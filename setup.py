@@ -1,13 +1,22 @@
-from distutils.core import setup
-setup(
-  name = 'fastestimator',
-  packages = ['fastestimator'], # this must be the same as the name above
-  version = '0.1',
-  description = 'A random test lib',
-  author = 'Edittool',
-  author_email = 'noreply@google.com',
-  url = 'https://github.com/fastestimator/fastestimator', # use the URL to the github repo
-  download_url = 'https://github.com/peterldowns/fastestimator/fastestimator/0.1.tar.gz', # I'll explain this in a second
-  keywords = ['fastestimator'], # arbitrary keywords
-  classifiers = [],
+import setuptools
+
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+	
+	
+setuptools.setup(
+    name="fastestimator",
+    version="0.0.1",
+    author="Edittool",
+    author_email="shawnmengdong@gmail.com",
+    description="building deep learning models fast&easy",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    url="https://github.com/fastestimator/fastestimator",
+    packages=setuptools.find_packages(),
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+    ],
 )
