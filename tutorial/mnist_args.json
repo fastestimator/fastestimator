@@ -1,0 +1,3 @@
+{"epochs": 3,
+ "optimizer": "sgd",
+ "batch_size": 64}
