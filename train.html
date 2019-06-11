@@ -1,0 +1,312 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>How to train with FastEstimator &mdash; FastEstimator 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="FastEstimator API reference" href="api.html" />
+    <link rel="prev" title="Buiding model with FastEstimator" href="model.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> FastEstimator
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model.html">Buiding model with FastEstimator</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">How to train with FastEstimator</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#command-line-interface">Command Line Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#example-1-using-entry-point-only">Example 1: Using entry point only</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example-2-using-entry-point-with-arguments">Example 2: Using entry point with arguments</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example-3-using-json-file-as-arguments">Example 3: Using JSON file as arguments</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#python-console">Python Console</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#example-4-train-in-python-console">Example 4: Train in python console</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">FastEstimator API reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">FastEstimator</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>How to train with FastEstimator</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/train.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="how-to-train-with-fastestimator">
+<h1>How to train with FastEstimator<a class="headerlink" href="#how-to-train-with-fastestimator" title="Permalink to this headline">¶</a></h1>
+<p>Users can choose one of two ways to start training. Here’s the general rule of thumb:</p>
+<ul class="simple">
+<li>Use Command Line Interface for:<ul>
+<li>General purpose training</li>
+<li>Distributed training</li>
+<li>Hyperparameter tuning</li>
+</ul>
+</li>
+<li>Use Python Console for:<ul>
+<li>Debugging</li>
+</ul>
+</li>
+</ul>
+<p>Next We use Mnist data as example to demonstrate various ways to launch training jobs.</p>
+<div class="section" id="command-line-interface">
+<h2>Command Line Interface<a class="headerlink" href="#command-line-interface" title="Permalink to this headline">¶</a></h2>
+<p><cite>fastestimator</cite> command will be available after installation, in order to use the command,
+users should prepare entry point – python script that defines the <cite>get_estimator</cite> function. Here’s the usage:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>fastestimator train
+
+Required arguments:
+
+--entry_point:      Path of python script that defines <span class="s1">&#39;get_estimator&#39;</span>
+
+Optional arguments:
+
+--input:            Directory where tfrecord is saved or will be saved
+                    <span class="o">(</span>default: /tmp/FEdataset<span class="o">)</span>
+--hyperparameters:  Path of JSON file that defines the input arguments of
+                    <span class="s1">&#39;get_estimator&#39;</span> in a dictionary format <span class="o">(</span>default: None<span class="o">)</span>
+--num_process:      Number of parallel training process <span class="o">(</span>default: <span class="m">1</span><span class="o">)</span>
+--arg1:             Input argument1 of <span class="sb">`</span>get_estimator<span class="sb">`</span> <span class="k">function</span> <span class="o">(</span>default: None<span class="o">)</span>
+...                 ...
+--argN:             Input argumentN of <span class="sb">`</span>get_estimator<span class="sb">`</span> <span class="k">function</span> <span class="o">(</span>default: None<span class="o">)</span>
+</pre></div>
+</div>
+<div class="section" id="example-1-using-entry-point-only">
+<h3>Example 1: Using entry point only<a class="headerlink" href="#example-1-using-entry-point-only" title="Permalink to this headline">¶</a></h3>
+<p>In this example, <cite>get_estimator</cite> takes default argument or no argument (see <a class="reference external" href="https://github.build.ge.com/edisonaitk/fastestimator/blob/master/tutorial/mnist.py">mnist</a>).
+This format is best suited for running a quick single experiment.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>fastestimator train --entry_point mnist.py
+</pre></div>
+</div>
+<p>if you want to save tfrecord to a specific direcoty (E.g, /data/mnist):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>fastestimator train --entry_point mnist.py --input /data/mnist
+</pre></div>
+</div>
+</div>
+<div class="section" id="example-2-using-entry-point-with-arguments">
+<h3>Example 2: Using entry point with arguments<a class="headerlink" href="#example-2-using-entry-point-with-arguments" title="Permalink to this headline">¶</a></h3>
+<p>In this case, user can pass arguments of <cite>get_estimator</cite> from command line. This is useful when experimenting different parameters.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>fastestimator train <span class="se">\</span>
+--entry_point mnist.py <span class="se">\</span>
+--input /data/mnist <span class="se">\</span>
+--epochs <span class="m">3</span> <span class="se">\</span>
+--batch_size <span class="m">64</span> <span class="se">\</span>
+--optimizer sgd
+</pre></div>
+</div>
+</div>
+<div class="section" id="example-3-using-json-file-as-arguments">
+<h3>Example 3: Using JSON file as arguments<a class="headerlink" href="#example-3-using-json-file-as-arguments" title="Permalink to this headline">¶</a></h3>
+<p>It may be cool to pass two or three arguments on terminal, but when the number of arguments is too
+big (say ~100), it doesn’t seem so cool anymore. Alternatively, you pass a <a class="reference external" href="https://github.build.ge.com/edisonaitk/fastestimator/blob/master/tutorial/mnist_args.json">JSON file</a> that contains all arguments of <cite>get_estimator</cite> in a dictionary format.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python -m fastestimator.fit <span class="se">\</span>
+--entry_point mnist.py <span class="se">\</span>
+--input /data/mnist <span class="se">\</span>
+--hyperparameters mnist_args.json
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="python-console">
+<h2>Python Console<a class="headerlink" href="#python-console" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="example-4-train-in-python-console">
+<h3>Example 4: Train in python console<a class="headerlink" href="#example-4-train-in-python-console" title="Permalink to this headline">¶</a></h3>
+<p>For users that prefer running codes in python console (e.g., Jupyter notebook, Spyder, Pycharm), check out <a class="reference external" href="https://github.build.ge.com/edisonaitk/fastestimator/blob/master/tutorial/mnist.ipynb">this notebook</a> for python console training.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">get_estimator</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="o">...</span>
+<span class="k">return</span> <span class="n">estimator</span>
+
+<span class="n">estimator</span> <span class="o">=</span> <span class="n">get_estimator</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="n">estimator</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="s2">&quot;/data/mnist&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="api.html" class="btn btn-neutral float-right" title="FastEstimator API reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="model.html" class="btn btn-neutral" title="Buiding model with FastEstimator" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, GEHC DataScience
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+
+  
+
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,607 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>fastestimator.util.tfrecord &mdash; FastEstimator 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+
+  
+  <script src="../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> FastEstimator
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../model.html">Buiding model with FastEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../train.html">How to train with FastEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">FastEstimator API reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">FastEstimator</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>fastestimator.util.tfrecord</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for fastestimator.util.tfrecord</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">fastestimator.util.util</span> <span class="k">import</span> <span class="n">convert_tf_dtype</span>
+<span class="kn">import</span> <span class="nn">multiprocessing</span> <span class="k">as</span> <span class="nn">mp</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">tempfile</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<div class="viewcode-block" id="TFRecorder"><a class="viewcode-back" href="../../../api.html#fastestimator.util.tfrecord.TFRecorder">[docs]</a><span class="k">class</span> <span class="nc">TFRecorder</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class for creating TFRecords from numpy data or csv file containing paths to data on disk</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        train_data: Training dataset in the form of dictionary containing numpy data, or csv file (with file</span>
+<span class="sd">            paths or data)</span>
+<span class="sd">        feature_name: List of strings representing the feature names in the data (headers in csv, keys in dictionary</span>
+<span class="sd">            or features in TFRecords)</span>
+<span class="sd">        transform_dataset: List of lists of numpy transformations to be performed sequentially  on the raw data</span>
+<span class="sd">            before the TFRecords are made.</span>
+<span class="sd">        validation_data:  Validation data in the form of dictionary containing numpy data, or csv file, or fraction</span>
+<span class="sd">            of training data to be sequestered for validation during training.</span>
+<span class="sd">        create_patch: Whether to create multiple records from single example.</span>
+<span class="sd">        max_tfrecord_mb: Maximum space to be occupied by one TFRecord.</span>
+<span class="sd">        compression: tfrecords compression type, one of None, &#39;GZIP&#39; or &#39;ZLIB&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">train_data</span><span class="p">,</span> <span class="n">feature_name</span><span class="p">,</span> <span class="n">transform_dataset</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">validation_data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">create_patch</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">max_tfrecord_mb</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">train_data</span> <span class="o">=</span> <span class="n">train_data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">feature_name</span> <span class="o">=</span> <span class="n">feature_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">transform_dataset</span> <span class="o">=</span> <span class="n">transform_dataset</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span> <span class="o">=</span> <span class="n">validation_data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_patch</span> <span class="o">=</span> <span class="n">create_patch</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_tfrecord_mb</span> <span class="o">=</span> <span class="n">max_tfrecord_mb</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_process</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">local_rank</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_subprocess</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_eval_example_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_train_example_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compression</span> <span class="o">=</span> <span class="n">compression</span>
+        <span class="n">option_map</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;GZIP&quot;</span><span class="p">:</span> <span class="n">tf</span><span class="o">.</span><span class="n">python_io</span><span class="o">.</span><span class="n">TFRecordCompressionType</span><span class="o">.</span><span class="n">GZIP</span><span class="p">,</span>
+                      <span class="s2">&quot;ZLIB&quot;</span><span class="p">:</span> <span class="n">tf</span><span class="o">.</span><span class="n">python_io</span><span class="o">.</span><span class="n">TFRecordCompressionType</span><span class="o">.</span><span class="n">ZLIB</span><span class="p">,</span>
+                      <span class="kc">None</span><span class="p">:</span> <span class="kc">None</span><span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compression_option</span> <span class="o">=</span> <span class="n">option_map</span><span class="p">[</span><span class="n">compression</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_int64_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Feature</span><span class="p">(</span><span class="n">int64_list</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Int64List</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="p">[</span><span class="n">value</span><span class="p">]))</span>
+
+    <span class="k">def</span> <span class="nf">_bytes_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Feature</span><span class="p">(</span><span class="n">bytes_list</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">BytesList</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="p">[</span><span class="n">value</span><span class="p">]))</span>
+
+    <span class="k">def</span> <span class="nf">_float_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Feature</span><span class="p">(</span><span class="n">float_list</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">FloatList</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="p">[</span><span class="n">value</span><span class="p">]))</span>
+
+<div class="viewcode-block" id="TFRecorder.create_tfrecord"><a class="viewcode-back" href="../../../api.html#fastestimator.util.tfrecord.TFRecorder.create_tfrecord">[docs]</a>    <span class="k">def</span> <span class="nf">create_tfrecord</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">save_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_savepath</span><span class="p">(</span><span class="n">save_dir</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_verify_input</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_training_dict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_get_feature_info</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_validation_dict</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_eval_example_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_write_tfrecord_parallel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_eval_exmaple_csv</span><span class="p">,</span> <span class="s2">&quot;eval&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_train_example_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_write_tfrecord_parallel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">train_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_train_example_csv</span><span class="p">,</span> <span class="s2">&quot;train&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_json_summary</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">save_dir</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_feature_info</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">feature</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transform_one_slice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">train_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">feature_name_new</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">feature</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mb_per_csv_example</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">feature_type_new</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_name_new</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">feature</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mb_per_csv_example</span> <span class="o">+=</span> <span class="n">data</span><span class="o">.</span><span class="n">nbytes</span> <span class="o">/</span> <span class="mf">1e6</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s2">&quot;&lt;U&quot;</span> <span class="ow">in</span> <span class="n">dtype</span><span class="p">:</span>
+                <span class="n">dtype</span> <span class="o">=</span> <span class="s2">&quot;string&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">feature_type_new</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_write_tfrecord_parallel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dictionary</span><span class="p">,</span> <span class="n">num_example_csv</span><span class="p">,</span> <span class="n">mode</span><span class="p">):</span>
+        <span class="n">num_example_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">processes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">queue</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
+        <span class="n">num_example_process</span> <span class="o">=</span> <span class="n">num_example_csv</span> <span class="o">//</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_process</span>
+        <span class="n">process_start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">*</span> <span class="n">num_example_process</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">==</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_process</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">process_end</span> <span class="o">=</span> <span class="n">num_example_csv</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">process_end</span> <span class="o">=</span> <span class="n">process_start</span> <span class="o">+</span> <span class="n">num_example_process</span>
+        <span class="n">num_example_process</span> <span class="o">=</span> <span class="n">process_end</span> <span class="o">-</span> <span class="n">process_start</span>
+        <span class="n">num_files_subprocess</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">num_example_process</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">mb_per_csv_example</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_tfrecord_mb</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_subprocess</span><span class="p">))</span>
+        <span class="n">file_idx_start_process</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">*</span> <span class="n">num_files_subprocess</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_subprocess</span>
+        <span class="n">num_example_subprocess_remain</span> <span class="o">=</span> <span class="n">num_example_process</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_subprocess</span>
+        <span class="n">serial_start</span> <span class="o">=</span> <span class="n">process_start</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_subprocess</span><span class="p">):</span>
+            <span class="n">file_idx_start_subprocess</span> <span class="o">=</span> <span class="n">i</span> <span class="o">*</span> <span class="n">num_files_subprocess</span> <span class="o">+</span> <span class="n">file_idx_start_process</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">num_example_subprocess_remain</span><span class="p">:</span>
+                <span class="n">num_example_subprocess</span> <span class="o">=</span> <span class="n">num_example_process</span> <span class="o">//</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_subprocess</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">num_example_subprocess</span> <span class="o">=</span> <span class="n">num_example_process</span> <span class="o">//</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_subprocess</span>
+            <span class="n">serial_end</span> <span class="o">=</span> <span class="n">serial_start</span> <span class="o">+</span> <span class="n">num_example_subprocess</span>
+            <span class="n">processes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mp</span><span class="o">.</span><span class="n">Process</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_write_tfrecord_serial</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">dictionary</span><span class="p">,</span> <span class="n">serial_start</span><span class="p">,</span> <span class="n">serial_end</span><span class="p">,</span> <span class="n">num_files_subprocess</span><span class="p">,</span> <span class="n">file_idx_start_subprocess</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">queue</span><span class="p">)))</span>
+            <span class="n">serial_start</span> <span class="o">+=</span> <span class="n">num_example_subprocess</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">processes</span><span class="p">:</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_subprocess</span><span class="p">):</span>
+            <span class="n">num_example_list</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">queue</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">block</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">processes</span><span class="p">:</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">num_example_list</span>
+
+    <span class="k">def</span> <span class="nf">_write_tfrecord_serial</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dictionary</span><span class="p">,</span> <span class="n">serial_start</span><span class="p">,</span> <span class="n">serial_end</span><span class="p">,</span> <span class="n">num_files_subprocess</span><span class="p">,</span> <span class="n">file_idx_start</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">queue</span><span class="p">):</span>
+        <span class="n">num_example_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">num_csv_example_per_file</span> <span class="o">=</span> <span class="p">(</span><span class="n">serial_end</span> <span class="o">-</span> <span class="n">serial_start</span><span class="p">)</span> <span class="o">//</span> <span class="n">num_files_subprocess</span>
+        <span class="n">show_progress</span> <span class="o">=</span> <span class="n">serial_start</span> <span class="o">==</span> <span class="mi">0</span>
+        <span class="n">file_start</span> <span class="o">=</span> <span class="n">serial_start</span>
+        <span class="n">file_end</span> <span class="o">=</span> <span class="n">file_start</span> <span class="o">+</span> <span class="n">num_csv_example_per_file</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_files_subprocess</span><span class="p">):</span>
+            <span class="n">file_idx</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="n">file_idx_start</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="n">mode</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">file_idx</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;.tfrecord&quot;</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="p">(</span><span class="n">num_files_subprocess</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="n">file_end</span> <span class="o">=</span> <span class="n">serial_end</span>
+            <span class="n">num_example_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_write_single_file</span><span class="p">(</span><span class="n">dictionary</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">file_start</span><span class="p">,</span> <span class="n">file_end</span><span class="p">,</span> <span class="n">serial_start</span><span class="p">,</span> <span class="n">serial_end</span><span class="p">,</span> <span class="n">show_progress</span><span class="p">,</span> <span class="n">mode</span><span class="p">))</span>
+            <span class="n">file_start</span> <span class="o">+=</span> <span class="n">num_csv_example_per_file</span>
+            <span class="n">file_end</span> <span class="o">+=</span> <span class="n">num_csv_example_per_file</span>
+        <span class="n">queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">num_example_list</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_write_single_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dictionary</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">file_start</span><span class="p">,</span> <span class="n">file_end</span><span class="p">,</span> <span class="n">serial_start</span><span class="p">,</span> <span class="n">serial_end</span><span class="p">,</span> <span class="n">show_progress</span><span class="p">,</span> <span class="n">mode</span><span class="p">):</span>
+        <span class="n">goal_number</span> <span class="o">=</span> <span class="n">serial_end</span> <span class="o">-</span> <span class="n">serial_start</span>
+        <span class="n">logging_interval</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">goal_number</span> <span class="o">//</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">num_example</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">python_io</span><span class="o">.</span><span class="n">TFRecordWriter</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">save_dir</span><span class="p">,</span> <span class="n">filename</span><span class="p">),</span> <span class="n">options</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compression_option</span><span class="p">)</span> <span class="k">as</span> <span class="n">writer</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">file_start</span><span class="p">,</span> <span class="n">file_end</span><span class="p">):</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">-</span> <span class="n">serial_start</span><span class="p">)</span> <span class="o">%</span> <span class="n">logging_interval</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">show_progress</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;FastEstimator: --Converting </span><span class="si">%s</span><span class="s2"> TFRecords </span><span class="si">%f%%</span><span class="s2">--&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">mode</span><span class="o">.</span><span class="n">capitalize</span><span class="p">(),</span> <span class="p">(</span><span class="n">i</span> <span class="o">-</span> <span class="n">serial_start</span><span class="p">)</span><span class="o">/</span><span class="n">goal_number</span><span class="o">*</span><span class="mi">100</span><span class="p">))</span>
+                <span class="n">feature</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transform_one_slice</span><span class="p">(</span><span class="n">dictionary</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_patch</span><span class="p">:</span>
+                    <span class="n">num_patches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_verify_dict</span><span class="p">(</span><span class="n">feature</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_patches</span><span class="p">):</span>
+                        <span class="n">feature_patch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_dict_slice</span><span class="p">(</span><span class="n">feature</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_write_single_example</span><span class="p">(</span><span class="n">feature_patch</span><span class="p">,</span> <span class="n">writer</span><span class="p">)</span>
+                        <span class="n">num_example</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_write_single_example</span><span class="p">(</span><span class="n">feature</span><span class="p">,</span> <span class="n">writer</span><span class="p">)</span>
+                    <span class="n">num_example</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">filename</span><span class="p">,</span> <span class="n">num_example</span>
+
+    <span class="k">def</span> <span class="nf">_transform_one_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dictionary</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="n">feature</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_dict_slice</span><span class="p">(</span><span class="n">dictionary</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">transform_dataset</span><span class="p">:</span>
+            <span class="n">feature</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preprocessing</span><span class="p">(</span><span class="n">feature</span><span class="p">)</span>
+        <span class="n">feature</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">edit_feature</span><span class="p">(</span><span class="n">feature</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">feature</span>
+
+    <span class="k">def</span> <span class="nf">_write_single_example</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dictionary</span><span class="p">,</span> <span class="n">writer</span><span class="p">):</span>
+        <span class="n">feature_tfrecord</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">keys</span> <span class="o">=</span> <span class="n">dictionary</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">dictionary</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="ow">is</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="ow">and</span> <span class="n">data</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="ow">is</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="ow">and</span> <span class="n">data</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">feature_tfrecord</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bytes_feature</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">tostring</span><span class="p">())</span>
+            <span class="k">elif</span> <span class="s2">&quot;int&quot;</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)):</span>
+                <span class="n">feature_tfrecord</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_int64_feature</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="s2">&quot;float&quot;</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)):</span>
+                <span class="n">feature_tfrecord</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_float_feature</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="s2">&quot;str&quot;</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)):</span>
+                <span class="n">feature_tfrecord</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bytes_feature</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;only supports either scalar, string, or numpy array, got </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)))</span>
+        <span class="n">example</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Example</span><span class="p">(</span><span class="n">features</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Features</span><span class="p">(</span><span class="n">feature</span><span class="o">=</span><span class="n">feature_tfrecord</span><span class="p">))</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">example</span><span class="o">.</span><span class="n">SerializeToString</span><span class="p">())</span>
+
+    <span class="k">def</span> <span class="nf">_get_dict_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dictionary</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="n">feature_slice</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">keys</span> <span class="o">=</span> <span class="n">dictionary</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+            <span class="n">feature_slice</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">dictionary</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="n">index</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">feature_slice</span>
+
+<div class="viewcode-block" id="TFRecorder.edit_feature"><a class="viewcode-back" href="../../../api.html#fastestimator.util.tfrecord.TFRecorder.edit_feature">[docs]</a>    <span class="k">def</span> <span class="nf">edit_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">feature</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">feature</span></div>
+
+    <span class="k">def</span> <span class="nf">_preprocessing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">feature</span><span class="p">):</span>
+        <span class="n">preprocessed_data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_name</span><span class="p">)):</span>
+            <span class="n">transform_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transform_dataset</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+            <span class="n">feature_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_name</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+            <span class="n">preprocess_data</span> <span class="o">=</span> <span class="n">feature</span><span class="p">[</span><span class="n">feature_name</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">preprocess_obj</span> <span class="ow">in</span> <span class="n">transform_list</span><span class="p">:</span>
+                <span class="n">preprocess_data</span> <span class="o">=</span> <span class="n">preprocess_obj</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">preprocess_data</span><span class="p">,</span> <span class="n">feature</span><span class="p">)</span>
+            <span class="n">preprocessed_data</span><span class="p">[</span><span class="n">feature_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">preprocess_data</span>
+        <span class="k">return</span> <span class="n">preprocessed_data</span>
+
+    <span class="k">def</span> <span class="nf">_verify_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dictionary</span><span class="p">):</span>
+        <span class="n">num_example_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">dictionary</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">feature_data</span> <span class="o">=</span> <span class="n">dictionary</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">feature_data</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">list</span><span class="p">:</span>
+                <span class="n">num_example_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">feature_data</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">feature_data</span><span class="p">)</span> <span class="ow">is</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+                <span class="n">num_example_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">feature_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;the feature only supports list or numpy array&quot;</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">num_example_list</span><span class="p">))</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;features should have the same number of examples&quot;</span>
+        <span class="k">return</span> <span class="nb">set</span><span class="p">(</span><span class="n">num_example_list</span><span class="p">)</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_prepare_training_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">train_data</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">train_data</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">train_data</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="s1">&#39;list&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_train_example_csv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_verify_dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">train_data</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_prepare_validation_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">float</span><span class="p">:</span>
+            <span class="n">num_example_takeout</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_train_example_csv</span><span class="p">)</span>
+            <span class="n">train_idx</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_train_example_csv</span><span class="p">)</span>
+            <span class="n">eval_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">train_idx</span><span class="p">,</span> <span class="n">num_example_takeout</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">train_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">train_idx</span><span class="p">,</span> <span class="n">eval_idx</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_name</span><span class="p">:</span>
+                <span class="n">total_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+                <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">total_data</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">list</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">train_data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">total_data</span><span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">train_idx</span><span class="p">]</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">total_data</span><span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">eval_idx</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">train_data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_data</span><span class="p">[</span><span class="n">train_idx</span><span class="p">]</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_data</span><span class="p">[</span><span class="n">eval_idx</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_train_example_csv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_train_example_csv</span> <span class="o">-</span> <span class="n">num_example_takeout</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="s1">&#39;list&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_eval_exmaple_csv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_verify_dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_prepare_savepath</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">save_dir</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">save_dir</span><span class="p">:</span>
+            <span class="n">save_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tempfile</span><span class="o">.</span><span class="n">gettempdir</span><span class="p">(),</span> <span class="s2">&quot;FEdataset&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">save_dir</span> <span class="o">=</span> <span class="n">save_dir</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;FastEstimator: Saving tfrecord to </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">save_dir</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">save_dir</span><span class="p">):</span>
+                <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">save_dir</span><span class="p">)</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">save_dir</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_process</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">horovod.tensorflow.keras</span> <span class="k">as</span> <span class="nn">hvd</span>
+            <span class="n">hvd</span><span class="o">.</span><span class="n">allreduce</span><span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Barrier&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_verify_input</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">train_data</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">dict</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_data</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.csv&quot;</span><span class="p">),</span> <span class="s2">&quot;train data should be either dictionary or csv file&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span><span class="p">)</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">dict</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.csv&quot;</span><span class="p">),</span> <span class="s2">&quot;validation data supports partition ratio (float), csv file or dictionary&quot;</span>
+
+    <span class="k">def</span> <span class="nf">_write_json_summary</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">summary</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;feature_name&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_name_new</span><span class="p">,</span> <span class="s2">&quot;feature_dtype&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_type_new</span><span class="p">}</span>
+        <span class="n">train_files</span><span class="p">,</span> <span class="n">num_train_examples</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">num_train_example_list</span><span class="p">)</span>
+        <span class="n">summary</span><span class="p">[</span><span class="s2">&quot;train_files&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">train_files</span><span class="p">)</span>
+        <span class="n">summary</span><span class="p">[</span><span class="s2">&quot;num_train_examples&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">num_train_examples</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">compression</span><span class="p">:</span>
+            <span class="n">summary</span><span class="p">[</span><span class="s2">&quot;compression&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compression</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_eval_example_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">eval_files</span><span class="p">,</span> <span class="n">num_eval_examples</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">num_eval_example_list</span><span class="p">)</span>
+            <span class="n">summary</span><span class="p">[</span><span class="s2">&quot;eval_files&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">eval_files</span><span class="p">)</span>
+            <span class="n">summary</span><span class="p">[</span><span class="s2">&quot;num_eval_examples&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">num_eval_examples</span><span class="p">)</span>
+        <span class="n">file_name</span> <span class="o">=</span> <span class="s2">&quot;summary</span><span class="si">%d</span><span class="s2">.json&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">save_dir</span><span class="p">,</span> <span class="n">file_name</span><span class="p">),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="n">fp</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="tfrecord_to_np"><a class="viewcode-back" href="../../../api.html#fastestimator.util.tfrecord.tfrecord_to_np">[docs]</a><span class="k">def</span> <span class="nf">tfrecord_to_np</span><span class="p">(</span><span class="n">file_path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Converts 1 TFRecord (created using fastestimator) to numpy data</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        file_path: Path of TFRecord file</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Dictionary containing numpy data</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">tensor_data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="n">folder_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+    <span class="n">json_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">folder_path</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">folder_path</span><span class="p">)</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.json&quot;</span><span class="p">)]</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">json_files</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;Cannot find summary json file, you can either add the json file or use TFRecorder to create tfrecord&quot;</span>
+    <span class="n">summary</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">json_files</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;r&#39;</span><span class="p">))</span>
+    <span class="n">keys_to_features</span> <span class="o">=</span> <span class="n">get_features</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+    <span class="n">decode_type</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span><span class="n">dtype</span> <span class="k">for</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">dtype</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">summary</span><span class="p">[</span><span class="s2">&quot;feature_name&quot;</span><span class="p">],</span> <span class="n">summary</span><span class="p">[</span><span class="s2">&quot;feature_dtype&quot;</span><span class="p">])}</span>
+    <span class="k">for</span> <span class="n">tf_record_example</span> <span class="ow">in</span> <span class="n">tf</span><span class="o">.</span><span class="n">python_io</span><span class="o">.</span><span class="n">tf_record_iterator</span><span class="p">(</span><span class="n">file_path</span><span class="p">):</span>
+        <span class="n">example</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">parse_single_example</span><span class="p">(</span><span class="n">tf_record_example</span><span class="p">,</span> <span class="n">features</span><span class="o">=</span><span class="n">keys_to_features</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">summary</span><span class="p">[</span><span class="s2">&quot;feature_name&quot;</span><span class="p">]:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">example</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+            <span class="k">if</span> <span class="s2">&quot;string&quot;</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span><span class="p">):</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">decode_raw</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">convert_tf_dtype</span><span class="p">(</span><span class="n">decode_type</span><span class="p">[</span><span class="n">key</span><span class="p">]))</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">tensor_data</span><span class="p">:</span>
+                <span class="n">tensor_data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">tensor_data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">data</span><span class="p">]</span>
+    <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span> <span class="k">as</span> <span class="n">sess</span><span class="p">:</span>
+        <span class="n">np_data</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">tensor_data</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">np_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="n">np_data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np_data</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">np_data</span></div>
+
+<div class="viewcode-block" id="get_number_of_examples"><a class="viewcode-back" href="../../../api.html#fastestimator.util.tfrecord.get_number_of_examples">[docs]</a><span class="k">def</span> <span class="nf">get_number_of_examples</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">show_warning</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns number of examples in 1 TFRecord</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        file_path: Path of TFRecord file</span>
+<span class="sd">        show_warning: Whether to display warning message</span>
+<span class="sd">        compression: None, &#39;GZIP&#39; or &#39;ZLIB&#39;</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Number of examples in the TFRecord</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="s2">&quot;tfrecord&quot;</span> <span class="ow">in</span> <span class="n">ext</span><span class="p">,</span> <span class="s2">&quot;please make sure data is in tfrecord format&quot;</span>
+    <span class="n">option_map</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;GZIP&quot;</span><span class="p">:</span> <span class="n">tf</span><span class="o">.</span><span class="n">python_io</span><span class="o">.</span><span class="n">TFRecordCompressionType</span><span class="o">.</span><span class="n">GZIP</span><span class="p">,</span>
+                  <span class="s2">&quot;ZLIB&quot;</span><span class="p">:</span> <span class="n">tf</span><span class="o">.</span><span class="n">python_io</span><span class="o">.</span><span class="n">TFRecordCompressionType</span><span class="o">.</span><span class="n">ZLIB</span><span class="p">,</span>
+                  <span class="kc">None</span><span class="p">:</span> <span class="kc">None</span><span class="p">}</span>
+    <span class="n">iterator</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">python_io</span><span class="o">.</span><span class="n">tf_record_iterator</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">option_map</span><span class="p">[</span><span class="n">compression</span><span class="p">])</span>
+    <span class="n">example_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">iterator</span><span class="p">))</span> <span class="o">+</span> <span class="mi">16</span>  <span class="c1">#from multiple observations, tfrecord adds 16 byte to each example</span>
+    <span class="n">file_size</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">stat</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span><span class="o">.</span><span class="n">st_size</span>
+    <span class="k">if</span> <span class="n">file_size</span> <span class="o">%</span> <span class="n">example_size</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">show_warning</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;FastEstimator-Warning: Can&#39;t accurately calculate number of examples&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="n">file_size</span><span class="o">//</span><span class="n">example_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="get_features"><a class="viewcode-back" href="../../../api.html#fastestimator.util.tfrecord.get_features">[docs]</a><span class="k">def</span> <span class="nf">get_features</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns the feature information in TFRecords</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        file_path: Path of TFRecord file</span>
+<span class="sd">        compression: None, &#39;GZIP&#39; or &#39;ZLIB&#39;</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Dictionary containing feature information of TFRecords</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">_get_dtype</span><span class="p">(</span><span class="n">example</span><span class="p">,</span> <span class="n">feature</span><span class="p">):</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">example</span><span class="o">.</span><span class="n">features</span><span class="o">.</span><span class="n">feature</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span><span class="o">.</span><span class="n">DESCRIPTOR</span><span class="o">.</span><span class="n">fields_by_name</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">feature_dtype</span> <span class="o">=</span> <span class="n">dtype</span><span class="p">[[</span><span class="n">example</span><span class="o">.</span><span class="n">features</span><span class="o">.</span><span class="n">feature</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span><span class="o">.</span><span class="n">HasField</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">dtype</span><span class="p">]]</span>
+        <span class="n">feature_dtype</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">feature_dtype</span><span class="p">))</span>
+        <span class="n">type_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;bytes_list&#39;</span><span class="p">:</span> <span class="n">tf</span><span class="o">.</span><span class="n">string</span><span class="p">,</span> <span class="s1">&#39;int64_list&#39;</span><span class="p">:</span> <span class="n">tf</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span> <span class="s1">&#39;float_list&#39;</span><span class="p">:</span> <span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">}</span>
+        <span class="n">tf_type</span> <span class="o">=</span> <span class="n">type_dict</span><span class="p">[</span><span class="n">feature_dtype</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">tf_type</span>
+    
+    <span class="n">option_map</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;GZIP&quot;</span><span class="p">:</span> <span class="n">tf</span><span class="o">.</span><span class="n">python_io</span><span class="o">.</span><span class="n">TFRecordCompressionType</span><span class="o">.</span><span class="n">GZIP</span><span class="p">,</span>
+                  <span class="s2">&quot;ZLIB&quot;</span><span class="p">:</span> <span class="n">tf</span><span class="o">.</span><span class="n">python_io</span><span class="o">.</span><span class="n">TFRecordCompressionType</span><span class="o">.</span><span class="n">ZLIB</span><span class="p">,</span>
+                  <span class="kc">None</span><span class="p">:</span> <span class="kc">None</span><span class="p">}</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="s2">&quot;tfrecord&quot;</span> <span class="ow">in</span> <span class="n">ext</span><span class="p">,</span> <span class="s2">&quot;please make sure data is in tfrecord format&quot;</span>
+    <span class="n">iterator</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">python_io</span><span class="o">.</span><span class="n">tf_record_iterator</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">option_map</span><span class="p">[</span><span class="n">compression</span><span class="p">])</span>
+    <span class="n">example</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Example</span><span class="o">.</span><span class="n">FromString</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">iterator</span><span class="p">))</span>
+    <span class="n">feature_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">example</span><span class="o">.</span><span class="n">features</span><span class="o">.</span><span class="n">feature</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="n">tf_type_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">tf</span><span class="o">.</span><span class="n">FixedLenFeature</span><span class="p">([],</span> <span class="n">_get_dtype</span><span class="p">(</span><span class="n">example</span><span class="p">,</span> <span class="n">f</span><span class="p">))</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">feature_list</span><span class="p">]</span>
+    <span class="n">keys_to_features</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">feature_list</span><span class="p">,</span> <span class="n">tf_type_list</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">keys_to_features</span></div>
+
+<div class="viewcode-block" id="add_summary"><a class="viewcode-back" href="../../../api.html#fastestimator.util.tfrecord.add_summary">[docs]</a><span class="k">def</span> <span class="nf">add_summary</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="n">train_prefix</span><span class="p">,</span> <span class="n">feature_name</span><span class="p">,</span> <span class="n">feature_dtype</span><span class="p">,</span> <span class="n">eval_prefix</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">num_train_examples</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">num_eval_examples</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Adds summary.json file to existing path with tfrecords.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        data_dir (str): Folder path where tfrecords are stored.</span>
+<span class="sd">        train_prefix (str): The prefix of all training tfrecord files.</span>
+<span class="sd">        feature_name (list): Feature name in the tfrecord in a list.</span>
+<span class="sd">        feature_dtype (list): Original data type for specific feature, this is used for decoding purpose.</span>
+<span class="sd">        eval_prefix (str, optional): The prefix of all evaluation tfrecord files. Defaults to None.</span>
+<span class="sd">        num_train_examples (int, optional): The total number of training examples, if None, it will calculate automatically. Defaults to None.</span>
+<span class="sd">        num_eval_examples (int, optional): The total number of validation examples, if None, it will calculate automatically. Defaults to None.</span>
+<span class="sd">        compression (str, optional): None, &#39;GZIP&#39; or &#39;ZLIB&#39;. Defaults to None.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">train_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">train_prefix</span><span class="p">)]</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">train_files</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;Couldn&#39;t find any training tfrecord files in </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">data_dir</span>
+    <span class="n">option_map</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;GZIP&quot;</span><span class="p">:</span> <span class="n">tf</span><span class="o">.</span><span class="n">python_io</span><span class="o">.</span><span class="n">TFRecordCompressionType</span><span class="o">.</span><span class="n">GZIP</span><span class="p">,</span>
+                  <span class="s2">&quot;ZLIB&quot;</span><span class="p">:</span> <span class="n">tf</span><span class="o">.</span><span class="n">python_io</span><span class="o">.</span><span class="n">TFRecordCompressionType</span><span class="o">.</span><span class="n">ZLIB</span><span class="p">,</span>
+                  <span class="kc">None</span><span class="p">:</span> <span class="kc">None</span><span class="p">}</span>
+    <span class="n">iterator</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">python_io</span><span class="o">.</span><span class="n">tf_record_iterator</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="n">train_files</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">options</span><span class="o">=</span><span class="n">option_map</span><span class="p">[</span><span class="n">compression</span><span class="p">])</span>
+    <span class="n">example</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Example</span><span class="o">.</span><span class="n">FromString</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">iterator</span><span class="p">))</span>
+    <span class="n">feature_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">example</span><span class="o">.</span><span class="n">features</span><span class="o">.</span><span class="n">feature</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="k">assert</span> <span class="nb">set</span><span class="p">(</span><span class="n">feature_list</span><span class="p">)</span><span class="o">.</span><span class="n">issuperset</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">feature_name</span><span class="p">)),</span> <span class="s2">&quot;feature name should at least be subset of feature name in tfrecords, found </span><span class="si">%s</span><span class="s2"> , given </span><span class="si">%s</span><span class="s2">.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">feature_list</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">feature_name</span><span class="p">))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">num_train_examples</span><span class="p">:</span>
+        <span class="c1"># num_train_examples = [get_number_of_examples(os.path.join(data_dir, f)) for f in train_files]</span>
+        <span class="n">num_trian_files</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">train_files</span><span class="p">)</span>
+        <span class="n">logging_interval</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">num_trian_files</span><span class="o">//</span><span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">num_train_examples</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_trian_files</span><span class="p">):</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="n">logging_interval</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;FastEstimator: Calculating number of examples for train </span><span class="si">%d</span><span class="s2">/</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_trian_files</span><span class="p">))</span>
+            <span class="n">num_train_examples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">get_number_of_examples</span><span class="p">(</span><span class="n">file_path</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="n">train_files</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span> <span class="n">show_warning</span><span class="o">=</span><span class="n">i</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="n">compression</span><span class="p">))</span>
+    <span class="n">summary</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;feature_name&quot;</span><span class="p">:</span> <span class="n">feature_name</span><span class="p">,</span> <span class="s2">&quot;feature_dtype&quot;</span><span class="p">:</span> <span class="n">feature_dtype</span><span class="p">,</span> <span class="s2">&quot;train_files&quot;</span><span class="p">:</span><span class="n">train_files</span><span class="p">,</span> <span class="s2">&quot;num_train_examples&quot;</span><span class="p">:</span> <span class="n">num_train_examples</span><span class="p">}</span>
+    <span class="k">if</span> <span class="n">eval_prefix</span><span class="p">:</span>
+        <span class="n">eval_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">eval_prefix</span><span class="p">)]</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">eval_files</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;Couldn&#39;t find any validation tfrecord files in </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">data_dir</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">num_eval_examples</span><span class="p">:</span>
+            <span class="c1"># num_eval_examples = [get_number_of_examples(os.path.join(data_dir, f)) for f in eval_files]</span>
+            <span class="n">num_eval_files</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">eval_files</span><span class="p">)</span>
+            <span class="n">logging_interval</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">num_eval_files</span><span class="o">//</span><span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">num_eval_examples</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_eval_files</span><span class="p">):</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="n">logging_interval</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;FastEstimator: Calculating number of examples for eval </span><span class="si">%d</span><span class="s2">/</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_eval_files</span><span class="p">))</span>
+                <span class="n">num_eval_examples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">get_number_of_examples</span><span class="p">(</span><span class="n">file_path</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="n">eval_files</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span> <span class="n">show_warning</span><span class="o">=</span><span class="n">i</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="n">compression</span><span class="p">))</span>
+        <span class="n">summary</span><span class="p">[</span><span class="s2">&quot;eval_files&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">eval_files</span>
+        <span class="n">summary</span><span class="p">[</span><span class="s2">&quot;num_eval_examples&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">num_eval_examples</span>
+    <span class="k">if</span> <span class="n">compression</span><span class="p">:</span>
+        <span class="n">summary</span><span class="p">[</span><span class="s2">&quot;compression&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">compression</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;summary0.json&quot;</span><span class="p">),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="n">fp</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;FastEstimator: Writing &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;summary0.json&quot;</span><span class="p">)))</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, GEHC DataScience
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    
+
+  
+
+  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

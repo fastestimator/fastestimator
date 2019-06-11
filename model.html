@@ -1,0 +1,763 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Buiding model with FastEstimator &mdash; FastEstimator 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="How to train with FastEstimator" href="train.html" />
+    <link rel="prev" title="Installation" href="install.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> FastEstimator
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Buiding model with FastEstimator</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pipeline">Pipeline</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id1">Overview</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#preprocess-before-training-loop">Preprocess (before training loop)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#preprocess-during-training-loop">Preprocess (during training loop)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#augmentation-during-training-loop">Augmentation (during training loop)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#data-filter">Data Filter</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pipeline-debugging">Pipeline Debugging</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#network">Network</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id2">Overview</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#model">Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loss">Loss</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#metrics">Metrics</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#optimizer">Optimizer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#model-save-path">Model Save Path</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#estimator">Estimator</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#callbacks">Callbacks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#custom-steps">Custom Steps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#logging-configuration">Logging Configuration</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#other-utility-functions">Other Utility Functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#tfrecorder">TFRecorder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#add-summary">add_summary</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#full-code-demo">Full Code Demo</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="train.html">How to train with FastEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">FastEstimator API reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">FastEstimator</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Buiding model with FastEstimator</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/model.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="buiding-model-with-fastestimator">
+<h1>Buiding model with FastEstimator<a class="headerlink" href="#buiding-model-with-fastestimator" title="Permalink to this headline">¶</a></h1>
+<p>If you ever go to a zoo, it may not be surprising to see that animals all have 3 parts:
+head, body and leg. Among different animals, no matter how much their appearances may vary,
+the differences are nothing but different arrangements of the 3 common parts.</p>
+<p>Similarly, in the deep learning model zoo, every model can be described in 3 components: model architecture,
+data pipeline and training strategy. Each component of the model serves its unique purpose and functionality:</p>
+<ul class="simple">
+<li>Model Architecture: stores trainable &amp; differentiable operations.</li>
+<li>Data Pipeline: performs series of preprocess operations and transports data from disk/RAM to model.</li>
+<li>Training Strategy: iterates data pipeline and model architecture in an optimization process.</li>
+</ul>
+<p>Each of the component above represents a critical building block of FastEstimator and the story begins with them.</p>
+<div class="section" id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
+<p>There are 3 main API components that users will be interacting with: <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code>,
+<code class="docutils literal notranslate"><span class="pre">Network</span></code> and <code class="docutils literal notranslate"><span class="pre">Estimator</span></code>. The workflow of FastEstimator is a 3-step process as shown below
+in the Mnist example.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">fastestimator.pipeline.static.preprocess</span> <span class="kn">import</span> <span class="n">Minmax</span><span class="p">,</span> <span class="n">Onehot</span><span class="p">,</span> <span class="n">Reshape</span>
+<span class="kn">from</span> <span class="nn">fastestimator.estimator.estimator</span> <span class="kn">import</span> <span class="n">Estimator</span>
+<span class="kn">from</span> <span class="nn">fastestimator.pipeline.pipeline</span> <span class="kn">import</span> <span class="n">Pipeline</span>
+<span class="kn">from</span> <span class="nn">fastestimator.network.network</span> <span class="kn">import</span> <span class="n">Network</span>
+<span class="kn">from</span> <span class="nn">fastestimator.application.lenet</span> <span class="kn">import</span> <span class="n">LeNet</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+
+<span class="k">def</span> <span class="nf">get_estimator</span><span class="p">():</span>
+
+    <span class="c1">#prepare training and validation data</span>
+    <span class="p">(</span><span class="n">x_train</span><span class="p">,</span><span class="n">y_train</span><span class="p">),(</span><span class="n">x_eval</span><span class="p">,</span><span class="n">y_eval</span><span class="p">)</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">datasets</span><span class="o">.</span><span class="n">mnist</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span>
+
+    <span class="c1"># Step 1: Define Pipeline</span>
+    <span class="n">pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">(</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+                        <span class="n">feature_name</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span><span class="s2">&quot;y&quot;</span><span class="p">],</span>
+                        <span class="n">train_data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;x&quot;</span><span class="p">:</span><span class="n">x_train</span><span class="p">,</span><span class="s2">&quot;y&quot;</span><span class="p">:</span><span class="n">y_train</span><span class="p">},</span>
+                        <span class="n">validation_data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;x&quot;</span><span class="p">:</span><span class="n">x_eval</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span><span class="n">y_eval</span><span class="p">},</span>
+                        <span class="n">transform_train</span><span class="o">=</span><span class="p">[[</span><span class="n">Reshape</span><span class="p">([</span><span class="mi">28</span><span class="p">,</span><span class="mi">28</span><span class="p">,</span><span class="mi">1</span><span class="p">]),</span> <span class="n">Minmax</span><span class="p">()],</span>
+                                         <span class="p">[</span><span class="n">Onehot</span><span class="p">(</span><span class="mi">10</span><span class="p">)]])</span>
+
+    <span class="c1">#Step2: Define Network</span>
+    <span class="n">network</span> <span class="o">=</span> <span class="n">Network</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">LeNet</span><span class="p">(</span><span class="n">input_name</span><span class="o">=</span><span class="s2">&quot;x&quot;</span><span class="p">,</span><span class="n">output_name</span><span class="o">=</span><span class="s2">&quot;y&quot;</span><span class="p">),</span>
+                      <span class="n">loss</span><span class="o">=</span><span class="s2">&quot;categorical_crossentropy&quot;</span><span class="p">,</span>
+                      <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;acc&quot;</span><span class="p">],</span>
+                      <span class="n">optimizer</span><span class="o">=</span><span class="s2">&quot;adam&quot;</span><span class="p">)</span>
+
+    <span class="c1">#Step3: Define Estimator</span>
+    <span class="n">estimator</span> <span class="o">=</span> <span class="n">Estimator</span><span class="p">(</span><span class="n">network</span><span class="o">=</span><span class="n">network</span><span class="p">,</span>
+                          <span class="n">pipeline</span><span class="o">=</span><span class="n">pipeline</span><span class="p">,</span>
+                          <span class="n">epochs</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">estimator</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="pipeline">
+<h2>Pipeline<a class="headerlink" href="#pipeline" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id1">
+<h3>Overview<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<p>Data pipeline is responsible for providing data from disk/memory to model. It includes
+data preprocessing operations before training loop and during training loop. The details of each argument of
+<code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> can be found in <a class="reference external" href="https://github.build.ge.com/pages/edisonaitk/fastestimator/api.html#pipeline">pipeline-api</a>, but let’s talk about several important ones here:</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">train_data</span></code>: The training data in disk (csv) or memory (dict) before creating tfrecords. Ignore it when using existing tfrecords.</li>
+<li><code class="docutils literal notranslate"><span class="pre">validation_data</span></code>: The validation data in disk (csv) or memory (dict) before creating tfrecords. It can also be split ratio of <code class="docutils literal notranslate"><span class="pre">train_data</span></code> from [0-1]. Ignore it when using existing tfrecords or have no valdiation data.</li>
+<li><code class="docutils literal notranslate"><span class="pre">transform_dataset</span></code>: Series of operations on individual features before creating tfrecords.</li>
+<li><code class="docutils literal notranslate"><span class="pre">transform_train</span></code>: Series of tensor operations on individual features during training loop.</li>
+</ul>
+</div>
+<div class="section" id="preprocess-before-training-loop">
+<h3>Preprocess (before training loop)<a class="headerlink" href="#preprocess-before-training-loop" title="Permalink to this headline">¶</a></h3>
+<p>There are some preprocessing operations that can be applied before training loop (e.g. Minmax).
+In order to ensure a fast training speed, it is recommended to apply those operations once and for all before training happens.
+FastEstimator offers commonly used preprocessing modules in <a class="reference external" href="https://github.build.ge.com/pages/edisonaitk/fastestimator/api.html#dynamic-preprocess">dynamic-preprocess</a> . User can use them in <code class="docutils literal notranslate"><span class="pre">transform_dataset</span></code> argument.</p>
+<p>For example, given two features x and y, if you want to proprocess them in the following way before training:</p>
+<ul class="simple">
+<li>x: mnist images with size [28,28]–&gt; resize to [50, 50] –&gt; normalize pixel to [0,1]</li>
+<li>y: mnist scalar label, do nothing.</li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">fastestimator.pipeline.dynamic.preprocess</span> <span class="kn">import</span> <span class="n">Resize</span><span class="p">,</span> <span class="n">Minmax</span>
+<span class="kn">from</span> <span class="nn">fastestimator.pipeline.static.preprocess</span> <span class="kn">import</span> <span class="n">Reshape</span><span class="p">,</span> <span class="n">Onehot</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+
+<span class="p">(</span><span class="n">x_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">),</span> <span class="p">(</span><span class="n">x_test</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">datasets</span><span class="o">.</span><span class="n">mnist</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span>
+
+<span class="n">pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">(</span><span class="o">...</span>
+                    <span class="n">feature_name</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">],</span>
+                    <span class="n">train_data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="n">x_train</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="n">y_train</span><span class="p">},</span>
+<span class="hll">                    <span class="n">transform_dataset</span><span class="o">=</span><span class="p">[[</span><span class="n">Resize</span><span class="p">([</span><span class="mi">50</span><span class="p">,</span><span class="mi">50</span><span class="p">]),</span> <span class="n">Minmax</span><span class="p">()],</span>
+</span><span class="hll">                                       <span class="p">[]],</span>
+</span>                    <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If you have a specific preprocessing needs, you can customize a preprocessing module.
+Let’s add some noise to the image before the <code class="docutils literal notranslate"><span class="pre">Minmax</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">fastestimator.pipeline.dynamic.preprocess</span> <span class="kn">import</span> <span class="n">AbstractPreprocessing</span>
+<span class="kn">from</span> <span class="nn">fastestimator.pipeline.dynamic.preprocess</span> <span class="kn">import</span> <span class="n">Resize</span><span class="p">,</span> <span class="n">Minmax</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="k">class</span> <span class="nc">AddNoise</span><span class="p">(</span><span class="n">AbstractPreprocessing</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">feature</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">data</span> <span class="o">+</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">data</span>
+
+<span class="p">(</span><span class="n">x_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">),</span> <span class="p">(</span><span class="n">x_test</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">datasets</span><span class="o">.</span><span class="n">mnist</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span>
+
+<span class="n">pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">(</span><span class="o">...</span>
+                    <span class="n">feature_name</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">],</span>
+                    <span class="n">train_data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="n">x_train</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="n">y_train</span><span class="p">},</span>
+<span class="hll">                    <span class="n">transform_dataset</span><span class="o">=</span><span class="p">[[</span><span class="n">Resize</span><span class="p">([</span><span class="mi">50</span><span class="p">,</span><span class="mi">50</span><span class="p">]),</span> <span class="n">AddNoise</span><span class="p">(),</span> <span class="n">Minmax</span><span class="p">()],</span>
+</span><span class="hll">                                       <span class="p">[]],</span>
+</span>                    <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="preprocess-during-training-loop">
+<h3>Preprocess (during training loop)<a class="headerlink" href="#preprocess-during-training-loop" title="Permalink to this headline">¶</a></h3>
+<p>In the previous example, we added some random noise to the image before training loop. As you may notice,
+the drawback is that the random noise not being “random” enough, as we are dealing with image with same noise every iteration.
+One natural answer is to add the noise at run time.</p>
+<p>Moreover, there are some operations that are better off applied at runtime such as <cite>onehot encoder</cite>. Because we don’t want
+our tfrecords to include bunch of useless zeros. Therefore, we need one more type of preprocess that can execute on the fly.</p>
+<p>In FastEstimator, on-the-fly preprocessing is implemented in tensorflow, these preprocessing modules are passed through <code class="docutils literal notranslate"><span class="pre">transform_train</span></code> argument.
+Users can use existing module in <a class="reference external" href="https://github.build.ge.com/pages/edisonaitk/fastestimator/api.html#static-preprocess">static-preprocess</a> or customize one for specific needs.</p>
+<p>For example, if we want the following process to happen during trainign loop:</p>
+<ul class="simple">
+<li>x: reshape the image data from [2500] to [50, 50, 1]</li>
+<li>y: apply one-hot encoder to scalar label</li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">fastestimator.pipeline.dynamic.preprocess</span> <span class="kn">import</span> <span class="n">Resize</span><span class="p">,</span> <span class="n">Minmax</span>
+<span class="kn">from</span> <span class="nn">fastestimator.pipeline.static.preprocess</span> <span class="kn">import</span> <span class="n">Reshape</span><span class="p">,</span> <span class="n">Onehot</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+
+<span class="p">(</span><span class="n">x_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">),</span> <span class="p">(</span><span class="n">x_test</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">datasets</span><span class="o">.</span><span class="n">mnist</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span>
+
+<span class="n">pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">(</span><span class="o">...</span>
+                    <span class="n">feature_name</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">],</span>
+                    <span class="n">train_data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="n">x_train</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="n">y_train</span><span class="p">},</span>
+                    <span class="n">transform_dataset</span><span class="o">=</span><span class="p">[[</span><span class="n">Resize</span><span class="p">([</span><span class="mi">50</span><span class="p">,</span><span class="mi">50</span><span class="p">]),</span> <span class="n">Minmax</span><span class="p">()],</span>
+                                       <span class="p">[]],</span>
+<span class="hll">                    <span class="n">transform_train</span><span class="o">=</span> <span class="p">[[</span><span class="n">Reshape</span><span class="p">([</span><span class="mi">50</span><span class="p">,</span><span class="mi">50</span><span class="p">,</span><span class="mi">1</span><span class="p">])],</span>
+</span><span class="hll">                                      <span class="p">[</span><span class="n">Onehot</span><span class="p">(</span><span class="mi">10</span><span class="p">)]])</span>
+</span></pre></div>
+</div>
+<p>Next, we add noise on the fly:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">fastestimator.pipeline.static.preprocess</span> <span class="kn">import</span> <span class="n">AbstractPreprocessing</span>
+<span class="kn">from</span> <span class="nn">fastestimator.pipeline.dynamic.preprocess</span> <span class="kn">import</span> <span class="n">Resize</span><span class="p">,</span> <span class="n">Minmax</span>
+<span class="kn">from</span> <span class="nn">fastestimator.pipeline.static.preprocess</span> <span class="kn">import</span> <span class="n">Reshape</span><span class="p">,</span> <span class="n">Onehot</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="k">class</span> <span class="nc">AddNoise</span><span class="p">(</span><span class="n">AbstractPreprocessing</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">decoded_data</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">data</span> <span class="o">+</span> <span class="n">tf</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span>
+
+<span class="p">(</span><span class="n">x_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">),</span> <span class="p">(</span><span class="n">x_test</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">datasets</span><span class="o">.</span><span class="n">mnist</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span>
+
+<span class="n">pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">(</span><span class="o">...</span>
+                    <span class="n">feature_name</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">],</span>
+                    <span class="n">train_data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="n">x_train</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="n">y_train</span><span class="p">},</span>
+                    <span class="n">transform_dataset</span><span class="o">=</span><span class="p">[[</span><span class="n">Resize</span><span class="p">([</span><span class="mi">50</span><span class="p">,</span><span class="mi">50</span><span class="p">]),</span> <span class="n">Minmax</span><span class="p">()],</span>
+                                       <span class="p">[]],</span>
+<span class="hll">                    <span class="n">transform_train</span><span class="o">=</span> <span class="p">[[</span><span class="n">Reshape</span><span class="p">([</span><span class="mi">50</span><span class="p">,</span><span class="mi">50</span><span class="p">,</span><span class="mi">1</span><span class="p">]),</span> <span class="n">AddNoise</span><span class="p">()],</span>
+</span><span class="hll">                                      <span class="p">[</span><span class="n">Onehot</span><span class="p">(</span><span class="mi">10</span><span class="p">)]])</span>
+</span></pre></div>
+</div>
+</div>
+<div class="section" id="augmentation-during-training-loop">
+<h3>Augmentation (during training loop)<a class="headerlink" href="#augmentation-during-training-loop" title="Permalink to this headline">¶</a></h3>
+<p>In FastEstimator, augmentation module is same as on-the-fly preprocessing except for one difference:
+augmentation allows two or more features to share the same information. For example, in a segmentation task,
+image and mask have to be tranformed in the same manner, meaning that they share the same transformation matrix.</p>
+<p>Similar to on-the-fly preprocessing, augmentation is passed through <code class="docutils literal notranslate"><span class="pre">transform_train</span></code> argument. FastEstimator provides default <a class="reference external" href="https://github.build.ge.com/pages/edisonaitk/fastestimator/api.html#augmentation">2D-augmentation</a>,
+for example, if we want to apply the following operation to mnist image:</p>
+<ul class="simple">
+<li>random rotation between -25 degrees to 25 degrees</li>
+<li>random zoom between 0.8 and 1.0,</li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">fastestimator.pipeline.static.preprocess</span> <span class="kn">import</span> <span class="n">Reshape</span><span class="p">,</span> <span class="n">Onehot</span>
+<span class="kn">from</span> <span class="nn">fastestimator.pipeline.static.augmentation</span> <span class="kn">import</span> <span class="n">Augmentation</span>
+<span class="kn">from</span> <span class="nn">fastestimator.pipeline.dynamic.preprocess</span> <span class="kn">import</span> <span class="n">Minmax</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+
+<span class="p">(</span><span class="n">x_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">),</span> <span class="p">(</span><span class="n">x_test</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">datasets</span><span class="o">.</span><span class="n">mnist</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span>
+<span class="hll"><span class="n">aug_obj</span> <span class="o">=</span> <span class="n">Augmentation</span><span class="p">(</span><span class="n">rotation_range</span><span class="o">=</span><span class="mf">25.0</span><span class="p">,</span> <span class="n">zoom_range</span><span class="o">=</span><span class="p">[</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">])</span>
+</span><span class="n">pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">(</span><span class="o">...</span>
+                    <span class="n">feature_name</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">],</span>
+                    <span class="n">train_data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="n">x_train</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="n">y_train</span><span class="p">},</span>
+                    <span class="n">transform_dataset</span><span class="o">=</span><span class="p">[[</span><span class="n">Minmax</span><span class="p">()],</span>
+                                       <span class="p">[]],</span>
+<span class="hll">                    <span class="n">transform_train</span><span class="o">=</span> <span class="p">[[</span><span class="n">Reshape</span><span class="p">([</span><span class="mi">28</span><span class="p">,</span><span class="mi">28</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">aug_obj</span><span class="p">)],</span>
+</span>                                      <span class="p">[</span><span class="n">Onehot</span><span class="p">(</span><span class="mi">10</span><span class="p">)]])</span>
+</pre></div>
+</div>
+<p>If you want the same augmentation to be applied to other features(when there is mask), just pass the same object:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="hll"><span class="n">aug_obj</span> <span class="o">=</span> <span class="n">Augmentation</span><span class="p">(</span><span class="n">rotation_range</span><span class="o">=</span><span class="mf">25.0</span><span class="p">,</span> <span class="n">zoom_range</span><span class="o">=</span><span class="p">[</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">])</span>
+</span><span class="n">pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">(</span><span class="o">....</span>
+                    <span class="n">feature_name</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;image&quot;</span><span class="p">,</span> <span class="s2">&quot;mask&quot;</span><span class="p">],</span>
+<span class="hll">                    <span class="n">transform_train</span> <span class="o">=</span> <span class="p">[[</span><span class="n">Reshape</span><span class="p">([</span><span class="mi">100</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">1</span><span class="p">]),</span> <span class="n">Minmax</span><span class="p">(),</span> <span class="n">aug_obj</span><span class="p">],</span>
+</span><span class="hll">                                      <span class="p">[</span><span class="n">Reshape</span><span class="p">([</span><span class="mi">100</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">1</span><span class="p">]),</span> <span class="n">aug_obj</span><span class="p">]])</span>
+</span></pre></div>
+</div>
+<p>User can also customize augmentation to achieve specific goal, for example, we want to add the
+same random noise for image and mask during training:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">fastestimator.pipeline.static.augmentation</span> <span class="kn">import</span> <span class="n">AbstractAugmentation</span>
+<span class="kn">from</span> <span class="nn">fastestimator.general.pipeline</span> <span class="kn">import</span> <span class="n">Pipeline</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+
+<span class="c1"># Define customized augmentation</span>
+<span class="k">class</span> <span class="nc">AddNoise</span><span class="p">(</span><span class="n">AbstractAugmentation</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;train&quot;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">decoded_data</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">feature_name</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1">#we define information shared between features in setup</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">random_noise</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">random_uniform</span><span class="p">([</span><span class="mi">100</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">minval</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">maxval</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">data</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">random_noise</span>
+        <span class="k">return</span> <span class="n">data</span>
+
+<span class="n">aug_obj</span> <span class="o">=</span> <span class="n">AddNoise</span><span class="p">()</span>
+<span class="n">pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">(</span><span class="o">....</span>
+                    <span class="n">feature_name</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;image&quot;</span><span class="p">,</span> <span class="s2">&quot;mask&quot;</span><span class="p">],</span>
+                    <span class="n">transform_train</span> <span class="o">=</span> <span class="p">[[</span><span class="n">Reshape</span><span class="p">([</span><span class="mi">100</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">1</span><span class="p">]),</span> <span class="n">Minmax</span><span class="p">(),</span> <span class="n">aug_obj</span><span class="p">],</span>
+                                      <span class="p">[</span><span class="n">Reshape</span><span class="p">([</span><span class="mi">100</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">1</span><span class="p">]),</span> <span class="n">aug_obj</span><span class="p">]])</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="data-filter">
+<h3>Data Filter<a class="headerlink" href="#data-filter" title="Permalink to this headline">¶</a></h3>
+<p>We can also filter out some example for imbalanced training, FastEstimator provides built-in filter based on scalar feature. For example,
+if we want to filter out example with label=1,3,5,7,9:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">fastestimator.pipeline.static.filter</span> <span class="kn">import</span> <span class="n">Filter</span>
+<span class="kn">from</span> <span class="nn">fastestimator.pipeline.pipeline</span> <span class="kn">import</span> <span class="n">Pipeline</span>
+
+<span class="n">my_filter</span> <span class="o">=</span> <span class="n">Filter</span><span class="p">(</span><span class="n">feature_name</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">],</span>
+                   <span class="n">filter_value</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">9</span><span class="p">],</span>
+                   <span class="n">keep_prob</span><span class="o">=</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">])</span>
+<span class="n">pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">(</span><span class="o">....</span>
+                    <span class="n">data_filter</span><span class="o">=</span><span class="n">my_filter</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>User can customize their own filter for more complex filters, for example, if we only want to use the example if sum of the image is greater than 10:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">fastestimator.pipeline.static.filter</span> <span class="kn">import</span> <span class="n">Filter</span>
+<span class="kn">from</span> <span class="nn">fastestimator.pipeline.pipeline</span> <span class="kn">import</span> <span class="n">Pipeline</span>
+
+<span class="k">class</span> <span class="nc">my_filter</span><span class="p">(</span><span class="n">Filter</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;train&quot;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">mode</span>
+
+    <span class="k">def</span> <span class="nf">predicate_fn</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">):</span>
+        <span class="c1">#we only use the example when predicate is True</span>
+        <span class="n">predicate</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">greater</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">reduce_sum</span><span class="p">(</span><span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">]),</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">predicate</span>
+
+<span class="n">pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">(</span><span class="o">....</span>
+                    <span class="n">data_filter</span><span class="o">=</span><span class="n">my_filter</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="pipeline-debugging">
+<h3>Pipeline Debugging<a class="headerlink" href="#pipeline-debugging" title="Permalink to this headline">¶</a></h3>
+<p>Once you created your pipeline instace, you can use the <cite>show_batches</cite> method to run the
+pipeline get the outcome in numpy.</p>
+<p>For example, if we want to produce tfrecords first and show two batches of pipeline outcome:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">fastestimator.pipeline.static.preprocess</span> <span class="kn">import</span> <span class="n">Minmax</span><span class="p">,</span> <span class="n">Onehot</span><span class="p">,</span> <span class="n">Reshape</span>
+<span class="kn">from</span> <span class="nn">fastestimator.pipeline.pipeline</span> <span class="kn">import</span> <span class="n">Pipeline</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+
+<span class="p">(</span><span class="n">x_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">),</span> <span class="p">(</span><span class="n">x_test</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">datasets</span><span class="o">.</span><span class="n">mnist</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span>
+
+<span class="n">pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">(</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+                    <span class="n">feature_name</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">],</span>
+                    <span class="n">train_data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="n">x_train</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="n">y_train</span><span class="p">},</span>
+                    <span class="n">transform_train</span><span class="o">=</span> <span class="p">[[</span><span class="n">Reshape</span><span class="p">([</span><span class="mi">28</span><span class="p">,</span><span class="mi">28</span><span class="p">,</span><span class="mi">1</span><span class="p">]),</span> <span class="n">Minmax</span><span class="p">()],</span>
+                                      <span class="p">[</span><span class="n">Onehot</span><span class="p">(</span><span class="mi">10</span><span class="p">)]])</span>
+<span class="n">data</span><span class="o">=</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">show_batches</span><span class="p">(</span><span class="n">num_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If we want to use existing tfrecords and show the outcome of pipleine, we can get rid of
+<code class="docutils literal notranslate"><span class="pre">train_data</span></code> and provide the tfrecords path in <code class="docutils literal notranslate"><span class="pre">show_batches</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">fastestimator.pipeline.static.preprocess</span> <span class="kn">import</span> <span class="n">Minmax</span><span class="p">,</span> <span class="n">Onehot</span><span class="p">,</span> <span class="n">Reshape</span>
+<span class="kn">from</span> <span class="nn">fastestimator.pipeline.pipeline</span> <span class="kn">import</span> <span class="n">Pipeline</span>
+
+<span class="n">pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">(</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+                    <span class="n">feature_name</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">],</span>
+                    <span class="n">transform_train</span><span class="o">=</span> <span class="p">[[</span><span class="n">Reshape</span><span class="p">([</span><span class="mi">28</span><span class="p">,</span><span class="mi">28</span><span class="p">,</span><span class="mi">1</span><span class="p">]),</span> <span class="n">Minmax</span><span class="p">()],</span>
+                                      <span class="p">[</span><span class="n">Onehot</span><span class="p">(</span><span class="mi">10</span><span class="p">)]])</span>
+<span class="n">data</span><span class="o">=</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">show_batches</span><span class="p">(</span><span class="n">inputs</span><span class="o">=</span><span class="s2">&quot;/your/tfrecord/path&quot;</span><span class="p">,</span> <span class="n">num_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="network">
+<h2>Network<a class="headerlink" href="#network" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id2">
+<h3>Overview<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<p>In FastEstimator, <cite>Network</cite> contains the model architecture and optimization related information.
+User can refer to <a class="reference external" href="https://github.build.ge.com/pages/edisonaitk/fastestimator/api.html#network">network-api</a> to find detail arguments. <cite>Network</cite> arguments have full compatibility
+with <code class="docutils literal notranslate"><span class="pre">tf.keras</span></code>, here’s one example of network :</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">fastestimator.network.network</span> <span class="kn">import</span> <span class="n">Network</span>
+<span class="kn">from</span> <span class="nn">fastestimator.application.lenet</span> <span class="kn">import</span> <span class="n">LeNet</span>
+
+<span class="n">network</span> <span class="o">=</span> <span class="n">Network</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">LeNet</span><span class="p">(</span><span class="n">input_name</span><span class="o">=</span><span class="s2">&quot;x&quot;</span><span class="p">,</span><span class="n">output_name</span><span class="o">=</span><span class="s2">&quot;y&quot;</span><span class="p">),</span>
+                  <span class="n">loss</span><span class="o">=</span><span class="s2">&quot;categorical_crossentropy&quot;</span><span class="p">,</span>
+                  <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;acc&quot;</span><span class="p">],</span>
+                  <span class="n">optimizer</span><span class="o">=</span><span class="s2">&quot;adam&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="model">
+<h3>Model<a class="headerlink" href="#model" title="Permalink to this headline">¶</a></h3>
+<p>model argument takes an uncompiled <code class="docutils literal notranslate"><span class="pre">tf.keras.Model</span></code> instance. In order for pipeline to
+feed data to the correct layer, users have to make sure the Input/Output layer’s name matches
+with pipeline’s feature name.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">fastestimator.pipeline.pipeline</span> <span class="kn">import</span> <span class="n">Pipeline</span>
+<span class="kn">from</span> <span class="nn">fastestimator.network.network</span> <span class="kn">import</span> <span class="n">Network</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+
+<span class="k">def</span> <span class="nf">my_network</span><span class="p">():</span>
+<span class="hll">    <span class="n">input_layer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Input</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;x&quot;</span><span class="p">)</span>
+</span>    <span class="o">.....</span>
+<span class="hll">    <span class="n">output_layer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Dense</span><span class="p">(</span><span class="o">....</span><span class="p">,</span> <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;y&quot;</span><span class="p">)</span>
+</span>    <span class="n">model</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">Model</span><span class="p">(</span><span class="n">inputs</span><span class="o">=</span><span class="n">input_layer</span><span class="p">,</span> <span class="n">outputs</span><span class="o">=</span><span class="n">output_layer</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">model</span>
+
+<span class="hll"><span class="n">pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">(</span><span class="n">feature_name</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">],</span>
+</span>                    <span class="o">...</span><span class="p">)</span>
+
+<span class="hll"><span class="n">network</span> <span class="o">=</span> <span class="n">Network</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">my_network</span><span class="p">(),</span>
+</span>                  <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="loss">
+<h3>Loss<a class="headerlink" href="#loss" title="Permalink to this headline">¶</a></h3>
+<p>All standard <code class="docutils literal notranslate"><span class="pre">tf.keras</span></code> loss functions are supported, in this case, you can simply provide the name of the loss as a string.
+Please refer official <a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/keras/losses">Losses</a> for a complete list of <code class="docutils literal notranslate"><span class="pre">tf.keras</span></code> loss functions.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">network</span> <span class="o">=</span> <span class="n">Network</span><span class="p">(</span><span class="o">...</span><span class="p">,</span>
+                  <span class="n">loss</span><span class="o">=</span><span class="s2">&quot;categorical_crossentropy&quot;</span><span class="p">,</span>
+                  <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>User can also define customized loss by tensorflow.keras:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">tensorflow.keras.backend</span> <span class="kn">as</span> <span class="nn">K</span>
+
+<span class="k">def</span> <span class="nf">rmse_loss</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">):</span>
+    <span class="n">rmse</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">y_true</span> <span class="o">-</span> <span class="n">y_pred</span><span class="p">)))</span>
+    <span class="k">return</span> <span class="n">rmse</span>
+
+<span class="n">network</span> <span class="o">=</span> <span class="n">Network</span><span class="p">(</span><span class="o">...</span><span class="p">,</span>
+                  <span class="n">loss</span><span class="o">=</span><span class="n">rmse_loss</span><span class="p">,</span>
+                  <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="metrics">
+<h3>Metrics<a class="headerlink" href="#metrics" title="Permalink to this headline">¶</a></h3>
+<p>Metrics also work similarly to loss. For standard Keras metrics (e.g., accuracy), you can simply specify the name of metric(s) in a list.
+Please refer official <a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/keras/metrics">Metrics</a> for a complete list of metric functions.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">network</span> <span class="o">=</span> <span class="n">Network</span><span class="p">(</span><span class="o">...</span><span class="p">,</span>
+                  <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;acc&quot;</span><span class="p">],</span>
+                  <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>User can also define customized metrics by tensorflow.keras:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">tensorflow.keras.backend</span> <span class="kn">as</span> <span class="nn">K</span>
+
+<span class="k">def</span> <span class="nf">dice</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">):</span>
+    <span class="n">intersection</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">y_true</span> <span class="o">*</span> <span class="n">y_pred</span><span class="p">)</span>
+    <span class="n">coef</span> <span class="o">=</span> <span class="p">(</span><span class="mf">2.</span> <span class="o">*</span> <span class="n">intersection</span> <span class="o">+</span> <span class="mf">1.</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">y_true</span><span class="p">)</span> <span class="o">+</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">y_pred</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1.</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">coef</span>
+
+<span class="n">network</span> <span class="o">=</span> <span class="n">Network</span><span class="p">(</span><span class="o">....</span>
+                <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="n">dice</span><span class="p">],</span>
+                <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="optimizer">
+<h3>Optimizer<a class="headerlink" href="#optimizer" title="Permalink to this headline">¶</a></h3>
+<p>FastEstimator is compatible with optimizers from <code class="docutils literal notranslate"><span class="pre">tf.keras.optimizer</span></code>, please refer to <a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/keras/optimizers">Optimizers</a>
+for a compelete list of optimizers. One can simply use string with default optimizer settings:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">network</span> <span class="o">=</span> <span class="n">Network</span><span class="p">(</span><span class="o">...</span><span class="p">,</span>
+                  <span class="n">optimizer</span><span class="o">=</span><span class="s2">&quot;adam&quot;</span><span class="p">,</span>
+                  <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Users can also pass an optimizer instance with custom settings:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">network</span> <span class="o">=</span> <span class="n">Network</span><span class="p">(</span><span class="o">...</span><span class="p">,</span>
+                  <span class="n">optimizer</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">optimizers</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">lr</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">beta_1</span><span class="o">=</span><span class="mf">0.95</span><span class="p">),</span>
+                  <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="model-save-path">
+<h3>Model Save Path<a class="headerlink" href="#model-save-path" title="Permalink to this headline">¶</a></h3>
+<p>In FastEstimator, model artifacts will be saved in a random path in <cite>/tmp</cite> by default.
+If user wants to save model to a specific directory, simply pass the directory to the <code class="docutils literal notranslate"><span class="pre">model_dir</span></code>:
+Once network instance is created, user can access the saving path by <code class="docutils literal notranslate"><span class="pre">network.model_dir</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">network</span> <span class="o">=</span> <span class="n">Network</span><span class="p">(</span><span class="o">...</span><span class="p">,</span>
+                  <span class="n">model_dir</span><span class="o">=</span><span class="s2">&quot;/home/model&quot;</span><span class="p">,</span>
+                  <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="estimator">
+<h2>Estimator<a class="headerlink" href="#estimator" title="Permalink to this headline">¶</a></h2>
+<p>In FastEstimator, the <cite>Estimator</cite> stores information about the optimization process. It
+takes both <cite>pipeline</cite> and <cite>network</cite> as input, configures them properly for different training
+settings. Next, we show several places where user can customize the training loop.</p>
+<div class="section" id="callbacks">
+<h3>Callbacks<a class="headerlink" href="#callbacks" title="Permalink to this headline">¶</a></h3>
+<p>Users can use all callbacks in <code class="docutils literal notranslate"><span class="pre">tf.keras.callbacks</span></code> except for three:</p>
+<ul class="simple">
+<li><cite>LearningRateScheduler</cite>: Use <code class="docutils literal notranslate"><span class="pre">fastestimator.estimator.callbacks.LearningRateScheduler</span></code></li>
+<li><cite>ReduceLROnPlateau</cite>: Use <code class="docutils literal notranslate"><span class="pre">fastestimator.estimator.callbacks.ReduceLROnPlateau</span></code></li>
+<li><cite>EarlyStopping</cite>: Use <code class="docutils literal notranslate"><span class="pre">fastestimator.estimator.callbacks.EarlyStopping</span></code></li>
+</ul>
+<p>For other callbacks, please refer to <a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/keras/callbacks">Callbacks</a> in Tensorflow Keras. Next, we present an example of using
+callbacks in FastEstimator:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">fastestimator.estimator.callbacks</span> <span class="kn">import</span> <span class="n">LearningRateScheduler</span><span class="p">,</span> <span class="n">EarlyStopping</span>
+<span class="kn">from</span> <span class="nn">fastestimator.network.lrscheduler</span> <span class="kn">import</span> <span class="n">CyclicScheduler</span>
+<span class="kn">from</span> <span class="nn">fastestimator.estimator.estimator</span> <span class="kn">import</span> <span class="n">Estimator</span>
+<span class="kn">from</span> <span class="nn">tensorflow.keras.callbacks</span> <span class="kn">import</span> <span class="n">TensorBoard</span>
+
+<span class="n">callbacks</span> <span class="o">=</span> <span class="p">[</span><span class="n">LearningRateScheduler</span><span class="p">(</span><span class="n">schedule</span><span class="o">=</span><span class="n">CyclicScheduler</span><span class="p">()),</span>
+             <span class="n">EarlyStopping</span><span class="p">(</span><span class="n">patience</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
+             <span class="n">TensorBoard</span><span class="p">()]</span>
+
+<span class="n">estimator</span> <span class="o">=</span> <span class="n">Estimator</span><span class="p">(</span><span class="o">...</span><span class="p">,</span>
+                      <span class="n">callbacks</span><span class="o">=</span><span class="n">callbacks</span><span class="p">,</span>
+                      <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="custom-steps">
+<h3>Custom Steps<a class="headerlink" href="#custom-steps" title="Permalink to this headline">¶</a></h3>
+<p>By default, the number of training steps and validation steps for each epoch is calculated as:</p>
+<ul class="simple">
+<li>steps_per_epoch = num_examples / batch_size / num_process</li>
+<li>validation_steps = num_examples / batch_size</li>
+</ul>
+<p>where <cite>num_process</cite> is the number of parallel training processes, in multi-GPU training, it is the number of GPUs.
+User can override the number of training and validation steps in the Estimator:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">estimator</span> <span class="o">=</span> <span class="n">Estimator</span><span class="p">(</span><span class="o">...</span><span class="p">,</span>
+                      <span class="n">steps_per_epoch</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                      <span class="n">validation_steps</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                      <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="logging-configuration">
+<h3>Logging Configuration<a class="headerlink" href="#logging-configuration" title="Permalink to this headline">¶</a></h3>
+<p>During trainig, the training logs will appear every 100 steps as default, users can change
+the logging interval through <code class="docutils literal notranslate"><span class="pre">log_steps</span></code> argument, for example, if we want the log to appear every 10 steps:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">estimator</span> <span class="o">=</span> <span class="n">Estimator</span><span class="p">(</span><span class="o">...</span><span class="p">,</span>
+                      <span class="n">log_steps</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+                      <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The training speed may decrease if the logging interval is too small.</p>
+</div>
+</div>
+<div class="section" id="other-utility-functions">
+<h2>Other Utility Functions<a class="headerlink" href="#other-utility-functions" title="Permalink to this headline">¶</a></h2>
+<p>Outside of core API, FastEstimator offers some useful utilify functions that can be used independently.</p>
+<div class="section" id="tfrecorder">
+<h3>TFRecorder<a class="headerlink" href="#tfrecorder" title="Permalink to this headline">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">fastestimator.util.tfrecord.TFRecorder</span></code> can help you easily create tfrecord from any data.
+The usage of TFRecorder is very similar to <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">fastestimator.pipeline.dynamic.preprocess</span> <span class="kn">import</span> <span class="n">Resize</span><span class="p">,</span> <span class="n">Minmax</span>
+<span class="kn">from</span> <span class="nn">fastestimator.util.tfrecord</span> <span class="kn">import</span> <span class="n">TFRecorder</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+
+<span class="p">(</span><span class="n">x_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">),</span> <span class="p">(</span><span class="n">x_test</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">datasets</span><span class="o">.</span><span class="n">mnist</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span>
+
+<span class="n">tfrecorder</span> <span class="o">=</span> <span class="n">TFRecorder</span><span class="p">(</span><span class="n">feature_name</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">],</span>
+                        <span class="n">train_data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="n">x_train</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="n">y_train</span><span class="p">},</span>
+                        <span class="n">validation_data</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span>
+                        <span class="n">transform_dataset</span><span class="o">=</span><span class="p">[[</span><span class="n">Resize</span><span class="p">([</span><span class="mi">50</span><span class="p">,</span><span class="mi">50</span><span class="p">]),</span> <span class="n">Minmax</span><span class="p">()],</span>
+                                            <span class="p">[]])</span>
+<span class="n">tfrecorder</span><span class="o">.</span><span class="n">create_tfrecord</span><span class="p">(</span><span class="n">save_dir</span><span class="o">=</span><span class="s2">&quot;/home/data&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="add-summary">
+<h3>add_summary<a class="headerlink" href="#add-summary" title="Permalink to this headline">¶</a></h3>
+<p>While creating tfrecords, both TFRecorder or FastEstimator produce a summary file that is required for training.
+If you have previously built tfrecords outside of FastEstimator or TFRecorder, you can use <code class="docutils literal notranslate"><span class="pre">add_summary</span></code>
+to create the summary file for training.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">fastestimator.util.tfrecord</span> <span class="kn">import</span> <span class="n">add_summary</span><span class="p">,</span> <span class="n">get_features</span>
+
+<span class="c1"># First, get feature name and related information</span>
+<span class="k">print</span><span class="p">(</span><span class="n">get_features</span><span class="p">(</span><span class="s2">&quot;/data/data/Xray/chestfrontal/chestfrontal_train_0000.tfrecords&quot;</span><span class="p">))</span>
+
+<span class="c1"># Next, fill in the required field</span>
+<span class="n">add_summary</span><span class="p">(</span><span class="n">data_dir</span><span class="o">=</span><span class="s2">&quot;/data/data/Xray/chestfrontal&quot;</span><span class="p">,</span>
+            <span class="n">train_prefix</span><span class="o">=</span><span class="s2">&quot;chestfrontal_train&quot;</span><span class="p">,</span>
+            <span class="n">eval_prefix</span><span class="o">=</span> <span class="s2">&quot;chestfrontal_val&quot;</span><span class="p">,</span>
+            <span class="n">feature_name</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;image_raw&quot;</span><span class="p">,</span> <span class="s2">&quot;image_labels&quot;</span><span class="p">],</span>
+            <span class="n">feature_dtype</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;uint8&quot;</span><span class="p">,</span> <span class="s2">&quot;int64&quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="full-code-demo">
+<h2>Full Code Demo<a class="headerlink" href="#full-code-demo" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Image Classification: <a class="reference external" href="https://github.build.ge.com/edisonaitk/public_model/blob/master/classification_mnist/mnist.ipynb">Mnist-Classification</a></li>
+<li>Image Segmentation: <a class="reference external" href="https://github.build.ge.com/edisonaitk/public_model/blob/master/segmentation_cub200/cub200.ipynb">Cub200-Segmentation</a></li>
+<li>Natural Language Processing: <a class="reference external" href="https://github.build.ge.com/edisonaitk/public_model/blob/master/sentiment_classification_imdb/imdb.ipynb">IMDB-Review</a></li>
+</ul>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="train.html" class="btn btn-neutral float-right" title="How to train with FastEstimator" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="install.html" class="btn btn-neutral" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, GEHC DataScience
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+
+  
+
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

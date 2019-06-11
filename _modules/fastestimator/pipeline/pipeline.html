@@ -1,0 +1,488 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>fastestimator.pipeline.pipeline &mdash; FastEstimator 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+
+  
+  <script src="../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> FastEstimator
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../model.html">Buiding model with FastEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../train.html">How to train with FastEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">FastEstimator API reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">FastEstimator</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>fastestimator.pipeline.pipeline</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for fastestimator.pipeline.pipeline</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">fastestimator.pipeline.static.augmentation</span> <span class="k">import</span> <span class="n">AbstractAugmentation</span> <span class="k">as</span> <span class="n">StaticAugmentation</span>
+<span class="kn">from</span> <span class="nn">fastestimator.util.tfrecord</span> <span class="k">import</span> <span class="n">TFRecorder</span><span class="p">,</span> <span class="n">get_features</span>
+<span class="kn">from</span> <span class="nn">fastestimator.util.util</span> <span class="k">import</span> <span class="n">convert_tf_dtype</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+<span class="kn">import</span> <span class="nn">multiprocessing</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<div class="viewcode-block" id="Pipeline"><a class="viewcode-back" href="../../../api.html#fastestimator.pipeline.pipeline.Pipeline">[docs]</a><span class="k">class</span> <span class="nc">Pipeline</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class representing the data pipeline required for fastestimator</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        batch_size: Integer representing the batch size for training model</span>
+<span class="sd">        feature_name: List of strings representing the feature names in the data (headers in csv, keys in dictionary</span>
+<span class="sd">            or features in TFRecords)</span>
+<span class="sd">        transform_train: List of lists of tensor transformations to be performed sequentially on the corresponding</span>
+<span class="sd">            features.</span>
+<span class="sd">        transform_dataset: List of lists of numpy transformations to be performed sequentially  on the raw data</span>
+<span class="sd">            before the TFRecords are made.</span>
+<span class="sd">        train_data: Training dataset in the form of dictionary containing numpy data, or csv file (with file</span>
+<span class="sd">            paths or data)</span>
+<span class="sd">        validation_data: Validation data in the form of dictionary containing numpy data, or csv file, or fraction</span>
+<span class="sd">            of training data to be sequestered for validation during training</span>
+<span class="sd">        data_filter: Filtering to be performed on the corresponding features in the form of an object from the Filter class</span>
+<span class="sd">        shuffle_buffer: buffer size for the shuffling, it can affect the memory consumption during training. default is &#39;auto&#39;.</span>
+<span class="sd">        **kwargs: Additional arguments to be forwarded for the creation of TFRecords.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">batch_size</span><span class="p">,</span>
+                 <span class="n">feature_name</span><span class="p">,</span>
+                 <span class="n">transform_train</span><span class="p">,</span>
+                 <span class="n">transform_dataset</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">train_data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">validation_data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">data_filter</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">shuffle_buffer</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">=</span> <span class="n">batch_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">train_data</span> <span class="o">=</span> <span class="n">train_data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">feature_name</span> <span class="o">=</span> <span class="n">feature_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">transform_train</span> <span class="o">=</span> <span class="n">transform_train</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">transform_dataset</span> <span class="o">=</span> <span class="n">transform_dataset</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span> <span class="o">=</span> <span class="n">validation_data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_filter</span> <span class="o">=</span> <span class="n">data_filter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shuffle_buffer</span> <span class="o">=</span> <span class="n">shuffle_buffer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span> <span class="o">=</span> <span class="n">kwargs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_process</span> <span class="o">=</span> <span class="mi">1</span> <span class="c1">#change later by mpi</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_local_process</span> <span class="o">=</span> <span class="mi">1</span> <span class="c1">#change later by mpi</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">=</span> <span class="mi">0</span> <span class="c1">#change later by mpi</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">local_rank</span> <span class="o">=</span> <span class="mi">0</span> <span class="c1">#change later by mpi</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">decode_type</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1">#change later by tfrecord config</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_names</span> <span class="o">=</span> <span class="p">[]</span> <span class="c1">#change later by network</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_names</span> <span class="o">=</span> <span class="p">[]</span> <span class="c1">#change later by network</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compression</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_length</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;train&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;eval&quot;</span><span class="p">:</span><span class="mi">1</span><span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">_prepare</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Prepares raw data and converts to TFRecords</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            inputs: Input directory where TFRecords exist</span>
+
+<span class="sd">        Returns:</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span> <span class="o">=</span> <span class="n">inputs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_subprocess</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span><span class="o">//</span><span class="bp">self</span><span class="o">.</span><span class="n">num_local_process</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_data</span><span class="p">:</span>
+            <span class="n">tfrecorder</span> <span class="o">=</span> <span class="n">TFRecorder</span><span class="p">(</span><span class="n">train_data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">train_data</span><span class="p">,</span>
+                                    <span class="n">feature_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_name</span><span class="p">,</span> 
+                                    <span class="n">transform_dataset</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">transform_dataset</span><span class="p">,</span> 
+                                    <span class="n">validation_data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span><span class="p">,</span>
+                                    <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">tfrecorder</span><span class="o">.</span><span class="n">rank</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span>
+            <span class="n">tfrecorder</span><span class="o">.</span><span class="n">local_rank</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_rank</span>
+            <span class="n">tfrecorder</span><span class="o">.</span><span class="n">num_process</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_process</span>
+            <span class="n">tfrecorder</span><span class="o">.</span><span class="n">num_subprocess</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_subprocess</span>
+            <span class="n">tfrecorder</span><span class="o">.</span><span class="n">edit_feature</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">edit_feature</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span> <span class="o">=</span> <span class="n">tfrecorder</span><span class="o">.</span><span class="n">create_tfrecord</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_process</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">horovod.tensorflow.keras</span> <span class="k">as</span> <span class="nn">hvd</span>
+            <span class="n">hvd</span><span class="o">.</span><span class="n">allreduce</span><span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Barrier&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_get_tfrecord_config</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inputs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_tfrecord_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_dir</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read TFRecords using summary files</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            data_dir: Input directory where TFRecords exist</span>
+
+<span class="sd">        Returns:</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">json_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.json&quot;</span><span class="p">)]</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">json_files</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;Cannot find .json file in </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">data_dir</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file_names</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;train&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;eval&quot;</span><span class="p">:</span> <span class="p">[]}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_examples</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;train&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;eval&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
+        <span class="k">for</span> <span class="n">json_file</span> <span class="ow">in</span> <span class="n">json_files</span><span class="p">:</span>
+            <span class="n">summary</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">json_file</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">))</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">decode_type</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">decode_type</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span><span class="n">dtype</span> <span class="k">for</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">dtype</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">summary</span><span class="p">[</span><span class="s2">&quot;feature_name&quot;</span><span class="p">],</span> <span class="n">summary</span><span class="p">[</span><span class="s2">&quot;feature_dtype&quot;</span><span class="p">])}</span>
+                <span class="k">if</span> <span class="s2">&quot;compression&quot;</span> <span class="ow">in</span> <span class="n">summary</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">compression</span> <span class="o">=</span> <span class="n">summary</span><span class="p">[</span><span class="s2">&quot;compression&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="s2">&quot;eval_files&quot;</span> <span class="ow">in</span> <span class="n">summary</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">file_names</span><span class="p">[</span><span class="s2">&quot;eval&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">summary</span><span class="p">[</span><span class="s2">&quot;eval_files&quot;</span><span class="p">]])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">num_examples</span><span class="p">[</span><span class="s2">&quot;eval&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">summary</span><span class="p">[</span><span class="s2">&quot;num_eval_examples&quot;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">file_names</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">summary</span><span class="p">[</span><span class="s2">&quot;train_files&quot;</span><span class="p">]])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_examples</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">summary</span><span class="p">[</span><span class="s2">&quot;num_train_examples&quot;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">keys_to_features</span> <span class="o">=</span> <span class="n">get_features</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file_names</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">compression</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">compression</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file_names</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">])</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_local_process</span><span class="p">,</span> <span class="s2">&quot;number of training file per local process should at least be 1&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;FastEstimator: Found </span><span class="si">%d</span><span class="s2"> examples for training and </span><span class="si">%d</span><span class="s2"> for validation in </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_examples</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_examples</span><span class="p">[</span><span class="s2">&quot;eval&quot;</span><span class="p">],</span> <span class="n">data_dir</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_input_source</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Prepares data from TFRecords for input into the model</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            mode: Mode for training (&quot;train&quot;, &quot;eval&quot; or &quot;both&quot;)</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dataset object containing the batch of tensors to be ingested by the model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">filenames</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_names</span><span class="p">[</span><span class="n">mode</span><span class="p">]</span>
+        <span class="n">dataset</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">Dataset</span><span class="o">.</span><span class="n">from_tensor_slices</span><span class="p">(</span><span class="n">filenames</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;train&quot;</span><span class="p">:</span>
+            <span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">shard</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_local_process</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_rank</span><span class="p">)</span>
+            <span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">filenames</span><span class="p">))</span>
+        <span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">interleave</span><span class="p">(</span><span class="k">lambda</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">tf</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">TFRecordDataset</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">compression_type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">compression</span><span class="p">),</span> <span class="n">cycle_length</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">num_subprocess</span><span class="p">,</span> <span class="n">block_length</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">block_length</span><span class="p">[</span><span class="n">mode</span><span class="p">])</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shuffle_buffer</span> <span class="o">==</span> <span class="s2">&quot;auto&quot;</span><span class="p">:</span>
+            <span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">experimental</span><span class="o">.</span><span class="n">shuffle_and_repeat</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="mi">10000</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_examples</span><span class="p">[</span><span class="n">mode</span><span class="p">])))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">experimental</span><span class="o">.</span><span class="n">shuffle_and_repeat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shuffle_buffer</span><span class="p">))</span>
+        <span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">dataset</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_and_decode</span><span class="p">(</span><span class="n">dataset</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_filter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_filter</span><span class="o">.</span><span class="n">mode</span> <span class="ow">in</span> <span class="p">[</span><span class="n">mode</span><span class="p">,</span> <span class="s2">&quot;both&quot;</span><span class="p">]:</span>
+            <span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">dataset</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_filter</span><span class="o">.</span><span class="n">predicate_fn</span><span class="p">(</span><span class="n">dataset</span><span class="p">))</span>
+        <span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">experimental</span><span class="o">.</span><span class="n">map_and_batch</span><span class="p">(</span><span class="k">lambda</span> <span class="n">dataset</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preprocess_fn</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">mode</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">))</span>
+        <span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">dataset</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_transform</span><span class="p">(</span><span class="n">dataset</span><span class="p">))</span>
+        <span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">dataset</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_split_in_out</span><span class="p">(</span><span class="n">dataset</span><span class="p">))</span>
+        <span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">prefetch</span><span class="p">(</span><span class="n">buffer_size</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">dataset</span>
+
+    <span class="k">def</span> <span class="nf">_preprocess_fn</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">decoded_data</span><span class="p">,</span> <span class="n">mode</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Preprocessing performed on the tensor data in features in the order specified in the transform_train list</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            decoded_data: dataset object containing a dictionary of tensors</span>
+<span class="sd">            mode: Mode for training (&quot;train&quot;, &quot;eval&quot; or &quot;both&quot;)</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dictionary containing the preprocessed data in the form of a dictionary of tensors</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">preprocessed_data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">randomized_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_name</span><span class="p">)):</span>
+            <span class="n">transform_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transform_train</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+            <span class="n">feature_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_name</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+            <span class="n">preprocess_data</span> <span class="o">=</span> <span class="n">decoded_data</span><span class="p">[</span><span class="n">feature_name</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">preprocess_obj</span> <span class="ow">in</span> <span class="n">transform_list</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">preprocess_obj</span><span class="p">,</span> <span class="n">StaticAugmentation</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">preprocess_obj</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">mode</span> <span class="ow">or</span> <span class="n">preprocess_obj</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;both&quot;</span><span class="p">:</span>
+                        <span class="n">preprocess_obj</span><span class="o">.</span><span class="n">height</span> <span class="o">=</span> <span class="n">preprocess_data</span><span class="o">.</span><span class="n">get_shape</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">value</span>
+                        <span class="n">preprocess_obj</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="n">preprocess_data</span><span class="o">.</span><span class="n">get_shape</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">value</span>
+                        <span class="n">preprocess_obj</span><span class="o">.</span><span class="n">feature_name</span> <span class="o">=</span> <span class="n">feature_name</span>
+                        <span class="k">if</span> <span class="n">preprocess_obj</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">randomized_list</span><span class="p">:</span>
+                            <span class="n">preprocess_obj</span><span class="o">.</span><span class="n">decoded_data</span> <span class="o">=</span> <span class="n">decoded_data</span>
+                            <span class="n">preprocess_obj</span><span class="o">.</span><span class="n">setup</span><span class="p">()</span>
+                            <span class="n">randomized_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">preprocess_obj</span><span class="p">)</span>
+                        <span class="n">preprocess_data</span> <span class="o">=</span> <span class="n">preprocess_obj</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">preprocess_data</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">preprocess_obj</span><span class="o">.</span><span class="n">feature_name</span> <span class="o">=</span> <span class="n">feature_name</span>
+                    <span class="n">preprocess_data</span> <span class="o">=</span> <span class="n">preprocess_obj</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">preprocess_data</span><span class="p">,</span> <span class="n">decoded_data</span><span class="p">)</span>
+            <span class="n">preprocessed_data</span><span class="p">[</span><span class="n">feature_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">preprocess_data</span>
+        <span class="k">return</span> <span class="n">preprocessed_data</span>
+
+<div class="viewcode-block" id="Pipeline.final_transform"><a class="viewcode-back" href="../../../api.html#fastestimator.pipeline.pipeline.Pipeline.final_transform">[docs]</a>    <span class="k">def</span> <span class="nf">final_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">preprocessed_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Can be overloaded to change tensors in any manner</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            preprocessed_data: Batch of training data as a tf.data object</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A dictionary of tensor data in the form of a tf.data object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">preprocessed_data</span></div>
+
+<div class="viewcode-block" id="Pipeline.edit_feature"><a class="viewcode-back" href="../../../api.html#fastestimator.pipeline.pipeline.Pipeline.edit_feature">[docs]</a>    <span class="k">def</span> <span class="nf">edit_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">feature</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Can be overloaded to change raw data dictionary in any manner</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            feature: Dictionary containing the raw data</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dictionary containing raw data to be stored in TFRecords</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">feature</span></div>
+
+    <span class="k">def</span> <span class="nf">_split_in_out</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">preprocessed_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Assigns features as input or output to the model</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            preprocessed_data: Dictionary of tensors that the model takes</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Input and output dictionaries of tensors that the model takes</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_names</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_names</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">preprocessed_data</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">features</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">targets</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">feature</span> <span class="ow">in</span> <span class="n">preprocessed_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">feature</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_names</span><span class="p">:</span>
+                    <span class="n">features</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span> <span class="o">=</span> <span class="n">preprocessed_data</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">feature</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_names</span><span class="p">:</span>
+                    <span class="n">targets</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span> <span class="o">=</span> <span class="n">preprocessed_data</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">features</span><span class="p">,</span> <span class="n">targets</span>
+
+<div class="viewcode-block" id="Pipeline.read_and_decode"><a class="viewcode-back" href="../../../api.html#fastestimator.pipeline.pipeline.Pipeline.read_and_decode">[docs]</a>    <span class="k">def</span> <span class="nf">read_and_decode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reads and decodes the string data from TFRecords</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            dataset: Dataset consisting of encoded data from TFRecords</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dictionary of decoded data</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">decoded_data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">all_data</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">parse_single_example</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">features</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">keys_to_features</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">feature</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_name</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">all_data</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span>
+            <span class="k">if</span> <span class="s2">&quot;string&quot;</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;string&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">decode_type</span><span class="p">[</span><span class="n">feature</span><span class="p">]:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">decode_raw</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">convert_tf_dtype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">decode_type</span><span class="p">[</span><span class="n">feature</span><span class="p">]))</span>
+            <span class="k">if</span> <span class="s2">&quot;int&quot;</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span><span class="p">):</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">decode_type</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;string&quot;</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="n">decoded_data</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="k">return</span> <span class="n">decoded_data</span></div>
+
+<div class="viewcode-block" id="Pipeline.show_batches"><a class="viewcode-back" href="../../../api.html#fastestimator.pipeline.pipeline.Pipeline.show_batches">[docs]</a>    <span class="k">def</span> <span class="nf">show_batches</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="n">inputs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">num_batches</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Shows batches of tensor data in numpy</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            mode: Mode for training (&quot;train&quot;, &quot;eval&quot; or &quot;both&quot;)</span>
+<span class="sd">            inputs: Directory for saving TFRecords</span>
+<span class="sd">            num_batches: Number of batches to show</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A dictionary containing the batches numpy data with corresponding keys</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">np_data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_subprocess</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span><span class="o">//</span><span class="bp">self</span><span class="o">.</span><span class="n">num_local_process</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_data</span><span class="p">:</span>
+            <span class="n">tfrecorder</span> <span class="o">=</span> <span class="n">TFRecorder</span><span class="p">(</span><span class="n">train_data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">train_data</span><span class="p">,</span>
+                                    <span class="n">feature_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_name</span><span class="p">,</span> 
+                                    <span class="n">transform_dataset</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">transform_dataset</span><span class="p">,</span> 
+                                    <span class="n">validation_data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span><span class="p">,</span>
+                                    <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">tfrecorder</span><span class="o">.</span><span class="n">edit_feature</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">edit_feature</span>
+            <span class="n">tfrecorder</span><span class="o">.</span><span class="n">create_tfrecord</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+            <span class="n">inputs</span> <span class="o">=</span> <span class="n">tfrecorder</span><span class="o">.</span><span class="n">save_dir</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">inputs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;Must specify the data path when using existing tfrecords&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_get_tfrecord_config</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="n">dataset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_source</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+        <span class="n">iterator</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">make_one_shot_iterator</span><span class="p">()</span>
+        <span class="n">data_tensor</span> <span class="o">=</span> <span class="n">iterator</span><span class="o">.</span><span class="n">get_next</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">data_tensor</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">np_data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span> <span class="k">as</span> <span class="n">sess</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_batches</span><span class="p">):</span>
+                <span class="n">np_batch</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">data_tensor</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">data_tensor</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="n">np_data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np_batch</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">np_data</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, GEHC DataScience
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    
+
+  
+
+  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
