@@ -252,5 +252,5 @@ class Reshape(AbstractPreprocessing):
         Returns:
             Reshaped array
         """
-        data = tf.reshape(data, self.shape)
+        data = np.reshape(data, self.shape)
         return data
