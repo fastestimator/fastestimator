@@ -114,13 +114,13 @@ class Pipeline:
         assert len(self.file_names["train"]) >= self.num_local_process, "number of training file per local process should at least be 1"
         if self.local_rank == 0:
             print("FastEstimator: Found %d examples for training and %d for validation in %s" %(self.num_examples["train"], self.num_examples["eval"], data_dir))
-    
-    def _input_source(self, mode):
+
+    def _input_stream(self, mode):
         """
-        Prepares data from TFRecords for input into the model
+        Prepares data from TFRecords for streaming input
 
         Args:
-            mode: Mode for training ("train", "eval" or "both")
+            mode: Mode for current pipeline ("train", "eval" or "both")
 
         Returns:
             Dataset object containing the batch of tensors to be ingested by the model
@@ -131,50 +131,86 @@ class Pipeline:
             dataset = dataset.shard(self.num_local_process, self.local_rank)
             dataset = dataset.shuffle(len(filenames))
         dataset = dataset.interleave(lambda dataset: tf.data.TFRecordDataset(dataset, compression_type=self.compression), cycle_length=self.num_subprocess, block_length=self.block_length[mode])
-        dataset = dataset.shuffle(min(10000, self.num_examples[mode]))
-        dataset = dataset.repeat()
+        if mode == "train":
+            dataset = dataset.shuffle(min(10000, self.num_examples[mode]))
+            dataset = dataset.repeat()
         dataset = dataset.map(lambda dataset: self.read_and_decode(dataset), num_parallel_calls=self.num_subprocess)
         if self.data_filter is not None and self.data_filter.mode in [mode, "both"]:
             dataset = dataset.filter(lambda dataset: self.data_filter.predicate_fn(dataset))
-        # dataset = dataset.map(lambda dataset: self._preprocess_fn(dataset, mode), num_parallel_calls=self.num_subprocess)
         dataset = dataset.batch(self.batch_size)
-        # dataset = dataset.map(lambda dataset: self.final_transform(dataset), num_parallel_calls=self.num_subprocess)
         dataset = dataset.prefetch(buffer_size=1)
         return dataset
 
-    def _preprocess_fn(self, decoded_data, mode):
-        """
-        Preprocessing performed on the tensor data in features in the order specified in the transform_train list
-
+    def _input_source(self, mode):
+        """Package the data from tfrecord to model
+        
         Args:
-            decoded_data: dataset object containing a dictionary of tensors
-            mode: Mode for training ("train", "eval" or "both")
-
+            mode (str): mode for current pipeline ("train", "eval" or "both")
+        
         Returns:
-            Dictionary containing the preprocessed data in the form of a dictionary of tensors
+            Iterator: An iterator that can provide a streaming of processed data
         """
-        preprocessed_data = {}
-        randomized_list = []
-        for idx in range(len(self.feature_name)):
-            transform_list = self.transform_train[idx]
-            feature_name = self.feature_name[idx]
-            preprocess_data = decoded_data[feature_name]
-            for preprocess_obj in transform_list:
-                if isinstance(preprocess_obj, AbstractAugmentation):
-                    if preprocess_obj.mode == mode or preprocess_obj.mode == "both":
-                        preprocess_obj.height = preprocess_data.get_shape()[0].value
-                        preprocess_obj.width = preprocess_data.get_shape()[1].value
-                        preprocess_obj.feature_name = feature_name
-                        if preprocess_obj not in randomized_list:
-                            preprocess_obj.decoded_data = decoded_data
-                            preprocess_obj.setup()
-                            randomized_list.append(preprocess_obj)
-                        preprocess_data = preprocess_obj.transform(preprocess_data)
-                else:
-                    preprocess_obj.feature_name = feature_name
-                    preprocess_data = preprocess_obj.transform(preprocess_data, decoded_data)
-            preprocessed_data[feature_name] = preprocess_data
-        return preprocessed_data
+        dataset = self._input_stream(mode)
+        for batch_data in dataset:
+            preprocessed_batch = []
+            #consider parallelization of following loop
+            for example_idx in range(self.batch_size):
+                preprocessed_data = {}
+                decoded_data = self._get_dict_slice(batch_data, example_idx)
+                randomized_list = []
+                for idx in range(len(self.feature_name)):
+                    transform_list = self.transform_train[idx]
+                    feature_name = self.feature_name[idx]
+                    preprocess_data = decoded_data[feature_name]
+                    for preprocess_obj in transform_list:
+                        if isinstance(preprocess_obj, AbstractAugmentation):
+                            if preprocess_obj.mode == mode or preprocess_obj.mode == "both":
+                                preprocess_obj.height = preprocess_data.shape[0]
+                                preprocess_obj.width = preprocess_data.shape[1]
+                                preprocess_obj.feature_name = feature_name
+                                if preprocess_obj not in randomized_list:
+                                    preprocess_obj.decoded_data = decoded_data
+                                    preprocess_obj.setup()
+                                    randomized_list.append(preprocess_obj)
+                                preprocess_data = preprocess_obj.transform(preprocess_data)
+                        else:
+                            preprocess_obj.feature_name = feature_name
+                            preprocess_data = preprocess_obj.transform(preprocess_data, decoded_data)
+                    preprocessed_data[feature_name] = preprocess_data
+                preprocessed_data = self.final_transform(preprocessed_data)
+                preprocessed_batch.append(preprocessed_data)
+            processed_batch_data = self._combine_dict(preprocessed_batch)
+            yield processed_batch_data
+
+    def _combine_dict(self, dict_list):
+        """combine same key of multiple dictionaries list into one dictinoary
+        
+        Args:
+            dict_list (list): list of dictionaries
+        
+        Returns:
+            dict: combined dictionary
+        """
+        combined_batch = {}
+        for feature in dict_list[0].keys():
+            combined_batch[feature] = np.array(list(d[feature] for d in dict_list))
+        return combined_batch
+        
+    def _get_dict_slice(self, dictionary, index):
+        """slice a dictionary for each key and return the sliced dictionary
+        
+        Args:
+            dictionary (dict): original dictionary
+            index (int): slice index
+        
+        Returns:
+            dict: sliced dictionary with same key as original dictionary
+        """
+        feature_slice = dict()
+        keys = dictionary.keys()
+        for key in keys:
+            feature_slice[key] = dictionary[key][index]
+        return feature_slice
 
     def final_transform(self, preprocessed_data):
         """
@@ -282,11 +318,9 @@ class Pipeline:
         else:
             assert inputs is not None, "Must specify the data path when using existing tfrecords"
         self._get_tfrecord_config(inputs)
-        dataset = self._input_source(mode)
-        it = iter(dataset.take(num_steps))
-        next(it)
+        it = self._input_source(mode)
         start = time.time()
-        for i, example in enumerate(it):
+        for i, _ in enumerate(it):
             if i % log_interval == 0 and i >0:
                 duration = time.time() - start
                 example_per_sec = log_interval * self.batch_size / duration
