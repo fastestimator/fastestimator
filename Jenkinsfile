@@ -9,6 +9,7 @@ pipeline {
     }
     stage('Test') {
         steps {
+            sh '. venv/bin/activate'
             sh 'python3 -m pytest'
         }
     }
