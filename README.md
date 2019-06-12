@@ -8,13 +8,10 @@ FastEstimator is a high-level deep learning API. With the help of FastEstimator,
 * Horovod (Only needed for distributed training)
 
 ## Installation
-1. Download [FastEstimator](https://github.build.ge.com/edisonaitk/fastestimator/archive/v0.2.zip)
-2. `pip install fastestimator-0.2.zip`
+`pip install fastestimator`
 
 ## Docker
 Docker container creates isolated virtual environment that shares resources with host machine. Docker provides an easy way to set up FastEstimator running environment, users can either build from dockerfile or pull from [Docker Hub](https://hub.docker.com/r/fastestimator/fastestimator/tags).
-
-___current docker image only provides FastEstimator dependencies, users need to install FastEstimator inside the container until opensource.___
 
 ### Build Image from docker file
 * GPU: `docker build -t fastestimator_gpu -f docker/Dockerfile.gpu`
@@ -28,9 +25,9 @@ ___current docker image only provides FastEstimator dependencies, users need to 
 ```
 $ fastestimator train --entry_point tutorial/mnist.py
 ```
-* Windows:
+* Windows, macOS and Linux:
 
-    check out this [notebook](https://github.build.ge.com/edisonaitk/fastestimator/blob/master/tutorial/mnist.ipynb)
+    check out this [notebook](https://github.com/fastestimator/fastestimator/blob/r0.2/tutorial/mnist.ipynb)
 
 ## Tests
 ```
@@ -38,7 +35,7 @@ $ ./fastestimator/test/tests.sh
 ```
 
 ## Documentation
-For more info about building models and training, check  out [FastEstimator documentation](https://github.build.ge.com/pages/edisonaitk/fastestimator/)
+For more info about building models and training, check  out [FastEstimator documentation](https://github.com/pages/fastestimator/fastestimator/)
 
 ## License
-[Apache License 2.0](https://github.build.ge.com/edisonaitk/fastestimator/blob/master/LICENSE)
+[Apache License 2.0](https://github.com/fastestimator/fastestimator/blob/master/LICENSE)
