@@ -1,1 +1,1 @@
-pip3 install tensorflow==1.12.0
+pip3 install tensorflow==1.13.1
