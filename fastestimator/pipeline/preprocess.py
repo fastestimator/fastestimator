@@ -1,6 +1,5 @@
 import os
 import numpy as np
-import tensorflow as tf
 
 epsilon = 1e-7
 
@@ -153,11 +152,10 @@ class Minmax(AbstractPreprocessing):
             Normalized numpy array
         """
 
-        data = tf.cast(data, tf.float32)
-        data = tf.math.divide(
-            tf.subtract(data, tf.reduce_min(data)),
-            tf.maximum(
-                tf.subtract(tf.reduce_max(data), tf.reduce_min(data)), epsilon))
+        data = np.float32(data)
+        data_max = np.max(data)
+        data_min = np.min(data)
+        data = (data - data_min) / max(data_max - data_min, epsilon)
         return data
 
 

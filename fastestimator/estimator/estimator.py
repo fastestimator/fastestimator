@@ -77,20 +77,9 @@ class Estimator:
             self.validation_steps = self.pipeline.num_examples["eval"]//self.pipeline.batch_size
 
     def train(self):
-        def _reshape(data, shape):
-            return np.reshape(data, shape)
-
-        def _minmax(data):
-            epsilon = 1e-7
-            data = data.astype(np.float32)
-            data = data - np.reshape(np.min(data, axis=(1,2,3)), (32,1,1,1))
-            data = data / (np.reshape(np.max(data, axis=(1,2,3)), (32,1,1,1)) + epsilon)
-            return data
         start = time.time()
         global_step = 0
         for feature in self.training_fn():
-            feature["x"] = _reshape(feature["x"], shape=(32, 28, 28, 1))
-            feature["x"] = _minmax(feature["x"])
             loss = self.train_step(feature)
             global_step += 1
             if global_step % 100 == 0 and global_step > 0:
@@ -101,7 +90,6 @@ class Estimator:
                 else:
                     loss = loss.numpy()
                 print("step: %d, loss is %s, example/sec is %f" % (global_step, str(loss), example_per_sec))
-                # print("step: %d, example/sec is %f" % (global_step, example_per_sec))
                 start = time.time()
     
     @tf.function
