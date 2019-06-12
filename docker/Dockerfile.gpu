@@ -76,5 +76,6 @@ RUN pip install --no-cache-dir \
     pandas \
     pillow \
     pydicom \
-    simpleitk
+    simpleitk \
+    fastestimator
 
