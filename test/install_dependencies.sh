@@ -5,4 +5,4 @@ if [ ! -d "venv"  ]; then
 fi
 . venv/bin/activate
 
-pip3 install tensorflow==1.13.1
+pip3 install tensorflow==1.13.1 pytest
