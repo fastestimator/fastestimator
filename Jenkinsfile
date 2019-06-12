@@ -4,7 +4,7 @@ pipeline {
   stages {
     stage('Build') {
       steps {
-        sh 'pip3 install -r requirements.txt'
+        sh './test/install_dependencies.sh'
       }
     }
     stage('Test') {
