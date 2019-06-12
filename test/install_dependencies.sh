@@ -6,4 +6,4 @@ fi
 . venv/bin/activate
 
 pip3 install tensorflow==1.13.1 pytest
-pip3 install -e fastestimator
+pip3 install -e fastestimator/fastestimator
