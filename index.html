@@ -1,0 +1,326 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Welcome to FastEstimator’s documentation! &mdash; FastEstimator 0.2 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Installation" href="install.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="#" class="icon icon-home"> FastEstimator
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.2
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model.html">Buiding model with FastEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="train.html">How to train with FastEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">FastEstimator API reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">FastEstimator</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="#">Docs</a> &raquo;</li>
+        
+      <li>Welcome to FastEstimator’s documentation!</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="welcome-to-fastestimator-s-documentation">
+<h1>Welcome to FastEstimator’s documentation!<a class="headerlink" href="#welcome-to-fastestimator-s-documentation" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="install.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="install.html#id1">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="install.html#docker">Docker</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="install.html#build-image-from-docker-file">Build Image from docker file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="install.html#pull-image-from-docker-hub">Pull Image from Docker Hub</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="model.html">Buiding model with FastEstimator</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="model.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model.html#pipeline">Pipeline</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="model.html#id1">Overview</a></li>
+<li class="toctree-l3"><a class="reference internal" href="model.html#preprocess-before-training-loop">Preprocess (before training loop)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="model.html#preprocess-during-training-loop">Preprocess (during training loop)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="model.html#augmentation-during-training-loop">Augmentation (during training loop)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="model.html#data-filter">Data Filter</a></li>
+<li class="toctree-l3"><a class="reference internal" href="model.html#pipeline-debugging">Pipeline Debugging</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="model.html#network">Network</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="model.html#id2">Overview</a></li>
+<li class="toctree-l3"><a class="reference internal" href="model.html#model">Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="model.html#loss">Loss</a></li>
+<li class="toctree-l3"><a class="reference internal" href="model.html#metrics">Metrics</a></li>
+<li class="toctree-l3"><a class="reference internal" href="model.html#optimizer">Optimizer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="model.html#model-save-path">Model Save Path</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="model.html#estimator">Estimator</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="model.html#callbacks">Callbacks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="model.html#custom-steps">Custom Steps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="model.html#logging-configuration">Logging Configuration</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="model.html#other-utility-functions">Other Utility Functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="model.html#tfrecorder">TFRecorder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="model.html#add-summary">add_summary</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="model.html#full-code-demo">Full Code Demo</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="train.html">How to train with FastEstimator</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="train.html#command-line-interface">Command Line Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="train.html#example-1-using-entry-point-only">Example 1: Using entry point only</a></li>
+<li class="toctree-l3"><a class="reference internal" href="train.html#example-2-using-entry-point-with-arguments">Example 2: Using entry point with arguments</a></li>
+<li class="toctree-l3"><a class="reference internal" href="train.html#example-3-using-json-file-as-arguments">Example 3: Using JSON file as arguments</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="train.html#python-console">Python Console</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="train.html#example-4-train-in-python-console">Example 4: Train in python console</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">FastEstimator API reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#pipeline">Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#dynamic-preprocess">Dynamic Preprocess</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#abstractpreprocessing">AbstractPreprocessing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#nrrdreader">NrrdReader</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#imagereader">ImageReader</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#zscore">Zscore</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#minmax">Minmax</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#scale">Scale</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#onehot">Onehot</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#resize">Resize</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#reshape">Reshape</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#static-preprocess">Static Preprocess</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#id1">AbstractPreprocessing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#binarize">Binarize</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#id2">Zscore</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#id3">Minmax</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#id4">Scale</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#id5">Onehot</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#id6">Resize</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#id7">Reshape</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#augmentation">Augmentation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#abstractaugmentation">AbstractAugmentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#id8">Augmentation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#filter">Filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#cyclic-learning-rate">Cyclic Learning Rate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#network">Network</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#estimator">Estimator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#callbacks">Callbacks</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#outputlogger">OutputLogger</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#learningrateupdater">LearningRateUpdater</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#learningratescheduler">LearningRateScheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#reducelronplateau">ReduceLROnPlateau</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#tfrecord-utility-functions">TFRecord Utility Functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#tfrecorder">TFRecorder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#tfrecord-to-np">tfrecord_to_np</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#get-number-of-examples">get_number_of_examples</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#get-features">get_features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#add-summary">add_summary</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="install.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, GE Healthcare
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+
+  
+
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

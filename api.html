@@ -1,0 +1,1616 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>FastEstimator API reference &mdash; FastEstimator 0.2 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="How to train with FastEstimator" href="train.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> FastEstimator
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.2
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model.html">Buiding model with FastEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="train.html">How to train with FastEstimator</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">FastEstimator API reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#pipeline">Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#dynamic-preprocess">Dynamic Preprocess</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#abstractpreprocessing">AbstractPreprocessing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#nrrdreader">NrrdReader</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#imagereader">ImageReader</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#zscore">Zscore</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#minmax">Minmax</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#scale">Scale</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#onehot">Onehot</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#resize">Resize</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#reshape">Reshape</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#static-preprocess">Static Preprocess</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id1">AbstractPreprocessing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#binarize">Binarize</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id2">Zscore</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id3">Minmax</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id4">Scale</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id5">Onehot</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id6">Resize</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id7">Reshape</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#augmentation">Augmentation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#abstractaugmentation">AbstractAugmentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id8">Augmentation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#filter">Filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cyclic-learning-rate">Cyclic Learning Rate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#network">Network</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#estimator">Estimator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#callbacks">Callbacks</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#outputlogger">OutputLogger</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#learningrateupdater">LearningRateUpdater</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#learningratescheduler">LearningRateScheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#reducelronplateau">ReduceLROnPlateau</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#tfrecord-utility-functions">TFRecord Utility Functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#tfrecorder">TFRecorder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#tfrecord-to-np">tfrecord_to_np</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#get-number-of-examples">get_number_of_examples</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#get-features">get_features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#add-summary">add_summary</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">FastEstimator</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>FastEstimator API reference</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/api.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="fastestimator-api-reference">
+<h1>FastEstimator API reference<a class="headerlink" href="#fastestimator-api-reference" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="pipeline">
+<h2>Pipeline<a class="headerlink" href="#pipeline" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="fastestimator.pipeline.pipeline.Pipeline">
+<em class="property">class </em><code class="descclassname">fastestimator.pipeline.pipeline.</code><code class="descname">Pipeline</code><span class="sig-paren">(</span><em>batch_size</em>, <em>feature_name</em>, <em>transform_train</em>, <em>transform_dataset=None</em>, <em>train_data=None</em>, <em>validation_data=None</em>, <em>data_filter=None</em>, <em>shuffle_buffer='auto'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/pipeline.html#Pipeline"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.pipeline.Pipeline" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class representing the data pipeline required for fastestimator</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>batch_size</strong> – Integer representing the batch size for training model</li>
+<li><strong>feature_name</strong> – List of strings representing the feature names in the data (headers in csv, keys in dictionary
+or features in TFRecords)</li>
+<li><strong>transform_train</strong> – List of lists of tensor transformations to be performed sequentially on the corresponding
+features.</li>
+<li><strong>transform_dataset</strong> – List of lists of numpy transformations to be performed sequentially  on the raw data
+before the TFRecords are made.</li>
+<li><strong>train_data</strong> – Training dataset in the form of dictionary containing numpy data, or csv file (with file
+paths or data)</li>
+<li><strong>validation_data</strong> – Validation data in the form of dictionary containing numpy data, or csv file, or fraction
+of training data to be sequestered for validation during training</li>
+<li><strong>data_filter</strong> – Filtering to be performed on the corresponding features in the form of an object from the Filter class</li>
+<li><strong>shuffle_buffer</strong> – buffer size for the shuffling, it can affect the memory consumption during training. default is ‘auto’.</li>
+<li><strong>**kwargs</strong> – Additional arguments to be forwarded for the creation of TFRecords.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="fastestimator.pipeline.pipeline.Pipeline.edit_feature">
+<code class="descname">edit_feature</code><span class="sig-paren">(</span><em>feature</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/pipeline.html#Pipeline.edit_feature"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.pipeline.Pipeline.edit_feature" title="Permalink to this definition">¶</a></dt>
+<dd><p>Can be overloaded to change raw data dictionary in any manner</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>feature</strong> – Dictionary containing the raw data</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Dictionary containing raw data to be stored in TFRecords</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="fastestimator.pipeline.pipeline.Pipeline.final_transform">
+<code class="descname">final_transform</code><span class="sig-paren">(</span><em>preprocessed_data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/pipeline.html#Pipeline.final_transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.pipeline.Pipeline.final_transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Can be overloaded to change tensors in any manner</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>preprocessed_data</strong> – Batch of training data as a tf.data object</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A dictionary of tensor data in the form of a tf.data object.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="fastestimator.pipeline.pipeline.Pipeline.read_and_decode">
+<code class="descname">read_and_decode</code><span class="sig-paren">(</span><em>dataset</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/pipeline.html#Pipeline.read_and_decode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.pipeline.Pipeline.read_and_decode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads and decodes the string data from TFRecords</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dataset</strong> – Dataset consisting of encoded data from TFRecords</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Dictionary of decoded data</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="fastestimator.pipeline.pipeline.Pipeline.show_batches">
+<code class="descname">show_batches</code><span class="sig-paren">(</span><em>mode='train'</em>, <em>inputs=None</em>, <em>num_batches=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/pipeline.html#Pipeline.show_batches"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.pipeline.Pipeline.show_batches" title="Permalink to this definition">¶</a></dt>
+<dd><p>Shows batches of tensor data in numpy</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>mode</strong> – Mode for training (“train”, “eval” or “both”)</li>
+<li><strong>inputs</strong> – Directory for saving TFRecords</li>
+<li><strong>num_batches</strong> – Number of batches to show</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A dictionary containing the batches numpy data with corresponding keys</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="dynamic-preprocess">
+<h2>Dynamic Preprocess<a class="headerlink" href="#dynamic-preprocess" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="abstractpreprocessing">
+<h3>AbstractPreprocessing<a class="headerlink" href="#abstractpreprocessing" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing">
+<em class="property">class </em><code class="descclassname">fastestimator.pipeline.dynamic.preprocess.</code><code class="descname">AbstractPreprocessing</code><a class="reference internal" href="_modules/fastestimator/pipeline/dynamic/preprocess.html#AbstractPreprocessing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing" title="Permalink to this definition">¶</a></dt>
+<dd><p>An abstract class for preprocessing</p>
+<dl class="method">
+<dt id="fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>data</em>, <em>feature=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/dynamic/preprocess.html#AbstractPreprocessing.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Placeholder function that is to be inherited by preprocessing classes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> – Data to be preprocessed</li>
+<li><strong>feature</strong> – Auxiliary decoded data needed for the preprocessing</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Transformed data numpy array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="nrrdreader">
+<h3>NrrdReader<a class="headerlink" href="#nrrdreader" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.pipeline.dynamic.preprocess.NrrdReader">
+<em class="property">class </em><code class="descclassname">fastestimator.pipeline.dynamic.preprocess.</code><code class="descname">NrrdReader</code><span class="sig-paren">(</span><em>parent_path=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/dynamic/preprocess.html#NrrdReader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.dynamic.preprocess.NrrdReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing" title="fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing"><code class="xref py py-class docutils literal notranslate"><span class="pre">fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing</span></code></a></p>
+<p>Class for reading NRRD images</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>parent_path</strong> (<em>str</em>) – Parent path that will be added on given path.</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="fastestimator.pipeline.dynamic.preprocess.NrrdReader.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>path</em>, <em>feature=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/dynamic/preprocess.html#NrrdReader.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.dynamic.preprocess.NrrdReader.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads from NRRD image path</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>path</strong> – path of the NRRD image</li>
+<li><strong>feature</strong> – Auxiliary data that may be used by the image reader</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Image as numpy array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="imagereader">
+<h3>ImageReader<a class="headerlink" href="#imagereader" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.pipeline.dynamic.preprocess.ImageReader">
+<em class="property">class </em><code class="descclassname">fastestimator.pipeline.dynamic.preprocess.</code><code class="descname">ImageReader</code><span class="sig-paren">(</span><em>parent_path=''</em>, <em>grey_scale=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/dynamic/preprocess.html#ImageReader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.dynamic.preprocess.ImageReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing" title="fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing"><code class="xref py py-class docutils literal notranslate"><span class="pre">fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing</span></code></a></p>
+<p>Class for reading png or jpg images</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>parent_path</strong> – Parent path that will be added on given path</li>
+<li><strong>grey_scale</strong> – Boolean to indicate whether or not to read image as grayscale</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="fastestimator.pipeline.dynamic.preprocess.ImageReader.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>path</em>, <em>feature=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/dynamic/preprocess.html#ImageReader.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.dynamic.preprocess.ImageReader.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads numpy array from image path</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>path</strong> – path of the image</li>
+<li><strong>feature</strong> – Auxiliary data that may be used by the image reader</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Image as numpy array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="zscore">
+<h3>Zscore<a class="headerlink" href="#zscore" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.pipeline.dynamic.preprocess.Zscore">
+<em class="property">class </em><code class="descclassname">fastestimator.pipeline.dynamic.preprocess.</code><code class="descname">Zscore</code><a class="reference internal" href="_modules/fastestimator/pipeline/dynamic/preprocess.html#Zscore"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.dynamic.preprocess.Zscore" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing" title="fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing"><code class="xref py py-class docutils literal notranslate"><span class="pre">fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing</span></code></a></p>
+<p>Standardize data using zscore method</p>
+<dl class="method">
+<dt id="fastestimator.pipeline.dynamic.preprocess.Zscore.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>data</em>, <em>feature=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/dynamic/preprocess.html#Zscore.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.dynamic.preprocess.Zscore.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Standardizes the data</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> – Data to be standardized</li>
+<li><strong>feature</strong> – Auxiliary data needed for the standardization</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Array containing standardized data</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="minmax">
+<h3>Minmax<a class="headerlink" href="#minmax" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.pipeline.dynamic.preprocess.Minmax">
+<em class="property">class </em><code class="descclassname">fastestimator.pipeline.dynamic.preprocess.</code><code class="descname">Minmax</code><a class="reference internal" href="_modules/fastestimator/pipeline/dynamic/preprocess.html#Minmax"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.dynamic.preprocess.Minmax" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing" title="fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing"><code class="xref py py-class docutils literal notranslate"><span class="pre">fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing</span></code></a></p>
+<p>Normalize data using the minmax method</p>
+<dl class="method">
+<dt id="fastestimator.pipeline.dynamic.preprocess.Minmax.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>data</em>, <em>feature=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/dynamic/preprocess.html#Minmax.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.dynamic.preprocess.Minmax.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Normalizes the data</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> – Data to be normalized</li>
+<li><strong>feature</strong> – Auxiliary data needed for the normalization</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Normalized numpy array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="scale">
+<h3>Scale<a class="headerlink" href="#scale" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.pipeline.dynamic.preprocess.Scale">
+<em class="property">class </em><code class="descclassname">fastestimator.pipeline.dynamic.preprocess.</code><code class="descname">Scale</code><span class="sig-paren">(</span><em>scalar</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/dynamic/preprocess.html#Scale"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.dynamic.preprocess.Scale" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing" title="fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing"><code class="xref py py-class docutils literal notranslate"><span class="pre">fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing</span></code></a></p>
+<p>Preprocessing class for scaling dataset</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>scalar</strong> – Scalar for scaling the data</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="fastestimator.pipeline.dynamic.preprocess.Scale.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>data</em>, <em>feature=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/dynamic/preprocess.html#Scale.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.dynamic.preprocess.Scale.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scales the data tensor</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> – Data to be scaled</li>
+<li><strong>feature</strong> – Auxiliary data needed for the normalization</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Scaled data array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="onehot">
+<h3>Onehot<a class="headerlink" href="#onehot" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.pipeline.dynamic.preprocess.Onehot">
+<em class="property">class </em><code class="descclassname">fastestimator.pipeline.dynamic.preprocess.</code><code class="descname">Onehot</code><span class="sig-paren">(</span><em>num_dim</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/dynamic/preprocess.html#Onehot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.dynamic.preprocess.Onehot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing" title="fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing"><code class="xref py py-class docutils literal notranslate"><span class="pre">fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing</span></code></a></p>
+<p>Preprocessing class for converting categorical labels to onehot encoding</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>num_dim</strong> – Number of dimensions of the labels</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="fastestimator.pipeline.dynamic.preprocess.Onehot.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>data</em>, <em>feature=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/dynamic/preprocess.html#Onehot.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.dynamic.preprocess.Onehot.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transforms categorical labels to onehot encodings</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> – Data to be preprocessed</li>
+<li><strong>feature</strong> – Auxiliary data needed for the preprocessing</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Transformed labels</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="resize">
+<h3>Resize<a class="headerlink" href="#resize" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.pipeline.dynamic.preprocess.Resize">
+<em class="property">class </em><code class="descclassname">fastestimator.pipeline.dynamic.preprocess.</code><code class="descname">Resize</code><span class="sig-paren">(</span><em>size</em>, <em>resize_method='bilinear'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/dynamic/preprocess.html#Resize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.dynamic.preprocess.Resize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing" title="fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing"><code class="xref py py-class docutils literal notranslate"><span class="pre">fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing</span></code></a></p>
+<dl class="method">
+<dt id="fastestimator.pipeline.dynamic.preprocess.Resize.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>data</em>, <em>feature=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/dynamic/preprocess.html#Resize.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.dynamic.preprocess.Resize.transform" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="reshape">
+<h3>Reshape<a class="headerlink" href="#reshape" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.pipeline.dynamic.preprocess.Reshape">
+<em class="property">class </em><code class="descclassname">fastestimator.pipeline.dynamic.preprocess.</code><code class="descname">Reshape</code><span class="sig-paren">(</span><em>shape</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/dynamic/preprocess.html#Reshape"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.dynamic.preprocess.Reshape" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing" title="fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing"><code class="xref py py-class docutils literal notranslate"><span class="pre">fastestimator.pipeline.dynamic.preprocess.AbstractPreprocessing</span></code></a></p>
+<p>Preprocessing class for reshaping the data</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>shape</strong> – target shape</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="fastestimator.pipeline.dynamic.preprocess.Reshape.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>data</em>, <em>feature=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/dynamic/preprocess.html#Reshape.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.dynamic.preprocess.Reshape.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reshapes data array</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> – Data to be reshaped</li>
+<li><strong>feature</strong> – Auxiliary data needed for the resizing</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Reshaped array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="static-preprocess">
+<h2>Static Preprocess<a class="headerlink" href="#static-preprocess" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id1">
+<h3>AbstractPreprocessing<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.pipeline.static.preprocess.AbstractPreprocessing">
+<em class="property">class </em><code class="descclassname">fastestimator.pipeline.static.preprocess.</code><code class="descname">AbstractPreprocessing</code><a class="reference internal" href="_modules/fastestimator/pipeline/static/preprocess.html#AbstractPreprocessing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.preprocess.AbstractPreprocessing" title="Permalink to this definition">¶</a></dt>
+<dd><p>An abstract class for preprocessing</p>
+<dl class="method">
+<dt id="fastestimator.pipeline.static.preprocess.AbstractPreprocessing.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>data</em>, <em>decoded_data=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/preprocess.html#AbstractPreprocessing.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.preprocess.AbstractPreprocessing.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Placeholder function that is to be inherited by preprocessing classes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> – Data to be preprocessed</li>
+<li><strong>decoded_data</strong> – Auxiliary decoded data needed for the preprocessing</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Transformed data tensor</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="binarize">
+<h3>Binarize<a class="headerlink" href="#binarize" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.pipeline.static.preprocess.Binarize">
+<em class="property">class </em><code class="descclassname">fastestimator.pipeline.static.preprocess.</code><code class="descname">Binarize</code><span class="sig-paren">(</span><em>threshold</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/preprocess.html#Binarize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.preprocess.Binarize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#fastestimator.pipeline.static.preprocess.AbstractPreprocessing" title="fastestimator.pipeline.static.preprocess.AbstractPreprocessing"><code class="xref py py-class docutils literal notranslate"><span class="pre">fastestimator.pipeline.static.preprocess.AbstractPreprocessing</span></code></a></p>
+<p>Binarize data based on threshold between 0 and 1</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>threshold</strong> – Threshold for binarizing</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="fastestimator.pipeline.static.preprocess.Binarize.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>data</em>, <em>decoded_data=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/preprocess.html#Binarize.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.preprocess.Binarize.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transforms the image to binary based on threshold</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> – Data to be binarized</li>
+<li><strong>decoded_data</strong> – Auxiliary decoded data needed for the binarization</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Tensor containing binarized data</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="id2">
+<h3>Zscore<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.pipeline.static.preprocess.Zscore">
+<em class="property">class </em><code class="descclassname">fastestimator.pipeline.static.preprocess.</code><code class="descname">Zscore</code><a class="reference internal" href="_modules/fastestimator/pipeline/static/preprocess.html#Zscore"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.preprocess.Zscore" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#fastestimator.pipeline.static.preprocess.AbstractPreprocessing" title="fastestimator.pipeline.static.preprocess.AbstractPreprocessing"><code class="xref py py-class docutils literal notranslate"><span class="pre">fastestimator.pipeline.static.preprocess.AbstractPreprocessing</span></code></a></p>
+<p>Standardize data using zscore method</p>
+<dl class="method">
+<dt id="fastestimator.pipeline.static.preprocess.Zscore.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>data</em>, <em>decoded_data=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/preprocess.html#Zscore.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.preprocess.Zscore.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Standardizes the data tensor</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> – Data to be standardized</li>
+<li><strong>decoded_data</strong> – Auxiliary decoded data needed for the standardization</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Tensor containing standardized data</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="id3">
+<h3>Minmax<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.pipeline.static.preprocess.Minmax">
+<em class="property">class </em><code class="descclassname">fastestimator.pipeline.static.preprocess.</code><code class="descname">Minmax</code><a class="reference internal" href="_modules/fastestimator/pipeline/static/preprocess.html#Minmax"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.preprocess.Minmax" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#fastestimator.pipeline.static.preprocess.AbstractPreprocessing" title="fastestimator.pipeline.static.preprocess.AbstractPreprocessing"><code class="xref py py-class docutils literal notranslate"><span class="pre">fastestimator.pipeline.static.preprocess.AbstractPreprocessing</span></code></a></p>
+<p>Normalize data using the minmax method</p>
+<dl class="method">
+<dt id="fastestimator.pipeline.static.preprocess.Minmax.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>data</em>, <em>decoded_data=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/preprocess.html#Minmax.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.preprocess.Minmax.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Normalizes the data tensor</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> – Data to be normalized</li>
+<li><strong>decoded_data</strong> – Auxiliary decoded data needed for the normalization</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Tensor after minmax</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="id4">
+<h3>Scale<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.pipeline.static.preprocess.Scale">
+<em class="property">class </em><code class="descclassname">fastestimator.pipeline.static.preprocess.</code><code class="descname">Scale</code><span class="sig-paren">(</span><em>scalar</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/preprocess.html#Scale"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.preprocess.Scale" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#fastestimator.pipeline.static.preprocess.AbstractPreprocessing" title="fastestimator.pipeline.static.preprocess.AbstractPreprocessing"><code class="xref py py-class docutils literal notranslate"><span class="pre">fastestimator.pipeline.static.preprocess.AbstractPreprocessing</span></code></a></p>
+<p>Preprocessing class for scaling dataset</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>scalar</strong> – Scalar for scaling the data</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="fastestimator.pipeline.static.preprocess.Scale.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>data</em>, <em>decoded_data=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/preprocess.html#Scale.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.preprocess.Scale.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scales the data tensor</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> – Data to be scaled</li>
+<li><strong>decoded_data</strong> – Auxiliary decoded data needed for the normalization</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Scaled data tensor</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="id5">
+<h3>Onehot<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.pipeline.static.preprocess.Onehot">
+<em class="property">class </em><code class="descclassname">fastestimator.pipeline.static.preprocess.</code><code class="descname">Onehot</code><span class="sig-paren">(</span><em>num_dim</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/preprocess.html#Onehot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.preprocess.Onehot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#fastestimator.pipeline.static.preprocess.AbstractPreprocessing" title="fastestimator.pipeline.static.preprocess.AbstractPreprocessing"><code class="xref py py-class docutils literal notranslate"><span class="pre">fastestimator.pipeline.static.preprocess.AbstractPreprocessing</span></code></a></p>
+<p>Preprocessing class for converting categorical labels to onehot encoding</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>num_dim</strong> – Number of dimensions of the labels</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="fastestimator.pipeline.static.preprocess.Onehot.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>data</em>, <em>decoded_data=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/preprocess.html#Onehot.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.preprocess.Onehot.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transforms categorical labels to onehot encodings</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> – Data to be preprocessed</li>
+<li><strong>decoded_data</strong> – Auxiliary decoded data needed for the preprocessing</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Transformed labels</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="id6">
+<h3>Resize<a class="headerlink" href="#id6" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.pipeline.static.preprocess.Resize">
+<em class="property">class </em><code class="descclassname">fastestimator.pipeline.static.preprocess.</code><code class="descname">Resize</code><span class="sig-paren">(</span><em>size</em>, <em>resize_method=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/preprocess.html#Resize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.preprocess.Resize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#fastestimator.pipeline.static.preprocess.AbstractPreprocessing" title="fastestimator.pipeline.static.preprocess.AbstractPreprocessing"><code class="xref py py-class docutils literal notranslate"><span class="pre">fastestimator.pipeline.static.preprocess.AbstractPreprocessing</span></code></a></p>
+<p>Preprocessing class for resizing the images</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>size</strong> – Destination shape of the images</li>
+<li><strong>resize_method</strong> – One of resize methods provided by tensorflow to be used</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="fastestimator.pipeline.static.preprocess.Resize.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>data</em>, <em>decoded_data=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/preprocess.html#Resize.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.preprocess.Resize.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resizes data tensor</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> – Tensor to be resized</li>
+<li><strong>decoded_data</strong> – Auxiliary decoded data needed for the resizing</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Resized tensor</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="id7">
+<h3>Reshape<a class="headerlink" href="#id7" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.pipeline.static.preprocess.Reshape">
+<em class="property">class </em><code class="descclassname">fastestimator.pipeline.static.preprocess.</code><code class="descname">Reshape</code><span class="sig-paren">(</span><em>shape</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/preprocess.html#Reshape"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.preprocess.Reshape" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#fastestimator.pipeline.static.preprocess.AbstractPreprocessing" title="fastestimator.pipeline.static.preprocess.AbstractPreprocessing"><code class="xref py py-class docutils literal notranslate"><span class="pre">fastestimator.pipeline.static.preprocess.AbstractPreprocessing</span></code></a></p>
+<p>Preprocessing class for reshaping the data</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>shape</strong> – target shape</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="fastestimator.pipeline.static.preprocess.Reshape.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>data</em>, <em>decoded_data=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/preprocess.html#Reshape.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.preprocess.Reshape.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reshapes data tensor</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> – Data to be reshaped</li>
+<li><strong>decoded_data</strong> – Auxiliary decoded data needed for the resizing</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Reshaped tensor</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="augmentation">
+<h2>Augmentation<a class="headerlink" href="#augmentation" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="abstractaugmentation">
+<h3>AbstractAugmentation<a class="headerlink" href="#abstractaugmentation" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.pipeline.static.augmentation.AbstractAugmentation">
+<em class="property">class </em><code class="descclassname">fastestimator.pipeline.static.augmentation.</code><code class="descname">AbstractAugmentation</code><span class="sig-paren">(</span><em>mode='train'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/augmentation.html#AbstractAugmentation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.augmentation.AbstractAugmentation" title="Permalink to this definition">¶</a></dt>
+<dd><p>An abstract class for data augmentation that defines interfaces.
+A custom augmentation can be defined by inheriting from this class.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>mode</strong> – Augmentation to be applied for training or evaluation, can be “train”, “eval” or “both”.</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="fastestimator.pipeline.static.augmentation.AbstractAugmentation.setup">
+<code class="descname">setup</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/augmentation.html#AbstractAugmentation.setup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.augmentation.AbstractAugmentation.setup" title="Permalink to this definition">¶</a></dt>
+<dd><p>An interface method to be implemented by inheriting augmentation class to setup necessary parameters for the
+augmentation</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="fastestimator.pipeline.static.augmentation.AbstractAugmentation.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/augmentation.html#AbstractAugmentation.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.augmentation.AbstractAugmentation.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>An interface method to be implemented by inheriting augmentation class to apply the transformation to data</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>data</strong> – Data on which a transformation is to be applied</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Transformed tensor</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="id8">
+<h3>Augmentation<a class="headerlink" href="#id8" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.pipeline.static.augmentation.Augmentation">
+<em class="property">class </em><code class="descclassname">fastestimator.pipeline.static.augmentation.</code><code class="descname">Augmentation</code><span class="sig-paren">(</span><em>rotation_range=0.0</em>, <em>width_shift_range=0.0</em>, <em>height_shift_range=0.0</em>, <em>shear_range=0.0</em>, <em>zoom_range=1.0</em>, <em>flip_left_right=False</em>, <em>flip_up_down=False</em>, <em>mode='train'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/augmentation.html#Augmentation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.augmentation.Augmentation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#fastestimator.pipeline.static.augmentation.AbstractAugmentation" title="fastestimator.pipeline.static.augmentation.AbstractAugmentation"><code class="xref py py-class docutils literal notranslate"><span class="pre">fastestimator.pipeline.static.augmentation.AbstractAugmentation</span></code></a></p>
+<p>This class supports commonly used 2D random affine transformations for data augmentation.
+Either a scalar <code class="docutils literal notranslate"><span class="pre">x</span></code> or a tuple <code class="docutils literal notranslate"><span class="pre">[x1,</span> <span class="pre">x2]</span></code> can be specified for rotation, shearing, shifting, and zoom.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>rotation_range</strong> – Scalar (x) that represents the range of random rotation (in degrees) from -x to x /
+Tuple ([x1, x2]) that represents  the range of random rotation between x1 and x2.</li>
+<li><strong>width_shift_range</strong> – Float (x) that represents the range of random width shift (in pixels) from -x to x /
+Tuple ([x1, x2]) that represents  the range of random width shift between x1 and x2.</li>
+<li><strong>height_shift_range</strong> – Float (x) that represents the range of random height shift (in pixels) from -x to x /
+Tuple ([x1, x2]) that represents  the range of random height shift between x1 and x2.</li>
+<li><strong>shear_range</strong> – Scalar (x) that represents the range of random shear (in degrees) from -x to x /
+Tuple ([x1, x2]) that represents  the range of random shear between x1 and x2.</li>
+<li><strong>zoom_range</strong> – Float (x) that represents the range of random zoom (in percentage) from -x to x /
+Tuple ([x1, x2]) that represents  the range of random zoom between x1 and x2.</li>
+<li><strong>flip_left_right</strong> – Boolean representing whether to flip the image horizontally with a probability of 0.5.</li>
+<li><strong>flip_up_down</strong> – Boolean representing whether to flip the image vertically with a probability of 0.5.</li>
+<li><strong>mode</strong> – Augmentation on ‘training’ data or ‘evaluation’ data.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="fastestimator.pipeline.static.augmentation.Augmentation.flip">
+<code class="descname">flip</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/augmentation.html#Augmentation.flip"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.augmentation.Augmentation.flip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decides whether or not to flip</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A boolean that represents whether or not to flip</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="fastestimator.pipeline.static.augmentation.Augmentation.rotate">
+<code class="descname">rotate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/augmentation.html#Augmentation.rotate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.augmentation.Augmentation.rotate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates affine transformation matrix for 2D rotation</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Transform affine tensor</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="fastestimator.pipeline.static.augmentation.Augmentation.setup">
+<code class="descname">setup</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/augmentation.html#Augmentation.setup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.augmentation.Augmentation.setup" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method set the appropriate variables necessary for the random 2D augmentation. It also computes the
+transformation matrix.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="fastestimator.pipeline.static.augmentation.Augmentation.shear">
+<code class="descname">shear</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/augmentation.html#Augmentation.shear"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.augmentation.Augmentation.shear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates affine transformation matrix for 2D shear</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Transform affine tensor</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="fastestimator.pipeline.static.augmentation.Augmentation.shift">
+<code class="descname">shift</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/augmentation.html#Augmentation.shift"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.augmentation.Augmentation.shift" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates affine transformation matrix for 2D shift</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Transform affine tensor</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="fastestimator.pipeline.static.augmentation.Augmentation.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/augmentation.html#Augmentation.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.augmentation.Augmentation.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transforms the data with the augmentation transformation</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>data</strong> – Data to be transformed</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Transformed (augmented) data</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="fastestimator.pipeline.static.augmentation.Augmentation.transform_matrix_offset_center">
+<code class="descname">transform_matrix_offset_center</code><span class="sig-paren">(</span><em>matrix</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/augmentation.html#Augmentation.transform_matrix_offset_center"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.augmentation.Augmentation.transform_matrix_offset_center" title="Permalink to this definition">¶</a></dt>
+<dd><p>Offsets the tensor to the center of the image</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>matrix</strong> – Affine tensor</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">An affine tensor offset to the center of the image</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="fastestimator.pipeline.static.augmentation.Augmentation.zoom">
+<code class="descname">zoom</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/augmentation.html#Augmentation.zoom"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.augmentation.Augmentation.zoom" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates affine transformation matrix for 2D zoom / scale</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Transform affine tensor</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="filter">
+<h2>Filter<a class="headerlink" href="#filter" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="fastestimator.pipeline.static.filter.Filter">
+<em class="property">class </em><code class="descclassname">fastestimator.pipeline.static.filter.</code><code class="descname">Filter</code><span class="sig-paren">(</span><em>feature_name</em>, <em>filter_value</em>, <em>keep_prob</em>, <em>mode='train'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/filter.html#Filter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.filter.Filter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class for performing filtering on dataset based on scalar values.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>feature_name</strong> – Name of the key in the dataset that is to be filtered</li>
+<li><strong>filter_value</strong> – The values in the dataset that are to be filtered.</li>
+<li><strong>keep_prob</strong> – The probability of keeping the example</li>
+<li><strong>mode</strong> – filter on ‘train’, ‘eval’ or ‘both’</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="fastestimator.pipeline.static.filter.Filter.predicate_fn">
+<code class="descname">predicate_fn</code><span class="sig-paren">(</span><em>dataset</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/pipeline/static/filter.html#Filter.predicate_fn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.pipeline.static.filter.Filter.predicate_fn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Filters the dataset based on the filter probabilities.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dataset</strong> – Tensorflow dataset object which is to be filtered</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Tensorflow conditional for filtering the dataset based on the probabilities for each of the values.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="cyclic-learning-rate">
+<h2>Cyclic Learning Rate<a class="headerlink" href="#cyclic-learning-rate" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="fastestimator.network.lrscheduler.CyclicScheduler">
+<em class="property">class </em><code class="descclassname">fastestimator.network.lrscheduler.</code><code class="descname">CyclicScheduler</code><span class="sig-paren">(</span><em>num_cycle=1</em>, <em>cycle_multiplier=2</em>, <em>decrease_method='cosine'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/network/lrscheduler.html#CyclicScheduler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.network.lrscheduler.CyclicScheduler" title="Permalink to this definition">¶</a></dt>
+<dd><p>A class representing cyclic learning rate scheduler</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>num_cycle</strong> – The number of cycles to be used by the learning rate scheduler</li>
+<li><strong>cycle_multiplier</strong> – The length of each next cycle’s multiplier</li>
+<li><strong>decrease_method</strong> – The decay method to be used with cyclic learning rate scheduler</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="fastestimator.network.lrscheduler.CyclicScheduler.lr_cosine_decay">
+<code class="descname">lr_cosine_decay</code><span class="sig-paren">(</span><em>global_steps</em>, <em>lr_ratio_start</em>, <em>lr_ratio_end</em>, <em>step_start</em>, <em>step_end</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/network/lrscheduler.html#CyclicScheduler.lr_cosine_decay"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.network.lrscheduler.CyclicScheduler.lr_cosine_decay" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fastestimator.network.lrscheduler.CyclicScheduler.lr_linear_decay">
+<code class="descname">lr_linear_decay</code><span class="sig-paren">(</span><em>global_steps</em>, <em>lr_ratio_start</em>, <em>lr_ratio_end</em>, <em>step_start</em>, <em>step_end</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/network/lrscheduler.html#CyclicScheduler.lr_linear_decay"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.network.lrscheduler.CyclicScheduler.lr_linear_decay" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fastestimator.network.lrscheduler.CyclicScheduler.lr_schedule_fn">
+<code class="descname">lr_schedule_fn</code><span class="sig-paren">(</span><em>global_steps</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/network/lrscheduler.html#CyclicScheduler.lr_schedule_fn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.network.lrscheduler.CyclicScheduler.lr_schedule_fn" title="Permalink to this definition">¶</a></dt>
+<dd><p>The actual function that computes the learning rate decay ratio using cyclic learning rate.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>global_steps</strong> – Current global step</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Learning rate ratio</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="network">
+<h2>Network<a class="headerlink" href="#network" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="fastestimator.network.network.Network">
+<em class="property">class </em><code class="descclassname">fastestimator.network.network.</code><code class="descname">Network</code><span class="sig-paren">(</span><em>model</em>, <em>loss</em>, <em>metrics=None</em>, <em>loss_weights=None</em>, <em>optimizer='adam'</em>, <em>model_dir=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/network/network.html#Network"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.network.network.Network" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class for representing the model for fastestimator</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>model</strong> – An instance of tensorflow.keras model object.</li>
+<li><strong>loss</strong> – String or list or dictionary of strings representing a loss function (defined in keras)
+or it can be a function handle of a customized loss function that takes a true value and
+predicted value and returns a scalar loss value.</li>
+<li><strong>metrics</strong> – List or dictionary of strings representing metrics (defined in keras)
+or it can be a list of function handles of a customized metric function that
+takes a true values and predicted values and returns a scalar metric.</li>
+<li><strong>loss_weights</strong> – List of floats used only if the loss is a weighted loss
+with the individual components defined as a list in the “loss member variable” (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)</li>
+<li><strong>optimizer</strong> – the type the optimizer for the model in the form of a string.</li>
+<li><strong>model_dir</strong> – Directory where the model is to be saved (default is the temporary directory)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="estimator">
+<h2>Estimator<a class="headerlink" href="#estimator" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="fastestimator.estimator.estimator.Estimator">
+<em class="property">class </em><code class="descclassname">fastestimator.estimator.estimator.</code><code class="descname">Estimator</code><span class="sig-paren">(</span><em>pipeline</em>, <em>network</em>, <em>epochs</em>, <em>steps_per_epoch=None</em>, <em>validation_steps=None</em>, <em>callbacks=[]</em>, <em>log_steps=100</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/estimator/estimator.html#Estimator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.estimator.estimator.Estimator" title="Permalink to this definition">¶</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">Estimator</span></code> class compiles all the components necessary to train a model.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>pipeline</strong> – Object of the Pipeline class that consists of data parameters.</li>
+<li><strong>network</strong> – Object of the Network class that consists of the model definition and parameters.</li>
+<li><strong>epochs</strong> – Total number of training epochs</li>
+<li><strong>steps_per_epoch</strong> – The number batches in one epoch of training,
+if None, it will be automatically calculated. Evaluation is performed at the end of every epoch.
+(default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)</li>
+<li><strong>validation_steps</strong> – Number of batches to be used for validation</li>
+<li><strong>callbacks</strong> – List of callbacks object in tf.keras. (default: <code class="docutils literal notranslate"><span class="pre">[]</span></code>)</li>
+<li><strong>log_steps</strong> – Number of steps after which training logs will be displayed periodically.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="fastestimator.estimator.estimator.Estimator.fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>inputs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/estimator/estimator.html#Estimator.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.estimator.estimator.Estimator.fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to perform training on the estimator</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>inputs</strong> – Path to input data</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="fastestimator.estimator.estimator.Estimator.train">
+<code class="descname">train</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/estimator/estimator.html#Estimator.train"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.estimator.estimator.Estimator.train" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="callbacks">
+<h2>Callbacks<a class="headerlink" href="#callbacks" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="outputlogger">
+<h3>OutputLogger<a class="headerlink" href="#outputlogger" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.estimator.callbacks.OutputLogger">
+<em class="property">class </em><code class="descclassname">fastestimator.estimator.callbacks.</code><code class="descname">OutputLogger</code><span class="sig-paren">(</span><em>batch_size</em>, <em>log_steps=100</em>, <em>validation=True</em>, <em>num_process=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/estimator/callbacks.html#OutputLogger"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.estimator.callbacks.OutputLogger" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">tensorflow.python.keras.callbacks.Callback</span></code></p>
+<p>Keras callback for logging the output</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>batch_size</strong> – Size of the training batch</li>
+<li><strong>log_steps</strong> – Number of steps at which to output the logs</li>
+<li><strong>validation</strong> – Boolean representing whether or not to output validation information</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="fastestimator.estimator.callbacks.OutputLogger.on_batch_begin">
+<code class="descname">on_batch_begin</code><span class="sig-paren">(</span><em>batch</em>, <em>logs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/estimator/callbacks.html#OutputLogger.on_batch_begin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.estimator.callbacks.OutputLogger.on_batch_begin" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fastestimator.estimator.callbacks.OutputLogger.on_batch_end">
+<code class="descname">on_batch_end</code><span class="sig-paren">(</span><em>batch</em>, <em>logs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/estimator/callbacks.html#OutputLogger.on_batch_end"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.estimator.callbacks.OutputLogger.on_batch_end" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fastestimator.estimator.callbacks.OutputLogger.on_epoch_end">
+<code class="descname">on_epoch_end</code><span class="sig-paren">(</span><em>epoch</em>, <em>logs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/estimator/callbacks.html#OutputLogger.on_epoch_end"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.estimator.callbacks.OutputLogger.on_epoch_end" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="learningrateupdater">
+<h3>LearningRateUpdater<a class="headerlink" href="#learningrateupdater" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.estimator.callbacks.LearningRateUpdater">
+<em class="property">class </em><code class="descclassname">fastestimator.estimator.callbacks.</code><code class="descname">LearningRateUpdater</code><span class="sig-paren">(</span><em>init_lr</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/estimator/callbacks.html#LearningRateUpdater"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.estimator.callbacks.LearningRateUpdater" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">tensorflow.python.keras.callbacks.Callback</span></code></p>
+<p>Keras callback to update the learning rate</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>init_lr</strong> – initial learning rate</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="fastestimator.estimator.callbacks.LearningRateUpdater.on_batch_begin">
+<code class="descname">on_batch_begin</code><span class="sig-paren">(</span><em>batch</em>, <em>logs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/estimator/callbacks.html#LearningRateUpdater.on_batch_begin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.estimator.callbacks.LearningRateUpdater.on_batch_begin" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fastestimator.estimator.callbacks.LearningRateUpdater.on_batch_end">
+<code class="descname">on_batch_end</code><span class="sig-paren">(</span><em>batch</em>, <em>logs={}</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/estimator/callbacks.html#LearningRateUpdater.on_batch_end"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.estimator.callbacks.LearningRateUpdater.on_batch_end" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="learningratescheduler">
+<h3>LearningRateScheduler<a class="headerlink" href="#learningratescheduler" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.estimator.callbacks.LearningRateScheduler">
+<em class="property">class </em><code class="descclassname">fastestimator.estimator.callbacks.</code><code class="descname">LearningRateScheduler</code><span class="sig-paren">(</span><em>schedule</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/estimator/callbacks.html#LearningRateScheduler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.estimator.callbacks.LearningRateScheduler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">tensorflow.python.keras.callbacks.Callback</span></code></p>
+<p>Keras callback for the learning rate scheduler</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>schedule</strong> – Schedule object to passed to the scheduler</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="fastestimator.estimator.callbacks.LearningRateScheduler.on_batch_begin">
+<code class="descname">on_batch_begin</code><span class="sig-paren">(</span><em>batch</em>, <em>logs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/estimator/callbacks.html#LearningRateScheduler.on_batch_begin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.estimator.callbacks.LearningRateScheduler.on_batch_begin" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fastestimator.estimator.callbacks.LearningRateScheduler.on_epoch_begin">
+<code class="descname">on_epoch_begin</code><span class="sig-paren">(</span><em>epoch</em>, <em>logs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/estimator/callbacks.html#LearningRateScheduler.on_epoch_begin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.estimator.callbacks.LearningRateScheduler.on_epoch_begin" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="reducelronplateau">
+<h3>ReduceLROnPlateau<a class="headerlink" href="#reducelronplateau" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.estimator.callbacks.ReduceLROnPlateau">
+<em class="property">class </em><code class="descclassname">fastestimator.estimator.callbacks.</code><code class="descname">ReduceLROnPlateau</code><span class="sig-paren">(</span><em>monitor='val_loss'</em>, <em>factor=0.1</em>, <em>patience=10</em>, <em>verbose=0</em>, <em>mode='auto'</em>, <em>min_delta=0.0001</em>, <em>cooldown=0</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/estimator/callbacks.html#ReduceLROnPlateau"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.estimator.callbacks.ReduceLROnPlateau" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">tensorflow.python.keras.callbacks.Callback</span></code></p>
+<p>Keras callback for the reduce learning rate on pleateau</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>monitor</strong> – Metric to be monitored</li>
+<li><strong>factor</strong> – Factor by which to reduce learning rate</li>
+<li><strong>patience</strong> – Number of epochs to wait before reducing LR</li>
+<li><strong>verbose</strong> – Whether or not to output verbose logs</li>
+<li><strong>mode</strong> – Learning rate reduction mode</li>
+<li><strong>min_delta</strong> – Minimum significant difference</li>
+<li><strong>cooldown</strong> – </li>
+<li><strong>**kwargs</strong> – </li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="fastestimator.estimator.callbacks.ReduceLROnPlateau.in_cooldown">
+<code class="descname">in_cooldown</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/estimator/callbacks.html#ReduceLROnPlateau.in_cooldown"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.estimator.callbacks.ReduceLROnPlateau.in_cooldown" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fastestimator.estimator.callbacks.ReduceLROnPlateau.on_epoch_end">
+<code class="descname">on_epoch_end</code><span class="sig-paren">(</span><em>epoch</em>, <em>logs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/estimator/callbacks.html#ReduceLROnPlateau.on_epoch_end"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.estimator.callbacks.ReduceLROnPlateau.on_epoch_end" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fastestimator.estimator.callbacks.ReduceLROnPlateau.on_train_begin">
+<code class="descname">on_train_begin</code><span class="sig-paren">(</span><em>logs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/estimator/callbacks.html#ReduceLROnPlateau.on_train_begin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.estimator.callbacks.ReduceLROnPlateau.on_train_begin" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="tfrecord-utility-functions">
+<h2>TFRecord Utility Functions<a class="headerlink" href="#tfrecord-utility-functions" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="tfrecorder">
+<h3>TFRecorder<a class="headerlink" href="#tfrecorder" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.util.tfrecord.TFRecorder">
+<em class="property">class </em><code class="descclassname">fastestimator.util.tfrecord.</code><code class="descname">TFRecorder</code><span class="sig-paren">(</span><em>train_data</em>, <em>feature_name</em>, <em>transform_dataset=None</em>, <em>validation_data=None</em>, <em>create_patch=False</em>, <em>max_tfrecord_mb=300</em>, <em>compression=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/util/tfrecord.html#TFRecorder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.util.tfrecord.TFRecorder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class for creating TFRecords from numpy data or csv file containing paths to data on disk</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>train_data</strong> – Training dataset in the form of dictionary containing numpy data, or csv file (with file
+paths or data)</li>
+<li><strong>feature_name</strong> – List of strings representing the feature names in the data (headers in csv, keys in dictionary
+or features in TFRecords)</li>
+<li><strong>transform_dataset</strong> – List of lists of numpy transformations to be performed sequentially  on the raw data
+before the TFRecords are made.</li>
+<li><strong>validation_data</strong> – Validation data in the form of dictionary containing numpy data, or csv file, or fraction
+of training data to be sequestered for validation during training.</li>
+<li><strong>create_patch</strong> – Whether to create multiple records from single example.</li>
+<li><strong>max_tfrecord_mb</strong> – Maximum space to be occupied by one TFRecord.</li>
+<li><strong>compression</strong> – tfrecords compression type, one of None, ‘GZIP’ or ‘ZLIB’.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="fastestimator.util.tfrecord.TFRecorder.create_tfrecord">
+<code class="descname">create_tfrecord</code><span class="sig-paren">(</span><em>save_dir=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/util/tfrecord.html#TFRecorder.create_tfrecord"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.util.tfrecord.TFRecorder.create_tfrecord" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fastestimator.util.tfrecord.TFRecorder.edit_feature">
+<code class="descname">edit_feature</code><span class="sig-paren">(</span><em>feature</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fastestimator/util/tfrecord.html#TFRecorder.edit_feature"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.util.tfrecord.TFRecorder.edit_feature" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="tfrecord-to-np">
+<h3>tfrecord_to_np<a class="headerlink" href="#tfrecord-to-np" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.util.tfrecord.tfrecord_to_np">
+<em class="property">class </em><code class="descclassname">fastestimator.util.tfrecord.</code><code class="descname">tfrecord_to_np</code><a class="reference internal" href="_modules/fastestimator/util/tfrecord.html#tfrecord_to_np"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.util.tfrecord.tfrecord_to_np" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts 1 TFRecord (created using fastestimator) to numpy data</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>file_path</strong> – Path of TFRecord file</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Dictionary containing numpy data</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="get-number-of-examples">
+<h3>get_number_of_examples<a class="headerlink" href="#get-number-of-examples" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.util.tfrecord.get_number_of_examples">
+<em class="property">class </em><code class="descclassname">fastestimator.util.tfrecord.</code><code class="descname">get_number_of_examples</code><a class="reference internal" href="_modules/fastestimator/util/tfrecord.html#get_number_of_examples"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.util.tfrecord.get_number_of_examples" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns number of examples in 1 TFRecord</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>file_path</strong> – Path of TFRecord file</li>
+<li><strong>show_warning</strong> – Whether to display warning message</li>
+<li><strong>compression</strong> – None, ‘GZIP’ or ‘ZLIB’</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Number of examples in the TFRecord</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="get-features">
+<h3>get_features<a class="headerlink" href="#get-features" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.util.tfrecord.get_features">
+<em class="property">class </em><code class="descclassname">fastestimator.util.tfrecord.</code><code class="descname">get_features</code><a class="reference internal" href="_modules/fastestimator/util/tfrecord.html#get_features"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.util.tfrecord.get_features" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the feature information in TFRecords</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>file_path</strong> – Path of TFRecord file</li>
+<li><strong>compression</strong> – None, ‘GZIP’ or ‘ZLIB’</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Dictionary containing feature information of TFRecords</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="add-summary">
+<h3>add_summary<a class="headerlink" href="#add-summary" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="fastestimator.util.tfrecord.add_summary">
+<em class="property">class </em><code class="descclassname">fastestimator.util.tfrecord.</code><code class="descname">add_summary</code><a class="reference internal" href="_modules/fastestimator/util/tfrecord.html#add_summary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fastestimator.util.tfrecord.add_summary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds summary.json file to existing path with tfrecords.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>data_dir</strong> (<em>str</em>) – Folder path where tfrecords are stored.</li>
+<li><strong>train_prefix</strong> (<em>str</em>) – The prefix of all training tfrecord files.</li>
+<li><strong>feature_name</strong> (<em>list</em>) – Feature name in the tfrecord in a list.</li>
+<li><strong>feature_dtype</strong> (<em>list</em>) – Original data type for specific feature, this is used for decoding purpose.</li>
+<li><strong>eval_prefix</strong> (<em>str</em><em>, </em><em>optional</em>) – The prefix of all evaluation tfrecord files. Defaults to None.</li>
+<li><strong>num_train_examples</strong> (<em>int</em><em>, </em><em>optional</em>) – The total number of training examples, if None, it will calculate automatically. Defaults to None.</li>
+<li><strong>num_eval_examples</strong> (<em>int</em><em>, </em><em>optional</em>) – The total number of validation examples, if None, it will calculate automatically. Defaults to None.</li>
+<li><strong>compression</strong> (<em>str</em><em>, </em><em>optional</em>) – None, ‘GZIP’ or ‘ZLIB’. Defaults to None.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="train.html" class="btn btn-neutral" title="How to train with FastEstimator" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, GE Healthcare
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+
+  
+
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
