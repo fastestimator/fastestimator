@@ -141,6 +141,33 @@ class Pipeline:
         dataset = dataset.prefetch(buffer_size=1)
         return dataset
 
+    def _transform_batch(self, batch_data, mode):
+        # single_example = dict()
+        # for k in batch_data.keys():
+        #     single_example[k] = None
+
+        for feature_idx, feature_name in enumerate(batch_data.keys()):
+            feature = batch_data[feature_name].numpy()
+            transform_list = self.transform_train[feature_idx]
+            # transform each example
+            # \TODO(jp) how to add decoded data here?
+            for i in range(self.batch_size):
+                # for k in batch_data.keys():
+                #     single_example[k] = batch_data[k][i,...]
+                # def _get_single_example():
+                #     feature_slice = dict()
+                #     for k in batch_data.keys():
+                #         feature_slice[k] = batch_data[k][i, ...]
+                #     return feature_slice
+                # single_example = _get_single_example()
+                for process_obj in transform_list:
+                    # process_obj.decoded_data = single_example
+                    if isinstance(process_obj, AbstractAugmentation):
+                        process_obj.setup()
+                    feature[i, ...] = process_obj.transform(feature[i, ...])
+            batch_data[feature_name] = feature
+        return batch_data
+
     def _input_source(self, mode):
         """Package the data from tfrecord to model
         
@@ -151,36 +178,18 @@ class Pipeline:
             Iterator: An iterator that can provide a streaming of processed data
         """
         dataset = self._input_stream(mode)
+        # init aug/preprocess objs
+        for feature_idx, feature_name in enumerate(self.feature_name):
+            transform_list = self.transform_train[feature_idx]
+            for process_obj in transform_list:
+                process_obj.feature_name = feature_name
+                if isinstance(process_obj, AbstractAugmentation):
+                    if process_obj.mode == mode or process_obj.mode == "both":
+                        process_obj.width = self.feature_shape[feature_name][1]
+                        process_obj.height = self.feature_shape[feature_name][2]
+
         for batch_data in dataset:
-            preprocessed_batch = []
-            #consider parallelization of following loop
-            for example_idx in range(self.batch_size):
-                preprocessed_data = {}
-                decoded_data = self._get_dict_slice(batch_data, example_idx)
-                randomized_list = []
-                for idx in range(len(self.feature_name)):
-                    transform_list = self.transform_train[idx]
-                    feature_name = self.feature_name[idx]
-                    preprocess_data = decoded_data[feature_name]
-                    for preprocess_obj in transform_list:
-                        if isinstance(preprocess_obj, AbstractAugmentation):
-                            if preprocess_obj.mode == mode or preprocess_obj.mode == "both":
-                                preprocess_obj.height = preprocess_data.shape[0]
-                                preprocess_obj.width = preprocess_data.shape[1]
-                                preprocess_obj.feature_name = feature_name
-                                if preprocess_obj not in randomized_list:
-                                    preprocess_obj.decoded_data = decoded_data
-                                    preprocess_obj.setup()
-                                    randomized_list.append(preprocess_obj)
-                                preprocess_data = preprocess_obj.transform(preprocess_data)
-                        else:
-                            preprocess_obj.feature_name = feature_name
-                            preprocess_data = preprocess_obj.transform(preprocess_data, decoded_data)
-                    preprocessed_data[feature_name] = preprocess_data
-                preprocessed_data = self.final_transform(preprocessed_data)
-                preprocessed_batch.append(preprocessed_data)
-            processed_batch_data = self._combine_dict(preprocessed_batch)
-            yield processed_batch_data
+            yield self._transform_batch(batch_data, mode)
 
     def _combine_dict(self, dict_list):
         """combine same key of multiple dictionaries list into one dictinoary
