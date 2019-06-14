@@ -33,6 +33,8 @@ $ fastestimator train --entry_point tutorial/mnist.py
 ```
 $ ./fastestimator/test/tests.sh
 ```
+## Continuous build status
+[![Build Status](http://54.184.62.55:8080/buildStatus/icon?job=fe_git%2Ffastestimator%2Fmaster)](http://54.184.62.55:8080/job/fe_git/job/fastestimator/job/master/)
 
 ## Documentation
 For more info about building models and training, check  out [FastEstimator documentation](https://github.com/pages/fastestimator/fastestimator/)
