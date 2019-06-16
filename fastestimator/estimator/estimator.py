@@ -67,10 +67,6 @@ class Estimator:
         self.pipeline.rank = self.rank
         self.pipeline.local_rank = self.local_rank
         self.pipeline._prepare(self.inputs)
-        self.training_fn = lambda: self.pipeline._input_source("train")
-        if self.pipeline.num_examples["eval"] > 0 and self.rank ==0:
-            self.validation_fn = lambda: self.pipeline._input_source("eval")
-            self.do_eval = True
 
     def _prepare_estimator(self):
         if self.traces is None:
@@ -79,6 +75,10 @@ class Estimator:
             self.steps_per_epoch = self.pipeline.num_examples["train"]//(self.pipeline.batch_size * self.num_process)
         if self.validation_steps is None and self.pipeline.num_examples["eval"] > 0:
             self.validation_steps = self.pipeline.num_examples["eval"]//self.pipeline.batch_size
+        self.training_fn = lambda: self.pipeline._input_source("train", self.steps_per_epoch * self.epochs)
+        if self.pipeline.num_examples["eval"] > 0 and self.rank ==0:
+            self.validation_fn = lambda: self.pipeline._input_source("eval", self.validation_steps)
+            self.do_eval = True
         self._add_traces()
 
     def _add_traces(self):
@@ -97,10 +97,8 @@ class Estimator:
                 self._run_traces_on_epoch_end(mode="train", logs={"epoch": self.epoch})
                 if self.do_eval:
                     self.val()
-                if (train_step + 1) == self.steps_per_epoch * self.epochs:
-                    print("FastEstimator: training finished!")
-                    self._run_traces_end(mode="train")
-                    break
+        self._run_traces_end(mode="train")
+        print("FastEstimator: training finished!")
 
     def val(self):
         self._run_traces_begin(mode="eval")
@@ -109,10 +107,8 @@ class Estimator:
             self._run_traces_on_batch_begin(mode="eval", logs= {"epoch": self.epoch, "step": eval_step, "size": self.pipeline.batch_size})
             prediction, loss = self.eval_step(batch)
             self._run_traces_on_batch_end(mode="eval", logs= {"epoch": self.epoch, "step": eval_step, "size": self.pipeline.batch_size, "batch": batch, "prediction": prediction, "loss": loss})
-            if eval_step+1 == self.validation_steps:
-                self._run_traces_on_epoch_end(mode="eval", logs={"epoch": self.epoch, "loss": np.mean(np.array(self.losses), axis=0)})
-                self._run_traces_end(mode="eval")
-                break
+        self._run_traces_on_epoch_end(mode="eval", logs={"epoch": self.epoch, "loss": np.mean(np.array(self.losses), axis=0)})
+        self._run_traces_end(mode="eval")
 
     def _run_traces_begin(self, mode):
         for trace in self.traces:

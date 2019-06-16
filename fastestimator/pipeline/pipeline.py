@@ -171,7 +171,7 @@ class Pipeline:
             preprocessed_data[feature_name] = preprocess_data
         return preprocessed_data
 
-    def _input_source(self, mode):
+    def _input_source(self, mode, num_steps):
         """Package the data from tfrecord to model
         
         Args:
@@ -181,7 +181,7 @@ class Pipeline:
             Iterator: An iterator that can provide a streaming of processed data
         """
         dataset = self._input_stream(mode)
-        for batch_data in dataset:
+        for batch_data in dataset.take(num_steps):
             batch_data = self.final_transform(batch_data)
             yield batch_data
 
@@ -263,10 +263,8 @@ class Pipeline:
         else:
             assert inputs is not None, "Must specify the data path when using existing tfrecords"
         self._get_tfrecord_config(inputs)
-        dataset = self._input_source(mode)
+        dataset = self._input_source(mode, num_batches)
         for i, example in enumerate(dataset):
-            if i == num_batches:
-                break
             for key in example.keys():
                 example[key] = np.array(example[key])
             np_data.append(example)
@@ -293,7 +291,7 @@ class Pipeline:
         else:
             assert inputs is not None, "Must specify the data path when using existing tfrecords"
         self._get_tfrecord_config(inputs)
-        it = self._input_source(mode)
+        it = self._input_source(mode, num_steps)
         start = time.time()
         for i, _ in enumerate(it):
             if i % log_interval == 0 and i >0:
