@@ -151,11 +151,9 @@ class Minmax(AbstractPreprocessing):
         Returns:
             Normalized numpy array
         """
-
-        data = np.float32(data)
-        data_max = np.max(data)
-        data_min = np.min(data)
-        data = (data - data_min) / max(data_max - data_min, epsilon)
+        data = data.astype(np.float32)
+        data = data - np.amin(data[:])
+        data = data / (np.amax(data[:]) + epsilon)
         return data
 
 

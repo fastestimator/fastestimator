@@ -13,13 +13,13 @@ FastEstimator is a high-level deep learning API. With the help of FastEstimator,
 `pip install fastestimator`
 
 ## Docker
-Docker container creates isolated virtual environment that shares resources with host machine. Docker provides an easy way to set up FastEstimator running environment, users can either build from dockerfile or pull from [Docker Hub](https://hub.docker.com/r/fastestimator/fastestimator/tags).
+Docker container creates isolated virtual environment that shares resources with host machine. Docker provides an easy way to set up FastEstimator running environment, users can either build from dockerfile or pull from Docker Hub.
 
-### Build Image from docker file
+### Build Image from Dockerfile
 * GPU: `docker build -t fastestimator_gpu -f docker/Dockerfile.gpu .`
 * CPU: `docker build -t fastestimator_cpu -f docker/Dockerfile.cpu .`
 
-### Pull Image from Docker Hub
+### Pull Image from [Docker Hub](https://hub.docker.com/r/fastestimator/fastestimator/tags)
 * GPU: `docker pull fastestimator/fastestimator:latest-gpu`
 
 ## Running your first FastEstimator training
