@@ -1,4 +1,4 @@
-from fastestimator.pipeline.augmentation import AbstractAugmentation
+from fastestimator.pipeline.static.augmentation import AbstractAugmentation
 from fastestimator.util.tfrecord import TFRecorder, get_features
 from fastestimator.util.util import convert_tf_dtype
 import tensorflow as tf
@@ -52,7 +52,6 @@ class Pipeline:
         self.decode_type = None #change later by tfrecord config
         self.feature_shape = None #change later by tfrecord config
         self.compression = None
-        self.block_length = {"train": 2, "eval":1}
 
     def _prepare(self, inputs=None):
         """
@@ -126,49 +125,53 @@ class Pipeline:
             Dataset object containing the batch of tensors to be ingested by the model
         """
         filenames = self.file_names[mode]
-        dataset = tf.data.Dataset.from_tensor_slices(filenames)
         if mode == "train":
+            dataset = tf.data.Dataset.from_tensor_slices(filenames)
             dataset = dataset.shard(self.num_local_process, self.local_rank)
             dataset = dataset.shuffle(len(filenames))
-        dataset = dataset.interleave(lambda dataset: tf.data.TFRecordDataset(dataset, compression_type=self.compression), cycle_length=self.num_subprocess, block_length=self.block_length[mode])
-        if mode == "train":
+            dataset = dataset.interleave(lambda dataset: tf.data.TFRecordDataset(dataset, compression_type=self.compression), cycle_length=self.num_subprocess, block_length=2)
             dataset = dataset.shuffle(min(10000, self.num_examples[mode]))
             dataset = dataset.repeat()
+        else:
+            dataset = tf.data.TFRecordDataset(filenames, compression_type=self.compression)
         dataset = dataset.map(lambda dataset: self.read_and_decode(dataset), num_parallel_calls=self.num_subprocess)
         if self.data_filter is not None and self.data_filter.mode in [mode, "both"]:
             dataset = dataset.filter(lambda dataset: self.data_filter.predicate_fn(dataset))
+        dataset = dataset.map(lambda dataset: self._preprocess_fn(dataset, mode), num_parallel_calls=self.num_subprocess)
         dataset = dataset.batch(self.batch_size)
         dataset = dataset.prefetch(buffer_size=1)
         return dataset
 
-    def _transform_batch(self, batch_data, mode):
-        # single_example = dict()
-        # for k in batch_data.keys():
-        #     single_example[k] = None
+    def _preprocess_fn(self, decoded_data, mode):
+        """
+        Preprocessing performed on the tensor data in features in the order specified in the transform_train list
+        Args:
+            decoded_data: dataset object containing a dictionary of tensors
+            mode: Mode for training ("train", "eval" or "both")
+        Returns:
+            Dictionary containing the preprocessed data in the form of a dictionary of tensors
+        """
+        preprocessed_data = {}
+        randomized_list = []
+        for idx in range(len(self.feature_name)):
+            transform_list = self.transform_train[idx]
+            feature_name = self.feature_name[idx]
+            preprocess_data = decoded_data[feature_name]
+            for preprocess_obj in transform_list:
+                preprocess_obj.feature_name = feature_name
+                preprocess_obj.decoded_data = decoded_data
+                if isinstance(preprocess_obj, AbstractAugmentation):
+                    if preprocess_obj.mode == mode or preprocess_obj.mode == "both":
+                        preprocess_obj.height = preprocess_data.get_shape()[0].value
+                        preprocess_obj.width = preprocess_data.get_shape()[1].value
+                        if preprocess_obj not in randomized_list:
+                            preprocess_obj.setup()
+                            randomized_list.append(preprocess_obj)
+                preprocess_data = preprocess_obj.transform(preprocess_data)
+            preprocessed_data[feature_name] = preprocess_data
+        return preprocessed_data
 
-        for feature_idx, feature_name in enumerate(batch_data.keys()):
-            feature = batch_data[feature_name].numpy()
-            transform_list = self.transform_train[feature_idx]
-            # transform each example
-            # \TODO(jp) how to add decoded data here?
-            for i in range(self.batch_size):
-                # for k in batch_data.keys():
-                #     single_example[k] = batch_data[k][i,...]
-                # def _get_single_example():
-                #     feature_slice = dict()
-                #     for k in batch_data.keys():
-                #         feature_slice[k] = batch_data[k][i, ...]
-                #     return feature_slice
-                # single_example = _get_single_example()
-                for process_obj in transform_list:
-                    # process_obj.decoded_data = single_example
-                    if isinstance(process_obj, AbstractAugmentation):
-                        process_obj.setup()
-                    feature[i, ...] = process_obj.transform(feature[i, ...])
-            batch_data[feature_name] = feature
-        return batch_data
-
-    def _input_source(self, mode):
+    def _input_source(self, mode, num_steps):
         """Package the data from tfrecord to model
         
         Args:
@@ -178,48 +181,9 @@ class Pipeline:
             Iterator: An iterator that can provide a streaming of processed data
         """
         dataset = self._input_stream(mode)
-        # init aug/preprocess objs
-        for feature_idx, feature_name in enumerate(self.feature_name):
-            transform_list = self.transform_train[feature_idx]
-            for process_obj in transform_list:
-                process_obj.feature_name = feature_name
-                if isinstance(process_obj, AbstractAugmentation):
-                    if process_obj.mode == mode or process_obj.mode == "both":
-                        process_obj.width = self.feature_shape[feature_name][1]
-                        process_obj.height = self.feature_shape[feature_name][2]
-
-        for batch_data in dataset:
-            yield self._transform_batch(batch_data, mode)
-
-    def _combine_dict(self, dict_list):
-        """combine same key of multiple dictionaries list into one dictinoary
-        
-        Args:
-            dict_list (list): list of dictionaries
-        
-        Returns:
-            dict: combined dictionary
-        """
-        combined_batch = {}
-        for feature in dict_list[0].keys():
-            combined_batch[feature] = np.array(list(d[feature] for d in dict_list))
-        return combined_batch
-        
-    def _get_dict_slice(self, dictionary, index):
-        """slice a dictionary for each key and return the sliced dictionary
-        
-        Args:
-            dictionary (dict): original dictionary
-            index (int): slice index
-        
-        Returns:
-            dict: sliced dictionary with same key as original dictionary
-        """
-        feature_slice = dict()
-        keys = dictionary.keys()
-        for key in keys:
-            feature_slice[key] = dictionary[key][index]
-        return feature_slice
+        for batch_data in dataset.take(num_steps):
+            batch_data = self.final_transform(batch_data)
+            yield batch_data
 
     def final_transform(self, preprocessed_data):
         """
@@ -299,10 +263,10 @@ class Pipeline:
         else:
             assert inputs is not None, "Must specify the data path when using existing tfrecords"
         self._get_tfrecord_config(inputs)
-        dataset = self._input_source(mode)
-        for example in dataset.take(num_batches):
+        dataset = self._input_source(mode, num_batches)
+        for i, example in enumerate(dataset):
             for key in example.keys():
-                example[key] = example[key].numpy()
+                example[key] = np.array(example[key])
             np_data.append(example)
         return np_data
 
@@ -327,7 +291,7 @@ class Pipeline:
         else:
             assert inputs is not None, "Must specify the data path when using existing tfrecords"
         self._get_tfrecord_config(inputs)
-        it = self._input_source(mode)
+        it = self._input_source(mode, num_steps)
         start = time.time()
         for i, _ in enumerate(it):
             if i % log_interval == 0 and i >0:

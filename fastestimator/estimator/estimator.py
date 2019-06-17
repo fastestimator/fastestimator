@@ -2,13 +2,13 @@ from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
 from tensorflow.keras.callbacks import EarlyStopping as EarlyStopping_keras
 from tensorflow.keras.callbacks import ReduceLROnPlateau as ReduceLROnPlateau_keras
 from tensorflow.keras.callbacks import LearningRateScheduler as LearningRateScheduler_keras
+from fastestimator.estimator.trace import TrainLogger
 from tensorflow.keras import backend as K
 import tensorflow as tf
+import numpy as np
 import logging
-import time
 import sys
 import os
-import numpy as np
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
@@ -27,18 +27,19 @@ class Estimator:
         callbacks: List of callbacks object in tf.keras. (default: ``[]``)
         log_steps: Number of steps after which training logs will be displayed periodically.
     """
-    def __init__(self, pipeline, network, epochs, steps_per_epoch=None, validation_steps=None, callbacks=[], log_steps=100):
+    def __init__(self, pipeline, network, epochs, steps_per_epoch=None, validation_steps=None, traces=None, log_steps=100):
         self.pipeline = pipeline
         self.network = network
         self.epochs = epochs
         self.steps_per_epoch = steps_per_epoch
         self.validation_steps = validation_steps
-        self.callbacks = callbacks
         self.log_steps = log_steps
         self.rank = 0
         self.local_rank = 0
         self.num_process = 1
         self.num_local_process = 1
+        self.traces = traces
+        self.do_eval = False
     
     def fit(self, inputs=None):
         """
@@ -66,33 +67,99 @@ class Estimator:
         self.pipeline.rank = self.rank
         self.pipeline.local_rank = self.local_rank
         self.pipeline._prepare(self.inputs)
-        self.training_fn = lambda: self.pipeline._input_source("train")
-        if self.pipeline.num_examples["eval"] > 0 and self.rank ==0:
-            self.validation_fn = lambda: self.pipeline._input_source("eval")
 
     def _prepare_estimator(self):
+        if self.traces is None:
+            self.traces = []
         if self.steps_per_epoch is None:
             self.steps_per_epoch = self.pipeline.num_examples["train"]//(self.pipeline.batch_size * self.num_process)
         if self.validation_steps is None and self.pipeline.num_examples["eval"] > 0:
             self.validation_steps = self.pipeline.num_examples["eval"]//self.pipeline.batch_size
+        self.training_fn = lambda: self.pipeline._input_source("train", self.steps_per_epoch * self.epochs)
+        if self.pipeline.num_examples["eval"] > 0 and self.rank ==0:
+            self.validation_fn = lambda: self.pipeline._input_source("eval", self.validation_steps)
+            self.do_eval = True
+        self._add_traces()
 
-    def train(self):
-        start = time.time()
-        global_step = 0
-        for feature in self.training_fn():
-            loss = self.train_step(feature)
-            global_step += 1
-            if global_step % 100 == 0 and global_step > 0:
-                time_elapse = time.time() - start
-                example_per_sec = 100 * self.pipeline.batch_size / time_elapse
-                if isinstance(loss, tuple):
-                    loss = [x.numpy() for x in list(loss)]
-                else:
-                    loss = loss.numpy()
-                print("step: %d, loss is %s, example/sec is %f" % (global_step, str(loss), example_per_sec))
-                start = time.time()
+    def _add_traces(self):
+        self.traces.insert(0, TrainLogger(log_steps=self.log_steps, num_process=self.num_process))
     
+    def train(self):
+        self._run_traces_begin(mode="train")
+        for train_step, batch in enumerate(self.training_fn()):
+            if train_step % self.steps_per_epoch == 0:
+                self.epoch = train_step // self.steps_per_epoch
+                self._run_traces_on_epoch_begin(mode="train", logs={"epoch": self.epoch})
+            self._run_traces_on_batch_begin(mode="train", logs= {"epoch": self.epoch, "step": train_step, "size": self.pipeline.batch_size})
+            prediction, loss = self.train_step(batch)
+            self._run_traces_on_batch_end(mode="train", logs= {"epoch": self.epoch, "step": train_step, "size": self.pipeline.batch_size, "batch": batch, "prediction": prediction, "loss": loss})
+            if (train_step + 1) % self.steps_per_epoch == 0:
+                self._run_traces_on_epoch_end(mode="train", logs={"epoch": self.epoch})
+                if self.do_eval:
+                    self.val()
+        self._run_traces_end(mode="train")
+        print("FastEstimator: training finished!")
+
+    def val(self):
+        self._run_traces_begin(mode="eval")
+        self._run_traces_on_epoch_begin(mode="eval", logs={"epoch": self.epoch})
+        for eval_step, batch in enumerate(self.validation_fn()):
+            self._run_traces_on_batch_begin(mode="eval", logs= {"epoch": self.epoch, "step": eval_step, "size": self.pipeline.batch_size})
+            prediction, loss = self.eval_step(batch)
+            self._run_traces_on_batch_end(mode="eval", logs= {"epoch": self.epoch, "step": eval_step, "size": self.pipeline.batch_size, "batch": batch, "prediction": prediction, "loss": loss})
+        self._run_traces_on_epoch_end(mode="eval", logs={"epoch": self.epoch, "loss": np.mean(np.array(self.losses), axis=0)})
+        self._run_traces_end(mode="eval")
+
+    def _run_traces_begin(self, mode):
+        for trace in self.traces:
+            trace.begin(mode)
+    
+    def _run_traces_on_epoch_begin(self, mode, logs):
+        self.losses = []
+        for trace in self.traces:
+            trace.on_epoch_begin(mode, logs)
+
+    def _run_traces_on_batch_begin(self, mode, logs):
+        for trace in self.traces:
+            trace.on_batch_begin(mode, logs)
+
+    def _run_traces_on_batch_end(self, mode, logs):
+        self.losses.append(logs["loss"])
+        for trace in self.traces:
+            trace.on_batch_end(mode, logs)
+
+    def _run_traces_on_epoch_end(self, mode, logs):
+        output_list = []
+        for trace in self.traces:
+            metric_output = trace.on_epoch_end(mode, logs)
+            if mode == "eval" and metric_output:
+                trace_name = type(trace).__name__
+                output_list.append((trace_name, metric_output))
+        if mode == "eval":
+            self._print_eval_message(output_list)
+
+    def _print_eval_message(self, output_list):
+        step = self.steps_per_epoch * (self.epoch + 1)
+        log_message = "FastEstimator-Eval: step: %d; " % step
+        for metric_name, metric_result in output_list:
+            if isinstance(metric_result, dict):
+                for key in metric_result.keys():
+                    eval_value = metric_result[key]
+                    log_message = log_message + key + ": " + str(eval_value) + "; "
+            else:
+                log_message = log_message + metric_name + ": " + str(metric_result) + "; "
+        print(log_message)
+
+    def _run_traces_end(self, mode):
+        for trace in self.traces:
+            trace.end(mode)
+
     @tf.function
-    def train_step(self, features):
-        loss = self.network.train_op(features)
-        return loss
+    def train_step(self, batch):
+        prediction, loss = self.network.train_op(batch)
+        return prediction, loss
+
+    @tf.function
+    def eval_step(self, batch):
+        prediction, loss = self.network.eval_op(batch)
+        return prediction, loss
