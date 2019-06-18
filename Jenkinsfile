@@ -4,8 +4,16 @@ pipeline {
   stages {
     stage('Build') {
       steps {
-        echo "Building"
+        sh './test/install_dependencies.sh'
       }
+    }
+    stage('Test') {
+        steps {
+            sh '''
+                . venv/bin/activate
+                python3 -m pytest
+            '''
+        }
     }
 
   }
