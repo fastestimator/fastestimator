@@ -570,6 +570,7 @@ Full Code Demo
 -------------------
 
 * Image Classification: Mnist-Classification_
+* Image Generation: Mnist-CGAN_
 
 
 .. _pipeline-api: https://fastestimator.github.io/fastestimator/api.html#pipeline
@@ -582,3 +583,4 @@ Full Code Demo
 .. _Optimizers: https://www.tensorflow.org/api_docs/python/tf/keras/optimizers
 .. _Callbacks: https://www.tensorflow.org/api_docs/python/tf/keras/callbacks
 .. _Mnist-Classification: https://github.com/fastestimator/examples/blob/master/image_classification/lenet_mnist.py
+.. _Mnist-CGAN: https://github.com/fastestimator/examples/blob/master/image_generation/dcgan_mnist.py
