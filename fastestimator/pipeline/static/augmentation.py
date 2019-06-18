@@ -307,8 +307,7 @@ class Augmentation(AbstractAugmentation):
         transform_matrix_flatten = transform_matrix_flatten[0, 0:8]
         #augment_data = tf.contrib.image.transform(data, transform_matrix_flatten)
         augment_data = transform_ops.transform(data, transform_matrix_flatten)
-        import pdb; pdb.set_trace()
-        #augment_data = tf.cond(self.do_flip_lr_tensor, lambda: tf.image.flip_left_right(augment_data), lambda: augment_data)
-        #augment_data = tf.cond(self.do_flip_ud_tensor, lambda: tf.image.flip_up_down(augment_data), lambda: augment_data)
+        augment_data = tf.cond(self.do_flip_lr_tensor, lambda: tf.image.flip_left_right(augment_data), lambda: augment_data)
+        augment_data = tf.cond(self.do_flip_ud_tensor, lambda: tf.image.flip_up_down(augment_data), lambda: augment_data)
         return augment_data
 
