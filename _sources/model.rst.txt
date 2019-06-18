@@ -557,12 +557,12 @@ to create the summary file for training.
     from fastestimator.util.tfrecord import add_summary, get_features
 
     # First, get feature name and related information
-    print(get_features("/home/data/tf_train_0000.tfrecords"))
+    print(get_features("/data/data/tf_train_0000.tfrecords"))
 
     # Next, fill in the required field
-    add_summary(data_dir="/data/home/", 
-                train_prefix="tf_train_", 
-                eval_prefix= "tf_eval_", 
+    add_summary(data_dir="/data/data/", 
+                train_prefix="tf_train", 
+                eval_prefix= "tf_val", 
                 feature_name=["image_raw", "image_labels"], 
                 feature_dtype=["uint8", "int64"])
 
@@ -570,20 +570,15 @@ Full Code Demo
 -------------------
 
 * Image Classification: Mnist-Classification_
-* Image Segmentation: Cub200-Segmentation_
-* Natural Language Processing: IMDB-Review_
 
 
-.. _pipeline-api: https://github.com/pages/fastestimator/fastestimator/api.html#pipeline
-.. _network-api: https://github.com/pages/fastestimator/fastestimator/api.html#network
-.. _dynamic-preprocess: https://github.com/pages/fastestimator/fastestimator/api.html#dynamic-preprocess
-.. _static-preprocess: https://github.com/pages/fastestimator/fastestimator/api.html#static-preprocess
-.. _2D-augmentation: https://github.com/pages/fastestimator/fastestimator/api.html#augmentation
+.. _pipeline-api: https://fastestimator.github.io/fastestimator/api.html#pipeline
+.. _network-api: https://fastestimator.github.io/fastestimator/api.html#network
+.. _dynamic-preprocess: https://fastestimator.github.io/fastestimator/api.html#dynamic-preprocess
+.. _static-preprocess: https://fastestimator.github.io/fastestimator/api.html#static-preprocess
+.. _2D-augmentation: https://fastestimator.github.io/fastestimator/api.html#augmentation
 .. _Losses: https://www.tensorflow.org/api_docs/python/tf/keras/losses
 .. _Metrics: https://www.tensorflow.org/api_docs/python/tf/keras/metrics
 .. _Optimizers: https://www.tensorflow.org/api_docs/python/tf/keras/optimizers
 .. _Callbacks: https://www.tensorflow.org/api_docs/python/tf/keras/callbacks
-.. _Mnist-Classification: https://github.com/fastestimator/examples/blob/master/classification_mnist/mnist.ipynb
-.. _Cub200-Segmentation: https://github.com/fastestimator/examples/blob/master/segmentation_cub200/cub200.ipynb
-.. _IMDB-Review: https://github.com/fastestimator/examples/blob/master/sentiment_classification_imdb/imdb.ipynb
-
+.. _Mnist-Classification: https://github.com/fastestimator/examples/blob/master/image_classification/lenet_mnist.py

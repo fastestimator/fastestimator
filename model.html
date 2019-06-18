@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Buiding model with FastEstimator &mdash; FastEstimator 0.2 documentation</title>
+  <title>Buiding model with FastEstimator &mdash; FastEstimator 0.0.1 documentation</title>
   
 
   
@@ -56,10 +56,6 @@
 
           
             
-            
-              <div class="version">
-                0.2
-              </div>
             
           
 
@@ -242,7 +238,7 @@ in the Mnist example.</p>
 <h3>Overview<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
 <p>Data pipeline is responsible for providing data from disk/memory to model. It includes
 data preprocessing operations before training loop and during training loop. The details of each argument of
-<code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> can be found in <a class="reference external" href="https://github.com/pages/fastestimator/fastestimator/api.html#pipeline">pipeline-api</a>, but let’s talk about several important ones here:</p>
+<code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> can be found in <a class="reference external" href="https://fastestimator.github.io/fastestimator/api.html#pipeline">pipeline-api</a>, but let’s talk about several important ones here:</p>
 <ul class="simple">
 <li><code class="docutils literal notranslate"><span class="pre">train_data</span></code>: The training data in disk (csv) or memory (dict) before creating tfrecords. Ignore it when using existing tfrecords.</li>
 <li><code class="docutils literal notranslate"><span class="pre">validation_data</span></code>: The validation data in disk (csv) or memory (dict) before creating tfrecords. It can also be split ratio of <code class="docutils literal notranslate"><span class="pre">train_data</span></code> from [0-1]. Ignore it when using existing tfrecords or have no valdiation data.</li>
@@ -254,7 +250,7 @@ data preprocessing operations before training loop and during training loop. The
 <h3>Preprocess (before training loop)<a class="headerlink" href="#preprocess-before-training-loop" title="Permalink to this headline">¶</a></h3>
 <p>There are some preprocessing operations that can be applied before training loop (e.g. Minmax).
 In order to ensure a fast training speed, it is recommended to apply those operations once and for all before training happens.
-FastEstimator offers commonly used preprocessing modules in <a class="reference external" href="https://github.com/pages/fastestimator/fastestimator/api.html#dynamic-preprocess">dynamic-preprocess</a> . User can use them in <code class="docutils literal notranslate"><span class="pre">transform_dataset</span></code> argument.</p>
+FastEstimator offers commonly used preprocessing modules in <a class="reference external" href="https://fastestimator.github.io/fastestimator/api.html#dynamic-preprocess">dynamic-preprocess</a> . User can use them in <code class="docutils literal notranslate"><span class="pre">transform_dataset</span></code> argument.</p>
 <p>For example, given two features x and y, if you want to proprocess them in the following way before training:</p>
 <ul class="simple">
 <li>x: mnist images with size [28,28]–&gt; resize to [50, 50] –&gt; normalize pixel to [0,1]</li>
@@ -305,7 +301,7 @@ One natural answer is to add the noise at run time.</p>
 <p>Moreover, there are some operations that are better off applied at runtime such as <cite>onehot encoder</cite>. Because we don’t want
 our tfrecords to include bunch of useless zeros. Therefore, we need one more type of preprocess that can execute on the fly.</p>
 <p>In FastEstimator, on-the-fly preprocessing is implemented in tensorflow, these preprocessing modules are passed through <code class="docutils literal notranslate"><span class="pre">transform_train</span></code> argument.
-Users can use existing module in <a class="reference external" href="https://github.com/pages/fastestimator/fastestimator/api.html#static-preprocess">static-preprocess</a> or customize one for specific needs.</p>
+Users can use existing module in <a class="reference external" href="https://fastestimator.github.io/fastestimator/api.html#static-preprocess">static-preprocess</a> or customize one for specific needs.</p>
 <p>For example, if we want the following process to happen during trainign loop:</p>
 <ul class="simple">
 <li>x: reshape the image data from [2500] to [50, 50, 1]</li>
@@ -355,7 +351,7 @@ Users can use existing module in <a class="reference external" href="https://git
 <p>In FastEstimator, augmentation module is same as on-the-fly preprocessing except for one difference:
 augmentation allows two or more features to share the same information. For example, in a segmentation task,
 image and mask have to be tranformed in the same manner, meaning that they share the same transformation matrix.</p>
-<p>Similar to on-the-fly preprocessing, augmentation is passed through <code class="docutils literal notranslate"><span class="pre">transform_train</span></code> argument. FastEstimator provides default <a class="reference external" href="https://github.com/pages/fastestimator/fastestimator/api.html#augmentation">2D-augmentation</a>,
+<p>Similar to on-the-fly preprocessing, augmentation is passed through <code class="docutils literal notranslate"><span class="pre">transform_train</span></code> argument. FastEstimator provides default <a class="reference external" href="https://fastestimator.github.io/fastestimator/api.html#augmentation">2D-augmentation</a>,
 for example, if we want to apply the following operation to mnist image:</p>
 <ul class="simple">
 <li>random rotation between -25 degrees to 25 degrees</li>
@@ -486,7 +482,7 @@ pipeline get the outcome in numpy.</p>
 <div class="section" id="id2">
 <h3>Overview<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
 <p>In FastEstimator, <cite>Network</cite> contains the model architecture and optimization related information.
-User can refer to <a class="reference external" href="https://github.com/pages/fastestimator/fastestimator/api.html#network">network-api</a> to find detail arguments. <cite>Network</cite> arguments have full compatibility
+User can refer to <a class="reference external" href="https://fastestimator.github.io/fastestimator/api.html#network">network-api</a> to find detail arguments. <cite>Network</cite> arguments have full compatibility
 with <code class="docutils literal notranslate"><span class="pre">tf.keras</span></code>, here’s one example of network :</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">fastestimator.network.network</span> <span class="kn">import</span> <span class="n">Network</span>
 <span class="kn">from</span> <span class="nn">fastestimator.application.lenet</span> <span class="kn">import</span> <span class="n">LeNet</span>
@@ -683,12 +679,12 @@ to create the summary file for training.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">fastestimator.util.tfrecord</span> <span class="kn">import</span> <span class="n">add_summary</span><span class="p">,</span> <span class="n">get_features</span>
 
 <span class="c1"># First, get feature name and related information</span>
-<span class="k">print</span><span class="p">(</span><span class="n">get_features</span><span class="p">(</span><span class="s2">&quot;/home/data/tf_train_0000.tfrecords&quot;</span><span class="p">))</span>
+<span class="k">print</span><span class="p">(</span><span class="n">get_features</span><span class="p">(</span><span class="s2">&quot;/data/data/tf_train_0000.tfrecords&quot;</span><span class="p">))</span>
 
 <span class="c1"># Next, fill in the required field</span>
-<span class="n">add_summary</span><span class="p">(</span><span class="n">data_dir</span><span class="o">=</span><span class="s2">&quot;/data/home/&quot;</span><span class="p">,</span>
-            <span class="n">train_prefix</span><span class="o">=</span><span class="s2">&quot;tf_train_&quot;</span><span class="p">,</span>
-            <span class="n">eval_prefix</span><span class="o">=</span> <span class="s2">&quot;tf_eval_&quot;</span><span class="p">,</span>
+<span class="n">add_summary</span><span class="p">(</span><span class="n">data_dir</span><span class="o">=</span><span class="s2">&quot;/data/data/&quot;</span><span class="p">,</span>
+            <span class="n">train_prefix</span><span class="o">=</span><span class="s2">&quot;tf_train&quot;</span><span class="p">,</span>
+            <span class="n">eval_prefix</span><span class="o">=</span> <span class="s2">&quot;tf_val&quot;</span><span class="p">,</span>
             <span class="n">feature_name</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;image_raw&quot;</span><span class="p">,</span> <span class="s2">&quot;image_labels&quot;</span><span class="p">],</span>
             <span class="n">feature_dtype</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;uint8&quot;</span><span class="p">,</span> <span class="s2">&quot;int64&quot;</span><span class="p">])</span>
 </pre></div>
@@ -698,9 +694,7 @@ to create the summary file for training.</p>
 <div class="section" id="full-code-demo">
 <h2>Full Code Demo<a class="headerlink" href="#full-code-demo" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
-<li>Image Classification: <a class="reference external" href="https://github.com/fastestimator/examples/blob/master/classification_mnist/mnist.ipynb">Mnist-Classification</a></li>
-<li>Image Segmentation: <a class="reference external" href="https://github.com/fastestimator/examples/blob/master/segmentation_cub200/cub200.ipynb">Cub200-Segmentation</a></li>
-<li>Natural Language Processing: <a class="reference external" href="https://github.com/fastestimator/examples/blob/master/sentiment_classification_imdb/imdb.ipynb">IMDB-Review</a></li>
+<li>Image Classification: <a class="reference external" href="https://github.com/fastestimator/examples/blob/master/image_classification/lenet_mnist.py">Mnist-Classification</a></li>
 </ul>
 </div>
 </div>
@@ -725,7 +719,7 @@ to create the summary file for training.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, GE Healthcare
+        &copy; Copyright 2019, GEHC DataScience
 
     </p>
   </div>
