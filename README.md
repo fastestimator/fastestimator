@@ -37,7 +37,7 @@ $ ./fastestimator/test/tests.sh
 ```
 
 ## Documentation
-For more info about building models and training, check  out [FastEstimator documentation](https://github.com/pages/fastestimator/fastestimator/)
+For more info about building models and training, check  out [FastEstimator documentation](https://fastestimator.github.io/fastestimator/)
 
 ## License
 [Apache License 2.0](https://github.com/fastestimator/fastestimator/blob/master/LICENSE)
