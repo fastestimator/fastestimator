@@ -10,7 +10,6 @@ pipeline {
     stage('Test') {
         steps {
             sh '''
-                whoami
                 . venv/bin/activate
                 python3 -m pytest
             '''
