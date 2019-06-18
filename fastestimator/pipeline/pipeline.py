@@ -162,8 +162,8 @@ class Pipeline:
                 preprocess_obj.decoded_data = decoded_data
                 if isinstance(preprocess_obj, AbstractAugmentation):
                     if preprocess_obj.mode == mode or preprocess_obj.mode == "both":
-                        preprocess_obj.height = preprocess_data.get_shape()[0].value
-                        preprocess_obj.width = preprocess_data.get_shape()[1].value
+                        preprocess_obj.height = preprocess_data.get_shape()[0]
+                        preprocess_obj.width = preprocess_data.get_shape()[1]
                         if preprocess_obj not in randomized_list:
                             preprocess_obj.setup()
                             randomized_list.append(preprocess_obj)

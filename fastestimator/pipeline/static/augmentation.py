@@ -1,5 +1,6 @@
-import tensorflow as tf
 import math
+import tensorflow as tf
+from tensorflow_addons.image import transform_ops
 
 class AbstractAugmentation:
     """
@@ -85,7 +86,7 @@ class Augmentation(AbstractAugmentation):
         else:
             rotation_range = self.rotation_range
         self.rotation_range = rotation_range
-        theta = tf.random_uniform([], maxval=math.pi / 180 * self.rotation_range[1],
+        theta = tf.random.uniform([], maxval=math.pi / 180 * self.rotation_range[1],
                                   minval=math.pi / 180 * self.rotation_range[0])
         base_matrix = tf.constant([[1, 0, 0], [0, 1, 0], [0, 0, 0]], shape=[3, 3], dtype=tf.float32)
         rotation_matrix_1 = tf.cos(theta) * base_matrix
@@ -117,10 +118,10 @@ class Augmentation(AbstractAugmentation):
         else:
             height_shift_range = self.height_shift_range
         self.height_shift_range = height_shift_range
-        ty = tf.random_uniform([], maxval=self.width_shift_range[1], minval=self.width_shift_range[0])
+        ty = tf.random.uniform([], maxval=self.width_shift_range[1], minval=self.width_shift_range[0])
         ty *= self.width
         base_ty = ty * tf.constant([[0, 0, 1], [0, 0, 0], [0, 0, 0]], shape=[3, 3], dtype=tf.float32)
-        tx = tf.random_uniform([], maxval=self.height_shift_range[1], minval=self.height_shift_range[0])
+        tx = tf.random.uniform([], maxval=self.height_shift_range[1], minval=self.height_shift_range[0])
         tx *= self.height
         base_tx = tx * tf.constant([[0, 0, 0], [0, 0, 1], [0, 0, 0]], shape=[3, 3], dtype=tf.float32)
         transform_matrix = tf.constant([[1, 0, 0], [0, 1, 0], [0, 0, 1]], shape=[3, 3],
@@ -142,8 +143,8 @@ class Augmentation(AbstractAugmentation):
         else:
             shear_range = self.shear_range
         self.shear_range = shear_range
-        sx = tf.random_uniform([], maxval=math.pi / 180 * self.shear_range[1], minval=math.pi / 180 * self.shear_range[0])
-        sy = tf.random_uniform([], maxval=math.pi / 180 * self.shear_range[1], minval=math.pi / 180 * self.shear_range[0])
+        sx = tf.random.uniform([], maxval=math.pi / 180 * self.shear_range[1], minval=math.pi / 180 * self.shear_range[0])
+        sy = tf.random.uniform([], maxval=math.pi / 180 * self.shear_range[1], minval=math.pi / 180 * self.shear_range[0])
         base_shear1 = -tf.sin(sx) * tf.constant([[0, 1, 0], [0, 0, 0], [0, 0, 0]], shape=[3, 3], dtype=tf.float32)
         base_shear2 = tf.cos(sy) * tf.constant([[0, 0, 0], [0, 1, 0], [0, 0, 0]], shape=[3, 3], dtype=tf.float32)
         transform_matrix = tf.constant([[1, 0, 0], [0, 0, 0], [0, 0, 1]], shape=[3, 3], dtype=tf.float32) + \
@@ -165,8 +166,8 @@ class Augmentation(AbstractAugmentation):
         else:
             zoom_range = self.zoom_range
         self.zoom_range = zoom_range
-        zx = tf.random_uniform([], maxval=self.zoom_range[1], minval=self.zoom_range[0])
-        zy = tf.random_uniform([], maxval=self.zoom_range[1], minval=self.zoom_range[0])
+        zx = tf.random.uniform([], maxval=self.zoom_range[1], minval=self.zoom_range[0])
+        zy = tf.random.uniform([], maxval=self.zoom_range[1], minval=self.zoom_range[0])
         base_zx = tf.constant([[1, 0, 0], [0, 0, 0], [0, 0, 0]], shape=[3, 3], dtype=tf.float32) / zx
         base_zy = tf.constant([[0, 0, 0], [0, 1, 0], [0, 0, 0]], shape=[3, 3], dtype=tf.float32) / zy
         transform_matrix = tf.constant([[0, 0, 0], [0, 0, 0], [0, 0, 1]], shape=[3, 3], dtype=tf.float32) + base_zx + base_zy
@@ -180,7 +181,7 @@ class Augmentation(AbstractAugmentation):
         Returns:
             A boolean that represents whether or not to flip
         """
-        do_flip = tf.greater(tf.random_uniform([], minval=0, maxval=1), 0.5)
+        do_flip = tf.greater(tf.random.uniform([], minval=0, maxval=1), 0.5)
         return do_flip
 
     def transform_matrix_offset_center(self, matrix):
@@ -260,7 +261,7 @@ class Augmentation(AbstractAugmentation):
         else:
             if self.shear_range[0] > 0. or self.shear_range[1] > 0.:
                 do_shear = True
-        
+
         if do_rotate:
             if transform_matrix is None:
                 transform_matrix = self.rotate()
@@ -294,7 +295,7 @@ class Augmentation(AbstractAugmentation):
     def transform(self, data):
         """
         Transforms the data with the augmentation transformation
-        
+
         Args:
             data: Data to be transformed
 
@@ -304,7 +305,10 @@ class Augmentation(AbstractAugmentation):
         """
         transform_matrix_flatten = tf.reshape(self.transform_matrix, shape=[1, 9])
         transform_matrix_flatten = transform_matrix_flatten[0, 0:8]
-        augment_data = tf.contrib.image.transform(data, transform_matrix_flatten)
-        augment_data = tf.cond(self.do_flip_lr_tensor, lambda: tf.image.flip_left_right(augment_data), lambda: augment_data)
-        augment_data = tf.cond(self.do_flip_ud_tensor, lambda: tf.image.flip_up_down(augment_data), lambda: augment_data)
+        #augment_data = tf.contrib.image.transform(data, transform_matrix_flatten)
+        augment_data = transform_ops.transform(data, transform_matrix_flatten)
+        import pdb; pdb.set_trace()
+        #augment_data = tf.cond(self.do_flip_lr_tensor, lambda: tf.image.flip_left_right(augment_data), lambda: augment_data)
+        #augment_data = tf.cond(self.do_flip_ud_tensor, lambda: tf.image.flip_up_down(augment_data), lambda: augment_data)
         return augment_data
+
