@@ -84,10 +84,3 @@ class TestEstimator:
             with self.g.as_default():
                 self.pipeline.feature_name = ["x/", "y/"]
                 self.estimator.fit(self.pipeline.inputs)
-
-    def test_horovod_setup(self):
-        self.estimator.callbacks = []
-        self.network.optimizer = "sgd"
-        self.network._check_optimizer()
-        self.estimator._horovod_setup()
-        tf.keras.backend.clear_session()
