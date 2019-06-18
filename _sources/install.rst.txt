@@ -20,8 +20,6 @@ Docker container creates isolated virtual environment that shares resources with
 Docker provides an easy way to set up FastEstimator running environment, users can either build 
 image from dockerfile or pull image from Docker-Hub_.
 
-Current docker image only provides FastEstimator dependencies, users need to install FastEstimator inside the container until opensource.
-
 Build Image from docker file
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :GPU: ``docker build -t fastestimator -f docker/Dockerfile.gpu``
