@@ -4,7 +4,7 @@ import numpy as np
 epsilon = 1e-7
 
 
-class AbstractPreprocessing():
+class AbstractPreprocessing(object):
     """
     An abstract class for preprocessing
     """
@@ -245,7 +245,7 @@ class Reshape(AbstractPreprocessing):
         
         Args:
             data: Data to be reshaped
-            feature: Auxiliary data needed for the resizing
+            feature: Auxiliary data needed for the reshaping
 
         Returns:
             Reshaped array

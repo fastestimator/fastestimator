@@ -295,12 +295,11 @@ class Augmentation(AbstractAugmentation):
             Transformed (augmented) data
         """
         import cv2
-
         augment_data = cv2.warpAffine(data, self.transform_matrix[:2, :],
                                                         (data.shape[0], data.shape[1]), flags=cv2.WARP_INVERSE_MAP)
         augment_data = np.fliplr(augment_data) if self.flip_left_right else augment_data
         augment_data = np.flipud(augment_data) if self.flip_up_down else augment_data
+        if not(data.shape[-1] == augment_data.shape[-1]):
+            # This is due to cv2 removing the last channel if the image is gray scale
+            augment_data = np.expand_dims(augment_data, axis=-1)
         return augment_data
-
-
-
