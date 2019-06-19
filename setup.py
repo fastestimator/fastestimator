@@ -1,7 +1,5 @@
 from __future__ import absolute_import
 
-import os
-import re
 
 from setuptools import setup, find_packages
 
@@ -37,10 +35,11 @@ setup(name="fastestimator",
           'scipy',
           'pytest',
           'pytest-cov',
-          'opencv-python'
+          'opencv-python',
+          'tensorflow'
       ],
       # Declare extra set for installation
       extras_require={
       },
-      scripts=['bin/fastestimator', 'bin/fastestimator_train']
+      scripts=['bin/fastestimator', 'bin/fastestimator_train', 'bin/fastestimator_visualize']
       )

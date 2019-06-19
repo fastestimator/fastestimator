@@ -1,4 +1,3 @@
-import argparse
 import json
 import os
 
@@ -8,21 +7,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python import keras
 
-from saliencies import GradientSaliency, IntegratedGradients
-
-
-def is_number(s):
-    """
-    Args:
-        s: A string
-    Returns:
-        True iff the string represents a number
-    """
-    try:
-        float(s)
-        return True
-    except ValueError:
-        return False
+from fastestimator.util.saliencies import GradientSaliency, IntegratedGradients
+from fastestimator.util.util import is_number
 
 
 def show_text(axis, background, text, title=None):
@@ -172,8 +158,7 @@ def decode_predictions(predictions, top=3, dictionary=None):
 
 def interpret_model(model, model_input, baseline_input=None, decode_dictionary=None, color_map="inferno", smooth=7,
                     save=False, save_path='.'):
-    """Returns a integrated gradients mask.
-
+    """ Displays or saves a saliency mask interpretation of the given input
     Args:
         model: A model to evaluate. Should be a classifier which takes the 0th axis as the batch axis
         model_input: Input tensor, shaped for the model ex. (1, 299, 299, 3)
@@ -229,72 +214,36 @@ def interpret_model(model, model_input, baseline_input=None, decode_dictionary=N
         plt.savefig(save_file, dpi=300, bbox_inches="tight")
 
 
-class SaveAction(argparse.Action):
+def load_and_interpret(model_path, input_paths, baseline=-1, input_type='float32', dictionary_path=None,
+                       strip_alpha=False, smooth_factor=7, save=False, save_dir=None):
+    """ A helper class to load input and invoke the interpretation api
+
+    Args:
+        model_path: The path the model file (str)
+        input_paths: The paths to model input files [(str),...]
+        baseline: Either a number corresponding to the baseline for integration, or a path to a baseline file
+        input_type: The data type of the model inputs, ex 'float32'
+        dictionary_path: The path to a dictionary file encoding a 'class_idx'->'class_name' mapping
+        strip_alpha: Whether to collapse alpha channels when loading an input (bool)
+        smooth_factor: How many iterations of the smoothing algorithm to run (int)
+        save: Whether to save (True) or display (False) the resulting image
+        save_dir: Where to save the image if save=True
     """
-    A custom save action which is used to populate a secondary variable inside of an exclusive group. Used if this file
-        is invoked directly during argument parsing.
-    """
-
-    def __init__(self, option_strings, dest, nargs='?', **kwargs):
-        if '?' != nargs:
-            raise ValueError("nargs must be \'?\'")
-        super(SaveAction, self).__init__(option_strings, dest, nargs, **kwargs)
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        setattr(namespace, self.dest, True)
-        setattr(namespace, self.dest + '_dir', values if values is None else os.path.join(values, ''))
-
-
-if __name__ == '__main__':
-    parser_instance = argparse.ArgumentParser(description='Generates saliency maps for a model on given input(s)',
-                                              formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser_instance.add_argument('model', metavar='<Model Path>', type=str,
-                                 help="The path to a saved model file")
-    parser_instance.add_argument('inputs', metavar='Input', type=str, nargs='+',
-                                 help="The paths to one or more inputs to visualize")
-    parser_instance.add_argument('--dictionary', metavar='<Dictionary Path>', type=str,
-                                 help="The path to a {'class_id':'class_name} json file", default=None)
-    parser_instance.add_argument('--smooth', metavar='N', type=int, default=7,
-                                 help="The number of samples to use when generating smoothed saliency masks")
-    parser_instance.add_argument('--type', metavar='T', type=str, default='float32',
-                                 help="The dtype of the inputs to the model")
-    parser_instance.add_argument('--baseline', metavar='B', type=str, default='-1',
-                                 help="The value to use as a baseline for integrated gradient calculations. Can be \
-                                    either a number or the path to an image. What would a 'blank' input look like")
-    parser_instance.add_argument('--strip-alpha', action='store_true',
-                                 help="True if you want to convert RGBA images to RGB")
-    save_group = parser_instance.add_argument_group('output arguments')
-    save_x_group = save_group.add_mutually_exclusive_group(required=False)
-    save_x_group.add_argument('--save', nargs='?', metavar='<Save Dir>',
-                              help="Save the output image. May be accompanied by a directory into which the \
-                                file is saved. If no output directory is specified, the model directory will be used",
-                              dest='save', action=SaveAction, default=False)
-    save_x_group.add_argument('--display', dest='save', action='store_false',
-                              help="Render the image to the UI (rather than saving it)", default=True)
-    save_x_group.set_defaults(save_dir=None)
-    args = vars(parser_instance.parse_args())
-
-    model_path = args['model']
     model_dir = os.path.dirname(model_path)
-    save_dir = args['save_dir']
     if save_dir is None:
         save_dir = model_dir
-
-    network = keras.models.load_model(args['model'])
-    dic = load_dict(args['dictionary'])
-
-    inputs = [load_image(args['inputs'][i], strip_alpha=args['strip_alpha']) for i in range(len(args['inputs']))]
+    network = keras.models.load_model(model_path)
+    dic = load_dict(dictionary_path)
+    inputs = [load_image(input_paths[i], strip_alpha=strip_alpha) for i in range(len(input_paths))]
     max_shapes = np.maximum.reduce([inp.shape for inp in inputs], axis=0)
-    tf_image = tf.stack([tf.image.resize_with_crop_or_pad(tf.convert_to_tensor(im, dtype=args['type']), max_shapes[0],
+    tf_image = tf.stack([tf.image.resize_with_crop_or_pad(tf.convert_to_tensor(im, dtype=input_type), max_shapes[0],
                                                           max_shapes[1]) for im in inputs], axis=0)
-
-    baseline = args['baseline']
-    baseline_image = None
     if is_number(baseline):
         baseline_gen = tf.constant_initializer(float(baseline))
-        baseline_image = baseline_gen(shape=tf_image.shape, dtype=args['type'])
+        baseline_image = baseline_gen(shape=tf_image.shape, dtype=input_type)
     else:
         baseline_image = load_image(baseline)
+        baseline_image = tf.convert_to_tensor(baseline_image, dtype=input_type)
 
-    interpret_model(network, tf_image, baseline_input=baseline_image, decode_dictionary=dic, smooth=args['smooth'],
-                    save=args['save'], save_path=save_dir)
+    interpret_model(network, tf_image, baseline_input=baseline_image, decode_dictionary=dic, smooth=smooth_factor,
+                    save=save, save_path=save_dir)

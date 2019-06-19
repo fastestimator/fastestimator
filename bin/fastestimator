@@ -1,40 +1,57 @@
 #!/usr/bin/env python
-import os
 import argparse
+import os
 import sys
+
 
 class CLI:
     def __init__(self, arguments):
         self.arguments = arguments
+        self.allowable_ops = ["train", "predict", "visualize"]
 
     def run(self):
+        if len(self.arguments) < 1:
+            print("A mode of operation must be specified (" + str.join(", ", self.allowable_ops) + ")")
+            sys.exit(-1)
         mode = self.arguments[0]
-        assert mode in ["train", "predict"], "the mode must be specified either train or predict"
+        if mode not in self.allowable_ops:
+            print("A valid mode must be specified, one of: " + str.join(", ", self.allowable_ops))
+            sys.exit(-1)
         getattr(self, mode)()
-    
+
     def train(self):
         parser = argparse.ArgumentParser()
         parser.add_argument('--num_process', type=int, help='Number of parallel training process', default=1)
         args, _ = parser.parse_known_args()
         num_process = args.num_process
         cmd = self.get_train_cmd(self.arguments[1:])
-        if num_process >1:
-            cmd = "mpirun -np %d -H localhost:%d --allow-run-as-root " % (num_process, num_process)+ cmd
+        if num_process > 1:
+            cmd = "mpirun -np %d -H localhost:%d --allow-run-as-root " % (num_process, num_process) + cmd
         os.system(cmd)
 
     def predict(self):
         print("prediction not yet supported, but coming soon...!")
         sys.exit(-1)
 
-    def get_train_cmd(self, arguments):
-        cmd = "fastestimator_train "
-        for arg in arguments:
+    def visualize(self):
+        cmd = self.get_vis_cmd(self.arguments[1:])
+        os.system(cmd)
+
+    def get_cmd(self, title, args):
+        cmd = title
+        for arg in args:
             cmd += " "
             cmd += str(arg)
         return cmd
+
+    def get_train_cmd(self, args):
+        return self.get_cmd("fastestimator_train ", args)
+
+    def get_vis_cmd(self, args):
+        return self.get_cmd("fastestimator_visualize ", args)
+
 
 if __name__ == '__main__':
     arguments = sys.argv[1:]
     cli = CLI(arguments)
     cli.run()
-

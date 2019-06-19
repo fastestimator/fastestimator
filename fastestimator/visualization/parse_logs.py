@@ -1,8 +1,6 @@
-import argparse
 import math
 import os
 import re
-import string
 from collections import defaultdict
 
 import matplotlib.pyplot as plt
@@ -10,57 +8,7 @@ import numpy as np
 import seaborn as sns
 from scipy.ndimage.filters import gaussian_filter1d
 
-
-def strip_suffix(target, suffix):
-    """
-    Remove the given suffix from the target if it is present there
-
-    Args:
-        target: A string to be formatted
-        suffix: A string to be removed from 'target'
-
-    Returns:
-        The formatted version of 'target'
-    """
-    if suffix is None or target is None:
-        return target
-    s_len = len(suffix)
-    if target[-s_len:] == suffix:
-        return target[:-s_len]
-    return target
-
-
-def prettify_metric_name(metric):
-    """
-    Add spaces to camel case words, then swap _ for space, and capitalize each word
-
-    Args:
-        metric: A string to be formatted
-
-    Returns:
-        The formatted version of 'metric'
-    """
-    return string.capwords(re.sub("([a-z])([A-Z])", r"\g<1> \g<2>", metric).replace("_", " "))
-
-
-def remove_blacklist_keys(dic, blacklist):
-    """
-    A function which removes the blacklisted elements from a dictionary
-
-    Args:
-        dic: The dictionary to inspect
-        blacklist: keys to be removed from dic if they are present
-
-    Returns:
-        None
-
-    Side Effects:
-        Entries in dic may be removed
-    """
-    if blacklist is None:
-        return
-    for elem in blacklist:
-        dic.pop(elem, None)
+from fastestimator.util.util import prettify_metric_name, remove_blacklist_keys, strip_suffix
 
 
 def parse_file(file_path):
@@ -251,55 +199,3 @@ def parse_folder(dir_path, log_extension='.txt', smooth_factor=1, save=False, sa
             file_paths.append(file_path)
 
     parse_files(file_paths, log_extension, smooth_factor, save, save_path, ignore_metrics, share_legend, pretty_names)
-
-
-class SaveAction(argparse.Action):
-    """
-    A custom save action which is used to populate a secondary variable inside of an exclusive group. Used if this file
-        is invoked directly during argument parsing.
-    """
-
-    def __init__(self, option_strings, dest, nargs='?', **kwargs):
-        if '?' != nargs:
-            raise ValueError("nargs must be \'?\'")
-        super(SaveAction, self).__init__(option_strings, dest, nargs, **kwargs)
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        setattr(namespace, self.dest, True)
-        setattr(namespace, self.dest + '_dir', values if values is None else os.path.join(values, ''))
-
-
-if __name__ == '__main__':
-    parser_instance = argparse.ArgumentParser(description='Generates comparison graphs amongst one or more log files',
-                                              formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser_instance.add_argument('log_dir', metavar='<Log Dir>', type=str,
-                                 help="The path to a folder containing one or more log files")
-    parser_instance.add_argument('--extension', metavar='E', type=str, help="The file type / extension of your logs",
-                                 default=".txt")
-    parser_instance.add_argument('--ignore', metavar='I', type=str, nargs='+',
-                                 help="The names of metrics to ignore though they may be present in the log files")
-    parser_instance.add_argument('--smooth', metavar='<float>', type=float,
-                                 help="The amount of gaussian smoothing to apply (zero for no smoothing)",
-                                 default=1)
-    parser_instance.add_argument('--pretty_names', help="Clean up the metric names for display", action='store_true')
-
-    legend_group = parser_instance.add_argument_group('legend arguments')
-    legend_x_group = legend_group.add_mutually_exclusive_group(required=False)
-    legend_x_group.add_argument('--common_legend', dest='share_legend', help="Generate one legend total",
-                                action='store_true', default=True)
-    legend_x_group.add_argument('--split_legend', dest='share_legend', help="Generate one legend per graph",
-                                action='store_false', default=False)
-
-    save_group = parser_instance.add_argument_group('output arguments')
-    save_x_group = save_group.add_mutually_exclusive_group(required=False)
-    save_x_group.add_argument('--save', nargs='?', metavar='<Save Dir>',
-                              help="Save the output image. May be accompanied by a directory into which the \
-                                file is saved. If no output directory is specified, the log directory will be used",
-                              dest='save', action=SaveAction, default=False)
-    save_x_group.add_argument('--display', dest='save', action='store_false',
-                              help="Render the image to the UI (rather than saving it)", default=True)
-    save_x_group.set_defaults(save_dir=None)
-    args = vars(parser_instance.parse_args())
-
-    parse_folder(args['log_dir'], args['extension'], args['smooth'], args['save'], args['save_dir'], args['ignore'],
-                 args['share_legend'], args['pretty_names'])
