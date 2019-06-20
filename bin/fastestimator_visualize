@@ -1,0 +1,130 @@
+import argparse
+import os
+import sys
+
+from pyfiglet import Figlet
+
+from fastestimator.visualization.parse_logs import parse_folder
+from fastestimator.visualization.saliency_masks import load_and_interpret
+
+
+class SaveAction(argparse.Action):
+    """
+    A custom save action which is used to populate a secondary variable inside of an exclusive group. Used if this file
+        is invoked directly during argument parsing.
+    """
+
+    def __init__(self, option_strings, dest, nargs='?', **kwargs):
+        if '?' != nargs:
+            raise ValueError("nargs must be \'?\'")
+        super(SaveAction, self).__init__(option_strings, dest, nargs, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest, True)
+        setattr(namespace, self.dest + '_dir', values if values is None else os.path.join(values, ''))
+
+
+class CLI:
+    def __init__(self, arguments):
+        self.arguments = arguments
+        self.allowable_ops = ["logs", "saliency"]
+
+    @staticmethod
+    def draw():
+        print(Figlet(font="slant").renderText("FastEstimator"))
+
+    def run(self):
+        if len(self.arguments) < 1:
+            print("A mode of operation must be specified (" + str.join(", ", self.allowable_ops) + ")")
+            sys.exit(-1)
+        mode = self.arguments[0]
+        if mode not in self.allowable_ops:
+            print("A valid mode must be specified, one of: " + str.join(", ", self.allowable_ops))
+            sys.exit(-1)
+        getattr(self, mode)(self.arguments[1:])
+
+    @staticmethod
+    def logs(remaining_args):
+        parser_instance = argparse.ArgumentParser(
+            description='Generates comparison graphs amongst one or more log files',
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        parser_instance.add_argument('log_dir', metavar='<Log Dir>', type=str,
+                                     help="The path to a folder containing one or more log files")
+        parser_instance.add_argument('--extension', metavar='E', type=str,
+                                     help="The file type / extension of your logs",
+                                     default=".txt")
+        parser_instance.add_argument('--ignore', metavar='I', type=str, nargs='+',
+                                     help="The names of metrics to ignore though they may be present in the log files")
+        parser_instance.add_argument('--smooth', metavar='<float>', type=float,
+                                     help="The amount of gaussian smoothing to apply (zero for no smoothing)",
+                                     default=1)
+        parser_instance.add_argument('--pretty_names', help="Clean up the metric names for display",
+                                     action='store_true')
+
+        legend_group = parser_instance.add_argument_group('legend arguments')
+        legend_x_group = legend_group.add_mutually_exclusive_group(required=False)
+        legend_x_group.add_argument('--common_legend', dest='share_legend', help="Generate one legend total",
+                                    action='store_true', default=True)
+        legend_x_group.add_argument('--split_legend', dest='share_legend', help="Generate one legend per graph",
+                                    action='store_false', default=False)
+
+        save_group = parser_instance.add_argument_group('output arguments')
+        save_x_group = save_group.add_mutually_exclusive_group(required=False)
+        save_x_group.add_argument('--save', nargs='?', metavar='<Save Dir>', dest='save', action=SaveAction,
+                                  default=False, help="Save the output image. May be accompanied by a directory into \
+                                  which the file is saved. If no output directory is specified, the log directory will \
+                                  be used")
+        save_x_group.add_argument('--display', dest='save', action='store_false',
+                                  help="Render the image to the UI (rather than saving it)", default=True)
+        save_x_group.set_defaults(save_dir=None)
+        args = vars(parser_instance.parse_args(remaining_args))
+
+        parse_folder(args['log_dir'], args['extension'], args['smooth'], args['save'], args['save_dir'], args['ignore'],
+                     args['share_legend'], args['pretty_names'])
+
+    @staticmethod
+    def saliency(remaining_args):
+        parser_instance = argparse.ArgumentParser(description='Generates saliency maps for a model on given input(s)',
+                                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        parser_instance.add_argument('model', metavar='<Model Path>', type=str,
+                                     help="The path to a saved model file")
+        parser_instance.add_argument('inputs', metavar='Input', type=str, nargs='+',
+                                     help="The paths to one or more inputs to visualize")
+        parser_instance.add_argument('--dictionary', metavar='<Dictionary Path>', type=str,
+                                     help="The path to a {'class_id':'class_name} json file", default=None)
+        parser_instance.add_argument('--smooth', metavar='N', type=int, default=7,
+                                     help="The number of samples to use when generating smoothed saliency masks")
+        parser_instance.add_argument('--type', metavar='T', type=str, default='float32',
+                                     help="The dtype of the inputs to the model")
+        parser_instance.add_argument('--baseline', metavar='B', type=str, default='-1',
+                                     help="The value to use as a baseline for integrated gradient calculations. Can be \
+                                            either a number or the path to an image. What would a 'blank' input look \
+                                            like")
+        parser_instance.add_argument('--strip-alpha', action='store_true',
+                                     help="True if you want to convert RGBA images to RGB")
+        save_group = parser_instance.add_argument_group('output arguments')
+        save_x_group = save_group.add_mutually_exclusive_group(required=False)
+        save_x_group.add_argument('--save', nargs='?', metavar='<Save Dir>',
+                                  help="Save the output image. May be accompanied by a directory into which the \
+                                        file is saved. If no output directory is specified, the model directory will be\
+                                         used",
+                                  dest='save', action=SaveAction, default=False)
+        save_x_group.add_argument('--display', dest='save', action='store_false',
+                                  help="Render the image to the UI (rather than saving it)", default=True)
+        save_x_group.set_defaults(save_dir=None)
+        args = vars(parser_instance.parse_args(remaining_args))
+
+        load_and_interpret(args['model'], args['inputs'], baseline=args['baseline'], input_type=args['type'],
+                           dictionary_path=args['dictionary'], strip_alpha=args['strip_alpha'],
+                           smooth_factor=args['smooth'], save=args['save'], save_dir=args['save_dir'])
+
+
+def run(arguments):
+    cli = CLI(arguments)
+    cli.draw()
+    cli.run()
+
+
+if __name__ == '__main__':
+    inp = sys.argv[1:]
+    run(inp)
