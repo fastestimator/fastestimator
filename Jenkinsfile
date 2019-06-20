@@ -15,6 +15,11 @@ pipeline {
             '''
         }
     }
+    stage('Cleanup') {
+	steps {
+	    sh 'rm -rf venv'
+	}
+    }
 
   }
 }
