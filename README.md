@@ -19,6 +19,7 @@ Docker container creates isolated virtual environment that shares resources with
 
 ### Pull Image from Docker Hub
 * GPU: `docker pull fastestimator/fastestimator:latest-gpu`
+* CPU: `docker pull fastestimator/fastestimator:latest-cpu`
 
 ## Running your first FastEstimator training
 * macOS/Linux:
