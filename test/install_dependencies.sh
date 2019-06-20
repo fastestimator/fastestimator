@@ -1,7 +1,7 @@
 PATH=$WORKSPACE/venv/bin:/usr/local/bin:$PATH
 echo $WROKSPACE
 if [ ! -d "venv"  ]; then
-    virtualenv venv
+    virtualenv -p python3.6 venv
 fi
 . venv/bin/activate
 
