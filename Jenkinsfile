@@ -17,10 +17,8 @@ pipeline {
     }
     stage('Cleanup') {
 	steps {
-	    sh '''
-	    deactivate
-	    rm -rf venv
-	    '''
+	    sh 'deactivate'
+	    sh 'rm -rf venv'
 	}
     }
 
