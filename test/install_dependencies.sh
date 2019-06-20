@@ -5,5 +5,5 @@ if [ ! -d "venv"  ]; then
 fi
 . venv/bin/activate
 
-pip3 install tensorflow==1.13.1 pytest numpy nibabel pydicom horovod
+pip3 install tensorflow==1.12.0 pytest numpy nibabel pydicom
 pip3 install -e .
