@@ -10,15 +10,10 @@ pipeline {
     stage('Test') {
         steps {
             sh '''
-                . venv/bin/activate
+                . /var/lib/jenkins/workspace/venv/bin/activate
                 python3 -m pytest
             '''
         }
-    }
-    stage('Cleanup') {
-	steps {
-	     sh 'rm -rf venv'
-	}
     }
 
   }
