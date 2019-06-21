@@ -1,5 +1,6 @@
-PATH=$WORKSPACE/venv/bin:/usr/local/bin:$PATH
+PATH=$WORKSPACE/../venv/bin:/usr/local/bin:$PATH
 echo $WORKSPACE
+echo $PATH
 if [ ! -d "venv"  ]; then
     virtualenv -p python3.6 /var/lib/jenkins/workspace/venv
 fi
