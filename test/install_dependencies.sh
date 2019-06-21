@@ -1,10 +1,11 @@
-PATH=$WORKSPACE/../venv/bin:/usr/local/bin:$PATH
-echo $WORKSPACE
+JENKINS_DIR=$WORKSPACE
+PATH=$JENKINS_DIR/../venv/bin:/usr/local/bin:$PATH
+echo $JENKINS_DIR
 echo $PATH
-if [ ! -d "venv"  ]; then
-    virtualenv -p python3.6 /var/lib/jenkins/workspace/venv
+if [ ! -d "$JENKINS_DIR/venv"  ]; then
+    virtualenv -p python3.6 $JENKINS_DIR/venv
 fi
-. /var/lib/jenkins/workspace/venv/bin/activate
+. $JENKINS_DIR/venv/bin/activate
 
 pip3 install tensorflow==1.12.0 pytest numpy nibabel pydicom
 pip3 install -e .
