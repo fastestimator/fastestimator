@@ -45,7 +45,8 @@ def parse_cli_to_dictionary(input_list):
         else:
             val += input_list[idx]
         idx += 1
-    result[key] = parse_string_to_python(val)
+    if len(key) > 0:
+        result[key] = parse_string_to_python(val)
     return result
 
 
