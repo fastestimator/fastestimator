@@ -3,7 +3,8 @@ from unittest import TestCase
 
 from tensorflow.python.client import device_lib
 
-from .util import get_num_GPU, remove_blacklist_keys, strip_suffix, prettify_metric_name
+from .util import get_num_GPU, remove_blacklist_keys, strip_suffix, prettify_metric_name, parse_string_to_python, \
+    parse_cli_to_dictionary
 
 
 class TestUtil(TestCase):
@@ -156,3 +157,195 @@ class TestUtil(TestCase):
         expected = "Val Mask Raw Conditional Dice"
         actual = prettify_metric_name(base)
         self.assertEqual(actual, expected)
+
+    # -------------------------------------------------------------------------------------------------------- #
+    # --------------------------------------------- Parse String --------------------------------------------- #
+    # -------------------------------------------------------------------------------------------------------- #
+    def test_parse_string_to_python_none(self):
+        input_string = None
+        expected = ""
+        actual = parse_string_to_python(input_string)
+        self.assertEqual(actual, expected)
+
+    def test_parse_string_to_python(self):
+        input_string = ""
+        expected = ""
+        actual = parse_string_to_python(input_string)
+        self.assertEqual(actual, expected)
+
+    def test_parse_string_to_python_array(self):
+        input_string = '[]'
+        expected = []
+        actual = parse_string_to_python(input_string)
+        self.assertListEqual(actual, expected)
+
+    def test_parse_string_to_python_tuple(self):
+        input_string = '()'
+        expected = ()
+        actual = parse_string_to_python(input_string)
+        self.assertTupleEqual(actual, expected)
+
+    def test_parse_string_to_python_dict(self):
+        input_string = '{}'
+        expected = {}
+        actual = parse_string_to_python(input_string)
+        self.assertDictEqual(actual, expected)
+
+    def test_parse_string_to_python_true(self):
+        input_string = "true"
+        expected = True
+        actual = parse_string_to_python(input_string)
+        self.assertEqual(actual, expected)
+
+    def test_parse_string_to_python_true2(self):
+        input_string = "True"
+        expected = True
+        actual = parse_string_to_python(input_string)
+        self.assertEqual(actual, expected)
+
+    def test_parse_string_to_python_false(self):
+        input_string = "false"
+        expected = False
+        actual = parse_string_to_python(input_string)
+        self.assertEqual(actual, expected)
+
+    def test_parse_string_to_python_false2(self):
+        input_string = "False"
+        expected = False
+        actual = parse_string_to_python(input_string)
+        self.assertEqual(actual, expected)
+
+    def test_parse_string_to_python_boolean_array(self):
+        input_string = '[true, false, true, false]'
+        expected = [True, False, True, False]
+        actual = parse_string_to_python(input_string)
+        self.assertListEqual(actual, expected)
+
+    def test_parse_string_to_python_boolean_array2(self):
+        input_string = '[True, False, True, False]'
+        expected = [True, False, True, False]
+        actual = parse_string_to_python(input_string)
+        self.assertListEqual(actual, expected)
+
+    def test_parse_string_to_python_boolean_tuple(self):
+        input_string = '(True, False, True, False)'
+        expected = (True, False, True, False)
+        actual = parse_string_to_python(input_string)
+        self.assertTupleEqual(actual, expected)
+
+    def test_parse_string_to_python_int(self):
+        input_string = "7"
+        expected = 7
+        actual = parse_string_to_python(input_string)
+        self.assertEqual(actual, expected)
+
+    def test_parse_string_to_python_int_array(self):
+        input_string = '[0, -2, 4, 8]'
+        expected = [0, -2, 4, 8]
+        actual = parse_string_to_python(input_string)
+        self.assertListEqual(actual, expected)
+
+    def test_parse_string_to_python_int_tuple(self):
+        input_string = '(0, -2, 4, 8)'
+        expected = (0, -2, 4, 8)
+        actual = parse_string_to_python(input_string)
+        self.assertTupleEqual(actual, expected)
+
+    def test_parse_string_to_python_float(self):
+        input_string = "7.5"
+        expected = 7.5
+        actual = parse_string_to_python(input_string)
+        self.assertEqual(actual, expected)
+
+    def test_parse_string_to_python_float_array(self):
+        input_string = '[0.5, -2.1, 4, 8.89]'
+        expected = [0.5, -2.1, 4, 8.89]
+        actual = parse_string_to_python(input_string)
+        self.assertListEqual(actual, expected)
+
+    def test_parse_string_to_python_float_tuple(self):
+        input_string = '(0.5, -2.1, 4, 8.89)'
+        expected = (0.5, -2.1, 4, 8.89)
+        actual = parse_string_to_python(input_string)
+        self.assertTupleEqual(actual, expected)
+
+    def test_parse_string_to_python_string(self):
+        input_string = "random string"
+        expected = "random string"
+        actual = parse_string_to_python(input_string)
+        self.assertEqual(actual, expected)
+
+    def test_parse_string_to_python_string_array(self):
+        input_string = '["random", "string"]'
+        expected = ['random', 'string']
+        actual = parse_string_to_python(input_string)
+        self.assertListEqual(actual, expected)
+
+    def test_parse_string_to_python_string_tuple(self):
+        input_string = '("random", "string")'
+        expected = ('random', 'string')
+        actual = parse_string_to_python(input_string)
+        self.assertTupleEqual(actual, expected)
+
+    def test_parse_string_to_python_string_tuple2(self):
+        input_string = "('random', 'string')"
+        expected = ('random', 'string')
+        actual = parse_string_to_python(input_string)
+        self.assertTupleEqual(actual, expected)
+
+    def test_parse_string_to_python_nested(self):
+        input_string = '("random", ["string1", 10], (True, 7.5, "string2"))'
+        expected = ('random', ["string1", 10], (True, 7.5, "string2"))
+        actual = parse_string_to_python(input_string)
+        self.assertTupleEqual(actual, expected)
+
+    def test_parse_string_to_python_string_dict(self):
+        input_string = '{"key1":"val1","key2":"val2"}'
+        expected = {"key1": "val1", "key2": "val2"}
+        actual = parse_string_to_python(input_string)
+        self.assertDictEqual(actual, expected)
+
+    # -------------------------------------------------------------------------------------------------------- #
+    # ----------------------------------------------- Parse CLI ---------------------------------------------- #
+    # -------------------------------------------------------------------------------------------------------- #
+    def test_parse_cli_to_dictionary_none(self):
+        input_list = None
+        expected = {}
+        actual = parse_cli_to_dictionary(input_list)
+        self.assertDictEqual(actual, expected)
+
+    def test_parse_cli_to_dictionary(self):
+        input_list = []
+        expected = {}
+        actual = parse_cli_to_dictionary(input_list)
+        self.assertDictEqual(actual, expected)
+
+    def test_parse_cli_to_dictionary_no_key(self):
+        input_list = ["thing1", "thing2", "True", "(0,", "1)"]
+        expected = {}
+        actual = parse_cli_to_dictionary(input_list)
+        self.assertDictEqual(actual, expected)
+
+    def test_parse_cli_to_dictionary_one_key_string(self):
+        input_list = ["thing1", "--key1", "True", "(0,", "1)"]
+        expected = {"key1": 'True(0,1)'}
+        actual = parse_cli_to_dictionary(input_list)
+        self.assertDictEqual(actual, expected)
+
+    def test_parse_cli_to_dictionary_one_key_string2(self):
+        input_list = ["--key1", "True"]
+        expected = {"key1": True}
+        actual = parse_cli_to_dictionary(input_list)
+        self.assertDictEqual(actual, expected)
+
+    def test_parse_cli_to_dictionary_one_key_tuple(self):
+        input_list = ["thing1", "--key1", "(0,", "1)"]
+        expected = {"key1": (0, 1)}
+        actual = parse_cli_to_dictionary(input_list)
+        self.assertDictEqual(actual, expected)
+
+    def test_parse_cli_to_dictionary_two_key_tuple(self):
+        input_list = ["--key1", "(0,", "1)", "--key2", "[True,", "False,", "'args']"]
+        expected = {"key1": (0, 1), "key2": [True, False, 'args']}
+        actual = parse_cli_to_dictionary(input_list)
+        self.assertDictEqual(actual, expected)
