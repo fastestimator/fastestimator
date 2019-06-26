@@ -41,5 +41,5 @@ setup(name="fastestimator",
       # Declare extra set for installation
       extras_require={
       },
-      scripts=['bin/fastestimator', 'bin/fastestimator_train', 'bin/fastestimator_visualize']
+      scripts=['bin/fastestimator']
       )
