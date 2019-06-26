@@ -1,10 +1,52 @@
-import argparse
-import os
+import json
 import re
 import string
 import subprocess
 
 import tensorflow as tf
+
+
+def parse_string_to_python(val):
+    """
+    Args:
+        val: An input string
+
+    Returns:
+        A python object version of the input string
+    """
+    if val == "True":
+        return True
+    if val == "False":
+        return False
+    try:
+        return json.loads(val)
+    except json.JSONDecodeError:
+        return val
+
+
+def parse_cli_to_dictionary(input_list):
+    """
+    Args:
+        input_list: A list of input strings from a cli
+
+    Returns:
+        A dictionary constructed from the input list, with values converted to python objects where applicable
+    """
+    result = {}
+    key = ""
+    val = ""
+    idx = 0
+    while idx < len(input_list):
+        if input_list[idx].startswith("--"):
+            if len(key) > 0:
+                result[key] = parse_string_to_python(val)
+            val = ""
+            key = input_list[idx].strip('--')
+        else:
+            val += input_list[idx]
+        idx += 1
+    result[key] = parse_string_to_python(val)
+    return result
 
 
 def get_num_GPU():
