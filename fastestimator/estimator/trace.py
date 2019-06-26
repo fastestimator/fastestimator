@@ -52,7 +52,7 @@ class Trace:
                 "step": current global step index starting from 0 (or batch index)
                 "size": current batch size
                 "batch": the batch data used as input of network
-                "prediction": the batch predictions in dictionary format
+                "prediction": the batch predictions
                 "loss": the batch loss (only available when mode is "train" or "eval")
         """
         pass
