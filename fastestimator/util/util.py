@@ -2,6 +2,7 @@ import json
 import re
 import string
 import subprocess
+from ast import literal_eval
 
 import tensorflow as tf
 
@@ -14,14 +15,15 @@ def parse_string_to_python(val):
     Returns:
         A python object version of the input string
     """
-    if val == "True":
-        return True
-    if val == "False":
-        return False
+    if val is None or len(val) == 0:
+        return ""
     try:
-        return json.loads(val)
-    except json.JSONDecodeError:
-        return val
+        return literal_eval(val)
+    except (ValueError, SyntaxError):
+        try:
+            return json.loads(val)
+        except json.JSONDecodeError:
+            return val
 
 
 def parse_cli_to_dictionary(input_list):
@@ -33,6 +35,8 @@ def parse_cli_to_dictionary(input_list):
         A dictionary constructed from the input list, with values converted to python objects where applicable
     """
     result = {}
+    if input_list is None:
+        return result
     key = ""
     val = ""
     idx = 0
