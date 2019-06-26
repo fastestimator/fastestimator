@@ -75,7 +75,7 @@ class TFRecorder:
             if "<U" in dtype:
                 dtype = "string"
             self.feature_type_new.append(dtype)
-            if max(data.shape) == np.prod(data.shape):
+            if data.size == 1 or max(data.shape) == np.prod(data.shape):
                 self.feature_shape.append([-1])
             else:
                 self.feature_shape.append(data.shape)
