@@ -8,4 +8,5 @@ fi
 . $JENKINS_DIR/venv/bin/activate
 
 pip3 install tensorflow==1.12.0 pytest pytest-cov numpy nibabel pydicom
+pip3 install --upgrade setuptools
 pip3 install -e .
