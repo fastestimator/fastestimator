@@ -3,10 +3,21 @@ pipeline {
   
   stages {
     
+    stage('Build') {
+      steps {
+        sh './test/install_dependencies.sh'
+      }
+    }
+
     stage('Sonarqube') {
       environment {
         scannerHome = tool 'SonarScannerFE'
       }
+
+      steps {
+        sh 'python3 -m pytest --cov --cov-report xml:coverage.xml ./ ./'
+      }
+
       steps {
         withSonarQubeEnv('SonarFE') {
           sh "${scannerHome}/bin/sonar-scanner"
@@ -17,11 +28,6 @@ pipeline {
       }
     }
 
-    stage('Build') {
-      steps {
-        sh './test/install_dependencies.sh'
-      }
-    }
     stage('Test') {
         steps {
             sh '''
