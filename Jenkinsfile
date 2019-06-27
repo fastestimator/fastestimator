@@ -17,7 +17,7 @@ pipeline {
       steps {
         sh '''
             . /var/lib/jenkins/workspace/venv/bin/activate
-            python3 -m pytest --cov --cov-report xml:coverage.xml ./fastestimator ./fastestimator 
+            python3 -m pytest --cov-config=.coveragerc --cov --cov-report xml:coverage.xml ./fastestimator ./fastestimator 
         '''
         withSonarQubeEnv('SonarFE') {
           sh "${scannerHome}/bin/sonar-scanner"
