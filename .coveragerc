@@ -1,2 +1,5 @@
 [report]
-omit = *_test.py
+omit = 
+    *_test.py
+    venv/*
+
