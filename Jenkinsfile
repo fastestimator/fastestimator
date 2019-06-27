@@ -6,7 +6,6 @@ pipeline {
     stage('Build') {
       steps {
         sh './test/install_dependencies.sh'
-        sh 'python3 -m pytest --cov --cov-report xml:coverage.xml ./ ./'
       }
     }
 
@@ -16,6 +15,10 @@ pipeline {
       }
 
       steps {
+        sh '''
+            . /var/lib/jenkins/workspace/venv/bin/activate
+            python3 -m pytest --cov --cov-report xml:coverage.xml ./ ./
+        '''
         withSonarQubeEnv('SonarFE') {
           sh "${scannerHome}/bin/sonar-scanner"
         }
