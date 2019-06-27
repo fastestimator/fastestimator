@@ -16,9 +16,7 @@ pipeline {
 
       steps {
         sh 'python3 -m pytest --cov --cov-report xml:coverage.xml ./ ./'
-      }
 
-      steps {
         withSonarQubeEnv('SonarFE') {
           sh "${scannerHome}/bin/sonar-scanner"
         }
