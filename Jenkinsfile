@@ -9,7 +9,7 @@ pipeline {
       }
     }
 
-    stage('Sonarqube') {
+    stage('Sonarqube/Test') {
       environment {
         scannerHome = tool 'SonarScannerFE'
       }
@@ -26,15 +26,6 @@ pipeline {
           waitForQualityGate abortPipeline: true
         }
       }
-    }
-
-    stage('Test') {
-        steps {
-            sh '''
-                . /var/lib/jenkins/workspace/venv/bin/activate
-                python3 -m pytest
-            '''
-        }
     }
 
   }
