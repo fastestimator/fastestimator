@@ -4,21 +4,21 @@ import numpy as np
 
 def classification_sub_net(num_classes, num_anchor=9):
     model = models.Sequential()
-    model.add(layers.Conv2D(256,  kernel_size=3, strides=1, padding='same', activation='relu'))
-    model.add(layers.Conv2D(256,  kernel_size=3, strides=1, padding='same', activation='relu'))
-    model.add(layers.Conv2D(256,  kernel_size=3, strides=1, padding='same', activation='relu'))
-    model.add(layers.Conv2D(256,  kernel_size=3, strides=1, padding='same', activation='relu'))
-    model.add(layers.Conv2D(num_classes * num_anchor,  kernel_size=3, strides=1, padding='same', activation='sigmoid'))
+    model.add(layers.Conv2D(256,  kernel_size=3, strides=1, padding='same', activation='relu', kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
+    model.add(layers.Conv2D(256,  kernel_size=3, strides=1, padding='same', activation='relu', kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
+    model.add(layers.Conv2D(256,  kernel_size=3, strides=1, padding='same', activation='relu', kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
+    model.add(layers.Conv2D(256,  kernel_size=3, strides=1, padding='same', activation='relu', kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
+    model.add(layers.Conv2D(num_classes * num_anchor,  kernel_size=3, strides=1, padding='same', activation='sigmoid', kernel_initializer=tf.random_normal_initializer(stddev=0.01), bias_initializer=tf.initializers.constant(np.log(1/99))))
     model.add(layers.Reshape((-1, num_classes)))  #the output dimension is [batch, #anchor, #classes]
     return model
 
 def regression_sub_net(num_anchor=9):
     model = models.Sequential()
-    model.add(layers.Conv2D(256,  kernel_size=3, strides=1, padding='same', activation='relu'))
-    model.add(layers.Conv2D(256,  kernel_size=3, strides=1, padding='same', activation='relu'))
-    model.add(layers.Conv2D(256,  kernel_size=3, strides=1, padding='same', activation='relu'))
-    model.add(layers.Conv2D(256,  kernel_size=3, strides=1, padding='same', activation='relu'))
-    model.add(layers.Conv2D(4 * num_anchor,  kernel_size=3, strides=1, padding='same'))
+    model.add(layers.Conv2D(256,  kernel_size=3, strides=1, padding='same', activation='relu', kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
+    model.add(layers.Conv2D(256,  kernel_size=3, strides=1, padding='same', activation='relu', kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
+    model.add(layers.Conv2D(256,  kernel_size=3, strides=1, padding='same', activation='relu', kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
+    model.add(layers.Conv2D(256,  kernel_size=3, strides=1, padding='same', activation='relu', kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
+    model.add(layers.Conv2D(4 * num_anchor,  kernel_size=3, strides=1, padding='same', kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(layers.Reshape((-1, 4)))  #the output dimension is [batch, #anchor, 4]
     return model
 
