@@ -40,11 +40,11 @@ class Estimator:
         self.num_local_process = 1
         self.traces = traces
         self.do_eval = False
-    
+
     def fit(self, inputs=None):
         """
         Function to perform training on the estimator
-        
+
         Args:
             inputs: Path to input data
 
@@ -83,7 +83,7 @@ class Estimator:
 
     def _add_traces(self):
         self.traces.insert(0, TrainLogger(log_steps=self.log_steps, num_process=self.num_process))
-    
+
     def train(self):
         self._run_traces_begin(mode="train")
         for train_step, batch in enumerate(self.training_fn()):
@@ -113,7 +113,7 @@ class Estimator:
     def _run_traces_begin(self, mode):
         for trace in self.traces:
             trace.begin(mode)
-    
+
     def _run_traces_on_epoch_begin(self, mode, logs):
         self.losses = []
         for trace in self.traces:
@@ -132,7 +132,7 @@ class Estimator:
         output_list = []
         for trace in self.traces:
             metric_output = trace.on_epoch_end(mode, logs)
-            if mode == "eval" and metric_output:
+            if mode == "eval" and metric_output is not None:
                 trace_name = type(trace).__name__
                 output_list.append((trace_name, metric_output))
         if mode == "eval":
