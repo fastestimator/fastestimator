@@ -36,7 +36,9 @@ setup(name="fastestimator",
           'pytest',
           'pytest-cov',
           'opencv-python',
-          'tensorflow-addons'
+          'tensorflow-addons',
+          'umap-learn',
+          'tqdm'
       ],
       # Declare extra set for installation
       extras_require={

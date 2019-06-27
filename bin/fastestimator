@@ -7,6 +7,7 @@ import sys
 from pyfiglet import Figlet
 
 from fastestimator.util.util import parse_cli_to_dictionary
+from fastestimator.visualization.layer_umap import umap_layers
 from fastestimator.visualization.parse_logs import parse_folder
 from fastestimator.visualization.saliency_masks import load_and_interpret
 
@@ -67,8 +68,8 @@ def configure_log_parser(subparsers):
     save_x_group = save_group.add_mutually_exclusive_group(required=False)
     save_x_group.add_argument('--save', nargs='?', metavar='<Save Dir>', dest='save', action=SaveAction,
                               default=False, help="Save the output image. May be accompanied by a directory into \
-                                              which the file is saved. If no output directory is specified, the log directory will \
-                                              be used")
+                                              which the file is saved. If no output directory is specified, the log \
+                                              directory will be used")
     save_x_group.add_argument('--display', dest='save', action='store_false',
                               help="Render the image to the UI (rather than saving it)", default=True)
     save_x_group.set_defaults(save_dir=None)
@@ -91,30 +92,80 @@ def configure_saliency_parser(subparsers):
     parser.add_argument('model', metavar='<Model Path>', type=str,
                         help="The path to a saved model file")
     parser.add_argument('inputs', metavar='Input', type=str, nargs='+',
-                        help="The paths to one or more inputs to visualize")
+                        help="The paths to one or more inputs to visualize (or the path to a folder which will be \
+                        recursively traversed to find image files)")
     parser.add_argument('--dictionary', metavar='<Dictionary Path>', type=str,
-                        help="The path to a {'class_id':'class_name} json file", default=None)
+                        help="The path to a {'class_id':'class_name'} json file", default=None)
     parser.add_argument('--smooth', metavar='N', type=int, default=7,
                         help="The number of samples to use when generating smoothed saliency masks")
     parser.add_argument('--type', metavar='T', type=str, default='float32',
                         help="The dtype of the inputs to the model")
     parser.add_argument('--baseline', metavar='B', type=str, default='-1',
-                        help="The value to use as a baseline for integrated gradient calculations. Can be \
-                                                        either a number or the path to an image. What would a 'blank' input look \
-                                                        like")
+                        help="The value to use as a baseline for integrated gradient calculations. Can be either a \
+                        number or the path to an image. What would a 'blank' input look like")
     parser.add_argument('--strip-alpha', action='store_true',
                         help="True if you want to convert RGBA images to RGB")
     save_group = parser.add_argument_group('output arguments')
     save_x_group = save_group.add_mutually_exclusive_group(required=False)
     save_x_group.add_argument('--save', nargs='?', metavar='<Save Dir>',
                               help="Save the output image. May be accompanied by a directory into which the \
-                                                    file is saved. If no output directory is specified, the model directory will be\
-                                                     used",
+                              file is saved. If no output directory is specified, the model directory will be used",
                               dest='save', action=SaveAction, default=False)
     save_x_group.add_argument('--display', dest='save', action='store_false',
                               help="Render the image to the UI (rather than saving it)", default=True)
     save_x_group.set_defaults(save_dir=None)
     parser.set_defaults(func=saliency)
+
+
+def umap(args, unknown):
+    hyperparameters = parse_cli_to_dictionary(unknown)
+    umap_layers(args['model'], args['input_dir'], print_layers=args['print_layers'], strip_alpha=args['strip_alpha'],
+                input_type=args['type'], layers=args['layers'], batch=args['batch'], use_cache=args['cache'],
+                cache_dir=args['cache_dir'], dictionary_path=args['dictionary'], legend_mode=args['legend'],
+                save=args['save'], save_dir=args['save_dir'], umap_parameters=hyperparameters)
+
+
+def configure_umap_parser(subparsers):
+    parser = subparsers.add_parser('umap',
+                                   description='Plots umaps for model layers over given inputs',
+                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('model', metavar='<Model Path>', type=str,
+                        help="The path to a saved model file")
+    parser.add_argument('input_dir', metavar='Input', type=str,
+                        help="The path to a folder of folders containing inputs sorted by class")
+    parser.add_argument('--print-layers', action='store_true',
+                        help="True if you only want to print a model's layers to the console. Useful for inspecting a \
+                            model to choose which layer indices to visualize.")
+    parser.add_argument('--layers', metavar='IDX', type=int, nargs='+',
+                        help='The indices of layers you want to visualize. If not provided then all layers will be \
+                                      analyzed, but that is likely to run out of memory on moderately sized models.')
+    parser.add_argument('--strip-alpha', action='store_true',
+                        help="True if you want to convert RGBA images to RGB")
+    parser.add_argument('--type', metavar='T', type=str, default='float32',
+                        help="The dtype of the inputs to the model")
+    parser.add_argument('--batch', type=int, default=50,
+                        help="How many images to process at a time (set based on available RAM)")
+    parser.add_argument('--dictionary', metavar='<Dictionary Path>', type=str,
+                        help="The path to a {'class_id':'class_name'} json file", default=None)
+    parser.add_argument('--legend', choices=['on', 'off', 'shared'], default='shared',
+                        help='Whether to display legends or not.')
+    save_group = parser.add_argument_group('output arguments')
+    save_group.add_argument('--cache', metavar='<Cache Dir>', action=SaveAction, default=False,
+                            help="Enable caching of intermediate results. Highly recommended to reduce RAM \
+                            requirements. If no cache directory is specified, a sibling of the input directory will be \
+                            used")
+    save_group.set_defaults(cache_dir=None)
+    save_x_group = save_group.add_mutually_exclusive_group(required=False)
+    save_x_group.add_argument('--save', nargs='?', metavar='<Save Dir>', dest='save', action=SaveAction,
+                              default=False, help="Save the output image. May be accompanied by a directory into \
+                                                      which the file is saved. If no output directory is specified, \
+                                                      the model directory will be used")
+    save_x_group.add_argument('--display', dest='save', action='store_false',
+                              help="Render the image to the UI (rather than saving it)", default=True)
+    save_x_group.set_defaults(save_dir=None)
+    parser.add_argument_group('umap arguments', 'Arguments from the umap module may all be passed through. Examples \
+    include --n_neighbors <int>, --metric <str>, --n_epochs <int>, --min_dist <float>, --learning_rate <float>, etc...')
+    parser.set_defaults(func=umap)
 
 
 def configure_visualization_parser(subparsers):
@@ -126,6 +177,7 @@ def configure_visualization_parser(subparsers):
 
     configure_log_parser(visualization_subparsers)
     configure_saliency_parser(visualization_subparsers)
+    configure_umap_parser(visualization_subparsers)
 
 
 def train(args, unknown):

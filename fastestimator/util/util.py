@@ -4,7 +4,56 @@ import string
 import subprocess
 from ast import literal_eval
 
+import PIL
+import numpy as np
+# noinspection PyPackageRequirements
 import tensorflow as tf
+
+
+def load_image(file_path, strip_alpha=False):
+    """
+    Args:
+        file_path: The path to an image file
+        strip_alpha: True to convert an RGBA image to RGB
+    Returns:
+        The image loaded into memory and scaled to a range of [-1, 1]
+    """
+    # noinspection PyUnresolvedReferences
+    im = PIL.Image.open(file_path)
+    if im.mode == "L":
+        im = im.convert('RGB')
+    if strip_alpha and im.mode == "RGBA":
+        # noinspection PyUnresolvedReferences
+        background = PIL.Image.new("RGB", im.size, (0, 0, 0))
+        background.paste(im, mask=im.split()[3])
+        im = background
+    im = np.asarray(im)
+    return im / 127.5 - 1.0
+
+
+def load_dict(dict_path, array_key=False):
+    """
+    Args:
+        dict_path: The path to a json dictionary
+        array_key: If true the parser will consider the first element in a sublist at the key {_:[K,...,V],...}.
+                    Otherwise it will parse as {K:V,...} or {K:[...,V],...}
+    Returns:
+        A dictionary corresponding to the info from the file. If the file was formatted with arrays as the values for a
+         key, the last element of the array is used as the value for the key in the parsed dictionary
+    """
+    parsed = None
+    if dict_path is not None:
+        with open(dict_path) as f:
+            parsed = json.load(f)
+            for key in list(parsed.keys()):
+                entry = parsed[key]
+                if type(entry) == list:
+                    if array_key:
+                        val = parsed.pop(key)
+                        parsed[val[0]] = val[-1]
+                    else:
+                        parsed[key] = parsed[key][-1]
+    return parsed
 
 
 def parse_string_to_python(val):

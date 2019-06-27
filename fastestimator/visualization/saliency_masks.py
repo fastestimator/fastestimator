@@ -1,14 +1,15 @@
-import json
 import os
 
-import PIL.Image
 import matplotlib.pyplot as plt
 import numpy as np
+# noinspection PyPackageRequirements
 import tensorflow as tf
+# noinspection PyPackageRequirements
 from tensorflow.python import keras
 
+from fastestimator.util.loader import PathLoader
 from fastestimator.util.saliencies import GradientSaliency, IntegratedGradients
-from fastestimator.util.util import is_number
+from fastestimator.util.util import is_number, load_dict, load_image
 
 
 def show_text(axis, background, text, title=None):
@@ -59,42 +60,6 @@ def show_gray_image(axis, im, title=None, color_map="inferno"):
     axis.imshow(im, cmap=plt.get_cmap(name=color_map), vmin=0, vmax=1)
     if title is not None:
         axis.set_title(title)
-
-
-def load_image(file_path, strip_alpha=False):
-    """
-    Args:
-        file_path: The path to an image file
-        strip_alpha: True to convert an RGBA image to RGB
-    Returns:
-        The image loaded into memory and scaled to a range of [-1, 1]
-    """
-    im = PIL.Image.open(file_path)
-    if strip_alpha and im.mode == "RGBA":
-        background = PIL.Image.new("RGB", im.size, (0, 0, 0))
-        background.paste(im, mask=im.split()[3])
-        im = background
-    im = np.asarray(im)
-    return im / 127.5 - 1.0
-
-
-def load_dict(dict_path):
-    """
-    Args:
-        dict_path: The path to a json dictionary
-    Returns:
-        A dictionary corresponding to the info from the file. If the file was formatted with arrays as the values for a
-         key, the last element of the array is used as the value for the key in the parsed dictionary
-    """
-    parsed = None
-    if dict_path is not None:
-        with open(dict_path) as f:
-            parsed = json.load(f)
-            for key in parsed:
-                entry = parsed[key]
-                if type(entry) == list:
-                    parsed[key] = parsed[key][-1]
-    return parsed
 
 
 @tf.function
@@ -220,7 +185,7 @@ def load_and_interpret(model_path, input_paths, baseline=-1, input_type='float32
 
     Args:
         model_path: The path the model file (str)
-        input_paths: The paths to model input files [(str),...]
+        input_paths: The paths to model input files [(str),...] or to a folder of inputs [(str)]
         baseline: Either a number corresponding to the baseline for integration, or a path to a baseline file
         input_type: The data type of the model inputs, ex 'float32'
         dictionary_path: The path to a dictionary file encoding a 'class_idx'->'class_name' mapping
@@ -234,6 +199,9 @@ def load_and_interpret(model_path, input_paths, baseline=-1, input_type='float32
         save_dir = model_dir
     network = keras.models.load_model(model_path)
     dic = load_dict(dictionary_path)
+    if len(input_paths) == 1 and os.path.isdir(input_paths[0]):
+        loader = PathLoader(input_paths[0])
+        input_paths = [path[0] for path in loader.path_pairs]
     inputs = [load_image(input_paths[i], strip_alpha=strip_alpha) for i in range(len(input_paths))]
     max_shapes = np.maximum.reduce([inp.shape for inp in inputs], axis=0)
     tf_image = tf.stack([tf.image.resize_with_crop_or_pad(tf.convert_to_tensor(im, dtype=input_type), max_shapes[0],
