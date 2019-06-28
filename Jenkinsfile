@@ -3,11 +3,22 @@ pipeline {
   
   stages {
     
-    stage('Sonarqube') {
+    stage('Build') {
+      steps {
+        sh './test/install_dependencies.sh'
+      }
+    }
+
+    stage('Sonarqube/Test') {
       environment {
         scannerHome = tool 'SonarScannerFE'
       }
+
       steps {
+        sh '''
+            . /var/lib/jenkins/workspace/venv/bin/activate
+            python3 -m pytest --cov --cov-report xml:coverage.xml fastestimator fastestimator 
+        '''
         withSonarQubeEnv('SonarFE') {
           sh "${scannerHome}/bin/sonar-scanner"
         }
@@ -15,20 +26,6 @@ pipeline {
           waitForQualityGate abortPipeline: true
         }
       }
-    }
-
-    stage('Build') {
-      steps {
-        sh './test/install_dependencies.sh'
-      }
-    }
-    stage('Test') {
-        steps {
-            sh '''
-                . /var/lib/jenkins/workspace/venv/bin/activate
-                python3 -m pytest
-            '''
-        }
     }
 
   }
