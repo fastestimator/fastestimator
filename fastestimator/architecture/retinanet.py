@@ -93,7 +93,7 @@ def get_fpn_anchor_box(input_shape):
                         anchor_idx += 1
         if p_h == 1 and p_w == 1: #the next level of 1x1 feature map is still 1x1, therefore ignore
             break
-    return anchorbox
+    return np.float32(anchorbox)
 
 def get_target(anchorbox, label, x1, y1, x2, y2, num_classes=10):
     num_anchor = anchorbox.shape[0]
