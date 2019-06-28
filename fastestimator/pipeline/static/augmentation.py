@@ -1,6 +1,6 @@
 import math
 import tensorflow as tf
-from tensorflow_addons.image import transform_ops
+# from tensorflow_addons.image import transform_ops
 
 class AbstractAugmentation:
     """
@@ -303,11 +303,61 @@ class Augmentation(AbstractAugmentation):
             Transformed (augmented) data
 
         """
-        transform_matrix_flatten = tf.reshape(self.transform_matrix, shape=[1, 9])
-        transform_matrix_flatten = transform_matrix_flatten[0, 0:8]
-        #augment_data = tf.contrib.image.transform(data, transform_matrix_flatten)
-        augment_data = transform_ops.transform(data, transform_matrix_flatten)
+        # transform_matrix_flatten = tf.reshape(self.transform_matrix, shape=[1, 9])
+        # transform_matrix_flatten = transform_matrix_flatten[0, 0:8]
+        # augment_data = transform_ops.transform(data, transform_matrix_flatten)
+        import time
+        t = time.time()
+        augment_data = self._transform(data)
+        print("augmentation: {}".format(time.time() - t))
         augment_data = tf.cond(self.do_flip_lr_tensor, lambda: tf.image.flip_left_right(augment_data), lambda: augment_data)
         augment_data = tf.cond(self.do_flip_ud_tensor, lambda: tf.image.flip_up_down(augment_data), lambda: augment_data)
         return augment_data
+    
+    def _transform(self, data):
+        # data = tf.cast(data, tf.float64)
+        dtype = data.dtype
+        
+        x_range = tf.range(data.get_shape()[0])
+        y_range = tf.range(data.get_shape()[1])
+        z_range = tf.range(data.get_shape()[2])
+
+        x_, y_, z_ = tf.meshgrid(x_range, y_range, z_range)
+        x_ = tf.reshape(x_, [-1])
+        y_ = tf.reshape(y_, [-1])
+        z_ = tf.reshape(z_, [-1])                
+        base_coords = tf.stack([x_, y_, tf.ones_like(x_)])
+        
+        M = tf.linalg.inv(self.transform_matrix)        
+        
+        new_coords = tf.transpose(tf.matmul(tf.cast(M, tf.float32), tf.cast(base_coords, tf.float32)))
+        new_coords = new_coords[:,:2]             
+        # check the bound
+        lower = tf.less(new_coords, 0) 
+        upper = tf.greater_equal(new_coords, tf.reshape(tf.cast(data.get_shape()[:2], tf.float32), [1,2]))
+        bound_check = tf.math.logical_or(lower, upper)
+        bound = tf.reshape(
+            tf.math.logical_or(bound_check[:,0], bound_check[:,1]), [-1, 1]
+        )
+
+        t_ = tf.concat(
+            [
+                tf.cast(bound, tf.float32),
+                tf.slice(new_coords, [0, 1], [-1, 1]),
+                tf.slice(new_coords, [0, 0], [-1, 1]),
+                tf.cast(tf.reshape(z_, [-1, 1]), tf.float32)
+            ],
+            axis=-1
+        )
+        result_flat = tf.map_fn(
+            lambda x: tf.cond(
+                tf.greater(x[0], 0.0),
+                lambda: tf.cast(-1.0, dtype),
+                lambda: tf.gather_nd(
+                    data, tf.cast(tf.floor(x[1:]), tf.int32)
+                )
+            ),
+            t_
+        )
+        return tf.reshape(result_flat, data.shape)
 
