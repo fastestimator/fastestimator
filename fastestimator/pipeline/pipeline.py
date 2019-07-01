@@ -26,6 +26,7 @@ class Pipeline:
             of training data to be sequestered for validation during training
         data_filter: Filtering to be performed on the corresponding features in the form of an object from the
             Filter class
+        padded_batch: Whether to pad the batch data in case of inconsistent shape within batch. fill value is 0.
         **kwargs: Additional arguments to be forwarded for the creation of TFRecords.
     """
     def __init__(self,
@@ -36,6 +37,7 @@ class Pipeline:
                  train_data=None,
                  validation_data=None,
                  data_filter=None,
+                 padded_batch=False,
                  **kwargs):
         self.batch_size = batch_size
         self.train_data = train_data
@@ -44,6 +46,7 @@ class Pipeline:
         self.transform_dataset = transform_dataset
         self.validation_data = validation_data
         self.data_filter = data_filter
+        self.padded_batch = padded_batch
         self.kwargs = kwargs
         self.num_process = 1 #change later by mpi
         self.num_local_process = 1 #change later by mpi
@@ -138,7 +141,10 @@ class Pipeline:
         if self.data_filter is not None and self.data_filter.mode in [mode, "both"]:
             dataset = dataset.filter(lambda dataset: self.data_filter.predicate_fn(dataset))
         dataset = dataset.map(lambda dataset: self._preprocess_fn(dataset, mode), num_parallel_calls=self.num_subprocess)
-        dataset = dataset.batch(self.batch_size)
+        if self.padded_batch:
+            dataset = dataset.padded_batch(self.batch_size, padded_shapes={key:self.feature_shape[key] for key in self.feature_name})
+        else:
+            dataset = dataset.batch(self.batch_size)
         dataset = dataset.prefetch(buffer_size=1)
         return dataset
 

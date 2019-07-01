@@ -75,7 +75,10 @@ class TFRecorder:
             if "<U" in dtype:
                 dtype = "string"
             self.feature_type_new.append(dtype)
-            self.feature_shape.append(data.shape)
+            if data.size == 1 or max(data.shape) == np.prod(data.shape):
+                self.feature_shape.append([-1])
+            else:
+                self.feature_shape.append(data.shape)
 
 
     def _write_tfrecord_parallel(self, dictionary, num_example_csv, mode):
@@ -157,19 +160,8 @@ class TFRecorder:
         feature_tfrecord = {}
         keys = dictionary.keys()
         for key in keys:
-            data = dictionary[key]
-            if type(data) is np.ndarray and data.size ==1:
-                data = data.reshape(-1)[0]
-            if type(data) is np.ndarray and data.size > 1:
-                feature_tfrecord[key] = self._bytes_feature(data.tostring())
-            elif "int" in str(type(data)):
-                feature_tfrecord[key] = self._int64_feature(data)
-            elif "float" in str(type(data)):
-                feature_tfrecord[key] = self._float_feature(data)
-            elif "str" in str(type(data)):
-                feature_tfrecord[key] = self._bytes_feature(data.encode())
-            else:
-                raise ValueError("only supports either scalar, string, or numpy array, got %s" % str(type(data)))
+            data = np.array(dictionary[key])
+            feature_tfrecord[key] = self._bytes_feature(data.tostring())
         example = tf.train.Example(features=tf.train.Features(feature=feature_tfrecord))
         writer.write(example.SerializeToString())
 
@@ -188,10 +180,13 @@ class TFRecorder:
         for idx in range(len(self.feature_name)):
             transform_list = self.transform_dataset[idx]
             feature_name = self.feature_name[idx]
-            preprocess_data = feature[feature_name]
-            for preprocess_obj in transform_list:
-                preprocess_data = preprocess_obj.transform(preprocess_data, feature)
-            preprocessed_data[feature_name] = preprocess_data
+            if feature_name in feature:
+                preprocess_data = feature[feature_name]
+                for preprocess_obj in transform_list:
+                    preprocess_obj.feature_name = feature_name
+                    preprocess_obj.feature = feature
+                    preprocess_data = preprocess_obj.transform(preprocess_data)
+                preprocessed_data[feature_name] = preprocess_data
         return preprocessed_data
 
     def _verify_dict(self, dictionary):
@@ -267,42 +262,9 @@ class TFRecorder:
         with open(os.path.join(self.save_dir, file_name), 'w') as fp:
             json.dump(summary, fp, indent=4)
 
-def tfrecord_to_np(file_path):
-    """
-    Converts 1 TFRecord (created using fastestimator) to numpy data
-
-    Args:
-        file_path: Path of TFRecord file
-
-    Returns:
-        Dictionary containing numpy data
-    """
-    tensor_data = dict()
-    folder_path = os.path.dirname(file_path)
-    json_files = [os.path.join(folder_path, f) for f in os.listdir(folder_path) if f.endswith(".json")]
-    assert len(json_files) > 0, "Cannot find summary json file, you can either add the json file or use TFRecorder to create tfrecord"
-    summary = json.load(open(json_files[0], 'r'))
-    keys_to_features = get_features(file_path)
-    decode_type = {name:dtype for (name, dtype) in zip(summary["feature_name"], summary["feature_dtype"])}
-    for tf_record_example in tf.io.tf_record_iterator(file_path):
-        example = tf.parse_single_example(tf_record_example, features=keys_to_features)
-        for key in summary["feature_name"]:
-            data = example[key]
-            if "string" in str(data.dtype):
-                data = tf.decode_raw(data, convert_tf_dtype(decode_type[key]))
-            if key in tensor_data:
-                tensor_data[key].append(data)
-            else:
-                tensor_data[key] = [data]
-    with tf.Session() as sess:
-        np_data = sess.run(tensor_data)
-    for key in np_data.keys():
-        np_data[key] = np.array(np_data[key])
-    return np_data
-
 def get_number_of_examples(file_path, show_warning=True, compression=None):
     """
-    Returns number of examples in 1 TFRecord
+    Returns number of examples in one TFRecord
 
     Args:
         file_path: Path of TFRecord file
