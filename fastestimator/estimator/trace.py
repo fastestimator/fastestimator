@@ -54,7 +54,7 @@ class Trace:
                 "step": current global step index starting from 0 (or batch index)
                 "size": current batch size
                 "batch": the batch data used as input of network
-                "prediction": the batch predictions in dictionary format
+                "prediction": the batch predictions
                 "loss": the batch loss (only available when mode is "train" or "eval")
         """
 
@@ -127,14 +127,16 @@ class TrainLogger(Trace):
 
 
 class Accuracy(Trace):
-    """Metric: accuracy.
-    """
-    def __init__(self, feature_true=None, feature_predict=None):
-        super().__init__()
-        self.feature_true = feature_true
-        self.feature_predict = feature_predict
-        self.total = 0
-        self.correct = 0
+    def __init__(self, y_true_key, y_pred_key=None):
+        """Calculate accuracy for classification task and report it back to logger.
+
+        Args:
+            Trace ([type]): [description]
+            y_true_key (str): the key name of the ground truth label in data pipeline
+            y_pred_key (str, optional): if the network's output is a dictionary, key name of predicted label. Defaults to None.
+        """
+        self.y_true_key = y_true_key
+        self.y_pred_key = y_pred_key
 
     def on_epoch_begin(self, mode, logs):
         if mode == "eval":
@@ -143,12 +145,12 @@ class Accuracy(Trace):
 
     def on_batch_end(self, mode, logs):
         if mode == "eval":
-            groundtruth_label = np.array(logs["batch"][self.feature_true])
+            groundtruth_label = np.array(logs["batch"][self.y_true_key])
             if groundtruth_label.shape[-1] > 1 and len(groundtruth_label.shape) > 1:
                 groundtruth_label = np.argmax(groundtruth_label, axis=-1)
             prediction = logs["prediction"]
             if isinstance(prediction, dict):
-                prediction_score = np.array(prediction[self.feature_predict])
+                prediction_score = np.array(prediction[self.y_pred_key])
             else:
 
                 prediction_score = np.array(prediction)
