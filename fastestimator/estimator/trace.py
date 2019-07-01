@@ -1,101 +1,107 @@
-import numpy as np
+"""Trace contains metrics and other information users want to track."""
 import time
 
+import numpy as np
+from sklearn.metrics import confusion_matrix
+
+
 class Trace:
+    """Trace base class.
+
+    User can use `Trace` to customize their own operations during training, validation and testing.
+
+    Args:
+        network: `Network` instance can be accessible by `self.network`.
+    """
     def __init__(self):
-        """trace is a combination of original callbacks, metrics and more, user can use trace to customize their own operations
-        during training, validation and testing.
-
-        network instance can be accessible by self.network
-
-        """
         self.network = None
-        pass
 
     def begin(self, mode):
-        """this function runs at the beginning of the mode
-        
+        """Runs at the beginning of the mode.
+
         Args:
-            mode (str): signature during different phases, can be "train", "eval" or "test"
+            mode (str): Signature during different phases, can be "train", "eval" or "test".
         """
-        pass
 
     def on_epoch_begin(self, mode, logs):
-        """this function runs at the beginning of each epoch
-        
+        """Runs at the beginning of each epoch of the mode.
+
         Args:
-            mode (str): signature during different phases, can be "train", "eval" or "test"
-            logs (dict): dictionary with following key:
-                "epoch": current epoch index starting from 0
+            mode (str): Signature during different phases, can be "train", "eval" or "test".
+            logs (dict): Dictionary with the following key:
+
+                * "epoch": current epoch index starting from 0
         """
-        pass
 
     def on_batch_begin(self, mode, logs):
-        """this function runs at the beginning of every batch
-        
+        """Runs at the beginning of every batch of the mode.
+
         Args:
-            mode (str): signature during different phases, can be "train", "eval" or "test"
-            logs (dict): dictionary with following key:
-                "epoch": current epoch index starting from 0
-                "step": current global step index starting from 0 (or batch index)
-                "size": current batch size
+            mode (str): Signature during different phases, can be "train", "eval" or "test".
+            logs (dict): Dictionary with the following keys:
+
+                * "epoch": current epoch index starting from 0
+                * "step": current global step index starting from 0 (or batch index)
+                * "size": current batch size
         """
-        pass
 
     def on_batch_end(self, mode, logs):
-        """this function runs at the end of every batch
-        
+        """Runs at the end of every batch of the mode.
+
         Args:
-            mode (str): signature during different phases, can be "train", "eval" or "test"
-            logs (dict): dictionary with following key:
-                "epoch": current epoch index starting from 0
-                "step": current global step index starting from 0 (or batch index)
-                "size": current batch size
-                "batch": the batch data used as input of network
-                "prediction": the batch predictions
-                "loss": the batch loss (only available when mode is "train" or "eval")
+            mode (str): Signature during different phases, can be "train", "eval" or "test".
+            logs (dict): Dictionary with the following keys:
+
+                * "epoch": current epoch index starting from 0
+                * "step": current global step index starting from 0 (or batch index)
+                * "size": current batch size
+                * "batch": the batch data used as input of network
+                * "prediction": the batch predictions
+                * "loss": the batch loss (only available when mode is "train" or "eval")
         """
-        pass
 
     def on_epoch_end(self, mode, logs):
-        """this function runs at the end of every epoch, if needed to display metric in logger, then return the metric.
-        the metric can be a scalar, list, tuple, numpy array or dictionary.
-        
+        """Runs at the end of every epoch of the mode.
+
+        If needed to display metric in logger, then return the metric. The metric can be a scalar,
+        list, tuple, numpy array or dictionary.
+
         Args:
-            mode (str): signature during different phases, can be "train", "eval" or "test"
-            logs (dict): dictionary with following key:
-                "epoch": current epoch index starting from 0
-                "loss": average loss within epoch (only available when mode is "eval")
+            mode (str): Signature during different phases, can be "train", "eval" or "test".
+            logs (dict): Dictionary with the following keys:
+
+                * "epoch": current epoch index starting from 0
+                * "loss": average loss within epoch (only available when mode is "eval")
         """
-        return None
 
     def end(self, mode):
-        """this function runs at the end of the mode
-        
-        Args:
-            mode (str): signature during different phases, can be "train", "eval" or "test"
-        """
-        pass
+        """Runs at the end of the mode.
 
+        Args:
+            mode (str): Signature during different phases, can be "train", "eval" or "test".
+        """
 
 class TrainLogger(Trace):
+    """Training logger, automatically applied by default.
+    """
     def __init__(self, log_steps=100, num_process=1):
-        """Training logger, automatically applied by default
-        
-        Args:
-            log_steps (int, optional): logging interval. Defaults to 100.
-            num_process (int, optional): number of distributed training processes. Defaults to 1.
         """
+        Args:
+            log_steps (int, optional): Logging interval. Default value is 100.
+            num_process (int, optional): Number of distributed training processes. Default is 1.
+        """
+        super().__init__()
         self.log_steps = log_steps
         self.num_process = num_process
         self.elapse_times = []
         self.epochs_since_best = 0
         self.best_loss = None
+        self.time_start = 0
 
     def on_epoch_begin(self, mode, logs):
         if mode == "train":
             self.time_start = time.time()
-    
+
     def on_batch_end(self, mode, logs):
         if mode == "train" and logs["step"] % self.log_steps == 0:
             if logs["step"] == 0:
@@ -115,7 +121,7 @@ class TrainLogger(Trace):
             current_eval_loss = logs["loss"]
             output_metric = {"val_loss": current_eval_loss}
             if np.isscalar(current_eval_loss):
-                if self.best_loss == None or current_eval_loss < self.best_loss:
+                if self.best_loss is None or current_eval_loss < self.best_loss:
                     self.best_loss = current_eval_loss
                     self.epochs_since_best = 0
                 else:
@@ -123,19 +129,22 @@ class TrainLogger(Trace):
                 output_metric["min_val_loss"] = self.best_loss
                 output_metric["since_best"] = self.epochs_since_best
             return output_metric
+        return None
 
 
 class Accuracy(Trace):
+    """Calculates accuracy for classification task and report it back to logger.
+
+    Args:
+        y_true_key (str): Name of the keys in the ground truth label in data pipeline.
+        y_pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label. Default is `None`.
+    """
     def __init__(self, y_true_key, y_pred_key=None):
-        """Calculate accuracy for classification task and report it back to logger.
-        
-        Args:
-            Trace ([type]): [description]
-            y_true_key (str): the key name of the ground truth label in data pipeline
-            y_pred_key (str, optional): if the network's output is a dictionary, key name of predicted label. Defaults to None.
-        """
+        super().__init__()
         self.y_true_key = y_true_key
         self.y_pred_key = y_pred_key
+        self.total = 0
+        self.correct = 0
 
     def on_epoch_begin(self, mode, logs):
         if mode == "eval":
@@ -151,6 +160,7 @@ class Accuracy(Trace):
             if isinstance(prediction, dict):
                 prediction_score = np.array(prediction[self.y_pred_key])
             else:
+
                 prediction_score = np.array(prediction)
             binary_classification = prediction_score.shape[-1] == 1
             if binary_classification:
@@ -164,4 +174,55 @@ class Accuracy(Trace):
     def on_epoch_end(self, mode, logs):
         if mode == "eval":
             return self.correct/self.total
-            
+        return None
+
+class ConfusionMatrix(Trace):
+    """Computes confusion matrix between y_true and y_predict.
+
+    Args:
+        num_classes (int): Total number of classes of the confusion matrix.
+        y_true_key (str): Name of the keys in the ground truth label in data pipeline.
+        y_pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label. Default is `None`.
+    """
+    def __init__(self, y_true_key, y_pred_key=None, num_classes=None):
+        if not isinstance(num_classes, int):
+            raise ValueError('num_classes should be a positive interger.')
+        super().__init__()
+        self.y_true_key = y_true_key
+        self.y_pred_key = y_pred_key
+        self.num_classes = num_classes
+        self.confusion = None
+
+    def on_epoch_begin(self, mode, logs):
+        if mode == "eval":
+            self.confusion = None
+
+    def on_batch_end(self, mode, logs):
+        if mode == "eval":
+            groundtruth_label = np.array(logs["batch"][self.y_true_key])
+            if groundtruth_label.shape[-1] > 1 and groundtruth_label.ndim > 1:
+                groundtruth_label = np.argmax(groundtruth_label, axis=-1)
+
+            prediction = logs["prediction"]
+            if isinstance(prediction, dict):
+                prediction_score = np.array(prediction[self.y_pred_key])
+            else:
+                prediction_score = np.array(prediction)
+
+            binary_classification = prediction_score.shape[-1] == 1
+            if binary_classification:
+                prediction_label = np.round(prediction_score)
+            else:
+                prediction_label = np.argmax(prediction_score, axis=-1)
+            assert prediction_label.size == groundtruth_label.size
+
+            batch_confusion = confusion_matrix(groundtruth_label, prediction_label, labels=list(range(0, self.num_classes)))
+            if self.confusion is None:
+                self.confusion = batch_confusion
+            else:
+                self.confusion += batch_confusion
+
+    def on_epoch_end(self, mode, logs):
+        if mode == "eval":
+            return self.confusion
+        return None
