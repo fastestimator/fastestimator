@@ -270,7 +270,7 @@ class Pipeline:
             np_data.append(example)
         return np_data
 
-    def benchmark(self, inputs=None, mode="train", num_steps= 500, log_interval= 10):
+    def benchmark(self, inputs=None, mode="train", num_steps= 500, log_interval= 100):
         """
         benchmark the pipeline processing speed during training
 
