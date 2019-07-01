@@ -209,7 +209,7 @@ class Augmentation(AbstractAugmentation):
 
         transform_matrix = tf.tensordot(tf.tensordot(offset_matrix, matrix, axes=1), reset_matrix, axes=1)
         return transform_matrix
-    
+
     def setup(self):
         """
         This method set the appropriate variables necessary for the random 2D augmentation. It also computes the
@@ -218,13 +218,16 @@ class Augmentation(AbstractAugmentation):
         Returns:
             None
         """
-        transform_matrix = tf.constant([[1, 0, 0], [0, 1, 0], [0, 0, 1]], shape=[3, 3], dtype=tf.float32)
+        # \NOTE(JP): tracing behavior from dataset.map causes issue when any tensor id defined as tf.constant
+        transform_matrix = tf.convert_to_tensor(
+            [[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=tf.float32
+        )
         do_rotate = False
         do_shift = False
         do_zoom = False
         do_shear = False
-        self.do_flip_lr_tensor = tf.constant(False)
-        self.do_flip_ud_tensor = tf.constant(False)
+        self.do_flip_lr_tensor = tf.convert_to_tensor(False)
+        self.do_flip_ud_tensor = tf.convert_to_tensor(False)
 
         if type(self.rotation_range) is not tuple and type(self.rotation_range) is not list:
             if self.rotation_range > 0.:
@@ -302,16 +305,13 @@ class Augmentation(AbstractAugmentation):
             Transformed (augmented) data
 
         """
-        # transform_matrix_flatten = tf.reshape(self.transform_matrix, shape=[1, 9])
-        # transform_matrix_flatten = transform_matrix_flatten[0, 0:8]
-        # augment_data = transform_ops.transform(data, transform_matrix_flatten)
         augment_data = self._transform(data)
 
         augment_data = tf.cond(self.do_flip_lr_tensor, lambda: tf.image.flip_left_right(augment_data), lambda: augment_data)
         augment_data = tf.cond(self.do_flip_ud_tensor, lambda: tf.image.flip_up_down(augment_data), lambda: augment_data)
         return augment_data
-    
-    def _transform(self, data, fill_val=0):        
+
+    def _transform(self, data):
         dtype = data.dtype
         x_range = tf.range(data.get_shape()[0])
         y_range = tf.range(data.get_shape()[1])
@@ -322,16 +322,15 @@ class Augmentation(AbstractAugmentation):
         y_ = tf.reshape(y_, [-1])
         z_ = tf.reshape(z_, [-1])
         coords = tf.stack([x_, y_, tf.ones_like(x_)])
-        
-        M = tf.linalg.inv(self.transform_matrix)
 
+        M = tf.linalg.inv(self.transform_matrix)
         coords = tf.matmul(
             tf.cast(M, tf.float32), tf.cast(coords, tf.float32)
         )
-        
+
         x_ = tf.cast(coords[0], tf.int32)
         y_ = tf.cast(coords[1], tf.int32)
-        
+
         mask = (x_ > -1) & (x_ < data.get_shape()[0]) & (y_ > -1) & (y_ < data.get_shape()[1])
         # mask_inv = ~mask
         mask = tf.cast(mask, dtype)
@@ -354,38 +353,5 @@ class Augmentation(AbstractAugmentation):
             tf.stack([x_, y_, z_], axis=-1)
         )
         # result_flat = result_flat * tf.cast(mask, tf.int32) + 
-        result_flat = tf.multiply(result_flat, mask)
-        # result_flat = tf.add(result_flat, mask_inv)
-        # # check the bound
-        # lower = tf.less(coords[:2,:], 0) 
-        # upper = tf.greater_equal(
-        #     coords[:2,:], tf.reshape(tf.cast(data.get_shape()[:2], tf.float32), [2, 1])
-        # )
-        # bound_check = tf.math.logical_or(lower, upper)
-        # bound = tf.math.logical_or(bound_check[0], bound_check[1])
-
-        # x_ = tf.cast(tf.clip_by_value(
-        #     tf.round(x_),
-        #     0,
-        #     data.get_shape()[0] - 1
-        # ), tf.int32)
-
-        # y_ = tf.cast(tf.clip_by_value(
-        #     tf.round(y_),
-        #     0,
-        #     data.get_shape()[1] - 1
-        # ), tf.int32)
-
-        # # T = (bound, x_, y_, z_)
-        # T = (bound, x_, y_)
-        # result_flat = tf.map_fn(
-        #     fn=lambda x: tf.cond(
-        #         x[0],
-        #         lambda: tf.cast(fill_val, dtype),
-        #         lambda: data[x[1]][x[2]][0]
-        #     ),
-        #     elems=T,
-        #     dtype=dtype,
-        #     back_prop=False
-        # )
+        result_flat = tf.multiply(result_flat, mask)        
         return tf.convert_to_tensor(tf.reshape(result_flat, data.shape))
