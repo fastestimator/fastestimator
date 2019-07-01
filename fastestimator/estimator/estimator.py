@@ -1,14 +1,15 @@
-from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
-from tensorflow.keras.callbacks import EarlyStopping as EarlyStopping_keras
-from tensorflow.keras.callbacks import ReduceLROnPlateau as ReduceLROnPlateau_keras
-from tensorflow.keras.callbacks import LearningRateScheduler as LearningRateScheduler_keras
-from fastestimator.estimator.trace import TrainLogger
-from tensorflow.keras import backend as K
-import tensorflow as tf
-import numpy as np
 import logging
 import sys
-import os
+
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.callbacks import EarlyStopping as EarlyStopping_keras
+from tensorflow.keras.callbacks import LearningRateScheduler as LearningRateScheduler_keras
+from tensorflow.keras.callbacks import ModelCheckpoint
+from tensorflow.keras.callbacks import ReduceLROnPlateau as ReduceLROnPlateau_keras
+from tensorflow.keras.callbacks import TensorBoard
+
+from fastestimator.estimator.trace import TrainLogger
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
@@ -40,6 +41,7 @@ class Estimator:
         self.num_local_process = 1
         self.traces = traces
         self.do_eval = False
+        self.inputs = None
 
     def fit(self, inputs=None):
         """
@@ -138,16 +140,24 @@ class Estimator:
         if mode == "eval":
             self._print_eval_message(output_list)
 
+    @staticmethod
+    def _format_log_message(message, metric_name, metric_value):
+        if not isinstance(metric_value, np.ndarray):
+            log_message = "{}{}: {}; ".format(message, metric_name, str(metric_value))
+        else:
+            log_message = "{}\n{}:\n{};\n".format(message, metric_name, np.array2string(metric_value, separator=','))
+        return log_message
+
     def _print_eval_message(self, output_list):
         step = self.steps_per_epoch * (self.epoch + 1)
-        log_message = "FastEstimator-Eval: step: %d; " % step
+        log_message = "FastEstimator-Eval: step: {}; ".format(step)
         for metric_name, metric_result in output_list:
             if isinstance(metric_result, dict):
                 for key in metric_result.keys():
-                    eval_value = metric_result[key]
-                    log_message = log_message + key + ": " + str(eval_value) + "; "
+                    log_message = self._format_log_message(log_message, key, metric_result[key])
             else:
-                log_message = log_message + metric_name + ": " + str(metric_result) + "; "
+                log_message = self._format_log_message(log_message, metric_name, metric_result)
+
         print(log_message)
 
     def _run_traces_end(self, mode):
