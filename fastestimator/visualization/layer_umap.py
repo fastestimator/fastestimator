@@ -12,10 +12,10 @@ from matplotlib.lines import Line2D
 from mpl_toolkits.mplot3d import Axes3D
 # noinspection PyPackageRequirements
 from tensorflow.python import keras
-from tqdm import tqdm
+from tqdm import tqdm, trange
 
 from fastestimator.util.loader import ImageLoader
-from fastestimator.util.util import load_dict
+from fastestimator.util.util import load_dict, Suppressor
 
 assert Axes3D  # Axes3D is used to enable projection='3d', but will show up as unused without the assert
 
@@ -150,15 +150,21 @@ class FileCache(object):
         if batches is None:
             batches = self.idx
         data = [None for _ in range(self.num_layers)]
-        for layer in range(self.num_layers):
-            layer_data = None
-            for batch in range(batches):
+        classes = []
+
+        if batches == 0:
+            return data, classes
+
+        for layer in trange(self.num_layers, desc='Computing UMaps', unit='layer'):
+            layer_data = []
+            for batch in trange(batches, desc='Loading Cache', unit='batch', leave=False):
                 dat = np.load(os.path.join(self.root_path, "layer{}-batch{}.npy".format(self.layers[layer], batch)),
                               allow_pickle=True)
-                layer_data = dat if layer_data is None else np.concatenate((layer_data, dat), axis=0)
-            data[layer] = self.fit.fit_transform(layer_data)
+                layer_data.append(dat)
+            layer_data = np.concatenate(layer_data, axis=0)
+            with Suppressor():  # Silence a bunch of numba warnings
+                data[layer] = self.fit.fit_transform(layer_data)
 
-        classes = []
         for batch in range(batches):
             clazz = np.load(os.path.join(self.root_path, "class{}.npy".format(batch)), allow_pickle=True)
             classes.extend(clazz)
@@ -166,8 +172,8 @@ class FileCache(object):
         return data, classes
 
 
-def umap_layers(model_path, input_root_path, print_layers=False, strip_alpha=False, input_type='float32', layers=None,
-                input_extension='JPEG', batch=10, use_cache=True, cache_dir=None, dictionary_path=None, save=False,
+def umap_layers(model_path, input_root_path, print_layers=False, strip_alpha=False, layers=None,
+                input_extension=None, batch=10, use_cache=True, cache_dir=None, dictionary_path=None, save=False,
                 save_dir=None, legend_mode='shared', umap_parameters=None):
     if umap_parameters is None:
         umap_parameters = {}
@@ -184,8 +190,8 @@ def umap_layers(model_path, input_root_path, print_layers=False, strip_alpha=Fal
         return
 
     evaluator = Evaluator(network, layers=layers)
-    loader = ImageLoader(input_root_path, batch=batch, input_extension=input_extension, strip_alpha=strip_alpha,
-                         input_type=input_type)
+    loader = ImageLoader(input_root_path, network, batch=batch, input_extension=input_extension,
+                         strip_alpha=strip_alpha)
     cache = FileCache(cache_dir, evaluator.layers, umap_parameters) if use_cache else None
 
     classes = []
@@ -207,6 +213,7 @@ def umap_layers(model_path, input_root_path, print_layers=False, strip_alpha=Fal
         layer_outputs, classes = cache.load_and_transform(len(loader))
     else:
         fit = umap.UMAP(**umap_parameters)
-        layer_outputs = [fit.fit_transform(layer) for layer in layer_outputs]
+        with Suppressor():  # Silence a bunch of numba warnings
+            layer_outputs = [fit.fit_transform(layer) for layer in layer_outputs]
     draw_umaps(layer_outputs, classes, layer_ids=layers, layers=network.layers, save=save, save_path=save_dir,
                dictionary=load_dict(dictionary_path, True),  legend_mode=legend_mode)

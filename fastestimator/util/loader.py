@@ -1,7 +1,6 @@
 import math
 import os
 
-import numpy as np
 # noinspection PyPackageRequirements
 import tensorflow as tf
 
@@ -50,21 +49,24 @@ class PathLoader(object):
 
 
 class ImageLoader(PathLoader):
-    def __init__(self, root_path, batch=10, input_extension=None, strip_alpha=False, input_type='float32'):
+    def __init__(self, root_path, model, batch=10, input_extension=None, strip_alpha=False):
         super(ImageLoader, self).__init__(root_path, batch, input_extension)
         self.strip_alpha = strip_alpha
-        self.input_type = input_type
+        self.input_type = model.input.dtype
+        self.input_shape = model.input.shape
+        if not (3 <= len(self.input_shape) <= 4):
+            raise AssertionError("Model must have 3 or 4 dimensions: (batch, x, y, [channels])")
+        if self.input_shape[0] is not None:
+            raise AssertionError("Model must take batch on axis zero")
+        self.n_channels = 0 if len(self.input_shape) == 3 else self.input_shape[3]
 
     def __next__(self):
         paths = super(ImageLoader, self).__next__()
-        inputs = [load_image(paths[i][0], strip_alpha=self.strip_alpha) for i in range(len(paths))]
-        max_shapes = np.maximum.reduce([inp.shape for inp in inputs], axis=0)
-        max_shapes[
-            0] = 500  # problem: if different batches have different im size then the feature count will be different
-        max_shapes[1] = 500
+        inputs = [load_image(paths[i][0], strip_alpha=self.strip_alpha, channels=self.n_channels) for i in
+                  range(len(paths))]
         batch_inputs = tf.stack([tf.image.resize_with_crop_or_pad(tf.convert_to_tensor(im, dtype=self.input_type),
-                                                                  max_shapes[0], max_shapes[1]) for im in inputs],
-                                axis=0)
+                                                                  self.input_shape[1], self.input_shape[2]) for im in
+                                 inputs], axis=0)
 
         batch_classes = [paths[i][1] for i in range(len(paths))]
         return batch_inputs, batch_classes

@@ -8,27 +8,33 @@ import PIL
 import numpy as np
 # noinspection PyPackageRequirements
 import tensorflow as tf
+import sys
 
 
-def load_image(file_path, strip_alpha=False):
+def load_image(file_path, strip_alpha=False, channels=3):
     """
     Args:
         file_path: The path to an image file
         strip_alpha: True to convert an RGBA image to RGB
+        channels: How many channels should the image have (0,1,3)
     Returns:
         The image loaded into memory and scaled to a range of [-1, 1]
     """
     # noinspection PyUnresolvedReferences
     im = PIL.Image.open(file_path)
-    if im.mode == "L":
-        im = im.convert('RGB')
     if strip_alpha and im.mode == "RGBA":
         # noinspection PyUnresolvedReferences
         background = PIL.Image.new("RGB", im.size, (0, 0, 0))
         background.paste(im, mask=im.split()[3])
         im = background
-    im = np.asarray(im)
-    return im / 127.5 - 1.0
+    if channels == 0 or channels == 1:
+        im = im.convert("L")
+    if channels == 3:
+        im = im.convert("RGB")
+    im = np.asarray(im) / 127.5 - 1.0
+    if channels == 1:
+        im = np.reshape(im, (im.shape[0], im.shape[1], 1))
+    return im
 
 
 def load_dict(dict_path, array_key=False):
@@ -208,3 +214,25 @@ def is_number(s):
         return True
     except ValueError:
         return False
+
+
+class Suppressor(object):
+    """
+    A class which can be used to silence output of function calls. example:
+    with Suppressor():
+        func(args)
+    """
+
+    def __enter__(self):
+        self.stdout = sys.stdout
+        self.stderr = sys.stderr
+        sys.stdout = self
+        sys.stderr = self
+
+    def __exit__(self, type, value, traceback):
+        sys.stdout = self.stdout
+        sys.stderr = self.stderr
+        if type is not None:
+            raise
+
+    def write(self, x): pass
