@@ -80,7 +80,7 @@ def saliency(args, unknown):
     if len(unknown) > 0:
         print("error: unrecognized arguments: ", str.join(", ", unknown))
         sys.exit(-1)
-    load_and_interpret(args['model'], args['inputs'], baseline=args['baseline'], input_type=args['type'],
+    load_and_interpret(args['model'], args['inputs'], baseline=args['baseline'],
                        dictionary_path=args['dictionary'], strip_alpha=args['strip_alpha'],
                        smooth_factor=args['smooth'], save=args['save'], save_dir=args['save_dir'])
 
@@ -98,8 +98,6 @@ def configure_saliency_parser(subparsers):
                         help="The path to a {'class_id':'class_name'} json file", default=None)
     parser.add_argument('--smooth', metavar='N', type=int, default=7,
                         help="The number of samples to use when generating smoothed saliency masks")
-    parser.add_argument('--type', metavar='T', type=str, default='float32',
-                        help="The dtype of the inputs to the model")
     parser.add_argument('--baseline', metavar='B', type=str, default='-1',
                         help="The value to use as a baseline for integrated gradient calculations. Can be either a \
                         number or the path to an image. What would a 'blank' input look like")
@@ -120,9 +118,9 @@ def configure_saliency_parser(subparsers):
 def umap(args, unknown):
     hyperparameters = parse_cli_to_dictionary(unknown)
     umap_layers(args['model'], args['input_dir'], print_layers=args['print_layers'], strip_alpha=args['strip_alpha'],
-                input_type=args['type'], layers=args['layers'], batch=args['batch'], use_cache=args['cache'],
-                cache_dir=args['cache_dir'], dictionary_path=args['dictionary'], legend_mode=args['legend'],
-                save=args['save'], save_dir=args['save_dir'], umap_parameters=hyperparameters)
+                layers=args['layers'], batch=args['batch'], use_cache=args['cache'], cache_dir=args['cache_dir'],
+                dictionary_path=args['dictionary'], legend_mode=args['legend'], save=args['save'],
+                save_dir=args['save_dir'], umap_parameters=hyperparameters, input_extension=args['extension'])
 
 
 def configure_umap_parser(subparsers):
@@ -141,8 +139,9 @@ def configure_umap_parser(subparsers):
                                       analyzed, but that is likely to run out of memory on moderately sized models.')
     parser.add_argument('--strip-alpha', action='store_true',
                         help="True if you want to convert RGBA images to RGB")
-    parser.add_argument('--type', metavar='T', type=str, default='float32',
-                        help="The dtype of the inputs to the model")
+    parser.add_argument('--extension', metavar='E', type=str,
+                        help="The file type / extension of your input files (default matches all files)",
+                        default=None)
     parser.add_argument('--batch', type=int, default=50,
                         help="How many images to process at a time (set based on available RAM)")
     parser.add_argument('--dictionary', metavar='<Dictionary Path>', type=str,

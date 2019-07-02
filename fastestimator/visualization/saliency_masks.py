@@ -22,6 +22,10 @@ def show_text(axis, background, text, title=None):
         text: The text to display
         title: A title for the image
     """
+    # matplotlib doesn't support (x,y,1) images, so convert them to (x,y)
+    if len(background.shape) == 3 and background.shape[2] == 1:
+        background = np.reshape(background, (background.shape[0], background.shape[1]))
+
     axis.axis('off')
     axis.imshow(background, cmap=plt.get_cmap(name="Greys_r"), vmin=0, vmax=1)
     axis.text(0.5, 0.5, text,
@@ -41,6 +45,9 @@ def show_image(axis, im, title=None):
     """
     axis.axis('off')
     im = ((np.asarray(im) + 1) * 127.5).astype(np.uint8)
+    # matplotlib doesn't support (x,y,1) images, so convert them to (x,y)
+    if len(im.shape) == 3 and im.shape[2] == 1:
+        im = np.reshape(im, (im.shape[0], im.shape[1]))
     axis.imshow(im)
     if title is not None:
         axis.set_title(title)
@@ -154,8 +161,10 @@ def interpret_model(model, model_input, baseline_input=None, decode_dictionary=N
     num_rows = model_input.shape[0]
     num_cols = 6
     dpi = 96.0
-    fig, axs = plt.subplots(num_rows, num_cols,
-                            figsize=(num_cols * (model_input.shape[2] / dpi), num_rows * (model_input.shape[1] / dpi)),
+
+    box_width = max(220, model_input.shape[2])
+    box_height = max(220, model_input.shape[1])
+    fig, axs = plt.subplots(num_rows, num_cols, figsize=(num_cols * (box_width / dpi), num_rows * (box_height / dpi)),
                             dpi=dpi)
     if num_rows == 1:
         axs = [axs]  # axs object not wrapped if there's only one row
@@ -179,7 +188,7 @@ def interpret_model(model, model_input, baseline_input=None, decode_dictionary=N
         plt.savefig(save_file, dpi=300, bbox_inches="tight")
 
 
-def load_and_interpret(model_path, input_paths, baseline=-1, input_type='float32', dictionary_path=None,
+def load_and_interpret(model_path, input_paths, baseline=-1, dictionary_path=None,
                        strip_alpha=False, smooth_factor=7, save=False, save_dir=None):
     """ A helper class to load input and invoke the interpretation api
 
@@ -187,7 +196,6 @@ def load_and_interpret(model_path, input_paths, baseline=-1, input_type='float32
         model_path: The path the model file (str)
         input_paths: The paths to model input files [(str),...] or to a folder of inputs [(str)]
         baseline: Either a number corresponding to the baseline for integration, or a path to a baseline file
-        input_type: The data type of the model inputs, ex 'float32'
         dictionary_path: The path to a dictionary file encoding a 'class_idx'->'class_name' mapping
         strip_alpha: Whether to collapse alpha channels when loading an input (bool)
         smooth_factor: How many iterations of the smoothing algorithm to run (int)
@@ -198,11 +206,15 @@ def load_and_interpret(model_path, input_paths, baseline=-1, input_type='float32
     if save_dir is None:
         save_dir = model_dir
     network = keras.models.load_model(model_path)
+    input_type = network.input.dtype
+    input_shape = network.input.shape
+    n_channels = 0 if len(input_shape) == 3 else input_shape[3]
+
     dic = load_dict(dictionary_path)
     if len(input_paths) == 1 and os.path.isdir(input_paths[0]):
         loader = PathLoader(input_paths[0])
         input_paths = [path[0] for path in loader.path_pairs]
-    inputs = [load_image(input_paths[i], strip_alpha=strip_alpha) for i in range(len(input_paths))]
+    inputs = [load_image(input_paths[i], strip_alpha=strip_alpha, channels=n_channels) for i in range(len(input_paths))]
     max_shapes = np.maximum.reduce([inp.shape for inp in inputs], axis=0)
     tf_image = tf.stack([tf.image.resize_with_crop_or_pad(tf.convert_to_tensor(im, dtype=input_type), max_shapes[0],
                                                           max_shapes[1]) for im in inputs], axis=0)
