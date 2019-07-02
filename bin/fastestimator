@@ -131,7 +131,7 @@ def configure_visualization_parser(subparsers):
 def train(args, unknown):
     num_process = args['num_process']
     entry_point = args['entry_point']
-    input_path = args['input']
+    inputs_path = args['inputs']
 
     hyperparameters = {}
     if args['hyperparameters_json']:
@@ -154,7 +154,7 @@ def train(args, unknown):
               "fastestimator --worker " + str.join(" ", sys.argv[1:])
         os.system(cmd)
     else:
-        estimator.fit(inputs=input_path)
+        estimator.fit(inputs=inputs_path)
 
 
 def configure_train_parser(subparsers):
@@ -162,7 +162,7 @@ def configure_train_parser(subparsers):
     # use an argument group for required flag arguments since otherwise they will show up as optional in the help
     parser.add_argument('entry_point', type=str, help='The path to the model python file')
     parser.add_argument('--num_process', type=int, help='The number of parallel training processes', default=1)
-    parser.add_argument('--input', type=str, help='The path where tfrecord is saved or will be saved')
+    parser.add_argument('--inputs', type=str, help='The path where tfrecord is saved or will be saved')
     parser.add_argument('--hyperparameters', dest='hyperparameters_json', type=str,
                         help="The path to the hyperparameters JSON file")
     parser.set_defaults(func=train)
