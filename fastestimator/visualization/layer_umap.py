@@ -100,8 +100,8 @@ def draw_umaps(layer_outputs, classifications, dictionary=None, layers=None, lay
     if not save:
         plt.show()
     else:
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        save_file = os.path.join(os.path.dirname(save_path), 'umaps.png')
+        os.makedirs(save_path, exist_ok=True)
+        save_file = os.path.join(save_path, 'umaps.png')
         print("Saving to {}".format(save_file))
         plt.savefig(save_file, dpi=300)
 
