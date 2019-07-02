@@ -143,14 +143,14 @@ class TestParser(TestCase):
         mock_dir = '/good/'
         parse_mock = MagicMock()
         is_dir_mock = MagicMock(return_value=True)
-        list_mock = MagicMock(return_value=['/good/file1.log', '/good/file2.log', '/good/file3.txt', '/good/file4'])
+        walk_mock = MagicMock(return_value=[('/good', (), ('file1.log', 'file2.log', 'file3.txt', 'file4'))])
         with patch('fastestimator.visualization.parse_logs.parse_files', parse_mock), patch(
-                'fastestimator.visualization.parse_logs.os.path.isdir', is_dir_mock), patch(
-                'fastestimator.visualization.parse_logs.os.listdir', list_mock):
+                'fastestimator.util.loader.os.path.isdir', is_dir_mock), patch(
+                'fastestimator.util.loader.os.walk', walk_mock):
             parse_folder(mock_dir, log_extension='.log', smooth_factor=2, save=True, save_path=None,
                          ignore_metrics=['lr'])
         is_dir_mock.assert_called_once_with(mock_dir)
-        list_mock.assert_called_once_with(mock_dir)
+        walk_mock.assert_called_once_with(mock_dir)
         parse_mock.assert_called_once_with(['/good/file1.log', '/good/file2.log'], '.log', 2, True, None, ['lr'],
                                            True,
                                            False)
@@ -159,10 +159,10 @@ class TestParser(TestCase):
         mock_dir = '/bad/'
         parse_mock = MagicMock()
         is_dir_mock = MagicMock(return_value=False)
-        list_mock = MagicMock(return_value=['/good/file1.log', '/good/file2.log', '/good/file3.txt', '/good/file4'])
+        walk_mock = MagicMock(return_value=[('/good', (), ('file1.log', 'file2.log', 'file3.txt', 'file4'))])
         with patch('fastestimator.visualization.parse_logs.parse_files', parse_mock), patch(
-                'fastestimator.visualization.parse_logs.os.path.isdir', is_dir_mock), patch(
-                'fastestimator.visualization.parse_logs.os.listdir', list_mock):
+                'fastestimator.util.loader.os.path.isdir', is_dir_mock), patch(
+                'fastestimator.util.loader.os.walk', walk_mock):
             self.assertRaises(AssertionError, parse_folder, mock_dir)
         is_dir_mock.assert_called_once_with(mock_dir)
 
@@ -170,14 +170,14 @@ class TestParser(TestCase):
         mock_dir = '/good/'
         parse_mock = MagicMock()
         is_dir_mock = MagicMock(return_value=True)
-        list_mock = MagicMock(return_value=[])
+        walk_mock = MagicMock(return_value=[('/good', (), ())])
         with patch('fastestimator.visualization.parse_logs.parse_files', parse_mock), patch(
-                'fastestimator.visualization.parse_logs.os.path.isdir', is_dir_mock), patch(
-                'fastestimator.visualization.parse_logs.os.listdir', list_mock):
+                'fastestimator.util.loader.os.path.isdir', is_dir_mock), patch(
+                'fastestimator.util.loader.os.walk', walk_mock):
             parse_folder(mock_dir, log_extension='.log', smooth_factor=2, save=True, save_path=None,
                          ignore_metrics=['lr'])
         is_dir_mock.assert_called_once_with(mock_dir)
-        list_mock.assert_called_once_with(mock_dir)
+        walk_mock.assert_called_once_with(mock_dir)
         parse_mock.assert_called_once_with([], '.log', 2, True, None, ['lr'], True,
                                            False)
 

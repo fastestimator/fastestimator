@@ -9,6 +9,7 @@ import seaborn as sns
 from scipy.ndimage.filters import gaussian_filter1d
 
 from fastestimator.util.util import prettify_metric_name, remove_blacklist_keys, strip_suffix
+from fastestimator.util.loader import PathLoader
 
 
 def parse_file(file_path):
@@ -159,7 +160,8 @@ def parse_files(file_paths, log_extension='.txt', smooth_factor=0, save=False, s
     Returns:
         None
     """
-    assert len(file_paths) > 0, "must provide at least one log file"
+    if file_paths is None or len(file_paths) < 1:
+        raise AssertionError("must provide at least one log file")
 
     files_metrics = {}
     for file_path in file_paths:
@@ -188,14 +190,7 @@ def parse_folder(dir_path, log_extension='.txt', smooth_factor=1, save=False, sa
     Returns:
         None
     """
-    assert os.path.isdir(dir_path), "provided path is not a directory"
-
-    file_paths = []
-    for file_name in os.listdir(dir_path):
-        file_name = os.fsdecode(file_name)
-        file_path = os.path.join(dir_path, file_name)
-
-        if file_name.endswith(log_extension):
-            file_paths.append(file_path)
+    loader = PathLoader(dir_path, input_extension=log_extension)
+    file_paths = [x[0] for x in loader.path_pairs]
 
     parse_files(file_paths, log_extension, smooth_factor, save, save_path, ignore_metrics, share_legend, pretty_names)
