@@ -109,7 +109,7 @@ def parse_cli_to_dictionary(input_list):
     return result
 
 
-def get_num_GPU():
+def get_gpu_count():
     """
     Gets number of GPUs on device
 

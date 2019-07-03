@@ -6,7 +6,7 @@ import sys
 
 from pyfiglet import Figlet
 
-from fastestimator.util.util import parse_cli_to_dictionary
+from fastestimator.util.util import parse_cli_to_dictionary, get_gpu_count
 from fastestimator.visualization.layer_umap import umap_layers
 from fastestimator.visualization.parse_logs import parse_folder
 from fastestimator.visualization.saliency_masks import load_and_interpret
@@ -212,7 +212,8 @@ def configure_train_parser(subparsers):
     parser = subparsers.add_parser('train', description='Train a FastEstimator model')
     # use an argument group for required flag arguments since otherwise they will show up as optional in the help
     parser.add_argument('entry_point', type=str, help='The path to the model python file')
-    parser.add_argument('--num_process', type=int, help='The number of parallel training processes', default=1)
+    parser.add_argument('--num_process', type=int, help='The number of parallel training processes',
+                        default=max(1, get_gpu_count()))
     parser.add_argument('--inputs', type=str, help='The path where tfrecord is saved or will be saved')
     parser.add_argument('--hyperparameters', dest='hyperparameters_json', type=str,
                         help="The path to the hyperparameters JSON file")
