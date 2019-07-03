@@ -209,7 +209,8 @@ def train(args, unknown):
 
 
 def configure_train_parser(subparsers):
-    parser = subparsers.add_parser('train', description='Train a FastEstimator model')
+    parser = subparsers.add_parser('train', description='Train a FastEstimator model',
+                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     # use an argument group for required flag arguments since otherwise they will show up as optional in the help
     parser.add_argument('entry_point', type=str, help='The path to the model python file')
     parser.add_argument('--num_process', type=int, help='The number of parallel training processes',
@@ -217,6 +218,8 @@ def configure_train_parser(subparsers):
     parser.add_argument('--inputs', type=str, help='The path where tfrecord is saved or will be saved')
     parser.add_argument('--hyperparameters', dest='hyperparameters_json', type=str,
                         help="The path to the hyperparameters JSON file")
+    parser.add_argument_group('hyperparameter arguments', 'Arguments to be passed through to the get_estimator() call. \
+        Examples might look like --epochs <int>, --batch_size <int>, --optimizer <str>, etc...')
     parser.set_defaults(func=train)
 
 
