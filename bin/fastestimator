@@ -43,7 +43,7 @@ def logs(args, unknown):
 def configure_log_parser(subparsers):
     parser = subparsers.add_parser('logs',
                                    description='Generates comparison graphs amongst one or more log files',
-                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter, allow_abbrev=False)
     parser.add_argument('log_dir', metavar='<Log Dir>', type=str,
                         help="The path to a folder containing one or more log files")
     parser.add_argument('--extension', metavar='E', type=str,
@@ -88,7 +88,7 @@ def saliency(args, unknown):
 def configure_saliency_parser(subparsers):
     parser = subparsers.add_parser('saliency',
                                    description='Generates saliency maps for a model on given input(s)',
-                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter, allow_abbrev=False)
     parser.add_argument('model', metavar='<Model Path>', type=str,
                         help="The path to a saved model file")
     parser.add_argument('inputs', metavar='Input', type=str, nargs='+',
@@ -126,7 +126,7 @@ def umap(args, unknown):
 def configure_umap_parser(subparsers):
     parser = subparsers.add_parser('umap',
                                    description='Plots umaps for model layers over given inputs',
-                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter, allow_abbrev=False)
     parser.add_argument('model', metavar='<Model Path>', type=str,
                         help="The path to a saved model file")
     parser.add_argument('input_dir', metavar='Input', type=str,
@@ -168,7 +168,8 @@ def configure_umap_parser(subparsers):
 
 
 def configure_visualization_parser(subparsers):
-    visualization_parser = subparsers.add_parser('visualize', description='Generates various types of visualiztaions')
+    visualization_parser = subparsers.add_parser('visualize', description='Generates various types of visualiztaions',
+                                                 allow_abbrev=False)
     visualization_subparsers = visualization_parser.add_subparsers()
     # In python 3.7 the following 2 lines could be put into the .add_subparsers() call
     visualization_subparsers.required = True
@@ -210,7 +211,7 @@ def train(args, unknown):
 
 def configure_train_parser(subparsers):
     parser = subparsers.add_parser('train', description='Train a FastEstimator model',
-                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter, allow_abbrev=False)
     # use an argument group for required flag arguments since otherwise they will show up as optional in the help
     parser.add_argument('entry_point', type=str, help='The path to the model python file')
     parser.add_argument('--num_process', type=int, help='The number of parallel training processes',
@@ -231,12 +232,12 @@ def predict(args, unknown):
 
 
 def configure_predict_parser(subparsers):
-    parser = subparsers.add_parser('predict', description='Evaluate a trained model on new inputs')
+    parser = subparsers.add_parser('predict', description='Evaluate a trained model on new inputs', allow_abbrev=False)
     parser.set_defaults(func=predict)
 
 
 def run():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument('--worker', action='store_true',
                         help='A flag used internally to manage multi-processing. It can be ignored by users.')
     subparsers = parser.add_subparsers()
