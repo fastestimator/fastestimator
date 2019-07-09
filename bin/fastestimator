@@ -36,8 +36,8 @@ def logs(args, unknown):
     if len(unknown) > 0:
         print("error: unrecognized arguments: ", str.join(", ", unknown))
         sys.exit(-1)
-    parse_folder(args['log_dir'], args['extension'], args['smooth'], args['save'], args['save_dir'], args['ignore'],
-                 args['share_legend'], args['pretty_names'])
+    parse_folder(args['log_dir'], args['extension'], args['recursive'], args['smooth'], args['save'], args['save_dir'],
+                 args['ignore'], args['share_legend'], args['pretty_names'])
 
 
 def configure_log_parser(subparsers):
@@ -49,6 +49,7 @@ def configure_log_parser(subparsers):
     parser.add_argument('--extension', metavar='E', type=str,
                         help="The file type / extension of your logs",
                         default=".txt")
+    parser.add_argument('--recursive', action='store_true', help="Recursively search sub-directories for log files")
     parser.add_argument('--ignore', metavar='I', type=str, nargs='+',
                         help="The names of metrics to ignore though they may be present in the log files")
     parser.add_argument('--smooth', metavar='<float>', type=float,
