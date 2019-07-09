@@ -1,5 +1,6 @@
 from fastestimator.pipeline.static.augmentation import AbstractAugmentation
 from fastestimator.util.tfrecord import TFRecorder, get_features
+from fastestimator.pipeline.static.filter import Filter
 from fastestimator.util.util import convert_tf_dtype
 import tensorflow as tf
 import multiprocessing
@@ -7,6 +8,7 @@ import numpy as np
 import time
 import json
 import os
+# import pdb
 
 class Pipeline:
     """
@@ -128,6 +130,7 @@ class Pipeline:
             Dataset object containing the batch of tensors to be ingested by the model
         """
         filenames = self.file_names[mode]
+        # files reading
         if mode == "train":
             dataset = tf.data.Dataset.from_tensor_slices(filenames)
             dataset = dataset.shard(self.num_local_process, self.local_rank)
@@ -137,14 +140,28 @@ class Pipeline:
             dataset = dataset.repeat()
         else:
             dataset = tf.data.TFRecordDataset(filenames, compression_type=self.compression)
+        # reading and decoding
         dataset = dataset.map(lambda dataset: self.read_and_decode(dataset), num_parallel_calls=self.num_subprocess)
-        if self.data_filter is not None and self.data_filter.mode in [mode, "both"]:
-            dataset = dataset.filter(lambda dataset: self.data_filter.predicate_fn(dataset))
-        dataset = dataset.map(lambda dataset: self._preprocess_fn(dataset, mode), num_parallel_calls=self.num_subprocess)
+        # filtering and preprocessing
+        if isinstance(self.data_filter, list):
+            assert len(self.data_filter) > 1, "must provide at least two data filters for dataset zipping"
+            zip_ds = ()
+            for data_filter in self.data_filter:
+                assert isinstance(data_filter, Filter), "must provide Filter instance"
+                ds = dataset.filter(lambda dataset: data_filter.filter_fn(dataset))
+                ds = ds.map(lambda ds: self._preprocess_fn(ds, mode), num_parallel_calls=self.num_subprocess)
+                zip_ds += ds,
+            dataset = tf.data.Dataset.zip(zip_ds)
+        else:
+            if isinstance(self.data_filter, Filter) and self.data_filter.mode in [mode, "both"]:
+                dataset = dataset.filter(lambda dataset: self.data_filter.filter_fn(dataset))
+            dataset = dataset.map(lambda dataset: self._preprocess_fn(dataset, mode), num_parallel_calls=self.num_subprocess)
+        #batching
         if self.padded_batch:
             dataset = dataset.padded_batch(self.batch_size, padded_shapes={key:self.feature_shape[key] for key in self.feature_name})
         else:
             dataset = dataset.batch(self.batch_size)
+        #prefetching
         dataset = dataset.prefetch(buffer_size=1)
         return dataset
 
@@ -253,9 +270,9 @@ class Pipeline:
             mode: Mode for training ("train", "eval" or "both")
 
         Returns:
-            A dictionary containing the batches numpy data with corresponding keys
+            A dictionary containing the batches data
         """
-        np_data = []
+        data = []
         self.num_subprocess = min(8, multiprocessing.cpu_count()//self.num_local_process)
         if self.train_data:
             tfrecorder = TFRecorder(train_data=self.train_data,
@@ -271,10 +288,8 @@ class Pipeline:
         self._get_tfrecord_config(inputs)
         dataset = self._input_source(mode, num_batches)
         for i, example in enumerate(dataset):
-            for key in example.keys():
-                example[key] = np.array(example[key])
-            np_data.append(example)
-        return np_data
+            data.append(example)
+        return data
 
     def benchmark(self, inputs=None, mode="train", num_steps= 500, log_interval= 100):
         """

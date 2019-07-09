@@ -17,26 +17,7 @@ class Filter:
         self.keep_prob = keep_prob
         self.mode = mode
 
-    def predicate_fn(self, dataset):
-        """
-        Filters the dataset based on the filter probabilities.
-        
-        Args:
-            dataset: Tensorflow dataset object which is to be filtered
-
-        Returns:
-            Tensorflow conditional for filtering the dataset based on the probabilities for each of the values.
-        """
-        num_filter = len(self.feature_name)
-        for i in range(num_filter):
-            keep_prob_i = tf.cast(self.keep_prob[i], tf.float32)
-            if i == 0:
-                predicate = tf.cond(tf.equal(tf.reshape(dataset[self.feature_name[i]], []), self.filter_value[i]),
-                                    lambda: tf.greater(keep_prob_i, tf.random_uniform([])),
+    def filter_fn(self, dataset):
+        return tf.cond(tf.equal(tf.reshape(dataset[self.feature_name], []), self.filter_value),
+                                    lambda: tf.greater(self.keep_prob, tf.random.uniform([])),
                                     lambda: tf.constant(True))
-            else:
-                predicate = tf.math.logical_and(predicate,
-                                                tf.cond(tf.equal(tf.reshape(dataset[self.feature_name[i]], []), self.filter_value[i]),
-                                                        lambda: tf.greater(keep_prob_i, tf.random_uniform([])),
-                                                        lambda: tf.constant(True)))
-        return predicate
