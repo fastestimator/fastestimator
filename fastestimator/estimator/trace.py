@@ -226,3 +226,53 @@ class ConfusionMatrix(Trace):
         if mode == "eval":
             return self.confusion
         return None
+
+class Dice(Trace):
+    """Computes Dice score for binary classification between y_true and y_predict.
+
+    Args:
+        y_true_key (str): Name of the keys in the ground truth label in data pipeline.
+        y_pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label. Default is `None`.
+    """
+    def __init__(self, y_true_key, y_pred_key=None, threshold=0.5):
+        if not isinstance(int):
+            raise ValueError('num_classes should be a positive interger.')
+        super().__init__()
+        self.y_true_key = y_true_key
+        self.y_pred_key = y_pred_key
+        self.smooth = 1e-7
+        self.threshold = threshold
+        self.dice = None
+
+    def on_epoch_begin(self, mode, logs):
+        if mode == "eval":
+            self.dice = None
+
+    def on_batch_end(self, mode, logs):
+        if mode == "train":
+            groundtruth_label = np.array(logs["batch"][self.y_true_key])
+            if groundtruth_label.shape[-1] > 1 and groundtruth_label.ndim > 1:
+                groundtruth_label = np.argmax(groundtruth_label, axis=-1)
+
+            prediction = logs["prediction"]
+            if isinstance(prediction, dict):
+                prediction_score = np.array(prediction[self.y_pred_key])
+            else:
+                prediction_score = np.array(prediction)
+
+            print('max score: {}'.format(prediction_score.max()))
+            prediction_label = (prediction_score >= self.threshold).astype(np.int)
+
+            intersection = np.sum(groundtruth_label * prediction_label, axis=(1, 2, 3))
+            area_sum = np.sum(groundtruth_label, axis=(1, 2, 3)) + np.sum(prediction_label, axis=(1, 2, 3))
+            dice = (2. * intersection + self.smooth) / (area_sum + self.smooth)
+            if self.dice is None:
+                self.dice = dice
+            else:
+                self.dice = np.append(self.dice, dice, axis=0)
+
+    def on_epoch_end(self, mode, logs):
+        if mode == "train":
+            print(np.mean(self.dice))
+            return np.mean(self.dice)
+        return None
