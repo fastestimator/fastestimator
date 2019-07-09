@@ -273,6 +273,5 @@ class Dice(Trace):
 
     def on_epoch_end(self, mode, logs):
         if mode == "train":
-            print(np.mean(self.dice))
             return np.mean(self.dice)
         return None
