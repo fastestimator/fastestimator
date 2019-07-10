@@ -247,12 +247,12 @@ class Pipeline:
         all_data = tf.io.parse_single_example(dataset, features=self.keys_to_features)
         for feature in self.feature_name:
             data = all_data[feature]
-            if "string" in str(data.dtype) and "string" not in self.decode_type[feature]:
+            if "str" in str(data.dtype) and "str" not in self.decode_type[feature]:
                 data = tf.io.decode_raw(data, convert_tf_dtype(self.decode_type[feature]))
                 data = tf.reshape(data, self.feature_shape[feature])
             if "int" in str(data.dtype):
                 data = tf.cast(data, tf.int32)
-            elif self.decode_type[feature] == "string":
+            elif self.decode_type[feature] == "str":
                 data = data
             else:
                 data = tf.cast(data, tf.float32)

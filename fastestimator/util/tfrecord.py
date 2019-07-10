@@ -73,7 +73,7 @@ class TFRecorder:
             self.mb_per_csv_example += data.nbytes / 1e6
             dtype = str(data.dtype)
             if "<U" in dtype:
-                dtype = "string"
+                dtype = "str"
             self.feature_type_new.append(dtype)
             if data.size == 1 or max(data.shape) == np.prod(data.shape):
                 self.feature_shape.append([-1])
@@ -157,9 +157,8 @@ class TFRecorder:
 
     def _write_single_example(self, dictionary, writer):
         feature_tfrecord = {}
-        keys = dictionary.keys()
-        for key in keys:
-            data = np.array(dictionary[key])
+        for key, dtype in zip(self.feature_name_new, self.feature_type_new):
+            data = np.array(dictionary[key]).astype(dtype)
             feature_tfrecord[key] = self._bytes_feature(data.tostring())
         example = tf.train.Example(features=tf.train.Features(feature=feature_tfrecord))
         writer.write(example.SerializeToString())
