@@ -80,7 +80,6 @@ class TFRecorder:
             else:
                 self.feature_shape.append(data.shape)
 
-
     def _write_tfrecord_parallel(self, dictionary, num_example_csv, mode):
         num_example_list = []
         processes = []
