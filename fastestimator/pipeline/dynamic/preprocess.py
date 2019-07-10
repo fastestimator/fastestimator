@@ -28,7 +28,7 @@ class AbstractPreprocessing(object):
 class NrrdReader(AbstractPreprocessing):
     """
     Class for reading NRRD images
-    
+
     Args:
         parent_path (str): Parent path that will be added on given path.
     """
@@ -56,7 +56,7 @@ class NrrdReader(AbstractPreprocessing):
 
 class DicomReader(AbstractPreprocessing):
     """Class for reading dicom images
-    
+
     Args:
         parent_path (str): Parent path that will be added on given path.
     """
@@ -111,6 +111,8 @@ class ImageReader(AbstractPreprocessing):
         """
         path = os.path.normpath(os.path.join(self.parent_path, path))
         data = self.transform_fn(path, self.color_flag)
+        if not data:
+            raise ValueError('cv2 did not read correctly for file "{}"'.format(path))
         return data
 
 
@@ -242,7 +244,7 @@ class Reshape(AbstractPreprocessing):
     def transform(self, data, feature=None):
         """
         Reshapes data array
-        
+
         Args:
             data: Data to be reshaped
             feature: Auxiliary data needed for the reshaping
