@@ -111,7 +111,7 @@ class ImageReader(AbstractPreprocessing):
         """
         path = os.path.normpath(os.path.join(self.parent_path, path))
         data = self.transform_fn(path, self.color_flag)
-        if not data:
+        if not isinstance(data, np.ndarray):
             raise ValueError('cv2 did not read correctly for file "{}"'.format(path))
         return data
 
