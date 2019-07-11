@@ -260,7 +260,6 @@ class Dice(Trace):
             else:
                 prediction_score = np.array(prediction)
 
-            print('max score: {}'.format(prediction_score.max()))
             prediction_label = (prediction_score >= self.threshold).astype(np.int)
 
             intersection = np.sum(groundtruth_label * prediction_label, axis=(1, 2, 3))
