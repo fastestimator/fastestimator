@@ -56,7 +56,6 @@ class Trace:
                 * "step": current global step index starting from 0 (or batch index)
                 * "size": current batch size
                 * "batch": the batch data used as input of network
-                * "prediction": the batch predictions
                 * "loss": the batch loss (only available when mode is "train" or "eval")
         """
 
@@ -136,13 +135,12 @@ class Accuracy(Trace):
     """Calculates accuracy for classification task and report it back to logger.
 
     Args:
-        y_true_key (str): Name of the keys in the ground truth label in data pipeline.
-        y_pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label. Default is `None`.
+        true_key (str): Name of the key that corresponds to ground truth in batch dictionary
+        pred_key (str): Name of the key that corresponds to predicted score in batch dictionary
     """
-    def __init__(self, y_true_key, y_pred_key=None):
-        super().__init__()
-        self.y_true_key = y_true_key
-        self.y_pred_key = y_pred_key
+    def __init__(self, true_key, pred_key):
+        self.true_key = true_key
+        self.pred_key = pred_key
         self.total = 0
         self.correct = 0
 
@@ -153,15 +151,10 @@ class Accuracy(Trace):
 
     def on_batch_end(self, mode, logs):
         if mode == "eval":
-            groundtruth_label = np.array(logs["batch"][self.y_true_key])
+            groundtruth_label = np.array(logs["batch"][self.true_key])
             if groundtruth_label.shape[-1] > 1 and len(groundtruth_label.shape) > 1:
                 groundtruth_label = np.argmax(groundtruth_label, axis=-1)
-            prediction = logs["prediction"]
-            if isinstance(prediction, dict):
-                prediction_score = np.array(prediction[self.y_pred_key])
-            else:
-
-                prediction_score = np.array(prediction)
+            prediction_score = np.array(logs["batch"][self.pred_key])
             binary_classification = prediction_score.shape[-1] == 1
             if binary_classification:
                 prediction_label = np.round(prediction_score)
@@ -174,24 +167,21 @@ class Accuracy(Trace):
     def on_epoch_end(self, mode, logs):
         if mode == "eval":
             return self.correct/self.total
-        return None
+        else:
+            return None
 
 class ConfusionMatrix(Trace):
     """Computes confusion matrix between y_true and y_predict.
 
     Args:
         num_classes (int): Total number of classes of the confusion matrix.
-        y_true_key (str): Name of the keys in the ground truth label in data pipeline.
-        y_pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label. Default is `None`.
+        true_key (str): Name of the key that corresponds to ground truth in batch dictionary
+        pred_key (str): Name of the key that corresponds to predicted score in batch dictionary
     """
-    def __init__(self, y_true_key, y_pred_key=None, num_classes=None):
-        if not isinstance(num_classes, int):
-            raise ValueError('num_classes should be a positive interger.')
-        super().__init__()
-        self.y_true_key = y_true_key
-        self.y_pred_key = y_pred_key
+    def __init__(self, true_key, pred_key, num_classes):
+        self.true_key = true_key
+        self.pred_key = pred_key
         self.num_classes = num_classes
-        self.confusion = None
 
     def on_epoch_begin(self, mode, logs):
         if mode == "eval":
@@ -199,23 +189,16 @@ class ConfusionMatrix(Trace):
 
     def on_batch_end(self, mode, logs):
         if mode == "eval":
-            groundtruth_label = np.array(logs["batch"][self.y_true_key])
+            groundtruth_label = np.array(logs["batch"][self.true_key])
             if groundtruth_label.shape[-1] > 1 and groundtruth_label.ndim > 1:
                 groundtruth_label = np.argmax(groundtruth_label, axis=-1)
-
-            prediction = logs["prediction"]
-            if isinstance(prediction, dict):
-                prediction_score = np.array(prediction[self.y_pred_key])
-            else:
-                prediction_score = np.array(prediction)
-
+            prediction_score = np.array(logs["batch"][self.pred_key])
             binary_classification = prediction_score.shape[-1] == 1
             if binary_classification:
                 prediction_label = np.round(prediction_score)
             else:
                 prediction_label = np.argmax(prediction_score, axis=-1)
             assert prediction_label.size == groundtruth_label.size
-
             batch_confusion = confusion_matrix(groundtruth_label, prediction_label, labels=list(range(0, self.num_classes)))
             if self.confusion is None:
                 self.confusion = batch_confusion
@@ -225,21 +208,22 @@ class ConfusionMatrix(Trace):
     def on_epoch_end(self, mode, logs):
         if mode == "eval":
             return self.confusion
-        return None
+        else:
+            return None
 
 class Dice(Trace):
     """Computes Dice score for binary classification between y_true and y_predict.
 
     Args:
-        y_true_key (str): Name of the keys in the ground truth label in data pipeline.
-        y_pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label. Default is `None`.
+        true_key (str): Name of the keys in the ground truth label in data pipeline.
+        pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label. Default is `None`.
     """
-    def __init__(self, y_true_key, y_pred_key=None, threshold=0.5):
+    def __init__(self, true_key, pred_key=None, threshold=0.5):
         if not isinstance(int):
             raise ValueError('num_classes should be a positive interger.')
         super().__init__()
-        self.y_true_key = y_true_key
-        self.y_pred_key = y_pred_key
+        self.true_key = true_key
+        self.pred_key = pred_key
         self.smooth = 1e-7
         self.threshold = threshold
         self.dice = None
@@ -250,13 +234,13 @@ class Dice(Trace):
 
     def on_batch_end(self, mode, logs):
         if mode == "train":
-            groundtruth_label = np.array(logs["batch"][self.y_true_key])
+            groundtruth_label = np.array(logs["batch"][self.true_key])
             if groundtruth_label.shape[-1] > 1 and groundtruth_label.ndim > 1:
                 groundtruth_label = np.argmax(groundtruth_label, axis=-1)
 
             prediction = logs["prediction"]
             if isinstance(prediction, dict):
-                prediction_score = np.array(prediction[self.y_pred_key])
+                prediction_score = np.array(prediction[self.pred_key])
             else:
                 prediction_score = np.array(prediction)
 

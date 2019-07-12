@@ -93,7 +93,7 @@ class Estimator:
                 self.epoch = train_step // self.steps_per_epoch
                 self._run_traces_on_epoch_begin(mode="train", logs={"epoch": self.epoch})
             self._run_traces_on_batch_begin(mode="train", logs= {"epoch": self.epoch, "step": train_step, "size": self.pipeline.batch_size})
-            prediction, loss = self.train_step(batch)
+            prediction, loss = self.forward_step(batch, mode="train", epoch=self.epoch)
             self._run_traces_on_batch_end(mode="train", logs= {"epoch": self.epoch, "step": train_step, "size": self.pipeline.batch_size, "batch": batch, "prediction": prediction, "loss": loss})
             if (train_step + 1) % self.steps_per_epoch == 0:
                 self._run_traces_on_epoch_end(mode="train", logs={"epoch": self.epoch})
@@ -107,7 +107,7 @@ class Estimator:
         self._run_traces_on_epoch_begin(mode="eval", logs={"epoch": self.epoch})
         for eval_step, batch in enumerate(self.validation_fn()):
             self._run_traces_on_batch_begin(mode="eval", logs= {"epoch": self.epoch, "step": eval_step, "size": self.pipeline.batch_size})
-            prediction, loss = self.eval_step(batch)
+            prediction, loss = self.forward_step(batch, mode="eval", epoch=self.epoch)
             self._run_traces_on_batch_end(mode="eval", logs= {"epoch": self.epoch, "step": eval_step, "size": self.pipeline.batch_size, "batch": batch, "prediction": prediction, "loss": loss})
         self._run_traces_on_epoch_end(mode="eval", logs={"epoch": self.epoch, "loss": np.mean(np.array(self.losses), axis=0)})
         self._run_traces_end(mode="eval")
@@ -157,7 +157,6 @@ class Estimator:
                     log_message = self._format_log_message(log_message, key, metric_result[key])
             else:
                 log_message = self._format_log_message(log_message, metric_name, metric_result)
-
         print(log_message)
 
     def _run_traces_end(self, mode):
@@ -165,11 +164,19 @@ class Estimator:
             trace.end(mode)
 
     @tf.function
-    def train_step(self, batch):
-        prediction, loss = self.network.train_op(batch)
-        return prediction, loss
-
-    @tf.function
-    def eval_step(self, batch):
-        prediction, loss = self.network.eval_op(batch)
-        return prediction, loss
+    def forward_step(self, batch, mode, epoch):
+        losses = ()
+        if mode == "train":
+            with tf.GradientTape(persistent=True) as tape:
+                batch = self.network.forward(batch, mode, epoch)
+                # for model in self.network.model_list:
+                losses += self.network.model_list[0].loss.calculate_loss(batch)
+            for idx in range(self.network.num_model):
+                gradients = tape.gradient(losses[idx],  self.network.model_list[idx].trainable_variables)
+                model.optimizer.apply_gradients(zip(gradients, self.network.model_list[idx].trainable_variables))
+            del tape
+        else:
+            batch = self.network.forward(batch, mode, epoch)
+            for model in self.network.model_list:
+                losses += model.loss.calculate_loss(batch)
+        return batch, losses[0]
