@@ -10,8 +10,9 @@ from fastestimator.pipeline.static.preprocess import Minmax
 from fastestimator.network.loss import SparseCategoricalCrossentropy
 from fastestimator.network.operation import Operation
 
-def get_estimator(epochs=2, batch_size=32, optimizer="adam"):
-    #prepare the data
+
+def get_estimator(epochs=2, batch_size=32):
+
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.mnist.load_data()
     x_train = np.expand_dims(x_train, -1)
     x_eval = np.expand_dims(x_eval, -1)

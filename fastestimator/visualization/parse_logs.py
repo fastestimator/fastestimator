@@ -172,14 +172,15 @@ def parse_files(file_paths, log_extension='.txt', smooth_factor=0, save=False, s
                   save_path if save_path is not None else file_paths[0], share_legend, pretty_names)
 
 
-def parse_folder(dir_path, log_extension='.txt', smooth_factor=1, save=False, save_path=None, ignore_metrics=None,
-                 share_legend=True, pretty_names=False):
+def parse_folder(dir_path, log_extension='.txt', recursive_search=False, smooth_factor=1, save=False, save_path=None,
+                 ignore_metrics=None, share_legend=True, pretty_names=False):
     """
     A function which will gather all log files within a given folder and pass them along for visualization
 
     Args:
         dir_path: The path to a directory containing log files
         log_extension: The extension of the log files
+        recursive_search: Whether to recursively search sub-directories for log files
         smooth_factor: A non-negative float representing the magnitude of gaussian smoothing to apply(zero for none)
         save: Whether to save (true) or display (false) the generated graph
         save_path: Where to save the image if save is true. Defaults to dir_path if not provided
@@ -190,7 +191,7 @@ def parse_folder(dir_path, log_extension='.txt', smooth_factor=1, save=False, sa
     Returns:
         None
     """
-    loader = PathLoader(dir_path, input_extension=log_extension)
+    loader = PathLoader(dir_path, input_extension=log_extension, recursive_search=recursive_search)
     file_paths = [x[0] for x in loader.path_pairs]
 
     parse_files(file_paths, log_extension, smooth_factor, save, save_path, ignore_metrics, share_legend, pretty_names)

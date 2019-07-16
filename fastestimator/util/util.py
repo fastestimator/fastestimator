@@ -9,6 +9,8 @@ import numpy as np
 # noinspection PyPackageRequirements
 import tensorflow as tf
 import sys
+from contextlib import ContextDecorator
+import time
 
 
 def load_image(file_path, strip_alpha=False, channels=3):
@@ -229,10 +231,32 @@ class Suppressor(object):
         sys.stdout = self
         sys.stderr = self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, exc_type, exc_val, exc_tb):
         sys.stdout = self.stdout
         sys.stderr = self.stderr
-        if type is not None:
+        if exc_type is not None:
             raise
 
     def write(self, x): pass
+
+
+class Timer(ContextDecorator):
+    """
+    A class that can be used to time things:
+    with Timer():
+        func(args)
+
+    @Timer()
+    def func(args)
+    """
+    def __init__(self, name="Task"):
+        self.name = name
+
+    def __enter__(self):
+        self.start = time.time()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.end = time.time()
+        self.interval = self.end - self.start
+        tf.print("{} took {} seconds".format(self.name, self.interval))

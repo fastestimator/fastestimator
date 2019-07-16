@@ -8,10 +8,13 @@ from fastestimator.util.util import load_image
 
 
 class PathLoader(object):
-    def __init__(self, root_path, batch=10, input_extension=None):
+    def __init__(self, root_path, batch=10, input_extension=None, recursive_search=True):
         """
         Args:
             root_path: The path the the root directory containing files to be read
+            batch: The batch size to use when loading paths. Must be positive
+            input_extension: A file extension to limit what sorts of paths are returned
+            recursive_search: Whether to search within subdirectories for files
         """
         if not os.path.isdir(root_path):
             raise AssertionError("Provided path is not a directory")
@@ -20,6 +23,7 @@ class PathLoader(object):
             raise AssertionError("Batch size must be positive")
         self.batch = batch
         self.input_extension = input_extension
+        self.recursive_search = recursive_search
         self.current_idx = 0
         self.path_pairs = self.get_file_paths()
 
@@ -34,6 +38,8 @@ class PathLoader(object):
                         self.input_extension is not None and not file_name.endswith(self.input_extension)):
                     continue
                 path_pairs.append((os.path.join(root, file_name), os.path.basename(root)))
+            if not self.recursive_search:
+                break
         return path_pairs
 
     def __next__(self):
