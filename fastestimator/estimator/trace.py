@@ -109,6 +109,8 @@ class TrainLogger(Trace):
                 self.elapse_times.append(time.time() - self.time_start)
                 example_per_sec = logs["size"] * self.log_steps / np.sum(self.elapse_times)
             loss = np.array(logs["loss"])
+            if loss.size == 1:
+                loss = loss.ravel()[0]
             print("FastEstimator-Train: step: %d; train_loss: %s; example/sec: %f;" %(logs["step"], str(loss), example_per_sec*self.num_process))
             self.elapse_times = []
             self.time_start = time.time()
@@ -118,6 +120,8 @@ class TrainLogger(Trace):
             self.elapse_times.append(time.time() - self.time_start)
         elif mode == "eval":
             current_eval_loss = logs["loss"]
+            if current_eval_loss.size == 1:
+                current_eval_loss = current_eval_loss.ravel()[0]
             output_metric = {"val_loss": current_eval_loss}
             if np.isscalar(current_eval_loss):
                 if self.best_loss is None or current_eval_loss < self.best_loss:
@@ -154,7 +158,7 @@ class Accuracy(Trace):
             groundtruth_label = np.array(logs["batch"][self.true_key])
             if groundtruth_label.shape[-1] > 1 and len(groundtruth_label.shape) > 1:
                 groundtruth_label = np.argmax(groundtruth_label, axis=-1)
-            prediction_score = np.array(logs["batch"][self.pred_key])
+            prediction_score = np.array(logs["prediction"][self.pred_key])
             binary_classification = prediction_score.shape[-1] == 1
             if binary_classification:
                 prediction_label = np.round(prediction_score)
@@ -192,7 +196,7 @@ class ConfusionMatrix(Trace):
             groundtruth_label = np.array(logs["batch"][self.true_key])
             if groundtruth_label.shape[-1] > 1 and groundtruth_label.ndim > 1:
                 groundtruth_label = np.argmax(groundtruth_label, axis=-1)
-            prediction_score = np.array(logs["batch"][self.pred_key])
+            prediction_score = np.array(logs["prediction"][self.pred_key])
             binary_classification = prediction_score.shape[-1] == 1
             if binary_classification:
                 prediction_label = np.round(prediction_score)

@@ -95,6 +95,7 @@ class Estimator:
             self._run_traces_on_batch_begin(mode="train", logs= {"epoch": self.epoch, "step": train_step, "size": self.pipeline.batch_size})
             prediction, loss = self.forward_step(batch, mode="train", epoch=self.epoch)
             self._run_traces_on_batch_end(mode="train", logs= {"epoch": self.epoch, "step": train_step, "size": self.pipeline.batch_size, "batch": batch, "prediction": prediction, "loss": loss})
+            # self._run_traces_on_batch_end(mode="train", logs= {"epoch": self.epoch, "step": train_step, "size": self.pipeline.batch_size, "batch": batch, "loss": loss})
             if (train_step + 1) % self.steps_per_epoch == 0:
                 self._run_traces_on_epoch_end(mode="train", logs={"epoch": self.epoch})
                 if self.do_eval:
@@ -109,6 +110,7 @@ class Estimator:
             self._run_traces_on_batch_begin(mode="eval", logs= {"epoch": self.epoch, "step": eval_step, "size": self.pipeline.batch_size})
             prediction, loss = self.forward_step(batch, mode="eval", epoch=self.epoch)
             self._run_traces_on_batch_end(mode="eval", logs= {"epoch": self.epoch, "step": eval_step, "size": self.pipeline.batch_size, "batch": batch, "prediction": prediction, "loss": loss})
+            # self._run_traces_on_batch_end(mode="eval", logs= {"epoch": self.epoch, "step": eval_step, "size": self.pipeline.batch_size, "batch": batch, "loss": loss})
         self._run_traces_on_epoch_end(mode="eval", logs={"epoch": self.epoch, "loss": np.mean(np.array(self.losses), axis=0)})
         self._run_traces_end(mode="eval")
 
@@ -165,18 +167,19 @@ class Estimator:
 
     @tf.function
     def forward_step(self, batch, mode, epoch):
+        num_model = len(self.network.model_list)
         losses = ()
         if mode == "train":
             with tf.GradientTape(persistent=True) as tape:
-                batch = self.network.forward(batch, mode, epoch)
-                # for model in self.network.model_list:
-                losses += self.network.model_list[0].loss.calculate_loss(batch)
-            for idx in range(self.network.num_model):
-                gradients = tape.gradient(losses[idx],  self.network.model_list[idx].trainable_variables)
-                model.optimizer.apply_gradients(zip(gradients, self.network.model_list[idx].trainable_variables))
+                prediction = self.network.forward(batch, mode, epoch)
+                for idx in range(num_model):
+                    losses += self.network.model_list[idx].loss.calculate_loss(batch, prediction),
+            for idx in range(num_model):
+                gradients = tape.gradient(losses[idx], self.network.model_list[idx].trainable_variables)
+                self.network.model_list[idx].optimizer.apply_gradients(zip(gradients,self.network.model_list[idx].trainable_variables))
             del tape
         else:
-            batch = self.network.forward(batch, mode, epoch)
-            for model in self.network.model_list:
-                losses += model.loss.calculate_loss(batch)
-        return batch, losses[0]
+            prediction = self.network.forward(batch, mode, epoch)
+            for idx in range(num_model):
+                losses += self.network.model_list[idx].loss.calculate_loss(batch, prediction),
+        return prediction, losses

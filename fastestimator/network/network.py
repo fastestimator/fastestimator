@@ -2,7 +2,7 @@ from fastestimator.network.loss import Loss
 import tensorflow as tf
 
 class Network:
-    def __init__(self, ops):
+    def __init__(self, ops, model_list=None):
         self.ops = ops
         self._check_op()
 
@@ -19,9 +19,11 @@ class Network:
         self.num_model = len(self.model_list)
 
     def forward(self, batch, mode, epoch):
+        prediction = {}
         for op in self.ops:
-            batch = op.forward(batch, mode, epoch)
-        return batch
+            prediction = op.forward(batch, prediction, mode, epoch)
+        return prediction
+
 
 def prepare_model(keras_model, loss, optimizer):
     assert isinstance(keras_model, tf.keras.Model), "must provide tf.keras.Model instance as keras model"

@@ -20,10 +20,15 @@ class Operation:
         for block in self.link:
             assert hasattr(block, "__call__"), "object: {} is not callable".format(block)
 
-    def forward(self, batch, mode, epoch):
-        data = batch[self.key_in]
+    def forward(self, batch, prediction, mode, epoch):
+        if self.key_in in batch:
+            data = batch[self.key_in]
+        else:
+            data = prediction[self.key_in]
         for block in self.link:
-            if isinstance(block, tf.keras.Model) or block.mode in [mode, "both"]:
+            if isinstance(block, tf.keras.Model):
+                data = block(data, training=mode=="train")
+            elif block.mode in [mode, "both"]:
                 data = block(data)
-        batch[self.key_out] = data
-        return batch
+        prediction[self.key_out] = data
+        return prediction

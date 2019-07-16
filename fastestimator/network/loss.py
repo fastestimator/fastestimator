@@ -2,14 +2,14 @@ import tensorflow as tf
 
 class Loss:
     def __init__(self):
-        self.loss_obj = None
-        self.loss_fn = None
+        pass
 
-    def calculate_loss(self, batch):
+    def calculate_loss(self, batch, prediction):
         """this is the function that calculates the loss given the batch data
         
         Args:
-            batch (dict): batch data after forward operations
+            batch (dict): batch data before forward operation
+            prediction(dict): prediction data after forward operation
         
         Returns:
             loss (scalar): scalar loss for the model update
@@ -30,8 +30,8 @@ class SparseCategoricalCrossentropy(Loss):
         self.pred_key = pred_key
         self.loss_obj = tf.losses.SparseCategoricalCrossentropy(**kwargs)
 
-    def calculate_loss(self, batch):
-        loss = self.loss_obj(batch[self.true_key], batch[self.pred_key])
+    def calculate_loss(self, batch, prediction):
+        loss = self.loss_obj(batch[self.true_key], prediction[self.pred_key])
         return loss
 
 
