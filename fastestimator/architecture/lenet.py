@@ -1,4 +1,4 @@
-from tensorflow.python.keras import layers, Sequential
+from tensorflow.keras import layers, Sequential
 
 
 def LeNet(input_shape=(28, 28, 1), classes=10):
