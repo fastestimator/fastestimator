@@ -182,8 +182,12 @@ def umap_layers(model_path, input_root_path, print_layers=False, strip_alpha=Fal
     if save_dir is None:
         save_dir = os.path.dirname(model_path)
     if cache_dir is None:
-        cache_dir = os.path.join(os.path.dirname(input_root_path),
-                                 os.path.basename(input_root_path) + "__layer_outputs")
+        # If the user passes the input dir as a relative path without ./ then dirname will contain all path info
+        if os.path.basename(input_root_path) == "":
+            cache_dir = os.path.dirname(input_root_path) + "__layer_outputs"
+        else:
+            cache_dir = os.path.join(os.path.dirname(input_root_path),
+                                     os.path.basename(input_root_path) + "__layer_outputs")
 
     network = keras.models.load_model(model_path)
     if print_layers:
