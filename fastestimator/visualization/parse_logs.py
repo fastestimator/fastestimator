@@ -135,8 +135,11 @@ def graph_metrics(files_metrics, smooth_factor, save, save_path, share_legend, p
     if not save:
         plt.show()
     else:
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        save_file = os.path.join(os.path.dirname(save_path), 'parse_logs.png')
+        save_path = os.path.dirname(save_path)
+        if save_path is None or save_path == "":
+            save_path = "."
+        os.makedirs(save_path, exist_ok=True)
+        save_file = os.path.join(save_path, 'parse_logs.png')
         print("Saving to %s" % save_file)
         plt.savefig(save_file, dpi=300)
 

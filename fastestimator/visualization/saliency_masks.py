@@ -182,6 +182,8 @@ def interpret_model(model, model_input, baseline_input=None, decode_dictionary=N
     if not save:
         plt.show()
     else:
+        if save_path is None or save_path == "":
+            save_path = "."
         os.makedirs(save_path, exist_ok=True)
         save_file = os.path.join(save_path, 'saliency.png')
         print("Saving to %s" % save_file)
