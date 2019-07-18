@@ -247,7 +247,7 @@ class Dice(Trace):
             self.dice = None
 
     def on_batch_end(self, mode, logs):
-        if mode == "train":
+        if mode == "eval":
             groundtruth_label = np.array(logs["batch"][self.y_true_key])
             if groundtruth_label.shape[-1] > 1 and groundtruth_label.ndim > 1:
                 groundtruth_label = np.argmax(groundtruth_label, axis=-1)
@@ -269,6 +269,6 @@ class Dice(Trace):
                 self.dice = np.append(self.dice, dice, axis=0)
 
     def on_epoch_end(self, mode, logs):
-        if mode == "train":
+        if mode == "eval":
             return np.mean(self.dice)
         return None
