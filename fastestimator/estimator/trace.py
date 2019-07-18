@@ -235,8 +235,6 @@ class Dice(Trace):
         y_pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label. Default is `None`.
     """
     def __init__(self, y_true_key, y_pred_key=None, threshold=0.5):
-        if not isinstance(int):
-            raise ValueError('num_classes should be a positive interger.')
         super().__init__()
         self.y_true_key = y_true_key
         self.y_pred_key = y_pred_key
