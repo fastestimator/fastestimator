@@ -121,6 +121,35 @@ class ImageReader(AbstractPreprocessing):
         return data
 
 
+class MatReader(AbstractPreprocessing):
+    """Class for reading .mat files.
+
+    Args:
+        parent_path: Parent path that will be added on given path.
+    """
+
+    def __init__(self, parent_path=""):
+
+        from scipy.io import loadmat
+        self._loadmat = loadmat
+        self.parent_path = parent_path
+
+    def transform(self, data, feature=None):
+        """Reads mat file as dict.
+
+        Args:
+            data: Path to the mat file.
+            feature: Auxiliary data that may be used.
+
+        Returns:
+           dict
+        """
+        path = os.path.normpath(os.path.join(self.parent_path, data))
+        mat = self._loadmat(path)
+
+        return mat
+
+
 class Zscore(AbstractPreprocessing):
     """
     Standardize data using zscore method
