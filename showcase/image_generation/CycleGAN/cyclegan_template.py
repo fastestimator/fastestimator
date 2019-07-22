@@ -59,30 +59,6 @@ class GifGenerator(Trace):
             image = imageio.imread(filename)
             writer.append_data(image)
 
-class GANTrainLogger(TrainLogger):
-    def on_batch_end(self, mode, logs):
-        if mode == "train" and logs["step"] % self.log_steps == 0:
-            if logs["step"] == 0:
-                example_per_sec = 0.0
-            else:
-                self.elapse_times.append(time.time() - self.time_start)
-                example_per_sec = logs["size"] * \
-                    self.log_steps / np.sum(self.elapse_times)
-            print(
-                "FastEstimator-Train: step: {0:d};".format(logs["step"]), end=" ")
-            for loss_key in logs["loss"].keys():
-                print("{0:s}_loss: {1:2.5f};".format(
-                    str(loss_key), logs["loss"][loss_key].numpy()), end=" ")
-            print("ex/sec: {0:2.5f};".format(example_per_sec*self.num_process))
-
-            self.elapse_times = []
-            self.time_start = time.time()
-    def on_epoch_end(self, mode, logs):
-        if mode == "train":
-            self.elapse_times.append(time.time() - self.time_start)
-        else:
-            pass
-
 class Myrescale(AbstractPreprocessing):
     def transform(self, data, decoded_data=None):
         data = data.astype(np.float32)
@@ -149,7 +125,7 @@ def get_estimator():
                                             []],
                            data_filter=[my_filter_0(), my_filter_1()])
     # Step2: Define Trace
-    traces = [GANTrainLogger(), GifGenerator("/data/images/")]
+    traces = [GifGenerator("/data/images/")]
     # Step3: Define Estimator
     estimator = Estimator(network=Network(),
                           pipeline=pipeline,

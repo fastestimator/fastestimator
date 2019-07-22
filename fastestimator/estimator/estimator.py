@@ -84,13 +84,10 @@ class Estimator:
         self._add_traces()
 
     def _add_traces(self):
-        if not(any([isinstance(tr, TrainLogger) for tr in self.traces])):
-            self.traces.insert(0, TrainLogger(log_steps=self.log_steps, num_process=self.num_process))
+        self.traces.insert(0, TrainLogger(log_steps=self.log_steps, num_process=self.num_process))
 
     def train(self):
         self._run_traces_begin(mode="train")
-        if self.do_eval:
-            self._run_traces_begin(mode="eval")
         for train_step, batch in enumerate(self.training_fn()):
             if train_step % self.steps_per_epoch == 0:
                 self.epoch = train_step // self.steps_per_epoch
@@ -103,17 +100,17 @@ class Estimator:
                 if self.do_eval:
                     self.val()
         self._run_traces_end(mode="train")
-        if self.do_eval:
-            self._run_traces_end(mode="eval")
         print("FastEstimator: training finished!")
 
     def val(self):
+        self._run_traces_begin(mode="eval")
         self._run_traces_on_epoch_begin(mode="eval", logs={"epoch": self.epoch})
         for eval_step, batch in enumerate(self.validation_fn()):
             self._run_traces_on_batch_begin(mode="eval", logs= {"epoch": self.epoch, "step": eval_step, "size": self.pipeline.batch_size})
             prediction, loss = self.eval_step(batch)
             self._run_traces_on_batch_end(mode="eval", logs= {"epoch": self.epoch, "step": eval_step, "size": self.pipeline.batch_size, "batch": batch, "prediction": prediction, "loss": loss})
-        self._run_traces_on_epoch_end(mode="eval", logs={"epoch": self.epoch, "loss": self.losses})
+        self._run_traces_on_epoch_end(mode="eval", logs={"epoch": self.epoch, "loss": np.mean(np.array(self.losses), axis=0)})
+        self._run_traces_end(mode="eval")
 
     def _run_traces_begin(self, mode):
         for trace in self.traces:
