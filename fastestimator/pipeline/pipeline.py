@@ -189,7 +189,9 @@ class Pipeline:
                         if preprocess_obj not in randomized_list:
                             preprocess_obj.setup()
                             randomized_list.append(preprocess_obj)
-                preprocess_data = preprocess_obj.transform(preprocess_data)
+                        preprocess_data = preprocess_obj.transform(preprocess_data)
+                else:            
+                    preprocess_data = preprocess_obj.transform(preprocess_data)
             preprocessed_data[feature_name] = preprocess_data
         return preprocessed_data
 
