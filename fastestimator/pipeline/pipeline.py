@@ -10,80 +10,28 @@ import json
 import os
 
 class Pipeline:
-    """
-    Class representing the data pipeline required for fastestimator
-
-    Args:
-        batch_size: Integer representing the batch size for training model
-        feature_name: List of strings representing the feature names in the data (headers in csv, keys in dictionary
-            or features in TFRecords)
-        transform_train: List of lists of tensor transformations to be performed sequentially on the corresponding
-            features.
-        transform_dataset: List of lists of numpy transformations to be performed sequentially  on the raw data
-            before the TFRecords are made.
-        train_data: Training dataset in the form of dictionary containing numpy data, or csv file (with file
-            paths or data)
-        validation_data: Validation data in the form of dictionary containing numpy data, or csv file, or fraction
-            of training data to be sequestered for validation during training
-        data_filter: Filtering to be performed on the corresponding features in the form of an object from the
-            Filter class
-        padded_batch: Whether to pad the batch data in case of inconsistent shape within batch. fill value is 0.
-        **kwargs: Additional arguments to be forwarded for the creation of TFRecords.
-    """
     def __init__(self,
+                 data,
                  batch_size,
-                 feature_name,
-                 transform_train,
-                 transform_dataset=None,
-                 train_data=None,
-                 validation_data=None,
+                 ops,
+                 use_feature="all",
                  data_filter=None,
-                 padded_batch=False,
-                 **kwargs):
+                 pad_batch=False,
+                 multi_patch=False):
+        self.data = data
         self.batch_size = batch_size
-        self.train_data = train_data
-        self.feature_name = feature_name
-        self.transform_train = transform_train
-        self.transform_dataset = transform_dataset
-        self.validation_data = validation_data
+        self.ops = ops
+        self.use_feature = use_feature
         self.data_filter = data_filter
-        self.padded_batch = padded_batch
-        self.kwargs = kwargs
-        self.num_process = 1 #change later by mpi
-        self.num_local_process = 1 #change later by mpi
-        self.rank = 0 #change later by mpi
-        self.local_rank = 0 #change later by mpi
+        self.pad_batch = pad_batch
+        self.multi_patch = multi_patch
         self.decode_type = None #change later by tfrecord config
         self.feature_shape = None #change later by tfrecord config
         self.compression = None
 
     def _prepare(self, inputs=None):
-        """
-        Prepares raw data and converts to TFRecords
-
-        Args:
-            inputs: Input directory where TFRecords exist
-
-        Returns:
-
-        """
         self.inputs = inputs
-        self.num_subprocess = min(8, multiprocessing.cpu_count()//self.num_local_process)
-        if self.train_data:
-            tfrecorder = TFRecorder(train_data=self.train_data,
-                                    feature_name=self.feature_name, 
-                                    transform_dataset=self.transform_dataset, 
-                                    validation_data=self.validation_data,
-                                    **self.kwargs)
-            tfrecorder.rank = self.rank
-            tfrecorder.local_rank = self.local_rank
-            tfrecorder.num_process = self.num_process
-            tfrecorder.num_subprocess = self.num_subprocess
-            tfrecorder.edit_feature = self.edit_feature
-            self.inputs = tfrecorder.create_tfrecord(inputs)
-        if self.num_process > 1:
-            import horovod.tensorflow.keras as hvd
-            hvd.allreduce([0], name="Barrier")
+        self.num_subprocess = multiprocessing.cpu_count()//self.num_local_process
         self._get_tfrecord_config(self.inputs)
 
     def _get_tfrecord_config(self, data_dir):
@@ -189,7 +137,9 @@ class Pipeline:
                         if preprocess_obj not in randomized_list:
                             preprocess_obj.setup()
                             randomized_list.append(preprocess_obj)
-                preprocess_data = preprocess_obj.transform(preprocess_data)
+                        preprocess_data = preprocess_obj.transform(preprocess_data)
+                else:
+                    preprocess_data = preprocess_obj.transform(preprocess_data)
             preprocessed_data[feature_name] = preprocess_data
         return preprocessed_data
 

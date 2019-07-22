@@ -36,7 +36,6 @@ setup(name="fastestimator",
           'pytest',
           'pytest-cov',
           'opencv-python',
-          'tensorflow-addons',
           'tensorflow-probability',
           'umap-learn',
           'tqdm'

@@ -8,7 +8,7 @@ import shutil
 import json
 import os
 
-class TFRecorder:
+class RecordWriter:
     """
     Class for creating TFRecords from numpy data or csv file containing paths to data on disk
 
