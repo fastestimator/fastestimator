@@ -1,22 +1,21 @@
 import os
-import time
 import shutil
+import time
+from glob import glob
 
 import cv2
 import numpy as np
 import tensorflow as tf
-import imageio
-from glob import glob
 
-from fastestimator.estimator.estimator import Estimator
-from fastestimator.estimator.trace import TrainLogger
-from fastestimator.estimator.trace import Trace
-from fastestimator.pipeline.dynamic.preprocess import AbstractPreprocessing
-from fastestimator.pipeline.static.augmentation import AbstractAugmentation
-from fastestimator.pipeline.pipeline import Pipeline
-from fastestimator.pipeline.dynamic.preprocess import ImageReader
+import imageio
 from cyclegan_model import Network
+from fastestimator.estimator.estimator import Estimator
+from fastestimator.estimator.trace import Trace, TrainLogger
+from fastestimator.pipeline.dynamic.preprocess import AbstractPreprocessing
+from fastestimator.pipeline.pipeline import Pipeline
+from fastestimator.pipeline.static.augmentation import AbstractAugmentation
 from fastestimator.pipeline.static.filter import Filter
+
 
 class GifGenerator(Trace):
     def __init__(self, save_path, export_name="anim.gif"):
@@ -27,7 +26,7 @@ class GifGenerator(Trace):
 
     def begin(self, mode):
         if mode == "eval":
-            if not(os.path.exists(self.save_path)):                
+            if not(os.path.exists(self.save_path)):
                 os.makedirs(self.save_path)
 
     def on_batch_end(self, mode, logs):
@@ -39,10 +38,11 @@ class GifGenerator(Trace):
             img *= 255
             img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
             img_path = os.path.join(
-                self.save_path, 
+                self.save_path,
                 self.prefix.format(logs["epoch"])
-            )            
+            )
             cv2.imwrite(img_path, img.astype("uint8"))
+
     def end(self, mode):
         with imageio.get_writer(self.export_name, mode='I') as writer:
             filenames = glob(os.path.join(self.save_path, "*.png"))
@@ -117,20 +117,20 @@ class my_pipeline(Pipeline):
 def get_estimator():
     # Step 1: Define Pipeline
     pipeline = my_pipeline(batch_size=1,
-                           train_data="/data/train.csv",
-                           validation_data="/data/val.csv",
+                           train_data="/root/data/public/horse2zebra/data.csv",
+                           validation_data="/root/data/public/horse2zebra/val.csv",
                            feature_name=["img", "label"],
                            transform_dataset=[[MyImageReader(), Myrescale()], []],
                            transform_train=[[RandomJitter(mode="train")],
                                             []],
                            data_filter=[my_filter_0(), my_filter_1()])
     # Step2: Define Trace
-    traces = [GifGenerator("/data/images/")]
+    traces = [GifGenerator("/root/data/public/horse2zebra/images")]
     # Step3: Define Estimator
     estimator = Estimator(network=Network(),
                           pipeline=pipeline,
                           steps_per_epoch=1000,
                           validation_steps=1,
                           traces=traces,
-                          epochs=100)
+                          epochs=10)
     return estimator
