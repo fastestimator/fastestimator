@@ -13,8 +13,11 @@
 # limitations under the License.
 # ==============================================================================
 import math
+
 import tensorflow as tf
+
 from fastestimator.util.op import TensorOp
+
 
 class Augmentation2D(TensorOp):
     """
@@ -36,8 +39,9 @@ class Augmentation2D(TensorOp):
        flip_up_down: Boolean representing whether to flip the image vertically with a probability of 0.5.
        mode: Augmentation on 'training' data or 'evaluation' data.
    """
+
     def __init__(self, rotation_range=0., width_shift_range=0., height_shift_range=0.,
-                shear_range=0., zoom_range=1., flip_left_right=False, flip_up_down=False, mode='train'):
+                 shear_range=0., zoom_range=1., flip_left_right=False, flip_up_down=False, mode='train'):
         self.mode = mode
         self.height = None
         self.width = None
@@ -49,6 +53,10 @@ class Augmentation2D(TensorOp):
         self.flip_left_right_boolean = flip_left_right
         self.flip_up_down_boolean = flip_up_down
         self.transform_matrix = tf.eye(3)
+        # There appears to be a bug in TF2 which breaks compatibility between boolean control flow and gradient tapes.
+        # Using 0/1 instead for the time being. Test against future versions of TF by running caricature visualization
+        self.do_flip_lr_tensor = tf.Variable(0, trainable=False)
+        self.do_flip_ud_tensor = tf.Variable(0, trainable=False)
 
     def rotate(self):
         """
@@ -103,7 +111,7 @@ class Augmentation2D(TensorOp):
         tx *= self.height
         base_tx = tx * tf.constant([[0, 0, 0], [0, 0, 1], [0, 0, 0]], shape=[3, 3], dtype=tf.float32)
         transform_matrix = tf.constant([[1, 0, 0], [0, 1, 0], [0, 0, 1]], shape=[3, 3],
-                                   dtype=tf.float32) + base_tx + base_ty
+                                       dtype=tf.float32) + base_tx + base_ty
         transform_matrix = self.transform_matrix_offset_center(transform_matrix)
         return transform_matrix
 
@@ -121,12 +129,14 @@ class Augmentation2D(TensorOp):
         else:
             shear_range = self.shear_range
         self.shear_range = shear_range
-        sx = tf.random.uniform([], maxval=math.pi / 180 * self.shear_range[1], minval=math.pi / 180 * self.shear_range[0])
-        sy = tf.random.uniform([], maxval=math.pi / 180 * self.shear_range[1], minval=math.pi / 180 * self.shear_range[0])
+        sx = tf.random.uniform([], maxval=math.pi / 180 * self.shear_range[1],
+                               minval=math.pi / 180 * self.shear_range[0])
+        sy = tf.random.uniform([], maxval=math.pi / 180 * self.shear_range[1],
+                               minval=math.pi / 180 * self.shear_range[0])
         base_shear1 = -tf.sin(sx) * tf.constant([[0, 1, 0], [0, 0, 0], [0, 0, 0]], shape=[3, 3], dtype=tf.float32)
         base_shear2 = tf.cos(sy) * tf.constant([[0, 0, 0], [0, 1, 0], [0, 0, 0]], shape=[3, 3], dtype=tf.float32)
         transform_matrix = tf.constant([[1, 0, 0], [0, 0, 0], [0, 0, 1]], shape=[3, 3], dtype=tf.float32) + \
-                       base_shear1 + base_shear2
+                           base_shear1 + base_shear2
         transform_matrix = self.transform_matrix_offset_center(transform_matrix)
         return transform_matrix
 
@@ -148,10 +158,11 @@ class Augmentation2D(TensorOp):
         zy = tf.random.uniform([], maxval=self.zoom_range[1], minval=self.zoom_range[0])
         base_zx = tf.constant([[1, 0, 0], [0, 0, 0], [0, 0, 0]], shape=[3, 3], dtype=tf.float32) / zx
         base_zy = tf.constant([[0, 0, 0], [0, 1, 0], [0, 0, 0]], shape=[3, 3], dtype=tf.float32) / zy
-        transform_matrix = tf.constant([[0, 0, 0], [0, 0, 0], [0, 0, 1]], shape=[3, 3], dtype=tf.float32) + base_zx + base_zy
+        transform_matrix = tf.constant([[0, 0, 0], [0, 0, 0], [0, 0, 1]], shape=[3, 3],
+                                       dtype=tf.float32) + base_zx + base_zy
         transform_matrix = self.transform_matrix_offset_center(transform_matrix)
         return transform_matrix
-        
+
     def flip(self):
         """
         Decides whether or not to flip
@@ -160,7 +171,7 @@ class Augmentation2D(TensorOp):
             A boolean that represents whether or not to flip
         """
         do_flip = tf.greater(tf.random.uniform([], minval=0, maxval=1), 0.5)
-        return do_flip
+        return 1 if do_flip else 0
 
     def transform_matrix_offset_center(self, matrix):
         """
@@ -205,8 +216,8 @@ class Augmentation2D(TensorOp):
         do_shift = False
         do_zoom = False
         do_shear = False
-        self.do_flip_lr_tensor = tf.convert_to_tensor(False)
-        self.do_flip_ud_tensor = tf.convert_to_tensor(False)
+        self.do_flip_lr_tensor.assign(0)
+        self.do_flip_ud_tensor.assign(0)
 
         if type(self.rotation_range) is not tuple and type(self.rotation_range) is not list:
             if self.rotation_range > 0.:
@@ -269,9 +280,9 @@ class Augmentation2D(TensorOp):
         self.transform_matrix = transform_matrix
 
         if self.flip_left_right_boolean:
-             self.do_flip_lr_tensor = self.flip()
+            self.do_flip_lr_tensor.assign(self.flip())
         if self.flip_up_down_boolean:
-             self.do_flip_ud_tensor = self.flip()
+            self.do_flip_ud_tensor.assign(self.flip())
 
     def forward(self, data):
         """
@@ -285,8 +296,12 @@ class Augmentation2D(TensorOp):
 
         """
         augment_data = self._transform(data)
-        augment_data = tf.cond(self.do_flip_lr_tensor, lambda: tf.image.flip_left_right(augment_data), lambda: augment_data)
-        augment_data = tf.cond(self.do_flip_ud_tensor, lambda: tf.image.flip_up_down(augment_data), lambda: augment_data)
+
+        if self.do_flip_lr_tensor == 1:
+            augment_data = tf.image.flip_left_right(augment_data)
+        if self.do_flip_ud_tensor == 1:
+            augment_data = tf.image.flip_up_down(augment_data)
+
         return augment_data
 
     def _transform(self, data):
@@ -331,5 +346,5 @@ class Augmentation2D(TensorOp):
             tf.stack([x_, y_, z_], axis=-1)
         )
         # result_flat = result_flat * tf.cast(mask, tf.int32) + 
-        result_flat = tf.multiply(result_flat, mask)        
+        result_flat = tf.multiply(result_flat, mask)
         return tf.convert_to_tensor(tf.reshape(result_flat, data.shape))

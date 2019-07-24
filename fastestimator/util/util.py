@@ -232,6 +232,29 @@ def is_number(s):
         return False
 
 
+def decode_predictions(predictions, top=3, dictionary=None):
+    """
+    Args:
+        predictions: A batched numpy array of class prediction scores (Batch X Predictions)
+        top: How many of the highest predictions to capture
+        dictionary: {"<class_idx>" -> "<class_name>"}
+    Returns:
+        A right-justified newline-separated array of the top classes and their associated probabilities.
+        There is one entry in the results array per batch in the input
+    """
+    results = []
+    for prediction in predictions:
+        top_indices = prediction.argsort()[-top:][::-1]
+        if dictionary is None:
+            result = ["Class {:d}: {:.4f}".format(i, prediction[i]) for i in top_indices]
+        else:
+            result = ["{:s}: {:.4f}".format(dictionary[str(i)], prediction[i]) for i in top_indices]
+        max_width = len(max(result, key=lambda s: len(s)))
+        result = str.join("\n", [s.rjust(max_width) for s in result])
+        results.append(result)
+    return results
+
+
 class Suppressor(object):
     """
     A class which can be used to silence output of function calls. example:
