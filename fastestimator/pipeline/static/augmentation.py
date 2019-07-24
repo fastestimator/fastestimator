@@ -313,11 +313,11 @@ class Augmentation(AbstractAugmentation):
 
     def _transform(self, data):
         dtype = data.dtype
-        x_range = tf.range(data.get_shape()[0])
-        y_range = tf.range(data.get_shape()[1])
-        z_range = tf.range(data.get_shape()[2])
-        x_, y_, z_ = tf.meshgrid(x_range, y_range, z_range)
-        x_, y_ = tf.meshgrid(x_range, y_range)
+        x_shape, y_shape, z_shape = data.get_shape()[0], data.get_shape()[1], data.get_shape()[2]
+        x_range = tf.range(x_shape)
+        y_range = tf.range(y_shape)
+        z_range = tf.range(z_shape)
+        x_, y_, z_ = tf.meshgrid(x_range, y_range, z_range, indexing='ij')
         x_ = tf.reshape(x_, [-1])
         y_ = tf.reshape(y_, [-1])
         z_ = tf.reshape(z_, [-1])
@@ -331,7 +331,7 @@ class Augmentation(AbstractAugmentation):
         x_ = tf.cast(coords[0], tf.int32)
         y_ = tf.cast(coords[1], tf.int32)
 
-        mask = (x_ > -1) & (x_ < data.get_shape()[0]) & (y_ > -1) & (y_ < data.get_shape()[1])
+        mask = (x_ > -1) & (x_ < x_shape) & (y_ > -1) & (y_ < y_shape)
         # mask_inv = ~mask
         mask = tf.cast(mask, dtype)
         # mask_inv = tf.cast(mask_inv, tf.int32)
@@ -339,13 +339,13 @@ class Augmentation(AbstractAugmentation):
         x_ = tf.cast(tf.clip_by_value(
             tf.round(x_),
             0,
-            data.get_shape()[0] - 1
+            x_shape - 1
         ), tf.int32)
 
         y_ = tf.cast(tf.clip_by_value(
             tf.round(y_),
             0,
-            data.get_shape()[1] - 1
+            y_shape - 1
         ), tf.int32)
 
         result_flat = tf.gather_nd(
