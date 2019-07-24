@@ -243,11 +243,11 @@ class Dice(Trace):
         self.dice = None
 
     def on_epoch_begin(self, mode, logs):
-        if mode == "eval":
+        if mode in ["train", "eval"]:
             self.dice = None
 
     def on_batch_end(self, mode, logs):
-        if mode == "eval":
+        if mode in ["train", "eval"]:
             groundtruth_label = np.array(logs["batch"][self.y_true_key])
             if groundtruth_label.shape[-1] > 1 and groundtruth_label.ndim > 1:
                 groundtruth_label = np.argmax(groundtruth_label, axis=-1)
@@ -258,6 +258,7 @@ class Dice(Trace):
             else:
                 prediction_score = np.array(prediction)
 
+            print('{} max pred: {}'.format(mode, np.amax(prediction_score)))
             prediction_label = (prediction_score >= self.threshold).astype(np.int)
 
             intersection = np.sum(groundtruth_label * prediction_label, axis=(1, 2, 3))
@@ -269,6 +270,6 @@ class Dice(Trace):
                 self.dice = np.append(self.dice, dice, axis=0)
 
     def on_epoch_end(self, mode, logs):
-        if mode == "eval":
+        if mode in ["train", "eval"]:
             return np.mean(self.dice)
         return None
