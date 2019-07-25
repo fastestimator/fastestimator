@@ -11,7 +11,6 @@ import wget
 
 
 def load_data(path=None):
-<<<<<<< HEAD
     """Download the CUB200 data set to local storage. This will generate a cub200.csv file, which contains all the path information.
 
     Args:
@@ -20,14 +19,11 @@ def load_data(path=None):
     Raises:
         FileNotFoundError: When the gernerated CSV file does not match with the extracted dataset.
     """
-=======
->>>>>>> 51ef926564311592d55d482f888cab05e71d83bf
     if path:
         os.makedirs(path, exist_ok=True)
     else:
         path = os.path.join(tempfile.gettempdir(), 'FE_CUB200')
 
-<<<<<<< HEAD
     csv_path = os.path.join(path, 'cub200.csv')
 
     if os.path.isfile(csv_path):
@@ -41,8 +37,6 @@ def load_data(path=None):
             print('All files exist, using existing {}.'.format(csv_path))
             return
 
-=======
->>>>>>> 51ef926564311592d55d482f888cab05e71d83bf
     url = {'image': 'http://www.vision.caltech.edu/visipedia-data/CUB-200/images.tgz',
            'annotation': 'http://www.vision.caltech.edu/visipedia-data/CUB-200/annotations.tgz'}
 
@@ -50,19 +44,11 @@ def load_data(path=None):
     anno_path = os.path.join(path, 'annotations.tgz')
 
     if not (os.path.exists(img_path) and os.path.exists(anno_path)):
-<<<<<<< HEAD
         print("Downloading data to {} ...".format(path))
         wget.download(url['image'], path)
         wget.download(url['annotation'], path)
 
     print('\nExtracting files ...')
-=======
-        print("Downloading data to {}:".format(path))
-        wget.download(url['image'], path)
-        wget.download(url['annotation'], path)
-
-    print('\nExtracting files...')
->>>>>>> 51ef926564311592d55d482f888cab05e71d83bf
     with tarfile.open(img_path) as img_tar:
         img_tar.extractall(path)
     with tarfile.open(anno_path) as anno_tar:
@@ -77,8 +63,4 @@ def load_data(path=None):
         raise FileNotFoundError
 
     df.to_csv(os.path.join(path, 'cub200.csv'), index=False)
-<<<<<<< HEAD
     print('Data summary is saved at {}'.format(csv_path))
-=======
-    print('Data summary is saved at {}'.format(os.path.join(path, 'cub200.csv')))
->>>>>>> 51ef926564311592d55d482f888cab05e71d83bf
