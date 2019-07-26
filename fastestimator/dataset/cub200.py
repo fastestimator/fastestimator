@@ -43,10 +43,9 @@ def load_data(path=None):
     img_path = os.path.join(path, 'images.tgz')
     anno_path = os.path.join(path, 'annotations.tgz')
 
-    if not (os.path.exists(img_path) and os.path.exists(anno_path)):
-        print("Downloading data to {} ...".format(path))
-        wget.download(url['image'], path)
-        wget.download(url['annotation'], path)
+    print("Downloading data to {} ...".format(path))
+    wget.download(url['image'], path)
+    wget.download(url['annotation'], path)
 
     print('\nExtracting files ...')
     with tarfile.open(img_path) as img_tar:
