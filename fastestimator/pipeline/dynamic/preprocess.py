@@ -1,16 +1,18 @@
+"""Dynamic preprocessing functions before TFRecord generation.
+"""
 import os
+from abc import ABC, abstractmethod
+
 import numpy as np
 
-epsilon = 1e-7
+EPSILON = 1e-7
 
 
-class AbstractPreprocessing(object):
+class AbstractPreprocessing(ABC):
+    """Abstract class for preprocessing.
     """
-    An abstract class for preprocessing
-    """
-    def __init__(self):
-        pass
 
+    @abstractmethod
     def transform(self, data, feature=None):
         """
         Placeholder function that is to be inherited by preprocessing classes.
@@ -32,6 +34,7 @@ class NrrdReader(AbstractPreprocessing):
     Args:
         parent_path (str): Parent path that will be added on given path.
     """
+
     def __init__(self, parent_path=""):
         import nibabel as nib
         self.transform_fn = nib.load
@@ -60,6 +63,7 @@ class DicomReader(AbstractPreprocessing):
     Args:
         parent_path (str): Parent path that will be added on given path.
     """
+
     def __init__(self, parent_path=""):
         import pydicom
         self.transform_fn = pydicom.dcmread
@@ -90,6 +94,7 @@ class ImageReader(AbstractPreprocessing):
         parent_path: Parent path that will be added on given path
         grey_scale: Boolean to indicate whether or not to read image as grayscale
     """
+
     def __init__(self, parent_path="", grey_scale=False):
         import cv2
         self.transform_fn = cv2.imread
@@ -116,10 +121,40 @@ class ImageReader(AbstractPreprocessing):
         return data
 
 
+class MatReader(AbstractPreprocessing):
+    """Class for reading .mat files.
+
+    Args:
+        parent_path: Parent path that will be added on given path.
+    """
+
+    def __init__(self, parent_path=""):
+
+        from scipy.io import loadmat
+        self._loadmat = loadmat
+        self.parent_path = parent_path
+
+    def transform(self, data, feature=None):
+        """Reads mat file as dict.
+
+        Args:
+            data: Path to the mat file.
+            feature: Auxiliary data that may be used.
+
+        Returns:
+           dict
+        """
+        path = os.path.normpath(os.path.join(self.parent_path, data))
+        mat = self._loadmat(path)
+
+        return mat
+
+
 class Zscore(AbstractPreprocessing):
     """
     Standardize data using zscore method
     """
+
     def transform(self, data, feature=None):
         """
         Standardizes the data
@@ -133,7 +168,7 @@ class Zscore(AbstractPreprocessing):
         """
         mean = np.mean(data)
         std = np.std(data)
-        data = (data - mean) / np.amax([std, epsilon])
+        data = (data - mean) / np.amax([std, EPSILON])
         data = data.astype(np.float32)
         return data
 
@@ -142,6 +177,7 @@ class Minmax(AbstractPreprocessing):
     """
     Normalize data using the minmax method
     """
+
     def transform(self, data, feature=None):
         """
         Normalizes the data
@@ -155,7 +191,7 @@ class Minmax(AbstractPreprocessing):
         """
         data = data.astype(np.float32)
         data = data - np.amin(data[:])
-        data = data / (np.amax(data[:]) + epsilon)
+        data = data / (np.amax(data[:]) + EPSILON)
         return data
 
 
@@ -166,6 +202,7 @@ class Scale(AbstractPreprocessing):
     Args:
         scalar: Scalar for scaling the data
     """
+
     def __init__(self, scalar):
         self.scalar = scalar
 
@@ -192,6 +229,7 @@ class Onehot(AbstractPreprocessing):
     Args:
         num_dim: Number of dimensions of the labels
     """
+
     def __init__(self, num_dim):
         self.num_dim = num_dim
 
@@ -213,9 +251,22 @@ class Onehot(AbstractPreprocessing):
 
 
 class Resize(AbstractPreprocessing):
-    def __init__(self, size, resize_method='bilinear'):
+    """Resize image.
+
+    Args:
+        target_size (tuple): Target image size in (height, width) format.
+        resize_method (string): `bilinear`, `nearest`, `area`, and `lanczos4` are available.
+        keep_ratio (bool): If `True`, the resulting image will be padded to keep the original aspect ratio.
+
+    Returns:
+        Resized `np.ndarray`.
+    """
+
+    def __init__(self, target_size, resize_method='bilinear', keep_ratio=False):
         import cv2
-        self.size = (size[1], size[0])
+        self._cv2 = cv2
+
+        self.target_size = target_size
         if resize_method == "bilinear":
             self.resize_method = cv2.INTER_LINEAR
         elif resize_method == "nearest":
@@ -224,11 +275,24 @@ class Resize(AbstractPreprocessing):
             self.resize_method = cv2.INTER_AREA
         elif resize_method == "lanczos4":
             self.resize_method = cv2.INTER_LANCZOS4
-        self.transform_fn = cv2.resize
+        self.keep_ratio = keep_ratio
 
     def transform(self, data, feature=None):
-        data = self.transform_fn(data, self.size, self.resize_method)
-        return data
+        if self.keep_ratio:
+            original_ratio = data.shape[1] / data.shape[0]
+            target_ratio = self.target_size[1] / self.target_size[0]
+
+            if original_ratio >= target_ratio:
+                pad = (data.shape[1] / target_ratio - data.shape[0]) / 2
+                pad_boarder = (np.ceil(pad).astype(np.int), np.floor(pad).astype(np.int), 0, 0)
+            else:
+                pad = (data.shape[0] * target_ratio - data.shape[1]) / 2
+                pad_boarder = (0, 0, np.ceil(pad).astype(np.int), np.floor(pad).astype(np.int))
+
+            data = self._cv2.copyMakeBorder(data, *pad_boarder, self._cv2.BORDER_CONSTANT)
+
+        im_resized = self._cv2.resize(data, (self.target_size[1], self.target_size[0]), self.resize_method)
+        return im_resized
 
 
 class Reshape(AbstractPreprocessing):
@@ -238,6 +302,7 @@ class Reshape(AbstractPreprocessing):
     Args:
         shape: target shape
     """
+
     def __init__(self, shape):
         self.shape = shape
 

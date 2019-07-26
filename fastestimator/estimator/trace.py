@@ -235,8 +235,6 @@ class Dice(Trace):
         y_pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label. Default is `None`.
     """
     def __init__(self, y_true_key, y_pred_key=None, threshold=0.5):
-        if not isinstance(int):
-            raise ValueError('num_classes should be a positive interger.')
         super().__init__()
         self.y_true_key = y_true_key
         self.y_pred_key = y_pred_key
@@ -245,11 +243,11 @@ class Dice(Trace):
         self.dice = None
 
     def on_epoch_begin(self, mode, logs):
-        if mode == "eval":
+        if mode in ["eval"]:
             self.dice = None
 
     def on_batch_end(self, mode, logs):
-        if mode == "train":
+        if mode in ["eval"]:
             groundtruth_label = np.array(logs["batch"][self.y_true_key])
             if groundtruth_label.shape[-1] > 1 and groundtruth_label.ndim > 1:
                 groundtruth_label = np.argmax(groundtruth_label, axis=-1)
@@ -259,7 +257,6 @@ class Dice(Trace):
                 prediction_score = np.array(prediction[self.y_pred_key])
             else:
                 prediction_score = np.array(prediction)
-
             prediction_label = (prediction_score >= self.threshold).astype(np.int)
 
             intersection = np.sum(groundtruth_label * prediction_label, axis=(1, 2, 3))
@@ -271,6 +268,6 @@ class Dice(Trace):
                 self.dice = np.append(self.dice, dice, axis=0)
 
     def on_epoch_end(self, mode, logs):
-        if mode == "train":
+        if mode in ["eval"]:
             return np.mean(self.dice)
         return None
