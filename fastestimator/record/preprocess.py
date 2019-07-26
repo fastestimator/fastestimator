@@ -1,7 +1,7 @@
 import os
 import numpy as np
 
-epsilon = 1e-7
+EPSILON = 1e-7
 
 class NumpyPreprocess:
     def __init__(self, inputs=None, outputs=None, mode=None):
@@ -67,7 +67,7 @@ class Zscore(NumpyPreprocess):
         """
         mean = np.mean(data)
         std = np.std(data)
-        data = (data - mean) / max(std, epsilon)
+        data = (data - mean) / max(std, EPSILON)
         return data
 
 
@@ -88,7 +88,7 @@ class Minmax(NumpyPreprocess):
         """
         data_max = np.max(data)
         data_min = np.min(data)
-        data = (data - data_min) / max((data_max - data_min), epsilon)
+        data = (data - data_min) / max((data_max - data_min), EPSILON)
         return data
 
 
@@ -120,28 +120,6 @@ class Scale(NumpyPreprocess):
         return data
 
 
-class Resize(NumpyPreprocess):
-    def __init__(self, size, resize_method='bilinear', inputs=None, outputs=None, mode=None):
-        import cv2
-        self.size = (size[1], size[0])
-        if resize_method == "bilinear":
-            self.resize_method = cv2.INTER_LINEAR
-        elif resize_method == "nearest":
-            self.resize_method = cv2.INTER_NEAREST
-        elif resize_method == "area":
-            self.resize_method = cv2.INTER_AREA
-        elif resize_method == "lanczos4":
-            self.resize_method = cv2.INTER_LANCZOS4
-        self.forward_fn = cv2.resize
-        self.inputs = inputs
-        self.outputs = outputs
-        self.mode = mode
-
-    def transform(self, data):
-        data = self.forward_fn(data, self.size, self.resize_method)
-        return data
-
-
 class Reshape(NumpyPreprocess):
     """
     Preprocessing class for reshaping the data
@@ -167,4 +145,81 @@ class Reshape(NumpyPreprocess):
             Reshaped array
         """
         data = np.reshape(data, self.shape)
+        return data
+
+class MatReader(NumpyPreprocess):
+    """Class for reading .mat files.
+
+    Args:
+        parent_path: Parent path that will be added on given path.
+    """
+
+    def __init__(self, inputs=None, outputs=None, mode=None, parent_path=""):
+
+        from scipy.io import loadmat
+        self._loadmat = loadmat
+        self.inputs = inputs
+        self.outputs = outputs
+        self.mode = mode
+        self.parent_path = parent_path
+
+    def forward(self, data):
+        """Reads mat file as dict.
+
+        Args:
+            data: Path to the mat file.
+            feature: Auxiliary data that may be used.
+
+        Returns:
+           dict
+        """
+        path = os.path.normpath(os.path.join(self.parent_path, data))
+        data = self._loadmat(data)
+
+        return mat
+
+class Resize(NumpyPreprocess):
+    """Resize image.
+
+    Args:
+        target_size (tuple): Target image size in (height, width) format.
+        resize_method (string): `bilinear`, `nearest`, `area`, and `lanczos4` are available.
+        keep_ratio (bool): If `True`, the resulting image will be padded to keep the original aspect ratio.
+
+    Returns:
+        Resized `np.ndarray`.
+    """
+
+    def __init__(self, target_size, resize_method='bilinear', keep_ratio=False, inputs=None, outputs=None, mode=None):
+        import cv2
+        self._cv2 = cv2
+        self.target_size = target_size
+        if resize_method == "bilinear":
+            self.resize_method = cv2.INTER_LINEAR
+        elif resize_method == "nearest":
+            self.resize_method = cv2.INTER_NEAREST
+        elif resize_method == "area":
+            self.resize_method = cv2.INTER_AREA
+        elif resize_method == "lanczos4":
+            self.resize_method = cv2.INTER_LANCZOS4
+        self.keep_ratio = keep_ratio
+        self.inputs = inputs
+        self.outputs = outputs
+        self.mode = mode
+
+    def transform(self, data, feature=None):
+        if self.keep_ratio:
+            original_ratio = data.shape[1] / data.shape[0]
+            target_ratio = self.target_size[1] / self.target_size[0]
+
+            if original_ratio >= target_ratio:
+                pad = (data.shape[1] / target_ratio - data.shape[0]) / 2
+                pad_boarder = (np.ceil(pad).astype(np.int), np.floor(pad).astype(np.int), 0, 0)
+            else:
+                pad = (data.shape[0] * target_ratio - data.shape[1]) / 2
+                pad_boarder = (0, 0, np.ceil(pad).astype(np.int), np.floor(pad).astype(np.int))
+
+            data = self._cv2.copyMakeBorder(data, *pad_boarder, self._cv2.BORDER_CONSTANT)
+
+        data = self._cv2.resize(data, (self.target_size[1], self.target_size[0]), self.resize_method)
         return data
