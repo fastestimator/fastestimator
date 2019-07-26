@@ -57,10 +57,14 @@ def load_data(path=None):
     img_list = glob(os.path.join(path, 'images', '**', '*.jpg'))
 
     df = pd.DataFrame(data={'image': img_list})
+    df['image'] = df['image'].apply(lambda x: os.path.relpath(x, path))
+    df['image'] = df['image'].apply(os.path.normpath)
     df['annotation'] = df['image'].str.replace('images', 'annotations-mat').str.replace('jpg', 'mat')
 
-    if not df['annotation'].apply(os.path.exists).all():
+    if not (df['annotation'].apply(lambda x : os.path.join(path, x))).apply(os.path.exists).all():
         raise FileNotFoundError
 
     df.to_csv(os.path.join(path, 'cub200.csv'), index=False)
     print('Data summary is saved at {}'.format(csv_path))
+
+    return csv_path, path

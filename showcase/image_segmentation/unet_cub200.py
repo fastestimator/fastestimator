@@ -16,7 +16,7 @@ from fastestimator.pipeline.static.preprocess import Minmax, Reshape
 DATA_SAVE_PATH = os.path.join(tempfile.gettempdir(), 'CUB200')
 
 # Download CUB200 dataset.
-cub200.load_data(DATA_SAVE_PATH)
+csv_path, path = cub200.load_data(DATA_SAVE_PATH)
 
 class Network:
     """Load U-Net and define train and eval ops.
@@ -73,12 +73,12 @@ def get_estimator():
     pipeline = Pipeline(
         batch_size=64,
         feature_name=["image", "annotation"],
-        train_data=os.path.join(DATA_SAVE_PATH, 'cub200.csv'),
+        train_data=csv_path,
         validation_data=0.2,
         transform_dataset=[
-            [ImageReader(),
+            [ImageReader(parent_path=path),
              Resize((128, 128), keep_ratio=True)],
-            [MatReader(), SelectKey(), Resize((128, 128), keep_ratio=True)]
+            [MatReader(parent_path=path), SelectKey(), Resize((128, 128), keep_ratio=True)]
         ],
         transform_train=[[Reshape((128, 128, 3)), Minmax()], [Reshape((128, 128, 1))]])
 
@@ -86,7 +86,7 @@ def get_estimator():
 
     estimator = Estimator(network=Network(),
                           pipeline=pipeline,
-                          epochs=2000,
+                          epochs=400,
                           steps_per_epoch=10,
                           validation_steps=1,
                           log_steps=10,
