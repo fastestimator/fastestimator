@@ -16,7 +16,7 @@ from fastestimator.pipeline.static.preprocess import Minmax, Reshape
 DATA_SAVE_PATH = os.path.join(tempfile.gettempdir(), 'CUB200')
 
 # Download CUB200 dataset.
-csv_path, path = cub200.load_data(DATA_SAVE_PATH)
+csv_path, path = cub200.load_data(path=DATA_SAVE_PATH)
 
 class Network:
     """Load U-Net and define train and eval ops.
