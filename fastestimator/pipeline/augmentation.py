@@ -1,7 +1,7 @@
 import math
 import tensorflow as tf
 
-class AbstractAugmentation:
+class TensorAugmentation:
     """
     An abstract class for data augmentation that defines interfaces.
     A custom augmentation can be defined by inheriting from this class.
@@ -24,7 +24,7 @@ class AbstractAugmentation:
         """
         return None
 
-    def transform(self, data):
+    def forward(self, data):
         """
         An interface method to be implemented by inheriting augmentation class to apply the transformation to data
 
@@ -37,7 +37,7 @@ class AbstractAugmentation:
         """
         return data
 
-class Augmentation(AbstractAugmentation):
+class Augmentation(TensorAugmentation):
     """
    This class supports commonly used 2D random affine transformations for data augmentation.
    Either a scalar ``x`` or a tuple ``[x1, x2]`` can be specified for rotation, shearing, shifting, and zoom.
@@ -294,7 +294,7 @@ class Augmentation(AbstractAugmentation):
         if self.flip_up_down_boolean:
              self.do_flip_ud_tensor = self.flip()
 
-    def transform(self, data):
+    def forward(self, data):
         """
         Transforms the data with the augmentation transformation
 

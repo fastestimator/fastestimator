@@ -43,3 +43,14 @@ def prepare_model(keras_model, loss, optimizer):
         keras_model.optimizer = optimizer
         keras_model.fe_compiled = True
     return keras_model
+
+
+class Model:
+    def __init__(self, prepared_model, inputs=None, outputs=None, mode=None):
+        self.prepared_model = prepared_model
+        self.inputs = inputs
+        self.outputs = outputs
+        self.mode = mode
+
+    def forward(self, data, current_mode):
+        data = self.prepared_model(data, training=current_mode=="train")
