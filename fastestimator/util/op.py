@@ -1,6 +1,7 @@
 from fastestimator.record.preprocess import NumpyPreprocess
 from fastestimator.pipeline.preprocess import TensorPreprocess
 from fastestimator.pipeline.augmentation import TensorAugmentation
+from fastestimator.pipeline.filter import TensorFilter
 from fastestimator.network.network import Model
 from itertools import chain
 
@@ -25,7 +26,7 @@ def get_op_from_mode(ops, current_mode):
 
 def verify_ops(ops, class_name):
     inheritage = {"RecordWriter": NumpyPreprocess,
-                   "Pipeline": (TensorPreprocess, TensorAugmentation),
+                   "Pipeline": (TensorPreprocess, TensorAugmentation, TensorFilter),
                    "Network": Model}
     inheritage_class = inheritage[class_name]
     assert ops[0].inputs, "must provide inputs for the operation '{}' in '{}'".format(type(ops[0]).__name__, class_name)

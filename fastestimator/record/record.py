@@ -9,43 +9,51 @@ import time
 import os
 
 class RecordWriter:
-    """
-    Class for creating TFRecords from numpy data or csv file containing paths to data on disk
-
-    Args:
-        train_data: Training dataset in the form of dictionary containing numpy data, or csv file (with file
-            paths or data)
-        feature_name: List of strings representing the feature names in the data (headers in csv, keys in dictionary
-            or features in TFRecords)
-        transform_dataset: List of lists of numpy transformations to be performed sequentially  on the raw data
-            before the TFRecords are made.
-        validation_data:  Validation data in the form of dictionary containing numpy data, or csv file, or fraction
-            of training data to be sequestered for validation during training.
-        create_patch: Whether to create multiple records from single example.
-        max_tfrecord_mb: Maximum space to be occupied by one TFRecord.
-        compression: tfrecords compression type, one of None, 'GZIP' or 'ZLIB'.
-    """
-    def __init__(self, train_data, validation_data=None, ops=None, write_feature=None, create_patch=False, max_tfrecord_mb=300, compression=None):
+    def __init__(self, train_data, validation_data=None, ops=None, write_feature=None, expand_dims=False, max_record_size_mb=300, compression=None):
         self.train_data = train_data
         self.validation_data = validation_data
         self.ops = ops
         self.write_feature = write_feature
-        self.create_patch = create_patch
-        self.max_tfrecord_mb = max_tfrecord_mb
+        self.expand_dims = expand_dims
+        self.max_record_size_mb = max_record_size_mb
         self.compression = compression
-        self.num_process = 1
-        self.rank = 0
-        self.local_rank = 0
-        self.num_subprocess = mp.cpu_count()
+        self.num_process = mp.cpu_count()
         self.compression_option = tf.io.TFRecordOptions(compression_type=compression)
-        self.num_example_csv = {}
-        self.mode_ops = {}
-        self.final_feature_name = {}
-        self.mb_per_csv_example = {}
-        self.feature_dtype = {}
-        self.feature_shape = {}
-        self.feature_name = {}
-        self.num_example_record = {}
+        self.global_file_idx = {"train": 0, "eval": 0}
+        self.global_feature_key = {"train": [], "eval": []}
+        self.feature_set_idx = 0
+        self._verify_inputs()
+
+    def _verify_inputs(self):
+        if any(isinstance(inp, tuple) for inp in [self.train_data, self.validation_data, self.ops, self.write_feature]):
+            num_unpaired_feature_sets = [len(self.train_data)]
+            if self.validation_data:
+                assert isinstance(self.validation_data, tuple), "validation data must be tuple when creating unpaired feature set"
+                num_unpaired_feature_sets.append(len(self.validation_data))
+            else:
+                self.validation_data = [None] * len(self.train_data)
+            if self.ops:
+                assert isinstance(self.ops, tuple), "operation must be tuple when creating unpaired feature set"
+                num_unpaired_feature_sets.append(len(self.ops))
+            else:
+                self.ops = [None] * len(self.train_data)
+            if self.write_feature:
+                assert isinstance(self.write_feature, tuple), "write_feature must be tuple when creating unpaired feature set"
+                num_unpaired_feature_sets.append((len(self.write_feature)))
+            else:
+                self.write_feature = [None] * len(self.train_data)
+            assert len(set(num_unpaired_feature_sets)) == 1, "tuple length should be consistent when creating unpaired feature set"
+            self.train_data, self.validation_data, self.ops, self.write_feature = list(self.train_data), list(self.validation_data), list(self.ops), list(self.write_feature)
+        else:
+            self.train_data, self.validation_data, self.ops, self.write_feature = [self.train_data], [self.validation_data], [self.ops], [self.write_feature]
+        for idx in range(len(self.train_data)):
+            assert type(self.train_data[idx]) is dict or self.train_data[idx].endswith(".csv"), "train data should either be a dictionary or a csv path"
+            if self.validation_data[idx]:
+                assert type(self.validation_data[idx]) in [dict, float] or self.validation_data[idx].endswith(".csv"), "validation data supports partition ratio (float), csv file or dictionary"
+            if self.write_feature[idx]:
+                assert isinstance(self.write_feature[idx], (list, dict)), "write_feature must be either list or dictionary"
+            if self.ops[idx]:
+                self.ops[idx] = flatten_operation(self.ops[idx])
 
     def _int64_feature(self, value):
         return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
@@ -57,84 +65,92 @@ class RecordWriter:
         return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
 
     def create_tfrecord(self, save_dir):
-        self._verify_input()
-        self._prepare_train()
-        if self.validation_data:
-            self._prepare_validation()
-            self._get_feature_info(self.validation_data, "eval")
-        self._get_feature_info(self.train_data, "train")
         self._prepare_savepath(save_dir)
-        self.num_example_record["train"] = self._write_tfrecord_parallel(self.train_data, mode="train")
-        if self.validation_data:
-            self.num_example_record["eval"] = self._write_tfrecord_parallel(self.validation_data, mode="eval")
-        self._write_json_summary()
+        for train_data, validation_data, write_feature, ops in zip(self.train_data, self.validation_data, self.write_feature, self.ops):
+            self._create_record_local(train_data, validation_data, write_feature, ops)
+            self.feature_set_idx += 1
+        
+    def _create_record_local(self, train_data, validation_data, write_feature, ops):
+        self.num_example_csv, self.num_example_record, self.mb_per_csv_example, self.mb_per_record_example = {}, {}, {}, {}
+        self.mode_ops, self.feature_name, self.feature_dtype, self.feature_shape = {}, {}, {}, {}
+        self.train_data_local, self.validation_data_local, self.write_feature_local, self.ops_local = train_data, validation_data, write_feature, ops
+        self._prepare_train()
+        self._get_feature_info(self.train_data_local, "train")
+        if validation_data:
+            self._prepare_validation()
+            self._get_feature_info(self.validation_data_local, "eval")
+        self.num_example_record["train"] = self._write_tfrecord_parallel(self.train_data_local, mode="train")
+        self._write_json_summary("train")
+        if validation_data:
+            self.num_example_record["eval"] = self._write_tfrecord_parallel(self.validation_data_local, mode="eval")
+            self._write_json_summary("eval")
 
     def _get_feature_info(self, dictionary, mode):
         feature = self._transform_one_slice(dictionary=dictionary, index=0, mode=mode)
-        if self.write_feature is None:
+        if self.write_feature_local is None:
             self.feature_name[mode] = list(feature.keys())
-        elif isinstance(self.write_feature, dict):
-            self.feature_name[mode] = self.write_feature[mode]
+        elif isinstance(self.write_feature_local, dict):
+            self.feature_name[mode] = self.write_feature_local[mode]
         else:
-            self.feature_name[mode] = self.write_feature
+            self.feature_name[mode] = self.write_feature_local
+        self.global_feature_key[mode].extend(self.feature_name[mode])
+        assert len(set(self.global_feature_key[mode])) == len(self.global_feature_key[mode]), "found duplicate key in feature name during {}: {}".format(mode, self.global_feature_key[mode])
         self.mb_per_csv_example[mode] = 0
+        self.mb_per_record_example[mode] = 0
         self.feature_dtype[mode] = {}
         self.feature_shape[mode] = {}
         for name in self.feature_name[mode]:
             data = np.asarray(feature[name])
             self.mb_per_csv_example[mode] += data.nbytes / 1e6
+            if self.expand_dims:
+                data = data[0]
+            self.mb_per_record_example[mode] += data.nbytes /1e6
             dtype = str(data.dtype)
             if "<U" in dtype:
                 dtype = "str"
             self.feature_dtype[mode][name] = dtype
-            if data.size == 1 or max(data.shape) == np.prod(data.shape):
+            if data.size == 1:
+                self.feature_shape[mode][name] = []
+            elif max(data.shape) == np.prod(data.shape):
                 self.feature_shape[mode][name] = [-1]
             else:
                 self.feature_shape[mode][name] = data.shape
-        return 
 
     def _write_tfrecord_parallel(self, dictionary, mode):
         num_example_list = []
         processes = []
         queue = mp.Queue()
-        num_example_process = self.num_example_csv[mode] // self.num_process
-        process_start = self.rank * num_example_process
-        if self.rank == (self.num_process -1):
-            process_end = self.num_example_csv[mode]
-        else:
-            process_end = process_start + num_example_process
-        num_example_process = process_end - process_start
-        num_files_subprocess = int(np.ceil(num_example_process * self.mb_per_csv_example[mode] / self.max_tfrecord_mb / self.num_subprocess))
-        file_idx_start_process = self.rank * num_files_subprocess * self.num_subprocess
-        num_example_subprocess_remain = num_example_process % self.num_subprocess
-        serial_start = process_start
-        for i in range(self.num_subprocess):
-            file_idx_start_subprocess = i * num_files_subprocess + file_idx_start_process
-            if i < num_example_subprocess_remain:
-                num_example_subprocess = num_example_process // self.num_subprocess + 1
+        num_files_process = int(np.ceil(self.num_example_csv[mode] * self.mb_per_csv_example[mode] / self.max_record_size_mb / self.num_process))
+        num_example_process_remain = self.num_example_csv[mode] % self.num_process
+        serial_start = 0
+        file_idx_start = 0
+        for i in range(self.num_process):
+            if i < num_example_process_remain:
+                num_example_process = self.num_example_csv[mode] // self.num_process + 1
             else:
-                num_example_subprocess = num_example_process // self.num_subprocess
-            serial_end = serial_start + num_example_subprocess
-            processes.append(mp.Process(target=self._write_tfrecord_serial, args=(dictionary, serial_start, serial_end, num_files_subprocess, file_idx_start_subprocess, mode, queue)))
-            serial_start += num_example_subprocess
+                num_example_process = self.num_example_csv[mode] // self.num_process
+            serial_end = serial_start + num_example_process
+            processes.append(mp.Process(target=self._write_tfrecord_serial, args=(dictionary, serial_start, serial_end, num_files_process, file_idx_start, mode, queue)))
+            serial_start += num_example_process
+            file_idx_start += num_files_process
         for p in processes:
             p.start()
-        for _ in range(self.num_subprocess):
+        for _ in range(self.num_process):
             num_example_list.extend(queue.get(block=True))
         for p in processes:
             p.join()
         return num_example_list
 
-    def _write_tfrecord_serial(self, dictionary, serial_start, serial_end, num_files_subprocess, file_idx_start, mode, queue):
+    def _write_tfrecord_serial(self, dictionary, serial_start, serial_end, num_files_process, file_idx_start, mode, queue):
         num_example_list = []
-        num_csv_example_per_file = (serial_end - serial_start) // num_files_subprocess
+        num_csv_example_per_file = (serial_end - serial_start) // num_files_process
         show_progress = serial_start == 0
         file_start = serial_start
         file_end = file_start + num_csv_example_per_file
-        for i in range(num_files_subprocess):
-            file_idx = i + file_idx_start
+        for i in range(num_files_process):
+            file_idx = i + file_idx_start + self.global_file_idx[mode]
             filename = mode + str(file_idx) + ".tfrecord"
-            if i == (num_files_subprocess - 1):
+            if i == (num_files_process - 1):
                 file_end = serial_end
             num_example_list.append(self._write_single_file(dictionary, filename, file_start, file_end, serial_start, serial_end, show_progress, mode))
             file_start += num_csv_example_per_file
@@ -154,10 +170,10 @@ class RecordWriter:
                     if i == 0:
                         record_per_sec = 0.0
                     else:
-                        record_per_sec = (num_example - example_start) * self.num_process * self.num_subprocess/(time.time() - time_start)
+                        record_per_sec = (num_example - example_start) * self.num_process/(time.time() - time_start)
                     print("FastEstimator: Converting %s TFRecords %.1f%%, Speed: %.2f record/sec" % (mode.capitalize(), (i - serial_start)/goal_number*100, record_per_sec))
                 feature = self._transform_one_slice(dictionary, i, mode=mode)
-                if self.create_patch:
+                if self.expand_dims:
                     num_patches = self._verify_dict(feature, mode)
                     for j in range(num_patches):
                         feature_patch = self._get_dict_slice(feature, j)
@@ -170,7 +186,7 @@ class RecordWriter:
 
     def _transform_one_slice(self, dictionary, index, mode):
         feature = self._get_dict_slice(dictionary, index)
-        if self.ops:
+        if self.ops_local:
             feature = self._preprocessing(feature, mode)
         return feature
 
@@ -233,70 +249,57 @@ class RecordWriter:
         return set(num_example_list).pop()
 
     def _prepare_train(self):
-        if type(self.train_data) is str:
-            df = pd.read_csv(self.train_data)
-            self.train_data = df.to_dict('list')
-        self.num_example_csv["train"] = self._verify_dict(self.train_data)
+        if type(self.train_data_local) is str:
+            df = pd.read_csv(self.train_data_local)
+            self.train_data_local = df.to_dict('list')
+        self.num_example_csv["train"] = self._verify_dict(self.train_data_local)
         self._check_ops("train")
 
     def _prepare_validation(self):
-        if type(self.validation_data) is float:
-            num_example_takeout = int(self.validation_data * self.num_example_csv["train"])
+        if type(self.validation_data_local) is float:
+            num_example_takeout = int(self.validation_data_local * self.num_example_csv["train"])
             train_idx = range(self.num_example_csv["train"])
             eval_idx = np.random.choice(train_idx, num_example_takeout, replace=False)
             train_idx = np.delete(train_idx, eval_idx)
-            self.validation_data = {}
-            for key in self.train_data.keys():
-                total_data = self.train_data[key]
+            self.validation_data_local = {}
+            for key in self.train_data_local.keys():
+                total_data = self.train_data_local[key]
                 if type(total_data) is list:
-                    self.train_data[key] = [total_data[x] for x in train_idx]
-                    self.validation_data[key] = [total_data[x] for x in eval_idx]
+                    self.train_data_local[key] = [total_data[x] for x in train_idx]
+                    self.validation_data_local[key] = [total_data[x] for x in eval_idx]
                 else:
-                    self.train_data[key] = total_data[train_idx]
-                    self.validation_data[key] = total_data[eval_idx]
+                    self.train_data_local[key] = total_data[train_idx]
+                    self.validation_data_local[key] = total_data[eval_idx]
             self.num_example_csv["train"] = self.num_example_csv["train"] - num_example_takeout
-        elif type(self.validation_data) is str:
-            df = pd.read_csv(self.validation_data)
-            self.validation_data = df.to_dict('list')
-        self.num_example_csv["eval"] = self._verify_dict(self.validation_data)
+        elif type(self.validation_data_local) is str:
+            df = pd.read_csv(self.validation_data_local)
+            self.validation_data_local = df.to_dict('list')
+        self.num_example_csv["eval"] = self._verify_dict(self.validation_data_local)
         self._check_ops("eval")
 
     def _check_ops(self, mode):
-        if self.ops:
-            self.mode_ops[mode] = get_op_from_mode(self.ops, mode)
+        if self.ops_local:
+            self.mode_ops[mode] = get_op_from_mode(self.ops_local, mode)
             if len(self.mode_ops[mode]) > 0:
                 verify_ops(self.mode_ops[mode], "RecordWriter")
 
     def _prepare_savepath(self, save_dir):
         self.save_dir = save_dir
-        if self.local_rank == 0:
-            print("FastEstimator: Saving tfrecord to %s" % self.save_dir)
-            assert not os.path.exists(self.save_dir), "data path already exits: %s" % self.save_dir
+        if os.path.exists(self.save_dir):
+            assert len(os.listdir(self.save_dir) ) == 0, "Cannot save to {} because the direcotry is not empty".format(self.save_dir)
+        else:
             os.makedirs(self.save_dir)
-        if self.num_process > 1:
-            import horovod.tensorflow.keras as hvd
-            hvd.allreduce([0], name="Barrier")
+        print("FastEstimator: Saving tfrecord to %s" % self.save_dir)
 
-    def _verify_input(self):
-        assert type(self.train_data) is dict or self.train_data.endswith(".csv"), "data should either be a dictionary or a csv file"
-        if self.validation_data:
-            assert type(self.validation_data) in [dict, float] or self.validation_data.endswith(".csv"), "validation data supports partition ratio (float), csv file or dictionary"
-        if self.write_feature:
-            assert isinstance(self.write_feature, (list, dict)), "write_feature must be either list or dictionary"
-        if self.ops:
-            self.ops = flatten_operation(self.ops)
-
-    def _write_json_summary(self):
-        summary = {"feature_dtype": self.feature_dtype, "feature_shape": self.feature_shape, "file_names": {}, "num_records":{}}
-        train_files, num_train_examples = zip(*self.num_example_record["train"])
-        summary["file_names"]["train"] = list(train_files)
-        summary["num_records"]["train"] = list(num_train_examples)
+    def _write_json_summary(self, mode):
+        summary = {"feature_dtype": self.feature_dtype[mode], "feature_shape": self.feature_shape[mode]}
+        files, num_examples = zip(*self.num_example_record[mode])
+        summary["file_names"] = list(files)
+        summary["num_examples"] = list(num_examples)
+        summary["example_size_mb"] = self.mb_per_record_example[mode]
         if self.compression:
             summary["compression"] = self.compression
-        if self.validation_data:
-            eval_files, num_eval_examples = zip(*self.num_example_record["eval"])
-            summary["file_names"]["eval"] = list(eval_files)
-            summary["num_records"]["eval"] = list(num_eval_examples)
-        file_name = "summary%d.json" % self.rank
+        file_name = "%s_summary%d.json" % (mode, self.feature_set_idx)
         with open(os.path.join(self.save_dir, file_name), 'w') as fp:
             json.dump(summary, fp, indent=4)
+        self.global_file_idx[mode] += len(files)

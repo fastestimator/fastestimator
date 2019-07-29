@@ -111,7 +111,7 @@ class TrainLogger(Trace):
             loss = np.array(logs["loss"])
             if loss.size == 1:
                 loss = loss.ravel()[0]
-            print("FastEstimator-Train: step: %d; train_loss: %s; example/sec: %f;" %(logs["step"], str(loss), example_per_sec*self.num_process))
+            print("FastEstimator-Train: step: %d; train_loss: %s; example/sec: %.2f;" %(logs["step"], str(loss), example_per_sec*self.num_process))
             self.elapse_times = []
             self.time_start = time.time()
 
