@@ -1,6 +1,6 @@
 from fastestimator.estimator.estimator import Estimator
 from fastestimator.pipeline.pipeline import Pipeline
-from fastestimator.pipeline.preprocess import TensorPreprocess
+from fastestimator.util.op import TensorOp
 from tensorflow.keras import layers
 from fastestimator.network.loss import Loss
 from fastestimator.network.network import Network
@@ -54,7 +54,7 @@ def make_discriminator_model():
     model.add(layers.Dense(1))
     return model
 
-class Myrescale(TensorPreprocess):
+class Myrescale(TensorOp):
     def forward(self, data):
         data = tf.cast(data, tf.float32)
         data = (data - 127.5) / 127.5
