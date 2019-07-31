@@ -2,7 +2,7 @@
 import time
 
 import numpy as np
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 
 
 class Trace:
@@ -215,6 +215,169 @@ class ConfusionMatrix(Trace):
         else:
             return None
 
+
+class Precision(Trace):
+    """Calculates precision for classification task and report it back to logger.
+    Args:
+        true_key (str): Name of the keys in the ground truth label in data pipeline.
+        pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label. Default is `None`.
+    """
+    def __init__(self, true_key, pred_key=None, labels=None, pos_label=1, average='auto', sample_weight=None):
+        super().__init__()
+        self.true_key = true_key
+        self.pred_key = pred_key
+        self.labels = labels
+        self.pos_label  = pos_label
+        self.average = average
+        self.sample_weight = sample_weight
+        self.y_true = []
+        self.y_pred = []
+
+    def on_epoch_begin(self, mode, logs):
+        if mode == "eval":
+            self.y_true = []
+            self.y_pred = []
+
+    def on_batch_end(self, mode, logs):
+        if mode == "eval":
+            groundtruth_label = np.array(logs["batch"][self.true_key])
+            if groundtruth_label.shape[-1] > 1 and len(groundtruth_label.shape) > 1:
+                groundtruth_label = np.argmax(groundtruth_label, axis=-1)
+            prediction = logs["prediction"]
+            if isinstance(prediction, dict):
+                prediction_score = np.array(prediction[self.pred_key])
+            else:
+                prediction_score = np.array(prediction)
+            binary_classification = prediction_score.shape[-1] == 1
+            if binary_classification:
+                prediction_label = np.round(prediction_score)
+            else:
+                prediction_label = np.argmax(prediction_score, axis=-1)
+            assert prediction_label.size == groundtruth_label.size
+            self.binary_classification = binary_classification or prediction_score.shape[-1] == 2
+            self.y_pred.append(list(prediction_label.ravel()))
+            self.y_true.append(list(groundtruth_label.ravel()))
+
+    def on_epoch_end(self, mode, logs):
+        if mode == "eval":
+            if self.average == 'auto' :
+                if self.binary_classification:
+                    return precision_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label, average='binary', sample_weight=self.sample_weight)
+                else :
+                    return precision_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label, average=None, sample_weight=self.sample_weight)
+            else :
+                return precision_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label, self.average, self.sample_weight)
+        return None
+
+
+class Recall(Trace):
+    """Calculates recall for classification task and report it back to logger.
+    Args:
+        true_key (str): Name of the keys in the ground truth label in data pipeline.
+        pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label. Default is `None`.
+    """
+    def __init__(self, true_key, pred_key=None, labels=None, pos_label=1, average='auto', sample_weight=None):
+        super().__init__()
+        self.true_key = true_key
+        self.pred_key = pred_key
+        self.labels = labels
+        self.pos_label  = pos_label
+        self.average = average
+        self.sample_weight = sample_weight
+        self.y_true = []
+        self.y_pred = []
+
+    def on_epoch_begin(self, mode, logs):
+        if mode == "eval":
+            self.y_true = []
+            self.y_pred = []
+    
+    def on_batch_end(self, mode, logs):
+        if mode == "eval":
+            groundtruth_label = np.array(logs["batch"][self.true_key])
+            if groundtruth_label.shape[-1] > 1 and len(groundtruth_label.shape) > 1:
+                groundtruth_label = np.argmax(groundtruth_label, axis=-1)
+            prediction = logs["prediction"]
+            if isinstance(prediction, dict):
+                prediction_score = np.array(prediction[self.pred_key])
+            else:
+                prediction_score = np.array(prediction)
+            binary_classification = prediction_score.shape[-1] == 1
+            if binary_classification:
+                prediction_label = np.round(prediction_score)
+            else:
+                prediction_label = np.argmax(prediction_score, axis=-1)
+            assert prediction_label.size == groundtruth_label.size
+            self.binary_classification = binary_classification or prediction_score.shape[-1] == 2
+            self.y_pred.append(list(prediction_label.ravel()))
+            self.y_true.append(list(groundtruth_label.ravel()))
+
+    def on_epoch_end(self, mode, logs):
+        if mode == "eval":
+            if self.average == 'auto' :
+                if self.binary_classification:
+                    return recall_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label, average='binary', sample_weight=self.sample_weight)
+                else :
+                    return recall_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label, average=None, sample_weight=self.sample_weight)
+            else :
+                return recall_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label, self.average, self.sample_weight)
+        return None
+
+
+class F1_score(Trace):
+    """Calculates F1 score for classification task and report it back to logger.
+    Args:
+        true_key (str): Name of the keys in the ground truth label in data pipeline.
+        pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label. Default is `None`.
+    """
+    def __init__(self, true_key, pred_key=None, labels=None, pos_label=1, average='auto', sample_weight=None):
+        super().__init__()
+        self.true_key = true_key
+        self.pred_key = pred_key
+        self.labels = labels
+        self.pos_label  = pos_label
+        self.average = average
+        self.sample_weight = sample_weight
+        self.y_true = []
+        self.y_pred = []
+
+    def on_epoch_begin(self, mode, logs):
+        if mode == "eval":
+            self.y_true = []
+            self.y_pred = []
+
+    def on_batch_end(self, mode, logs):
+        if mode == "eval":
+            groundtruth_label = np.array(logs["batch"][self.true_key])
+            if groundtruth_label.shape[-1] > 1 and len(groundtruth_label.shape) > 1:
+                groundtruth_label = np.argmax(groundtruth_label, axis=-1)
+            prediction = logs["prediction"]
+            if isinstance(prediction, dict):
+                prediction_score = np.array(prediction[self.pred_key])
+            else:
+                prediction_score = np.array(prediction)
+            binary_classification = prediction_score.shape[-1] == 1
+            if binary_classification:
+                prediction_label = np.round(prediction_score)
+            else:
+                prediction_label = np.argmax(prediction_score, axis=-1)
+            self.binary_classification = binary_classification or prediction_score.shape[-1] == 2
+            assert prediction_label.size == groundtruth_label.size
+            self.y_pred.append(list(prediction_label.ravel()))
+            self.y_true.append(list(groundtruth_label.ravel()))
+
+    def on_epoch_end(self, mode, logs):
+        if mode == "eval":
+            if self.average == 'auto' :
+                if self.binary_classification:
+                    return f1_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label, average='binary', sample_weight=self.sample_weight)
+                else :
+                    return f1_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label, average=None, sample_weight=self.sample_weight)
+            else :
+                return f1_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label, self.average, self.sample_weight)
+        return None
+
+
 class Dice(Trace):
     """Computes Dice score for binary classification between y_true and y_predict.
 
@@ -236,17 +399,15 @@ class Dice(Trace):
 
     def on_batch_end(self, mode, logs):
         if mode in ["eval"]:
-            groundtruth_label = np.array(logs["batch"][self.y_true_key])
+            groundtruth_label = np.array(logs["batch"][self.true_key])
             if groundtruth_label.shape[-1] > 1 and groundtruth_label.ndim > 1:
                 groundtruth_label = np.argmax(groundtruth_label, axis=-1)
-
             prediction = logs["prediction"]
             if isinstance(prediction, dict):
                 prediction_score = np.array(prediction[self.pred_key])
             else:
                 prediction_score = np.array(prediction)
             prediction_label = (prediction_score >= self.threshold).astype(np.int)
-
             intersection = np.sum(groundtruth_label * prediction_label, axis=(1, 2, 3))
             area_sum = np.sum(groundtruth_label, axis=(1, 2, 3)) + np.sum(prediction_label, axis=(1, 2, 3))
             dice = (2. * intersection + self.smooth) / (area_sum + self.smooth)

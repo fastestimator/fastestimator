@@ -1,24 +1,25 @@
 from fastestimator.estimator.estimator import Estimator
 from fastestimator.pipeline.pipeline import Pipeline
+from fastestimator.pipeline.preprocess import TensorPreprocess
 from tensorflow.keras import layers
 from fastestimator.network.loss import Loss
-from fastestimator.network.network import Network, prepare_model
+from fastestimator.network.network import Network
+from fastestimator.network.model import ModelOp, build
 import tensorflow as tf
-from fastestimator.network.operation import Operation
 import numpy as np
 
 class g_loss(Loss):
     def __init__(self):
         self.cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
     def calculate_loss(self, batch, prediction):
-        return self.cross_entropy(tf.ones_like(prediction["y_pred_fake"]), prediction["y_pred_fake"])
+        return self.cross_entropy(tf.ones_like(prediction["pred_fake"]), prediction["pred_fake"])
 
 class d_loss(Loss):
     def __init__(self):
         self.cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
     def calculate_loss(self, batch, prediction):
-        real_loss = self.cross_entropy(tf.ones_like(prediction["y_pred_true"]), prediction["y_pred_true"])
-        fake_loss = self.cross_entropy(tf.zeros_like(prediction["y_pred_fake"]), prediction["y_pred_fake"])
+        real_loss = self.cross_entropy(tf.ones_like(prediction["pred_true"]), prediction["pred_true"])
+        fake_loss = self.cross_entropy(tf.zeros_like(prediction["pred_fake"]), prediction["pred_fake"])
         total_loss = real_loss + fake_loss
         return total_loss
 
@@ -53,39 +54,25 @@ def make_discriminator_model():
     model.add(layers.Dense(1))
     return model
 
-class Myrescale:
-    def transform(self, data, decoded_data=None):
+class Myrescale(TensorPreprocess):
+    def forward(self, data):
         data = tf.cast(data, tf.float32)
         data = (data - 127.5) / 127.5
         return data
 
-class myOperation(Operation):
-    def forward(self, batch, prediction, mode, epoch):
-        data = tf.random.normal([32, 100])
-        for block in self.link:
-            if isinstance(block, tf.keras.Model):
-                data = block(data, training=mode=="train")
-            elif block.mode in [mode, "both"]:
-                data = block(data)
-        prediction[self.key_out] = data
-        return prediction
-
 def get_estimator():
-    (x_train, _), (x_eval, _) = tf.keras.datasets.mnist.load_data()
-    x_train = np.expand_dims(x_train, -1)
-    x_eval = np.expand_dims(x_eval, -1)
-
+    #prepare data
+    (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.mnist.load_data()
+    data = {"train":  {"x": np.expand_dims(x_train, -1)},  "eval": {"x": np.expand_dims(x_eval, -1)}}
     pipeline = Pipeline(batch_size=32,
-                        feature_name=["x"],
-                        train_data={"x": x_train},
-                        validation_data={"x": x_eval},
-                        transform_train= [[Myrescale()], []])
-
-    g = prepare_model(keras_model=make_generator_model(), loss=g_loss(), optimizer=tf.optimizers.Adam(1e-4))
-    d = prepare_model(keras_model=make_discriminator_model(), loss=d_loss(), optimizer=tf.optimizers.Adam(1e-4))
-    network = Network(ops=[myOperation(key_in= "noise", link=[g, d], key_out="y_pred_fake"),
-                           Operation(key_in= "x", link=d, key_out="y_pred_true")])
-
+                        data=data,
+                        ops=Myrescale(inputs="x", outputs="x"))
+    #prepare model
+    g = build(keras_model=make_generator_model(), loss=g_loss(), optimizer=tf.optimizers.Adam(1e-4))
+    d = build(keras_model=make_discriminator_model(), loss=d_loss(), optimizer=tf.optimizers.Adam(1e-4))
+    network = Network(ops= [ModelOp(inputs=lambda: tf.random.normal([32, 100]), model=g), ModelOp(model=d, outputs="pred_fake"),
+                            ModelOp(inputs="x", model=d, outputs="pred_true")])
+    #prepare estimator
     estimator = Estimator(network= network,
                           pipeline=pipeline,
                           epochs= 2)

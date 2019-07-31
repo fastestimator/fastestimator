@@ -260,3 +260,14 @@ class Timer(ContextDecorator):
         self.end = time.time()
         self.interval = self.end - self.start
         tf.print("{} took {} seconds".format(self.name, self.interval))
+
+class NonContext(object):
+    """
+    A class which is used for nothing
+    """
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, *exc):
+        pass

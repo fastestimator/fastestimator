@@ -11,6 +11,7 @@ class Estimator:
         self.validation_steps = validation_steps
         self.log_steps = log_steps
         self.traces = traces
+        self.num_gpu = 1
 
     def fit(self, inputs=None):
         """
@@ -24,38 +25,44 @@ class Estimator:
         """
         self.inputs = inputs
         self._prepare_pipeline()
+        self._prepare_network()
         self._prepare_estimator()
         self.train()
 
     def _prepare_pipeline(self):
-            self.pipeline._prepare(self.inputs)
+            self.pipeline._prepare(inputs = self.inputs)
+            assert self.pipeline._preprare_mode(mode="train"), "could not find data in {} for training"
+            self.do_eval = self.pipeline._preprare_mode(mode="eval")
+            
+    def _prepare_network(self):
+        self.network._check_ops("train")
+        if self.do_eval:
+            self.network._check_ops("eval")
 
     def _prepare_estimator(self):
         if self.traces is None:
             self.traces = []
         if self.steps_per_epoch is None:
-            self.steps_per_epoch = self.pipeline.num_examples["train"]//(self.pipeline.batch_size * self.num_process)
-        if self.validation_steps is None and self.pipeline.num_examples["eval"] > 0:
-            self.validation_steps = self.pipeline.num_examples["eval"]//self.pipeline.batch_size
-        self.training_fn = lambda: self.pipeline._input_source("train", self.steps_per_epoch * self.epochs)
-        if self.pipeline.num_examples["eval"] > 0 and self.rank ==0:
-            self.validation_fn = lambda: self.pipeline._input_source("eval", self.validation_steps)
-            self.do_eval = True
+            self.steps_per_epoch = np.min(self.pipeline.num_examples["train"])//(self.pipeline.batch_size * self.num_gpu)
+        if self.validation_steps is None and self.do_eval:
+            self.validation_steps = np.min(self.pipeline.num_examples["eval"])//self.pipeline.batch_size
+        self.training_fn = lambda: self.pipeline._input_stream("train")
+        if self.do_eval:
+            self.validation_fn = lambda: self.pipeline._input_stream("eval")
         self._add_traces()
 
     def _add_traces(self):
-        self.traces.insert(0, TrainLogger(log_steps=self.log_steps, num_process=self.num_process))
+        self.traces.insert(0, TrainLogger(log_steps=self.log_steps, num_process=self.num_gpu))
 
     def train(self):
         self._run_traces_begin(mode="train")
-        for train_step, batch in enumerate(self.training_fn()):
+        for train_step, batch in enumerate(self.training_fn().take(self.steps_per_epoch * self.epochs)):
             if train_step % self.steps_per_epoch == 0:
                 self.epoch = train_step // self.steps_per_epoch
                 self._run_traces_on_epoch_begin(mode="train", logs={"epoch": self.epoch})
             self._run_traces_on_batch_begin(mode="train", logs= {"epoch": self.epoch, "step": train_step, "size": self.pipeline.batch_size})
             prediction, loss = self.forward_step(batch, mode="train", epoch=self.epoch)
             self._run_traces_on_batch_end(mode="train", logs= {"epoch": self.epoch, "step": train_step, "size": self.pipeline.batch_size, "batch": batch, "prediction": prediction, "loss": loss})
-            # self._run_traces_on_batch_end(mode="train", logs= {"epoch": self.epoch, "step": train_step, "size": self.pipeline.batch_size, "batch": batch, "loss": loss})
             if (train_step + 1) % self.steps_per_epoch == 0:
                 self._run_traces_on_epoch_end(mode="train", logs={"epoch": self.epoch})
                 if self.do_eval:
@@ -66,11 +73,10 @@ class Estimator:
     def val(self):
         self._run_traces_begin(mode="eval")
         self._run_traces_on_epoch_begin(mode="eval", logs={"epoch": self.epoch})
-        for eval_step, batch in enumerate(self.validation_fn()):
+        for eval_step, batch in enumerate(self.validation_fn().take(self.validation_steps)):
             self._run_traces_on_batch_begin(mode="eval", logs= {"epoch": self.epoch, "step": eval_step, "size": self.pipeline.batch_size})
             prediction, loss = self.forward_step(batch, mode="eval", epoch=self.epoch)
             self._run_traces_on_batch_end(mode="eval", logs= {"epoch": self.epoch, "step": eval_step, "size": self.pipeline.batch_size, "batch": batch, "prediction": prediction, "loss": loss})
-            # self._run_traces_on_batch_end(mode="eval", logs= {"epoch": self.epoch, "step": eval_step, "size": self.pipeline.batch_size, "batch": batch, "loss": loss})
         self._run_traces_on_epoch_end(mode="eval", logs={"epoch": self.epoch, "loss": np.mean(np.array(self.losses), axis=0)})
         self._run_traces_end(mode="eval")
 
@@ -127,19 +133,5 @@ class Estimator:
 
     @tf.function
     def forward_step(self, batch, mode, epoch):
-        num_model = len(self.network.model_list)
-        losses = ()
-        if mode == "train":
-            with tf.GradientTape(persistent=True) as tape:
-                prediction = self.network.forward(batch, mode, epoch)
-                for idx in range(num_model):
-                    losses += self.network.model_list[idx].loss.calculate_loss(batch, prediction),
-            for idx in range(num_model):
-                gradients = tape.gradient(losses[idx], self.network.model_list[idx].trainable_variables)
-                self.network.model_list[idx].optimizer.apply_gradients(zip(gradients,self.network.model_list[idx].trainable_variables))
-            del tape
-        else:
-            prediction = self.network.forward(batch, mode, epoch)
-            for idx in range(num_model):
-                losses += self.network.model_list[idx].loss.calculate_loss(batch, prediction),
+        prediction, losses = self.network.run_step(batch, mode, epoch)
         return prediction, losses

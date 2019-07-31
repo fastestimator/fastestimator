@@ -57,7 +57,7 @@ class Pipeline:
         if self.ops:
             self.ops = flatten_operation(self.ops)
 
-    def _prepare_pipeline(self, inputs):
+    def _prepare(self, inputs):
         self.inputs = inputs
         if isinstance(self.data, (tuple, dict)):
             if isinstance(self.data, dict):
@@ -68,9 +68,8 @@ class Pipeline:
                 for key in data.keys():
                     self.all_features[key].append(data[key])
         else:
-            if inputs is None:
-                raise ValueError("Must specify the data path of tfrecords")
-            elif isinstance(self.data, RecordWriter) and (not os.path.exists(inputs) or len(os.listdir(inputs))==0):
+            assert inputs, "Must specify the data path of tfrecords"
+            if isinstance(self.data, RecordWriter) and (not os.path.exists(inputs) or len(os.listdir(inputs))==0):
                 self.data.create_tfrecord(save_dir=inputs)
             else:
                 print("FastEstimator: Using existing tfrecords in {}".format(inputs))
@@ -80,15 +79,17 @@ class Pipeline:
             self.file_names = {"train": [], "eval": []}
 
     def _preprare_mode(self, mode):
+        success = True
         if isinstance(self.data, list):
             self._get_numpy_config(mode)
         else:
-            self._get_tfrecord_config(mode)
-        self._get_feature_name(mode=mode)
-        self._check_ops(mode=mode)
+            success = self._get_tfrecord_config(mode)
+        if success:
+            self._get_feature_name(mode=mode)
+            self._check_ops(mode=mode)
+        return success
 
     def _get_numpy_config(self, mode):
-        print(self.all_features.keys())
         for data in self.all_features[mode]:
             num_example_list = []
             for key in data.keys():
@@ -133,23 +134,25 @@ class Pipeline:
 
     def _get_tfrecord_config(self, mode):
         json_files = [os.path.join(self.inputs, f) for f in os.listdir(self.inputs) if f.endswith(".json") and f.startswith("%s_summary" % mode)]
-        assert len(json_files) > 0, "Cannot find json file in %s for %s" % (self.inputs, mode)
-        for json_file in json_files:
-            with open(json_file, 'r') as fp:
-                summary = json.load(fp)
-            self.file_names[mode].append([os.path.join(self.inputs, f) for f in summary["file_names"]])
-            self.num_examples[mode].append(np.sum(summary["num_examples"]))
-            self.feature_dtype[mode].append(summary["feature_dtype"])
-            self.feature_shape[mode].append(summary["feature_shape"])
-            if "compression" in summary:
-                self.compression[mode].append(summary["compression"])
-            else:
-                self.compression[mode].append(None)
-            self.all_features[mode].append(get_features(self.file_names[mode][-1][0], compression=self.compression[mode][-1]))
-            num_example = self.num_examples[mode][-1]
-            example_size_mb = summary["example_size_mb"]
-            self.shuffle_buffer[mode].append(min(num_example, self.max_shuffle_buffer_mb//example_size_mb))
-            print("FastEstimator: Found %d examples for %s in %s" %(num_example, mode, json_file))
+        found_record = len(json_files) > 0
+        if found_record:
+            for json_file in json_files:
+                with open(json_file, 'r') as fp:
+                    summary = json.load(fp)
+                self.file_names[mode].append([os.path.join(self.inputs, f) for f in summary["file_names"]])
+                self.num_examples[mode].append(np.sum(summary["num_examples"]))
+                self.feature_dtype[mode].append(summary["feature_dtype"])
+                self.feature_shape[mode].append(summary["feature_shape"])
+                if "compression" in summary:
+                    self.compression[mode].append(summary["compression"])
+                else:
+                    self.compression[mode].append(None)
+                self.all_features[mode].append(get_features(self.file_names[mode][-1][0], compression=self.compression[mode][-1]))
+                num_example = self.num_examples[mode][-1]
+                example_size_mb = summary["example_size_mb"]
+                self.shuffle_buffer[mode].append(min(num_example, self.max_shuffle_buffer_mb//example_size_mb))
+                print("FastEstimator: Found %d examples for %s in %s" %(num_example, mode, json_file))
+        return found_record
 
     def _input_stream(self, mode):
         ds_tuple = ()
@@ -263,8 +266,8 @@ class Pipeline:
             A dictionary containing the batches data
         """
         data = []
-        self._prepare_pipeline(inputs=inputs)
-        self._preprare_mode(mode=mode)
+        self._prepare(inputs=inputs)
+        assert self._preprare_mode(mode=mode), "could not find record in {} for mode {}".format(inputs, mode)
         dataset = self._input_stream(mode)
         for i, example in enumerate(dataset.take(num_steps)):
             data.append(example)
@@ -278,8 +281,8 @@ class Pipeline:
             inputs: Directory for saving TFRecords
             mode: Mode for training ("train", "eval")
         """
-        self._prepare_pipeline(inputs=inputs)
-        self._preprare_mode(mode=mode)
+        self._prepare(inputs=inputs)
+        assert self._preprare_mode(mode=mode), "could not find record in {} for mode {}".format(inputs, mode)
         dataset = self._input_stream(mode)
         start = time.time()
         for i, _ in enumerate(dataset.take(num_steps)):

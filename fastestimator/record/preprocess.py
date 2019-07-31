@@ -207,7 +207,7 @@ class Resize(NumpyPreprocess):
         self.outputs = outputs
         self.mode = mode
 
-    def transform(self, data, feature=None):
+    def forward(self, data, feature=None):
         if self.keep_ratio:
             original_ratio = data.shape[1] / data.shape[0]
             target_ratio = self.target_size[1] / self.target_size[0]
