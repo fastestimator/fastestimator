@@ -1,7 +1,8 @@
 import math
 import tensorflow as tf
+from fastestimator.util.op import TensorOp
 
-class TensorAugmentation:
+class TensorAugmentation(TensorOp):
     """
     An abstract class for data augmentation that defines interfaces.
     A custom augmentation can be defined by inheriting from this class.
@@ -37,7 +38,7 @@ class TensorAugmentation:
         """
         return data
 
-class Augmentation(TensorAugmentation):
+class Augmentation2D(TensorAugmentation):
     """
    This class supports commonly used 2D random affine transformations for data augmentation.
    Either a scalar ``x`` or a tuple ``[x1, x2]`` can be specified for rotation, shearing, shifting, and zoom.

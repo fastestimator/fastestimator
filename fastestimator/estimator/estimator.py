@@ -131,7 +131,7 @@ class Estimator:
                 log_message = self._format_log_message(log_message, metric_name, metric_result)
         print(log_message)
 
-    @tf.function
+    # @tf.function
     def forward_step(self, batch, mode, epoch):
         prediction, losses = self.network.run_step(batch, mode, epoch)
         return prediction, losses

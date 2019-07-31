@@ -16,8 +16,7 @@ class Network:
     def _verify_inputs(self):
         self.ops = flatten_operation(self.ops)
         for op in self.ops:
-            assert isinstance(op, ModelOp)
-            if op.model not in self.model_list:
+            if isinstance(op, ModelOp) and op.model not in self.model_list:
                 self.model_list.append(op.model)
         self.num_model = len(self.model_list)
         assert self.num_model > 0, "Network contains no model"

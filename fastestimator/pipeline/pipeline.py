@@ -10,6 +10,7 @@ from fastestimator.pipeline.filter import TensorFilter
 from fastestimator.util.tfrecord import get_features
 from fastestimator.util.util import convert_tf_dtype
 from fastestimator.record.record import RecordWriter
+import pdb
 
 class Pipeline:
     def __init__(self,
@@ -34,6 +35,7 @@ class Pipeline:
         self.num_examples = {"train": [], "eval": []}
         self.all_features = {"train": [], "eval": []}
         self.shuffle_buffer = {"train": [], "eval": []}
+        self.padded_feature_shape = {"train": {}, "eval": {}}
         self.num_core = mp.cpu_count()
         self._verify_input()
 
@@ -74,7 +76,7 @@ class Pipeline:
             else:
                 print("FastEstimator: Using existing tfrecords in {}".format(inputs))
             self.feature_dtype = {"train": [], "eval": []}
-            self.feature_shape = {"train": [], "eval": []}
+            self.record_feature_shape = {"train": [], "eval": []}
             self.compression = {"train": [], "eval": []}
             self.file_names = {"train": [], "eval": []}
 
@@ -87,6 +89,8 @@ class Pipeline:
         if success:
             self._get_feature_name(mode=mode)
             self._check_ops(mode=mode)
+            if self.padded_batch:
+                _ = self._input_stream(mode, warm_up=True)
         return success
 
     def _get_numpy_config(self, mode):
@@ -142,7 +146,7 @@ class Pipeline:
                 self.file_names[mode].append([os.path.join(self.inputs, f) for f in summary["file_names"]])
                 self.num_examples[mode].append(np.sum(summary["num_examples"]))
                 self.feature_dtype[mode].append(summary["feature_dtype"])
-                self.feature_shape[mode].append(summary["feature_shape"])
+                self.record_feature_shape[mode].append(summary["feature_shape"])
                 if "compression" in summary:
                     self.compression[mode].append(summary["compression"])
                 else:
@@ -150,11 +154,11 @@ class Pipeline:
                 self.all_features[mode].append(get_features(self.file_names[mode][-1][0], compression=self.compression[mode][-1]))
                 num_example = self.num_examples[mode][-1]
                 example_size_mb = summary["example_size_mb"]
-                self.shuffle_buffer[mode].append(min(num_example, self.max_shuffle_buffer_mb//example_size_mb))
+                self.shuffle_buffer[mode].append(int(min(num_example, self.max_shuffle_buffer_mb//example_size_mb)))
                 print("FastEstimator: Found %d examples for %s in %s" %(num_example, mode, json_file))
         return found_record
 
-    def _input_stream(self, mode):
+    def _input_stream(self, mode, warm_up=False):
         ds_tuple = ()
         #Data Reading
         for idx in range(len(self.all_features[mode])):
@@ -183,17 +187,25 @@ class Pipeline:
             dataset = self._execute_mode_ops(dataset, mode)
         if self.expand_dims:
             dataset = dataset.flat_map(lambda dataset: tf.data.Dataset.from_tensor_slices(dataset))
+        if warm_up:
+            dataset = dataset.map(lambda dataset: self._get_padded_shape(dataset, mode))
         if self.padded_batch:
-            dataset = dataset.padded_batch(self.batch_size, padded_shapes=self.padded_batch)
+            dataset = dataset.padded_batch(self.batch_size, padded_shapes=self.padded_feature_shape[mode])
         else:
             dataset = dataset.batch(self.batch_size)
         dataset = dataset.prefetch(buffer_size=1)
+        return dataset
+
+    def _get_padded_shape(self, dataset, mode):
+        for key in dataset:
+            self.padded_feature_shape[mode][key] = dataset[key].shape
         return dataset
 
     def _combine_dataset(self, *dataset):
         combined_dict = {}
         for ds in dataset:
             for key in ds.keys():
+                assert key not in combined_dict, "found duplicated key {} in unpaird feature sets".format(key)
                 combined_dict[key] = ds[key]
         return combined_dict
 
@@ -249,7 +261,11 @@ class Pipeline:
             data = all_data[feature]
             if "str" in str(data.dtype) and "str" not in self.feature_dtype[mode][idx][feature]:
                 data = tf.io.decode_raw(data, convert_tf_dtype(self.feature_dtype[mode][idx][feature]))
-                data = tf.reshape(data, self.feature_shape[mode][idx][feature])
+                data = tf.reshape(data, self.record_feature_shape[mode][idx][feature])
+            if "int" in str(data.dtype):
+                data = tf.cast(data, tf.int32)
+            elif "str" not in self.feature_dtype[mode][idx][feature]:
+                data = tf.cast(data, tf.float32)
             decoded_data[feature] = data
         return decoded_data
 

@@ -1,21 +1,9 @@
 import tensorflow as tf
+from fastestimator.util.op import TensorOp
 
 epsilon = 1e-7
 
-class TensorPreprocess:
-    """
-    An abstract class for preprocessing
-    """
-    def __init__(self, inputs=None, outputs=None, mode=None):
-        self.inputs = inputs
-        self.outputs = outputs
-        self.mode = mode
-
-    def forward(self, data):
-        return data
-
-
-class Binarize(TensorPreprocess):
+class Binarize(TensorOp):
     """
     Binarize data based on threshold between 0 and 1
 
@@ -40,7 +28,7 @@ class Binarize(TensorPreprocess):
         return data
 
 
-class Zscore(TensorPreprocess):
+class Zscore(TensorOp):
     """
     Standardize data using zscore method
     """
@@ -64,7 +52,7 @@ class Zscore(TensorPreprocess):
         return data
 
 
-class Minmax(TensorPreprocess):
+class Minmax(TensorOp):
     """
     Normalize data using the minmax method
     """
@@ -86,7 +74,7 @@ class Minmax(TensorPreprocess):
         return data
 
 
-class Scale(TensorPreprocess):
+class Scale(TensorOp):
     """
     Preprocessing class for scaling dataset
 
@@ -111,7 +99,7 @@ class Scale(TensorPreprocess):
         return data
 
 
-class Onehot(TensorPreprocess):
+class Onehot(TensorOp):
     """
     Preprocessing class for converting categorical labels to onehot encoding
 
@@ -139,7 +127,7 @@ class Onehot(TensorPreprocess):
         return data
 
     
-class Resize(TensorPreprocess):
+class Resize(TensorOp):
     """
     Preprocessing class for resizing the images
 
@@ -165,7 +153,7 @@ class Resize(TensorPreprocess):
         return preprocessed_data
 
 
-class Reshape(TensorPreprocess):
+class Reshape(TensorOp):
     """
     Preprocessing class for reshaping the data
 

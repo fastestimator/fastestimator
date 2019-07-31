@@ -1,19 +1,10 @@
 import os
 import numpy as np
+from fastestimator.util.op import NumpyOp
 
 EPSILON = 1e-7
 
-class NumpyPreprocess:
-    def __init__(self, inputs=None, outputs=None, mode=None):
-        self.inputs = inputs
-        self.outputs = outputs
-        self.mode = mode
-
-    def forward(self, data):
-        return data
-
-
-class ImageReader(NumpyPreprocess):
+class ImageReader(NumpyOp):
     """
     Class for reading png or jpg images
 
@@ -50,7 +41,7 @@ class ImageReader(NumpyPreprocess):
         return data
 
 
-class Zscore(NumpyPreprocess):
+class Zscore(NumpyOp):
     """
     Standardize data using zscore method
     """
@@ -71,7 +62,7 @@ class Zscore(NumpyPreprocess):
         return data
 
 
-class Minmax(NumpyPreprocess):
+class Minmax(NumpyOp):
     """
     Normalize data using the minmax method
     """
@@ -92,7 +83,7 @@ class Minmax(NumpyPreprocess):
         return data
 
 
-class Scale(NumpyPreprocess):
+class Scale(NumpyOp):
     """
     Preprocessing class for scaling dataset
 
@@ -120,7 +111,7 @@ class Scale(NumpyPreprocess):
         return data
 
 
-class Reshape(NumpyPreprocess):
+class Reshape(NumpyOp):
     """
     Preprocessing class for reshaping the data
 
@@ -147,7 +138,7 @@ class Reshape(NumpyPreprocess):
         data = np.reshape(data, self.shape)
         return data
 
-class MatReader(NumpyPreprocess):
+class MatReader(NumpyOp):
     """Class for reading .mat files.
 
     Args:
@@ -175,10 +166,9 @@ class MatReader(NumpyPreprocess):
         """
         path = os.path.normpath(os.path.join(self.parent_path, data))
         data = self._loadmat(data)
+        return data
 
-        return mat
-
-class Resize(NumpyPreprocess):
+class Resize(NumpyOp):
     """Resize image.
 
     Args:
@@ -211,15 +201,12 @@ class Resize(NumpyPreprocess):
         if self.keep_ratio:
             original_ratio = data.shape[1] / data.shape[0]
             target_ratio = self.target_size[1] / self.target_size[0]
-
             if original_ratio >= target_ratio:
                 pad = (data.shape[1] / target_ratio - data.shape[0]) / 2
                 pad_boarder = (np.ceil(pad).astype(np.int), np.floor(pad).astype(np.int), 0, 0)
             else:
                 pad = (data.shape[0] * target_ratio - data.shape[1]) / 2
                 pad_boarder = (0, 0, np.ceil(pad).astype(np.int), np.floor(pad).astype(np.int))
-
             data = self._cv2.copyMakeBorder(data, *pad_boarder, self._cv2.BORDER_CONSTANT)
-
         data = self._cv2.resize(data, (self.target_size[1], self.target_size[0]), self.resize_method)
         return data

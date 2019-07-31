@@ -1,5 +1,6 @@
 import tensorflow as tf
 from fastestimator.network.loss import Loss
+from fastestimator.util.op import TensorOp
 
 def build(keras_model, loss, optimizer):
     assert isinstance(keras_model, tf.keras.Model), "must provide tf.keras.Model instance as keras model"
@@ -20,7 +21,7 @@ def build(keras_model, loss, optimizer):
     keras_model.fe_compiled = True
     return keras_model
 
-class ModelOp:
+class ModelOp(TensorOp):
     def __init__(self, model, inputs=None, outputs=None, mode=None):
         self.model = model
         self.inputs = inputs

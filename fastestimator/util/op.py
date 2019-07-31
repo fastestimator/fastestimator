@@ -1,9 +1,24 @@
-from fastestimator.record.preprocess import NumpyPreprocess
-from fastestimator.pipeline.preprocess import TensorPreprocess
-from fastestimator.pipeline.augmentation import TensorAugmentation
 from fastestimator.pipeline.filter import TensorFilter
-from fastestimator.network.model import ModelOp
 from itertools import chain
+
+class TensorOp:
+    def __init__(self, inputs=None, outputs=None, mode=None):
+        self.inputs = inputs
+        self.outputs = outputs
+        self.mode = mode
+
+    def forward(self, data):
+        return data
+
+
+class NumpyOp:
+    def __init__(self, inputs=None, outputs=None, mode=None):
+        self.inputs = inputs
+        self.outputs = outputs
+        self.mode = mode
+
+    def forward(self, data):
+        return data
 
 def flatten_operation(ops):
     if not isinstance(ops, list):
@@ -25,9 +40,9 @@ def get_op_from_mode(ops, current_mode):
     return selected_ops
 
 def verify_ops(ops, class_name):
-    inheritage = {"RecordWriter": NumpyPreprocess,
-                   "Pipeline": (TensorPreprocess, TensorAugmentation, TensorFilter),
-                   "Network": ModelOp}
+    inheritage = {"RecordWriter": NumpyOp,
+                   "Pipeline": (TensorOp,TensorFilter),
+                   "Network": TensorOp}
     inheritage_class = inheritage[class_name]
     assert ops[0].inputs, "must provide inputs for the operation '{}' in '{}'".format(type(ops[0]).__name__, class_name)
     assert ops[-1].outputs, "must provide outputs for the operation '{}' in '{}'".format(type(ops[-1]).__name__, class_name)
