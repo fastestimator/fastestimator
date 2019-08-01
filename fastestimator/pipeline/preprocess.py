@@ -1,30 +1,9 @@
 import tensorflow as tf
+from fastestimator.util.op import TensorOp
 
 epsilon = 1e-7
 
-
-class AbstractPreprocessing():
-    """
-    An abstract class for preprocessing
-    """
-    def __init__(self):
-        self.feature_name = None
-        self.decoded_data = None
-
-    def transform(self, data):
-        """
-        Placeholder function that is to be inherited by preprocessing classes.
-
-        Args:
-            data: Data to be preprocessed
-
-        Returns:
-            Transformed data tensor
-        """
-        return data
-
-
-class Binarize(AbstractPreprocessing):
+class Binarize(TensorOp):
     """
     Binarize data based on threshold between 0 and 1
 
@@ -34,7 +13,7 @@ class Binarize(AbstractPreprocessing):
     def __init__(self, threshold):
         self.thresh = threshold
 
-    def transform(self, data, ):
+    def forward(self, data, ):
         """
         Transforms the image to binary based on threshold
 
@@ -49,11 +28,11 @@ class Binarize(AbstractPreprocessing):
         return data
 
 
-class Zscore(AbstractPreprocessing):
+class Zscore(TensorOp):
     """
     Standardize data using zscore method
     """
-    def transform(self, data):
+    def forward(self, data):
         """
         Standardizes the data tensor
 
@@ -73,11 +52,11 @@ class Zscore(AbstractPreprocessing):
         return data
 
 
-class Minmax(AbstractPreprocessing):
+class Minmax(TensorOp):
     """
     Normalize data using the minmax method
     """
-    def transform(self, data):
+    def forward(self, data):
         """
         Normalizes the data tensor
 
@@ -95,7 +74,7 @@ class Minmax(AbstractPreprocessing):
         return data
 
 
-class Scale(AbstractPreprocessing):
+class Scale(TensorOp):
     """
     Preprocessing class for scaling dataset
 
@@ -105,7 +84,7 @@ class Scale(AbstractPreprocessing):
     def __init__(self, scalar):
         self.scalar = scalar
 
-    def transform(self, data):
+    def forward(self, data):
         """
         Scales the data tensor
 
@@ -120,17 +99,20 @@ class Scale(AbstractPreprocessing):
         return data
 
 
-class Onehot(AbstractPreprocessing):
+class Onehot(TensorOp):
     """
     Preprocessing class for converting categorical labels to onehot encoding
 
     Args:
         num_dim: Number of dimensions of the labels
     """
-    def __init__(self, num_dim):
+    def __init__(self, num_dim, inputs=None, outputs=None, mode=None):
         self.num_dim = num_dim
+        self.inputs = inputs
+        self.outputs = outputs
+        self.mode = mode
 
-    def transform(self, data):
+    def forward(self, data):
         """
         Transforms categorical labels to onehot encodings
 
@@ -145,7 +127,7 @@ class Onehot(AbstractPreprocessing):
         return data
 
     
-class Resize(AbstractPreprocessing):
+class Resize(TensorOp):
     """
     Preprocessing class for resizing the images
 
@@ -157,7 +139,7 @@ class Resize(AbstractPreprocessing):
         self.size = size
         self.resize_method = resize_method
 
-    def transform(self, data):
+    def forward(self, data):
         """
         Resizes data tensor
 
@@ -171,7 +153,7 @@ class Resize(AbstractPreprocessing):
         return preprocessed_data
 
 
-class Reshape(AbstractPreprocessing):
+class Reshape(TensorOp):
     """
     Preprocessing class for reshaping the data
 
@@ -181,7 +163,7 @@ class Reshape(AbstractPreprocessing):
     def __init__(self, shape):
         self.shape = shape
 
-    def transform(self, data):
+    def forward(self, data):
         """
         Reshapes data tensor
         

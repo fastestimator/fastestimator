@@ -1,269 +1,277 @@
-from fastestimator.pipeline.static.augmentation import AbstractAugmentation
-from fastestimator.util.tfrecord import TFRecorder, get_features
-from fastestimator.pipeline.static.filter import Filter
-from fastestimator.util.util import convert_tf_dtype
-import tensorflow as tf
-import multiprocessing
-import numpy as np
-import time
 import json
+import multiprocessing as mp
 import os
+import time
+import numpy as np
+import tensorflow as tf
+from fastestimator.util.op import flatten_operation, get_op_from_mode, verify_ops
+from fastestimator.pipeline.augmentation import TensorAugmentation
+from fastestimator.pipeline.filter import TensorFilter
+from fastestimator.util.tfrecord import get_features
+from fastestimator.util.util import convert_tf_dtype
+from fastestimator.record.record import RecordWriter
+import pdb
 
 class Pipeline:
-    """
-    Class representing the data pipeline required for fastestimator
-
-    Args:
-        batch_size: Integer representing the batch size for training model
-        feature_name: List of strings representing the feature names in the data (headers in csv, keys in dictionary
-            or features in TFRecords)
-        transform_train: List of lists of tensor transformations to be performed sequentially on the corresponding
-            features.
-        transform_dataset: List of lists of numpy transformations to be performed sequentially  on the raw data
-            before the TFRecords are made.
-        train_data: Training dataset in the form of dictionary containing numpy data, or csv file (with file
-            paths or data)
-        validation_data: Validation data in the form of dictionary containing numpy data, or csv file, or fraction
-            of training data to be sequestered for validation during training
-        data_filter: Filtering to be performed on the corresponding features in the form of an object from the
-            Filter class
-        padded_batch: Whether to pad the batch data in case of inconsistent shape within batch. fill value is 0.
-        **kwargs: Additional arguments to be forwarded for the creation of TFRecords.
-    """
     def __init__(self,
                  batch_size,
-                 feature_name,
-                 transform_train,
-                 transform_dataset=None,
-                 train_data=None,
-                 validation_data=None,
-                 data_filter=None,
+                 data=None,
+                 ops=None,
+                 read_feature=None,
                  padded_batch=False,
-                 **kwargs):
+                 expand_dims=False,
+                 max_shuffle_buffer_mb=3000):
+
         self.batch_size = batch_size
-        self.train_data = train_data
-        self.feature_name = feature_name
-        self.transform_train = transform_train
-        self.transform_dataset = transform_dataset
-        self.validation_data = validation_data
-        self.data_filter = data_filter
+        self.data = data
+        self.ops = ops
+        self.read_feature = read_feature
         self.padded_batch = padded_batch
-        self.kwargs = kwargs
-        self.num_process = 1 #change later by mpi
-        self.num_local_process = 1 #change later by mpi
-        self.rank = 0 #change later by mpi
-        self.local_rank = 0 #change later by mpi
-        self.decode_type = None #change later by tfrecord config
-        self.feature_shape = None #change later by tfrecord config
-        self.compression = None
+        self.expand_dims = expand_dims
+        self.max_shuffle_buffer_mb = max_shuffle_buffer_mb
+        self.mode_forward_ops = {"train": [], "eval": []}
+        self.mode_filter_ops = {"train": [], "eval": []}
+        self.feature_name = {"train": [], "eval": []}
+        self.num_examples = {"train": [], "eval": []}
+        self.all_features = {"train": [], "eval": []}
+        self.shuffle_buffer = {"train": [], "eval": []}
+        self.padded_feature_shape = {"train": {}, "eval": {}}
+        self.num_core = mp.cpu_count()
+        self._verify_input()
 
-    def _prepare(self, inputs=None):
-        """
-        Prepares raw data and converts to TFRecords
+    def _verify_input(self):
+        if self.data:
+            assert isinstance(self.data, (dict, tuple, RecordWriter)), "data must be either RecordWriter, dictionary"
+        if self.read_feature:
+            assert isinstance(self.read_feature, (list, dict, tuple)), "write_feature must be either list, dictionary"
+        if any(isinstance(inp, tuple) for inp in [self.data, self.read_feature]):
+            num_unpaired_feature_sets = []
+            if self.data and not isinstance(self.data, RecordWriter):
+                assert isinstance(self.data, tuple), "data must be in tuple format when using unpaired feature set"
+                num_unpaired_feature_sets.append(len(self.data))
+            if self.read_feature:
+                assert isinstance(self.read_feature, tuple), "read feature must be in tuple format when using unpaired feature set"
+                num_unpaired_feature_sets.append(len(self.read_feature))
+            assert len(set(num_unpaired_feature_sets)) == 1, "tuple length should be consistent when creating unpaired feature set"
+        else:
+            if self.read_feature:
+                self.read_feature = [self.read_feature]
+        if self.ops:
+            self.ops = flatten_operation(self.ops)
 
-        Args:
-            inputs: Input directory where TFRecords exist
-
-        Returns:
-
-        """
+    def _prepare(self, inputs):
         self.inputs = inputs
-        self.num_subprocess = min(8, multiprocessing.cpu_count()//self.num_local_process)
-        if self.train_data:
-            tfrecorder = TFRecorder(train_data=self.train_data,
-                                    feature_name=self.feature_name, 
-                                    transform_dataset=self.transform_dataset, 
-                                    validation_data=self.validation_data,
-                                    **self.kwargs)
-            tfrecorder.rank = self.rank
-            tfrecorder.local_rank = self.local_rank
-            tfrecorder.num_process = self.num_process
-            tfrecorder.num_subprocess = self.num_subprocess
-            tfrecorder.edit_feature = self.edit_feature
-            self.inputs = tfrecorder.create_tfrecord(inputs)
-        if self.num_process > 1:
-            import horovod.tensorflow.keras as hvd
-            hvd.allreduce([0], name="Barrier")
-        self._get_tfrecord_config(self.inputs)
+        if isinstance(self.data, (tuple, dict)):
+            if isinstance(self.data, dict):
+                self.data = [self.data]
+            else:
+                self.data = list(self.data)
+            for data in self.data:
+                for key in data.keys():
+                    self.all_features[key].append(data[key])
+        else:
+            assert inputs, "Must specify the data path of tfrecords"
+            if isinstance(self.data, RecordWriter) and (not os.path.exists(inputs) or len(os.listdir(inputs))==0):
+                self.data.create_tfrecord(save_dir=inputs)
+            else:
+                print("FastEstimator: Using existing tfrecords in {}".format(inputs))
+            self.feature_dtype = {"train": [], "eval": []}
+            self.record_feature_shape = {"train": [], "eval": []}
+            self.compression = {"train": [], "eval": []}
+            self.file_names = {"train": [], "eval": []}
 
-    def _get_tfrecord_config(self, data_dir):
-        """
-        Read TFRecords using summary files
+    def _preprare_mode(self, mode):
+        success = True
+        if isinstance(self.data, list):
+            self._get_numpy_config(mode)
+        else:
+            success = self._get_tfrecord_config(mode)
+        if success:
+            self._get_feature_name(mode=mode)
+            self._check_ops(mode=mode)
+            if self.padded_batch:
+                _ = self._input_stream(mode, warm_up=True)
+        return success
 
-        Args:
-            data_dir: Input directory where TFRecords exist
+    def _get_numpy_config(self, mode):
+        for data in self.all_features[mode]:
+            num_example_list = []
+            for key in data.keys():
+                feature_data = data[key]
+                if type(feature_data) is list:
+                    num_example_list.append(len(feature_data))
+                elif type(feature_data) is np.ndarray:
+                    num_example_list.append(feature_data.shape[0])
+                else:
+                    raise ValueError("the feature only supports list or numpy array")
+            assert len(set(num_example_list)) == 1, "inconsistent number of data found during {}, please check the data".format(mode)
+            self.num_examples[mode].append(set(num_example_list).pop())
+            self.shuffle_buffer[mode].append(set(num_example_list).pop())
 
-        Returns:
+    def _get_feature_name(self, mode):
+        if len(self.all_features[mode])>1 and self.read_feature:
+            assert isinstance(self.read_feature, tuple), "read feature must be a tuple for unpaired feature set"
+            assert len(self.read_feature) == len(self.all_features[mode]), "the tuple should be consistent between read feature and data"
+        for idx,feature in enumerate(self.all_features[mode]):
+            if self.read_feature is None:
+                self.feature_name[mode].append(list(feature.keys()))
+            elif isinstance(self.read_feature[idx], dict):
+                self.feature_name[mode].append(self.read_feature[idx][mode])
+            else:
+                self.feature_name[mode].append(self.read_feature[idx])
 
-        """
-        json_files = [os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith(".json")]
-        assert len(json_files) > 0, "Cannot find .json file in %s" % data_dir
-        self.file_names = {"train": [], "eval": []}
-        self.num_examples = {"train": 0, "eval": 0}
-        for json_file in json_files:
-            summary = json.load(open(json_file, 'r'))
-            if self.decode_type is None:
-                self.decode_type = {name:dtype for (name, dtype) in zip(summary["feature_name"], summary["feature_dtype"])}
-            if self.feature_shape is None:
-                self.feature_shape = {name:dtype for (name, dtype) in zip(summary["feature_name"], summary["feature_shape"])}
+    def _check_ops(self, mode):
+        if self.ops:
+            mode_ops = get_op_from_mode(self.ops, mode)
+            mode_ops_without_filter = [op for op in mode_ops if not isinstance(op, TensorFilter)]
+            if len(mode_ops_without_filter) > 0:
+                verify_ops(mode_ops_without_filter, "Pipeline")
+                forward_ops = []
+                for op in mode_ops:
+                    if not isinstance(op, TensorFilter):
+                        forward_ops.append(op)
+                    else:
+                        self.mode_forward_ops[mode].append(forward_ops)
+                        self.mode_filter_ops[mode].append(op)
+                        forward_ops = []
+                self.mode_forward_ops[mode].append(forward_ops)
+
+    def _get_tfrecord_config(self, mode):
+        json_files = [os.path.join(self.inputs, f) for f in os.listdir(self.inputs) if f.endswith(".json") and f.startswith("%s_summary" % mode)]
+        found_record = len(json_files) > 0
+        if found_record:
+            for json_file in json_files:
+                with open(json_file, 'r') as fp:
+                    summary = json.load(fp)
+                self.file_names[mode].append([os.path.join(self.inputs, f) for f in summary["file_names"]])
+                self.num_examples[mode].append(np.sum(summary["num_examples"]))
+                self.feature_dtype[mode].append(summary["feature_dtype"])
+                self.record_feature_shape[mode].append(summary["feature_shape"])
                 if "compression" in summary:
-                    self.compression = summary["compression"]
-            if "eval_files" in summary:
-                self.file_names["eval"].extend([os.path.join(data_dir, f) for f in summary["eval_files"]])
-                self.num_examples["eval"] += np.sum(summary["num_eval_examples"])
-            self.file_names["train"].extend([os.path.join(data_dir, f) for f in summary["train_files"]])
-            self.num_examples["train"] += np.sum(summary["num_train_examples"])
-        self.keys_to_features = get_features(self.file_names["train"][0], compression=self.compression)
-        assert len(self.file_names["train"]) >= self.num_local_process, "number of training file per local process should at least be 1"
-        if self.local_rank == 0:
-            print("FastEstimator: Found %d examples for training and %d for validation in %s" %(self.num_examples["train"], self.num_examples["eval"], data_dir))
+                    self.compression[mode].append(summary["compression"])
+                else:
+                    self.compression[mode].append(None)
+                self.all_features[mode].append(get_features(self.file_names[mode][-1][0], compression=self.compression[mode][-1]))
+                num_example = self.num_examples[mode][-1]
+                example_size_mb = summary["example_size_mb"]
+                self.shuffle_buffer[mode].append(int(min(num_example, self.max_shuffle_buffer_mb//example_size_mb)))
+                print("FastEstimator: Found %d examples for %s in %s" %(num_example, mode, json_file))
+        return found_record
 
-    def _input_stream(self, mode):
-        """
-        Prepares data from TFRecords for streaming input
-
-        Args:
-            mode: Mode for current pipeline ("train", "eval" or "both")
-
-        Returns:
-            Dataset object containing the batch of tensors to be ingested by the model
-        """
-        filenames = self.file_names[mode]
-        # files reading
-        if mode == "train":
-            dataset = tf.data.Dataset.from_tensor_slices(filenames)
-            dataset = dataset.shard(self.num_local_process, self.local_rank)
-            dataset = dataset.shuffle(len(filenames))
-            dataset = dataset.interleave(lambda dataset: tf.data.TFRecordDataset(dataset, compression_type=self.compression), cycle_length=self.num_subprocess, block_length=2)
-            dataset = dataset.shuffle(min(10000, self.num_examples[mode]))
-            dataset = dataset.repeat()
+    def _input_stream(self, mode, warm_up=False):
+        ds_tuple = ()
+        #Data Reading
+        for idx in range(len(self.all_features[mode])):
+            if isinstance(self.data, (list, tuple)):
+                ds = tf.data.Dataset.from_tensor_slices(self.all_features[mode][idx])
+            else:
+                if mode == "train":
+                    ds = tf.data.Dataset.from_tensor_slices(self.file_names[mode][idx])
+                    ds = ds.shuffle(len(self.file_names[mode][idx]))
+                    ds = ds.interleave(lambda ds: tf.data.TFRecordDataset(ds, compression_type=self.compression[mode][idx]), cycle_length=self.num_core, block_length=2)
+                else:
+                    ds = tf.data.TFRecordDataset(self.file_names[mode][idx], compression_type=self.compression[mode][idx])
+                ds = ds.map(lambda ds: self._decode_records(ds, mode, idx), num_parallel_calls=self.num_core)
+            if mode =="train":
+                ds = ds.shuffle(self.shuffle_buffer[mode][idx])
+                ds = ds.repeat()
+            ds_tuple += ds,
+        #Combine dataset from different unpaired feature sets
+        if len(self.all_features[mode]) > 1:
+            dataset = tf.data.Dataset.zip(ds_tuple)
+            dataset = dataset.map(self._combine_dataset, num_parallel_calls=self.num_core)
         else:
-            dataset = tf.data.TFRecordDataset(filenames, compression_type=self.compression)
-        # reading and decoding
-        dataset = dataset.map(lambda dataset: self.read_and_decode(dataset), num_parallel_calls=self.num_subprocess)
-        # filtering and preprocessing
-        if isinstance(self.data_filter, list):
-            assert len(self.data_filter) > 1, "must provide at least two data filters for dataset zipping"
-            zip_ds = ()
-            for data_filter in self.data_filter:
-                assert isinstance(data_filter, Filter), "must provide Filter instance"
-                ds = dataset.filter(lambda dataset: data_filter.filter_fn(dataset))
-                ds = ds.map(lambda ds: self._preprocess_fn(ds, mode), num_parallel_calls=self.num_subprocess)
-                zip_ds += ds,
-            dataset = tf.data.Dataset.zip(zip_ds)
-        else:
-            if isinstance(self.data_filter, Filter) and self.data_filter.mode in [mode, "both"]:
-                dataset = dataset.filter(lambda dataset: self.data_filter.filter_fn(dataset))
-            dataset = dataset.map(lambda dataset: self._preprocess_fn(dataset, mode), num_parallel_calls=self.num_subprocess)
-        #batching
+            dataset = ds_tuple[0]
+        #Data preprocessing
+        if self.ops:
+            dataset = self._execute_mode_ops(dataset, mode)
+        if self.expand_dims:
+            dataset = dataset.flat_map(lambda dataset: tf.data.Dataset.from_tensor_slices(dataset))
+        if warm_up:
+            dataset = dataset.map(lambda dataset: self._get_padded_shape(dataset, mode))
         if self.padded_batch:
-            dataset = dataset.padded_batch(self.batch_size, padded_shapes={key:self.feature_shape[key] for key in self.feature_name})
+            dataset = dataset.padded_batch(self.batch_size, padded_shapes=self.padded_feature_shape[mode])
         else:
             dataset = dataset.batch(self.batch_size)
-        #prefetching
         dataset = dataset.prefetch(buffer_size=1)
         return dataset
 
-    def _preprocess_fn(self, decoded_data, mode):
-        """
-        Preprocessing performed on the tensor data in features in the order specified in the transform_train list
-        Args:
-            decoded_data: dataset object containing a dictionary of tensors
-            mode: Mode for training ("train", "eval" or "both")
-        Returns:
-            Dictionary containing the preprocessed data in the form of a dictionary of tensors
-        """
-        preprocessed_data = {}
+    def _get_padded_shape(self, dataset, mode):
+        for key in dataset:
+            self.padded_feature_shape[mode][key] = dataset[key].shape
+        return dataset
+
+    def _combine_dataset(self, *dataset):
+        combined_dict = {}
+        for ds in dataset:
+            for key in ds.keys():
+                assert key not in combined_dict, "found duplicated key {} in unpaird feature sets".format(key)
+                combined_dict[key] = ds[key]
+        return combined_dict
+
+    def _execute_mode_ops(self, dataset, mode):
+        num_filters = len(self.mode_filter_ops[mode])
+        ops = self.mode_forward_ops[mode][0]
+        dataset = dataset.map(lambda dataset: self._preprocess_fn(dataset, ops), num_parallel_calls=self.num_core)
+        if num_filters > 0:
+            for idx in range(num_filters):
+                dataset = dataset.filter(lambda dataset: self.mode_filter_ops[mode][idx].filter_fn(dataset))
+                ops = self.mode_forward_ops[mode][idx+1]
+                if len(ops) > 0:
+                    dataset = dataset.map(lambda dataset: self._preprocess_fn(dataset, ops), num_parallel_calls=self.num_core)
+        return dataset
+
+    def _preprocess_fn(self, feature, ops):
         randomized_list = []
-        for idx in range(len(self.feature_name)):
-            transform_list = self.transform_train[idx]
-            feature_name = self.feature_name[idx]
-            preprocess_data = decoded_data[feature_name]
-            for preprocess_obj in transform_list:
-                preprocess_obj.feature_name = feature_name
-                preprocess_obj.decoded_data = decoded_data
-                if isinstance(preprocess_obj, AbstractAugmentation):
-                    if preprocess_obj.mode == mode or preprocess_obj.mode == "both":
-                        preprocess_obj.height = preprocess_data.get_shape()[0]
-                        preprocess_obj.width = preprocess_data.get_shape()[1]
-                        if preprocess_obj not in randomized_list:
-                            preprocess_obj.setup()
-                            randomized_list.append(preprocess_obj)
-                        preprocess_data = preprocess_obj.transform(preprocess_data)
-                else:            
-                    preprocess_data = preprocess_obj.transform(preprocess_data)
-            preprocessed_data[feature_name] = preprocess_data
-        return preprocessed_data
-
-    def _input_source(self, mode, num_steps):
-        """Package the data from tfrecord to model
-        
-        Args:
-            mode (str): mode for current pipeline ("train", "eval" or "both")
-        
-        Returns:
-            Iterator: An iterator that can provide a streaming of processed data
-        """
-        dataset = self._input_stream(mode)
-        for batch_data in dataset.take(num_steps):
-            batch_data = self.final_transform(batch_data)
-            yield batch_data
-
-    def final_transform(self, preprocessed_data):
-        """
-        Can be overloaded to change tensors in any manner
-
-        Args:
-            preprocessed_data: Batch of training data as a tf.data object
-
-        Returns:
-            A dictionary of tensor data in the form of a tf.data object.
-        """
-        return preprocessed_data
-
-    def edit_feature(self, feature):
-        """
-        Can be overloaded to change raw data dictionary in any manner
-
-        Args:
-            feature: Dictionary containing the raw data
-
-        Returns:
-            Dictionary containing raw data to be stored in TFRecords
-
-        """
+        for op in ops:
+            if op.inputs:
+                data = self._get_inputs_from_key(feature, op.inputs)
+            if isinstance(op, TensorAugmentation):
+                op.height = data.get_shape()[0]
+                op.width = data.get_shape()[1]
+                if op not in randomized_list:
+                    op.setup()
+                    randomized_list.append(op)
+            data = op.forward(data)
+            if op.outputs:
+                feature = self._write_outputs_to_key(feature, data, op.outputs)
         return feature
 
-    def read_and_decode(self, dataset):
-        """
-        Reads and decodes the string data from TFRecords
+    def _write_outputs_to_key(self, feature, outputs_data, outputs_key):
+        if isinstance(outputs_key, str):
+            feature[outputs_key] = outputs_data
+        else:
+            for key, data in zip(outputs_key, outputs_data):
+                feature[key] = data
+        return feature
 
-        Args:
-            dataset: Dataset consisting of encoded data from TFRecords
+    def _get_inputs_from_key(self, feature, inputs_key):
+        if isinstance(inputs_key, list):
+            data = [feature[key] for key in inputs_key]
+        elif isinstance(inputs_key, tuple):
+            data = tuple([feature[key] for key in inputs_key])
+        else:
+            data = feature[inputs_key]
+        return data
 
-        Returns:
-            Dictionary of decoded data
-
-        """
+    def _decode_records(self, dataset, mode, idx):
         decoded_data = {}
-        all_data = tf.io.parse_single_example(dataset, features=self.keys_to_features)
-        for feature in self.feature_name:
+        all_data = tf.io.parse_single_example(dataset, features=self.all_features[mode][idx])
+        for feature in self.feature_name[mode][idx]:
             data = all_data[feature]
-            if "str" in str(data.dtype) and "str" not in self.decode_type[feature]:
-                data = tf.io.decode_raw(data, convert_tf_dtype(self.decode_type[feature]))
-                data = tf.reshape(data, self.feature_shape[feature])
+            if "str" in str(data.dtype) and "str" not in self.feature_dtype[mode][idx][feature]:
+                data = tf.io.decode_raw(data, convert_tf_dtype(self.feature_dtype[mode][idx][feature]))
+                data = tf.reshape(data, self.record_feature_shape[mode][idx][feature])
             if "int" in str(data.dtype):
                 data = tf.cast(data, tf.int32)
-            elif self.decode_type[feature] == "str":
-                data = data
-            else:
+            elif "str" not in self.feature_dtype[mode][idx][feature]:
                 data = tf.cast(data, tf.float32)
             decoded_data[feature] = data
         return decoded_data
 
-    def show_batches(self, inputs=None, num_batches=1, mode="train"):
+    def show_results(self, inputs=None, mode="train", num_steps=1):
         """
-        Shows batches of tensor data in numpy
+        Shows batches of tensor data
 
         Args:
             inputs: Directory for saving TFRecords
@@ -274,21 +282,10 @@ class Pipeline:
             A dictionary containing the batches data
         """
         data = []
-        self.num_subprocess = min(8, multiprocessing.cpu_count()//self.num_local_process)
-        if self.train_data:
-            tfrecorder = TFRecorder(train_data=self.train_data,
-                                    feature_name=self.feature_name, 
-                                    transform_dataset=self.transform_dataset, 
-                                    validation_data=self.validation_data,
-                                    **self.kwargs)
-            tfrecorder.edit_feature = self.edit_feature
-            tfrecorder.create_tfrecord(inputs)
-            inputs = tfrecorder.save_dir
-        else:
-            assert inputs is not None, "Must specify the data path when using existing tfrecords"
-        self._get_tfrecord_config(inputs)
-        dataset = self._input_source(mode, num_batches)
-        for i, example in enumerate(dataset):
+        self._prepare(inputs=inputs)
+        assert self._preprare_mode(mode=mode), "could not find record in {} for mode {}".format(inputs, mode)
+        dataset = self._input_stream(mode)
+        for i, example in enumerate(dataset.take(num_steps)):
             data.append(example)
         return data
 
@@ -298,24 +295,13 @@ class Pipeline:
 
         Args:
             inputs: Directory for saving TFRecords
-            mode: Mode for training ("train", "eval" or "both")
+            mode: Mode for training ("train", "eval")
         """
-        self.num_subprocess = min(8, multiprocessing.cpu_count()//self.num_local_process)
-        if self.train_data:
-            tfrecorder = TFRecorder(train_data=self.train_data,
-                                    feature_name=self.feature_name, 
-                                    transform_dataset=self.transform_dataset, 
-                                    validation_data=self.validation_data,
-                                    **self.kwargs)
-            tfrecorder.edit_feature = self.edit_feature
-            tfrecorder.create_tfrecord(inputs)
-            inputs = tfrecorder.save_dir
-        else:
-            assert inputs is not None, "Must specify the data path when using existing tfrecords"
-        self._get_tfrecord_config(inputs)
-        it = self._input_source(mode, num_steps)
+        self._prepare(inputs=inputs)
+        assert self._preprare_mode(mode=mode), "could not find record in {} for mode {}".format(inputs, mode)
+        dataset = self._input_stream(mode)
         start = time.time()
-        for i, _ in enumerate(it):
+        for i, _ in enumerate(dataset.take(num_steps)):
             if i % log_interval == 0 and i >0:
                 duration = time.time() - start
                 example_per_sec = log_interval * self.batch_size / duration
