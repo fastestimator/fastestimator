@@ -2,43 +2,7 @@ import math
 import tensorflow as tf
 from fastestimator.util.op import TensorOp
 
-class TensorAugmentation(TensorOp):
-    """
-    An abstract class for data augmentation that defines interfaces.
-    A custom augmentation can be defined by inheriting from this class.
-
-    Args:
-        mode: Augmentation to be applied for training or evaluation, can be "train", "eval" or "both".
-    """
-    def __init__(self, mode="train"):
-        self.mode = mode
-        self.decoded_data = None
-        self.feature_name = None
-
-    def setup(self):
-        """
-        An interface method to be implemented by inheriting augmentation class to setup necessary parameters for the
-        augmentation
-
-        Returns:
-            None
-        """
-        return None
-
-    def forward(self, data):
-        """
-        An interface method to be implemented by inheriting augmentation class to apply the transformation to data
-
-        Args:
-            data: Data on which a transformation is to be applied
-
-        Returns:
-            Transformed tensor
-
-        """
-        return data
-
-class Augmentation2D(TensorAugmentation):
+class Augmentation2D(TensorOp):
     """
    This class supports commonly used 2D random affine transformations for data augmentation.
    Either a scalar ``x`` or a tuple ``[x1, x2]`` can be specified for rotation, shearing, shifting, and zoom.
@@ -307,7 +271,6 @@ class Augmentation2D(TensorAugmentation):
 
         """
         augment_data = self._transform(data)
-
         augment_data = tf.cond(self.do_flip_lr_tensor, lambda: tf.image.flip_left_right(augment_data), lambda: augment_data)
         augment_data = tf.cond(self.do_flip_ud_tensor, lambda: tf.image.flip_up_down(augment_data), lambda: augment_data)
         return augment_data
