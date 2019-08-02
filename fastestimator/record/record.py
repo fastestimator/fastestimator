@@ -113,8 +113,8 @@ class RecordWriter:
         self.mb_per_record_example[mode] = 0
         self.feature_dtype[mode] = {}
         self.feature_shape[mode] = {}
-        for name in self.feature_name[mode]:
-            data = np.asarray(feature[name])
+        for key in self.feature_name[mode]:
+            data = np.asarray(feature[key])
             self.mb_per_csv_example[mode] += data.nbytes / 1e6
             if self.expand_dims:
                 data = data[0]
@@ -122,18 +122,20 @@ class RecordWriter:
             dtype = str(data.dtype)
             if "<U" in dtype:
                 dtype = "str"
-            self.feature_dtype[mode][name] = dtype
+            self.feature_dtype[mode][key] = dtype
             if data.size == 1:
-                self.feature_shape[mode][name] = []
+                self.feature_shape[mode][key] = []
             elif max(data.shape) == np.prod(data.shape):
-                self.feature_shape[mode][name] = [-1]
+                self.feature_shape[mode][key] = [-1]
             else:
-                self.feature_shape[mode][name] = data.shape
+                self.feature_shape[mode][key] = data.shape
 
     def _write_tfrecord_parallel(self, dictionary, mode):
         num_example_list = []
+        feature_shape_list = []
         processes = []
-        queue = mp.Queue()
+        queue_example = mp.Queue()
+        queue_shape = mp.Queue()
         num_files_process = int(np.ceil(self.num_example_csv[mode] * self.mb_per_csv_example[mode] / self.max_record_size_mb / self.num_process))
         num_example_process_remain = self.num_example_csv[mode] % self.num_process
         serial_start = 0
@@ -144,18 +146,28 @@ class RecordWriter:
             else:
                 num_example_process = self.num_example_csv[mode] // self.num_process
             serial_end = serial_start + num_example_process
-            processes.append(mp.Process(target=self._write_tfrecord_serial, args=(dictionary, serial_start, serial_end, num_files_process, file_idx_start, mode, queue)))
+            processes.append(mp.Process(target=self._write_tfrecord_serial, args=(dictionary, serial_start, serial_end, num_files_process, file_idx_start, mode, queue_example, queue_shape)))
             serial_start += num_example_process
             file_idx_start += num_files_process
         for p in processes:
             p.start()
         for _ in range(self.num_process):
-            num_example_list.extend(queue.get(block=True))
+            num_example_list.extend(queue_example.get(block=True))
+            feature_shape_list.append(queue_shape.get(block=True))
         for p in processes:
             p.join()
+        self._reconfirm_shape(feature_shape_list, mode)
         return num_example_list
 
-    def _write_tfrecord_serial(self, dictionary, serial_start, serial_end, num_files_process, file_idx_start, mode, queue):
+    def _reconfirm_shape(self, feature_shape_list, mode):
+        feature_shape = self.feature_shape[mode]
+        for new_feature_shape in feature_shape_list:
+            for key in feature_shape:
+                if new_feature_shape[key] == [-1] and feature_shape[key] == []:
+                    feature_shape[key] = [-1]
+        self.feature_shape[mode] = feature_shape
+
+    def _write_tfrecord_serial(self, dictionary, serial_start, serial_end, num_files_process, file_idx_start, mode, queue_example, queue_shape):
         num_example_list = []
         num_csv_example_per_file = (serial_end - serial_start) // num_files_process
         show_progress = serial_start == 0
@@ -169,7 +181,8 @@ class RecordWriter:
             num_example_list.append(self._write_single_file(dictionary, filename, file_start, file_end, serial_start, serial_end, show_progress, mode))
             file_start += num_csv_example_per_file
             file_end += num_csv_example_per_file
-        queue.put(num_example_list)
+        queue_example.put(num_example_list)
+        queue_shape.put(self.feature_shape[mode])
 
     def _write_single_file(self, dictionary, filename, file_start, file_end, serial_start, serial_end, show_progress, mode):
         goal_number = serial_end - serial_start
@@ -206,9 +219,18 @@ class RecordWriter:
 
     def _write_single_example(self, dictionary, writer, mode):
         feature_tfrecord = {}
-        for name in self.feature_name[mode]:
-            data = np.array(dictionary[name]).astype(self.feature_dtype[mode][name])
-            feature_tfrecord[name] = self._bytes_feature(data.tostring())
+        for key in self.feature_name[mode]:
+            data = np.array(dictionary[key]).astype(self.feature_dtype[mode][key])
+            expected_shape = self.feature_shape[mode][key]
+            assert data.size > 0, "found empty data on feature '{}'".format(key)
+            if len(expected_shape) > 1:
+                assert expected_shape == data.shape, "inconsistent shape on same feature `{}` among different examples, expected `{}`, found `{}`".format(key, expected_shape, data.shape)
+            else:
+                if data.size > 1:
+                    assert max(data.shape) == np.prod(data.shape), "inconsistent shape on same feature `{}` among different examples, expected 0 or 1 dimensional array, found `{}`".format(key, expected_shape, data.shape)
+                    if expected_shape == []:
+                        self.feature_shape[mode][key] = [-1]
+            feature_tfrecord[key] = self._bytes_feature(data.tostring())
         example = tf.train.Example(features=tf.train.Features(feature=feature_tfrecord))
         writer.write(example.SerializeToString())
 
