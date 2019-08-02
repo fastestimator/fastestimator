@@ -24,8 +24,7 @@ from fastestimator.pipeline.pipeline import Pipeline
 from fastestimator.pipeline.preprocess import Minmax
 from fastestimator.record.preprocess import ImageReader, Resize
 from fastestimator.record.record import RecordWriter
-from fastestimator.util.op import TensorOp, NumpyOp
-
+from fastestimator.util.op import NumpyOp, TensorOp
 
 class String2List(NumpyOp):
     #this thing converts '[1, 2, 3]' into np.array([1, 2, 3])
@@ -53,7 +52,7 @@ class GenerateTarget(NumpyOp):
         target_cls, target_loc = get_target(self.anchorbox, label, x1, y1, x2, y2, num_classes=10)
         return target_cls,target_loc
 
-class CombinedLoss(Loss):
+class RetinaLoss(Loss):
     def focal_loss(self, cls_gt, cls_pred, num_classes, alpha=0.25, gamma=2.0):
         #cls_gt has shape [B, A], cls_pred is in [B, A, K]
         obj_idx = tf.where(tf.greater_equal(cls_gt, 0)) #index of object
@@ -96,11 +95,18 @@ class CombinedLoss(Loss):
         smooth_l1_loss = self.smooth_l1(loc_gt, loc_pred, obj_idx)
         return 40000*focal_loss+smooth_l1_loss
 
-class GenerateBox(TensorOp):
+class PredictBox(TensorOp):
+    def __init__(self, inputs=None, outputs=None, mode=None):
+        self.inputs = inputs
+        self.outputs = outputs
+        self.mode = mode
+        self.anchorbox = tf.convert_to_tensor(get_fpn_anchor_box(input_shape=(64, 128, 3)))
+        self.anchor_w_h = tf.tile(self.anchorbox[:,2:], [1, 2]) - tf.tile(self.anchorbox[:, :2], [1, 2])
+
     def forward(self, data):
+        cls_pred, loc_pred = tuple(data)
         top_n = 10
         score_threshold = 0.2
-        cls_pred, loc_pred = data
         #convert the residual prediction to absolute prediction in (x1, y1, x2, y2)
         loc_pred = tf.map_fn(lambda x: x * self.anchor_w_h + self.anchorbox, elems=loc_pred, dtype=tf.float32, back_prop=False)
         num_batch, num_anchor, _ = loc_pred.shape
@@ -139,18 +145,16 @@ def get_estimator():
     pipeline = Pipeline(batch_size=256,
                         data=writer,
                         ops=Minmax(inputs="image", outputs="image"),
-                        read_feature=["image", "target_cls", "target_loc", "x1", "y1", "x2", "y2"],
-                        padded_batch=True)
+                        read_feature=["image", "target_cls", "target_loc"])
     #prepare model
     model = build(keras_model=RetinaNet(input_shape=(64, 128, 3), num_classes=10),
-                  loss=CombinedLoss(),
+                  loss=RetinaLoss(),
                   optimizer=tf.optimizers.Adam(learning_rate=0.0001))
     network = Network(ops=[ModelOp(inputs="image", model=model, outputs=["pred_cls", "pred_loc"]),
-                           GenerateBox(inputs=("pred_cls", "pred_loc"), outputs=("cls_selected", "loc_selected", "valid_outputs"), mode="eval")])
+                           PredictBox(outputs=("cls_selected", "loc_selected", "valid_outputs"), mode="eval")])
     #prepare estimator
     estimator = Estimator(network= network,
                           pipeline=pipeline,
                           epochs= 15,
-                          log_steps=20,
-                          steps_per_epoch=50)
+                          log_steps=20)
     return estimator

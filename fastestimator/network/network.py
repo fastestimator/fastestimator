@@ -62,7 +62,10 @@ class Network:
                     data = op.inputs()
                 else:
                     data = self._get_inputs_from_key(batch, prediction, op.inputs)
-            data = op.forward(data, mode)
+            if isinstance(op, ModelOp):
+                data = op.forward(data, mode)
+            else:
+                data = op.forward(data)
             if op.outputs:
                 prediction = self._write_outputs_to_key(data, prediction, op.outputs)
         return prediction

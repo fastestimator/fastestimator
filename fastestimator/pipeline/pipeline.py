@@ -19,12 +19,10 @@ import time
 import numpy as np
 import tensorflow as tf
 from fastestimator.util.op import flatten_operation, get_op_from_mode, verify_ops
-from fastestimator.pipeline.augmentation import TensorAugmentation
 from fastestimator.pipeline.filter import TensorFilter
 from fastestimator.util.tfrecord import get_features
 from fastestimator.util.util import convert_tf_dtype
 from fastestimator.record.record import RecordWriter
-import pdb
 
 class Pipeline:
     def __init__(self,
@@ -236,16 +234,9 @@ class Pipeline:
         return dataset
 
     def _preprocess_fn(self, feature, ops):
-        randomized_list = []
         for op in ops:
             if op.inputs:
                 data = self._get_inputs_from_key(feature, op.inputs)
-            if isinstance(op, TensorAugmentation):
-                op.height = data.get_shape()[0]
-                op.width = data.get_shape()[1]
-                if op not in randomized_list:
-                    op.setup()
-                    randomized_list.append(op)
             data = op.forward(data)
             if op.outputs:
                 feature = self._write_outputs_to_key(feature, data, op.outputs)

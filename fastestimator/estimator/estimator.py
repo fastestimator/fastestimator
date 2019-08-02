@@ -14,7 +14,7 @@
 # ==============================================================================
 import numpy as np
 import tensorflow as tf
-from fastestimator.estimator.trace import TrainLogger
+from fastestimator.estimator.trace import Trace, TrainLogger
 
 class Estimator:
     def __init__(self, pipeline, network, epochs, steps_per_epoch=None, validation_steps=None, traces=None, log_steps=100):
@@ -56,6 +56,10 @@ class Estimator:
     def _prepare_estimator(self):
         if self.traces is None:
             self.traces = []
+        elif not isinstance(self.traces, list):
+            self.traces = [self.traces]
+        for trace in self.traces:
+            assert isinstance(trace, Trace)
         if self.steps_per_epoch is None:
             self.steps_per_epoch = np.min(self.pipeline.num_examples["train"])//(self.pipeline.batch_size * self.num_gpu)
         if self.validation_steps is None and self.do_eval:
