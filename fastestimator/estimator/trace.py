@@ -4,7 +4,6 @@ import time
 import numpy as np
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 
-
 class Trace:
     """Trace base class.
 
