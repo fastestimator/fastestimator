@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 from tensorflow.keras import layers, models
-from fastestimator.util.op import NumpyOp, TensorOp
 import tensorflow as tf
 import numpy as np
 
