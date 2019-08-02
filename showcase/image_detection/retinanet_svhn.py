@@ -145,7 +145,7 @@ def get_estimator():
     pipeline = Pipeline(batch_size=256,
                         data=writer,
                         ops=Minmax(inputs="image", outputs="image"),
-                        read_feature=["image", "target_cls", "target_loc"])
+                        padded_batch=True)
     #prepare model
     model = build(keras_model=RetinaNet(input_shape=(64, 128, 3), num_classes=10),
                   loss=RetinaLoss(),
