@@ -22,7 +22,7 @@ from fastestimator.network.loss import Loss
 from fastestimator.network.model import ModelOp, build
 from fastestimator.network.network import Network
 from fastestimator.pipeline.pipeline import Pipeline
-from fastestimator.pipeline.preprocess import Minmax
+from fastestimator.pipeline.processing import Minmax
 from fastestimator.record.preprocess import ImageReader, Resize
 from fastestimator.record.record import RecordWriter
 from fastestimator.util.op import NumpyOp, TensorOp
