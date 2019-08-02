@@ -95,8 +95,11 @@ class Scale(TensorOp):
     Args:
         scalar: Scalar for scaling the data
     """
-    def __init__(self, scalar):
+    def __init__(self, scalar, inputs=None, outputs=None, mode=None):
         self.scalar = scalar
+        self.inputs = inputs
+        self.outputs = outputs
+        self.mode = mode
 
     def forward(self, data):
         """
