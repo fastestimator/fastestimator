@@ -23,64 +23,8 @@ from tensorflow.python import keras
 
 from fastestimator.util.loader import PathLoader
 from fastestimator.util.saliencies import GradientSaliency, IntegratedGradients
-from fastestimator.util.util import is_number, load_dict, load_image
-
-
-def show_text(axis, background, text, title=None):
-    """
-    Plots a given image onto an axis
-
-    Args:
-        axis: The matplotlib axis to plot on
-        background: A background image to display behind the text (useful for sizing the plot correctly)
-        text: The text to display
-        title: A title for the image
-    """
-    # matplotlib doesn't support (x,y,1) images, so convert them to (x,y)
-    if len(background.shape) == 3 and background.shape[2] == 1:
-        background = np.reshape(background, (background.shape[0], background.shape[1]))
-
-    axis.axis('off')
-    axis.imshow(background, cmap=plt.get_cmap(name="Greys_r"), vmin=0, vmax=1)
-    axis.text(0.5, 0.5, text,
-              ha='center', va='center', transform=axis.transAxes, wrap=False, family='monospace')
-    if title is not None:
-        axis.set_title(title)
-
-
-def show_image(axis, im, title=None):
-    """
-    Plots a given image onto an axis
-
-    Args:
-        axis: The matplotlib axis to plot on
-        im: The image to display (width X height)
-        title: A title for the image
-    """
-    axis.axis('off')
-    im = ((np.asarray(im) + 1) * 127.5).astype(np.uint8)
-    # matplotlib doesn't support (x,y,1) images, so convert them to (x,y)
-    if len(im.shape) == 3 and im.shape[2] == 1:
-        im = np.reshape(im, (im.shape[0], im.shape[1]))
-    axis.imshow(im)
-    if title is not None:
-        axis.set_title(title)
-
-
-def show_gray_image(axis, im, title=None, color_map="inferno"):
-    """
-    Plots a given image onto an axis
-
-    Args:
-        axis: The matplotlib axis to plot on
-        im: The image to display (width X height)
-        title: A title for the image
-        color_map: The color set to be used (since the image is gray scale)
-    """
-    axis.axis('off')
-    axis.imshow(im, cmap=plt.get_cmap(name=color_map), vmin=0, vmax=1)
-    if title is not None:
-        axis.set_title(title)
+from fastestimator.util.util import is_number, load_dict, load_image, decode_predictions
+from fastestimator.util.vis_util import show_image, show_text, show_gray_image
 
 
 @tf.function
@@ -117,29 +61,6 @@ def convert_for_visualization(batched_masks, percentile=99):
     vmin = tf.reduce_min(flattened_mask, axis=(1, 2), keepdims=True)
 
     return tf.clip_by_value((flattened_mask - vmin) / (vmax - vmin), 0, 1)
-
-
-def decode_predictions(predictions, top=3, dictionary=None):
-    """
-    Args:
-        predictions: A batched numpy array of class prediction scores (Batch X Predictions)
-        top: How many of the highest predictions to capture
-        dictionary: {"<class_idx>" -> "<class_name>"}
-    Returns:
-        A right-justified newline-separated array of the top classes and their associated probabilities.
-        There is one entry in the results array per batch in the input
-    """
-    results = []
-    for prediction in predictions:
-        top_indices = prediction.argsort()[-top:][::-1]
-        if dictionary is None:
-            result = ["Class {:d}: {:.4f}".format(i, prediction[i]) for i in top_indices]
-        else:
-            result = ["{:s}: {:.4f}".format(dictionary[str(i)], prediction[i]) for i in top_indices]
-        max_width = len(max(result, key=lambda s: len(s)))
-        result = str.join("\n", [s.rjust(max_width) for s in result])
-        results.append(result)
-    return results
 
 
 def interpret_model(model, model_input, baseline_input=None, decode_dictionary=None, color_map="inferno", smooth=7,

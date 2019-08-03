@@ -7,6 +7,7 @@ import sys
 from pyfiglet import Figlet
 
 from fastestimator.util.util import parse_cli_to_dictionary, get_gpu_count
+from fastestimator.visualization.caricature import load_and_caricature
 from fastestimator.visualization.layer_umap import umap_layers
 from fastestimator.visualization.parse_logs import parse_folder
 from fastestimator.visualization.saliency_masks import load_and_interpret
@@ -168,6 +169,67 @@ def configure_umap_parser(subparsers):
     parser.set_defaults(func=umap)
 
 
+def caricature(args, unknown):
+    if len(unknown) > 0:
+        print("error: unrecognized arguments: ", str.join(", ", unknown))
+        sys.exit(-1)
+    load_and_caricature(args['model'], args['inputs'], dictionary_path=args['dictionary'], save=args['save'],
+                        save_dir=args['save_dir'], strip_alpha=args['strip_alpha'], layer_ids=args['layers'],
+                        print_layers=args['print_layers'], n_steps=args['steps'], learning_rate=args['learning_rate'],
+                        blur=args['blur'], cossim_pow=args['cossim'], sd=args['stddev'], fft=not args['pixel_based'],
+                        decorrelate=not args['true_color'], sigmoid=not args['hard_clip'])
+
+
+def configure_caricature_parser(subparsers):
+    parser = subparsers.add_parser('caricature',
+                                   description='Plots caricatures for model layers over given inputs',
+                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter, allow_abbrev=False)
+    parser.add_argument('model', metavar='<Model Path>', type=str,
+                        help="The path to a saved model file")
+    parser.add_argument('inputs', metavar='Input', type=str, nargs='+',
+                        help="The paths to one or more inputs to visualize (or the path to a folder which will be \
+                            recursively traversed to find image files)")
+    parser.add_argument('--print-layers', action='store_true',
+                        help="True if you only want to print a model's layers to the console. Useful for inspecting a \
+                            model to choose which layer indices to visualize.")
+    parser.add_argument('--layers', metavar='IDX', type=int, nargs='+',
+                        help='The indices of layers you want to visualize. If not provided then all layers will be \
+                                      analyzed, but that is likely to run out of memory on moderately sized models.')
+    parser.add_argument('--strip-alpha', action='store_true',
+                        help="True if you want to convert RGBA images to RGB")
+    parser.add_argument('--dictionary', metavar='<Dictionary Path>', type=str,
+                        help="The path to a {'class_id':'class_name'} json file", default=None)
+    parser.add_argument('--steps', metavar='N', type=int,
+                        help="How many optimization iterations to run", default=250)
+    parser.add_argument('--learning-rate', metavar='LR', type=float,
+                        help="Initial learning rate for the optimizer", default=0.05)
+    parser.add_argument('--blur', metavar='B', type=float,
+                        help="Strength of blurring used on image during processing (reduces high-frequency artifacts)",
+                        default=1.0)
+    parser.add_argument('--cossim', metavar='B', type=float,
+                        help="Strength of cosine similarity coefficient in loss function (higher value increases \
+                        similarity)", default=0.5)
+    parser.add_argument('--stddev', type=float,
+                        help="The standard deviation of the noise used to generate the seed image", default=0.01)
+    parser.add_argument('--pixel-based', action='store_true',
+                        help="Use pixel-based optimization rather than fft based. Individual steps will be faster but \
+                        convergence will be slower")
+    parser.add_argument('--true-color', action='store_true',
+                        help="Disable color decorrelation. You may want this if using non-imagenet style images")
+    parser.add_argument('--hard-clip', action='store_true',
+                        help="Use hard clipping instead of sigmoids to constrain pixel values")
+    save_group = parser.add_argument_group('output arguments')
+    save_x_group = save_group.add_mutually_exclusive_group(required=False)
+    save_x_group.add_argument('--save', nargs='?', metavar='<Save Dir>',
+                              help="Save the output image. May be accompanied by a directory into which the \
+                              file is saved. If no output directory is specified, the model directory will be used",
+                              dest='save', action=SaveAction, default=False)
+    save_x_group.add_argument('--display', dest='save', action='store_false',
+                              help="Render the image to the UI (rather than saving it)", default=True)
+    save_x_group.set_defaults(save_dir=None)
+    parser.set_defaults(func=caricature)
+
+
 def configure_visualization_parser(subparsers):
     visualization_parser = subparsers.add_parser('visualize', description='Generates various types of visualiztaions',
                                                  allow_abbrev=False)
@@ -179,6 +241,7 @@ def configure_visualization_parser(subparsers):
     configure_log_parser(visualization_subparsers)
     configure_saliency_parser(visualization_subparsers)
     configure_umap_parser(visualization_subparsers)
+    configure_caricature_parser(visualization_subparsers)
 
 
 def train(args, unknown):
