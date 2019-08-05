@@ -15,6 +15,7 @@
 import math
 
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from fastestimator.util.op import TensorOp
 
@@ -348,3 +349,31 @@ class Augmentation2D(TensorOp):
         # result_flat = result_flat * tf.cast(mask, tf.int32) + 
         result_flat = tf.multiply(result_flat, mask)
         return tf.convert_to_tensor(tf.reshape(result_flat, data.shape))
+
+
+class MixUpBatch(TensorOp):
+    """
+    This class should be used in conjunction with MixUpLoss to perform mix-up training, which helps to reduce
+    over-fitting, stabilize GAN training, and against adversarial attacks (https://arxiv.org/abs/1710.09412)
+    """
+    def __init__(self, inputs=None, outputs=None, mode=None, alpha=1.0):
+        """
+        Args:
+            inputs: key of the input to be mixed up
+            outputs: key to store the mixed-up input
+            mode: what mode to execute in. Probably 'train'
+            alpha: the alpha value defining the beta distribution to be drawn from during training
+        """
+        super(MixUpBatch, self).__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.alpha = tf.constant(alpha)
+        self.beta = tfp.distributions.Beta(alpha, alpha)
+
+    def forward(self, data):
+        if self.alpha <= 0:
+            return [data, 1.0]
+        lam = self.beta.sample()
+        # Could do random mix-up using tf.gather() on a shuffled index list, but batches are already randomly ordered,
+        # so just need to roll by 1 to get a random combination of inputs. This also allows MixUpLoss to easily compute
+        # the corresponding Y values
+        x_mix = lam * data + (1.0 - lam) * tf.roll(data, shift=1, axis=0)
+        return [x_mix, lam]

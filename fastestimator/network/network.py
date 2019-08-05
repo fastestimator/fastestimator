@@ -42,15 +42,15 @@ class Network:
     def run_step(self, batch, mode, epoch):
         losses = ()
         # use gradient tape for train, otherwise use a dummy tape(to save computation)
-        with tf.GradientTape(persistent=True) if mode=="train" else NonContext() as tape:
+        with tf.GradientTape(persistent=True) if mode == "train" else NonContext() as tape:
             prediction = self._forward(batch, mode, epoch)
             for idx in range(self.num_model):
-                losses += self.model_list[idx].loss.calculate_loss(batch, prediction),
-        #update model only for train mode
+                losses += self.model_list[idx].loss.calculate_loss(batch, prediction, mode),
+        # update model only for train mode
         if mode == "train":
             for idx in range(self.num_model):
                 gradients = tape.gradient(losses[idx], self.model_list[idx].trainable_variables)
-                self.model_list[idx].optimizer.apply_gradients(zip(gradients,self.model_list[idx].trainable_variables))
+                self.model_list[idx].optimizer.apply_gradients(zip(gradients, self.model_list[idx].trainable_variables))
         del tape
         return prediction, losses
     
