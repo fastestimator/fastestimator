@@ -92,7 +92,7 @@ class Pipeline:
             self.compression = {"train": [], "eval": []}
             self.file_names = {"train": [], "eval": []}
 
-    def _preprare_mode(self, mode):
+    def _prepare_mode(self, mode):
         success = True
         if isinstance(self.data, list):
             self._get_numpy_config(mode)
@@ -288,7 +288,7 @@ class Pipeline:
         """
         data = []
         self._prepare(inputs=inputs)
-        assert self._preprare_mode(mode=mode), "could not find record in {} for mode {}".format(inputs, mode)
+        assert self._prepare_mode(mode=mode), "could not find record in {} for mode {}".format(inputs, mode)
         dataset = self._input_stream(mode)
         for i, example in enumerate(dataset.take(num_steps)):
             data.append(example)
@@ -303,7 +303,7 @@ class Pipeline:
             mode: Mode for training ("train", "eval")
         """
         self._prepare(inputs=inputs)
-        assert self._preprare_mode(mode=mode), "could not find record in {} for mode {}".format(inputs, mode)
+        assert self._prepare_mode(mode=mode), "could not find record in {} for mode {}".format(inputs, mode)
         dataset = self._input_stream(mode)
         start = time.time()
         for i, _ in enumerate(dataset.take(num_steps)):
