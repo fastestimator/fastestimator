@@ -46,7 +46,7 @@ class Estimator:
     def _prepare_pipeline(self):
             self.pipeline._prepare(inputs = self.inputs)
             assert self.pipeline._prepare_mode(mode="train"), "could not find training data in existing path '{}', please provide a new path for creating new data".format(self.inputs)
-            self.do_eval = self.pipeline._preprare_mode(mode="eval")
+            self.do_eval = self.pipeline._prepare_mode(mode="eval")
             
     def _prepare_network(self):
         self.network._check_ops("train")
