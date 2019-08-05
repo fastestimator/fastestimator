@@ -177,8 +177,11 @@ class Reshape(TensorOp):
     Args:
         shape: target shape
     """
-    def __init__(self, shape):
+    def __init__(self, shape, inputs=None, outputs=None, mode=None):
         self.shape = shape
+        self.inputs = inputs
+        self.outputs = outputs
+        self.mode = mode
 
     def forward(self, data):
         """
