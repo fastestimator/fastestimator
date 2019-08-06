@@ -74,7 +74,7 @@ def get_estimator(epochs=2, batch_size=32, alpha=1.0, epsilon=0.1):
                         validation_data={"x": x_eval, "y": y_eval},
                         transform_train=[[Minmax()], []])
 
-    traces = [Accuracy(y_true_key="y"), ConfusionMatrix(y_true_key="y", num_classes=num_classes)]
+    traces = [Accuracy(true_key="y", pred_key="y_pred"), ConfusionMatrix(y_true_key="y", num_classes=num_classes)]
 
     estimator = Estimator(
         network=Network(shape=x_train.shape[1:], num_classes=num_classes, alpha=alpha, epsilon=epsilon),
