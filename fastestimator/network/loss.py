@@ -23,7 +23,7 @@ class Loss:
         """this is the function that calculates the loss given the batch data
         
         Args:
-            batch (dict): batch data before forward operation
+            batch (dict): batch data after forward operation
             state(dict): current running state, has key 'mode', 'epoch' and 'step'
         
         Returns:
