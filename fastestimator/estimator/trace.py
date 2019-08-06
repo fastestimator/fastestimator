@@ -29,68 +29,66 @@ class Trace:
     def __init__(self):
         self.network = None
 
-    def begin(self, mode):
+    def begin(self, state):
         """Runs at the beginning of the mode.
 
         Args:
-            mode (str): Signature during different phases, can be "train", "eval" or "test".
+            state (dict): dictionary of run time that has the following key(s):
+                * "mode": the current run time mode, can be "train", "eval" or "test"
         """
 
-    def on_epoch_begin(self, mode, logs):
+    def on_epoch_begin(self, state):
         """Runs at the beginning of each epoch of the mode.
 
         Args:
-            mode (str): Signature during different phases, can be "train", "eval" or "test".
-            logs (dict): Dictionary with the following key:
-
+            state (dict): dictionary of run time that has the following key(s):
+                * "mode":  current run time mode, can be "train", "eval" or "test"
                 * "epoch": current epoch index starting from 0
         """
 
-    def on_batch_begin(self, mode, logs):
+    def on_batch_begin(self, state):
         """Runs at the beginning of every batch of the mode.
 
         Args:
-            mode (str): Signature during different phases, can be "train", "eval" or "test".
-            logs (dict): Dictionary with the following keys:
-
+            state (dict): dictionary of run time that has the following key(s):
+                * "mode":  current run time mode, can be "train", "eval" or "test"
                 * "epoch": current epoch index starting from 0
                 * "step": current global step index starting from 0 (or batch index)
-                * "size": current batch size
+                * "batch_size": current batch size on single machine
         """
 
-    def on_batch_end(self, mode, logs):
+    def on_batch_end(self, state):
         """Runs at the end of every batch of the mode.
 
         Args:
-            mode (str): Signature during different phases, can be "train", "eval" or "test".
-            logs (dict): Dictionary with the following keys:
-
+            state (dict): dictionary of run time that has the following key(s):
+                * "mode":  current run time mode, can be "train", "eval" or "test"
                 * "epoch": current epoch index starting from 0
                 * "step": current global step index starting from 0 (or batch index)
-                * "size": current batch size
-                * "batch": the batch data used as input of network
+                * "batch_size": current batch size on single machine
+                * "batch": the batch data after the Network execution
                 * "loss": the batch loss (only available when mode is "train" or "eval")
         """
 
-    def on_epoch_end(self, mode, logs):
+    def on_epoch_end(self, state):
         """Runs at the end of every epoch of the mode.
 
         If needed to display metric in logger, then return the metric. The metric can be a scalar,
         list, tuple, numpy array or dictionary.
 
         Args:
-            mode (str): Signature during different phases, can be "train", "eval" or "test".
-            logs (dict): Dictionary with the following keys:
-
+            state (dict): dictionary of run time that has the following key(s):
+                * "mode":  current run time mode, can be "train", "eval" or "test"
                 * "epoch": current epoch index starting from 0
-                * "loss": average loss within epoch (only available when mode is "eval")
+                * "loss": the batch loss (only available when mode is "train" or "eval")
         """
 
-    def end(self, mode):
+    def end(self, state):
         """Runs at the end of the mode.
 
         Args:
-            mode (str): Signature during different phases, can be "train", "eval" or "test".
+            state (dict): dictionary of run time that has the following key(s):
+                * "mode": the current run time mode, can be "train", "eval" or "test"
         """
 
 class TrainLogger(Trace):
@@ -108,31 +106,30 @@ class TrainLogger(Trace):
         self.elapse_times = []
         self.epochs_since_best = 0
         self.best_loss = None
-        self.time_start = 0
 
-    def on_epoch_begin(self, mode, logs):
-        if mode == "train":
+    def on_epoch_begin(self, state):
+        if state["mode"] == "train":
             self.time_start = time.time()
 
-    def on_batch_end(self, mode, logs):
-        if mode == "train" and logs["step"] % self.log_steps == 0:
-            if logs["step"] == 0:
+    def on_batch_end(self, state):
+        if state["mode"] == "train" and state["step"] % self.log_steps == 0:
+            if state["step"] == 0:
                 example_per_sec = 0.0
             else:
                 self.elapse_times.append(time.time() - self.time_start)
-                example_per_sec = logs["size"] * self.log_steps / np.sum(self.elapse_times)
-            loss = np.array(logs["loss"])
+                example_per_sec = state["batch_size"] * self.log_steps / np.sum(self.elapse_times)
+            loss = np.array(state["loss"])
             if loss.size == 1:
                 loss = loss.ravel()[0]
-            print("FastEstimator-Train: step: %d; train_loss: %s; example/sec: %.2f;" %(logs["step"], str(loss), example_per_sec*self.num_process))
+            print("FastEstimator-Train: step: %d; train_loss: %s; example/sec: %.2f;" %(state["step"], str(loss), example_per_sec*self.num_process))
             self.elapse_times = []
             self.time_start = time.time()
 
-    def on_epoch_end(self, mode, logs):
-        if mode == "train":
+    def on_epoch_end(self, state):
+        if state["mode"] == "train":
             self.elapse_times.append(time.time() - self.time_start)
-        elif mode == "eval":
-            current_eval_loss = logs["loss"]
+        elif state["mode"] == "eval":
+            current_eval_loss = state["loss"]
             if current_eval_loss.size == 1:
                 current_eval_loss = current_eval_loss.ravel()[0]
             output_metric = {"val_loss": current_eval_loss}
@@ -161,17 +158,17 @@ class Accuracy(Trace):
         self.total = 0
         self.correct = 0
 
-    def on_epoch_begin(self, mode, logs):
-        if mode == "eval":
+    def on_epoch_begin(self, state):
+        if state["mode"] == "eval":
             self.total = 0
             self.correct = 0
 
-    def on_batch_end(self, mode, logs):
-        if mode == "eval":
-            groundtruth_label = np.array(logs["batch"][self.true_key])
+    def on_batch_end(self, state):
+        if state["mode"] == "eval":
+            groundtruth_label = np.array(state["batch"][self.true_key])
             if groundtruth_label.shape[-1] > 1 and len(groundtruth_label.shape) > 1:
                 groundtruth_label = np.argmax(groundtruth_label, axis=-1)
-            prediction_score = np.array(logs["prediction"][self.pred_key])
+            prediction_score = np.array(state["batch"][self.pred_key])
             binary_classification = prediction_score.shape[-1] == 1
             if binary_classification:
                 prediction_label = np.round(prediction_score)
@@ -181,8 +178,8 @@ class Accuracy(Trace):
             self.correct += np.sum(prediction_label.ravel() == groundtruth_label.ravel())
             self.total += len(prediction_label.ravel())
 
-    def on_epoch_end(self, mode, logs):
-        if mode == "eval":
+    def on_epoch_end(self, state):
+        if state["mode"] == "eval":
             return self.correct/self.total
         else:
             return None
@@ -200,16 +197,16 @@ class ConfusionMatrix(Trace):
         self.pred_key = pred_key
         self.num_classes = num_classes
 
-    def on_epoch_begin(self, mode, logs):
-        if mode == "eval":
+    def on_epoch_begin(self, state):
+        if state["mode"] == "eval":
             self.confusion = None
 
-    def on_batch_end(self, mode, logs):
-        if mode == "eval":
-            groundtruth_label = np.array(logs["batch"][self.true_key])
+    def on_batch_end(self, state):
+        if state["mode"] == "eval":
+            groundtruth_label = np.array(state["batch"][self.true_key])
             if groundtruth_label.shape[-1] > 1 and groundtruth_label.ndim > 1:
                 groundtruth_label = np.argmax(groundtruth_label, axis=-1)
-            prediction_score = np.array(logs["prediction"][self.pred_key])
+            prediction_score = np.array(state["batch"][self.pred_key])
             binary_classification = prediction_score.shape[-1] == 1
             if binary_classification:
                 prediction_label = np.round(prediction_score)
@@ -222,8 +219,8 @@ class ConfusionMatrix(Trace):
             else:
                 self.confusion += batch_confusion
 
-    def on_epoch_end(self, mode, logs):
-        if mode == "eval":
+    def on_epoch_end(self, state):
+        if state["mode"] == "eval":
             return self.confusion
         else:
             return None
@@ -246,21 +243,17 @@ class Precision(Trace):
         self.y_true = []
         self.y_pred = []
 
-    def on_epoch_begin(self, mode, logs):
-        if mode == "eval":
+    def on_epoch_begin(self, state):
+        if state["mode"] == "eval":
             self.y_true = []
             self.y_pred = []
 
-    def on_batch_end(self, mode, logs):
-        if mode == "eval":
-            groundtruth_label = np.array(logs["batch"][self.true_key])
+    def on_batch_end(self, state):
+        if state["mode"] == "eval":
+            groundtruth_label = np.array(state["batch"][self.true_key])
             if groundtruth_label.shape[-1] > 1 and len(groundtruth_label.shape) > 1:
                 groundtruth_label = np.argmax(groundtruth_label, axis=-1)
-            prediction = logs["prediction"]
-            if isinstance(prediction, dict):
-                prediction_score = np.array(prediction[self.pred_key])
-            else:
-                prediction_score = np.array(prediction)
+            prediction_score = np.array(state["batch"][self.pred_key])
             binary_classification = prediction_score.shape[-1] == 1
             if binary_classification:
                 prediction_label = np.round(prediction_score)
@@ -271,8 +264,8 @@ class Precision(Trace):
             self.y_pred.append(list(prediction_label.ravel()))
             self.y_true.append(list(groundtruth_label.ravel()))
 
-    def on_epoch_end(self, mode, logs):
-        if mode == "eval":
+    def on_epoch_end(self, state):
+        if state["mode"] == "eval":
             if self.average == 'auto' :
                 if self.binary_classification:
                     return precision_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label, average='binary', sample_weight=self.sample_weight)
@@ -300,21 +293,17 @@ class Recall(Trace):
         self.y_true = []
         self.y_pred = []
 
-    def on_epoch_begin(self, mode, logs):
-        if mode == "eval":
+    def on_epoch_begin(self, state):
+        if state["mode"] == "eval":
             self.y_true = []
             self.y_pred = []
     
-    def on_batch_end(self, mode, logs):
-        if mode == "eval":
-            groundtruth_label = np.array(logs["batch"][self.true_key])
+    def on_batch_end(self, state):
+        if state["mode"] == "eval":
+            groundtruth_label = np.array(state["batch"][self.true_key])
             if groundtruth_label.shape[-1] > 1 and len(groundtruth_label.shape) > 1:
                 groundtruth_label = np.argmax(groundtruth_label, axis=-1)
-            prediction = logs["prediction"]
-            if isinstance(prediction, dict):
-                prediction_score = np.array(prediction[self.pred_key])
-            else:
-                prediction_score = np.array(prediction)
+            prediction_score = np.array(state["batch"][self.pred_key])
             binary_classification = prediction_score.shape[-1] == 1
             if binary_classification:
                 prediction_label = np.round(prediction_score)
@@ -325,8 +314,8 @@ class Recall(Trace):
             self.y_pred.append(list(prediction_label.ravel()))
             self.y_true.append(list(groundtruth_label.ravel()))
 
-    def on_epoch_end(self, mode, logs):
-        if mode == "eval":
+    def on_epoch_end(self, state):
+        if state["mode"] == "eval":
             if self.average == 'auto' :
                 if self.binary_classification:
                     return recall_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label, average='binary', sample_weight=self.sample_weight)
@@ -354,21 +343,17 @@ class F1_score(Trace):
         self.y_true = []
         self.y_pred = []
 
-    def on_epoch_begin(self, mode, logs):
-        if mode == "eval":
+    def on_epoch_begin(self, state):
+        if state["mode"] == "eval":
             self.y_true = []
             self.y_pred = []
 
-    def on_batch_end(self, mode, logs):
-        if mode == "eval":
-            groundtruth_label = np.array(logs["batch"][self.true_key])
+    def on_batch_end(self, state):
+        if state["mode"] == "eval":
+            groundtruth_label = np.array(state["batch"][self.true_key])
             if groundtruth_label.shape[-1] > 1 and len(groundtruth_label.shape) > 1:
                 groundtruth_label = np.argmax(groundtruth_label, axis=-1)
-            prediction = logs["prediction"]
-            if isinstance(prediction, dict):
-                prediction_score = np.array(prediction[self.pred_key])
-            else:
-                prediction_score = np.array(prediction)
+            prediction_score = np.array(state["batch"][self.pred_key])
             binary_classification = prediction_score.shape[-1] == 1
             if binary_classification:
                 prediction_label = np.round(prediction_score)
@@ -379,8 +364,8 @@ class F1_score(Trace):
             self.y_pred.append(list(prediction_label.ravel()))
             self.y_true.append(list(groundtruth_label.ravel()))
 
-    def on_epoch_end(self, mode, logs):
-        if mode == "eval":
+    def on_epoch_end(self, state):
+        if state["mode"] == "eval":
             if self.average == 'auto' :
                 if self.binary_classification:
                     return f1_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label, average='binary', sample_weight=self.sample_weight)
@@ -406,20 +391,16 @@ class Dice(Trace):
         self.threshold = threshold
         self.dice = None
 
-    def on_epoch_begin(self, mode, logs):
-        if mode in ["eval"]:
+    def on_epoch_begin(self, state):
+        if state["mode"] == "eval":
             self.dice = None
 
-    def on_batch_end(self, mode, logs):
-        if mode in ["eval"]:
-            groundtruth_label = np.array(logs["batch"][self.true_key])
+    def on_batch_end(self, state):
+        if state["mode"] == "eval":
+            groundtruth_label = np.array(state["batch"][self.true_key])
             if groundtruth_label.shape[-1] > 1 and groundtruth_label.ndim > 1:
                 groundtruth_label = np.argmax(groundtruth_label, axis=-1)
-            prediction = logs["prediction"]
-            if isinstance(prediction, dict):
-                prediction_score = np.array(prediction[self.pred_key])
-            else:
-                prediction_score = np.array(prediction)
+            prediction_score = np.array(state["batch"][self.pred_key])
             prediction_label = (prediction_score >= self.threshold).astype(np.int)
             intersection = np.sum(groundtruth_label * prediction_label, axis=(1, 2, 3))
             area_sum = np.sum(groundtruth_label, axis=(1, 2, 3)) + np.sum(prediction_label, axis=(1, 2, 3))
@@ -429,7 +410,6 @@ class Dice(Trace):
             else:
                 self.dice = np.append(self.dice, dice, axis=0)
 
-    def on_epoch_end(self, mode, logs):
-        if mode in ["eval"]:
+    def on_epoch_end(self, state):
+        if state["mode"] == "eval":
             return np.mean(self.dice)
-        return None

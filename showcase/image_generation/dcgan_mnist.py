@@ -28,17 +28,17 @@ class g_loss(Loss):
     def __init__(self):
         self.cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 
-    def calculate_loss(self, batch, prediction, mode):
-        return self.cross_entropy(tf.ones_like(prediction["pred_fake"]), prediction["pred_fake"])
+    def calculate_loss(self, batch, state):
+        return self.cross_entropy(tf.ones_like(batch["pred_fake"]), batch["pred_fake"])
 
 
 class d_loss(Loss):
     def __init__(self):
         self.cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 
-    def calculate_loss(self, batch, prediction, mode):
-        real_loss = self.cross_entropy(tf.ones_like(prediction["pred_true"]), prediction["pred_true"])
-        fake_loss = self.cross_entropy(tf.zeros_like(prediction["pred_fake"]), prediction["pred_fake"])
+    def calculate_loss(self, batch, state):
+        real_loss = self.cross_entropy(tf.ones_like(batch["pred_true"]), batch["pred_true"])
+        fake_loss = self.cross_entropy(tf.zeros_like(batch["pred_fake"]), batch["pred_fake"])
         total_loss = real_loss + fake_loss
         return total_loss
 
@@ -85,7 +85,7 @@ class Myrescale(TensorOp):
 
 def get_estimator():
     # prepare data
-    (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.mnist.load_data()
+    (x_train, _), (x_eval, _) = tf.keras.datasets.mnist.load_data()
     data = {"train": {"x": np.expand_dims(x_train, -1)}, "eval": {"x": np.expand_dims(x_eval, -1)}}
     pipeline = Pipeline(batch_size=32,
                         data=data,

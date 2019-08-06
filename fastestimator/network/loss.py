@@ -19,13 +19,12 @@ class Loss:
     def __init__(self):
         pass
 
-    def calculate_loss(self, batch, prediction, mode):
+    def calculate_loss(self, batch, state):
         """this is the function that calculates the loss given the batch data
         
         Args:
-            batch (dict): batch data before forward operation
-            prediction(dict): prediction data after forward operation
-            mode: the current execution mode ("train" or "eval")
+            batch (dict): batch data after forward operation
+            state(dict): current running state, has key 'mode', 'epoch' and 'step'
         
         Returns:
             loss (scalar): scalar loss for the model update
@@ -46,8 +45,8 @@ class SparseCategoricalCrossentropy(Loss):
         self.pred_key = pred_key
         self.loss_obj = tf.losses.SparseCategoricalCrossentropy(**kwargs)
 
-    def calculate_loss(self, batch, prediction, mode):
-        loss = self.loss_obj(batch[self.true_key], prediction[self.pred_key])
+    def calculate_loss(self, batch, state):
+        loss = self.loss_obj(batch[self.true_key], batch[self.pred_key])
         return loss
 
 
@@ -70,11 +69,11 @@ class MixUpLoss(Loss):
         self.pred_key = pred_key
         self.lambda_key = lambda_key
 
-    def calculate_loss(self, batch, prediction, mode):
-        loss1 = self.loss_obj(batch[self.true_key], prediction[self.pred_key])
-        if mode != "train":
+    def calculate_loss(self, batch, state):
+        loss1 = self.loss_obj(batch[self.true_key], batch[self.pred_key])
+        if state["mode"] != "train":
             return loss1
-        lam = prediction[self.lambda_key]
-        loss2 = self.loss_obj(tf.roll(batch[self.true_key], shift=1, axis=0), prediction[self.pred_key])
+        lam = batch[self.lambda_key]
+        loss2 = self.loss_obj(tf.roll(batch[self.true_key], shift=1, axis=0), batch[self.pred_key])
         return lam * loss1 + (1.0 - lam) * loss2
 
