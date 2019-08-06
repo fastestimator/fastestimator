@@ -16,15 +16,15 @@ import json
 import re
 import string
 import subprocess
+import sys
+import time
 from ast import literal_eval
+from contextlib import ContextDecorator
 
 import PIL
 import numpy as np
 # noinspection PyPackageRequirements
 import tensorflow as tf
-import sys
-from contextlib import ContextDecorator
-import time
 
 
 def load_image(file_path, strip_alpha=False, channels=3):
@@ -286,6 +286,7 @@ class Timer(ContextDecorator):
     @Timer()
     def func(args)
     """
+
     def __init__(self, name="Task"):
         self.name = name
 
@@ -297,6 +298,7 @@ class Timer(ContextDecorator):
         self.end = time.time()
         self.interval = self.end - self.start
         tf.print("{} took {} seconds".format(self.name, self.interval))
+
 
 class NonContext(object):
     """
