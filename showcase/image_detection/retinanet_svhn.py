@@ -35,14 +35,12 @@ class String2List(NumpyOp):
             data[idx] = np.array([int(x) for x in elem[1:-1].split(',')])
         return data
 
-
 class RelativeCoordinate(NumpyOp):
     def forward(self, data):
         image, x1, y1, x2, y2 = data
         height, width = image.shape[0], image.shape[1]
         x1, y1, x2, y2 = x1 / width, y1 / height, x2 / width, y2 / height
         return x1, y1, x2, y2
-
 
 class GenerateTarget(NumpyOp):
     def __init__(self, inputs=None, outputs=None, mode=None):
@@ -55,7 +53,6 @@ class GenerateTarget(NumpyOp):
         label, x1, y1, x2, y2 = data
         target_cls, target_loc = get_target(self.anchorbox, label, x1, y1, x2, y2, num_classes=10)
         return target_cls, target_loc
-
 
 class RetinaLoss(Loss):
     def focal_loss(self, cls_gt, cls_pred, num_classes, alpha=0.25, gamma=2.0):
@@ -93,9 +90,9 @@ class RetinaLoss(Loss):
         smooth_l1_loss = tf.reduce_mean(smooth_l1_loss)
         return smooth_l1_loss
 
-    def calculate_loss(self, batch, prediction, mode):
+    def calculate_loss(self, batch, state):
         cls_gt, loc_gt = batch["target_cls"], batch["target_loc"]
-        cls_pred, loc_pred = prediction["pred_cls"], prediction["pred_loc"]
+        cls_pred, loc_pred = batch["pred_cls"], batch["pred_loc"]
         focal_loss, obj_idx = self.focal_loss(cls_gt, cls_pred, num_classes=10)
         smooth_l1_loss = self.smooth_l1(loc_gt, loc_pred, obj_idx)
         return 40000 * focal_loss + smooth_l1_loss
@@ -145,7 +142,6 @@ class PredictBox(TensorOp):
         loc_selected = tf.gather_nd(loc_pred, selected_anchors)
         cls_selected = tf.gather_nd(cls_best_class, selected_anchors)
         return cls_selected, loc_selected, valid_outputs
-
 
 def get_estimator():
     # prepare data in disk

@@ -15,6 +15,7 @@
 import numpy as np
 import tensorflow as tf
 from fastestimator.estimator.trace import Trace, TrainLogger
+from collections import ChainMap
 
 class Estimator:
     def __init__(self, pipeline, network, epochs, steps_per_epoch=None, validation_steps=None, traces=None, log_steps=100):
@@ -73,62 +74,66 @@ class Estimator:
         self.traces.insert(0, TrainLogger(log_steps=self.log_steps, num_process=self.num_gpu))
 
     def train(self):
-        self._run_traces_begin(mode="train")
+        self._run_traces_begin({"mode":"train"})
         for train_step, batch in enumerate(self.training_fn().take(self.steps_per_epoch * self.epochs)):
             if train_step % self.steps_per_epoch == 0:
                 self.epoch = train_step // self.steps_per_epoch
-                self._run_traces_on_epoch_begin(mode="train", logs={"epoch": self.epoch})
-            self._run_traces_on_batch_begin(mode="train", logs= {"epoch": self.epoch, "step": train_step, "size": self.pipeline.batch_size})
-            prediction, loss = self.forward_step(batch, mode="train", epoch=self.epoch)
-            self._run_traces_on_batch_end(mode="train", logs= {"epoch": self.epoch, "step": train_step, "size": self.pipeline.batch_size, "batch": batch, "prediction": prediction, "loss": loss})
+                self._run_traces_on_epoch_begin({"mode": "train", "epoch": self.epoch})
+            self._run_traces_on_batch_begin( {"mode": "train", "epoch": self.epoch, "step": train_step, "batch_size": self.pipeline.batch_size})
+            # prediction, loss = self.forward_step(batch, {"mode":"train", "epoch": self.epoch, "step": train_step})
+            prediction, loss = self.forward_step(batch, {"mode":"train"})
+            batch = ChainMap(prediction, batch)
+            self._run_traces_on_batch_end( {"mode":"train", "epoch": self.epoch, "step": train_step, "batch_size": self.pipeline.batch_size, "batch": batch, "loss": loss})
             if (train_step + 1) % self.steps_per_epoch == 0:
-                self._run_traces_on_epoch_end(mode="train", logs={"epoch": self.epoch})
+                self._run_traces_on_epoch_end({"mode":"train", "epoch": self.epoch})
                 if self.do_eval:
                     self.val()
-        self._run_traces_end(mode="train")
+        self._run_traces_end({"mode":"train"})
         print("FastEstimator: training finished!")
 
     def val(self):
-        self._run_traces_begin(mode="eval")
-        self._run_traces_on_epoch_begin(mode="eval", logs={"epoch": self.epoch})
+        self._run_traces_begin({"mode":"eval"})
+        self._run_traces_on_epoch_begin({"mode": "eval", "epoch": self.epoch})
         for eval_step, batch in enumerate(self.validation_fn().take(self.validation_steps)):
-            self._run_traces_on_batch_begin(mode="eval", logs= {"epoch": self.epoch, "step": eval_step, "size": self.pipeline.batch_size})
-            prediction, loss = self.forward_step(batch, mode="eval", epoch=self.epoch)
-            self._run_traces_on_batch_end(mode="eval", logs= {"epoch": self.epoch, "step": eval_step, "size": self.pipeline.batch_size, "batch": batch, "prediction": prediction, "loss": loss})
-        self._run_traces_on_epoch_end(mode="eval", logs={"epoch": self.epoch, "loss": np.mean(np.array(self.losses), axis=0)})
-        self._run_traces_end(mode="eval")
+            self._run_traces_on_batch_begin( {"mode": "eval", "epoch": self.epoch, "step": eval_step, "batch_size": self.pipeline.batch_size})
+            # prediction, loss = self.forward_step(batch, {"mode":"eval", "epoch": self.epoch, "step": eval_step})
+            prediction, loss = self.forward_step(batch, {"mode":"eval"})
+            batch = ChainMap(prediction, batch)
+            self._run_traces_on_batch_end( {"mode":"eval", "epoch": self.epoch, "step": eval_step, "batch_size": self.pipeline.batch_size, "batch": batch, "loss": loss})
+        self._run_traces_on_epoch_end({"mode":"eval", "epoch": self.epoch, "loss": np.mean(np.array(self.losses), axis=0)})
+        self._run_traces_end({"mode":"eval"})
 
-    def _run_traces_begin(self, mode):
+    def _run_traces_begin(self, state):
         for trace in self.traces:
-            trace.begin(mode)
+            trace.begin(state)
 
-    def _run_traces_on_epoch_begin(self, mode, logs):
+    def _run_traces_on_epoch_begin(self, state):
         self.losses = []
         for trace in self.traces:
-            trace.on_epoch_begin(mode, logs)
+            trace.on_epoch_begin(state)
 
-    def _run_traces_on_batch_begin(self, mode, logs):
+    def _run_traces_on_batch_begin(self, state):
         for trace in self.traces:
-            trace.on_batch_begin(mode, logs)
+            trace.on_batch_begin(state)
 
-    def _run_traces_on_batch_end(self, mode, logs):
-        self.losses.append(logs["loss"])
+    def _run_traces_on_batch_end(self, state):
+        self.losses.append(state["loss"])
         for trace in self.traces:
-            trace.on_batch_end(mode, logs)
+            trace.on_batch_end(state)
 
-    def _run_traces_on_epoch_end(self, mode, logs):
+    def _run_traces_on_epoch_end(self, state):
         output_list = []
         for trace in self.traces:
-            metric_output = trace.on_epoch_end(mode, logs)
-            if mode == "eval" and metric_output is not None:
+            metric_output = trace.on_epoch_end(state)
+            if state["mode"] == "eval" and metric_output is not None:
                 trace_name = type(trace).__name__
                 output_list.append((trace_name, metric_output))
-        if mode == "eval":
+        if state["mode"] == "eval":
             self._print_eval_message(output_list)
 
-    def _run_traces_end(self, mode):
+    def _run_traces_end(self, state):
         for trace in self.traces:
-            trace.end(mode)
+            trace.end(state)
 
     @staticmethod
     def _format_log_message(message, metric_name, metric_value):
@@ -150,6 +155,8 @@ class Estimator:
         print(log_message)
 
     @tf.function
-    def forward_step(self, batch, mode, epoch):
-        prediction, losses = self.network.run_step(batch, mode, epoch)
+    def forward_step(self, batch, state):
+        prediction = {}
+        batch = ChainMap(prediction, batch)
+        losses = self.network.run_step(batch, state)
         return prediction, losses
