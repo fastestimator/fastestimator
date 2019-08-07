@@ -12,3 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from fastestimator.visualization import caricature
+from fastestimator.visualization import layer_umap
+from fastestimator.visualization import parse_logs
+from fastestimator.visualization import saliency_masks

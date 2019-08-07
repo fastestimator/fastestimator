@@ -12,3 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from fastestimator.architecture import cyclegan
+from fastestimator.architecture.lenet import LeNet
+from fastestimator.architecture import retinanet
+from fastestimator.architecture.unet import UNet
