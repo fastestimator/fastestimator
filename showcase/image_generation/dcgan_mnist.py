@@ -45,7 +45,7 @@ class d_loss(Loss):
 
 def make_generator_model():
     model = tf.keras.Sequential()
-    model.add(layers.Dense(7 * 7 * 256, use_bias=False, input_shape=(100,)))
+    model.add(layers.Dense(7 * 7 * 256, use_bias=False, input_shape=(100, )))
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
     model.add(layers.Reshape((7, 7, 256)))
@@ -87,17 +87,15 @@ def get_estimator():
     # prepare data
     (x_train, _), (x_eval, _) = tf.keras.datasets.mnist.load_data()
     data = {"train": {"x": np.expand_dims(x_train, -1)}, "eval": {"x": np.expand_dims(x_eval, -1)}}
-    pipeline = Pipeline(batch_size=32,
-                        data=data,
-                        ops=Myrescale(inputs="x", outputs="x"))
+    pipeline = Pipeline(batch_size=32, data=data, ops=Myrescale(inputs="x", outputs="x"))
     # prepare model
     g = build(keras_model=make_generator_model(), loss=g_loss(), optimizer=tf.optimizers.Adam(1e-4))
     d = build(keras_model=make_discriminator_model(), loss=d_loss(), optimizer=tf.optimizers.Adam(1e-4))
-    network = Network(
-        ops=[ModelOp(inputs=lambda: tf.random.normal([32, 100]), model=g), ModelOp(model=d, outputs="pred_fake"),
-             ModelOp(inputs="x", model=d, outputs="pred_true")])
+    network = Network(ops=[
+        ModelOp(inputs=lambda: tf.random.normal([32, 100]), model=g),
+        ModelOp(model=d, outputs="pred_fake"),
+        ModelOp(inputs="x", model=d, outputs="pred_true")
+    ])
     # prepare estimator
-    estimator = Estimator(network=network,
-                          pipeline=pipeline,
-                          epochs=2)
+    estimator = Estimator(network=network, pipeline=pipeline, epochs=2)
     return estimator

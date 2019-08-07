@@ -21,7 +21,6 @@ EPSILON = 1e-7
 
 class TensorFilter(TensorOp):
     """An abstract class for data filter."""
-
     def __init__(self, inputs=None, outputs=None, mode="train"):
         super(TensorFilter, self).__init__(inputs=inputs, outputs=outputs, mode=mode)
 
@@ -38,7 +37,6 @@ class ScalarFilter(TensorFilter):
         keep_prob: The probability of keeping the example
         mode: mode that the filter acts on
     """
-
     def __init__(self, inputs, filter_value, keep_prob, mode="train", outputs=None):
         super(ScalarFilter, self).__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.filter_value = filter_value
@@ -72,7 +70,6 @@ class Binarize(TensorOp):
     Args:
         threshold: Threshold for binarizing
     """
-
     def __init__(self, threshold, inputs=None, outputs=None, mode=None):
         super(Binarize, self).__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.thresh = threshold
@@ -97,7 +94,6 @@ class Zscore(TensorOp):
     """
     Standardize data using zscore method
     """
-
     def forward(self, data, state):
         """
         Standardizes the data tensor
@@ -112,9 +108,7 @@ class Zscore(TensorOp):
         data = tf.cast(data, tf.float32)
         mean = tf.reduce_mean(data)
         std = tf.keras.backend.std(data)
-        data = tf.math.divide(
-            tf.subtract(data, mean),
-            tf.maximum(std, EPSILON))
+        data = tf.math.divide(tf.subtract(data, mean), tf.maximum(std, EPSILON))
         data = tf.cast(data, tf.float32)
         return data
 
@@ -123,7 +117,6 @@ class Minmax(TensorOp):
     """
     Normalize data using the minmax method
     """
-
     def forward(self, data, state):
         """
         Normalizes the data tensor
@@ -136,10 +129,8 @@ class Minmax(TensorOp):
             Tensor after minmax
         """
         data = tf.cast(data, tf.float32)
-        data = tf.math.divide(
-            tf.subtract(data, tf.reduce_min(data)),
-            tf.maximum(
-                tf.subtract(tf.reduce_max(data), tf.reduce_min(data)), EPSILON))
+        data = tf.math.divide(tf.subtract(data, tf.reduce_min(data)),
+                              tf.maximum(tf.subtract(tf.reduce_max(data), tf.reduce_min(data)), EPSILON))
         return data
 
 
@@ -150,7 +141,6 @@ class Scale(TensorOp):
     Args:
         scalar: Scalar for scaling the data
     """
-
     def __init__(self, scalar, inputs=None, outputs=None, mode=None):
         super(Scale, self).__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.scalar = scalar
@@ -178,7 +168,6 @@ class Onehot(TensorOp):
     Args:
         num_dim: Number of dimensions of the labels
     """
-
     def __init__(self, num_dim, inputs=None, outputs=None, mode=None):
         super(Onehot, self).__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.num_dim = num_dim
@@ -207,7 +196,6 @@ class Resize(TensorOp):
         size: Destination shape of the images
         resize_method: One of resize methods provided by tensorflow to be used
     """
-
     def __init__(self, size, resize_method=tf.image.ResizeMethod.BILINEAR, inputs=None, outputs=None, mode=None):
         super(Resize, self).__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.size = size
@@ -235,7 +223,6 @@ class Reshape(TensorOp):
     Args:
         shape: target shape
     """
-
     def __init__(self, shape, inputs=None, outputs=None, mode=None):
         super(Reshape, self).__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.shape = shape

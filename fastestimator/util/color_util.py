@@ -16,9 +16,11 @@ import numpy as np
 import tensorflow as tf
 
 # Empirical (ImageNet) color correlation matrix, from https://github.com/tensorflow/lucid
+# yapf: disable
 color_correlation_svd_sqrt = np.asarray([[0.26, 0.09, 0.02],
                                          [0.27, 0.00, -0.05],
                                          [0.27, -0.09, 0.03]]).astype("float32")
+# yapf: enable
 max_norm_svd_sqrt = np.max(np.linalg.norm(color_correlation_svd_sqrt, axis=0))
 color_correlation_normalized = color_correlation_svd_sqrt / max_norm_svd_sqrt
 color_correlation_normalized_transpose = color_correlation_normalized.T

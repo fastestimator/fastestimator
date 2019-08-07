@@ -18,19 +18,20 @@ import os
 import tempfile
 
 import tensorflow as tf
+from fastestimator.pipeline.dynamic.preprocess import AbstractPreprocessing, ImageReader, MatReader, Resize
+from fastestimator.pipeline.static.preprocess import Minmax, Reshape
 
 from fastestimator.architecture.unet import unet
 from fastestimator.dataset import cub200
 from fastestimator.estimator.estimator import Estimator
 from fastestimator.estimator.trace import Dice
-from fastestimator.pipeline.dynamic.preprocess import AbstractPreprocessing, ImageReader, MatReader, Resize
 from fastestimator.pipeline.pipeline import Pipeline
-from fastestimator.pipeline.static.preprocess import Minmax, Reshape
 
 DATA_SAVE_PATH = os.path.join(tempfile.gettempdir(), 'CUB200')
 
 # Download CUB200 dataset.
 csv_path, path = cub200.load_data(path=DATA_SAVE_PATH)
+
 
 class Network:
     """Load U-Net and define train and eval ops.
@@ -85,24 +86,16 @@ def get_estimator():
         Estimator object.
     """
     pipeline = Pipeline(
-        batch_size=64,
-        feature_name=["image", "annotation"],
-        train_data=csv_path,
-        validation_data=0.2,
-        transform_dataset=[
-            [ImageReader(parent_path=path),
-             Resize((128, 128), keep_ratio=True)],
-            [MatReader(parent_path=path), SelectKey(), Resize((128, 128), keep_ratio=True)]
-        ],
-        transform_train=[[Reshape((128, 128, 3)), Minmax()], [Reshape((128, 128, 1))]])
+        batch_size=64, feature_name=["image", "annotation"], train_data=csv_path, validation_data=0.2,
+        transform_dataset=[[ImageReader(parent_path=path),
+                            Resize((128, 128), keep_ratio=True)],
+                           [MatReader(parent_path=path),
+                            SelectKey(), Resize(
+                                (128, 128), keep_ratio=True)]], transform_train=[[Reshape((128, 128, 3)),
+                                                                                  Minmax()], [Reshape((128, 128, 1))]])
 
     traces = [Dice(y_true_key="annotation")]
 
-    estimator = Estimator(network=Network(),
-                          pipeline=pipeline,
-                          epochs=400,
-                          steps_per_epoch=10,
-                          validation_steps=1,
-                          log_steps=10,
-                          traces=traces)
+    estimator = Estimator(network=Network(), pipeline=pipeline, epochs=400, steps_per_epoch=10, validation_steps=1,
+                          log_steps=10, traces=traces)
     return estimator
