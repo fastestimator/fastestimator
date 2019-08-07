@@ -56,14 +56,13 @@ class Network:
 
     def _forward(self, batch, state):
         mode = state["mode"]
+        data = None
         for op in self.mode_ops[mode]:
             if op.inputs:
                 if hasattr(op.inputs, "__call__"):
                     data = op.inputs()
                 else:
                     data = self._get_inputs_from_key(batch, op.inputs)
-            else:
-                data = None
             data = op.forward(data, state)
             if op.outputs:
                 self._write_outputs_to_key(data, batch, op.outputs)
