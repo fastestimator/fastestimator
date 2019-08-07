@@ -18,7 +18,7 @@ from tensorflow.keras.layers import Conv2D, Dropout, Input, MaxPooling2D, UpSamp
 from tensorflow.keras.models import Model
 
 
-def unet(input_name, output_name, input_size=(128, 128, 3)):
+def UNet(input_name, output_name, input_size=(128, 128, 3)):
     """U-Net model.
 
     Args:

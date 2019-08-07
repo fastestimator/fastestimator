@@ -19,7 +19,7 @@ import time
 import numpy as np
 import tensorflow as tf
 from fastestimator.util.op import flatten_operation, get_op_from_mode, verify_ops
-from fastestimator.pipeline.filter import TensorFilter
+from fastestimator.pipeline.processing import TensorFilter
 from fastestimator.util.tfrecord import get_features
 from fastestimator.util.util import convert_tf_dtype
 from fastestimator.record.record import RecordWriter
@@ -227,7 +227,7 @@ class Pipeline:
         dataset = dataset.map(lambda dataset: self._preprocess_fn(dataset, ops), num_parallel_calls=self.num_core)
         if num_filters > 0:
             for idx in range(num_filters):
-                dataset = dataset.filter(lambda dataset: self.mode_filter_ops[mode][idx].filter_fn(dataset))
+                dataset = dataset.filter(lambda dataset: self.mode_filter_ops[mode][idx].forward(dataset))
                 ops = self.mode_forward_ops[mode][idx+1]
                 if len(ops) > 0:
                     dataset = dataset.map(lambda dataset: self._preprocess_fn(dataset, ops), num_parallel_calls=self.num_core)

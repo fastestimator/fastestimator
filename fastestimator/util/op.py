@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.pipeline.filter import TensorFilter
 from itertools import chain
 
 
@@ -58,9 +57,7 @@ def get_op_from_mode(ops, current_mode):
 
 
 def verify_ops(ops, class_name):
-    inheritage = {"RecordWriter": NumpyOp,
-                  "Pipeline": (TensorOp, TensorFilter),
-                  "Network": TensorOp}
+    inheritage = {"RecordWriter": NumpyOp, "Pipeline": TensorOp, "Network": TensorOp}
     inheritage_class = inheritage[class_name]
     assert ops[0].inputs, "must provide inputs for the operation '{}' in '{}'".format(type(ops[0]).__name__, class_name)
     assert ops[-1].outputs, "must provide outputs for the operation '{}' in '{}'".format(type(ops[-1]).__name__, class_name)
