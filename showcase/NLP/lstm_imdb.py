@@ -12,16 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.pipeline.static.preprocess import Reshape
-from fastestimator.estimator.estimator import Estimator
-from fastestimator.pipeline.pipeline import Pipeline
-from fastestimator.estimator.trace import Accuracy
-from tensorflow.keras import layers
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
+from fastestimator.pipeline.static.preprocess import Reshape
+from tensorflow.keras import layers
+
+from fastestimator.estimator.estimator import Estimator
+from fastestimator.estimator.trace import Accuracy
+from fastestimator.pipeline.pipeline import Pipeline
 
 MAX_WORDS = 1000
 MAX_LEN = 150
+
 
 class Network:
     def __init__(self):
@@ -52,25 +54,25 @@ class Network:
         model.add(layers.Dense(1, activation="sigmoid"))
         return model
 
+
 def pad(list, padding_size, padding_value):
-    return list + [padding_value] * abs((len(list)-padding_size))
+    return list + [padding_value] * abs((len(list) - padding_size))
+
 
 def get_estimator(epochs=10, batch_size=64, optimizer="adam"):
-
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.imdb.load_data(maxlen=300, num_words=MAX_WORDS)
     x_train = np.array([pad(x, 300, 0) for x in x_train])
     x_eval = np.array([pad(x, 300, 0) for x in x_eval])
 
-    pipeline = Pipeline(batch_size=batch_size,
-                        feature_name=["x", "y"],
-                        train_data={"x": x_train, "y": y_train},
-                        validation_data={"x": x_eval, "y": y_eval},
-                        transform_train= [[], [Reshape([1])]])
+    pipeline = Pipeline(batch_size=batch_size, feature_name=["x", "y"], train_data={
+        "x": x_train,
+        "y": y_train
+    }, validation_data={
+        "x": x_eval,
+        "y": y_eval
+    }, transform_train=[[], [Reshape([1])]])
 
     traces = [Accuracy(y_true_key="y")]
 
-    estimator = Estimator(network= Network(),
-                          pipeline=pipeline,
-                          epochs= epochs,
-                          traces= traces)
+    estimator = Estimator(network=Network(), pipeline=pipeline, epochs=epochs, traces=traces)
     return estimator

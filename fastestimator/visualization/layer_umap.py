@@ -37,11 +37,11 @@ assert Axes3D  # Axes3D is used to enable projection='3d', but will show up as u
 def map_classes_to_colors(classifications):
     classes = set(classifications)
     num_classes = len(classes)
-    colors = sns.hls_palette(n_colors=num_classes, s=0.95) if num_classes > 10 else sns.color_palette(
-        "colorblind")
+    colors = sns.hls_palette(n_colors=num_classes, s=0.95) if num_classes > 10 else sns.color_palette("colorblind")
     class_to_color = {clazz: idx for idx, clazz in enumerate(classes)}
-    return [colors[class_to_color[clazz]] for clazz in classifications], {clazz: colors[class_to_color[clazz]] for clazz
-                                                                          in classes}
+    return [colors[class_to_color[clazz]]
+            for clazz in classifications], {clazz: colors[class_to_color[clazz]]
+                                            for clazz in classes}
 
 
 def draw_umaps(layer_outputs, classifications, dictionary=None, layers=None, layer_ids=None, save=False, save_path='.',
@@ -95,9 +95,10 @@ def draw_umaps(layer_outputs, classifications, dictionary=None, layers=None, lay
     plt.tight_layout()
 
     if legend_mode != 'off':
-        legend_elements = [Line2D([0], [0], marker='o', color='w', markerfacecolor=color_map[clazz],
-                                  label=clazz if dictionary is None else dictionary[clazz],
-                                  markersize=7) for clazz in color_map]
+        legend_elements = [
+            Line2D([0], [0], marker='o', color='w', markerfacecolor=color_map[clazz],
+                   label=clazz if dictionary is None else dictionary[clazz], markersize=7) for clazz in color_map
+        ]
         if legend_mode == 'shared' and num_rows > 1:
             if last_column_idx == num_cols - 1:
                 fig.subplots_adjust(bottom=0.15)
@@ -152,15 +153,18 @@ class FileCache(object):
     def save(self, data, classes):
         if len(data) != self.num_layers:
             raise IndexError("Inconsistent Layer Count Detected")
-        [np.save(os.path.join(self.root_path, "layer{}-batch{}.npy".format(self.layers[layer], self.idx)), data[layer])
-         for layer in range(self.num_layers)]
+        [
+            np.save(os.path.join(self.root_path, "layer{}-batch{}.npy".format(self.layers[layer], self.idx)),
+                    data[layer]) for layer in range(self.num_layers)
+        ]
         np.save(os.path.join(self.root_path, "class{}.npy".format(self.idx)), classes)
         self.idx += 1
 
     def batch_cached(self, batch_id):
-        return os.path.isfile(os.path.join(self.root_path, "class{}.npy".format(batch_id))) and all(
-            [os.path.isfile(os.path.join(self.root_path, "layer{}-batch{}.npy".format(self.layers[layer], batch_id)))
-             for layer in range(self.num_layers)])
+        return os.path.isfile(os.path.join(self.root_path, "class{}.npy".format(batch_id))) and all([
+            os.path.isfile(os.path.join(self.root_path, "layer{}-batch{}.npy".format(self.layers[layer], batch_id)))
+            for layer in range(self.num_layers)
+        ])
 
     def load_and_transform(self, batches=None):
         if batches is None:
@@ -188,9 +192,9 @@ class FileCache(object):
         return data, classes
 
 
-def umap_layers(model_path, input_root_path, print_layers=False, strip_alpha=False, layers=None,
-                input_extension=None, batch=10, use_cache=True, cache_dir=None, dictionary_path=None, save=False,
-                save_dir=None, legend_mode='shared', umap_parameters=None):
+def umap_layers(model_path, input_root_path, print_layers=False, strip_alpha=False, layers=None, input_extension=None,
+                batch=10, use_cache=True, cache_dir=None, dictionary_path=None, save=False, save_dir=None,
+                legend_mode='shared', umap_parameters=None):
     if umap_parameters is None:
         umap_parameters = {}
     if save_dir is None:
@@ -236,4 +240,4 @@ def umap_layers(model_path, input_root_path, print_layers=False, strip_alpha=Fal
         with Suppressor():  # Silence a bunch of numba warnings
             layer_outputs = [fit.fit_transform(layer) for layer in layer_outputs]
     draw_umaps(layer_outputs, classes, layer_ids=layers, layers=network.layers, save=save, save_path=save_dir,
-               dictionary=load_dict(dictionary_path, True),  legend_mode=legend_mode)
+               dictionary=load_dict(dictionary_path, True), legend_mode=legend_mode)

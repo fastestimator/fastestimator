@@ -51,8 +51,10 @@ def load_data(path=None):
             print('All files exist, using existing {}.'.format(csv_path))
             return csv_path, path
 
-    url = {'image': 'http://www.vision.caltech.edu/visipedia-data/CUB-200/images.tgz',
-           'annotation': 'http://www.vision.caltech.edu/visipedia-data/CUB-200/annotations.tgz'}
+    url = {
+        'image': 'http://www.vision.caltech.edu/visipedia-data/CUB-200/images.tgz',
+        'annotation': 'http://www.vision.caltech.edu/visipedia-data/CUB-200/annotations.tgz'
+    }
 
     img_path = os.path.join(path, 'images.tgz')
     anno_path = os.path.join(path, 'annotations.tgz')

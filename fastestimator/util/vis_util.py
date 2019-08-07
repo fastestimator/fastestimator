@@ -34,8 +34,7 @@ def show_text(axis, background, text, title=None):
 
     axis.axis('off')
     axis.imshow(background, cmap=plt.get_cmap(name="Greys_r"), vmin=0, vmax=1)
-    axis.text(0.5, 0.5, text,
-              ha='center', va='center', transform=axis.transAxes, wrap=False, family='monospace')
+    axis.text(0.5, 0.5, text, ha='center', va='center', transform=axis.transAxes, wrap=False, family='monospace')
     if title is not None:
         axis.set_title(title)
 
@@ -170,7 +169,7 @@ def rfft2d_freqs(h, w):
     fy = np.fft.fftfreq(h)[:, None]
     # when we have an odd input dimension we need to keep one additional
     # frequency and later cut off 1 pixel
-    fx = np.fft.fftfreq(w)[: w // 2 + 1 + w % 2]
+    fx = np.fft.fftfreq(w)[:w // 2 + 1 + w % 2]
     return np.sqrt(fx * fx + fy * fy)
 
 

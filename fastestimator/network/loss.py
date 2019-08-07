@@ -35,12 +35,14 @@ class Loss:
 
 class SparseCategoricalCrossentropy(Loss):
     def __init__(self, true_key, pred_key, **kwargs):
-        """Calculate sparse categorical cross entropy, the rest of the keyword argument will be passed to tf.losses.SparseCategoricalCrossentropy
+        """Calculate sparse categorical cross entropy, the rest of the keyword argument will be passed to 
+           tf.losses.SparseCategoricalCrossentropy
         
         Args:
             true_key (str): the key of ground truth label in batch data
             pred_key (str): the key of predicted label in batch data
         """
+        super(SparseCategoricalCrossentropy, self).__init__()
         self.true_key = true_key
         self.pred_key = pred_key
         self.loss_obj = tf.losses.SparseCategoricalCrossentropy(**kwargs)
@@ -77,4 +79,3 @@ class MixUpLoss(Loss):
             return loss1
         loss2 = self.loss_obj(tf.roll(batch[self.true_key], shift=1, axis=0), batch[self.pred_key])
         return lam * loss1 + (1.0 - lam) * loss2
-

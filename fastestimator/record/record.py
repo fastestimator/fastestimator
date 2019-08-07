@@ -22,8 +22,10 @@ import json
 import time
 import os
 
+
 class RecordWriter:
-    def __init__(self, train_data, validation_data=None, ops=None, write_feature=None, expand_dims=False, max_record_size_mb=300, compression=None):
+    def __init__(self, train_data, validation_data=None, ops=None, write_feature=None, expand_dims=False,
+                 max_record_size_mb=300, compression=None):
         self.train_data = train_data
         self.validation_data = validation_data
         self.ops = ops
@@ -42,7 +44,8 @@ class RecordWriter:
         if any(isinstance(inp, tuple) for inp in [self.train_data, self.validation_data, self.ops, self.write_feature]):
             num_unpaired_feature_sets = [len(self.train_data)]
             if self.validation_data:
-                assert isinstance(self.validation_data, tuple), "validation data must be tuple when creating unpaired feature set"
+                assert isinstance(self.validation_data,
+                                  tuple), "validation data must be tuple when creating unpaired feature set"
                 num_unpaired_feature_sets.append(len(self.validation_data))
             else:
                 self.validation_data = [None] * len(self.train_data)
@@ -52,20 +55,28 @@ class RecordWriter:
             else:
                 self.ops = [None] * len(self.train_data)
             if self.write_feature:
-                assert isinstance(self.write_feature, tuple), "write_feature must be tuple when creating unpaired feature set"
+                assert isinstance(self.write_feature,
+                                  tuple), "write_feature must be tuple when creating unpaired feature set"
                 num_unpaired_feature_sets.append((len(self.write_feature)))
             else:
                 self.write_feature = [None] * len(self.train_data)
-            assert len(set(num_unpaired_feature_sets)) == 1, "tuple length should be consistent when creating unpaired feature set"
-            self.train_data, self.validation_data, self.ops, self.write_feature = list(self.train_data), list(self.validation_data), list(self.ops), list(self.write_feature)
+            assert len(set(
+                num_unpaired_feature_sets)) == 1, "tuple length should be consistent when creating unpaired feature set"
+            self.train_data, self.validation_data, self.ops, self.write_feature = list(self.train_data), list(
+                self.validation_data), list(self.ops), list(self.write_feature)
         else:
-            self.train_data, self.validation_data, self.ops, self.write_feature = [self.train_data], [self.validation_data], [self.ops], [self.write_feature]
+            self.train_data, self.validation_data, self.ops, self.write_feature = [self.train_data], [
+                self.validation_data
+            ], [self.ops], [self.write_feature]
         for idx in range(len(self.train_data)):
-            assert type(self.train_data[idx]) is dict or self.train_data[idx].endswith(".csv"), "train data should either be a dictionary or a csv path"
+            assert type(self.train_data[idx]) is dict or self.train_data[idx].endswith(
+                ".csv"), "train data should either be a dictionary or a csv path"
             if self.validation_data[idx]:
-                assert type(self.validation_data[idx]) in [dict, float] or self.validation_data[idx].endswith(".csv"), "validation data supports partition ratio (float), csv file or dictionary"
+                assert type(self.validation_data[idx]) in [dict, float] or self.validation_data[idx].endswith(
+                    ".csv"), "validation data supports partition ratio (float), csv file or dictionary"
             if self.write_feature[idx]:
-                assert isinstance(self.write_feature[idx], (list, dict)), "write_feature must be either list or dictionary"
+                assert isinstance(self.write_feature[idx],
+                                  (list, dict)), "write_feature must be either list or dictionary"
             if self.ops[idx]:
                 self.ops[idx] = flatten_operation(self.ops[idx])
 
@@ -80,10 +91,11 @@ class RecordWriter:
 
     def create_tfrecord(self, save_dir):
         self._prepare_savepath(save_dir)
-        for train_data, validation_data, write_feature, ops in zip(self.train_data, self.validation_data, self.write_feature, self.ops):
+        for train_data, validation_data, write_feature, ops in zip(self.train_data, self.validation_data,
+                                                                   self.write_feature, self.ops):
             self._create_record_local(train_data, validation_data, write_feature, ops)
             self.feature_set_idx += 1
-        
+
     def _create_record_local(self, train_data, validation_data, write_feature, ops):
         self.num_example_csv, self.num_example_record, self.mb_per_csv_example, self.mb_per_record_example = {}, {}, {}, {}
         self.mode_ops, self.feature_name, self.feature_dtype, self.feature_shape = {}, {}, {}, {}
@@ -108,7 +120,9 @@ class RecordWriter:
         else:
             self.feature_name[mode] = self.write_feature_local
         self.global_feature_key[mode].extend(self.feature_name[mode])
-        assert len(set(self.global_feature_key[mode])) == len(self.global_feature_key[mode]), "found duplicate key in feature name during {}: {}".format(mode, self.global_feature_key[mode])
+        assert len(set(self.global_feature_key[mode])) == len(
+            self.global_feature_key[mode]), "found duplicate key in feature name during {}: {}".format(
+                mode, self.global_feature_key[mode])
         self.mb_per_csv_example[mode] = 0
         self.mb_per_record_example[mode] = 0
         self.feature_dtype[mode] = {}
@@ -118,7 +132,7 @@ class RecordWriter:
             self.mb_per_csv_example[mode] += data.nbytes / 1e6
             if self.expand_dims:
                 data = data[0]
-            self.mb_per_record_example[mode] += data.nbytes /1e6
+            self.mb_per_record_example[mode] += data.nbytes / 1e6
             dtype = str(data.dtype)
             if "<U" in dtype:
                 dtype = "str"
@@ -136,7 +150,9 @@ class RecordWriter:
         processes = []
         queue_example = mp.Queue()
         queue_shape = mp.Queue()
-        num_files_process = int(np.ceil(self.num_example_csv[mode] * self.mb_per_csv_example[mode] / self.max_record_size_mb / self.num_process))
+        num_files_process = int(
+            np.ceil(self.num_example_csv[mode] * self.mb_per_csv_example[mode] / self.max_record_size_mb /
+                    self.num_process))
         num_example_process_remain = self.num_example_csv[mode] % self.num_process
         serial_start = 0
         file_idx_start = 0
@@ -146,7 +162,10 @@ class RecordWriter:
             else:
                 num_example_process = self.num_example_csv[mode] // self.num_process
             serial_end = serial_start + num_example_process
-            processes.append(mp.Process(target=self._write_tfrecord_serial, args=(dictionary, serial_start, serial_end, num_files_process, file_idx_start, mode, queue_example, queue_shape)))
+            processes.append(
+                mp.Process(
+                    target=self._write_tfrecord_serial, args=(dictionary, serial_start, serial_end, num_files_process,
+                                                              file_idx_start, mode, queue_example, queue_shape)))
             serial_start += num_example_process
             file_idx_start += num_files_process
         for p in processes:
@@ -167,7 +186,8 @@ class RecordWriter:
                     feature_shape[key] = [-1]
         self.feature_shape[mode] = feature_shape
 
-    def _write_tfrecord_serial(self, dictionary, serial_start, serial_end, num_files_process, file_idx_start, mode, queue_example, queue_shape):
+    def _write_tfrecord_serial(self, dictionary, serial_start, serial_end, num_files_process, file_idx_start, mode,
+                               queue_example, queue_shape):
         num_example_list = []
         num_csv_example_per_file = (serial_end - serial_start) // num_files_process
         show_progress = serial_start == 0
@@ -178,17 +198,20 @@ class RecordWriter:
             filename = mode + str(file_idx) + ".tfrecord"
             if i == (num_files_process - 1):
                 file_end = serial_end
-            num_example_list.append(self._write_single_file(dictionary, filename, file_start, file_end, serial_start, serial_end, show_progress, mode))
+            num_example_list.append(
+                self._write_single_file(dictionary, filename, file_start, file_end, serial_start, serial_end,
+                                        show_progress, mode))
             file_start += num_csv_example_per_file
             file_end += num_csv_example_per_file
         queue_example.put(num_example_list)
         queue_shape.put(self.feature_shape[mode])
 
-    def _write_single_file(self, dictionary, filename, file_start, file_end, serial_start, serial_end, show_progress, mode):
+    def _write_single_file(self, dictionary, filename, file_start, file_end, serial_start, serial_end, show_progress,
+                           mode):
         goal_number = serial_end - serial_start
         logging_interval = max(goal_number // 20, 1)
         num_example = 0
-        with tf.io.TFRecordWriter(os.path.join(self.save_dir, filename), options= self.compression_option) as writer:
+        with tf.io.TFRecordWriter(os.path.join(self.save_dir, filename), options=self.compression_option) as writer:
             for i in range(file_start, file_end):
                 if i == file_start and show_progress:
                     time_start = time.time()
@@ -197,8 +220,9 @@ class RecordWriter:
                     if i == 0:
                         record_per_sec = 0.0
                     else:
-                        record_per_sec = (num_example - example_start) * self.num_process/(time.time() - time_start)
-                    print("FastEstimator: Converting %s TFRecords %.1f%%, Speed: %.2f record/sec" % (mode.capitalize(), (i - serial_start)/goal_number*100, record_per_sec))
+                        record_per_sec = (num_example - example_start) * self.num_process / (time.time() - time_start)
+                    print("FastEstimator: Converting %s TFRecords %.1f%%, Speed: %.2f record/sec" %
+                          (mode.capitalize(), (i - serial_start) / goal_number * 100, record_per_sec))
                 feature = self._transform_one_slice(dictionary, i, mode=mode)
                 if self.expand_dims:
                     num_patches = self._verify_dict(feature, mode)
@@ -224,10 +248,14 @@ class RecordWriter:
             expected_shape = self.feature_shape[mode][key]
             assert data.size > 0, "found empty data on feature '{}'".format(key)
             if len(expected_shape) > 1:
-                assert expected_shape == data.shape, "inconsistent shape on same feature `{}` among different examples, expected `{}`, found `{}`".format(key, expected_shape, data.shape)
+                assert expected_shape == data.shape, "inconsistent shape on same feature `{}` among different examples, expected `{}`, found `{}`".format(
+                    key, expected_shape, data.shape)
             else:
                 if data.size > 1:
-                    assert max(data.shape) == np.prod(data.shape), "inconsistent shape on same feature `{}` among different examples, expected 0 or 1 dimensional array, found `{}`".format(key, expected_shape, data.shape)
+                    assert max(data.shape) == np.prod(
+                        data.shape
+                    ), "inconsistent shape on same feature `{}` among different examples, expected 0 or 1 dimensional array, found `{}`".format(
+                        key, expected_shape, data.shape)
                     if expected_shape == []:
                         self.feature_shape[mode][key] = [-1]
             feature_tfrecord[key] = self._bytes_feature(data.tostring())
@@ -322,7 +350,8 @@ class RecordWriter:
     def _prepare_savepath(self, save_dir):
         self.save_dir = save_dir
         if os.path.exists(self.save_dir):
-            assert len(os.listdir(self.save_dir) ) == 0, "Cannot save to {} because the direcotry is not empty".format(self.save_dir)
+            assert len(os.listdir(self.save_dir)) == 0, "Cannot save to {} because the direcotry is not empty".format(
+                self.save_dir)
         else:
             os.makedirs(self.save_dir)
         print("FastEstimator: Saving tfrecord to %s" % self.save_dir)

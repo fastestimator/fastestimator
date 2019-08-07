@@ -48,8 +48,8 @@ class PathLoader(object):
         path_pairs = []
         for root, dirs, files in os.walk(self.root_path):
             for file_name in files:
-                if file_name.startswith(".") or (
-                        self.input_extension is not None and not file_name.endswith(self.input_extension)):
+                if file_name.startswith(".") or (self.input_extension is not None
+                                                 and not file_name.endswith(self.input_extension)):
                     continue
                 path_pairs.append((os.path.join(root, file_name), os.path.basename(root)))
             if not self.recursive_search:
@@ -82,11 +82,13 @@ class ImageLoader(PathLoader):
 
     def __next__(self):
         paths = super(ImageLoader, self).__next__()
-        inputs = [load_image(paths[i][0], strip_alpha=self.strip_alpha, channels=self.n_channels) for i in
-                  range(len(paths))]
-        batch_inputs = tf.stack([tf.image.resize_with_crop_or_pad(tf.convert_to_tensor(im, dtype=self.input_type),
-                                                                  self.input_shape[1], self.input_shape[2]) for im in
-                                 inputs], axis=0)
+        inputs = [
+            load_image(paths[i][0], strip_alpha=self.strip_alpha, channels=self.n_channels) for i in range(len(paths))
+        ]
+        batch_inputs = tf.stack([
+            tf.image.resize_with_crop_or_pad(tf.convert_to_tensor(im, dtype=self.input_type), self.input_shape[1],
+                                             self.input_shape[2]) for im in inputs
+        ], axis=0)
 
         batch_classes = [paths[i][1] for i in range(len(paths))]
         return batch_inputs, batch_classes

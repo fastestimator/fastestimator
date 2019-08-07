@@ -70,9 +70,12 @@ def load_data(path=None):
 
     if not os.path.exists(os.path.join(path, "ChestXRay2017.zip")):
         print("downloading data to %s" % path)
-        wget.download('https://data.mendeley.com/datasets/rscbjbr9sj/2/files/41d542e7-7f91-47f6-9ff2-dd8e5a5a7861/ChestXRay2017.zip', path)
+        wget.download(
+            'https://data.mendeley.com/datasets/rscbjbr9sj/2/files/ \
+            41d542e7-7f91-47f6-9ff2-dd8e5a5a7861/ChestXRay2017.zip', path)
 
-    if not (os.path.exists(os.path.join(path, "chest_xray/train")) and os.path.exists(os.path.join(path, "chest_xray/test"))):
+    if not (os.path.exists(os.path.join(path, "chest_xray/train"))
+            and os.path.exists(os.path.join(path, "chest_xray/test"))):
         print(" ")
         print("extracting data...")
         with zipfile.ZipFile(os.path.join(path, "ChestXRay2017.zip"), 'r') as zip_file:
