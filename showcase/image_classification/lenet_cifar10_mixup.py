@@ -25,7 +25,7 @@ from fastestimator.pipeline.augmentation import MixUpBatch
 from fastestimator.pipeline.processing import Minmax
 
 
-def get_estimator(epochs=2, batch_size=32, alpha=1.0):
+def get_estimator(epochs=2, batch_size=32, alpha=1.0, warmup=0):
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.cifar10.load_data()
     data = {"train": {"x": x_train, "y": y_train}, "eval": {"x": x_eval, "y": y_eval}}
     num_classes = 10
@@ -37,7 +37,7 @@ def get_estimator(epochs=2, batch_size=32, alpha=1.0):
                   loss=MixUpLoss(tf.losses.SparseCategoricalCrossentropy(), true_key="y", pred_key="y_pred",
                                  lambda_key="lambda"),
                   optimizer="adam")
-    network = Network(ops=[MixUpBatch(inputs="x", outputs=["x", "lambda"], alpha=alpha, mode="train"),
+    network = Network(ops=[MixUpBatch(inputs="x", outputs=["x", "lambda"], alpha=alpha, warmup=warmup, mode="train"),
                            ModelOp(inputs="x", model=model, outputs="y_pred")])
 
     traces = [Accuracy(true_key="y", pred_key="y_pred"),
