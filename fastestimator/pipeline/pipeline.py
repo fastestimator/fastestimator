@@ -249,11 +249,10 @@ class Pipeline:
         return dataset
 
     def _preprocess_fn(self, feature, ops):
+        data = None
         for op in ops:
             if op.inputs:
                 data = self._get_inputs_from_key(feature, op.inputs)
-            else:
-                data = None
             data = op.forward(data, {})
             if op.outputs:
                 feature = self._write_outputs_to_key(feature, data, op.outputs)
