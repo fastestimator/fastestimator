@@ -12,3 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from fastestimator.dataset import cub200
+from fastestimator.dataset import mendeley
+from fastestimator.dataset import svhn_data
+from fastestimator.dataset import zebra2horse_data

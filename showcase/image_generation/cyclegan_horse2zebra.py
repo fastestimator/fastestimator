@@ -97,7 +97,7 @@ class RandomJitter(AbstractAugmentation):
         # randomly cropping to 256 x 256 x 3
         data = tf.image.random_crop(data, size=[256, 256, 3])
 
-        # random mirroring        
+        # random mirroring
         data = tf.image.random_flip_left_right(data)
 
         return data
