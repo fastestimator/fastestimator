@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import tensorflow as tf
+
 from fastestimator.util.op import TensorOp
 
 EPSILON = 1e-7
@@ -21,10 +22,10 @@ EPSILON = 1e-7
 class TensorFilter(TensorOp):
     """An abstract class for data filter."""
 
-    def __init__(self, mode="train"):
-        self.mode = mode
+    def __init__(self, inputs=None, outputs=None, mode="train"):
+        super(TensorFilter, self).__init__(inputs=inputs, outputs=outputs, mode=mode)
 
-    def forward(self, dataset):
+    def forward(self, data, state):
         return tf.constant(True)
 
 
@@ -38,11 +39,10 @@ class ScalarFilter(TensorFilter):
         mode: mode that the filter acts on
     """
 
-    def __init__(self, inputs, filter_value, keep_prob, mode="train"):
-        self.inputs = inputs
+    def __init__(self, inputs, filter_value, keep_prob, mode="train", outputs=None):
+        super(ScalarFilter, self).__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.filter_value = filter_value
         self.keep_prob = keep_prob
-        self.mode = mode
         self._verify_inputs()
 
     def _verify_inputs(self):
@@ -56,13 +56,14 @@ class ScalarFilter(TensorFilter):
             data = [data]
         return data
 
-    def forward(self, dataset):
+    def forward(self, data, state):
         for inp, filter_value, keep_prob in zip(self.inputs, self.filter_value, self.keep_prob):
-            if tf.equal(tf.reshape(dataset[inp], []), filter_value):
+            if tf.equal(tf.reshape(data[inp], []), filter_value):
                 pass_filter = tf.greater(keep_prob, tf.random.uniform([]))
             else:
                 pass_filter = tf.constant(True)
         return pass_filter
+
 
 class Binarize(TensorOp):
     """
@@ -71,15 +72,18 @@ class Binarize(TensorOp):
     Args:
         threshold: Threshold for binarizing
     """
-    def __init__(self, threshold):
+
+    def __init__(self, threshold, inputs=None, outputs=None, mode=None):
+        super(Binarize, self).__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.thresh = threshold
 
-    def forward(self, data):
+    def forward(self, data, state):
         """
         Transforms the image to binary based on threshold
 
         Args:
             data: Data to be binarized
+            state: Information about the current execution context
 
         Returns:
             Tensor containing binarized data
@@ -93,12 +97,14 @@ class Zscore(TensorOp):
     """
     Standardize data using zscore method
     """
-    def forward(self, data):
+
+    def forward(self, data, state):
         """
         Standardizes the data tensor
 
         Args:
             data: Data to be standardized
+            state: Information about the current execution context
 
         Returns:
             Tensor containing standardized data
@@ -117,12 +123,14 @@ class Minmax(TensorOp):
     """
     Normalize data using the minmax method
     """
-    def forward(self, data):
+
+    def forward(self, data, state):
         """
         Normalizes the data tensor
 
         Args:
             data: Data to be normalized
+            state: Information about the current execution context
 
         Returns:
             Tensor after minmax
@@ -142,18 +150,18 @@ class Scale(TensorOp):
     Args:
         scalar: Scalar for scaling the data
     """
-    def __init__(self, scalar, inputs=None, outputs=None, mode=None):
-        self.scalar = scalar
-        self.inputs = inputs
-        self.outputs = outputs
-        self.mode = mode
 
-    def forward(self, data):
+    def __init__(self, scalar, inputs=None, outputs=None, mode=None):
+        super(Scale, self).__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.scalar = scalar
+
+    def forward(self, data, state):
         """
         Scales the data tensor
 
         Args:
             data: Data to be scaled
+            state: Information about the current execution context
 
         Returns:
             Scaled data tensor
@@ -170,18 +178,18 @@ class Onehot(TensorOp):
     Args:
         num_dim: Number of dimensions of the labels
     """
-    def __init__(self, num_dim, inputs=None, outputs=None, mode=None):
-        self.num_dim = num_dim
-        self.inputs = inputs
-        self.outputs = outputs
-        self.mode = mode
 
-    def forward(self, data):
+    def __init__(self, num_dim, inputs=None, outputs=None, mode=None):
+        super(Onehot, self).__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.num_dim = num_dim
+
+    def forward(self, data, state):
         """
         Transforms categorical labels to onehot encodings
 
         Args:
             data: Data to be preprocessed
+            state: Information about the current execution context
 
         Returns:
             Transformed labels
@@ -199,16 +207,19 @@ class Resize(TensorOp):
         size: Destination shape of the images
         resize_method: One of resize methods provided by tensorflow to be used
     """
-    def __init__(self, size, resize_method=tf.image.ResizeMethod.BILINEAR):
+
+    def __init__(self, size, resize_method=tf.image.ResizeMethod.BILINEAR, inputs=None, outputs=None, mode=None):
+        super(Resize, self).__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.size = size
         self.resize_method = resize_method
 
-    def forward(self, data):
+    def forward(self, data, state):
         """
         Resizes data tensor
 
         Args:
             data: Tensor to be resized
+            state: Information about the current execution context
 
         Returns:
             Resized tensor
@@ -224,18 +235,18 @@ class Reshape(TensorOp):
     Args:
         shape: target shape
     """
-    def __init__(self, shape, inputs=None, outputs=None, mode=None):
-        self.shape = shape
-        self.inputs = inputs
-        self.outputs = outputs
-        self.mode = mode
 
-    def forward(self, data):
+    def __init__(self, shape, inputs=None, outputs=None, mode=None):
+        super(Reshape, self).__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.shape = shape
+
+    def forward(self, data, state):
         """
         Reshapes data tensor
 
         Args:
             data: Data to be reshaped
+            state: Information about the current execution context
 
         Returns:
             Reshaped tensor

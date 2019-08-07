@@ -12,12 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.util.op import flatten_operation, get_op_from_mode, verify_ops
-from fastestimator.network.loss import Loss
-from fastestimator.network.model import ModelOp
-from fastestimator.util.util import NonContext
-from collections import ChainMap
 import tensorflow as tf
+
+from fastestimator.network.model import ModelOp
+from fastestimator.util.op import flatten_operation, get_op_from_mode, verify_ops
+from fastestimator.util.util import NonContext
 
 
 class Network:
@@ -54,22 +53,20 @@ class Network:
                 self.model_list[idx].optimizer.apply_gradients(zip(gradients, self.model_list[idx].trainable_variables))
         del tape
         return losses
-    
+
     def _forward(self, batch, state):
         mode = state["mode"]
+        data = None
         for op in self.mode_ops[mode]:
             if op.inputs:
                 if hasattr(op.inputs, "__call__"):
                     data = op.inputs()
                 else:
                     data = self._get_inputs_from_key(batch, op.inputs)
-            if isinstance(op, ModelOp):
-                data = op.forward(data, mode)
-            else:
-                data = op.forward(data)
+            data = op.forward(data, state)
             if op.outputs:
                 self._write_outputs_to_key(data, batch, op.outputs)
-    
+
     def _get_inputs_from_key(self, batch, inputs_key):
         if isinstance(inputs_key, list):
             data = [batch[key] for key in inputs_key]
