@@ -14,15 +14,16 @@
 # ==============================================================================
 import tensorflow as tf
 
-from fastestimator.architecture.lenet import LeNet
-from fastestimator.estimator.estimator import Estimator
+from fastestimator import Estimator
+from fastestimator import Network
+from fastestimator import Pipeline
+from fastestimator.architecture import LeNet
 from fastestimator.estimator.trace import Accuracy, ConfusionMatrix
 from fastestimator.network.loss import MixUpLoss
 from fastestimator.network.model import ModelOp, build
-from fastestimator.network.network import Network
 from fastestimator.pipeline.augmentation import MixUpBatch
-from fastestimator.pipeline.pipeline import Pipeline
-from fastestimator.pipeline.preprocess import Minmax
+from fastestimator.pipeline.processing import Minmax
+
 
 def get_estimator(epochs=2, batch_size=32, alpha=1.0):
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.cifar10.load_data()
@@ -33,11 +34,13 @@ def get_estimator(epochs=2, batch_size=32, alpha=1.0):
                         ops=Minmax(inputs="x", outputs="x"))
 
     model = build(keras_model=LeNet(input_shape=x_train.shape[1:], classes=num_classes),
-                  loss=MixUpLoss(tf.losses.SparseCategoricalCrossentropy(), true_key="y", pred_key="y_pred", lambda_key="lambda"),
+                  loss=MixUpLoss(tf.losses.SparseCategoricalCrossentropy(), true_key="y", pred_key="y_pred",
+                                 lambda_key="lambda"),
                   optimizer="adam")
-    network = Network(ops=[MixUpBatch(inputs="x", outputs=["x", "lambda"], alpha=alpha, mode="train"), 
+    network = Network(ops=[MixUpBatch(inputs="x", outputs=["x", "lambda"], alpha=alpha, mode="train"),
                            ModelOp(inputs="x", model=model, outputs="y_pred")])
 
-    traces = [Accuracy(true_key="y", pred_key="y_pred"), ConfusionMatrix(true_key="y", pred_key="y_pred", num_classes=num_classes)]
+    traces = [Accuracy(true_key="y", pred_key="y_pred"),
+              ConfusionMatrix(true_key="y", pred_key="y_pred", num_classes=num_classes)]
     estimator = Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces)
     return estimator

@@ -71,9 +71,10 @@ class MixUpLoss(Loss):
 
     def calculate_loss(self, batch, state):
         loss1 = self.loss_obj(batch[self.true_key], batch[self.pred_key])
-        if state["mode"] != "train":
+        lam = batch.get(self.lambda_key, None)
+        # If no lambda value is present then mix-up was not performed, so stop with the regular loss
+        if lam is None or lam == 1.0:
             return loss1
-        lam = batch[self.lambda_key]
         loss2 = self.loss_obj(tf.roll(batch[self.true_key], shift=1, axis=0), batch[self.pred_key])
         return lam * loss1 + (1.0 - lam) * loss2
 

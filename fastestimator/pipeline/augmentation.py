@@ -369,11 +369,12 @@ class MixUpBatch(TensorOp):
         self.beta = tfp.distributions.Beta(alpha, alpha)
 
     def forward(self, data):
+        iterdata = data if isinstance(data, list) else list(data) if isinstance(data, tuple) else [data]
         if self.alpha <= 0:
-            return [data, 1.0]
+            return iterdata + [1.0]
         lam = self.beta.sample()
         # Could do random mix-up using tf.gather() on a shuffled index list, but batches are already randomly ordered,
         # so just need to roll by 1 to get a random combination of inputs. This also allows MixUpLoss to easily compute
         # the corresponding Y values
-        x_mix = lam * data + (1.0 - lam) * tf.roll(data, shift=1, axis=0)
-        return [x_mix, lam]
+        mix = [lam * dat + (1.0 - lam) * tf.roll(dat, shift=1, axis=0) for dat in iterdata]
+        return mix + [lam]
