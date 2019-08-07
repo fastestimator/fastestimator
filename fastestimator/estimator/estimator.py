@@ -90,7 +90,6 @@ class Estimator:
                 {"mode": "train", "epoch": self.epoch, "step": train_step, "batch_size": self.pipeline.batch_size})
             prediction, loss = self.forward_step(batch, {"mode": "train", "epoch": tf.constant(self.epoch),
                                                          "step": tf.constant(train_step)})
-            # prediction, loss = self.forward_step(batch, {"mode": "train"})
             batch = ChainMap(prediction, batch)
             self._run_traces_on_batch_end(
                 {"mode": "train", "epoch": self.epoch, "step": train_step, "batch_size": self.pipeline.batch_size,
@@ -110,7 +109,6 @@ class Estimator:
                 {"mode": "eval", "epoch": self.epoch, "step": eval_step, "batch_size": self.pipeline.batch_size})
             prediction, loss = self.forward_step(batch, {"mode": "eval", "epoch": tf.constant(self.epoch),
                                                          "step": tf.constant(eval_step)})
-            # prediction, loss = self.forward_step(batch, {"mode": "eval"})
             batch = ChainMap(prediction, batch)
             self._run_traces_on_batch_end(
                 {"mode": "eval", "epoch": self.epoch, "step": eval_step, "batch_size": self.pipeline.batch_size,
