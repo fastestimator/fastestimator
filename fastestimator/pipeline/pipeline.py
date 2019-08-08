@@ -25,6 +25,7 @@ from fastestimator.record.record import RecordWriter
 from fastestimator.util.op import flatten_operation, get_op_from_mode, verify_ops
 from fastestimator.util.tfrecord import get_features
 from fastestimator.util.util import convert_tf_dtype
+from fastestimator.util.schedule import Scheduler
 
 
 class Pipeline:
@@ -180,7 +181,8 @@ class Pipeline:
                 print("FastEstimator: Found %d examples for %s in %s" % (num_example, mode, json_file))
         return found_record
 
-    def _input_stream(self, mode, warm_up=False):
+    def _input_stream(self, state, warm_up=False):
+        mode = state["mode"]
         ds_tuple = ()
         # Data Reading
         for idx in range(len(self.all_features[mode])):
@@ -214,10 +216,15 @@ class Pipeline:
             dataset = dataset.flat_map(lambda dataset: tf.data.Dataset.from_tensor_slices(dataset))
         if warm_up:
             dataset = dataset.map(lambda dataset: self._get_padded_shape(dataset, mode))
-        if self.padded_batch:
-            dataset = dataset.padded_batch(self.batch_size, padded_shapes=self.padded_feature_shape[mode])
+        # Decide batch size
+        if isinstance(self.batch_size, Scheduler) and self.batch_size.change_value(state):
+            self.batch_size_tensor = tf.convert_to_tensor(self.batch_size.get_current_value(state), dtype=tf.int64)
         else:
-            dataset = dataset.batch(self.batch_size)
+            self.batch_size_tensor = tf.convert_to_tensor(self.batch_size, dtype=tf.int64)
+        if self.padded_batch:
+            dataset = dataset.padded_batch(self.batch_size_tensor, padded_shapes=self.padded_feature_shape[mode])
+        else:
+            dataset = dataset.batch(self.batch_size_tensor)
         dataset = dataset.prefetch(buffer_size=1)
         return dataset
 
@@ -320,11 +327,15 @@ class Pipeline:
         """
         self._prepare(inputs=inputs)
         assert self._prepare_mode(mode=mode), "could not find record in {} for mode {}".format(inputs, mode)
-        dataset = self._input_stream(mode)
+        self.num_example_per_epoch = np.min(self.num_examples[mode])
+        epoch = tf.convert_to_tensor(0)
+        step = tf.convert_to_tensor(0)
+        dataset = self._input_stream(state={"mode": mode, "epoch": epoch, "step": step})
         start = time.time()
-        for i, _ in enumerate(dataset.take(num_steps)):
-            if i % log_interval == 0 and i > 0:
+        for _ in dataset.take(num_steps):
+            if step.numpy() % log_interval == 0 and step.numpy() > 0:
                 duration = time.time() - start
-                example_per_sec = log_interval * self.batch_size / duration
-                print("FastEstimator: Pipeline Preprocessing Example/sec %f" % example_per_sec)
+                example_per_sec = log_interval * self.batch_size_tensor.numpy() / duration
+                tf.print("FastEstimator: Step: %d, Epoch: %d, Batch Size %d, Example/sec %.2f" % (step.numpy(), epoch.numpy(), self.batch_size_tensor.numpy(), example_per_sec))
                 start = time.time()
+            step += 1
