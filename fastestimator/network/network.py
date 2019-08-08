@@ -43,6 +43,7 @@ class Network:
         losses = ()
         # use gradient tape for train, otherwise use a dummy tape(to save computation)
         with tf.GradientTape(persistent=True) if state["mode"] == "train" else NonContext() as tape:
+            state['tape'] = tape
             self._forward(batch, state)
             for idx in range(self.num_model):
                 losses += self.model_list[idx].loss.calculate_loss(batch, state),
@@ -51,6 +52,7 @@ class Network:
             for idx in range(self.num_model):
                 gradients = tape.gradient(losses[idx], self.model_list[idx].trainable_variables)
                 self.model_list[idx].optimizer.apply_gradients(zip(gradients, self.model_list[idx].trainable_variables))
+        del state['tape']
         del tape
         return losses
 

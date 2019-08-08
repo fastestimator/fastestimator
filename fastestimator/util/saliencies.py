@@ -19,7 +19,6 @@ class SaliencyMask(object):
     """Base class for saliency masks. Alone, this class doesn't do anything.
     This code was adapted from https://github.com/PAIR-code/saliency to be compatible with TensorFlow 2.0
     """
-
     def __init__(self, model):
         """
         Args:
@@ -37,9 +36,7 @@ class SaliencyMask(object):
         """
         raise NotImplementedError('A derived class should implemented GetMask()')
 
-    def get_smoothed_mask(
-            self, model_input, stdev_spread=.15, nsamples=25,
-            magnitude=True, **kwargs):
+    def get_smoothed_mask(self, model_input, stdev_spread=.15, nsamples=25, magnitude=True, **kwargs):
         """
         Args:
             model_input: Input tensor, shaped for the model ex. (1, 299, 299, 3)
@@ -75,7 +72,6 @@ class SaliencyMask(object):
 
 class GradientSaliency(SaliencyMask):
     """A SaliencyMask class that computes saliency masks with a gradient."""
-
     def __init__(self, model):
         super(GradientSaliency, self).__init__(model)
 
@@ -104,7 +100,6 @@ class IntegratedGradients(GradientSaliency):
 
     https://arxiv.org/abs/1703.01365
     """
-
     @tf.function
     def get_mask(self, model_input, input_baseline=None, steps=25, classes=None):
         """

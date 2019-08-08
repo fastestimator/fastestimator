@@ -114,8 +114,8 @@ def graph_metrics(files_metrics, smooth_factor, save, save_path, share_legend, p
         axs[num_rows - 2][i].set_xlabel('Steps')
         axs[num_rows - 2][i].xaxis.set_tick_params(which='both', labelbottom=True)
 
-    colors = sns.hls_palette(n_colors=num_experiments, s=0.95) if num_experiments > 10 else sns.color_palette(
-        "colorblind")
+    colors = sns.hls_palette(n_colors=num_experiments,
+                             s=0.95) if num_experiments > 10 else sns.color_palette("colorblind")
 
     handles = []
     labels = []
@@ -124,10 +124,8 @@ def graph_metrics(files_metrics, smooth_factor, save, save_path, share_legend, p
         for (idx, metric) in enumerate(files_metrics[file]):
             data = np.array(files_metrics[file][metric])
             y = data[:, 1] if smooth_factor == 0 else gaussian_filter1d(data[:, 1], sigma=smooth_factor)
-            ln = axs[metric_grid_location[metric][0]][metric_grid_location[metric][1]].plot(data[:, 0], y,
-                                                                                            color=colors[color_idx],
-                                                                                            label=file,
-                                                                                            linewidth=1.5)
+            ln = axs[metric_grid_location[metric][0]][metric_grid_location[metric][1]].plot(
+                data[:, 0], y, color=colors[color_idx], label=file, linewidth=1.5)
             if idx == 0:
                 handles.append(ln[0])
 
@@ -185,8 +183,8 @@ def parse_files(file_paths, log_extension='.txt', smooth_factor=0, save=False, s
         file_metrics = parse_file(file_path)
         remove_blacklist_keys(file_metrics, ignore_metrics)
         files_metrics[strip_suffix(os.path.split(file_path)[1].strip(), log_extension)] = file_metrics
-    graph_metrics(files_metrics, smooth_factor, save,
-                  save_path if save_path is not None else file_paths[0], share_legend, pretty_names)
+    graph_metrics(files_metrics, smooth_factor, save, save_path if save_path is not None else file_paths[0],
+                  share_legend, pretty_names)
 
 
 def parse_folder(dir_path, log_extension='.txt', recursive_search=False, smooth_factor=1, save=False, save_path=None,

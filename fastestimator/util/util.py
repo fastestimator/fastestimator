@@ -151,18 +151,20 @@ def convert_tf_dtype(datatype):
     Returns:
         Tensor data type
     """
-    datatype_map = {"string": tf.string,
-                    "int8": tf.int8,
-                    "uint8": tf.uint8,
-                    "int16": tf.int16,
-                    "uint16": tf.uint16,
-                    "int32": tf.int32,
-                    "uint32": tf.uint32,
-                    "int64": tf.int64,
-                    "uint64": tf.uint64,
-                    "float16": tf.float16,
-                    "float32": tf.float32,
-                    "float64": tf.float64}
+    datatype_map = {
+        "string": tf.string,
+        "int8": tf.int8,
+        "uint8": tf.uint8,
+        "int16": tf.int16,
+        "uint16": tf.uint16,
+        "int32": tf.int32,
+        "uint32": tf.uint32,
+        "int64": tf.int64,
+        "uint64": tf.uint64,
+        "float16": tf.float16,
+        "float32": tf.float32,
+        "float64": tf.float64
+    }
     return datatype_map[datatype]
 
 
@@ -261,7 +263,6 @@ class Suppressor(object):
     with Suppressor():
         func(args)
     """
-
     def __enter__(self):
         self.stdout = sys.stdout
         self.stderr = sys.stderr
@@ -274,7 +275,8 @@ class Suppressor(object):
         if exc_type is not None:
             raise
 
-    def write(self, x): pass
+    def write(self, x):
+        pass
 
 
 class Timer(ContextDecorator):
@@ -286,7 +288,6 @@ class Timer(ContextDecorator):
     @Timer()
     def func(args)
     """
-
     def __init__(self, name="Task"):
         self.name = name
 
@@ -304,7 +305,6 @@ class NonContext(object):
     """
     A class which is used for nothing
     """
-
     def __enter__(self):
         pass
 
