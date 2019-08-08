@@ -37,10 +37,10 @@ def compute_percentile(tensor, percentile, keepdims=True):
     Returns:
         A tensor corresponding to the given percentile value within each batch of the input tensor
     """
-    result = tf.reduce_min(tf.math.top_k(tf.reshape(tensor, (tensor.shape[0], -1)),
-                                         tf.cast(
-                                             tf.math.ceil((1 - percentile / 100) * tensor.shape[1] * tensor.shape[2]),
-                                             tf.int32), sorted=False).values, axis=1)
+    result = tf.reduce_min(
+        tf.math.top_k(tf.reshape(tensor, (tensor.shape[0], -1)),
+                      tf.cast(tf.math.ceil((1 - percentile / 100) * tensor.shape[1] * tensor.shape[2]), tf.int32),
+                      sorted=False).values, axis=1)
     if keepdims:
         result = tf.reshape(result, [tensor.shape[0]] + [1 for _ in tensor.shape[1:]])
     return result
@@ -125,8 +125,8 @@ def interpret_model(model, model_input, baseline_input=None, decode_dictionary=N
         plt.savefig(save_file, dpi=300, bbox_inches="tight")
 
 
-def load_and_interpret(model_path, input_paths, baseline=-1, dictionary_path=None,
-                       strip_alpha=False, smooth_factor=7, save=False, save_dir=None):
+def load_and_interpret(model_path, input_paths, baseline=-1, dictionary_path=None, strip_alpha=False, smooth_factor=7,
+                       save=False, save_dir=None):
     """ A helper class to load input and invoke the interpretation api
 
     Args:
@@ -153,8 +153,10 @@ def load_and_interpret(model_path, input_paths, baseline=-1, dictionary_path=Non
         input_paths = [path[0] for path in loader.path_pairs]
     inputs = [load_image(input_paths[i], strip_alpha=strip_alpha, channels=n_channels) for i in range(len(input_paths))]
     max_shapes = np.maximum.reduce([inp.shape for inp in inputs], axis=0)
-    tf_image = tf.stack([tf.image.resize_with_crop_or_pad(tf.convert_to_tensor(im, dtype=input_type), max_shapes[0],
-                                                          max_shapes[1]) for im in inputs], axis=0)
+    tf_image = tf.stack([
+        tf.image.resize_with_crop_or_pad(tf.convert_to_tensor(im, dtype=input_type), max_shapes[0], max_shapes[1])
+        for im in inputs
+    ], axis=0)
     if is_number(baseline):
         baseline_gen = tf.constant_initializer(float(baseline))
         baseline_image = baseline_gen(shape=tf_image.shape, dtype=input_type)

@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.estimator.estimator import Estimator
-from fastestimator.pipeline.pipeline import Pipeline
+import tensorflow as tf
 from sklearn.preprocessing import StandardScaler
 from tensorflow.keras import layers
-import tensorflow as tf
-import numpy as np
+
+from fastestimator.estimator.estimator import Estimator
+from fastestimator.pipeline.pipeline import Pipeline
+
 
 class Network:
     def __init__(self):
@@ -49,21 +50,20 @@ class Network:
         model.add(layers.Dense(1, activation="linear"))
         return model
 
-def get_estimator(epochs=30, batch_size=32):
 
+def get_estimator(epochs=30, batch_size=32):
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.boston_housing.load_data()
     scaler = StandardScaler()
     x_train = scaler.fit_transform(x_train)
     x_eval = scaler.transform(x_eval)
 
-    pipeline = Pipeline(batch_size=batch_size,
-                        feature_name=["x", "y"],
-                        train_data={"x": x_train, "y": y_train},
-                        validation_data={"x": x_eval, "y": y_eval},
-                        transform_train= [[], []])
+    pipeline = Pipeline(batch_size=batch_size, feature_name=["x", "y"], train_data={
+        "x": x_train,
+        "y": y_train
+    }, validation_data={
+        "x": x_eval,
+        "y": y_eval
+    }, transform_train=[[], []])
 
-    estimator = Estimator(network= Network(),
-                          pipeline=pipeline,
-                          epochs= epochs,
-                          log_steps=10)
+    estimator = Estimator(network=Network(), pipeline=pipeline, epochs=epochs, log_steps=10)
     return estimator

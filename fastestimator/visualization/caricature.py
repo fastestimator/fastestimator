@@ -32,10 +32,10 @@ def dot_loss(true, pred, cossim_pow):
     reduce_axis = tf.range(1, len(true.shape))  # Reductions should keep the batch axis (zero) separated
     # reduce_axis = tf.range(len(true.shape))  # TODO - it seems empirically like this doesn't matter. why???
     dot = tf.reduce_sum(true * pred, axis=reduce_axis)
-    mag = tf.sqrt(tf.reduce_sum(true ** 2, axis=reduce_axis)) * tf.sqrt(tf.reduce_sum(pred ** 2, axis=reduce_axis))
+    mag = tf.sqrt(tf.reduce_sum(true**2, axis=reduce_axis)) * tf.sqrt(tf.reduce_sum(pred**2, axis=reduce_axis))
     cossim = dot / (1e-6 + mag)
     cossim = tf.maximum(0.1, cossim)
-    result = dot * cossim ** cossim_pow
+    result = dot * cossim**cossim_pow
     # Negative value since we actually want to maximize this objective
     return -1. * result
 
@@ -59,15 +59,14 @@ def compute_gradients(model, aug, target_input, source_input, cossim_pow, decorr
 def generate_variable_image(model_input, sd=0.01, fft=False, decay_power=1):
     sd = sd or 0.01
     if not fft:
-        return tf.Variable(
-            tf.random.normal(shape=model_input.shape, mean=tf.reduce_mean(model_input), stddev=sd),
-            trainable=True), None
+        return tf.Variable(tf.random.normal(shape=model_input.shape, mean=tf.reduce_mean(model_input), stddev=sd),
+                           trainable=True), None
     batch, h, w, ch = model_input.shape
     init_val_size = (2, batch, ch, h, w // 2 + 1 + (w % 2))  # zeroth index is for real/imaginary
     caricatures_freq = tf.Variable(tf.random.normal(shape=init_val_size, mean=0, stddev=sd))
 
     freqs = rfft2d_freqs(h, w)
-    scale = 1.0 / np.maximum(freqs, 1.0 / max(w, h)) ** decay_power
+    scale = 1.0 / np.maximum(freqs, 1.0 / max(w, h))**decay_power
     scale *= np.sqrt(w * h)
     big_kernel = tf.eye(num_rows=scale.shape[0], num_columns=scale.shape[0], batch_shape=[batch, ch], dtype=scale.dtype)
     scale = tf.matmul(big_kernel, scale)
@@ -112,9 +111,11 @@ def caricature(model, model_input, layer_ids=None, decode_dictionary=None, save=
     predictions = np.asarray(model(model_input))
     decoded = decode_predictions(predictions, top=3, dictionary=decode_dictionary)
 
-    caricatures = [generate_caricatures(model, model_input, layer, n_steps=n_steps, learning_rate=learning_rate,
-                                        blur=blur, cossim_pow=cossim_pow, sd=sd, fft=fft, decorrelate=decorrelate,
-                                        sigmoid=sigmoid) for layer in layer_ids]
+    caricatures = [
+        generate_caricatures(model, model_input, layer, n_steps=n_steps, learning_rate=learning_rate, blur=blur,
+                             cossim_pow=cossim_pow, sd=sd, fft=fft, decorrelate=decorrelate, sigmoid=sigmoid)
+        for layer in layer_ids
+    ]
 
     num_rows = model_input.shape[0]
     num_cols = len(layer_ids) + 2
@@ -171,8 +172,10 @@ def load_and_caricature(model_path, input_paths, dictionary_path=None, save=Fals
         loader = PathLoader(input_paths[0])
         input_paths = [path[0] for path in loader.path_pairs]
     inputs = [load_image(input_paths[i], strip_alpha=strip_alpha, channels=n_channels) for i in range(len(input_paths))]
-    tf_image = tf.stack([tf.image.resize_with_pad(tf.convert_to_tensor(im, dtype=input_type), input_height, input_width,
-                                                  method='lanczos3') for im in inputs])
+    tf_image = tf.stack([
+        tf.image.resize_with_pad(tf.convert_to_tensor(im, dtype=input_type), input_height, input_width,
+                                 method='lanczos3') for im in inputs
+    ])
     tf_image = tf.clip_by_value(tf_image, -1, 1)
 
     caricature(network, tf_image, layer_ids=layer_ids, decode_dictionary=dic, save=save, save_path=save_dir,

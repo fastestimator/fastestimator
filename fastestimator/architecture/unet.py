@@ -14,8 +14,8 @@
 # ==============================================================================
 """U-Net architecture.
 """
-from tensorflow.keras.layers import Conv2D, Dropout, Input, MaxPooling2D, UpSampling2D, concatenate
-from tensorflow.keras.models import Model
+from tensorflow.python.keras.layers import Conv2D, Dropout, Input, MaxPooling2D, UpSampling2D, concatenate
+from tensorflow.python.keras.models import Model
 
 
 def UNet(input_name, output_name, input_size=(128, 128, 3)):

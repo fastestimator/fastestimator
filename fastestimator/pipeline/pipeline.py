@@ -29,13 +29,7 @@ from fastestimator.util.schedule import Scheduler
 
 
 class Pipeline:
-    def __init__(self,
-                 batch_size,
-                 data=None,
-                 ops=None,
-                 read_feature=None,
-                 padded_batch=False,
-                 expand_dims=False,
+    def __init__(self, batch_size, data=None, ops=None, read_feature=None, padded_batch=False, expand_dims=False,
                  max_shuffle_buffer_mb=3000):
 
         self.batch_size = batch_size
@@ -122,9 +116,8 @@ class Pipeline:
                     num_example_list.append(feature_data.shape[0])
                 else:
                     raise ValueError("the feature only supports list or numpy array")
-            assert len(set(
-                num_example_list)) == 1, "inconsistent number of data found during {}, please check the data".format(
-                mode)
+            assert len(set(num_example_list)
+                       ) == 1, "inconsistent number of data found during {}, please check the data".format(mode)
             self.num_examples[mode].append(set(num_example_list).pop())
             self.shuffle_buffer[mode].append(set(num_example_list).pop())
 
@@ -158,8 +151,10 @@ class Pipeline:
                 self.mode_forward_ops[mode].append(forward_ops)
 
     def _get_tfrecord_config(self, mode):
-        json_files = [os.path.join(self.inputs, f) for f in os.listdir(self.inputs) if
-                      f.endswith(".json") and f.startswith("%s_summary" % mode)]
+        json_files = [
+            os.path.join(self.inputs, f) for f in os.listdir(self.inputs)
+            if f.endswith(".json") and f.startswith("%s_summary" % mode)
+        ]
         found_record = len(json_files) > 0
         if found_record:
             for json_file in json_files:

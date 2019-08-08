@@ -40,9 +40,8 @@ class Augmentation2D(TensorOp):
        flip_up_down: Boolean representing whether to flip the image vertically with a probability of 0.5.
        mode: Augmentation on 'training' data or 'evaluation' data.
    """
-
-    def __init__(self, rotation_range=0., width_shift_range=0., height_shift_range=0.,
-                 shear_range=0., zoom_range=1., flip_left_right=False, flip_up_down=False, mode='train'):
+    def __init__(self, rotation_range=0., width_shift_range=0., height_shift_range=0., shear_range=0., zoom_range=1.,
+                 flip_left_right=False, flip_up_down=False, mode='train'):
         self.mode = mode
         self.height = None
         self.width = None
@@ -210,9 +209,7 @@ class Augmentation2D(TensorOp):
             None
         """
         # \NOTE(JP): tracing behavior from dataset.map causes issue when any tensor id defined as tf.constant
-        transform_matrix = tf.convert_to_tensor(
-            [[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=tf.float32
-        )
+        transform_matrix = tf.convert_to_tensor([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=tf.float32)
         do_rotate = False
         do_shift = False
         do_zoom = False
@@ -319,9 +316,7 @@ class Augmentation2D(TensorOp):
         coords = tf.stack([x_, y_, tf.ones_like(x_)])
 
         M = tf.linalg.inv(self.transform_matrix)
-        coords = tf.matmul(
-            tf.cast(M, tf.float32), tf.cast(coords, tf.float32)
-        )
+        coords = tf.matmul(tf.cast(M, tf.float32), tf.cast(coords, tf.float32))
 
         x_ = tf.cast(coords[0], tf.int32)
         y_ = tf.cast(coords[1], tf.int32)
@@ -331,23 +326,12 @@ class Augmentation2D(TensorOp):
         mask = tf.cast(mask, dtype)
         # mask_inv = tf.cast(mask_inv, tf.int32)
         # mask_inv = tf.multiply(mask_inv, fill_val)
-        x_ = tf.cast(tf.clip_by_value(
-            tf.round(x_),
-            0,
-            x_shape - 1
-        ), tf.int32)
+        x_ = tf.cast(tf.clip_by_value(tf.round(x_), 0, x_shape - 1), tf.int32)
 
-        y_ = tf.cast(tf.clip_by_value(
-            tf.round(y_),
-            0,
-            y_shape - 1
-        ), tf.int32)
+        y_ = tf.cast(tf.clip_by_value(tf.round(y_), 0, y_shape - 1), tf.int32)
 
-        result_flat = tf.gather_nd(
-            data,
-            tf.stack([x_, y_, z_], axis=-1)
-        )
-        # result_flat = result_flat * tf.cast(mask, tf.int32) + 
+        result_flat = tf.gather_nd(data, tf.stack([x_, y_, z_], axis=-1))
+        # result_flat = result_flat * tf.cast(mask, tf.int32) +
         result_flat = tf.multiply(result_flat, mask)
         return tf.convert_to_tensor(tf.reshape(result_flat, data.shape))
 

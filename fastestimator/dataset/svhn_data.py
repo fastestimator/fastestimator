@@ -27,36 +27,42 @@ def get_name(index, hdf5_data):
     name = hdf5_data['/digitStruct/name']
     return ''.join([chr(v[0]) for v in hdf5_data[name[index][0]].value])
 
+
 def get_bbox(index, hdf5_data):
     attrs = {}
     item = hdf5_data['digitStruct']['bbox'][index].item()
     for key in ['label', 'left', 'top', 'width', 'height']:
         attr = hdf5_data[item][key]
-        values = [int(hdf5_data[attr.value[i].item()].value[0][0]) for i in range(len(attr))] if len(attr) > 1 else [int(attr.value[0][0])]
+        values = [int(hdf5_data[attr.value[i].item()].value[0][0])
+                  for i in range(len(attr))] if len(attr) > 1 else [int(attr.value[0][0])]
         attrs[key] = values
     return attrs
 
+
 def img_boundingbox_data_constructor(data_folder, mode, csv_path):
-    f = h5py.File(os.path.join(data_folder, "digitStruct.mat"),'r')     
+    f = h5py.File(os.path.join(data_folder, "digitStruct.mat"), 'r')
     row_list = []
     num_example = f['/digitStruct/bbox'].shape[0]
     logging_interval = num_example // 10
     print("found %d number of examples for %s" % (num_example, mode))
     for j in range(num_example):
         if j % logging_interval == 0:
-            print("retrieving bounding box for %s: %f%%" % (mode, j/num_example*100))
+            print("retrieving bounding box for %s: %f%%" % (mode, j / num_example * 100))
         img_name = get_name(j, f)
         bbox = get_bbox(j, f)
-        row_dict = {'image': os.path.join(mode, img_name),
-                    'label': bbox["label"],
-                    'x1': bbox["left"],
-                    'y1': bbox["top"],
-                    'x2': list(map(add, bbox["left"], bbox["width"])),
-                    'y2': list(map(add, bbox["top"], bbox["height"]))}
+        row_dict = {
+            'image': os.path.join(mode, img_name),
+            'label': bbox["label"],
+            'x1': bbox["left"],
+            'y1': bbox["top"],
+            'x2': list(map(add, bbox["left"], bbox["width"])),
+            'y2': list(map(add, bbox["top"], bbox["height"]))
+        }
         row_list.append(row_dict)
-    bbox_df = pd.DataFrame(row_list, columns=['image','label','x1','y1','x2','y2'])
+    bbox_df = pd.DataFrame(row_list, columns=['image', 'label', 'x1', 'y1', 'x2', 'y2'])
     bbox_df.to_csv(csv_path, index=False)
     return bbox_df
+
 
 def load_data(path=None):
     if path is None:

@@ -18,6 +18,7 @@ import time
 import numpy as np
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 
+
 class Trace:
     """Trace base class.
 
@@ -36,7 +37,6 @@ class Trace:
             state (dict): dictionary of run time that has the following key(s):
                 * "mode": the current run time mode, can be "train", "eval" or "test"
         """
-
     def on_epoch_begin(self, state):
         """Runs at the beginning of each epoch of the mode.
 
@@ -45,7 +45,6 @@ class Trace:
                 * "mode":  current run time mode, can be "train", "eval" or "test"
                 * "epoch": current epoch index starting from 0
         """
-
     def on_batch_begin(self, state):
         """Runs at the beginning of every batch of the mode.
 
@@ -56,7 +55,6 @@ class Trace:
                 * "step": current global step index starting from 0 (or batch index)
                 * "batch_size": current batch size on single machine
         """
-
     def on_batch_end(self, state):
         """Runs at the end of every batch of the mode.
 
@@ -69,7 +67,6 @@ class Trace:
                 * "batch": the batch data after the Network execution
                 * "loss": the batch loss (only available when mode is "train" or "eval")
         """
-
     def on_epoch_end(self, state):
         """Runs at the end of every epoch of the mode.
 
@@ -82,7 +79,6 @@ class Trace:
                 * "epoch": current epoch index starting from 0
                 * "loss": the batch loss (only available when mode is "train" or "eval")
         """
-
     def end(self, state):
         """Runs at the end of the mode.
 
@@ -90,6 +86,7 @@ class Trace:
             state (dict): dictionary of run time that has the following key(s):
                 * "mode": the current run time mode, can be "train", "eval" or "test"
         """
+
 
 class TrainLogger(Trace):
     """Training logger, automatically applied by default.
@@ -121,7 +118,8 @@ class TrainLogger(Trace):
             loss = np.array(state["loss"])
             if loss.size == 1:
                 loss = loss.ravel()[0]
-            print("FastEstimator-Train: step: %d; train_loss: %s; example/sec: %.2f;" %(state["step"], str(loss), example_per_sec*self.num_process))
+            print("FastEstimator-Train: step: %d; train_loss: %s; example/sec: %.2f;" %
+                  (state["step"], str(loss), example_per_sec * self.num_process))
             self.elapse_times = []
             self.time_start = time.time()
 
@@ -180,9 +178,10 @@ class Accuracy(Trace):
 
     def on_epoch_end(self, state):
         if state["mode"] == "eval":
-            return self.correct/self.total
+            return self.correct / self.total
         else:
             return None
+
 
 class ConfusionMatrix(Trace):
     """Computes confusion matrix between y_true and y_predict.
@@ -213,7 +212,8 @@ class ConfusionMatrix(Trace):
             else:
                 prediction_label = np.argmax(prediction_score, axis=-1)
             assert prediction_label.size == groundtruth_label.size
-            batch_confusion = confusion_matrix(groundtruth_label, prediction_label, labels=list(range(0, self.num_classes)))
+            batch_confusion = confusion_matrix(groundtruth_label, prediction_label,
+                                               labels=list(range(0, self.num_classes)))
             if self.confusion is None:
                 self.confusion = batch_confusion
             else:
@@ -230,14 +230,15 @@ class Precision(Trace):
     """Calculates precision for classification task and report it back to logger.
     Args:
         true_key (str): Name of the keys in the ground truth label in data pipeline.
-        pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label. Default is `None`.
+        pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label.
+                                  Default is `None`.
     """
     def __init__(self, true_key, pred_key=None, labels=None, pos_label=1, average='auto', sample_weight=None):
         super().__init__()
         self.true_key = true_key
         self.pred_key = pred_key
         self.labels = labels
-        self.pos_label  = pos_label
+        self.pos_label = pos_label
         self.average = average
         self.sample_weight = sample_weight
         self.y_true = []
@@ -266,13 +267,16 @@ class Precision(Trace):
 
     def on_epoch_end(self, state):
         if state["mode"] == "eval":
-            if self.average == 'auto' :
+            if self.average == 'auto':
                 if self.binary_classification:
-                    return precision_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label, average='binary', sample_weight=self.sample_weight)
-                else :
-                    return precision_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label, average=None, sample_weight=self.sample_weight)
-            else :
-                return precision_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label, self.average, self.sample_weight)
+                    return precision_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label,
+                                           average='binary', sample_weight=self.sample_weight)
+                else:
+                    return precision_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label,
+                                           average=None, sample_weight=self.sample_weight)
+            else:
+                return precision_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label,
+                                       self.average, self.sample_weight)
         return None
 
 
@@ -280,14 +284,15 @@ class Recall(Trace):
     """Calculates recall for classification task and report it back to logger.
     Args:
         true_key (str): Name of the keys in the ground truth label in data pipeline.
-        pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label. Default is `None`.
+        pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label. 
+                                  Default is `None`.
     """
     def __init__(self, true_key, pred_key=None, labels=None, pos_label=1, average='auto', sample_weight=None):
         super().__init__()
         self.true_key = true_key
         self.pred_key = pred_key
         self.labels = labels
-        self.pos_label  = pos_label
+        self.pos_label = pos_label
         self.average = average
         self.sample_weight = sample_weight
         self.y_true = []
@@ -297,7 +302,7 @@ class Recall(Trace):
         if state["mode"] == "eval":
             self.y_true = []
             self.y_pred = []
-    
+
     def on_batch_end(self, state):
         if state["mode"] == "eval":
             groundtruth_label = np.array(state["batch"][self.true_key])
@@ -316,13 +321,16 @@ class Recall(Trace):
 
     def on_epoch_end(self, state):
         if state["mode"] == "eval":
-            if self.average == 'auto' :
+            if self.average == 'auto':
                 if self.binary_classification:
-                    return recall_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label, average='binary', sample_weight=self.sample_weight)
-                else :
-                    return recall_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label, average=None, sample_weight=self.sample_weight)
-            else :
-                return recall_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label, self.average, self.sample_weight)
+                    return recall_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label,
+                                        average='binary', sample_weight=self.sample_weight)
+                else:
+                    return recall_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label,
+                                        average=None, sample_weight=self.sample_weight)
+            else:
+                return recall_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label,
+                                    self.average, self.sample_weight)
         return None
 
 
@@ -330,14 +338,15 @@ class F1_score(Trace):
     """Calculates F1 score for classification task and report it back to logger.
     Args:
         true_key (str): Name of the keys in the ground truth label in data pipeline.
-        pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label. Default is `None`.
+        pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label. 
+                                  Default is `None`.
     """
     def __init__(self, true_key, pred_key=None, labels=None, pos_label=1, average='auto', sample_weight=None):
         super().__init__()
         self.true_key = true_key
         self.pred_key = pred_key
         self.labels = labels
-        self.pos_label  = pos_label
+        self.pos_label = pos_label
         self.average = average
         self.sample_weight = sample_weight
         self.y_true = []
@@ -366,13 +375,16 @@ class F1_score(Trace):
 
     def on_epoch_end(self, state):
         if state["mode"] == "eval":
-            if self.average == 'auto' :
+            if self.average == 'auto':
                 if self.binary_classification:
-                    return f1_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label, average='binary', sample_weight=self.sample_weight)
-                else :
-                    return f1_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label, average=None, sample_weight=self.sample_weight)
-            else :
-                return f1_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label, self.average, self.sample_weight)
+                    return f1_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label,
+                                    average='binary', sample_weight=self.sample_weight)
+                else:
+                    return f1_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label,
+                                    average=None, sample_weight=self.sample_weight)
+            else:
+                return f1_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label, self.average,
+                                self.sample_weight)
         return None
 
 
@@ -381,7 +393,8 @@ class Dice(Trace):
 
     Args:
         true_key (str): Name of the keys in the ground truth label in data pipeline.
-        pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label. Default is `None`.
+        pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label. 
+                                  Default is `None`.
     """
     def __init__(self, true_key, pred_key=None, threshold=0.5):
         super().__init__()

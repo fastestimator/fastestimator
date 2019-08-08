@@ -23,12 +23,13 @@ from glob import glob
 import pandas as pd
 import wget
 
+
 def load_data(path=None):
 
     if path is None:
         path = os.path.join(tempfile.gettempdir(), "FE_HORSE2ZEBRA")
 
-    if not(os.path.exists(path)):
+    if not (os.path.exists(path)):
         print("Creating {}".format(path))
         os.makedirs(path)
 
@@ -61,7 +62,7 @@ def load_data(path=None):
     testA_label = [0] * len(testA_img)
     testB_img = glob(os.path.join(path, 'horese2zebra', 'testB', '*.jpg'))
     testB_img = [img_filename.replace(path, '.') for img_filename in testB_img]
-    testB_label = [1]* len(testB_img)
+    testB_label = [1] * len(testB_img)
     test_img = testA_img + testB_img
     test_label = testA_label + testB_label
 

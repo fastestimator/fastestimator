@@ -17,6 +17,7 @@ import numpy as np
 import json
 import os
 
+
 def get_number_of_examples(file_path, show_warning=True, compression=None):
     """
     Returns number of examples in one TFRecord
@@ -32,11 +33,13 @@ def get_number_of_examples(file_path, show_warning=True, compression=None):
     _, ext = os.path.splitext(file_path)
     assert "tfrecord" in ext, "please make sure data is in tfrecord format"
     dataset = tf.data.TFRecordDataset(file_path, compression_type=compression)
-    example_size = len(next(iter(dataset)).numpy()) + 16  #from multiple observations, tfrecord adds 16 byte to each example
+    example_size = len(next(
+        iter(dataset)).numpy()) + 16  #from multiple observations, tfrecord adds 16 byte to each example
     file_size = os.stat(file_path).st_size
     if file_size % example_size != 0 and show_warning:
         print("FastEstimator-Warning: Can't accurately calculate number of examples")
-    return max(file_size//example_size, 1)
+    return max(file_size // example_size, 1)
+
 
 def get_features(file_path, compression=None):
     """
@@ -57,6 +60,7 @@ def get_features(file_path, compression=None):
         type_dict = {'bytes_list': tf.string, 'int64_list': tf.int64, 'float_list': tf.float32}
         tf_type = type_dict[feature_dtype]
         return tf_type
+
     _, ext = os.path.splitext(file_path)
     assert "tfrecord" in ext, "please make sure data is in tfrecord format"
     dataset = tf.data.TFRecordDataset(file_path, compression_type=compression)
@@ -66,7 +70,9 @@ def get_features(file_path, compression=None):
     keys_to_features = dict(zip(feature_list, tf_type_list))
     return keys_to_features
 
-def add_summary(data_dir, train_prefix, feature_name, feature_dtype, feature_shape, eval_prefix=None, num_train_examples=None, num_eval_examples=None, compression=None):
+
+def add_summary(data_dir, train_prefix, feature_name, feature_dtype, feature_shape, eval_prefix=None,
+                num_train_examples=None, num_eval_examples=None, compression=None):
     """Adds summary.json file to existing path with tfrecords.
 
     Args:
@@ -85,29 +91,42 @@ def add_summary(data_dir, train_prefix, feature_name, feature_dtype, feature_sha
     dataset = tf.data.TFRecordDataset(os.path.join(data_dir, train_files[0]), compression_type=compression)
     example = tf.train.Example.FromString(next(iter(dataset)).numpy())
     feature_list = list(example.features.feature.keys())
-    assert set(feature_list).issuperset(set(feature_name)), "feature name should at least be subset of feature name in tfrecords, found %s , given %s." % (str(feature_list), str(feature_name))
+    assert set(feature_list).issuperset(
+        set(feature_name)
+    ), "feature name should at least be subset of feature name in tfrecords, found %s , given %s." % (str(feature_list),
+                                                                                                      str(feature_name))
     if not num_train_examples:
         # num_train_examples = [get_number_of_examples(os.path.join(data_dir, f)) for f in train_files]
         num_trian_files = len(train_files)
-        logging_interval = max(num_trian_files//10, 1)
+        logging_interval = max(num_trian_files // 10, 1)
         num_train_examples = []
         for i in range(num_trian_files):
-            if (i+1) % logging_interval == 0:
-                print("FastEstimator: Calculating number of examples for train %d/%d" % (i+1, num_trian_files))
-            num_train_examples.append(get_number_of_examples(file_path=os.path.join(data_dir, train_files[i]), show_warning=i==0, compression=compression))
-    summary = {"feature_name": feature_name, "feature_dtype": feature_dtype, "feature_shape": feature_shape, "train_files":train_files, "num_train_examples": num_train_examples}
+            if (i + 1) % logging_interval == 0:
+                print("FastEstimator: Calculating number of examples for train %d/%d" % (i + 1, num_trian_files))
+            num_train_examples.append(
+                get_number_of_examples(file_path=os.path.join(data_dir, train_files[i]), show_warning=i == 0,
+                                       compression=compression))
+    summary = {
+        "feature_name": feature_name,
+        "feature_dtype": feature_dtype,
+        "feature_shape": feature_shape,
+        "train_files": train_files,
+        "num_train_examples": num_train_examples
+    }
     if eval_prefix:
         eval_files = [f for f in os.listdir(data_dir) if f.startswith(eval_prefix)]
         assert len(eval_files) > 0, "Couldn't find any validation tfrecord files in %s" % data_dir
         if not num_eval_examples:
             # num_eval_examples = [get_number_of_examples(os.path.join(data_dir, f)) for f in eval_files]
             num_eval_files = len(eval_files)
-            logging_interval = max(num_eval_files//10, 1)
+            logging_interval = max(num_eval_files // 10, 1)
             num_eval_examples = []
             for i in range(num_eval_files):
-                if (i+1) % logging_interval == 0:
-                    print("FastEstimator: Calculating number of examples for eval %d/%d" % (i+1, num_eval_files))
-                num_eval_examples.append(get_number_of_examples(file_path=os.path.join(data_dir, eval_files[i]), show_warning=i==0, compression=compression))
+                if (i + 1) % logging_interval == 0:
+                    print("FastEstimator: Calculating number of examples for eval %d/%d" % (i + 1, num_eval_files))
+                num_eval_examples.append(
+                    get_number_of_examples(file_path=os.path.join(data_dir, eval_files[i]), show_warning=i == 0,
+                                           compression=compression))
         summary["eval_files"] = eval_files
         summary["num_eval_examples"] = num_eval_examples
     if compression:

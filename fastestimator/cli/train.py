@@ -59,6 +59,7 @@ def configure_train_parser(subparsers):
     parser.add_argument('--inputs', type=str, help='The path where tfrecord is saved or will be saved')
     parser.add_argument('--hyperparameters', dest='hyperparameters_json', type=str,
                         help="The path to the hyperparameters JSON file")
-    parser.add_argument_group('hyperparameter arguments', 'Arguments to be passed through to the get_estimator() call. \
+    parser.add_argument_group(
+        'hyperparameter arguments', 'Arguments to be passed through to the get_estimator() call. \
         Examples might look like --epochs <int>, --batch_size <int>, --optimizer <str>, etc...')
     parser.set_defaults(func=train)

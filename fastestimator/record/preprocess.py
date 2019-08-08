@@ -18,6 +18,7 @@ from fastestimator.util.op import NumpyOp
 
 EPSILON = 1e-7
 
+
 class ImageReader(NumpyOp):
     """
     Class for reading png or jpg images
@@ -152,13 +153,13 @@ class Reshape(NumpyOp):
         data = np.reshape(data, self.shape)
         return data
 
+
 class MatReader(NumpyOp):
     """Class for reading .mat files.
 
     Args:
         parent_path: Parent path that will be added on given path.
     """
-
     def __init__(self, inputs=None, outputs=None, mode=None, parent_path=""):
 
         from scipy.io import loadmat
@@ -182,6 +183,7 @@ class MatReader(NumpyOp):
         data = self._loadmat(data)
         return data
 
+
 class Resize(NumpyOp):
     """Resize image.
 
@@ -193,7 +195,6 @@ class Resize(NumpyOp):
     Returns:
         Resized `np.ndarray`.
     """
-
     def __init__(self, target_size, resize_method='bilinear', keep_ratio=False, inputs=None, outputs=None, mode=None):
         import cv2
         self._cv2 = cv2
