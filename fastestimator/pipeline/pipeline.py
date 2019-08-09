@@ -90,6 +90,8 @@ class Pipeline:
             self.record_feature_shape = {"train": [], "eval": []}
             self.compression = {"train": [], "eval": []}
             self.file_names = {"train": [], "eval": []}
+            self.all_features = {"train": [], "eval": []}
+
 
     def _prepare_mode(self, mode):
         success = True
