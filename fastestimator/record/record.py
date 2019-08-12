@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.util.op import flatten_operation, get_op_from_mode, verify_ops
+from fastestimator.util.op import get_op_from_mode, verify_ops
 from fastestimator.util.util import convert_tf_dtype
 import multiprocessing as mp
 import tensorflow as tf

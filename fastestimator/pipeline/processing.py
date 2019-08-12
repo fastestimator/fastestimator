@@ -18,17 +18,7 @@ from fastestimator.util.op import TensorOp
 
 EPSILON = 1e-7
 
-
-class TensorFilter(TensorOp):
-    """An abstract class for data filter."""
-    def __init__(self, inputs=None, outputs=None, mode="train"):
-        super(TensorFilter, self).__init__(inputs=inputs, outputs=outputs, mode=mode)
-
-    def forward(self, data, state):
-        return tf.constant(True)
-
-
-class ScalarFilter(TensorFilter):
+class ScalarFilter(TensorOp):
     """Class for performing filtering on dataset based on scalar values.
 
     Args:
@@ -37,10 +27,11 @@ class ScalarFilter(TensorFilter):
         keep_prob: The probability of keeping the example
         mode: mode that the filter acts on
     """
-    def __init__(self, inputs, filter_value, keep_prob, mode="train", outputs=None):
-        super(ScalarFilter, self).__init__(inputs=inputs, outputs=outputs, mode=mode)
+    def __init__(self, inputs, filter_value, keep_prob, mode="train"):
+        self.inputs = inputs
         self.filter_value = filter_value
         self.keep_prob = keep_prob
+        self.mode = mode
         self._verify_inputs()
 
     def _verify_inputs(self):
@@ -54,12 +45,14 @@ class ScalarFilter(TensorFilter):
             data = [data]
         return data
 
-    def forward(self, data, state):
+    def forward(self, dataset, state):
+        pass_filter = tf.constant(True)
         for inp, filter_value, keep_prob in zip(self.inputs, self.filter_value, self.keep_prob):
-            if tf.equal(tf.reshape(data[inp], []), filter_value):
-                pass_filter = tf.greater(keep_prob, tf.random.uniform([]))
+            if tf.reshape(dataset[inp], []) == filter_value:
+                pass_current_filter = tf.greater(keep_prob, tf.random.uniform([]))
             else:
-                pass_filter = tf.constant(True)
+                pass_current_filter = tf.constant(True)
+            pass_filter = tf.logical_and(pass_filter, pass_current_filter)
         return pass_filter
 
 
@@ -212,7 +205,7 @@ class Resize(TensorOp):
         Returns:
             Resized tensor
         """
-        preprocessed_data = tf.image.resize_images(data, self.size, self.resize_method)
+        preprocessed_data = tf.image.resize(data, self.size, self.resize_method)
         return preprocessed_data
 
 

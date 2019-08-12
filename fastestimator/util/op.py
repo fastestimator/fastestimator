@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from itertools import chain
 
 
 class TensorOp:
@@ -33,17 +32,6 @@ class NumpyOp:
 
     def forward(self, data):
         return data
-
-
-def flatten_operation(ops):
-    if not isinstance(ops, list):
-        ops = [ops]
-    for idx, op in enumerate(ops):
-        if not isinstance(op, list):
-            ops[idx] = [op]
-    ops = list(chain.from_iterable(ops))
-    return ops
-
 
 def get_op_from_mode(ops, current_mode):
     selected_ops = []

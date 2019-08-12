@@ -15,7 +15,7 @@
 import tensorflow as tf
 
 from fastestimator.network.model import ModelOp
-from fastestimator.util.op import flatten_operation, get_op_from_mode, verify_ops
+from fastestimator.util.op import get_op_from_mode, verify_ops
 from fastestimator.util.util import NonContext
 
 
