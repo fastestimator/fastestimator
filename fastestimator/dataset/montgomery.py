@@ -62,6 +62,4 @@ def load_and_set_data(path=None):
     df_val.to_csv(eval_cvs_path, index=False)
 
 
-    return train_cvs_path, eval_cvs_path, path 
-
-# path = load_and_set_data()
+    return train_cvs_path, eval_cvs_path, path
