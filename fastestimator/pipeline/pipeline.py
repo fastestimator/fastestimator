@@ -25,6 +25,7 @@ from fastestimator.record.record import RecordWriter
 from fastestimator.util.op import get_op_from_mode, verify_ops
 from fastestimator.util.tfrecord import get_features
 from fastestimator.util.util import convert_tf_dtype
+from fastestimator.util.schedule import Scheduler
 
 
 class Pipeline:
@@ -272,10 +273,10 @@ class Pipeline:
         state = {"mode":mode, "epoch": current_epoch}
         dataset = self._input_epoch(state)
         start = time.time()
-        for i, _ in enumerate(dataset.take(num_steps)):
-            if i % log_interval == 0 and i > 0:
+        for _ in dataset.take(num_steps):
+            if step.numpy() % log_interval == 0 and step.numpy() > 0:
                 duration = time.time() - start
-                example_per_sec = log_interval * self.batch_size / duration
-                print("FastEstimator: Pipeline Preprocessing Example/sec %f" % example_per_sec)
+                example_per_sec = log_interval * self.batch_size_tensor.numpy() / duration
+                tf.print("FastEstimator: Step: %d, Epoch: %d, Batch Size %d, Example/sec %.2f" % (step.numpy(), epoch.numpy(), self.batch_size_tensor.numpy(), example_per_sec))
                 start = time.time()
         self._reset()
