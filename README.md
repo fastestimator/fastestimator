@@ -6,7 +6,7 @@ FastEstimator is a high-level deep learning API. With the help of FastEstimator,
 
 ## Prerequisites:
 * Python3
-* TensorFlow 2.0 beta1
+* TensorFlow 1.12.0
 * Horovod (Only needed for distributed training)
 
 ## Installation
