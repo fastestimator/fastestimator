@@ -20,7 +20,7 @@ class TensorOp:
         self.outputs = outputs
         self.mode = mode
 
-    def forward(self, data, state):
+    def forward(self, data):
         return data
 
 
@@ -33,9 +33,11 @@ class NumpyOp:
     def forward(self, data):
         return data
 
+
 def get_op_from_mode(ops, current_mode):
     selected_ops = []
     for op in ops:
+        assert hasattr(op, "mode"), "Operation: {} has no mode attribute".format(op)
         op_mode = op.mode
         if not isinstance(op_mode, list):
             op_mode = [op_mode]
@@ -47,16 +49,19 @@ def get_op_from_mode(ops, current_mode):
 def verify_ops(ops, class_name):
     inheritage = {"RecordWriter": NumpyOp, "Pipeline": TensorOp, "Network": TensorOp}
     inheritage_class = inheritage[class_name]
-    assert ops[0].inputs, "must provide inputs for the operation '{}' in '{}'".format(type(ops[0]).__name__, class_name)
-    assert ops[-1].outputs, "must provide outputs for the operation '{}' in '{}'".format(
-        type(ops[-1]).__name__, class_name)
-    inputs = ops[0].inputs
-    for idx, op in enumerate(ops):
-        assert isinstance(op, inheritage_class), "operation '{}' in class '{}' doesn't have correct inheritage".format(
-            type(op).__name__, class_name)
-        if idx + 1 < len(ops) and ops[idx + 1].inputs:
-            new_inputs = ops[idx + 1].inputs
-            if new_inputs and new_inputs != inputs:
-                assert op.outputs, \
-                    "must provide outputs for the operation '{}' in class '{}', otherwise the result will be lost"\
-                    .format(type(op).__name__, class_name)
+    if ops:
+        assert ops[0].inputs, "must provide inputs for the operation '{}' in '{}'".format(
+            type(ops[0]).__name__, class_name)
+        assert ops[-1].outputs, "must provide outputs for the operation '{}' in '{}'".format(
+            type(ops[-1]).__name__, class_name)
+        inputs = ops[0].inputs
+        for idx, op in enumerate(ops):
+            assert isinstance(op,
+                              inheritage_class), "operation '{}' in class '{}' doesn't have correct inheritage".format(
+                                  type(op).__name__, class_name)
+            if idx + 1 < len(ops) and ops[idx + 1].inputs:
+                new_inputs = ops[idx + 1].inputs
+                if new_inputs and new_inputs != inputs:
+                    assert op.outputs, \
+                        "must provide outputs for the operation '{}' in class '{}', otherwise the result will be lost"\
+                        .format(type(op).__name__, class_name)

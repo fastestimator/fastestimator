@@ -18,7 +18,8 @@ from fastestimator.util.op import TensorOp
 
 EPSILON = 1e-7
 
-class ScalarFilter(TensorOp):
+
+class TensorFilter(TensorOp):
     """Class for performing filtering on dataset based on scalar values.
 
     Args:
@@ -45,7 +46,7 @@ class ScalarFilter(TensorOp):
             data = [data]
         return data
 
-    def forward(self, dataset, state):
+    def forward(self, dataset):
         pass_filter = tf.constant(True)
         for inp, filter_value, keep_prob in zip(self.inputs, self.filter_value, self.keep_prob):
             if tf.reshape(dataset[inp], []) == filter_value:
@@ -67,7 +68,7 @@ class Binarize(TensorOp):
         super(Binarize, self).__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.thresh = threshold
 
-    def forward(self, data, state):
+    def forward(self, data):
         """
         Transforms the image to binary based on threshold
 
@@ -87,7 +88,7 @@ class Zscore(TensorOp):
     """
     Standardize data using zscore method
     """
-    def forward(self, data, state):
+    def forward(self, data):
         """
         Standardizes the data tensor
 
@@ -110,7 +111,7 @@ class Minmax(TensorOp):
     """
     Normalize data using the minmax method
     """
-    def forward(self, data, state):
+    def forward(self, data):
         """
         Normalizes the data tensor
 
@@ -138,7 +139,7 @@ class Scale(TensorOp):
         super(Scale, self).__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.scalar = scalar
 
-    def forward(self, data, state):
+    def forward(self, data):
         """
         Scales the data tensor
 
@@ -165,7 +166,7 @@ class Onehot(TensorOp):
         super(Onehot, self).__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.num_dim = num_dim
 
-    def forward(self, data, state):
+    def forward(self, data):
         """
         Transforms categorical labels to onehot encodings
 
@@ -194,7 +195,7 @@ class Resize(TensorOp):
         self.size = size
         self.resize_method = resize_method
 
-    def forward(self, data, state):
+    def forward(self, data):
         """
         Resizes data tensor
 
@@ -220,7 +221,7 @@ class Reshape(TensorOp):
         super(Reshape, self).__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.shape = shape
 
-    def forward(self, data, state):
+    def forward(self, data):
         """
         Reshapes data tensor
 

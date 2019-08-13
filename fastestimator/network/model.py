@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import tensorflow as tf
+
 from fastestimator.network.loss import Loss
 from fastestimator.util.op import TensorOp
 
@@ -48,6 +49,6 @@ class ModelOp(TensorOp):
             self.model, tf.keras.Model
         ) and self.model.fe_compiled is True, "must prepare your the keras model before use in ModelOp"
 
-    def forward(self, data, state):
-        data = self.model(data, training=state['mode'] == "train")
+    def forward(self, data, mode):
+        data = self.model(data, training=mode == "train")
         return data

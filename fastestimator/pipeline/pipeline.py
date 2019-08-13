@@ -23,9 +23,9 @@ import tensorflow as tf
 from fastestimator.pipeline.processing import TensorFilter
 from fastestimator.record.record import RecordWriter
 from fastestimator.util.op import get_op_from_mode, verify_ops
+from fastestimator.util.schedule import Scheduler
 from fastestimator.util.tfrecord import get_features
 from fastestimator.util.util import convert_tf_dtype
-from fastestimator.util.schedule import Scheduler
 
 
 class Pipeline:
@@ -48,11 +48,15 @@ class Pipeline:
         if self.data:
             assert isinstance(self.data, (dict, RecordWriter)), "data must be either RecordWriter, dictionary"
         if self.read_feature:
-            assert isinstance(self.read_feature, (list, tuple, dict)), "write_feature must be either list, tuple or dictionary"
+            assert isinstance(self.read_feature,
+                              (list, tuple, dict)), "write_feature must be either list, tuple or dictionary"
             if not isinstance(self.read_feature, tuple):
                 self.read_feature = [self.read_feature]
-        if not isinstance(self.ops, list):
-            self.ops = [self.ops]
+        if self.ops:
+            if not isinstance(self.ops, list):
+                self.ops = [self.ops]
+        else:
+            self.ops = []
 
     def _reset(self):
         self.mode_list = []
@@ -62,6 +66,7 @@ class Pipeline:
         self.feature_name = {"train": [], "eval": []}
         self.extracted_dataset = {}
         self.transformed_dataset = {}
+        self.dataset_schedule = {}
         #TFrecord only
         self.summary_file = {}
         self.feature_dtype = {"train": [], "eval": []}
@@ -75,7 +80,7 @@ class Pipeline:
             self._get_numpy_config()
         else:
             assert inputs, "Must specify the data path of tfrecords"
-            if isinstance(self.data, RecordWriter) and (not os.path.exists(inputs) or len(os.listdir(inputs)) == 0):
+            if isinstance(self.data, RecordWriter) and (not os.path.exists(inputs) or not os.listdir(inputs)):
                 self.data.create_tfrecord(save_dir=inputs)
             else:
                 print("FastEstimator: Reading non-empty directory: {}".format(inputs))
@@ -103,15 +108,19 @@ class Pipeline:
                 num_examples_list.append(feature_data.shape[0])
             else:
                 raise ValueError("the feature only supports list or numpy array")
-        assert len(set(num_examples_list)) == 1, "inconsistent number of data found during {}, please check the data".format(mode)
+        assert len(set(
+            num_examples_list)) == 1, "inconsistent number of data found during {}, please check the data".format(mode)
         self.num_examples[mode].append(set(num_examples_list).pop())
         self.shuffle_buffer[mode].append(set(num_examples_list).pop())
-    
+
     def _get_tfrecord_config(self):
         found_data = False
         for mode in self.possible_mode:
-            self.summary_file[mode] = [os.path.join(self.inputs, f) for f in os.listdir(self.inputs) if f.endswith(".json") and f.startswith("%s_summary" % mode)]
-            if len(self.summary_file[mode]) > 0:
+            self.summary_file[mode] = [
+                os.path.join(self.inputs, f) for f in os.listdir(self.inputs)
+                if f.endswith(".json") and f.startswith("%s_summary" % mode)
+            ]
+            if self.summary_file[mode] > 0:
                 self.mode_list.append(mode)
                 self._get_tfrecord_config_mode(mode)
                 found_data = True
@@ -140,7 +149,8 @@ class Pipeline:
     def _get_feature_name(self, mode):
         if len(self.all_features[mode]) > 1 and self.read_feature:
             assert isinstance(self.read_feature, tuple), "read feature must be a tuple for unpaired feature set"
-            assert len(self.read_feature) == len(self.all_features[mode]), "the tuple should be consistent between read_feature and data"
+            assert len(self.read_feature) == len(
+                self.all_features[mode]), "the tuple should be consistent between read_feature and data"
         for idx, feature in enumerate(self.all_features[mode]):
             if self.read_feature is None:
                 self.feature_name[mode].append(list(feature.keys()))
@@ -148,20 +158,23 @@ class Pipeline:
                 self.feature_name[mode].append(self.read_feature[idx][mode])
             else:
                 self.feature_name[mode].append(self.read_feature[idx])
-    
+
     def _extract_dataset(self, mode):
         ds_tuple = ()
         # Data Reading
         for idx in range(len(self.all_features[mode])):
-            if isinstance(self.data, (list, tuple)):
+            if isinstance(self.data, dict):
                 ds = tf.data.Dataset.from_tensor_slices(self.all_features[mode][idx])
             else:
                 if mode == "train":
                     ds = tf.data.Dataset.from_tensor_slices(self.file_names[mode][idx])
                     ds = ds.shuffle(len(self.file_names[mode][idx]))
-                    ds = ds.interleave(lambda ds: tf.data.TFRecordDataset(ds, compression_type=self.compression[mode][idx]), cycle_length=self.num_core, block_length=2)
+                    ds = ds.interleave(
+                        lambda ds: tf.data.TFRecordDataset(ds, compression_type=self.compression[mode][idx]),
+                        cycle_length=self.num_core, block_length=2)
                 else:
-                    ds = tf.data.TFRecordDataset(self.file_names[mode][idx], compression_type=self.compression[mode][idx])
+                    ds = tf.data.TFRecordDataset(self.file_names[mode][idx],
+                                                 compression_type=self.compression[mode][idx])
                 ds = ds.map(lambda ds: self._decode_records(ds, mode, idx), num_parallel_calls=self.num_core)
             ds = ds.shuffle(self.shuffle_buffer[mode][idx])
             ds_tuple += ds,
@@ -174,38 +187,105 @@ class Pipeline:
         self.extracted_dataset[mode] = dataset
 
     def _transform_dataset(self, mode):
-        dataset = self.extracted_dataset[mode]
-        signature_epoch_list = [0]
-        if self.ops:
-            pass
-        
-        for epoch in signature_epoch_list:
-            
+        signature_epoch, mode_ops = self._get_signature_epoch(mode)
+        extracted_ds = self.extracted_dataset[mode]
+        dataset_map = {}
+        for epoch in signature_epoch:
+            epoch_ops_all = []
+            forward_ops_epoch = []
+            filter_ops_epoch = []
+            forward_ops_between_filter = []
+            #get batch size for the epoch
+            batch_size = self.batch_size
+            if isinstance(batch_size, Scheduler):
+                batch_size = batch_size.get_current_value(epoch)
+            #generate ops for specific mode and epoch
+            for op in mode_ops:
+                if isinstance(op, Scheduler):
+                    scheduled_op = op.get_current_value(epoch)
+                    if scheduled_op:
+                        epoch_ops_all.append(scheduled_op)
+                else:
+                    epoch_ops_all.append(op)
+            #check the ops
+            epoch_ops_without_filter = [op for op in epoch_ops_all if not isinstance(op, TensorFilter)]
+            verify_ops(epoch_ops_without_filter, "Pipeline")
+            # arrange operation according to filter location
+            for op in epoch_ops_all:
+                if not isinstance(op, TensorFilter):
+                    forward_ops_between_filter.append(op)
+                else:
+                    forward_ops_epoch.append(forward_ops_between_filter)
+                    filter_ops_epoch.append(op)
+                    forward_ops_between_filter = []
+            forward_ops_epoch.append(forward_ops_between_filter)
+            #execute the operations
+            dataset = self._execute_ops(extracted_ds, forward_ops_epoch, filter_ops_epoch)
+            #rest of the dataset setup
+            if self.expand_dims:
+                dataset = dataset.flat_map(lambda dataset: tf.data.Dataset.from_tensor_slices(dataset))
+            if self.padded_batch:
+                padded_shape = dataset.map(self._get_padded_shape)
+                dataset = dataset.padded_batch(batch_size, padded_shapes=padded_shape)
+            else:
+                dataset = dataset.batch(batch_size)
+            dataset = dataset.prefetch(buffer_size=1)
+            dataset_map[epoch] = dataset
+        self.dataset_schedule[mode] = Scheduler(epoch_dict=dataset_map)
 
+    def _get_padded_shape(self, dataset):
+        padded_shape = {}
+        for key in dataset:
+            padded_shape[key] = dataset[key].shape
+        return padded_shape
 
-
-
-
-    def _epoch_dataset(self, state):
-        epoch = state["epoch"]
-        mode = state["mode"]
-        
-
-
-
-    def _execute_mode_ops(self, dataset, state):
-        num_filters = len(self.mode_filter_ops[mode])
-        ops = self.mode_forward_ops[mode][0]
-        dataset = dataset.map(lambda dataset: self._preprocess_fn(dataset, ops), num_parallel_calls=self.num_core)
+    def _execute_ops(self, dataset, forward_ops_epoch, filter_ops_epoch):
+        num_filters = len(filter_ops_epoch)
+        forward_ops = forward_ops_epoch[0]
+        dataset = dataset.map(lambda dataset: self._preprocess_fn(dataset, forward_ops),
+                              num_parallel_calls=self.num_core)
         if num_filters > 0:
-            for idx in range(num_filters):
-                dataset = dataset.filter(
-                    lambda dataset: self.mode_filter_ops[mode][idx].forward(dataset, {"mode": mode}))
-                ops = self.mode_forward_ops[mode][idx + 1]
-                if len(ops) > 0:
-                    dataset = dataset.map(lambda dataset: self._preprocess_fn(dataset, ops),
-                                          num_parallel_calls=self.num_core)
+            for filter_op, forward_ops in zip(filter_ops_epoch, forward_ops_epoch[1:]):
+                dataset = dataset.filter(filter_op.forward)
+                dataset = dataset.map(lambda dataset: self._preprocess_fn(dataset, forward_ops),
+                                      num_parallel_calls=self.num_core)
         return dataset
+
+    def _preprocess_fn(self, feature, forward_ops):
+        for op in forward_ops:
+            if op.inputs:
+                data = self._get_inputs_from_key(feature, op.inputs)
+            data = op.forward(data)
+            if op.outputs:
+                feature = self._write_outputs_to_key(feature, data, op.outputs)
+        return feature
+
+    def _get_inputs_from_key(self, feature, inputs_key):
+        if isinstance(inputs_key, list):
+            data = [feature[key] for key in inputs_key]
+        elif isinstance(inputs_key, tuple):
+            data = tuple([feature[key] for key in inputs_key])
+        else:
+            data = feature[inputs_key]
+        return data
+
+    def _write_outputs_to_key(self, feature, outputs_data, outputs_key):
+        if isinstance(outputs_key, str):
+            feature[outputs_key] = outputs_data
+        else:
+            for key, data in zip(outputs_key, outputs_data):
+                feature[key] = data
+        return feature
+
+    def _get_signature_epoch(self, mode):
+        signature_epoch = [0]
+        if isinstance(self.batch_size, Scheduler):
+            signature_epoch.extend(self.batch_size.keys)
+        mode_ops = get_op_from_mode(self.ops, mode)
+        for op in mode_ops:
+            if isinstance(op, Scheduler):
+                signature_epoch.extend(op.keys)
+        return list(set(signature_epoch)), mode_ops
 
     def _decode_records(self, dataset, mode, idx):
         decoded_data = {}
@@ -230,39 +310,10 @@ class Pipeline:
                 combined_dict[key] = ds[key]
         return combined_dict
 
-    def _preprocess_fn(self, feature, ops):
-        data = None
-        for op in ops:
-            if op.inputs:
-                data = self._get_inputs_from_key(feature, op.inputs)
-            data = op.forward(data, {})
-            if op.outputs:
-                feature = self._write_outputs_to_key(feature, data, op.outputs)
-        return feature
-
-    def _write_outputs_to_key(self, feature, outputs_data, outputs_key):
-        if isinstance(outputs_key, str):
-            feature[outputs_key] = outputs_data
-        else:
-            for key, data in zip(outputs_key, outputs_data):
-                feature[key] = data
-        return feature
-
-    def _get_inputs_from_key(self, feature, inputs_key):
-        if isinstance(inputs_key, list):
-            data = [feature[key] for key in inputs_key]
-        elif isinstance(inputs_key, tuple):
-            data = tuple([feature[key] for key in inputs_key])
-        else:
-            data = feature[inputs_key]
-        return data
-
-
     def show_results(self, inputs=None, mode="train", num_steps=1, current_epoch=0):
         data = []
         self._prepare(inputs=inputs)
-        state = {"mode":mode, "epoch": current_epoch}
-        dataset = self._input_epoch(state)
+        dataset = self.dataset_schedule[mode].get_current_value(current_epoch)
         for example in dataset.take(num_steps):
             data.append(example)
         self._reset()
@@ -270,13 +321,23 @@ class Pipeline:
 
     def benchmark(self, inputs=None, mode="train", num_steps=1000, log_interval=100, current_epoch=0):
         self._prepare(inputs=inputs)
-        state = {"mode":mode, "epoch": current_epoch}
-        dataset = self._input_epoch(state)
+        dataset = self.dataset_schedule[mode].get_current_value(current_epoch)
+        batch_size = self.batch_size
+        if isinstance(batch_size, Scheduler):
+            batch_size = batch_size.get_current_value(current_epoch)
+
+        num_loops = int(np.ceil(batch_size * num_steps / min(self.num_examples[mode])))
+        step = 0
         start = time.time()
-        for _ in dataset.take(num_steps):
-            if step.numpy() % log_interval == 0 and step.numpy() > 0:
-                duration = time.time() - start
-                example_per_sec = log_interval * self.batch_size_tensor.numpy() / duration
-                tf.print("FastEstimator: Step: %d, Epoch: %d, Batch Size %d, Example/sec %.2f" % (step.numpy(), epoch.numpy(), self.batch_size_tensor.numpy(), example_per_sec))
-                start = time.time()
-        self._reset()
+        for _ in range(num_loops):
+            for _ in dataset:
+                step += 1
+                if step % log_interval == 0:
+                    duration = time.time() - start
+                    example_per_sec = log_interval * batch_size / duration
+                    print("FastEstimator: Step: %d, Epoch: %d, Batch Size %d, Example/sec %.2f" %
+                          (step, current_epoch, batch_size, example_per_sec))
+                    start = time.time()
+                if step == num_steps:
+                    self._reset()
+                    return
