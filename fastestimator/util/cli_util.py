@@ -26,7 +26,7 @@ class SaveAction(argparse.Action):
     def __init__(self, option_strings, dest, nargs='?', **kwargs):
         if '?' != nargs:
             raise ValueError("nargs must be \'?\'")
-        super(SaveAction, self).__init__(option_strings, dest, nargs, **kwargs)
+        super().__init__(option_strings, dest, nargs, **kwargs)
 
     def __call__(self, parser, namespace, values, option_string=None):
         setattr(namespace, self.dest, True)
