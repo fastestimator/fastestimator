@@ -21,7 +21,7 @@ from tensorflow.python.keras.initializers import RandomNormal
 class InstanceNormalization(layers.Layer):
     """Instance Normalization Layer (https://arxiv.org/abs/1607.08022)."""
     def __init__(self, epsilon=1e-5):
-        super(InstanceNormalization, self).__init__()
+        super().__init__()
         self.epsilon = epsilon
 
     def build(self, input_shape):
@@ -42,7 +42,7 @@ class ReflectionPadding2D(layers.Layer):
     def __init__(self, padding=(1, 1), **kwargs):
         self.padding = tuple(padding)
         self.input_spec = [layers.InputSpec(ndim=4)]
-        super(ReflectionPadding2D, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def compute_output_shape(self, s):
         """ If you are using "channels_last" configuration"""

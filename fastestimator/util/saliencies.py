@@ -73,7 +73,7 @@ class SaliencyMask(object):
 class GradientSaliency(SaliencyMask):
     """A SaliencyMask class that computes saliency masks with a gradient."""
     def __init__(self, model):
-        super(GradientSaliency, self).__init__(model)
+        super().__init__(model)
 
     @tf.function
     def get_mask(self, model_input, classes=None):
@@ -132,6 +132,6 @@ class IntegratedGradients(GradientSaliency):
 
         for alpha in tf.linspace(0.0, 1.0, steps):
             x_step = input_baseline + alpha * x_diff
-            total_gradients += super(IntegratedGradients, self).get_mask(x_step, classes=classes)
+            total_gradients += super().get_mask(x_step, classes=classes)
 
         return tf.multiply(total_gradients, x_diff)
