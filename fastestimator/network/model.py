@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import tensorflow as tf
-from fastestimator.network.loss import Loss
+from fastestimator.network.loss import Loss, CacheLoss
 from fastestimator.util.op import TensorOp
 
 
@@ -51,3 +51,32 @@ class ModelOp(TensorOp):
     def forward(self, data, state):
         data = self.model(data, training=state['mode'] == "train")
         return data
+
+
+class AdverseModelOp(ModelOp):
+    def __init__(self, model, inputs=None, outputs=None, mode=None, epsilon=0.1, warmup=0):
+        super(AdverseModelOp, self).__init__(model=model, inputs=inputs, outputs=outputs, mode=mode)
+        self.model.loss = CacheLoss(self.model.loss)
+        self.epsilon = epsilon
+        self.warmup = tf.constant(warmup)
+
+    def forward(self, data, state):
+        self.model.loss.cache_enabled = False
+        x, y = data
+        training = state['mode'] == "train"
+        if training is False:
+            return self.model(x, training=training)
+        tape = state['tape']
+        tape.watch(x)
+        y_pred = self.model(x, training=training)
+        loss_clean = self.model.loss.calculate_loss({'y': y, 'y_pred': y_pred}, state)
+        with tape.stop_recording():
+            grad_clean = tape.gradient(loss_clean, x)
+            x_dirty = tf.clip_by_value(x + self.epsilon * tf.sign(grad_clean), tf.reduce_min(x), tf.reduce_max(x))
+        y_dirty = self.model(x_dirty, training=training)
+        loss = 0.5 * loss_clean + 0.5 * self.model.loss.calculate_loss({'y': y, 'y_pred': y_dirty}, state)
+        self.model.loss.cache = loss
+        if state['step'] < self.warmup:  # TODO abort this higher up (doesn't want to work for some reason)
+            self.model.loss.cache = loss_clean
+        self.model.loss.cache_enabled = True
+        return y_pred
