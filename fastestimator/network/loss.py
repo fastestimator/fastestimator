@@ -33,6 +33,25 @@ class Loss:
         return loss
 
 
+class CacheLoss(Loss):
+    def __init__(self, real_loss_func):
+        """
+        A loss wrapper that can be used to cache loss values (useful in adversarial training)
+        Args:
+            real_loss_func: The underlying FE loss function to be invoked
+        """
+        super(CacheLoss, self).__init__()
+        self.real_loss_func = real_loss_func
+        self.cache = 0.0
+        self.cache_enabled = False
+
+    def calculate_loss(self, batch, state):
+        if self.cache_enabled is True:
+            return self.cache
+        else:
+            return self.real_loss_func.calculate_loss(batch, state)
+
+
 class SparseCategoricalCrossentropy(Loss):
     def __init__(self, true_key, pred_key, **kwargs):
         """Calculate sparse categorical cross entropy, the rest of the keyword argument will be passed to 
