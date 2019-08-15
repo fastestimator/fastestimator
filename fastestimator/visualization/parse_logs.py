@@ -156,8 +156,14 @@ def graph_metrics(files_metrics, smooth_factor, save, save_path, share_legend, p
         plt.savefig(save_file, dpi=300)
 
 
-def parse_files(file_paths, log_extension='.txt', smooth_factor=0, save=False, save_path=None, ignore_metrics=None,
-                share_legend=True, pretty_names=False):
+def parse_files(file_paths,
+                log_extension='.txt',
+                smooth_factor=0,
+                save=False,
+                save_path=None,
+                ignore_metrics=None,
+                share_legend=True,
+                pretty_names=False):
     """
     A function which will iterate through the given log file paths, parse them to extract metrics, remove any
         metrics which are blacklisted, and then pass the necessary information on the graphing function
@@ -183,12 +189,23 @@ def parse_files(file_paths, log_extension='.txt', smooth_factor=0, save=False, s
         file_metrics = parse_file(file_path)
         remove_blacklist_keys(file_metrics, ignore_metrics)
         files_metrics[strip_suffix(os.path.split(file_path)[1].strip(), log_extension)] = file_metrics
-    graph_metrics(files_metrics, smooth_factor, save, save_path if save_path is not None else file_paths[0],
-                  share_legend, pretty_names)
+    graph_metrics(files_metrics,
+                  smooth_factor,
+                  save,
+                  save_path if save_path is not None else file_paths[0],
+                  share_legend,
+                  pretty_names)
 
 
-def parse_folder(dir_path, log_extension='.txt', recursive_search=False, smooth_factor=1, save=False, save_path=None,
-                 ignore_metrics=None, share_legend=True, pretty_names=False):
+def parse_folder(dir_path,
+                 log_extension='.txt',
+                 recursive_search=False,
+                 smooth_factor=1,
+                 save=False,
+                 save_path=None,
+                 ignore_metrics=None,
+                 share_legend=True,
+                 pretty_names=False):
     """
     A function which will gather all log files within a given folder and pass them along for visualization
 
