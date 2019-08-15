@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import tensorflow as tf
+from tensorflow.python.keras.losses import SparseCategoricalCrossentropy as KerasCrossentropy
 
 from fastestimator import Estimator
 from fastestimator import Network
@@ -31,15 +32,15 @@ def get_estimator(epochs=2, batch_size=32, alpha=1.0, warmup=0):
     num_classes = 10
     pipeline = Pipeline(batch_size=batch_size, data=data, ops=Minmax(inputs="x", outputs="x"))
 
-    model = build(keras_model=LeNet(input_shape=x_train.shape[1:], classes=num_classes), loss=Loss(inputs="loss"),
+    model = build(keras_model=LeNet(input_shape=x_train.shape[1:], classes=num_classes),
+                  loss=Loss(inputs="loss"),
                   optimizer="adam")
 
     network = Network(ops=[
         MixUpBatch(inputs="x", outputs=["x", "lambda"], alpha=alpha, warmup=warmup, mode="train"),
         ModelOp(inputs="x", model=model, outputs="y_pred"),
-        MixUpLoss(tf.losses.SparseCategoricalCrossentropy(), inputs=("lambda", "y",
-                                                                     "y_pred"), outputs="loss", mode="train"),
-        SparseCategoricalCrossentropy(inputs=("y", "y_pred"), outputs="loss", mode="eval")
+        MixUpLoss(KerasCrossentropy(), lam="lambda", y_true="y", y_pred="y_pred", outputs="loss", mode="train"),
+        SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred", outputs="loss", mode="eval")
     ])
 
     traces = [
