@@ -38,8 +38,7 @@ def get_estimator():
     }
     pipeline = fe.Pipeline(batch_size=32, data=data, ops=Minmax(inputs="x", outputs="x"))
     # step 2. prepare model
-    model = build(keras_model=LeNet(), loss=SparseCategoricalCrossentropy(true_key="y", pred_key="y_pred"),
-                  optimizer="adam")
+    model = build(keras_model=LeNet(), loss=SparseCategoricalCrossentropy(inputs=("y", "y_pred")), optimizer="adam")
     network = fe.Network(ops=ModelOp(inputs="x", model=model, outputs="y_pred"))
     # step 3.prepare estimator
     estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=2,

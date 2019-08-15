@@ -350,7 +350,7 @@ class MixUpBatch(TensorOp):
             alpha: the alpha value defining the beta distribution to be drawn from during training
             warmup: how many steps (int) to wait before starting mix-up
         """
-        super(MixUpBatch, self).__init__(inputs=inputs, outputs=outputs, mode=mode)
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.alpha = tf.constant(alpha)
         self.beta = tfp.distributions.Beta(alpha, alpha)
         self.warmup = warmup
@@ -365,3 +365,30 @@ class MixUpBatch(TensorOp):
         # the corresponding Y values
         mix = [lam * dat + (1.0 - lam) * tf.roll(dat, shift=1, axis=0) for dat in iterdata]
         return mix + [lam]
+
+
+class AdversarialSample(TensorOp):
+    def __init__(self, inputs, outputs=None, mode=None, epsilon=0.1):
+        assert len(inputs) == 2, \
+            "AdversarialSample requires 2 inputs: a loss value and the input data which lead to the loss"
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.epsilon = epsilon
+
+    def forward(self, data, state):
+        clean_loss, clean_data = data
+        tape = state['tape']
+        with tape.stop_recording():
+            grad_clean = tape.gradient(clean_loss, clean_data)
+            adverse_data = tf.clip_by_value(clean_data + self.epsilon * tf.sign(grad_clean), tf.reduce_min(clean_data),
+                                            tf.reduce_max(clean_data))
+        return adverse_data
+
+
+class Average(TensorOp):
+    def forward(self, data, state):
+        iterdata = data if isinstance(data, list) else list(data) if isinstance(data, tuple) else [data]
+        num_entries = len(iterdata)
+        result = 0.0
+        for elem in iterdata:
+            result += elem
+        return result / num_entries

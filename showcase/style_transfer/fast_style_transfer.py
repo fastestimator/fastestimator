@@ -1,21 +1,17 @@
 import cv2
 import numpy as np
 import tensorflow as tf
+
 from fastestimator.architecture.stnet import styleTransferNet, lossNet
 from fastestimator.dataset.mscoco import load_data
-
 from fastestimator.estimator.estimator import Estimator
-
-from fastestimator.network.loss import Loss, SparseCategoricalCrossentropy
-from fastestimator.network.network import Network
+from fastestimator.network.loss import Loss
 from fastestimator.network.model import ModelOp, build
-
+from fastestimator.network.network import Network
 from fastestimator.pipeline.pipeline import Pipeline
-
 from fastestimator.record.preprocess import ImageReader, Resize
 from fastestimator.record.record import RecordWriter
-
-from fastestimator.util.op import NumpyOp, TensorOp
+from fastestimator.util.op import TensorOp
 
 
 class Rescale(TensorOp):
@@ -25,7 +21,7 @@ class Rescale(TensorOp):
 
 class ExtractVGGFeatures(TensorOp):
     def __init__(self, inputs, outputs, mode=None):
-        super(ExtractVGGFeatures, self).__init__(inputs, outputs, mode)
+        super().__init__(inputs, outputs, mode)
         self.vgg = lossNet()
 
     def forward(self, data, state):
@@ -33,7 +29,8 @@ class ExtractVGGFeatures(TensorOp):
 
 
 class StyleContentLoss(Loss):
-    def __init__(self, style_weight, content_weight, tv_weight):
+    def __init__(self, style_weight, content_weight, tv_weight, inputs, outputs=None, mode=None):
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.style_weight = style_weight
         self.content_weight = content_weight
         self.tv_weight = tv_weight
@@ -61,10 +58,8 @@ class StyleContentLoss(Loss):
     def calculate_total_variation(self, y_pred):
         return tf.reduce_mean(tf.image.total_variation(y_pred))
 
-    def calculate_loss(self, batch, state):
-        y_pred = batch['y_pred']
-        y_style = batch['y_style']
-        y_content = batch['y_content']
+    def forward(self, data, state):
+        y_pred, y_style, y_content, image_out = data
 
         style_loss = [self.calculate_style_recon_loss(a, b) for a, b in zip(y_style['style'], y_pred['style'])]
         style_loss = tf.add_n(style_loss)
@@ -76,7 +71,7 @@ class StyleContentLoss(Loss):
         content_loss = tf.add_n(content_loss)
         content_loss *= self.content_weight
 
-        total_variation_reg = self.calculate_total_variation(batch['image_out'])
+        total_variation_reg = self.calculate_total_variation(image_out)
         total_variation_reg *= self.tv_weight
         return style_loss + content_loss + total_variation_reg
 
@@ -93,8 +88,10 @@ def get_estimator(style_img_path, data_path=None, style_weight=5.0, content_weig
             Resize(inputs="image", target_size=(256, 256), outputs="image")
         ])
     pipeline = Pipeline(batch_size=4, data=writer, ops=[Rescale(inputs="image", outputs="image")])
-    model = build(keras_model=styleTransferNet(), loss=StyleContentLoss(style_weight, content_weight, tv_weight),
-                  optimizer=tf.keras.optimizers.Adam())
+    model = build(
+        keras_model=styleTransferNet(), loss=StyleContentLoss(style_weight, content_weight, tv_weight,
+                                                              inputs=('y_pred', 'y_style', 'y_content', 'image_out')),
+        optimizer=tf.keras.optimizers.Adam())
     network = Network(ops=[
         ModelOp(inputs="image", model=model, outputs="image_out"),
         ExtractVGGFeatures(inputs=lambda: style_img_t, outputs="y_style"),

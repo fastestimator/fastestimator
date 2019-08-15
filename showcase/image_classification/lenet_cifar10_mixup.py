@@ -19,7 +19,7 @@ from fastestimator import Network
 from fastestimator import Pipeline
 from fastestimator.architecture import LeNet
 from fastestimator.estimator.trace import Accuracy, ConfusionMatrix
-from fastestimator.network.loss import MixUpLoss
+from fastestimator.network.loss import MixUpLoss, SparseCategoricalCrossentropy, Loss
 from fastestimator.network.model import ModelOp, build
 from fastestimator.pipeline.augmentation import MixUpBatch
 from fastestimator.pipeline.processing import Minmax
@@ -31,18 +31,21 @@ def get_estimator(epochs=2, batch_size=32, alpha=1.0, warmup=0):
     num_classes = 10
     pipeline = Pipeline(batch_size=batch_size, data=data, ops=Minmax(inputs="x", outputs="x"))
 
-    model = build(
-        keras_model=LeNet(input_shape=x_train.shape[1:], classes=num_classes),
-        loss=MixUpLoss(tf.losses.SparseCategoricalCrossentropy(), true_key="y", pred_key="y_pred",
-                       lambda_key="lambda"), optimizer="adam")
+    model = build(keras_model=LeNet(input_shape=x_train.shape[1:], classes=num_classes), loss=Loss(inputs="loss"),
+                  optimizer="adam")
+
     network = Network(ops=[
         MixUpBatch(inputs="x", outputs=["x", "lambda"], alpha=alpha, warmup=warmup, mode="train"),
-        ModelOp(inputs="x", model=model, outputs="y_pred")
+        ModelOp(inputs="x", model=model, outputs="y_pred"),
+        MixUpLoss(tf.losses.SparseCategoricalCrossentropy(), inputs=("lambda", "y",
+                                                                     "y_pred"), outputs="loss", mode="train"),
+        SparseCategoricalCrossentropy(inputs=("y", "y_pred"), outputs="loss", mode="eval")
     ])
 
     traces = [
         Accuracy(true_key="y", pred_key="y_pred"),
         ConfusionMatrix(true_key="y", pred_key="y_pred", num_classes=num_classes)
     ]
+
     estimator = Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces)
     return estimator

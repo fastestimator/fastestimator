@@ -46,7 +46,7 @@ class Network:
             state['tape'] = tape
             self._forward(batch, state)
             for idx in range(self.num_model):
-                losses += self.model_list[idx].loss.calculate_loss(batch, state),
+                losses += self._loss(self.model_list[idx], batch, state),
         # update model only for train mode
         if state["mode"] == "train":
             for idx in range(self.num_model):
@@ -55,6 +55,19 @@ class Network:
         del state['tape']
         del tape
         return losses
+
+    def _loss(self, model, batch, state):
+        op = model.loss
+        data = None
+        if op.inputs:
+            if hasattr(op.inputs, "__call__"):
+                data = op.inputs()
+            else:
+                data = self._get_inputs_from_key(batch, op.inputs)
+        data = op.forward(data, state)
+        if op.outputs:
+            self._write_outputs_to_key(data, batch, op.outputs)
+        return data
 
     def _forward(self, batch, state):
         mode = state["mode"]
