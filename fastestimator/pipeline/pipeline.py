@@ -196,9 +196,7 @@ class Pipeline:
             filter_ops_epoch = []
             forward_ops_between_filter = []
             #get batch size for the epoch
-            batch_size = self.batch_size
-            if isinstance(batch_size, Scheduler):
-                batch_size = batch_size.get_current_value(epoch)
+            batch_size = self._get_batch_size(epoch)
             #generate ops for specific mode and epoch
             for op in mode_ops:
                 if isinstance(op, Scheduler):
@@ -310,6 +308,12 @@ class Pipeline:
                 combined_dict[key] = ds[key]
         return combined_dict
 
+    def _get_batch_size(self, epoch):
+        batch_size = self.batch_size
+        if isinstance(batch_size, Scheduler):
+            batch_size = batch_size.get_current_value(epoch)
+        return batch_size
+
     def show_results(self, inputs=None, mode="train", num_steps=1, current_epoch=0):
         data = []
         self._prepare(inputs=inputs)
@@ -322,10 +326,7 @@ class Pipeline:
     def benchmark(self, inputs=None, mode="train", num_steps=1000, log_interval=100, current_epoch=0):
         self._prepare(inputs=inputs)
         dataset = self.dataset_schedule[mode].get_current_value(current_epoch)
-        batch_size = self.batch_size
-        if isinstance(batch_size, Scheduler):
-            batch_size = batch_size.get_current_value(current_epoch)
-
+        batch_size = self._get_batch_size(current_epoch)
         num_loops = int(np.ceil(batch_size * num_steps / min(self.num_examples[mode])))
         step = 0
         start = time.time()

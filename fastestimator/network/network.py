@@ -20,15 +20,15 @@ from fastestimator.util.util import NonContext
 
 
 class Network:
-    def __init__(self, ops=None):
+    def __init__(self, ops):
         self.ops = ops
         self.model_list = []
         self.mode_ops = {}
-        if self.ops:
-            self._verify_inputs()
+        self._verify_inputs()
 
     def _verify_inputs(self):
-        self.ops = flatten_operation(self.ops)
+        if not isinstance(self.ops, list):
+            self.ops = [self.ops]
         for op in self.ops:
             if isinstance(op, ModelOp) and op.model not in self.model_list:
                 self.model_list.append(op.model)
@@ -57,9 +57,7 @@ class Network:
         return losses
 
     def _forward(self, batch, state):
-        mode = state["mode"]
-        data = None
-        for op in self.mode_ops[mode]:
+        for op in self.mode_ops[state["mode"]]:
             if op.inputs:
                 if hasattr(op.inputs, "__call__"):
                     data = op.inputs()
