@@ -21,6 +21,7 @@ class Loss(TensorOp):
     """
     A base class for loss operations. It can be used directly to perform value pass-through (see the adversarial
     training showcase for an example of when this is useful)
+
     """
 
 

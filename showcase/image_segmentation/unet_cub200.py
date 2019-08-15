@@ -72,8 +72,8 @@ def create_network():
     Returns:
         `fe.Network` instance.
     """
-    model = build(keras_model=UNet('image', 'annotation'), loss=BinaryCrossentropy(true_key='annotation',
-                                                                                   pred_key='mask_pred'),
+    model = build(keras_model=UNet('image', 'annotation'),
+                  loss=BinaryCrossentropy(y_true='annotation', y_pred='mask_pred'),
                   optimizer=tf.optimizers.Adam(learning_rate=0.0001))
 
     network = fe.Network(ops=ModelOp(inputs='image', model=model, outputs='mask_pred'))
