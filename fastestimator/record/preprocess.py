@@ -13,7 +13,9 @@
 # limitations under the License.
 # ==============================================================================
 import os
+
 import numpy as np
+
 from fastestimator.util.op import NumpyOp
 
 EPSILON = 1e-7
@@ -180,7 +182,7 @@ class MatReader(NumpyOp):
            dict
         """
         path = os.path.normpath(os.path.join(self.parent_path, data))
-        data = self._loadmat(data)
+        data = self._loadmat(path)
         return data
 
 

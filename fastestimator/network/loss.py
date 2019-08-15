@@ -21,11 +21,11 @@ class Loss:
 
     def calculate_loss(self, batch, state):
         """this is the function that calculates the loss given the batch data
-        
+
         Args:
             batch (dict): batch data after forward operation
             state(dict): current running state, has key 'mode', 'epoch' and 'step'
-        
+
         Returns:
             loss (scalar): scalar loss for the model update
         """
@@ -52,11 +52,30 @@ class CacheLoss(Loss):
             return self.real_loss_func.calculate_loss(batch, state)
 
 
+class BinaryCrossentropy(Loss):
+    def __init__(self, true_key, pred_key, **kwargs):
+        """Calculate binary cross entropy, the rest of the keyword argument will be passed to
+           tf.losses.BinaryCrossentropy
+
+        Args:
+            true_key (str): the key of ground truth label in batch data
+            pred_key (str): the key of predicted label in batch data
+        """
+        super().__init__()
+        self.true_key = true_key
+        self.pred_key = pred_key
+        self.loss_obj = tf.losses.BinaryCrossentropy(**kwargs)
+
+    def calculate_loss(self, batch, state):
+        loss = self.loss_obj(batch[self.true_key], batch[self.pred_key])
+        return loss
+
+
 class SparseCategoricalCrossentropy(Loss):
     def __init__(self, true_key, pred_key, **kwargs):
-        """Calculate sparse categorical cross entropy, the rest of the keyword argument will be passed to 
+        """Calculate sparse categorical cross entropy, the rest of the keyword argument will be passed to
            tf.losses.SparseCategoricalCrossentropy
-        
+
         Args:
             true_key (str): the key of ground truth label in batch data
             pred_key (str): the key of predicted label in batch data

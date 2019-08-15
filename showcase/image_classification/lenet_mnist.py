@@ -14,8 +14,8 @@
 # ==============================================================================
 import numpy as np
 import tensorflow as tf
-import fastestimator as fe
 
+import fastestimator as fe
 from fastestimator.architecture import LeNet
 from fastestimator.estimator.trace import Accuracy
 from fastestimator.network.loss import SparseCategoricalCrossentropy
