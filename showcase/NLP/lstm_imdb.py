@@ -72,8 +72,3 @@ def get_estimator(epochs=10, batch_size=64, optimizer="adam"):
                              traces=Accuracy(true_key="y", pred_key="y_pred"))
 
     return estimator
-
-
-if __name__ == "__main__":
-    o = get_estimator()
-    o.fit()
