@@ -83,14 +83,18 @@ def get_estimator(style_img_path, data_path=None, style_weight=5.0, content_weig
     style_img = (style_img.astype(np.float32) / 127.5) / 127.5
     style_img_t = tf.convert_to_tensor(np.expand_dims(style_img, axis=0))
     writer = RecordWriter(
-        train_data=train_csv, ops=[
+        train_data=train_csv,
+        ops=[
             ImageReader(inputs="image", parent_path=path, outputs="image"),
             Resize(inputs="image", target_size=(256, 256), outputs="image")
         ])
     pipeline = Pipeline(batch_size=4, data=writer, ops=[Rescale(inputs="image", outputs="image")])
     model = build(
-        keras_model=styleTransferNet(), loss=StyleContentLoss(style_weight, content_weight, tv_weight,
-                                                              inputs=('y_pred', 'y_style', 'y_content', 'image_out')),
+        keras_model=styleTransferNet(),
+        loss=StyleContentLoss(style_weight,
+                              content_weight,
+                              tv_weight,
+                              inputs=('y_pred', 'y_style', 'y_content', 'image_out')),
         optimizer=tf.keras.optimizers.Adam())
     network = Network(ops=[
         ModelOp(inputs="image", model=model, outputs="image_out"),

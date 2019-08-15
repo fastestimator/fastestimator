@@ -25,14 +25,15 @@ from fastestimator.pipeline.processing import Minmax
 from fastestimator.pipeline.augmentation import AdversarialSample, Average
 
 
-def get_estimator(epochs=2, batch_size=32, epsilon=0.1, warmup=1000):
+def get_estimator(epochs=2, batch_size=32, epsilon=0.01):
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.cifar10.load_data()
     data = {"train": {"x": x_train, "y": y_train}, "eval": {"x": x_eval, "y": y_eval}}
     num_classes = 10
 
     pipeline = Pipeline(batch_size=batch_size, data=data, ops=Minmax(inputs="x", outputs="x"))
 
-    model = build(keras_model=LeNet(input_shape=x_train.shape[1:], classes=num_classes), loss=Loss(inputs="loss"),
+    model = build(keras_model=LeNet(input_shape=x_train.shape[1:], classes=num_classes),
+                  loss=Loss(inputs="loss"),
                   optimizer="adam")
 
     traces = [
@@ -42,10 +43,10 @@ def get_estimator(epochs=2, batch_size=32, epsilon=0.1, warmup=1000):
 
     network = Network(ops=[
         ModelOp(inputs="x", model=model, outputs="y_pred", track_input=True),
-        SparseCategoricalCrossentropy(inputs=("y", "y_pred"), outputs="loss"),
+        SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred", outputs="loss"),
         AdversarialSample(inputs=("loss", "x"), outputs="x_adverse", epsilon=epsilon, mode="train"),
         ModelOp(inputs="x_adverse", model=model, outputs="y_pred_adverse", mode="train"),
-        SparseCategoricalCrossentropy(inputs=("y", "y_pred_adverse"), outputs="adverse_loss", mode="train"),
+        SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred_adverse", outputs="adverse_loss", mode="train"),
         Average(inputs=("loss", "adverse_loss"), outputs="loss", mode="train")
     ])
 
