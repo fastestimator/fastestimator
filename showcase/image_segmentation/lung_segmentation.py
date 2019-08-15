@@ -34,7 +34,9 @@ def get_estimator():
 
     train_csv_path, eval_cvs_path, path = montgomery.load_and_set_data()
     writer = RecordWriter(
-        train_data=train_csv_path, validation_data=eval_cvs_path, ops=[
+        train_data=train_csv_path,
+        validation_data=eval_cvs_path,
+        ops=[
             ImageReader(grey_scale=True, inputs="imgpath", parent_path=path, outputs="image"),
             ImageReader(grey_scale=True, inputs="mask", parent_path=path, outputs="mask"),
             Resize(inputs="image", target_size=(512, 512), outputs="image"),
@@ -42,19 +44,24 @@ def get_estimator():
         ])
 
     pipeline = Pipeline(
-        batch_size=8, data=writer, ops=[
+        batch_size=8,
+        data=writer,
+        ops=[
             Minmax(inputs="image", outputs="image"),
             Minmax(inputs="mask", outputs="mask"),
             Reshape(shape=(512, 512, 1), inputs="image", outputs="image"),
             Reshape(shape=(512, 512, 1), inputs="mask", outputs="mask")
         ])
 
-    model = build(keras_model=UNet("imgpath", "mask",
-                                   input_size=(512, 512, 1)), loss=BinaryCrossentropy(inputs=("mask", "pred_segment")),
+    model = build(keras_model=UNet("imgpath", "mask", input_size=(512, 512, 1)),
+                  loss=BinaryCrossentropy(y_true="mask", y_pred="pred_segment"),
                   optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001))
     network = Network(ops=[ModelOp(inputs="image", model=model, outputs="pred_segment")])
 
-    estimator = Estimator(network=network, pipeline=pipeline, epochs=25, log_steps=20,
+    estimator = Estimator(network=network,
+                          pipeline=pipeline,
+                          epochs=25,
+                          log_steps=20,
                           traces=[Dice("mask", "pred_segment")])
 
     return estimator
