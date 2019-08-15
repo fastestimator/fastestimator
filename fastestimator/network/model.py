@@ -42,13 +42,18 @@ def build(keras_model, loss, optimizer):
 
 
 class ModelOp(TensorOp):
-    def __init__(self, model, inputs=None, outputs=None, mode=None):
-        super(ModelOp, self).__init__(inputs=inputs, outputs=outputs, mode=mode)
+    def __init__(self, model, inputs=None, outputs=None, mode=None, track_input=False):
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.model = model
+        self.track_input = track_input
         assert isinstance(
             self.model, tf.keras.Model
         ) and self.model.fe_compiled is True, "must prepare your the keras model before use in ModelOp"
 
     def forward(self, data, state):
-        data = self.model(data, training=state["mode"] == "train")
+        training = state['mode'] == "train"
+        if self.track_input and training:
+            tape = state['tape']
+            tape.watch(data)
+        data = self.model(data, training=training)
         return data

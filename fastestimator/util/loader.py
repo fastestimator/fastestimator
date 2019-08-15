@@ -70,7 +70,7 @@ class PathLoader(object):
 
 class ImageLoader(PathLoader):
     def __init__(self, root_path, model, batch=10, input_extension=None, strip_alpha=False):
-        super(ImageLoader, self).__init__(root_path, batch, input_extension)
+        super().__init__(root_path, batch, input_extension)
         self.strip_alpha = strip_alpha
         self.input_type = model.input.dtype
         self.input_shape = model.input.shape
@@ -81,7 +81,7 @@ class ImageLoader(PathLoader):
         self.n_channels = 0 if len(self.input_shape) == 3 else self.input_shape[3]
 
     def __next__(self):
-        paths = super(ImageLoader, self).__next__()
+        paths = super().__next__()
         inputs = [
             load_image(paths[i][0], strip_alpha=self.strip_alpha, channels=self.n_channels) for i in range(len(paths))
         ]

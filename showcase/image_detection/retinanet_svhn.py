@@ -46,9 +46,7 @@ class RelativeCoordinate(NumpyOp):
 
 class GenerateTarget(NumpyOp):
     def __init__(self, inputs=None, outputs=None, mode=None):
-        self.inputs = inputs
-        self.outputs = outputs
-        self.mode = mode
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.anchorbox = get_fpn_anchor_box(input_shape=(64, 128, 3))
 
     def forward(self, data):
@@ -93,9 +91,8 @@ class RetinaLoss(Loss):
         smooth_l1_loss = tf.reduce_mean(smooth_l1_loss)
         return smooth_l1_loss
 
-    def calculate_loss(self, batch, state):
-        cls_gt, loc_gt = batch["target_cls"], batch["target_loc"]
-        cls_pred, loc_pred = batch["pred_cls"], batch["pred_loc"]
+    def forward(self, data, state):
+        cls_gt, loc_gt, cls_pred, loc_pred = data
         focal_loss, obj_idx = self.focal_loss(cls_gt, cls_pred, num_classes=10)
         smooth_l1_loss = self.smooth_l1(loc_gt, loc_pred, obj_idx)
         return 40000 * focal_loss + smooth_l1_loss
@@ -103,13 +100,11 @@ class RetinaLoss(Loss):
 
 class PredictBox(TensorOp):
     def __init__(self, inputs=None, outputs=None, mode=None):
-        self.inputs = inputs
-        self.outputs = outputs
-        self.mode = mode
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.anchorbox = tf.convert_to_tensor(get_fpn_anchor_box(input_shape=(64, 128, 3)))
         self.anchor_w_h = tf.tile(self.anchorbox[:, 2:], [1, 2]) - tf.tile(self.anchorbox[:, :2], [1, 2])
 
-    def forward(self, data):
+    def forward(self, data, state):
         cls_pred, loc_pred = tuple(data)
         top_n = 10
         score_threshold = 0.2
@@ -160,7 +155,8 @@ def get_estimator():
     # prepare pipeline
     pipeline = Pipeline(batch_size=256, data=writer, ops=Minmax(inputs="image", outputs="image"), padded_batch=True)
     # prepare model
-    model = build(keras_model=RetinaNet(input_shape=(64, 128, 3), num_classes=10), loss=RetinaLoss(),
+    model = build(keras_model=RetinaNet(input_shape=(64, 128, 3), num_classes=10),
+                  loss=RetinaLoss(inputs=("target_cls", "target_loc", "pred_cls", "pred_loc")),
                   optimizer=tf.optimizers.Adam(learning_rate=0.0001))
     network = Network(ops=[
         ModelOp(inputs="image", model=model, outputs=["pred_cls", "pred_loc"]),
