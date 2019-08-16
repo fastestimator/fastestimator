@@ -20,9 +20,8 @@ EPSILON = 1e-7
 
 
 class TensorFilter(TensorOp):
-    """An abstract class for data filter."""
-    def __init__(self, inputs=None, outputs=None, mode="train"):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+    def __init__(self, inputs, mode="train"):
+        super().__init__(inputs=inputs, mode=mode)
 
     def forward(self, data, state):
         return tf.constant(True)
@@ -37,29 +36,33 @@ class ScalarFilter(TensorFilter):
         keep_prob: The probability of keeping the example
         mode: mode that the filter acts on
     """
-    def __init__(self, inputs, filter_value, keep_prob, mode="train", outputs=None):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+    def __init__(self, inputs, filter_value, keep_prob, mode="train"):
+        super().__init__(inputs=inputs, mode=mode)
         self.filter_value = filter_value
         self.keep_prob = keep_prob
         self._verify_inputs()
 
     def _verify_inputs(self):
-        self.inputs = self._convert_to_list(self.inputs)
+        assert isinstance(self.inputs, str), "ScalarFilter only accepts single string input"
         self.filter_value = self._convert_to_list(self.filter_value)
         self.keep_prob = self._convert_to_list(self.keep_prob)
-        assert len(self.inputs) == len(self.filter_value) == len(self.keep_prob)
+        assert len(self.filter_value) == len(self.keep_prob), "filter_value and keep_prob must be same length"
 
     def _convert_to_list(self, data):
         if not isinstance(data, list):
-            data = [data]
+            if isinstance(data, tuple):
+                data = list(data)
+            else:
+                data = [data]
         return data
 
     def forward(self, data, state):
-        for inp, filter_value, keep_prob in zip(self.inputs, self.filter_value, self.keep_prob):
-            if tf.equal(tf.reshape(data[inp], []), filter_value):
-                pass_filter = tf.greater(keep_prob, tf.random.uniform([]))
-            else:
-                pass_filter = tf.constant(True)
+        pass_filter = tf.constant(True)
+        for filter_value, keep_prob in zip(self.filter_value, self.keep_prob):
+            pass_current_filter = tf.cond(tf.equal(data, filter_value),
+                                          lambda: tf.greater(keep_prob, tf.random.uniform([])),
+                                          lambda: tf.constant(True))
+            pass_filter = tf.logical_and(pass_filter, pass_current_filter)
         return pass_filter
 
 
@@ -212,7 +215,7 @@ class Resize(TensorOp):
         Returns:
             Resized tensor
         """
-        preprocessed_data = tf.image.resize_images(data, self.size, self.resize_method)
+        preprocessed_data = tf.image.resize(data, self.size, self.resize_method)
         return preprocessed_data
 
 

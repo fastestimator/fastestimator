@@ -13,7 +13,9 @@
 # limitations under the License.
 # ==============================================================================
 import os
+
 import numpy as np
+
 from fastestimator.util.op import NumpyOp
 
 EPSILON = 1e-7
@@ -38,7 +40,7 @@ class ImageReader(NumpyOp):
             self.color_flag = cv2.IMREAD_GRAYSCALE
         self.forward_fn = cv2.imread
 
-    def forward(self, path):
+    def forward(self, path, state):
         """
         Reads numpy array from image path
 
@@ -60,7 +62,7 @@ class Zscore(NumpyOp):
     """
     Standardize data using zscore method
     """
-    def forward(self, data):
+    def forward(self, data, state):
         """
         Standardizes the data
 
@@ -81,7 +83,7 @@ class Minmax(NumpyOp):
     """
     Normalize data using the minmax method
     """
-    def forward(self, data):
+    def forward(self, data, state):
         """
         Normalizes the data
 
@@ -111,7 +113,7 @@ class Scale(NumpyOp):
         self.outputs = outputs
         self.mode = mode
 
-    def forward(self, data):
+    def forward(self, data, state):
         """
         Scales the data tensor
 
@@ -139,7 +141,7 @@ class Reshape(NumpyOp):
         self.outputs = outputs
         self.mode = mode
 
-    def forward(self, data):
+    def forward(self, data, state):
         """
         Reshapes data array
 
@@ -169,7 +171,7 @@ class MatReader(NumpyOp):
         self.mode = mode
         self.parent_path = parent_path
 
-    def forward(self, data):
+    def forward(self, data, state):
         """Reads mat file as dict.
 
         Args:
@@ -212,7 +214,7 @@ class Resize(NumpyOp):
         self.outputs = outputs
         self.mode = mode
 
-    def forward(self, data, feature=None):
+    def forward(self, data, state):
         if self.keep_ratio:
             original_ratio = data.shape[1] / data.shape[0]
             target_ratio = self.target_size[1] / self.target_size[0]

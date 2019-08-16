@@ -16,7 +16,7 @@
 import time
 
 import numpy as np
-from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precision_score, recall_score
 
 
 class Trace:
@@ -44,6 +44,8 @@ class Trace:
             state (dict): dictionary of run time that has the following key(s):
                 * "mode":  current run time mode, can be "train", "eval" or "test"
                 * "epoch": current epoch index starting from 0
+                * "train_step": current global training step starting from 0
+                * "eval_step": current local evaluation step starting from 0 (only available when mode is "eval", resets every evaluation)
         """
     def on_batch_begin(self, state):
         """Runs at the beginning of every batch of the mode.
@@ -52,8 +54,10 @@ class Trace:
             state (dict): dictionary of run time that has the following key(s):
                 * "mode":  current run time mode, can be "train", "eval" or "test"
                 * "epoch": current epoch index starting from 0
-                * "step": current global step index starting from 0 (or batch index)
-                * "batch_size": current batch size on single machine
+                * "train_step": current global training step starting from 0
+                * "eval_step": current local evaluation step starting from 0 (only available when mode is "eval", resets every evaluation)
+                * "batch_size": current batch size per gpu
+
         """
     def on_batch_end(self, state):
         """Runs at the end of every batch of the mode.
@@ -62,7 +66,8 @@ class Trace:
             state (dict): dictionary of run time that has the following key(s):
                 * "mode":  current run time mode, can be "train", "eval" or "test"
                 * "epoch": current epoch index starting from 0
-                * "step": current global step index starting from 0 (or batch index)
+                * "train_step": current global training step starting from 0
+                * "eval_step": current local evaluation step starting from 0 (only available when mode is "eval", resets every evaluation)
                 * "batch_size": current batch size on single machine
                 * "batch": the batch data after the Network execution
                 * "loss": the batch loss (only available when mode is "train" or "eval")
@@ -77,7 +82,8 @@ class Trace:
             state (dict): dictionary of run time that has the following key(s):
                 * "mode":  current run time mode, can be "train", "eval" or "test"
                 * "epoch": current epoch index starting from 0
-                * "loss": the batch loss (only available when mode is "train" or "eval")
+                * "train_step": current global training step starting from 0
+                * "loss": the average loss of all batches (only available when mode is "train" or "eval")
         """
     def end(self, state):
         """Runs at the end of the mode.
@@ -109,8 +115,8 @@ class TrainLogger(Trace):
             self.time_start = time.time()
 
     def on_batch_end(self, state):
-        if state["mode"] == "train" and state["step"] % self.log_steps == 0:
-            if state["step"] == 0:
+        if state["mode"] == "train" and state["train_step"] % self.log_steps == 0:
+            if state["train_step"] == 0:
                 example_per_sec = 0.0
             else:
                 self.elapse_times.append(time.time() - self.time_start)
@@ -119,7 +125,7 @@ class TrainLogger(Trace):
             if loss.size == 1:
                 loss = loss.ravel()[0]
             print("FastEstimator-Train: step: %d; train_loss: %s; example/sec: %.2f;" %
-                  (state["step"], str(loss), example_per_sec * self.num_process))
+                  (state["train_step"], str(loss), example_per_sec * self.num_process))
             self.elapse_times = []
             self.time_start = time.time()
 
@@ -140,7 +146,6 @@ class TrainLogger(Trace):
                 output_metric["min_val_loss"] = self.best_loss
                 output_metric["since_best"] = self.epochs_since_best
             return output_metric
-        return None
 
 
 class Accuracy(Trace):
@@ -284,7 +289,7 @@ class Recall(Trace):
     """Calculates recall for classification task and report it back to logger.
     Args:
         true_key (str): Name of the keys in the ground truth label in data pipeline.
-        pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label. 
+        pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label.
                                   Default is `None`.
     """
     def __init__(self, true_key, pred_key=None, labels=None, pos_label=1, average='auto', sample_weight=None):
@@ -338,7 +343,7 @@ class F1_score(Trace):
     """Calculates F1 score for classification task and report it back to logger.
     Args:
         true_key (str): Name of the keys in the ground truth label in data pipeline.
-        pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label. 
+        pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label.
                                   Default is `None`.
     """
     def __init__(self, true_key, pred_key=None, labels=None, pos_label=1, average='auto', sample_weight=None):
@@ -393,7 +398,7 @@ class Dice(Trace):
 
     Args:
         true_key (str): Name of the keys in the ground truth label in data pipeline.
-        pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label. 
+        pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label.
                                   Default is `None`.
     """
     def __init__(self, true_key, pred_key=None, threshold=0.5):

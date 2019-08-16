@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import tensorflow as tf
+
 from fastestimator.network.loss import Loss
 from fastestimator.util.op import TensorOp
 
