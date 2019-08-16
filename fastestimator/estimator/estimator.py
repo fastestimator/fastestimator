@@ -21,7 +21,13 @@ from fastestimator.estimator.trace import Trace, TrainLogger
 
 
 class Estimator:
-    def __init__(self, pipeline, network, epochs, steps_per_epoch=None, validation_steps=None, traces=None,
+    def __init__(self,
+                 pipeline,
+                 network,
+                 epochs,
+                 steps_per_epoch=None,
+                 validation_steps=None,
+                 traces=None,
                  log_steps=100):
         self.pipeline = pipeline
         self.network = network
@@ -46,6 +52,7 @@ class Estimator:
         self._prepare_pipeline()
         self._prepare_network()
         self._prepare_estimator()
+        self._warmup()
         self.train()
 
     def _prepare_pipeline(self):
@@ -53,9 +60,7 @@ class Estimator:
         self.do_eval = "eval" in self.pipeline.mode_list
 
     def _prepare_network(self):
-        self.network._check_ops("train")
-        if self.do_eval:
-            self.network._check_ops("eval")
+        self.network._prepare(mode_list=self.pipeline.mode_list)
 
     def _prepare_estimator(self):
         if self.traces is None:
@@ -69,25 +74,36 @@ class Estimator:
     def _add_traces(self):
         self.traces.insert(0, TrainLogger(log_steps=self.log_steps, num_process=self.num_gpu))
 
+    def _warmup(self):
+        print("FastEstimator: Warming up operations")
+        mode_list = self.pipeline.mode_list
+        for mode in mode_list:
+            epochs_pipeline = self.pipeline.dataset_schedule[mode].keys
+            epochs_network = self.network.op_schedule[mode].keys
+            signature_epochs = list(set(epochs_pipeline) | set(epochs_network))
+            state = {"mode": mode}
+            for epoch in signature_epochs:
+                dataset = self.pipeline.dataset_schedule[mode].get_current_value(epoch)
+                batch = next(iter(dataset))
+                prediction = {}
+                batch = ChainMap(prediction, batch)
+                self.network.load_epoch(epoch, mode)
+                self.network.run_step(batch, state, warm_up=True)
+        print("FastEstimator: Warming up finished")
+
     def train(self):
         self._run_traces_begin({"mode": "train"})
         train_step = 0
         for epoch in range(self.epochs):
             dataset = self.pipeline.dataset_schedule["train"].get_current_value(epoch)
             batch_size = self.pipeline._get_batch_size(epoch)
+            self.network.load_epoch(epoch, "train")
             self._run_traces_on_epoch_begin({"mode": "train", "epoch": epoch, "train_step": train_step})
             for batch in dataset:
                 self._run_traces_on_batch_begin({
-                    "mode": "train",
-                    "epoch": epoch,
-                    "train_step": train_step,
-                    "batch_size": batch_size
+                    "mode": "train", "epoch": epoch, "train_step": train_step, "batch_size": batch_size
                 })
-                prediction, loss = self.forward_step(batch, {
-                    "mode": "train",
-                    "epoch": tf.convert_to_tensor(epoch),
-                    "train_step": tf.convert_to_tensor(train_step)
-                })
+                prediction, loss = self.forward_step(batch, {"mode": "train"})
                 batch = ChainMap(prediction, batch)
                 self._run_traces_on_batch_end({
                     "mode": "train",
@@ -111,6 +127,7 @@ class Estimator:
 
     def val(self, epoch, batch_size, train_step):
         self._run_traces_begin({"mode": "eval"})
+        self.network.load_epoch(epoch, "eval")
         self._run_traces_on_epoch_begin({"mode": "eval", "epoch": epoch, "train_step": train_step})
         dataset = self.pipeline.dataset_schedule["eval"].get_current_value(epoch)
         if self.validation_steps:
@@ -123,13 +140,7 @@ class Estimator:
                 "eval_step": eval_step,
                 "batch_size": batch_size
             })
-            prediction, loss = self.forward_step(
-                batch, {
-                    "mode": "eval",
-                    "epoch": tf.convert_to_tensor(epoch),
-                    "train_step": tf.convert_to_tensor(train_step),
-                    "eval_step": tf.convert_to_tensor(eval_step)
-                })
+            prediction, loss = self.forward_step(batch, {"mode": "eval"})
             batch = ChainMap(prediction, batch)
             self._run_traces_on_batch_end({
                 "mode": "eval",
@@ -141,10 +152,7 @@ class Estimator:
                 "loss": loss
             })
         self._run_traces_on_epoch_end({
-            "mode": "eval",
-            "epoch": epoch,
-            "train_step": train_step,
-            "loss": np.mean(np.array(self.losses), axis=0)
+            "mode": "eval", "epoch": epoch, "train_step": train_step, "loss": np.mean(np.array(self.losses), axis=0)
         })
         self._run_traces_end({"mode": "eval"})
 

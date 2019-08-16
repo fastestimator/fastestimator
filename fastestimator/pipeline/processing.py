@@ -20,6 +20,14 @@ EPSILON = 1e-7
 
 
 class TensorFilter(TensorOp):
+    def __init__(self, inputs, mode="train"):
+        super().__init__(inputs=inputs, mode=mode)
+
+    def forward(self, data, state):
+        return tf.constant(True)
+
+
+class ScalarFilter(TensorFilter):
     """Class for performing filtering on dataset based on scalar values.
 
     Args:
@@ -29,30 +37,31 @@ class TensorFilter(TensorOp):
         mode: mode that the filter acts on
     """
     def __init__(self, inputs, filter_value, keep_prob, mode="train"):
-        self.inputs = inputs
+        super().__init__(inputs=inputs, mode=mode)
         self.filter_value = filter_value
         self.keep_prob = keep_prob
-        self.mode = mode
         self._verify_inputs()
 
     def _verify_inputs(self):
-        self.inputs = self._convert_to_list(self.inputs)
+        assert isinstance(self.inputs, str), "ScalarFilter only accepts single string input"
         self.filter_value = self._convert_to_list(self.filter_value)
         self.keep_prob = self._convert_to_list(self.keep_prob)
-        assert len(self.inputs) == len(self.filter_value) == len(self.keep_prob)
+        assert len(self.filter_value) == len(self.keep_prob), "filter_value and keep_prob must be same length"
 
     def _convert_to_list(self, data):
         if not isinstance(data, list):
-            data = [data]
+            if isinstance(data, tuple):
+                data = list(data)
+            else:
+                data = [data]
         return data
 
-    def forward(self, dataset):
+    def forward(self, data, state):
         pass_filter = tf.constant(True)
-        for inp, filter_value, keep_prob in zip(self.inputs, self.filter_value, self.keep_prob):
-            if tf.reshape(dataset[inp], []) == filter_value:
-                pass_current_filter = tf.greater(keep_prob, tf.random.uniform([]))
-            else:
-                pass_current_filter = tf.constant(True)
+        for filter_value, keep_prob in zip(self.filter_value, self.keep_prob):
+            pass_current_filter = tf.cond(tf.equal(data, filter_value),
+                                          lambda: tf.greater(keep_prob, tf.random.uniform([])),
+                                          lambda: tf.constant(True))
             pass_filter = tf.logical_and(pass_filter, pass_current_filter)
         return pass_filter
 
@@ -68,7 +77,7 @@ class Binarize(TensorOp):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.thresh = threshold
 
-    def forward(self, data):
+    def forward(self, data, state):
         """
         Transforms the image to binary based on threshold
 
@@ -88,7 +97,7 @@ class Zscore(TensorOp):
     """
     Standardize data using zscore method
     """
-    def forward(self, data):
+    def forward(self, data, state):
         """
         Standardizes the data tensor
 
@@ -111,7 +120,7 @@ class Minmax(TensorOp):
     """
     Normalize data using the minmax method
     """
-    def forward(self, data):
+    def forward(self, data, state):
         """
         Normalizes the data tensor
 
@@ -139,7 +148,7 @@ class Scale(TensorOp):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.scalar = scalar
 
-    def forward(self, data):
+    def forward(self, data, state):
         """
         Scales the data tensor
 
@@ -166,7 +175,7 @@ class Onehot(TensorOp):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.num_dim = num_dim
 
-    def forward(self, data):
+    def forward(self, data, state):
         """
         Transforms categorical labels to onehot encodings
 
@@ -195,7 +204,7 @@ class Resize(TensorOp):
         self.size = size
         self.resize_method = resize_method
 
-    def forward(self, data):
+    def forward(self, data, state):
         """
         Resizes data tensor
 
@@ -221,7 +230,7 @@ class Reshape(TensorOp):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.shape = shape
 
-    def forward(self, data):
+    def forward(self, data, state):
         """
         Reshapes data tensor
 

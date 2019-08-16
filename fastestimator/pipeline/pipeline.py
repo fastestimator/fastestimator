@@ -29,7 +29,13 @@ from fastestimator.util.util import convert_tf_dtype
 
 
 class Pipeline:
-    def __init__(self, batch_size, data=None, ops=None, read_feature=None, padded_batch=False, expand_dims=False,
+    def __init__(self,
+                 batch_size,
+                 data=None,
+                 ops=None,
+                 read_feature=None,
+                 padded_batch=False,
+                 expand_dims=False,
                  max_shuffle_buffer_mb=3000):
 
         self.batch_size = batch_size
@@ -171,7 +177,8 @@ class Pipeline:
                     ds = ds.shuffle(len(self.file_names[mode][idx]))
                     ds = ds.interleave(
                         lambda ds: tf.data.TFRecordDataset(ds, compression_type=self.compression[mode][idx]),
-                        cycle_length=self.num_core, block_length=2)
+                        cycle_length=self.num_core,
+                        block_length=2)
                 else:
                     ds = tf.data.TFRecordDataset(self.file_names[mode][idx],
                                                  compression_type=self.compression[mode][idx])
@@ -189,6 +196,7 @@ class Pipeline:
     def _transform_dataset(self, mode):
         signature_epoch, mode_ops = self._get_signature_epoch(mode)
         extracted_ds = self.extracted_dataset[mode]
+        state = {"mode": mode}
         dataset_map = {}
         for epoch in signature_epoch:
             epoch_ops_all = []
@@ -218,7 +226,7 @@ class Pipeline:
                     forward_ops_between_filter = []
             forward_ops_epoch.append(forward_ops_between_filter)
             #execute the operations
-            dataset = self._execute_ops(extracted_ds, forward_ops_epoch, filter_ops_epoch)
+            dataset = self._execute_ops(extracted_ds, forward_ops_epoch, filter_ops_epoch, state)
             #rest of the dataset setup
             if self.expand_dims:
                 dataset = dataset.flat_map(lambda dataset: tf.data.Dataset.from_tensor_slices(dataset))
@@ -237,23 +245,28 @@ class Pipeline:
             padded_shape[key] = dataset[key].shape
         return padded_shape
 
-    def _execute_ops(self, dataset, forward_ops_epoch, filter_ops_epoch):
+    def _execute_ops(self, dataset, forward_ops_epoch, filter_ops_epoch, state):
         num_filters = len(filter_ops_epoch)
         forward_ops = forward_ops_epoch[0]
-        dataset = dataset.map(lambda dataset: self._preprocess_fn(dataset, forward_ops),
+        dataset = dataset.map(lambda dataset: self._preprocess_fn(dataset, forward_ops, state),
                               num_parallel_calls=self.num_core)
         if num_filters > 0:
             for filter_op, forward_ops in zip(filter_ops_epoch, forward_ops_epoch[1:]):
-                dataset = dataset.filter(filter_op.forward)
-                dataset = dataset.map(lambda dataset: self._preprocess_fn(dataset, forward_ops),
+                dataset = dataset.filter(lambda dataset: self._filter_fn(dataset, filter_op, state))
+                dataset = dataset.map(lambda dataset: self._preprocess_fn(dataset, forward_ops, state),
                                       num_parallel_calls=self.num_core)
         return dataset
 
-    def _preprocess_fn(self, feature, forward_ops):
+    def _filter_fn(self, feature, filter_op, state):
+        data = self._get_inputs_from_key(feature, filter_op.inputs)
+        data = filter_op.forward(data, state)
+        return data
+
+    def _preprocess_fn(self, feature, forward_ops, state):
         for op in forward_ops:
             if op.inputs:
                 data = self._get_inputs_from_key(feature, op.inputs)
-            data = op.forward(data)
+            data = op.forward(data, state)
             if op.outputs:
                 feature = self._write_outputs_to_key(feature, data, op.outputs)
         return feature

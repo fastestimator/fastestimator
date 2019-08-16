@@ -1,3 +1,5 @@
+import tensorflow as tf
+
 from fastestimator.util.op import TensorOp
 
 
