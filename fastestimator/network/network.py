@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import pdb
-
 import tensorflow as tf
+from tensorflow.python.framework import ops as tfops
 
 from fastestimator.network.model import ModelOp
 from fastestimator.util.op import get_op_from_mode, verify_ops
@@ -89,10 +88,12 @@ class Network:
             for idx in range(num_model):
                 gradients = tape.gradient(losses[idx], model_list[idx].trainable_variables)
                 if warm_up:
-                    #during warm up, make gradient to 0 to preserve initialization
-                    for var_idx, gradient in enumerate(gradients):
-                        gradients[var_idx] = gradients[var_idx] - gradient
-                model_list[idx].optimizer.apply_gradients(zip(gradients, model_list[idx].trainable_variables))
+                    with tfops.init_scope():
+                        _ = model_list[idx].optimizer.iterations
+                        model_list[idx].optimizer._create_hypers()
+                        model_list[idx].optimizer._create_slots(model_list[idx].trainable_variables)
+                else:
+                    model_list[idx].optimizer.apply_gradients(zip(gradients, model_list[idx].trainable_variables))
         del state['tape']
         del tape
         return losses
