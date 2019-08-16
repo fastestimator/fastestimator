@@ -128,7 +128,7 @@ class DLoss(Loss):
         return 0.5 * total_loss
 
 
-def get_estimator(LAMBDA=10):
+def get_estimator(epochs=200, LAMBDA=10):
     trainA_csv, trainB_csv, testA_csv, testB_csv, parent_path = load_data()
 
     # Step 1: Define Pipeline
@@ -172,5 +172,5 @@ def get_estimator(LAMBDA=10):
     ])
     # Step3: Define Estimator
     #traces = [GifGenerator("/root/data/public/horse2zebra/images")]
-    estimator = Estimator(network=network, pipeline=pipeline, epochs=200)
+    estimator = Estimator(network=network, pipeline=pipeline, epochs=epochs)
     return estimator
