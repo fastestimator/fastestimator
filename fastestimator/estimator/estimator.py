@@ -75,7 +75,6 @@ class Estimator:
         self.traces.insert(0, TrainLogger(log_steps=self.log_steps, num_process=self.num_gpu))
 
     def _warmup(self):
-        print("FastEstimator: Warming up operations")
         mode_list = self.pipeline.mode_list
         for mode in mode_list:
             epochs_pipeline = self.pipeline.dataset_schedule[mode].keys
@@ -89,7 +88,6 @@ class Estimator:
                 batch = ChainMap(prediction, batch)
                 self.network.load_epoch(epoch, mode)
                 self.network.run_step(batch, state, warm_up=True)
-        print("FastEstimator: Warming up finished")
 
     def train(self):
         self._run_traces_begin({"mode": "train"})
