@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 """
-Download horse2zebra dataset from https./people.eecs.berkeley.ed.~taesung_par.CycleGA.dataset.
+Download horse2zebra dataset from https://people.eecs.berkeley.edu/~taesung_park/CycleGAN/datasets/horse2zebra.zip
 """
 import os
 import zipfile
@@ -40,7 +40,7 @@ def load_data(path=None):
     img_zip = os.path.join(path, 'horse2zebra.zip')
     if not (os.path.exists(img_zip)):
         print("Downloading data to {}:".format(path))
-        wget.download('https./people.eecs.berkeley.ed.~taesung_par.CycleGA.dataset.horse2zebra.zip', path)
+        wget.download('https://people.eecs.berkeley.edu/~taesung_park/CycleGAN/datasets/horse2zebra.zip', path)
 
     print('\nExtracting files...')
     with zipfile.ZipFile(img_zip, 'r') as zip_file:

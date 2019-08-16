@@ -144,8 +144,6 @@ def get_estimator(LAMBDA=10):
             Myrescale(inputs="imgB", outputs="imgB"),
             RandomJitter(inputs="imgB", outputs="real_B")
         ])
-    a = pipeline.show_results()
-    import pdb; pdb.set_trace()
     # Step2: Define Network
     g_AtoB = build(keras_model=_build_generator(),
                    loss=GLoss(inputs=("real_A", "D_fake_B", "cycled_A", "same_A"), weight=10.0),
@@ -154,21 +152,23 @@ def get_estimator(LAMBDA=10):
                    loss=GLoss(inputs=("real_B", "D_fake_A", "cycled_B", "same_B"),weight=10.0),
                    optimizer=tf.keras.optimizers.Adam(2e-4, 0.5))
     d_A = build(keras_model=_build_discriminator(), 
-                loss=DLoss(inputs=("real_A", "fake_A")),
+                loss=DLoss(inputs=("D_real_A", "D_fake_A")),
                 optimizer=tf.keras.optimizers.Adam(2e-4, 0.5))
     d_B = build(keras_model=_build_discriminator(), 
-                loss=DLoss(inputs=("real_B", "fake_B")),
+                loss=DLoss(inputs=("D_real_B", "D_fake_B")),
                 optimizer=tf.keras.optimizers.Adam(2e-4, 0.5))
 
     network = Network(ops=[
         ModelOp(inputs="real_A", model=g_AtoB, outputs="fake_B"),
-        ModelOp(inputs="fake_B", model=d_B, outputs="D_fake_B"),
-        ModelOp(inputs="fake_B", model=g_BtoA, outputs="cycled_A"),
+        ModelOp(inputs="real_A", model=d_A, outputs="D_real_A"),
         ModelOp(inputs="real_A", model=g_BtoA, outputs="same_A"),
         ModelOp(inputs="real_B", model=g_BtoA, outputs="fake_A"),
-        ModelOp(inputs="fake_A", model=d_A, outputs="D_fake_A"),
+        ModelOp(inputs="real_B", model=d_B, outputs="D_real_B"),
+        ModelOp(inputs="real_B", model=g_AtoB, outputs="same_B"),
+        ModelOp(inputs="fake_B", model=g_BtoA, outputs="cycled_A"),
+        ModelOp(inputs="fake_B", model=d_B, outputs="D_fake_B"),
         ModelOp(inputs="fake_A", model=g_AtoB, outputs="cycled_B"),
-        ModelOp(inputs="real_B", model=g_AtoB, outputs="same_B")
+        ModelOp(inputs="fake_A", model=d_A, outputs="D_fake_A")
     ])
     # Step3: Define Estimator
     #traces = [GifGenerator("/root/data/public/horse2zebra/images")]
