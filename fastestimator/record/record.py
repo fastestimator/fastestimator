@@ -12,15 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import json
+import multiprocessing as mp
+import os
+import time
+
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+
 from fastestimator.util.op import get_op_from_mode, verify_ops
 from fastestimator.util.util import convert_tf_dtype
-import multiprocessing as mp
-import tensorflow as tf
-import pandas as pd
-import numpy as np
-import json
-import time
-import os
 
 
 class RecordWriter:
@@ -65,9 +67,7 @@ class RecordWriter:
             self.train_data, self.validation_data, self.ops, self.write_feature = list(self.train_data), list(
                 self.validation_data), list(self.ops), list(self.write_feature)
         else:
-            self.train_data, self.validation_data, self.ops, self.write_feature = [self.train_data], [
-                self.validation_data
-            ], [self.ops], [self.write_feature]
+            self.train_data, self.validation_data, self.ops, self.write_feature = [self.train_data], [self.validation_data], [self.ops], [self.write_feature]
         for idx in range(len(self.train_data)):
             assert type(self.train_data[idx]) is dict or self.train_data[idx].endswith(
                 ".csv"), "train data should either be a dictionary or a csv path"
@@ -78,7 +78,10 @@ class RecordWriter:
                 assert isinstance(self.write_feature[idx],
                                   (list, dict)), "write_feature must be either list or dictionary"
             if self.ops[idx]:
-                self.ops[idx] = flatten_operation(self.ops[idx])
+                if not isinstance(self.ops, list):
+                    self.ops[idx] = [self.ops[idx]]
+            else:
+                self.ops[idx] = []
 
     def _int64_feature(self, value):
         return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
