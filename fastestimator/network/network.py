@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import pdb
+
 import tensorflow as tf
 
 from fastestimator.network.model import ModelOp
@@ -76,7 +78,7 @@ class Network:
         ops = self.current_epoch_ops[mode]
         model_list = self.current_epoch_model[mode]
         num_model = len(model_list)
-        # use gradient tape for train, otherwise use a dummy tape(to save computation)
+        # use gradient tape for train, otherwise use a dummy tape
         with tf.GradientTape(persistent=True) if mode == "train" else NonContext() as tape:
             state['tape'] = tape
             self._forward(batch, state, ops)
@@ -86,6 +88,10 @@ class Network:
         if mode == "train":
             for idx in range(num_model):
                 gradients = tape.gradient(losses[idx], model_list[idx].trainable_variables)
+                if warm_up:
+                    #during warm up, make gradient to 0 to preserve initialization
+                    for var_idx, gradient in enumerate(gradients):
+                        gradients[var_idx] = gradients[var_idx] - gradient
                 model_list[idx].optimizer.apply_gradients(zip(gradients, model_list[idx].trainable_variables))
         del state['tape']
         del tape
