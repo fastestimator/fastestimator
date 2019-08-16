@@ -19,14 +19,18 @@ import cv2
 import imageio
 import numpy as np
 import tensorflow as tf
-from cyclegan_model import Network
-from fastestimator.pipeline.dynamic.preprocess import AbstractPreprocessing
-from fastestimator.pipeline.static.augmentation import AbstractAugmentation
-from fastestimator.pipeline.static.filter import Filter
 
-from fastestimator.estimator.estimator import Estimator
+from fastestimator.architecture.cyclegan import _build_generator, _build_discriminator
+from fastestimator.dataset.zebra2horse_data import load_data
+from fastestimator.record.record import RecordWriter
+from fastestimator.record.preprocess import ImageReader
 from fastestimator.estimator.trace import Trace
+from fastestimator.estimator.estimator import Estimator
+from fastestimator.network.loss import Loss
+from fastestimator.network.model import ModelOp, build
+from fastestimator.network.network import Network
 from fastestimator.pipeline.pipeline import Pipeline
+from fastestimator.util.op import TensorOp
 
 
 class GifGenerator(Trace):
@@ -48,7 +52,6 @@ class GifGenerator(Trace):
             img += 1
             img /= 2
             img *= 255
-            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
             img_path = os.path.join(self.save_path, self.prefix.format(logs["epoch"]))
             cv2.imwrite(img_path, img.astype("uint8"))
 
@@ -65,29 +68,19 @@ class GifGenerator(Trace):
                     continue
                 image = imageio.imread(filename)
                 writer.append_data(image)
-            image = imageio.imread(filename)
-            writer.append_data(image)
+                image = imageio.imread(filename)
+                writer.append_data(image)
 
 
-class Myrescale(AbstractPreprocessing):
-    def transform(self, data, decoded_data=None):
-        data = data.astype(np.float32)
+class Myrescale(TensorOp):
+    def forward(self, data, state):
+        data = tf.cast(data, tf.float32)
         data = (data - 127.5) / 127.5
         return data
 
 
-class MyImageReader(AbstractPreprocessing):
-    def transform(self, path):
-        data = cv2.imread(path)
-        data = cv2.cvtColor(data, cv2.COLOR_BGR2RGB)
-        return data
-
-
-class RandomJitter(AbstractAugmentation):
-    def __init__(self, mode="train"):
-        self.mode = mode
-
-    def transform(self, data):
+class RandomJitter(TensorOp):
+    def forward(self, data, state):
         # resizing to 286 x 286 x 3
         data = tf.image.resize(data, [286, 286], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
 
@@ -100,44 +93,84 @@ class RandomJitter(AbstractAugmentation):
         return data
 
 
-class my_filter_1(Filter):
-    def __init__(self, mode="both"):
-        self.mode = mode
+class GLoss(Loss):
+    def __init__(self, inputs, weight, outputs=None, mode=None):
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+        self.LAMBDA = weight
 
-    def filter_fn(self, dataset):
-        return tf.equal(tf.reshape(dataset["label"], []), 1)
+    def _adversarial_loss(self, fake_img):
+        return self.cross_entropy(tf.ones_like(fake_img), fake_img)
 
+    def _identity_loss(self, real_img, same_img):
+        return 0.5 * self.LAMBDA * tf.reduce_mean(tf.abs(real_img - same_img))
 
-class my_filter_0(Filter):
-    def __init__(self, mode="both"):
-        self.mode = mode
+    def _cycle_loss(self, real_img, cycled_img):
+        return self.LAMBDA * tf.reduce_mean(tf.abs(real_img - cycled_img))
 
-    def filter_fn(self, dataset):
-        return tf.equal(tf.reshape(dataset["label"], []), 0)
-
-
-class my_pipeline(Pipeline):
-    def final_transform(self, preprocessed_data):
-        d1, d2 = preprocessed_data
-        new_data = {}
-        new_data["img_X"] = d1["img"]
-        new_data["label_1"] = d1["label"]
-        new_data["img_Y"] = d2["img"]
-        new_data["label_2"] = d2["label"]
-        return new_data
+    def forward(self, data, state):
+        real_img, fake_img, cycled_img, same_img = data
+        total_loss = self._adversarial_loss(fake_img) + self._identity_loss(real_img, same_img) + self._cycle_loss(
+            real_img, cycled_img)
+        return total_loss
 
 
-def get_estimator():
+class DLoss(Loss):
+    def __init__(self, inputs, outputs=None, mode=None):
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+
+    def forward(self, data, state):
+        real_img, fake_img = data
+        real_img_loss = self.cross_entropy(tf.ones_like(real_img), real_img)
+        fake_img_loss = self.cross_entropy(tf.zeros_like(real_img), fake_img)
+        total_loss = real_img_loss + fake_img_loss
+        return 0.5 * total_loss
+
+
+def get_estimator(LAMBDA=10):
+    trainA_csv, trainB_csv, testA_csv, testB_csv, parent_path = load_data()
+
     # Step 1: Define Pipeline
-    pipeline = my_pipeline(batch_size=1, train_data="/root/data/public/horse2zebra/data.csv",
-                           validation_data="/root/data/public/horse2zebra/val.csv", feature_name=["img", "label"],
-                           transform_dataset=[[MyImageReader(), Myrescale()],
-                                              []], transform_train=[[RandomJitter(mode="train")],
-                                                                    []], data_filter=[my_filter_0(),
-                                                                                      my_filter_1()])
-    # Step2: Define Trace
-    traces = [GifGenerator("/root/data/public/horse2zebra/images")]
+    writer = RecordWriter(
+        train_data=(trainA_csv, trainB_csv),
+        ops=(ImageReader(inputs="imgA", outputs="imgA",
+                         parent_path=parent_path), ImageReader(inputs="imgB", outputs="imgB", parent_path=parent_path)))
+
+    pipeline = Pipeline(
+        data=writer, batch_size=1, ops=[
+            Myrescale(inputs="imgA", outputs="imgA"),
+            RandomJitter(inputs="imgA", outputs="real_A"),
+            Myrescale(inputs="imgB", outputs="imgB"),
+            RandomJitter(inputs="imgB", outputs="real_B")
+        ])
+    a = pipeline.show_results()
+    import pdb; pdb.set_trace()
+    # Step2: Define Network
+    g_AtoB = build(keras_model=_build_generator(),
+                   loss=GLoss(inputs=("real_A", "D_fake_B", "cycled_A", "same_A"), weight=10.0),
+                   optimizer=tf.keras.optimizers.Adam(2e-4, 0.5))
+    g_BtoA = build(keras_model=_build_generator(), 
+                   loss=GLoss(inputs=("real_B", "D_fake_A", "cycled_B", "same_B"),weight=10.0),
+                   optimizer=tf.keras.optimizers.Adam(2e-4, 0.5))
+    d_A = build(keras_model=_build_discriminator(), 
+                loss=DLoss(inputs=("real_A", "fake_A")),
+                optimizer=tf.keras.optimizers.Adam(2e-4, 0.5))
+    d_B = build(keras_model=_build_discriminator(), 
+                loss=DLoss(inputs=("real_B", "fake_B")),
+                optimizer=tf.keras.optimizers.Adam(2e-4, 0.5))
+
+    network = Network(ops=[
+        ModelOp(inputs="real_A", model=g_AtoB, outputs="fake_B"),
+        ModelOp(inputs="fake_B", model=d_B, outputs="D_fake_B"),
+        ModelOp(inputs="fake_B", model=g_BtoA, outputs="cycled_A"),
+        ModelOp(inputs="real_A", model=g_BtoA, outputs="same_A"),
+        ModelOp(inputs="real_B", model=g_BtoA, outputs="fake_A"),
+        ModelOp(inputs="fake_A", model=d_A, outputs="D_fake_A"),
+        ModelOp(inputs="fake_A", model=g_AtoB, outputs="cycled_B"),
+        ModelOp(inputs="real_B", model=g_AtoB, outputs="same_B")
+    ])
     # Step3: Define Estimator
-    estimator = Estimator(network=Network(), pipeline=pipeline, steps_per_epoch=1000, validation_steps=1, traces=traces,
-                          epochs=10)
+    #traces = [GifGenerator("/root/data/public/horse2zebra/images")]
+    estimator = Estimator(network=network, pipeline=pipeline, epochs=200)
     return estimator
