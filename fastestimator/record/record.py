@@ -25,6 +25,7 @@ from fastestimator.util.op import flatten_operation, get_op_from_mode, verify_op
 from fastestimator.util.util import convert_tf_dtype
 
 
+
 class RecordWriter:
     def __init__(self, train_data, validation_data=None, ops=None, write_feature=None, expand_dims=False,
                  max_record_size_mb=300, compression=None):

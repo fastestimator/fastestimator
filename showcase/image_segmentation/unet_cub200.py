@@ -61,7 +61,7 @@ def create_data_pipeline():
         Reshape((128, 128, 1), inputs='annotation', outputs='annotation')
     ]
 
-    pipeline = fe.Pipeline(batch_size=64, data=tfr_writer, ops=pipeline_ops)
+    pipeline = fe.Pipeline(batch_size=32, data=tfr_writer, ops=pipeline_ops)
 
     return pipeline
 

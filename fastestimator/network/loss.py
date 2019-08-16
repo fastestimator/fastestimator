@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 import tensorflow as tf
-
 from fastestimator.util.op import TensorOp
 
 
@@ -21,18 +20,21 @@ class Loss(TensorOp):
     """
     A base class for loss operations. It can be used directly to perform value pass-through (see the adversarial
     training showcase for an example of when this is useful)
-
     """
 
 
-class BinaryCrossentropy(Loss):
-    def __init__(self, true_key, pred_key, **kwargs):
-        """Calculate binary cross entropy, the rest of the keyword argument will be passed to
-           tf.losses.BinaryCrossentropy
+class SparseCategoricalCrossentropy(Loss):
+    def __init__(self, y_true=None, y_pred=None, inputs=None, outputs=None, mode=None, **kwargs):
+        """Calculate sparse categorical cross entropy, the rest of the keyword argument will be passed to
+           tf.losses.SparseCategoricalCrossentropy
 
         Args:
-            true_key (str): the key of ground truth label in batch data
-            pred_key (str): the key of predicted label in batch data
+            y_true: ground truth label key
+            y_pred: prediction label key
+            inputs: A tuple or list like: [<y_true>, <y_pred>]
+            outputs: Where to store the computed loss value (not required under normal use cases)
+            mode: 'train', 'eval', 'test', or None
+            kwargs: Arguments to be passed along to the tf.losses constructor
         """
         super().__init__()
         self.true_key = true_key
