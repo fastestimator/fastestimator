@@ -94,6 +94,8 @@ class Estimator:
         train_step = 0
         for epoch in range(self.epochs):
             dataset = self.pipeline.dataset_schedule["train"].get_current_value(epoch)
+            if self.steps_per_epoch:
+                dataset = dataset.take(self.steps_per_epoch)
             batch_size = self.pipeline._get_batch_size(epoch)
             self.network.load_epoch(epoch, "train")
             self._run_traces_on_epoch_begin({"mode": "train", "epoch": epoch, "train_step": train_step})
