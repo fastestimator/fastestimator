@@ -26,8 +26,14 @@ from fastestimator.util.util import convert_tf_dtype
 
 
 class RecordWriter:
-    def __init__(self, train_data, validation_data=None, ops=None, write_feature=None, expand_dims=False,
-                 max_record_size_mb=300, compression=None):
+    def __init__(self,
+                 train_data,
+                 validation_data=None,
+                 ops=None,
+                 write_feature=None,
+                 expand_dims=False,
+                 max_record_size_mb=300,
+                 compression=None):
         self.train_data = train_data
         self.validation_data = validation_data
         self.ops = ops
@@ -167,8 +173,15 @@ class RecordWriter:
             serial_end = serial_start + num_example_process
             processes.append(
                 mp.Process(
-                    target=self._write_tfrecord_serial, args=(dictionary, serial_start, serial_end, num_files_process,
-                                                              file_idx_start, mode, queue_example, queue_shape)))
+                    target=self._write_tfrecord_serial,
+                    args=(dictionary,
+                          serial_start,
+                          serial_end,
+                          num_files_process,
+                          file_idx_start,
+                          mode,
+                          queue_example,
+                          queue_shape)))
             serial_start += num_example_process
             file_idx_start += num_files_process
         for p in processes:
@@ -189,8 +202,15 @@ class RecordWriter:
                     feature_shape[key] = [-1]
         self.feature_shape[mode] = feature_shape
 
-    def _write_tfrecord_serial(self, dictionary, serial_start, serial_end, num_files_process, file_idx_start, mode,
-                               queue_example, queue_shape):
+    def _write_tfrecord_serial(self,
+                               dictionary,
+                               serial_start,
+                               serial_end,
+                               num_files_process,
+                               file_idx_start,
+                               mode,
+                               queue_example,
+                               queue_shape):
         num_example_list = []
         num_csv_example_per_file = (serial_end - serial_start) // num_files_process
         show_progress = serial_start == 0
@@ -202,14 +222,27 @@ class RecordWriter:
             if i == (num_files_process - 1):
                 file_end = serial_end
             num_example_list.append(
-                self._write_single_file(dictionary, filename, file_start, file_end, serial_start, serial_end,
-                                        show_progress, mode))
+                self._write_single_file(dictionary,
+                                        filename,
+                                        file_start,
+                                        file_end,
+                                        serial_start,
+                                        serial_end,
+                                        show_progress,
+                                        mode))
             file_start += num_csv_example_per_file
             file_end += num_csv_example_per_file
         queue_example.put(num_example_list)
         queue_shape.put(self.feature_shape[mode])
 
-    def _write_single_file(self, dictionary, filename, file_start, file_end, serial_start, serial_end, show_progress,
+    def _write_single_file(self,
+                           dictionary,
+                           filename,
+                           file_start,
+                           file_end,
+                           serial_start,
+                           serial_end,
+                           show_progress,
                            mode):
         goal_number = serial_end - serial_start
         logging_interval = max(goal_number // 20, 1)

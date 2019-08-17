@@ -126,7 +126,7 @@ class Pipeline:
                 os.path.join(self.inputs, f) for f in os.listdir(self.inputs)
                 if f.endswith(".json") and f.startswith("%s_summary" % mode)
             ]
-            if self.summary_file[mode] > 0:
+            if len(self.summary_file[mode]) > 0:
                 self.mode_list.append(mode)
                 self._get_tfrecord_config_mode(mode)
                 found_data = True
