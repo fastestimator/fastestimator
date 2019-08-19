@@ -106,12 +106,11 @@ class TrainLogger(Trace):
         super().__init__()
         self.log_steps = log_steps
         self.num_process = num_process
-        self.elapse_times = []
         self.epochs_since_best = 0
         self.best_loss = None
 
-    def on_epoch_begin(self, state):
-        if state["mode"] == "train":
+    def on_batch_begin(self, state):
+        if state["mode"] == "train" and state["train_step"] % self.log_steps == 0:
             self.time_start = time.time()
 
     def on_batch_end(self, state):
@@ -119,20 +118,15 @@ class TrainLogger(Trace):
             if state["train_step"] == 0:
                 example_per_sec = 0.0
             else:
-                self.elapse_times.append(time.time() - self.time_start)
-                example_per_sec = state["batch_size"] * self.log_steps / np.sum(self.elapse_times)
+                example_per_sec = state["batch_size"] / (time.time() - self.time_start)
             loss = np.array(state["loss"])
             if loss.size == 1:
                 loss = loss.ravel()[0]
             print("FastEstimator-Train: step: %d; train_loss: %s; example/sec: %.2f;" %
                   (state["train_step"], str(loss), example_per_sec * self.num_process))
-            self.elapse_times = []
-            self.time_start = time.time()
 
     def on_epoch_end(self, state):
-        if state["mode"] == "train":
-            self.elapse_times.append(time.time() - self.time_start)
-        elif state["mode"] == "eval":
+        if state["mode"] == "eval":
             current_eval_loss = state["loss"]
             if current_eval_loss.size == 1:
                 current_eval_loss = current_eval_loss.ravel()[0]
@@ -217,7 +211,8 @@ class ConfusionMatrix(Trace):
             else:
                 prediction_label = np.argmax(prediction_score, axis=-1)
             assert prediction_label.size == groundtruth_label.size
-            batch_confusion = confusion_matrix(groundtruth_label, prediction_label,
+            batch_confusion = confusion_matrix(groundtruth_label,
+                                               prediction_label,
                                                labels=list(range(0, self.num_classes)))
             if self.confusion is None:
                 self.confusion = batch_confusion
@@ -274,14 +269,26 @@ class Precision(Trace):
         if state["mode"] == "eval":
             if self.average == 'auto':
                 if self.binary_classification:
-                    return precision_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label,
-                                           average='binary', sample_weight=self.sample_weight)
+                    return precision_score(np.ravel(self.y_true),
+                                           np.ravel(self.y_pred),
+                                           self.labels,
+                                           self.pos_label,
+                                           average='binary',
+                                           sample_weight=self.sample_weight)
                 else:
-                    return precision_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label,
-                                           average=None, sample_weight=self.sample_weight)
+                    return precision_score(np.ravel(self.y_true),
+                                           np.ravel(self.y_pred),
+                                           self.labels,
+                                           self.pos_label,
+                                           average=None,
+                                           sample_weight=self.sample_weight)
             else:
-                return precision_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label,
-                                       self.average, self.sample_weight)
+                return precision_score(np.ravel(self.y_true),
+                                       np.ravel(self.y_pred),
+                                       self.labels,
+                                       self.pos_label,
+                                       self.average,
+                                       self.sample_weight)
         return None
 
 
@@ -328,14 +335,26 @@ class Recall(Trace):
         if state["mode"] == "eval":
             if self.average == 'auto':
                 if self.binary_classification:
-                    return recall_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label,
-                                        average='binary', sample_weight=self.sample_weight)
+                    return recall_score(np.ravel(self.y_true),
+                                        np.ravel(self.y_pred),
+                                        self.labels,
+                                        self.pos_label,
+                                        average='binary',
+                                        sample_weight=self.sample_weight)
                 else:
-                    return recall_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label,
-                                        average=None, sample_weight=self.sample_weight)
+                    return recall_score(np.ravel(self.y_true),
+                                        np.ravel(self.y_pred),
+                                        self.labels,
+                                        self.pos_label,
+                                        average=None,
+                                        sample_weight=self.sample_weight)
             else:
-                return recall_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label,
-                                    self.average, self.sample_weight)
+                return recall_score(np.ravel(self.y_true),
+                                    np.ravel(self.y_pred),
+                                    self.labels,
+                                    self.pos_label,
+                                    self.average,
+                                    self.sample_weight)
         return None
 
 
@@ -382,13 +401,25 @@ class F1_score(Trace):
         if state["mode"] == "eval":
             if self.average == 'auto':
                 if self.binary_classification:
-                    return f1_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label,
-                                    average='binary', sample_weight=self.sample_weight)
+                    return f1_score(np.ravel(self.y_true),
+                                    np.ravel(self.y_pred),
+                                    self.labels,
+                                    self.pos_label,
+                                    average='binary',
+                                    sample_weight=self.sample_weight)
                 else:
-                    return f1_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label,
-                                    average=None, sample_weight=self.sample_weight)
+                    return f1_score(np.ravel(self.y_true),
+                                    np.ravel(self.y_pred),
+                                    self.labels,
+                                    self.pos_label,
+                                    average=None,
+                                    sample_weight=self.sample_weight)
             else:
-                return f1_score(np.ravel(self.y_true), np.ravel(self.y_pred), self.labels, self.pos_label, self.average,
+                return f1_score(np.ravel(self.y_true),
+                                np.ravel(self.y_pred),
+                                self.labels,
+                                self.pos_label,
+                                self.average,
                                 self.sample_weight)
         return None
 

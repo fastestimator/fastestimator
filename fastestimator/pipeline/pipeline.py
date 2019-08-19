@@ -232,9 +232,9 @@ class Pipeline:
                 dataset = dataset.flat_map(lambda dataset: tf.data.Dataset.from_tensor_slices(dataset))
             if self.padded_batch:
                 padded_shape = dataset.map(self._get_padded_shape)
-                dataset = dataset.padded_batch(batch_size, padded_shapes=padded_shape)
+                dataset = dataset.padded_batch(batch_size, padded_shapes=padded_shape, drop_remainder=True)
             else:
-                dataset = dataset.batch(batch_size)
+                dataset = dataset.batch(batch_size, drop_remainder=True)
             dataset = dataset.prefetch(buffer_size=1)
             dataset_map[epoch] = dataset
         self.dataset_schedule[mode] = Scheduler(epoch_dict=dataset_map)
