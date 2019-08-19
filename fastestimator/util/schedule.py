@@ -15,8 +15,6 @@ class Scheduler:
         sample_content = self._get_sample_content()
         for key in self.keys:
             assert isinstance(key, int), "found non-integer key: {}".format(key)
-            assert type(sample_content) == type(
-                self.epoch_dict[key]) or self.epoch_dict[key] is None, "schedule contents must have same type"
             if isinstance(sample_content, TensorOp) and self.epoch_dict[key]:
                 assert self.mode == self.epoch_dict[key].mode, "schedule contents must have same mode"
 

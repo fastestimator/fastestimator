@@ -15,8 +15,8 @@
 import math
 
 import tensorflow as tf
-import tensorflow_probability as tfp
 
+import tensorflow_probability as tfp
 from fastestimator.util.op import TensorOp
 
 
@@ -341,7 +341,7 @@ class MixUpBatch(TensorOp):
     This class should be used in conjunction with MixUpLoss to perform mix-up training, which helps to reduce
     over-fitting, stabilize GAN training, and against adversarial attacks (https://arxiv.org/abs/1710.09412)
     """
-    def __init__(self, inputs=None, outputs=None, mode=None, alpha=1.0, warmup=0):
+    def __init__(self, inputs=None, outputs=None, mode=None, alpha=1.0):
         """
         Args:
             inputs: key of the input to be mixed up
@@ -353,12 +353,9 @@ class MixUpBatch(TensorOp):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.alpha = tf.constant(alpha)
         self.beta = tfp.distributions.Beta(alpha, alpha)
-        self.warmup = warmup
 
     def forward(self, data, state):
         iterdata = data if isinstance(data, list) else list(data) if isinstance(data, tuple) else [data]
-        if self.alpha <= 0 or state['step'] < self.warmup:
-            return iterdata + [1.0]
         lam = self.beta.sample()
         # Could do random mix-up using tf.gather() on a shuffled index list, but batches are already randomly ordered,
         # so just need to roll by 1 to get a random combination of inputs. This also allows MixUpLoss to easily compute

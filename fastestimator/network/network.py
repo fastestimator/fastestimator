@@ -68,14 +68,13 @@ class Network:
         return list(set(signature_epoch)), mode_ops
 
     def load_epoch(self, epoch, mode):
-        self.current_epoch_ops[mode] = self.op_schedule[mode].get_current_value(epoch)
-        self.current_epoch_model[mode] = self.model_schedule[mode].get_current_value(epoch)
+        ops = self.op_schedule[mode].get_current_value(epoch)
+        model_list = self.model_schedule[mode].get_current_value(epoch)
+        return ops, model_list
 
-    def run_step(self, batch, state, warm_up=False):
+    def run_step(self, batch, ops, model_list, state, warm_up=False):
         losses = ()
         mode = state["mode"]
-        ops = self.current_epoch_ops[mode]
-        model_list = self.current_epoch_model[mode]
         num_model = len(model_list)
         # use gradient tape for train, otherwise use a dummy tape
         with tf.GradientTape(persistent=True) if mode == "train" else NonContext() as tape:

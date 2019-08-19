@@ -15,18 +15,17 @@
 import tensorflow as tf
 from tensorflow.python.keras.losses import SparseCategoricalCrossentropy as KerasCrossentropy
 
-from fastestimator import Estimator
-from fastestimator import Network
-from fastestimator import Pipeline
+from fastestimator import Estimator, Network, Pipeline
 from fastestimator.architecture import LeNet
 from fastestimator.estimator.trace import Accuracy, ConfusionMatrix
-from fastestimator.network.loss import MixUpLoss, SparseCategoricalCrossentropy, Loss
+from fastestimator.network.loss import Loss, MixUpLoss, SparseCategoricalCrossentropy
 from fastestimator.network.model import ModelOp, build
 from fastestimator.pipeline.augmentation import MixUpBatch
 from fastestimator.pipeline.processing import Minmax
+from fastestimator.util.schedule import Scheduler
 
 
-def get_estimator(epochs=2, batch_size=32, alpha=1.0, warmup=0):
+def get_estimator(epochs=2, batch_size=32, alpha=1.0):
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.cifar10.load_data()
     data = {"train": {"x": x_train, "y": y_train}, "eval": {"x": x_eval, "y": y_eval}}
     num_classes = 10
@@ -35,18 +34,18 @@ def get_estimator(epochs=2, batch_size=32, alpha=1.0, warmup=0):
     model = build(keras_model=LeNet(input_shape=x_train.shape[1:], classes=num_classes),
                   loss=Loss(inputs="loss"),
                   optimizer="adam")
-
+    mixup_map = {1: MixUpBatch(inputs="x", outputs=["x", "lambda"], alpha=alpha, mode="train")}
+    mixup_loss = {
+        0: SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred", outputs="loss", mode="train"),
+        1: MixUpLoss(KerasCrossentropy(), lam="lambda", y_true="y", y_pred="y_pred", outputs="loss", mode="train")
+    }
     network = Network(ops=[
-        MixUpBatch(inputs="x", outputs=["x", "lambda"], alpha=alpha, warmup=warmup, mode="train"),
+        Scheduler(mixup_map),
         ModelOp(inputs="x", model=model, outputs="y_pred"),
-        MixUpLoss(KerasCrossentropy(), lam="lambda", y_true="y", y_pred="y_pred", outputs="loss", mode="train"),
+        Scheduler(mixup_loss),
         SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred", outputs="loss", mode="eval")
     ])
 
-    traces = [
-        Accuracy(true_key="y", pred_key="y_pred"),
-        ConfusionMatrix(true_key="y", pred_key="y_pred", num_classes=num_classes)
-    ]
-
+    traces = [Accuracy(true_key="y", pred_key="y_pred")]
     estimator = Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces)
     return estimator
