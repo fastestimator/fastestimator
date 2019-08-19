@@ -182,7 +182,7 @@ class MatReader(NumpyOp):
            dict
         """
         path = os.path.normpath(os.path.join(self.parent_path, data))
-        data = self._loadmat(data)
+        data = self._loadmat(path)
         return data
 
 
