@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import cv2
 import numpy as np
 import tensorflow as tf
 
@@ -90,7 +91,6 @@ class StyleContentLoss(Loss):
 
 
 def get_estimator(style_img_path, data_path=None, style_weight=5.0, content_weight=1.0, tv_weight=1e-4):
-    import cv2
     train_csv, path = load_data(data_path)
     style_img = cv2.imread(style_img_path)
     assert style_img is not None, "Invalid style reference image"
