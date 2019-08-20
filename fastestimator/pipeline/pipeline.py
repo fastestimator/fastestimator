@@ -184,6 +184,7 @@ class Pipeline:
                                                  compression_type=self.compression[mode][idx])
                 ds = ds.map(lambda ds: self._decode_records(ds, mode, idx), num_parallel_calls=self.num_core)
             ds = ds.shuffle(self.shuffle_buffer[mode][idx])
+            ds = ds.repeat()
             ds_tuple += ds,
         # Combine dataset from different unpaired feature sets
         if len(self.all_features[mode]) > 1:
@@ -232,11 +233,11 @@ class Pipeline:
                 dataset = dataset.flat_map(lambda dataset: tf.data.Dataset.from_tensor_slices(dataset))
             if self.padded_batch:
                 padded_shape = dataset.map(self._get_padded_shape)
-                dataset = dataset.padded_batch(batch_size, padded_shapes=padded_shape, drop_remainder=True)
+                dataset = dataset.padded_batch(batch_size, padded_shapes=padded_shape)
             else:
-                dataset = dataset.batch(batch_size, drop_remainder=True)
+                dataset = dataset.batch(batch_size)
             dataset = dataset.prefetch(buffer_size=1)
-            dataset_map[epoch] = dataset
+            dataset_map[epoch] = iter(dataset)
         self.dataset_schedule[mode] = Scheduler(epoch_dict=dataset_map)
 
     def _get_padded_shape(self, dataset):
@@ -330,28 +331,25 @@ class Pipeline:
     def show_results(self, inputs=None, mode="train", num_steps=1, current_epoch=0):
         data = []
         self._prepare(inputs=inputs)
-        dataset = self.dataset_schedule[mode].get_current_value(current_epoch)
-        for example in dataset.take(num_steps):
-            data.append(example)
+        ds_iter = self.dataset_schedule[mode].get_current_value(current_epoch)
+        for _ in range(num_steps):
+            data.append(next(ds_iter))
         self._reset()
         return data
 
     def benchmark(self, inputs=None, mode="train", num_steps=1000, log_interval=100, current_epoch=0):
         self._prepare(inputs=inputs)
-        dataset = self.dataset_schedule[mode].get_current_value(current_epoch)
+        ds_iter = self.dataset_schedule[mode].get_current_value(current_epoch)
         batch_size = self._get_batch_size(current_epoch)
-        num_loops = int(np.ceil(batch_size * num_steps / min(self.num_examples[mode])))
-        step = 0
-        start = time.time()
-        for _ in range(num_loops):
-            for _ in dataset:
-                step += 1
-                if step % log_interval == 0:
+        for idx in range(num_steps+1):
+            _ = next(ds_iter)
+            if idx % log_interval == 0:
+                if idx == 0:
+                    start = time.time()
+                else:
                     duration = time.time() - start
                     example_per_sec = log_interval * batch_size / duration
                     print("FastEstimator: Step: %d, Epoch: %d, Batch Size %d, Example/sec %.2f" %
-                          (step, current_epoch, batch_size, example_per_sec))
+                          (idx, current_epoch, batch_size, example_per_sec))
                     start = time.time()
-                if step == num_steps:
-                    self._reset()
-                    return
+        self._reset()

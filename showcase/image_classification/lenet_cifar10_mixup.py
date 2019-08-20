@@ -15,15 +15,14 @@
 import tensorflow as tf
 from tensorflow.python.keras.losses import SparseCategoricalCrossentropy as KerasCrossentropy
 
-from fastestimator import Estimator
-from fastestimator import Network
-from fastestimator import Pipeline
+from fastestimator import Estimator, Network, Pipeline
 from fastestimator.architecture import LeNet
 from fastestimator.estimator.trace import Accuracy, ConfusionMatrix
-from fastestimator.network.loss import MixUpLoss, SparseCategoricalCrossentropy, Loss
+from fastestimator.network.loss import Loss, MixUpLoss, SparseCategoricalCrossentropy
 from fastestimator.network.model import ModelOp, build
 from fastestimator.pipeline.augmentation import MixUpBatch
 from fastestimator.pipeline.processing import Minmax
+from fastestimator.util.schedule import Scheduler
 
 
 def get_estimator(epochs=2, batch_size=32, alpha=1.0, warmup=0):
@@ -36,10 +35,15 @@ def get_estimator(epochs=2, batch_size=32, alpha=1.0, warmup=0):
                   loss=Loss(inputs="loss"),
                   optimizer="adam")
 
+    mixup_map = {warmup: MixUpBatch(inputs="x", outputs=["x", "lambda"], alpha=alpha, mode="train")}
+    mixup_loss = {
+        0: SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred", outputs="loss", mode="train"),
+        warmup: MixUpLoss(KerasCrossentropy(), lam="lambda", y_true="y", y_pred="y_pred", outputs="loss", mode="train")
+    }
     network = Network(ops=[
-        MixUpBatch(inputs="x", outputs=["x", "lambda"], alpha=alpha, warmup=warmup, mode="train"),
+        Scheduler(mixup_map),
         ModelOp(inputs="x", model=model, outputs="y_pred"),
-        MixUpLoss(KerasCrossentropy(), lam="lambda", y_true="y", y_pred="y_pred", outputs="loss", mode="train"),
+        Scheduler(mixup_loss),
         SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred", outputs="loss", mode="eval")
     ])
 
