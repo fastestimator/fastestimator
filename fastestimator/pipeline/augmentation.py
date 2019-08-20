@@ -350,6 +350,7 @@ class MixUpBatch(TensorOp):
             alpha: the alpha value defining the beta distribution to be drawn from during training
             warmup: how many steps (int) to wait before starting mix-up
         """
+        assert alpha > 0, "Mixup alpha value must be greater than zero"
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.alpha = tf.constant(alpha)
         self.beta = tfp.distributions.Beta(alpha, alpha)
