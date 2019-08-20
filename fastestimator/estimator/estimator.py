@@ -82,8 +82,8 @@ class Estimator:
             signature_epochs = list(set(epochs_pipeline) | set(epochs_network))
             state = {"mode": mode}
             for epoch in signature_epochs:
-                dataset = self.pipeline.dataset_schedule[mode].get_current_value(epoch)
-                batch = next(iter(dataset))
+                ds_iter = self.pipeline.dataset_schedule[mode].get_current_value(epoch)
+                batch = next(ds_iter)
                 ops, model_list = self.network.load_epoch(epoch, mode)
                 model_list = self.network.model_schedule[mode].get_current_value(epoch)
                 self.network.run_step(batch, ops, model_list, state, warm_up=True)
@@ -92,16 +92,19 @@ class Estimator:
         self._run_traces_begin({"mode": "train"})
         train_step = 0
         for epoch in range(self.epochs):
-            dataset = self.pipeline.dataset_schedule["train"].get_current_value(epoch)
-            if self.steps_per_epoch:
-                dataset = dataset.take(self.steps_per_epoch)
+            ds_iter = self.pipeline.dataset_schedule["train"].get_current_value(epoch)
             batch_size = self.pipeline._get_batch_size(epoch)
+            if self.steps_per_epoch:
+                max_steps = self.steps_per_epoch
+            else:
+                max_steps = min(self.pipeline.num_examples["train"]) // batch_size
             ops, model_list = self.network.load_epoch(epoch, "train")
             self._run_traces_on_epoch_begin({"mode": "train", "epoch": epoch, "train_step": train_step})
-            for batch in dataset:
+            for _ in range(max_steps):
                 self._run_traces_on_batch_begin({
                     "mode": "train", "epoch": epoch, "train_step": train_step, "batch_size": batch_size
                 })
+                batch = next(ds_iter)
                 prediction, loss = self.forward_step(batch, ops, model_list, {"mode": "train"})
                 batch = ChainMap(prediction, batch)
                 self._run_traces_on_batch_end({
@@ -127,11 +130,13 @@ class Estimator:
     def val(self, epoch, batch_size, train_step):
         self._run_traces_begin({"mode": "eval"})
         ops, model_list = self.network.load_epoch(epoch, "eval")
-        self._run_traces_on_epoch_begin({"mode": "eval", "epoch": epoch, "train_step": train_step})
-        dataset = self.pipeline.dataset_schedule["eval"].get_current_value(epoch)
+        ds_iter = self.pipeline.dataset_schedule["eval"].get_current_value(epoch)
         if self.validation_steps:
-            dataset = dataset.take(self.validation_steps)
-        for eval_step, batch in enumerate(dataset):
+            max_steps = self.validation_steps
+        else:
+            max_steps = min(self.pipeline.num_examples["eval"]) // batch_size
+        self._run_traces_on_epoch_begin({"mode": "eval", "epoch": epoch, "train_step": train_step})
+        for eval_step in range(max_steps):
             self._run_traces_on_batch_begin({
                 "mode": "eval",
                 "epoch": epoch,
@@ -139,6 +144,7 @@ class Estimator:
                 "eval_step": eval_step,
                 "batch_size": batch_size
             })
+            batch = next(ds_iter)
             prediction, loss = self.forward_step(batch, ops, model_list, {"mode": "eval"})
             batch = ChainMap(prediction, batch)
             self._run_traces_on_batch_end({

@@ -17,7 +17,7 @@ from tensorflow.python.keras.losses import SparseCategoricalCrossentropy as Kera
 
 from fastestimator import Estimator, Network, Pipeline
 from fastestimator.architecture import LeNet
-from fastestimator.estimator.trace import Accuracy, ConfusionMatrix
+from fastestimator.estimator.trace import Accuracy, Trace
 from fastestimator.network.loss import Loss, MixUpLoss, SparseCategoricalCrossentropy
 from fastestimator.network.model import ModelOp, build
 from fastestimator.pipeline.augmentation import MixUpBatch
