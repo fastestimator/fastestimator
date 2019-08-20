@@ -23,9 +23,10 @@ from fastestimator.network.loss import SparseCategoricalCrossentropy, Loss
 from fastestimator.network.model import build, ModelOp
 from fastestimator.pipeline.processing import Minmax
 from fastestimator.pipeline.augmentation import AdversarialSample, Average
+from fastestimator.util.schedule import Scheduler
 
 
-def get_estimator(epochs=2, batch_size=32, epsilon=0.01):
+def get_estimator(epochs=2, batch_size=32, epsilon=0.01, warmup=0):
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.cifar10.load_data()
     data = {"train": {"x": x_train, "y": y_train}, "eval": {"x": x_eval, "y": y_eval}}
     num_classes = 10
@@ -36,19 +37,26 @@ def get_estimator(epochs=2, batch_size=32, epsilon=0.01):
                   loss=Loss(inputs="loss"),
                   optimizer="adam")
 
-    traces = [
-        Accuracy(true_key="y", pred_key="y_pred"),
-        ConfusionMatrix(true_key="y", pred_key="y_pred", num_classes=num_classes)
-    ]
+    adv_img = {warmup: AdversarialSample(inputs=("loss", "x"), outputs="x_adverse", epsilon=epsilon, mode="train")}
+    adv_eval = {warmup: ModelOp(inputs="x_adverse", model=model, outputs="y_pred_adverse", mode="train")}
+    adv_loss = {
+        warmup: SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred_adverse", outputs="adverse_loss", mode="train")
+    }
+    adv_avg = {warmup: Average(inputs=("loss", "adverse_loss"), outputs="loss", mode="train")}
 
     network = Network(ops=[
         ModelOp(inputs="x", model=model, outputs="y_pred", track_input=True),
         SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred", outputs="loss"),
-        AdversarialSample(inputs=("loss", "x"), outputs="x_adverse", epsilon=epsilon, mode="train"),
-        ModelOp(inputs="x_adverse", model=model, outputs="y_pred_adverse", mode="train"),
-        SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred_adverse", outputs="adverse_loss", mode="train"),
-        Average(inputs=("loss", "adverse_loss"), outputs="loss", mode="train")
+        Scheduler(adv_img),
+        Scheduler(adv_eval),
+        Scheduler(adv_loss),
+        Scheduler(adv_avg)
     ])
+
+    traces = [
+        Accuracy(true_key="y", pred_key="y_pred"),
+        ConfusionMatrix(true_key="y", pred_key="y_pred", num_classes=num_classes)
+    ]
 
     estimator = Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces)
 
