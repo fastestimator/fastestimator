@@ -46,6 +46,25 @@ def get_op_from_mode(ops, current_mode):
     return selected_ops
 
 
+def get_inputs_by_key(store, inputs_key):
+    if isinstance(inputs_key, list):
+        data = [store[key] for key in inputs_key]
+    elif isinstance(inputs_key, tuple):
+        data = tuple([store[key] for key in inputs_key])
+    else:
+        data = store[inputs_key]
+    return data
+
+
+def write_outputs_by_key(store, output, outputs_key):
+    if isinstance(outputs_key, str):
+        store[outputs_key] = output
+    else:
+        for key, data in zip(outputs_key, output):
+            store[key] = data
+    return store
+
+
 def verify_ops(ops, class_name):
     inheritage = {"RecordWriter": NumpyOp, "Pipeline": TensorOp, "Network": TensorOp}
     inheritage_class = inheritage[class_name]

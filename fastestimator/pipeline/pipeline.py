@@ -22,10 +22,10 @@ import tensorflow as tf
 
 from fastestimator.pipeline.processing import TensorFilter
 from fastestimator.record.record import RecordWriter
-from fastestimator.util.op import get_op_from_mode, verify_ops
+from fastestimator.util.op import get_op_from_mode, verify_ops, get_inputs_by_key, write_outputs_by_key
 from fastestimator.util.schedule import Scheduler
 from fastestimator.util.tfrecord import get_features
-from fastestimator.util.util import convert_tf_dtype, get_inputs_by_key, write_outputs_by_key
+from fastestimator.util.util import convert_tf_dtype
 
 
 class Pipeline:

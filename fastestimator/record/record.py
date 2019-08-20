@@ -21,8 +21,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-from fastestimator.util.op import get_op_from_mode, verify_ops
-from fastestimator.util.util import get_inputs_by_key, write_outputs_by_key
+from fastestimator.util.op import get_op_from_mode, verify_ops, get_inputs_by_key, write_outputs_by_key
 
 
 class RecordWriter:

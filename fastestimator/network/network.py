@@ -16,9 +16,9 @@ import tensorflow as tf
 from tensorflow.python.framework import ops as tfops
 
 from fastestimator.network.model import ModelOp
-from fastestimator.util.op import get_op_from_mode, verify_ops
+from fastestimator.util.op import get_op_from_mode, verify_ops, get_inputs_by_key, write_outputs_by_key
 from fastestimator.util.schedule import Scheduler
-from fastestimator.util.util import NonContext, get_inputs_by_key, write_outputs_by_key
+from fastestimator.util.util import NonContext
 
 
 class Network:

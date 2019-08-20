@@ -257,25 +257,6 @@ def decode_predictions(predictions, top=3, dictionary=None):
     return results
 
 
-def get_inputs_by_key(store, inputs_key):
-    if isinstance(inputs_key, list):
-        data = [store[key] for key in inputs_key]
-    elif isinstance(inputs_key, tuple):
-        data = tuple([store[key] for key in inputs_key])
-    else:
-        data = store[inputs_key]
-    return data
-
-
-def write_outputs_by_key(store, output, outputs_key):
-    if isinstance(outputs_key, str):
-        store[outputs_key] = output
-    else:
-        for key, data in zip(outputs_key, output):
-            store[key] = data
-    return store
-
-
 class Suppressor(object):
     """
     A class which can be used to silence output of function calls. example:
