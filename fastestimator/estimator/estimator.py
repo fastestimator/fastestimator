@@ -85,7 +85,6 @@ class Estimator:
                 ds_iter = self.pipeline.dataset_schedule[mode].get_current_value(epoch)
                 batch = next(ds_iter)
                 ops, model_list = self.network.load_epoch(epoch, mode)
-                model_list = self.network.model_schedule[mode].get_current_value(epoch)
                 self.network.run_step(batch, ops, model_list, state, warm_up=True)
 
     def train(self):
