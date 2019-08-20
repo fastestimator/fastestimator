@@ -20,13 +20,13 @@ import tempfile
 from glob import glob
 from zipfile import ZipFile
 
-import cv2
 import numpy as np
 import pandas as pd
 import wget
 
 
 def load_and_set_data(path=None):
+    import cv2
     if path is None:
         path = os.path.join(tempfile.gettempdir(), 'FE_MONTGOMERY')
     if not os.path.exists(path):

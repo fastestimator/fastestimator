@@ -15,8 +15,6 @@
 import os
 from glob import glob
 
-import cv2
-import imageio
 import tensorflow as tf
 
 from fastestimator.architecture.cyclegan import build_generator, build_discriminator
@@ -45,6 +43,7 @@ class GifGenerator(Trace):
                 os.makedirs(self.save_path)
 
     def on_batch_end(self, state):
+        import cv2
         mode = state['mode']
         epoch = state['epoch']
 
@@ -58,6 +57,7 @@ class GifGenerator(Trace):
             cv2.imwrite(img_path, img.astype("uint8"))
 
     def end(self, mode):
+        import imageio
         with imageio.get_writer(self.export_name, mode='I') as writer:
             filenames = glob(os.path.join(self.save_path, "*.png"))
             filenames = sorted(filenames)

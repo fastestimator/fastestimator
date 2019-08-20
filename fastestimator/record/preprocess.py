@@ -14,7 +14,6 @@
 # ==============================================================================
 import os
 
-import cv2
 import numpy as np
 from scipy.io import loadmat
 
@@ -32,8 +31,8 @@ class ImageReader(NumpyOp):
         grey_scale: Boolean to indicate whether or not to read image as grayscale
     """
     def __init__(self, inputs=None, outputs=None, mode=None, parent_path="", grey_scale=False):
-
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        import cv2
         self.parent_path = parent_path
         self.color_flag = cv2.IMREAD_COLOR
         if grey_scale:
@@ -191,6 +190,7 @@ class Resize(NumpyOp):
     """
     def __init__(self, target_size, resize_method='bilinear', keep_ratio=False, inputs=None, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        import cv2
         self._cv2 = cv2
         self.target_size = target_size
         if resize_method == "bilinear":
