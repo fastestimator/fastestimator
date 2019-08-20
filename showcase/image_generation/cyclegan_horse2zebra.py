@@ -15,18 +15,20 @@
 import os
 from glob import glob
 
+import cv2
+import imageio
 import tensorflow as tf
+from fastestimator.dataset.zebra2horse_data import load_data
 
 from fastestimator.architecture.cyclegan import build_generator, build_discriminator
-from fastestimator.dataset.zebra2horse_data import load_data
-from fastestimator.record.record import RecordWriter
-from fastestimator.record.preprocess import ImageReader
-from fastestimator.estimator.trace import Trace
 from fastestimator.estimator.estimator import Estimator
+from fastestimator.estimator.trace import Trace
 from fastestimator.network.loss import Loss
 from fastestimator.network.model import ModelOp, build
 from fastestimator.network.network import Network
 from fastestimator.pipeline.pipeline import Pipeline
+from fastestimator.record.preprocess import ImageReader
+from fastestimator.record.record import RecordWriter
 from fastestimator.util.op import TensorOp
 
 
@@ -43,7 +45,7 @@ class GifGenerator(Trace):
                 os.makedirs(self.save_path)
 
     def on_batch_end(self, state):
-        import cv2
+
         mode = state['mode']
         epoch = state['epoch']
 
@@ -57,7 +59,6 @@ class GifGenerator(Trace):
             cv2.imwrite(img_path, img.astype("uint8"))
 
     def end(self, mode):
-        import imageio
         with imageio.get_writer(self.export_name, mode='I') as writer:
             filenames = glob(os.path.join(self.save_path, "*.png"))
             filenames = sorted(filenames)
