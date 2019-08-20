@@ -1,16 +1,24 @@
-from __future__ import absolute_import
+import os
+import re
+
+from setuptools import find_packages, setup
 
 
-from setuptools import setup, find_packages
+def get_version():
+    path = os.path.dirname(__file__)
+    version_re = re.compile(r'''__version__ = ['"](.+)['"]''')
+    with open(os.path.join(path, 'fastestimator', '__init__.py')) as f:
+        init = f.read()
+    return version_re.search(init).group(1)
 
 setup(name="fastestimator",
-      version="2.0",
+      version=get_version(),
       description="Deep learning Application framework",
       packages=find_packages(),
       package_dir={'': '.'},
       long_description="FastEstimator is a high-level deep learning API. With the help of FastEstimator, you can easily build a high-performance deep learning model and run it anywhere.",
       author="FastEstimator Dev",
-      url='https://github.build.ge.com/EdisonAITK/FastEstimator',
+      url='https://github.com/fastestimator/fastestimator',
       license="Apache License 2.0",
       keywords="fastestimator tensorflow",
       classifiers=[
