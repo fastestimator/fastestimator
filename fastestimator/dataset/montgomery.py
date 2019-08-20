@@ -28,7 +28,7 @@ import wget
 
 def load_and_set_data(path=None):
     if path is None:
-        path = os.path.join(tempfile.gettempdir(),'FE_MONTGOMERY')
+        path = os.path.join(tempfile.gettempdir(), 'FE_MONTGOMERY')
     if not os.path.exists(path):
         os.mkdir(path)
     if not os.path.exists(os.path.join(path, 'MontgomerySet')) or not os.listdir(os.path.join(path, 'MontgomerySet')):
@@ -42,8 +42,8 @@ def load_and_set_data(path=None):
         os.mkdir(os.path.join(path, 'MontgomerySet', 'combinedMask'))
 
     montgomery_img = os.path.join(path, 'MontgomerySet', 'CXR_png')
-    montgomery_leftmask_img = os.path.join(path, 'MontgomerySet', 'ManualMask', 'leftMask' )
-    montgomery_rightmask_img = os.path.join(path, 'MontgomerySet', 'ManualMask', 'rightMask' )
+    montgomery_leftmask_img = os.path.join(path, 'MontgomerySet', 'ManualMask', 'leftMask')
+    montgomery_rightmask_img = os.path.join(path, 'MontgomerySet', 'ManualMask', 'rightMask')
     montgomery_combinedmask_img = os.path.join(path, 'MontgomerySet', 'combinedMask')
 
     montgomery_img_list = glob(os.path.join(montgomery_img, '*.png'))
@@ -62,12 +62,11 @@ def load_and_set_data(path=None):
                 cv2.imwrite(os.path.join(montgomery_combinedmask_img, lm_base), mask)
 
     montgomery_combinedmask_list = glob(os.path.join(montgomery_combinedmask_img, '*.png'))
-    bn_2_imgpath = {os.path.basename(i):i for i in montgomery_img_list}
-    bn_2_maskpath = {os.path.basename(i):i for i in montgomery_combinedmask_list }
+    bn_2_imgpath = {os.path.basename(i): i for i in montgomery_img_list}
+    bn_2_maskpath = {os.path.basename(i): i for i in montgomery_combinedmask_list}
 
     train_cvs_path = os.path.join(path, 'train_image_mask.csv')
     eval_cvs_path = os.path.join(path, 'eval_image_mask.csv')
-
 
     df_all = pd.DataFrame({'basename': list(bn_2_imgpath.keys()), 'imgpath': list(bn_2_imgpath.values())})
     df_all['mask'] = df_all.basename.map(bn_2_maskpath)
@@ -76,6 +75,5 @@ def load_and_set_data(path=None):
     df_val = df_all[100:]
     df_train.to_csv(train_cvs_path, index=False)
     df_val.to_csv(eval_cvs_path, index=False)
-
 
     return train_cvs_path, eval_cvs_path, path

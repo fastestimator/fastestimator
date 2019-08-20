@@ -30,7 +30,7 @@ class NumpyOp:
         self.outputs = outputs
         self.mode = mode
 
-    def forward(self, data):
+    def forward(self, data, state):
         return data
 
 

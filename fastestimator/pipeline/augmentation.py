@@ -40,8 +40,15 @@ class Augmentation2D(TensorOp):
        flip_up_down: Boolean representing whether to flip the image vertically with a probability of 0.5.
        mode: Augmentation on 'training' data or 'evaluation' data.
    """
-    def __init__(self, rotation_range=0., width_shift_range=0., height_shift_range=0., shear_range=0., zoom_range=1.,
-                 flip_left_right=False, flip_up_down=False, mode='train'):
+    def __init__(self,
+                 rotation_range=0.,
+                 width_shift_range=0.,
+                 height_shift_range=0.,
+                 shear_range=0.,
+                 zoom_range=1.,
+                 flip_left_right=False,
+                 flip_up_down=False,
+                 mode='train'):
         self.mode = mode
         self.height = None
         self.width = None
@@ -72,14 +79,15 @@ class Augmentation2D(TensorOp):
         else:
             rotation_range = self.rotation_range
         self.rotation_range = rotation_range
-        theta = tf.random.uniform([], maxval=math.pi / 180 * self.rotation_range[1],
+        theta = tf.random.uniform([],
+                                  maxval=math.pi / 180 * self.rotation_range[1],
                                   minval=math.pi / 180 * self.rotation_range[0])
         base_matrix = tf.constant([[1, 0, 0], [0, 1, 0], [0, 0, 0]], shape=[3, 3], dtype=tf.float32)
         rotation_matrix_1 = tf.cos(theta) * base_matrix
         base_matrix = tf.constant([[0, -1, 0], [1, 0, 0], [0, 0, 0]], shape=[3, 3], dtype=tf.float32)
         rotation_matrix_2 = base_matrix * tf.sin(theta)
-        transform_matrix = rotation_matrix_1 + rotation_matrix_2 + tf.constant([[0, 0, 0], [0, 0, 0], [0, 0, 1]],
-                                                                               shape=[3, 3], dtype=tf.float32)
+        transform_matrix = rotation_matrix_1 + rotation_matrix_2 + tf.constant(
+            [[0, 0, 0], [0, 0, 0], [0, 0, 1]], shape=[3, 3], dtype=tf.float32)
         transform_matrix = self.transform_matrix_offset_center(transform_matrix)
         return transform_matrix
 
@@ -129,9 +137,11 @@ class Augmentation2D(TensorOp):
         else:
             shear_range = self.shear_range
         self.shear_range = shear_range
-        sx = tf.random.uniform([], maxval=math.pi / 180 * self.shear_range[1],
+        sx = tf.random.uniform([],
+                               maxval=math.pi / 180 * self.shear_range[1],
                                minval=math.pi / 180 * self.shear_range[0])
-        sy = tf.random.uniform([], maxval=math.pi / 180 * self.shear_range[1],
+        sy = tf.random.uniform([],
+                               maxval=math.pi / 180 * self.shear_range[1],
                                minval=math.pi / 180 * self.shear_range[0])
         base_shear1 = -tf.sin(sx) * tf.constant([[0, 1, 0], [0, 0, 0], [0, 0, 0]], shape=[3, 3], dtype=tf.float32)
         base_shear2 = tf.cos(sy) * tf.constant([[0, 0, 0], [0, 1, 0], [0, 0, 0]], shape=[3, 3], dtype=tf.float32)
@@ -348,7 +358,6 @@ class MixUpBatch(TensorOp):
             outputs: key to store the mixed-up input
             mode: what mode to execute in. Probably 'train'
             alpha: the alpha value defining the beta distribution to be drawn from during training
-            warmup: how many steps (int) to wait before starting mix-up
         """
         assert alpha > 0, "Mixup alpha value must be greater than zero"
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
@@ -377,7 +386,8 @@ class AdversarialSample(TensorOp):
         tape = state['tape']
         with tape.stop_recording():
             grad_clean = tape.gradient(clean_loss, clean_data)
-            adverse_data = tf.clip_by_value(clean_data + self.epsilon * tf.sign(grad_clean), tf.reduce_min(clean_data),
+            adverse_data = tf.clip_by_value(clean_data + self.epsilon * tf.sign(grad_clean),
+                                            tf.reduce_min(clean_data),
                                             tf.reduce_max(clean_data))
         return adverse_data
 

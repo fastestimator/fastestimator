@@ -23,10 +23,12 @@ from glob import glob
 import pandas as pd
 import wget
 
+
 def _create_csv(img, key_name, parent_path, csv_name):
     df = pd.DataFrame()
     df[key_name] = [img_filename.replace(parent_path, '.') for img_filename in img]
     df.to_csv(csv_name, index=False)
+
 
 def load_data(path=None):
 
@@ -63,4 +65,3 @@ def load_data(path=None):
     _create_csv(testB_img, 'imgB', path, testB_csv)
 
     return trainA_csv, trainB_csv, testA_csv, testB_csv, path
-

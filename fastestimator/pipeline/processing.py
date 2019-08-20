@@ -31,7 +31,7 @@ class ScalarFilter(TensorFilter):
     """Class for performing filtering on dataset based on scalar values.
 
     Args:
-        feature_name: Name of the key in the dataset that is to be filtered
+        inputs: Name of the key in the dataset that is to be filtered
         filter_value: The values in the dataset that are to be filtered.
         keep_prob: The probability of keeping the example
         mode: mode that the filter acts on
@@ -44,11 +44,12 @@ class ScalarFilter(TensorFilter):
 
     def _verify_inputs(self):
         assert isinstance(self.inputs, str), "ScalarFilter only accepts single string input"
-        self.filter_value = self._convert_to_list(self.filter_value)
-        self.keep_prob = self._convert_to_list(self.keep_prob)
+        self.filter_value = ScalarFilter._convert_to_list(self.filter_value)
+        self.keep_prob = ScalarFilter._convert_to_list(self.keep_prob)
         assert len(self.filter_value) == len(self.keep_prob), "filter_value and keep_prob must be same length"
 
-    def _convert_to_list(self, data):
+    @staticmethod
+    def _convert_to_list(data):
         if not isinstance(data, list):
             if isinstance(data, tuple):
                 data = list(data)

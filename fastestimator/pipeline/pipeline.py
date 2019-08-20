@@ -25,7 +25,7 @@ from fastestimator.record.record import RecordWriter
 from fastestimator.util.op import get_op_from_mode, verify_ops
 from fastestimator.util.schedule import Scheduler
 from fastestimator.util.tfrecord import get_features
-from fastestimator.util.util import convert_tf_dtype
+from fastestimator.util.util import convert_tf_dtype, get_inputs_by_key, write_outputs_by_key
 
 
 class Pipeline:
@@ -47,6 +47,7 @@ class Pipeline:
         self.max_shuffle_buffer_mb = max_shuffle_buffer_mb
         self.possible_mode = ["train", "eval"]
         self.num_core = mp.cpu_count()
+        self.inputs = None
         self._verify_input()
         self._reset()
 
@@ -73,14 +74,14 @@ class Pipeline:
         self.extracted_dataset = {}
         self.transformed_dataset = {}
         self.dataset_schedule = {}
-        #TFrecord only
+        # TFrecord only
         self.summary_file = {}
         self.feature_dtype = {"train": [], "eval": []}
         self.record_feature_shape = {"train": [], "eval": []}
         self.compression = {"train": [], "eval": []}
         self.file_names = {"train": [], "eval": []}
 
-    def _prepare(self, inputs):
+    def prepare(self, inputs):
         self.inputs = inputs
         if isinstance(self.data, dict):
             self._get_numpy_config()
@@ -150,7 +151,7 @@ class Pipeline:
             self.compression[mode].append(compression)
             self.all_features[mode].append(get_features(file_names[0], compression=compression))
             self.shuffle_buffer[mode].append(int(min(num_examples, self.max_shuffle_buffer_mb // example_size_mb)))
-            print("FastEstimator: Found %d examples for %s in %s" % (num_examples, mode, json_file))
+            print("FastEstimator: Found %d examples for %s in %s" % (int(num_examples), mode, json_file))
 
     def _get_feature_name(self, mode):
         if len(self.all_features[mode]) > 1 and self.read_feature:
@@ -176,13 +177,13 @@ class Pipeline:
                     ds = tf.data.Dataset.from_tensor_slices(self.file_names[mode][idx])
                     ds = ds.shuffle(len(self.file_names[mode][idx]))
                     ds = ds.interleave(
-                        lambda ds: tf.data.TFRecordDataset(ds, compression_type=self.compression[mode][idx]),
+                        lambda ds_lam: tf.data.TFRecordDataset(ds_lam, compression_type=self.compression[mode][idx]),
                         cycle_length=self.num_core,
                         block_length=2)
                 else:
                     ds = tf.data.TFRecordDataset(self.file_names[mode][idx],
                                                  compression_type=self.compression[mode][idx])
-                ds = ds.map(lambda ds: self._decode_records(ds, mode, idx), num_parallel_calls=self.num_core)
+                ds = ds.map(lambda ds_lam: self._decode_records(ds_lam, mode, idx), num_parallel_calls=self.num_core)
             ds = ds.shuffle(self.shuffle_buffer[mode][idx])
             ds = ds.repeat()
             ds_tuple += ds,
@@ -204,9 +205,9 @@ class Pipeline:
             forward_ops_epoch = []
             filter_ops_epoch = []
             forward_ops_between_filter = []
-            #get batch size for the epoch
-            batch_size = self._get_batch_size(epoch)
-            #generate ops for specific mode and epoch
+            # get batch size for the epoch
+            batch_size = self.get_batch_size(epoch)
+            # generate ops for specific mode and epoch
             for op in mode_ops:
                 if isinstance(op, Scheduler):
                     scheduled_op = op.get_current_value(epoch)
@@ -214,7 +215,7 @@ class Pipeline:
                         epoch_ops_all.append(scheduled_op)
                 else:
                     epoch_ops_all.append(op)
-            #check the ops
+            # check the ops
             epoch_ops_without_filter = [op for op in epoch_ops_all if not isinstance(op, TensorFilter)]
             verify_ops(epoch_ops_without_filter, "Pipeline")
             # arrange operation according to filter location
@@ -226,11 +227,11 @@ class Pipeline:
                     filter_ops_epoch.append(op)
                     forward_ops_between_filter = []
             forward_ops_epoch.append(forward_ops_between_filter)
-            #execute the operations
+            # execute the operations
             dataset = self._execute_ops(extracted_ds, forward_ops_epoch, filter_ops_epoch, state)
-            #rest of the dataset setup
+            # rest of the dataset setup
             if self.expand_dims:
-                dataset = dataset.flat_map(lambda dataset: tf.data.Dataset.from_tensor_slices(dataset))
+                dataset = dataset.flat_map(lambda ds: tf.data.Dataset.from_tensor_slices(ds))
             if self.padded_batch:
                 padded_shape = dataset.map(self._get_padded_shape)
                 dataset = dataset.padded_batch(batch_size, padded_shapes=padded_shape)
@@ -240,7 +241,8 @@ class Pipeline:
             dataset_map[epoch] = iter(dataset)
         self.dataset_schedule[mode] = Scheduler(epoch_dict=dataset_map)
 
-    def _get_padded_shape(self, dataset):
+    @staticmethod
+    def _get_padded_shape(dataset):
         padded_shape = {}
         for key in dataset:
             padded_shape[key] = dataset[key].shape
@@ -249,44 +251,29 @@ class Pipeline:
     def _execute_ops(self, dataset, forward_ops_epoch, filter_ops_epoch, state):
         num_filters = len(filter_ops_epoch)
         forward_ops = forward_ops_epoch[0]
-        dataset = dataset.map(lambda dataset: self._preprocess_fn(dataset, forward_ops, state),
-                              num_parallel_calls=self.num_core)
+        dataset = dataset.map(lambda ds: self._preprocess_fn(ds, forward_ops, state), num_parallel_calls=self.num_core)
         if num_filters > 0:
             for filter_op, forward_ops in zip(filter_ops_epoch, forward_ops_epoch[1:]):
-                dataset = dataset.filter(lambda dataset: self._filter_fn(dataset, filter_op, state))
-                dataset = dataset.map(lambda dataset: self._preprocess_fn(dataset, forward_ops, state),
+                dataset = dataset.filter(lambda ds: self._filter_fn(ds, filter_op, state))
+                dataset = dataset.map(lambda ds: self._preprocess_fn(ds, forward_ops, state),
                                       num_parallel_calls=self.num_core)
         return dataset
 
-    def _filter_fn(self, feature, filter_op, state):
-        data = self._get_inputs_from_key(feature, filter_op.inputs)
+    @staticmethod
+    def _filter_fn(feature, filter_op, state):
+        data = get_inputs_by_key(feature, filter_op.inputs)
         data = filter_op.forward(data, state)
         return data
 
-    def _preprocess_fn(self, feature, forward_ops, state):
+    @staticmethod
+    def _preprocess_fn(feature, forward_ops, state):
+        data = None
         for op in forward_ops:
             if op.inputs:
-                data = self._get_inputs_from_key(feature, op.inputs)
+                data = get_inputs_by_key(feature, op.inputs)
             data = op.forward(data, state)
             if op.outputs:
-                feature = self._write_outputs_to_key(feature, data, op.outputs)
-        return feature
-
-    def _get_inputs_from_key(self, feature, inputs_key):
-        if isinstance(inputs_key, list):
-            data = [feature[key] for key in inputs_key]
-        elif isinstance(inputs_key, tuple):
-            data = tuple([feature[key] for key in inputs_key])
-        else:
-            data = feature[inputs_key]
-        return data
-
-    def _write_outputs_to_key(self, feature, outputs_data, outputs_key):
-        if isinstance(outputs_key, str):
-            feature[outputs_key] = outputs_data
-        else:
-            for key, data in zip(outputs_key, outputs_data):
-                feature[key] = data
+                feature = write_outputs_by_key(feature, data, op.outputs)
         return feature
 
     def _get_signature_epoch(self, mode):
@@ -314,7 +301,8 @@ class Pipeline:
             decoded_data[feature] = data
         return decoded_data
 
-    def _combine_dataset(self, *dataset):
+    @staticmethod
+    def _combine_dataset(*dataset):
         combined_dict = {}
         for ds in dataset:
             for key in ds.keys():
@@ -322,7 +310,7 @@ class Pipeline:
                 combined_dict[key] = ds[key]
         return combined_dict
 
-    def _get_batch_size(self, epoch):
+    def get_batch_size(self, epoch):
         batch_size = self.batch_size
         if isinstance(batch_size, Scheduler):
             batch_size = batch_size.get_current_value(epoch)
@@ -330,7 +318,7 @@ class Pipeline:
 
     def show_results(self, inputs=None, mode="train", num_steps=1, current_epoch=0):
         data = []
-        self._prepare(inputs=inputs)
+        self.prepare(inputs=inputs)
         ds_iter = self.dataset_schedule[mode].get_current_value(current_epoch)
         for _ in range(num_steps):
             data.append(next(ds_iter))
@@ -338,10 +326,11 @@ class Pipeline:
         return data
 
     def benchmark(self, inputs=None, mode="train", num_steps=1000, log_interval=100, current_epoch=0):
-        self._prepare(inputs=inputs)
+        self.prepare(inputs=inputs)
         ds_iter = self.dataset_schedule[mode].get_current_value(current_epoch)
-        batch_size = self._get_batch_size(current_epoch)
-        for idx in range(num_steps+1):
+        batch_size = self.get_batch_size(current_epoch)
+        start = time.time()
+        for idx in range(num_steps + 1):
             _ = next(ds_iter)
             if idx % log_interval == 0:
                 if idx == 0:

@@ -18,7 +18,6 @@ import tempfile
 from operator import add
 
 import h5py
-import numpy as np
 import pandas as pd
 import wget
 

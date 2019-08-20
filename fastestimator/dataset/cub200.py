@@ -25,7 +25,8 @@ import wget
 
 
 def load_data(path=None):
-    """Download the CUB200 data set to local storage. This will generate a cub200.csv file, which contains all the path information.
+    """Download the CUB200 data set to local storage. This will generate a cub200.csv file, which contains all the path
+        information.
 
     Args:
         path (str, optional): The path to store the CUB200 data. Defaults to None, will save at `tempfile.gettempdir()`.

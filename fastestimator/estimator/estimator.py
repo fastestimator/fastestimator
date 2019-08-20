@@ -37,6 +37,7 @@ class Estimator:
         self.log_steps = log_steps
         self.traces = traces
         self.num_gpu = 1
+        self.inputs = None
 
     def fit(self, inputs=None):
         """
@@ -56,11 +57,11 @@ class Estimator:
         self.train()
 
     def _prepare_pipeline(self):
-        self.pipeline._prepare(inputs=self.inputs)
+        self.pipeline.prepare(inputs=self.inputs)
         self.do_eval = "eval" in self.pipeline.mode_list
 
     def _prepare_network(self):
-        self.network._prepare(mode_list=self.pipeline.mode_list)
+        self.network.prepare(mode_list=self.pipeline.mode_list)
 
     def _prepare_estimator(self):
         if self.traces is None:
@@ -92,7 +93,7 @@ class Estimator:
         train_step = 0
         for epoch in range(self.epochs):
             ds_iter = self.pipeline.dataset_schedule["train"].get_current_value(epoch)
-            batch_size = self.pipeline._get_batch_size(epoch)
+            batch_size = self.pipeline.get_batch_size(epoch)
             if self.steps_per_epoch:
                 max_steps = self.steps_per_epoch
             else:

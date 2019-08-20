@@ -17,10 +17,9 @@ from glob import glob
 
 import cv2
 import imageio
-import numpy as np
 import tensorflow as tf
 
-from fastestimator.architecture.cyclegan import _build_generator, _build_discriminator
+from fastestimator.architecture.cyclegan import build_generator, build_discriminator
 from fastestimator.dataset.zebra2horse_data import load_data
 from fastestimator.record.record import RecordWriter
 from fastestimator.record.preprocess import ImageReader
@@ -45,14 +44,17 @@ class GifGenerator(Trace):
             if not (os.path.exists(self.save_path)):
                 os.makedirs(self.save_path)
 
-    def on_batch_end(self, mode, logs):
+    def on_batch_end(self, state):
+        mode = state['mode']
+        epoch = state['epoch']
+
         if mode == "eval":
-            img = logs["prediction"]["Y_fake"]
+            img = state['batch']['prediction']['Y_fake']
             img = img[0, ...].numpy()
             img += 1
             img /= 2
             img *= 255
-            img_path = os.path.join(self.save_path, self.prefix.format(logs["epoch"]))
+            img_path = os.path.join(self.save_path, self.prefix.format(epoch))
             cv2.imwrite(img_path, img.astype("uint8"))
 
     def end(self, mode):
@@ -128,33 +130,35 @@ class DLoss(Loss):
         return 0.5 * total_loss
 
 
-def get_estimator(epochs=200, LAMBDA=10):
+def get_estimator(epochs=200):
     trainA_csv, trainB_csv, testA_csv, testB_csv, parent_path = load_data()
 
     # Step 1: Define Pipeline
     writer = RecordWriter(
         train_data=(trainA_csv, trainB_csv),
-        ops=(ImageReader(inputs="imgA", outputs="imgA",
-                         parent_path=parent_path), ImageReader(inputs="imgB", outputs="imgB", parent_path=parent_path)))
+        ops=(ImageReader(inputs="imgA", outputs="imgA", parent_path=parent_path),
+             ImageReader(inputs="imgB", outputs="imgB", parent_path=parent_path)))
 
     pipeline = Pipeline(
-        data=writer, batch_size=1, ops=[
+        data=writer,
+        batch_size=1,
+        ops=[
             Myrescale(inputs="imgA", outputs="imgA"),
             RandomJitter(inputs="imgA", outputs="real_A"),
             Myrescale(inputs="imgB", outputs="imgB"),
             RandomJitter(inputs="imgB", outputs="real_B")
         ])
     # Step2: Define Network
-    g_AtoB = build(keras_model=_build_generator(),
+    g_AtoB = build(keras_model=build_generator(),
                    loss=GLoss(inputs=("real_A", "D_fake_B", "cycled_A", "same_A"), weight=10.0),
                    optimizer=tf.keras.optimizers.Adam(2e-4, 0.5))
-    g_BtoA = build(keras_model=_build_generator(), 
-                   loss=GLoss(inputs=("real_B", "D_fake_A", "cycled_B", "same_B"),weight=10.0),
+    g_BtoA = build(keras_model=build_generator(),
+                   loss=GLoss(inputs=("real_B", "D_fake_A", "cycled_B", "same_B"), weight=10.0),
                    optimizer=tf.keras.optimizers.Adam(2e-4, 0.5))
-    d_A = build(keras_model=_build_discriminator(), 
+    d_A = build(keras_model=build_discriminator(),
                 loss=DLoss(inputs=("D_real_A", "D_fake_A")),
                 optimizer=tf.keras.optimizers.Adam(2e-4, 0.5))
-    d_B = build(keras_model=_build_discriminator(), 
+    d_B = build(keras_model=build_discriminator(),
                 loss=DLoss(inputs=("D_real_B", "D_fake_B")),
                 optimizer=tf.keras.optimizers.Adam(2e-4, 0.5))
 
@@ -171,6 +175,6 @@ def get_estimator(epochs=200, LAMBDA=10):
         ModelOp(inputs="fake_A", model=d_A, outputs="D_fake_A")
     ])
     # Step3: Define Estimator
-    #traces = [GifGenerator("/root/data/public/horse2zebra/images")]
+    # traces = [GifGenerator("/root/data/public/horse2zebra/images")]
     estimator = Estimator(network=network, pipeline=pipeline, epochs=epochs)
     return estimator
