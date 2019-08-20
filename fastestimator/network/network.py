@@ -16,7 +16,7 @@ import tensorflow as tf
 from tensorflow.python.framework import ops as tfops
 
 from fastestimator.network.model import ModelOp
-from fastestimator.util.op import get_op_from_mode, verify_ops
+from fastestimator.util.op import get_op_from_mode, verify_ops, get_inputs_by_key, write_outputs_by_key
 from fastestimator.util.schedule import Scheduler
 from fastestimator.util.util import NonContext
 
@@ -31,7 +31,7 @@ class Network:
         self.current_epoch_ops = {}
         self.current_epoch_model = {}
 
-    def _prepare(self, mode_list):
+    def prepare(self, mode_list):
         for mode in mode_list:
             signature_epoch, mode_ops = self._get_signature_epoch(mode)
             epoch_ops_map = {}
@@ -39,7 +39,7 @@ class Network:
             for epoch in signature_epoch:
                 epoch_ops = []
                 epoch_model = []
-                #generate ops for specific mode and epoch
+                # generate ops for specific mode and epoch
                 for op in mode_ops:
                     if isinstance(op, Scheduler):
                         scheduled_op = op.get_current_value(epoch)
@@ -47,9 +47,9 @@ class Network:
                             epoch_ops.append(scheduled_op)
                     else:
                         epoch_ops.append(op)
-                #check the ops
+                # check the ops
                 verify_ops(epoch_ops, "Network")
-                #create model list
+                # create model list
                 for op in epoch_ops:
                     if isinstance(op, ModelOp) and op.model not in epoch_model:
                         epoch_model.append(op.model)
@@ -97,42 +97,29 @@ class Network:
         del tape
         return losses
 
-    def _loss(self, model, batch, state):
+    @staticmethod
+    def _loss(model, batch, state):
         op = model.loss
         data = None
         if op.inputs:
             if hasattr(op.inputs, "__call__"):
                 data = op.inputs()
             else:
-                data = self._get_inputs_from_key(batch, op.inputs)
+                data = get_inputs_by_key(batch, op.inputs)
         data = op.forward(data, state)
         if op.outputs:
-            self._write_outputs_to_key(data, batch, op.outputs)
+            write_outputs_by_key(batch, data, op.outputs)
         return data
 
-    def _forward(self, batch, state, ops):
+    @staticmethod
+    def _forward(batch, state, ops):
+        data = None
         for op in ops:
             if op.inputs:
                 if hasattr(op.inputs, "__call__"):
                     data = op.inputs()
                 else:
-                    data = self._get_inputs_from_key(batch, op.inputs)
+                    data = get_inputs_by_key(batch, op.inputs)
             data = op.forward(data, state)
             if op.outputs:
-                self._write_outputs_to_key(data, batch, op.outputs)
-
-    def _get_inputs_from_key(self, batch, inputs_key):
-        if isinstance(inputs_key, list):
-            data = [batch[key] for key in inputs_key]
-        elif isinstance(inputs_key, tuple):
-            data = tuple([batch[key] for key in inputs_key])
-        else:
-            data = batch[inputs_key]
-        return data
-
-    def _write_outputs_to_key(self, data, batch, outputs_key):
-        if isinstance(outputs_key, str):
-            batch[outputs_key] = data
-        else:
-            for key, value in zip(outputs_key, data):
-                batch[key] = value
+                write_outputs_by_key(batch, data, op.outputs)

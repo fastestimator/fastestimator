@@ -16,16 +16,13 @@
 import time
 
 import numpy as np
-from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precision_score, recall_score
+from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score
 
 
 class Trace:
     """Trace base class.
-
     User can use `Trace` to customize their own operations during training, validation and testing.
-
-    Args:
-        network: `Network` instance can be accessible by `self.network`.
+    The `Network` instance can be accessible by `self.network`.
     """
     def __init__(self):
         self.network = None
@@ -45,7 +42,8 @@ class Trace:
                 * "mode":  current run time mode, can be "train", "eval" or "test"
                 * "epoch": current epoch index starting from 0
                 * "train_step": current global training step starting from 0
-                * "eval_step": current local evaluation step starting from 0 (only available when mode is "eval", resets every evaluation)
+                * "eval_step": current local evaluation step starting from 0 (only available when mode is "eval",
+                                resets every evaluation)
         """
     def on_batch_begin(self, state):
         """Runs at the beginning of every batch of the mode.
@@ -55,7 +53,8 @@ class Trace:
                 * "mode":  current run time mode, can be "train", "eval" or "test"
                 * "epoch": current epoch index starting from 0
                 * "train_step": current global training step starting from 0
-                * "eval_step": current local evaluation step starting from 0 (only available when mode is "eval", resets every evaluation)
+                * "eval_step": current local evaluation step starting from 0 (only available when mode is "eval", 
+                                resets every evaluation)
                 * "batch_size": current batch size per gpu
 
         """
@@ -67,7 +66,8 @@ class Trace:
                 * "mode":  current run time mode, can be "train", "eval" or "test"
                 * "epoch": current epoch index starting from 0
                 * "train_step": current global training step starting from 0
-                * "eval_step": current local evaluation step starting from 0 (only available when mode is "eval", resets every evaluation)
+                * "eval_step": current local evaluation step starting from 0 (only available when mode is "eval", 
+                                resets every evaluation)
                 * "batch_size": current batch size on single machine
                 * "batch": the batch data after the Network execution
                 * "loss": the batch loss (only available when mode is "train" or "eval")
@@ -108,6 +108,7 @@ class TrainLogger(Trace):
         self.num_process = num_process
         self.epochs_since_best = 0
         self.best_loss = None
+        self.time_start = None
 
     def on_batch_begin(self, state):
         if state["mode"] == "train" and state["train_step"] % self.log_steps == 0:
@@ -150,6 +151,7 @@ class Accuracy(Trace):
         pred_key (str): Name of the key that corresponds to predicted score in batch dictionary
     """
     def __init__(self, true_key, pred_key):
+        super().__init__()
         self.true_key = true_key
         self.pred_key = pred_key
         self.total = 0
@@ -191,9 +193,11 @@ class ConfusionMatrix(Trace):
         pred_key (str): Name of the key that corresponds to predicted score in batch dictionary
     """
     def __init__(self, true_key, pred_key, num_classes):
+        super().__init__()
         self.true_key = true_key
         self.pred_key = pred_key
         self.num_classes = num_classes
+        self.confusion = None
 
     def on_epoch_begin(self, state):
         if state["mode"] == "eval":
@@ -243,6 +247,7 @@ class Precision(Trace):
         self.sample_weight = sample_weight
         self.y_true = []
         self.y_pred = []
+        self.binary_classification = None
 
     def on_epoch_begin(self, state):
         if state["mode"] == "eval":
@@ -309,6 +314,7 @@ class Recall(Trace):
         self.sample_weight = sample_weight
         self.y_true = []
         self.y_pred = []
+        self.binary_classification = None
 
     def on_epoch_begin(self, state):
         if state["mode"] == "eval":
@@ -358,7 +364,7 @@ class Recall(Trace):
         return None
 
 
-class F1_score(Trace):
+class F1Score(Trace):
     """Calculates F1 score for classification task and report it back to logger.
     Args:
         true_key (str): Name of the keys in the ground truth label in data pipeline.
@@ -375,6 +381,7 @@ class F1_score(Trace):
         self.sample_weight = sample_weight
         self.y_true = []
         self.y_pred = []
+        self.binary_classification = None
 
     def on_epoch_begin(self, state):
         if state["mode"] == "eval":

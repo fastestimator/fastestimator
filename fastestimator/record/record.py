@@ -21,8 +21,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-from fastestimator.util.op import get_op_from_mode, verify_ops
-from fastestimator.util.util import convert_tf_dtype
+from fastestimator.util.op import get_op_from_mode, verify_ops, get_inputs_by_key, write_outputs_by_key
 
 
 class RecordWriter:
@@ -73,7 +72,8 @@ class RecordWriter:
             self.train_data, self.validation_data, self.ops, self.write_feature = list(self.train_data), list(
                 self.validation_data), list(self.ops), list(self.write_feature)
         else:
-            self.train_data, self.validation_data, self.ops, self.write_feature = [self.train_data], [self.validation_data], [self.ops], [self.write_feature]
+            self.train_data, self.validation_data, self.ops, self.write_feature = \
+                [self.train_data], [self.validation_data], [self.ops], [self.write_feature]
         for idx in range(len(self.train_data)):
             assert type(self.train_data[idx]) is dict or self.train_data[idx].endswith(
                 ".csv"), "train data should either be a dictionary or a csv path"
@@ -89,13 +89,16 @@ class RecordWriter:
             else:
                 self.ops[idx] = []
 
-    def _int64_feature(self, value):
+    @staticmethod
+    def _int64_feature(value):
         return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
-    def _bytes_feature(self, value):
+    @staticmethod
+    def _bytes_feature(value):
         return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
-    def _float_feature(self, value):
+    @staticmethod
+    def _float_feature(value):
         return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
 
     def create_tfrecord(self, save_dir):
@@ -106,9 +109,11 @@ class RecordWriter:
             self.feature_set_idx += 1
 
     def _create_record_local(self, train_data, validation_data, write_feature, ops):
-        self.num_example_csv, self.num_example_record, self.mb_per_csv_example, self.mb_per_record_example = {}, {}, {}, {}
+        self.num_example_csv, self.num_example_record, self.mb_per_csv_example, self.mb_per_record_example = \
+            {}, {}, {}, {}
         self.mode_ops, self.feature_name, self.feature_dtype, self.feature_shape = {}, {}, {}, {}
-        self.train_data_local, self.validation_data_local, self.write_feature_local, self.ops_local = train_data, validation_data, write_feature, ops
+        self.train_data_local, self.validation_data_local, self.write_feature_local, self.ops_local = \
+            train_data, validation_data, write_feature, ops
         self._prepare_train()
         self._get_feature_info(self.train_data_local, "train")
         if validation_data:
@@ -284,21 +289,23 @@ class RecordWriter:
             expected_shape = self.feature_shape[mode][key]
             assert data.size > 0, "found empty data on feature '{}'".format(key)
             if len(expected_shape) > 1:
-                assert expected_shape == data.shape, "inconsistent shape on same feature `{}` among different examples, expected `{}`, found `{}`".format(
-                    key, expected_shape, data.shape)
+                assert expected_shape == data.shape, \
+                    "inconsistent shape on same feature `{}` among different examples, expected `{}`, found `{}`"\
+                    .format(key, expected_shape, data.shape)
             else:
                 if data.size > 1:
-                    assert max(data.shape) == np.prod(
-                        data.shape
-                    ), "inconsistent shape on same feature `{}` among different examples, expected 0 or 1 dimensional array, found `{}`".format(
-                        key, expected_shape, data.shape)
-                    if expected_shape == []:
+                    assert max(data.shape) == np.prod(data.shape), \
+                        "inconsistent shape on same feature `{}` among different examples,\
+                         expected 0 or 1 dimensional array, found `{}`"\
+                            .format(key, expected_shape, data.shape)
+                    if not expected_shape:
                         self.feature_shape[mode][key] = [-1]
             feature_tfrecord[key] = self._bytes_feature(data.tostring())
         example = tf.train.Example(features=tf.train.Features(feature=feature_tfrecord))
         writer.write(example.SerializeToString())
 
-    def _get_dict_slice(self, dictionary, index):
+    @staticmethod
+    def _get_dict_slice(dictionary, index):
         feature_slice = dict()
         keys = dictionary.keys()
         for key in keys:
@@ -306,30 +313,14 @@ class RecordWriter:
         return feature_slice
 
     def _preprocessing(self, feature, mode):
+        data = None
         for op in self.mode_ops[mode]:
             if op.inputs:
-                data = self._get_inputs_from_key(feature, op.inputs)
+                data = get_inputs_by_key(feature, op.inputs)
             data = op.forward(data, state={"mode": mode})
             if op.outputs:
-                feature = self._write_outputs_to_key(feature, data, op.outputs)
+                feature = write_outputs_by_key(feature, data, op.outputs)
         return feature
-
-    def _write_outputs_to_key(self, feature, outputs_data, outputs_key):
-        if isinstance(outputs_key, str):
-            feature[outputs_key] = outputs_data
-        else:
-            for key, data in zip(outputs_key, outputs_data):
-                feature[key] = data
-        return feature
-
-    def _get_inputs_from_key(self, feature, inputs_key):
-        if isinstance(inputs_key, list):
-            data = [feature[key] for key in inputs_key]
-        elif isinstance(inputs_key, tuple):
-            data = tuple([feature[key] for key in inputs_key])
-        else:
-            data = feature[inputs_key]
-        return data
 
     def _verify_dict(self, dictionary, mode=None):
         if mode is None:

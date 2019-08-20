@@ -14,7 +14,9 @@
 # ==============================================================================
 import os
 
+import cv2
 import numpy as np
+from scipy.io import loadmat
 
 from fastestimator.util.op import NumpyOp
 
@@ -30,10 +32,8 @@ class ImageReader(NumpyOp):
         grey_scale: Boolean to indicate whether or not to read image as grayscale
     """
     def __init__(self, inputs=None, outputs=None, mode=None, parent_path="", grey_scale=False):
-        import cv2
-        self.inputs = inputs
-        self.outputs = outputs
-        self.mode = mode
+
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.parent_path = parent_path
         self.color_flag = cv2.IMREAD_COLOR
         if grey_scale:
@@ -46,7 +46,7 @@ class ImageReader(NumpyOp):
 
         Args:
             path: path of the image
-            feature: Auxiliary data that may be used by the image reader
+            state: A dictionary containing background information such as 'mode'
 
         Returns:
            Image as numpy array
@@ -68,7 +68,7 @@ class Zscore(NumpyOp):
 
         Args:
             data: Data to be standardized
-            feature: Auxiliary data needed for the standardization
+            state: A dictionary containing background information such as 'mode'
 
         Returns:
             Array containing standardized data
@@ -89,7 +89,7 @@ class Minmax(NumpyOp):
 
         Args:
             data: Data to be normalized
-            feature: Auxiliary data needed for the normalization
+            state: A dictionary containing background information such as 'mode'
 
         Returns:
             Normalized numpy array
@@ -108,10 +108,8 @@ class Scale(NumpyOp):
         scalar: Scalar for scaling the data
     """
     def __init__(self, scalar, inputs=None, outputs=None, mode=None):
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.scalar = scalar
-        self.inputs = inputs
-        self.outputs = outputs
-        self.mode = mode
 
     def forward(self, data, state):
         """
@@ -119,7 +117,7 @@ class Scale(NumpyOp):
 
         Args:
             data: Data to be scaled
-            feature: Auxiliary data needed for the normalization
+            state: A dictionary containing background information such as 'mode'
 
         Returns:
             Scaled data array
@@ -136,10 +134,8 @@ class Reshape(NumpyOp):
         shape: target shape
     """
     def __init__(self, shape, inputs=None, outputs=None, mode=None):
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.shape = shape
-        self.inputs = inputs
-        self.outputs = outputs
-        self.mode = mode
 
     def forward(self, data, state):
         """
@@ -147,7 +143,7 @@ class Reshape(NumpyOp):
 
         Args:
             data: Data to be reshaped
-            feature: Auxiliary data needed for the reshaping
+            state: A dictionary containing background information such as 'mode'
 
         Returns:
             Reshaped array
@@ -163,12 +159,8 @@ class MatReader(NumpyOp):
         parent_path: Parent path that will be added on given path.
     """
     def __init__(self, inputs=None, outputs=None, mode=None, parent_path=""):
-
-        from scipy.io import loadmat
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self._loadmat = loadmat
-        self.inputs = inputs
-        self.outputs = outputs
-        self.mode = mode
         self.parent_path = parent_path
 
     def forward(self, data, state):
@@ -176,7 +168,7 @@ class MatReader(NumpyOp):
 
         Args:
             data: Path to the mat file.
-            feature: Auxiliary data that may be used.
+            state: A dictionary containing background information such as 'mode'
 
         Returns:
            dict
@@ -198,7 +190,7 @@ class Resize(NumpyOp):
         Resized `np.ndarray`.
     """
     def __init__(self, target_size, resize_method='bilinear', keep_ratio=False, inputs=None, outputs=None, mode=None):
-        import cv2
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self._cv2 = cv2
         self.target_size = target_size
         if resize_method == "bilinear":
@@ -210,9 +202,6 @@ class Resize(NumpyOp):
         elif resize_method == "lanczos4":
             self.resize_method = cv2.INTER_LANCZOS4
         self.keep_ratio = keep_ratio
-        self.inputs = inputs
-        self.outputs = outputs
-        self.mode = mode
 
     def forward(self, data, state):
         if self.keep_ratio:
