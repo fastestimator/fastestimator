@@ -23,20 +23,15 @@ from fastestimator.util.cli_util import draw
 
 def run():
     parser = argparse.ArgumentParser(allow_abbrev=False)
-    parser.add_argument('--worker', action='store_true',
-                        help='A flag used internally to manage multi-processing. It can be ignored by users.')
     subparsers = parser.add_subparsers()
     # In python 3.7 the following 2 lines could be put into the .add_subparsers() call
     subparsers.required = True
     subparsers.dest = 'mode'
-
     configure_train_parser(subparsers)
     configure_predict_parser(subparsers)
     configure_visualization_parser(subparsers)
-
     args, unknown = parser.parse_known_args()
-    if not args.worker:
-        draw()
+    draw()
     args.func(vars(args), unknown)
 
 

@@ -12,15 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator import architecture
-from fastestimator import dataset
-from fastestimator import estimator
-from fastestimator import network
-from fastestimator import pipeline
-from fastestimator import record
-from fastestimator import util
-from fastestimator import visualization
+from fastestimator import architecture, dataset, estimator, network, pipeline, record, util, visualization
 from fastestimator.estimator.estimator import Estimator
 from fastestimator.network.network import Network
 from fastestimator.pipeline.pipeline import Pipeline
 from fastestimator.record.record import RecordWriter
+
+__version__ = '1.0-alpha0'

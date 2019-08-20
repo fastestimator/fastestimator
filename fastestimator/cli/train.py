@@ -38,15 +38,7 @@ def train(args, unknown):
     spec_module = __import__(module_name, globals(), locals(), ["get_estimator"])
     estimator = spec_module.get_estimator(**hyperparameters)
     estimator.num_process = num_process
-
-    # Wait until now to spawn multiple threads so that all of the inputs are validated to be correct.
-    # That way the user won't get four different copies of the same error message if they enter something wrong
-    if num_process > 1 and not args['worker']:
-        cmd = "mpirun -np %d -H localhost:%d --allow-run-as-root " % (num_process, num_process) + \
-              "fastestimator --worker " + str.join(" ", sys.argv[1:])
-        os.system(cmd)
-    else:
-        estimator.fit(inputs=inputs_path)
+    estimator.fit(inputs=inputs_path)
 
 
 def configure_train_parser(subparsers):
