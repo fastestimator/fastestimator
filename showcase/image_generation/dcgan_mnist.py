@@ -47,7 +47,7 @@ class DLoss(Loss):
 
 
 def make_generator_model():
-    model = tf.keras.Sequential(name='generator')
+    model = tf.keras.Sequential()
     model.add(layers.Dense(7 * 7 * 256, use_bias=False, input_shape=(100, )))
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
@@ -67,7 +67,7 @@ def make_generator_model():
 
 
 def make_discriminator_model():
-    model = tf.keras.Sequential(name='discriminator')
+    model = tf.keras.Sequential()
     model.add(layers.Conv2D(64, (5, 5), strides=(2, 2), padding='same', input_shape=[28, 28, 1]))
     model.add(layers.LeakyReLU())
     model.add(layers.Dropout(0.3))
