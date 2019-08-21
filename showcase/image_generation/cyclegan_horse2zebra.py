@@ -33,32 +33,28 @@ from fastestimator.util.op import TensorOp
 
 
 class GifGenerator(Trace):
-    def __init__(self, save_path, export_name="anim.gif"):
-        super().__init__()
+    def __init__(self, inputs, save_path, export_name="anim.gif", mode='eval'):
+        super().__init__(inputs=inputs, mode=mode)
         self.save_path = save_path
         self.prefix = "image_at_epoch_{0:04d}.png"
         self.export_name = os.path.join(self.save_path, export_name)
 
-    def begin(self, mode):
-        if mode == "eval":
-            if not (os.path.exists(self.save_path)):
-                os.makedirs(self.save_path)
+    def begin(self, data, state):
+        if not (os.path.exists(self.save_path)):
+            os.makedirs(self.save_path)
 
-    def on_batch_end(self, state):
-
-        mode = state['mode']
+    def on_batch_end(self, data, state):
         epoch = state['epoch']
 
-        if mode == "eval":
-            img = state['batch']['prediction']['Y_fake']
-            img = img[0, ...].numpy()
-            img += 1
-            img /= 2
-            img *= 255
-            img_path = os.path.join(self.save_path, self.prefix.format(epoch))
-            cv2.imwrite(img_path, img.astype("uint8"))
+        img = data
+        img = img[0, ...].numpy()
+        img += 1
+        img /= 2
+        img *= 255
+        img_path = os.path.join(self.save_path, self.prefix.format(epoch))
+        cv2.imwrite(img_path, img.astype("uint8"))
 
-    def end(self, mode):
+    def end(self, data, state):
         with imageio.get_writer(self.export_name, mode='I') as writer:
             filenames = glob(os.path.join(self.save_path, "*.png"))
             filenames = sorted(filenames)

@@ -14,22 +14,25 @@
 # ==============================================================================
 
 
-class TensorOp:
+class Op:
     def __init__(self, inputs=None, outputs=None, mode=None):
         self.inputs = inputs
         self.outputs = outputs
         self.mode = mode
 
+
+class TensorOp(Op):
+    """
+    forward () calls to subclasses of TensorOp should be written to work within @tf.function()
+    """
     def forward(self, data, state):
         return data
 
 
-class NumpyOp:
-    def __init__(self, inputs=None, outputs=None, mode=None):
-        self.inputs = inputs
-        self.outputs = outputs
-        self.mode = mode
-
+class NumpyOp(Op):
+    """
+    forward () calls to subclasses of NumpyOp will execute in vanilla python (not in @tf.function)
+    """
     def forward(self, data, state):
         return data
 
@@ -46,13 +49,23 @@ def get_op_from_mode(ops, current_mode):
     return selected_ops
 
 
-def get_inputs_by_key(store, inputs_key):
+def get_inputs_by_op(op, store, default=None, throw_on_absent=True):
+    data = default
+    if op.inputs:
+        if hasattr(op.inputs, "__call__"):
+            data = op.inputs()
+        else:
+            data = get_inputs_by_key(store, op.inputs, throw_on_absent=throw_on_absent)
+    return data
+
+
+def get_inputs_by_key(store, inputs_key, throw_on_absent=True):
     if isinstance(inputs_key, list):
-        data = [store[key] for key in inputs_key]
+        data = [store[key] if throw_on_absent else store.get(key) for key in inputs_key]
     elif isinstance(inputs_key, tuple):
-        data = tuple([store[key] for key in inputs_key])
+        data = tuple([store[key] if throw_on_absent else store.get(key) for key in inputs_key])
     else:
-        data = store[inputs_key]
+        data = store[inputs_key] if throw_on_absent else store.get(inputs_key)
     return data
 
 
@@ -63,6 +76,27 @@ def write_outputs_by_key(store, output, outputs_key):
         for key, data in zip(outputs_key, output):
             store[key] = data
     return store
+
+
+def validate_op_inputs(inputs, *args):
+    """
+    A method to ensure that either the inputs array or individual input arguments are specified, but not both
+    Args:
+        inputs: None or a tuple/list of arguments
+        *args: a tuple of arguments or Nones
+    Returns:
+        either 'inputs' or the args tuple depending on which is populated
+    """
+    if inputs is None:  # Using args
+        assert all(map(lambda x: x is not None, args)), \
+            "If the 'inputs' field is not provided then all individual input arguments must be specified"
+        inputs = args
+    else:  # Using Inputs
+        assert all(map(lambda x: x is None, args)), \
+            "If the 'inputs' field is provided then individual input arguments may not be specified"
+        assert len(inputs) == len(args), \
+            "{} inputs were provided, but {} were required".format(len(inputs), len(args))
+    return inputs
 
 
 def verify_ops(ops, class_name):

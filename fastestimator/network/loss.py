@@ -14,7 +14,7 @@
 # ==============================================================================
 import tensorflow as tf
 
-from fastestimator.util.op import TensorOp
+from fastestimator.util.op import TensorOp, validate_op_inputs
 
 
 class Loss(TensorOp):
@@ -37,7 +37,7 @@ class SparseCategoricalCrossentropy(Loss):
             mode: 'train', 'eval', 'test', or None
             kwargs: Arguments to be passed along to the tf.losses constructor
         """
-        inputs = validate_loss_inputs(inputs, y_true, y_pred)
+        inputs = validate_op_inputs(inputs, y_true, y_pred)
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.loss_obj = tf.losses.SparseCategoricalCrossentropy(**kwargs)
 
@@ -59,7 +59,7 @@ class BinaryCrossentropy(Loss):
            mode: 'train', 'eval', 'test', or None
            kwargs: Arguments to be passed along to the tf.losses constructor
        """
-        inputs = validate_loss_inputs(inputs, y_true, y_pred)
+        inputs = validate_op_inputs(inputs, y_true, y_pred)
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.loss_obj = tf.losses.BinaryCrossentropy(**kwargs)
 
@@ -84,7 +84,7 @@ class MixUpLoss(Loss):
             outputs: Where to store the computed loss value (not required under normal use cases)
             mode: 'train', 'eval', 'test', or None
         """
-        inputs = validate_loss_inputs(inputs, lam, y_true, y_pred)
+        inputs = validate_op_inputs(inputs, lam, y_true, y_pred)
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.loss_obj = loss
 
@@ -93,24 +93,3 @@ class MixUpLoss(Loss):
         loss1 = self.loss_obj(true, pred)
         loss2 = self.loss_obj(tf.roll(true, shift=1, axis=0), pred)
         return lam * loss1 + (1.0 - lam) * loss2
-
-
-def validate_loss_inputs(inputs, *args):
-    """
-    A method to ensure that either the inputs array or individual input arguments are specified, but not both
-    Args:
-        inputs: None or a tuple/list of arguments
-        *args: a tuple of arguments or Nones
-    Returns:
-        either 'inputs' or the args tuple depending on which is populated
-    """
-    if inputs is None:  # Using args
-        assert all(map(lambda x: x is not None, args)), \
-            "If the 'inputs' field is not provided then all individual input arguments must be specified"
-        inputs = args
-    else:  # Using Inputs
-        assert all(map(lambda x: x is None, args)), \
-            "If the 'inputs' field is provided then individual input arguments may not be specified"
-        assert len(inputs) == len(args), \
-            "{} inputs were provided, but {} were required".format(len(inputs), len(args))
-    return inputs

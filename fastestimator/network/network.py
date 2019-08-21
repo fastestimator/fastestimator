@@ -16,7 +16,7 @@ import tensorflow as tf
 from tensorflow.python.framework import ops as tfops
 
 from fastestimator.network.model import ModelOp
-from fastestimator.util.op import get_op_from_mode, verify_ops, get_inputs_by_key, write_outputs_by_key
+from fastestimator.util.op import get_op_from_mode, verify_ops, get_inputs_by_op, write_outputs_by_key
 from fastestimator.util.schedule import Scheduler
 from fastestimator.util.util import NonContext
 
@@ -73,15 +73,13 @@ class Network:
         return ops, model_list
 
     def run_step(self, batch, ops, model_list, state, warm_up=False):
-        losses = ()
         mode = state["mode"]
         num_model = len(model_list)
         # use gradient tape for train, otherwise use a dummy tape
         with tf.GradientTape(persistent=True) if mode == "train" else NonContext() as tape:
             state['tape'] = tape
-            self._forward(batch, state, ops)
-            for idx in range(num_model):
-                losses += self._loss(model_list[idx], batch, state),
+            Network._forward(batch, state, ops)
+            losses = Network._forward(batch, state, map(lambda x: x.loss, model_list), recycle=False, ret_response=True)
         # update model only for train mode
         if mode == "train":
             for idx in range(num_model):
@@ -98,28 +96,16 @@ class Network:
         return losses
 
     @staticmethod
-    def _loss(model, batch, state):
-        op = model.loss
-        data = None
-        if op.inputs:
-            if hasattr(op.inputs, "__call__"):
-                data = op.inputs()
-            else:
-                data = get_inputs_by_key(batch, op.inputs)
-        data = op.forward(data, state)
-        if op.outputs:
-            write_outputs_by_key(batch, data, op.outputs)
-        return data
-
-    @staticmethod
-    def _forward(batch, state, ops):
+    def _forward(batch, state, ops, recycle=True, ret_response=False):
+        response = ()
         data = None
         for op in ops:
-            if op.inputs:
-                if hasattr(op.inputs, "__call__"):
-                    data = op.inputs()
-                else:
-                    data = get_inputs_by_key(batch, op.inputs)
+            if not recycle:
+                data = None
+            data = get_inputs_by_op(op, batch, data)
             data = op.forward(data, state)
             if op.outputs:
                 write_outputs_by_key(batch, data, op.outputs)
+            if ret_response:
+                response += data,
+        return response
