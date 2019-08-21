@@ -13,21 +13,22 @@
 # limitations under the License.
 # ==============================================================================
 import tensorflow as tf
+
 from fastestimator.util.op import TensorOp
 
 
 class Loss(TensorOp):
     """
-    A base class for loss operations. It can be used directly to perform value pass-through (see the adversarial 
+    A base class for loss operations. It can be used directly to perform value pass-through (see the adversarial
     training showcase for an example of when this is useful)
     """
 
 
 class SparseCategoricalCrossentropy(Loss):
     def __init__(self, y_true=None, y_pred=None, inputs=None, outputs=None, mode=None, **kwargs):
-        """Calculate sparse categorical cross entropy, the rest of the keyword argument will be passed to 
+        """Calculate sparse categorical cross entropy, the rest of the keyword argument will be passed to
            tf.losses.SparseCategoricalCrossentropy
-        
+
         Args:
             y_true: ground truth label key
             y_pred: prediction label key
@@ -47,7 +48,7 @@ class SparseCategoricalCrossentropy(Loss):
 
 class BinaryCrossentropy(Loss):
     def __init__(self, y_true=None, y_pred=None, inputs=None, outputs=None, mode=None, **kwargs):
-        """Calculate binary cross entropy, the rest of the keyword argument will be passed to 
+        """Calculate binary cross entropy, the rest of the keyword argument will be passed to
                   tf.losses.BinaryCrossentropy
 
        Args:
