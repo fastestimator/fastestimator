@@ -21,10 +21,11 @@ import time
 from ast import literal_eval
 from contextlib import ContextDecorator
 
-import PIL
 import numpy as np
+import PIL
 # noinspection PyPackageRequirements
 import tensorflow as tf
+from tensorflow.python.client import device_lib
 
 
 def load_image(file_path, strip_alpha=False, channels=3):
@@ -125,26 +126,10 @@ def parse_cli_to_dictionary(input_list):
     return result
 
 
-def get_gpu_count():
-    """
-    Gets number of GPUs on device
-
-    Returns:
-        Number of GPUS available on device
-    """
-    try:
-        result = subprocess.run(['nvidia-smi', '-q'], stdout=subprocess.PIPE).stdout.decode('utf-8')
-        lines = [line.split() for line in result.splitlines() if line.startswith("Attached GPUs")]
-        num_gpu = int(lines[0][-1])
-    except:
-        num_gpu = 0
-    return num_gpu
-
-
 def convert_tf_dtype(datatype):
     """
     Gets the tensorflow datatype from string
-    
+
     Args:
         datatype: String of datatype
 
@@ -310,3 +295,11 @@ class NonContext(object):
 
     def __exit__(self, *exc):
         pass
+
+
+def get_gpu_info():
+    local_device_protos = device_lib.list_local_devices()
+    gpu_list = [x.name for x in local_device_protos if x.device_type == 'GPU']
+    num_gpu = len(gpu_list)
+    device_map = dict(zip(range(num_gpu), gpu_list))
+    return device_map, num_gpu

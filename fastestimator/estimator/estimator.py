@@ -18,6 +18,7 @@ import numpy as np
 import tensorflow as tf
 
 from fastestimator.estimator.trace import Trace, TrainLogger
+from fastestimator.util.util import NonContext, get_gpu_info
 
 
 class Estimator:
@@ -28,16 +29,39 @@ class Estimator:
                  steps_per_epoch=None,
                  validation_steps=None,
                  traces=None,
+                 devices=None,
                  log_steps=100):
         self.pipeline = pipeline
         self.network = network
         self.epochs = epochs
         self.steps_per_epoch = steps_per_epoch
         self.validation_steps = validation_steps
-        self.log_steps = log_steps
         self.traces = traces
-        self.num_gpu = 1
-        self.inputs = None
+        self.devices = devices
+        self.log_steps = log_steps
+        self.configure_gpu()
+        self.distributed = False
+        self.strategy = None
+
+    def configure_gpu(self):
+        device_map, num_gpu = get_gpu_info()
+        if self.devices is None:
+            if num_gpu > 1:
+                self.distributed = True
+                self.strategy = tf.distribute.MirroredStrategy()
+        elif isinstance(self.devices, (list, int)):
+            if isinstance(self.devices, int):
+                self.devices = list(range(self.devices))
+            assert len(self.devices) <= num_gpu, "requested {} devices but only {} available".format(len(self.devices), num_gpu)
+            if len(device_map) > 1:
+                device_list = []
+                for device_idx in self.devices:
+                    assert device_idx in device_map, "cannot find key {} in the device map {}".format(device_idx, device_map)
+                    device_list.append(device_map[device_idx])
+                self.distributed = True
+                self.strategy = tf.distribute.MirroredStrategy(devices=device_list)
+        else:
+            raise ValueError("unrecognized device input: {}".format(self.devices))
 
     def fit(self, inputs=None):
         """

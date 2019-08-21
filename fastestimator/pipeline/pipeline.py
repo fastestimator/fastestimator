@@ -22,7 +22,7 @@ import tensorflow as tf
 
 from fastestimator.pipeline.processing import TensorFilter
 from fastestimator.record.record import RecordWriter
-from fastestimator.util.op import get_op_from_mode, verify_ops, get_inputs_by_key, write_outputs_by_key
+from fastestimator.util.op import get_inputs_by_key, get_op_from_mode, verify_ops, write_outputs_by_key
 from fastestimator.util.schedule import Scheduler
 from fastestimator.util.tfrecord import get_features
 from fastestimator.util.util import convert_tf_dtype
@@ -81,7 +81,7 @@ class Pipeline:
         self.compression = {"train": [], "eval": []}
         self.file_names = {"train": [], "eval": []}
 
-    def prepare(self, inputs):
+    def prepare(self, inputs, distributed=False):
         self.inputs = inputs
         if isinstance(self.data, dict):
             self._get_numpy_config()
@@ -95,7 +95,7 @@ class Pipeline:
         for mode in self.mode_list:
             self._get_feature_name(mode)
             self._extract_dataset(mode)
-            self._transform_dataset(mode)
+            self._transform_dataset(mode, distributed)
 
     def _get_numpy_config(self):
         for mode in self.possible_mode:
@@ -195,7 +195,7 @@ class Pipeline:
             dataset = ds_tuple[0]
         self.extracted_dataset[mode] = dataset
 
-    def _transform_dataset(self, mode):
+    def _transform_dataset(self, mode, distributed):
         signature_epoch, mode_ops = self._get_signature_epoch(mode)
         extracted_ds = self.extracted_dataset[mode]
         state = {"mode": mode}

@@ -12,48 +12,51 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import types
+
 import tensorflow as tf
 
 from fastestimator.network.loss import Loss
 from fastestimator.util.op import TensorOp
 
 
-def build(keras_model, loss, optimizer):
-    assert isinstance(keras_model, tf.keras.Model), "must provide tf.keras.Model instance as keras model"
-    assert isinstance(loss, Loss)
-    keras_model.loss = loss
-    if isinstance(optimizer, str):
-        optimizer_fn = {
-            'adadelta': tf.optimizers.Adadelta,
-            'adagrad': tf.optimizers.Adagrad,
-            'adam': tf.optimizers.Adam,
-            'adamax': tf.optimizers.Adamax,
-            'nadam': tf.optimizers.Nadam,
-            'rmsprop': tf.optimizers.RMSprop,
-            'sgd': tf.optimizers.SGD
-        }
-        keras_model.optimizer = optimizer_fn[optimizer]()
-    else:
-        assert isinstance(optimizer,
-                          tf.optimizers.Optimizer), "must provide tf.optimizer.Optimizer instance as optimizer"
-        keras_model.optimizer = optimizer
-    keras_model.fe_compiled = True
-    return keras_model
+class CompileModel:
+    def __init__(self, model_def, loss, optimizer, name):
+        assert isinstance(model_def, types.FunctionType), "must provide function definition as model_def"
+        assert isinstance(loss, Loss), "must provide loss from fastestimator.network.loss"
+        self.model_def = model_def
+        self.loss = loss
+        self.optimizer = optimizer
+        self.name = name
+        self._check_optimizer()
+
+    def _check_optimizer(self):
+        if isinstance(self.optimizer, str):
+            optimizer_fn = {
+                'adadelta': tf.optimizers.Adadelta,
+                'adagrad': tf.optimizers.Adagrad,
+                'adam': tf.optimizers.Adam,
+                'adamax': tf.optimizers.Adamax,
+                'nadam': tf.optimizers.Nadam,
+                'rmsprop': tf.optimizers.RMSprop,
+                'sgd': tf.optimizers.SGD
+            }
+            self.optimizer = optimizer_fn[self.optimizer]()
+        else:
+            assert isinstance(self.optimizer, tf.optimizers.Optimizer), "must provide tf.optimizer.Optimizer instance as optimizer"
 
 
 class ModelOp(TensorOp):
-    def __init__(self, model, inputs=None, outputs=None, mode=None, track_input=False):
+    def __init__(self, compile_model, inputs=None, outputs=None, mode=None, track_input=False):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        self.model = model
+        self.compile_model = compile_model
         self.track_input = track_input
-        assert isinstance(
-            self.model, tf.keras.Model
-        ) and self.model.fe_compiled is True, "must prepare your the keras model before use in ModelOp"
+        assert isinstance(self.compile_model, CompileModel), "must provide CompileModel in ModelOp"
 
     def forward(self, data, state):
         training = state['mode'] == "train"
         if self.track_input and training:
             tape = state['tape']
             tape.watch(data)
-        data = self.model(data, training=training)
+        data = self.compile_model.model(data, training=training)
         return data
