@@ -40,14 +40,14 @@ class DLoss(Loss):
 
     def forward(self, data, state):
         true, fake = data
-        real_loss = self.cross_entropy(tf.ones_like(true), fake)
-        fake_loss = self.cross_entropy(tf.zeros_like(true), fake)
+        real_loss = self.cross_entropy(tf.ones_like(true), true)
+        fake_loss = self.cross_entropy(tf.zeros_like(fake), fake)
         total_loss = real_loss + fake_loss
         return total_loss
 
 
 def make_generator_model():
-    model = tf.keras.Sequential()
+    model = tf.keras.Sequential(name='generator')
     model.add(layers.Dense(7 * 7 * 256, use_bias=False, input_shape=(100, )))
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
@@ -67,7 +67,7 @@ def make_generator_model():
 
 
 def make_discriminator_model():
-    model = tf.keras.Sequential()
+    model = tf.keras.Sequential(name='discriminator')
     model.add(layers.Conv2D(64, (5, 5), strides=(2, 2), padding='same', input_shape=[28, 28, 1]))
     model.add(layers.LeakyReLU())
     model.add(layers.Dropout(0.3))
@@ -88,18 +88,20 @@ class Myrescale(TensorOp):
 
 def get_estimator():
     # prepare data
+    batch_size = 256
     (x_train, _), (x_eval, _) = tf.keras.datasets.mnist.load_data()
     data = {"train": {"x": np.expand_dims(x_train, -1)}, "eval": {"x": np.expand_dims(x_eval, -1)}}
-    pipeline = Pipeline(batch_size=32, data=data, ops=Myrescale(inputs="x", outputs="x"))
+    pipeline = Pipeline(batch_size=batch_size, data=data, ops=Myrescale(inputs="x", outputs="x"))
     # prepare model
     g = build(keras_model=make_generator_model(), loss=GLoss(inputs="pred_fake"), optimizer=tf.optimizers.Adam(1e-4))
-    d = build(keras_model=make_discriminator_model(), loss=DLoss(inputs=("pred_true", "pred_fake")),
+    d = build(keras_model=make_discriminator_model(),
+              loss=DLoss(inputs=("pred_true", "pred_fake")),
               optimizer=tf.optimizers.Adam(1e-4))
     network = Network(ops=[
-        ModelOp(inputs=lambda: tf.random.normal([32, 100]), model=g),
+        ModelOp(inputs=lambda: tf.random.normal([batch_size, 100]), model=g),
         ModelOp(model=d, outputs="pred_fake"),
         ModelOp(inputs="x", model=d, outputs="pred_true")
     ])
     # prepare estimator
-    estimator = Estimator(network=network, pipeline=pipeline, epochs=2)
+    estimator = Estimator(network=network, pipeline=pipeline, epochs=10)
     return estimator
