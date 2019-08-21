@@ -121,7 +121,6 @@ class Estimator:
                         "train_step": train_step,
                         "batch_idx": batch_idx,
                         "batch_size": batch_size,
-                        "batch": batch,
                         "loss": loss
                     })
                 train_step += 1
