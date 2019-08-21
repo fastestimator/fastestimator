@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+"""DCGAN example using MNIST data set."""
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import layers
@@ -25,6 +26,7 @@ from fastestimator.util.op import TensorOp
 
 
 class GLoss(Loss):
+    """Compute generator loss."""
     def __init__(self, inputs, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
@@ -34,14 +36,15 @@ class GLoss(Loss):
 
 
 class DLoss(Loss):
+    """Compute discrimator loss."""
     def __init__(self, inputs, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 
     def forward(self, data, state):
         true, fake = data
-        real_loss = self.cross_entropy(tf.ones_like(true), fake)
-        fake_loss = self.cross_entropy(tf.zeros_like(true), fake)
+        real_loss = self.cross_entropy(tf.ones_like(true), true)
+        fake_loss = self.cross_entropy(tf.zeros_like(fake), fake)
         total_loss = real_loss + fake_loss
         return total_loss
 
@@ -80,26 +83,30 @@ def make_discriminator_model():
 
 
 class Myrescale(TensorOp):
+    """Scale image values from uint8 to float32 between -1 and 1."""
     def forward(self, data, state):
         data = tf.cast(data, tf.float32)
         data = (data - 127.5) / 127.5
         return data
 
 
-def get_estimator():
+def get_estimator(batch_size=256, epochs=10):
     # prepare data
     (x_train, _), (x_eval, _) = tf.keras.datasets.mnist.load_data()
     data = {"train": {"x": np.expand_dims(x_train, -1)}, "eval": {"x": np.expand_dims(x_eval, -1)}}
-    pipeline = Pipeline(batch_size=32, data=data, ops=Myrescale(inputs="x", outputs="x"))
+    pipeline = Pipeline(batch_size=batch_size, data=data, ops=Myrescale(inputs="x", outputs="x"))
     # prepare model
-    g = build(keras_model=make_generator_model(), loss=GLoss(inputs="pred_fake"), optimizer=tf.optimizers.Adam(1e-4))
-    d = build(keras_model=make_discriminator_model(), loss=DLoss(inputs=("pred_true", "pred_fake")),
-              optimizer=tf.optimizers.Adam(1e-4))
+    g_model = build(keras_model=make_generator_model(),
+                    loss=GLoss(inputs="pred_fake"),
+                    optimizer=tf.optimizers.Adam(1e-4))
+    d_model = build(keras_model=make_discriminator_model(),
+                    loss=DLoss(inputs=("pred_true", "pred_fake")),
+                    optimizer=tf.optimizers.Adam(1e-4))
     network = Network(ops=[
-        ModelOp(inputs=lambda: tf.random.normal([32, 100]), model=g),
-        ModelOp(model=d, outputs="pred_fake"),
-        ModelOp(inputs="x", model=d, outputs="pred_true")
+        ModelOp(inputs=lambda: tf.random.normal([batch_size, 100]), model=g_model),
+        ModelOp(model=d_model, outputs="pred_fake"),
+        ModelOp(inputs="x", model=d_model, outputs="pred_true")
     ])
     # prepare estimator
-    estimator = Estimator(network=network, pipeline=pipeline, epochs=2)
+    estimator = Estimator(network=network, pipeline=pipeline, epochs=epochs)
     return estimator
