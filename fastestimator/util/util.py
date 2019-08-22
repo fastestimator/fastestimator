@@ -144,7 +144,7 @@ def get_gpu_count():
 def convert_tf_dtype(datatype):
     """
     Gets the tensorflow datatype from string
-    
+
     Args:
         datatype: String of datatype
 
@@ -292,11 +292,11 @@ class Timer(ContextDecorator):
         self.name = name
 
     def __enter__(self):
-        self.start = time.time()
+        self.start = time.perf_counter()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.end = time.time()
+        self.end = time.perf_counter()
         self.interval = self.end - self.start
         tf.print("{} took {} seconds".format(self.name, self.interval))
 
