@@ -112,14 +112,14 @@ class TrainLogger(Trace):
 
     def on_batch_begin(self, state):
         if state["mode"] == "train" and state["train_step"] % self.log_steps == 0:
-            self.time_start = time.time()
+            self.time_start = time.perf_counter()
 
     def on_batch_end(self, state):
         if state["mode"] == "train" and state["train_step"] % self.log_steps == 0:
             if state["train_step"] == 0:
                 example_per_sec = 0.0
             else:
-                example_per_sec = state["batch_size"] / (time.time() - self.time_start)
+                example_per_sec = state["batch_size"] / (time.perf_counter() - self.time_start)
             loss = np.array(state["loss"])
             if loss.size == 1:
                 loss = loss.ravel()[0]
