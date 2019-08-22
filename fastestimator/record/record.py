@@ -255,13 +255,14 @@ class RecordWriter:
         with tf.io.TFRecordWriter(os.path.join(self.save_dir, filename), options=self.compression_option) as writer:
             for i in range(file_start, file_end):
                 if i == file_start and show_progress:
-                    time_start = time.time()
+                    time_start = time.perf_counter()
                     example_start = num_example
                 if (i - serial_start) % logging_interval == 0 and show_progress:
                     if i == 0:
                         record_per_sec = 0.0
                     else:
-                        record_per_sec = (num_example - example_start) * self.num_process / (time.time() - time_start)
+                        record_per_sec = (num_example - example_start) * self.num_process / (time.perf_counter() -
+                                                                                             time_start)
                     print("FastEstimator: Converting %s TFRecords %.1f%%, Speed: %.2f record/sec" %
                           (mode.capitalize(), (i - serial_start) / goal_number * 100, record_per_sec))
                 feature = self._transform_one_slice(dictionary, i, mode=mode)
