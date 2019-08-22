@@ -16,7 +16,6 @@ import tensorflow as tf
 from sklearn.preprocessing import StandardScaler
 from tensorflow.keras import layers
 
-import fastestimator as fe
 from fastestimator import Estimator, Pipeline, Network
 from fastestimator.network.loss import MeanSquaredError
 from fastestimator.network.model import ModelOp, build
