@@ -17,7 +17,7 @@ from collections import ChainMap
 import numpy as np
 import tensorflow as tf
 
-from fastestimator.estimator.trace import Trace, TrainLogger, EvalLogger
+from fastestimator.estimator.trace import Trace, TrainLogger
 from fastestimator.util.op import get_inputs_by_op, write_outputs_by_key
 
 
@@ -74,7 +74,6 @@ class Estimator:
         self._add_traces()
 
     def _add_traces(self):
-        self.traces.insert(0, EvalLogger())
         self.traces.insert(0, TrainLogger(log_steps=self.log_steps, num_process=self.num_gpu))
 
     def _warmup(self):
@@ -91,7 +90,7 @@ class Estimator:
                 self.network.run_step(batch, ops, model_list, state, warm_up=True)
 
     def train(self):
-        self._run_traces_begin({"mode": "train"})
+        self._run_traces_on_begin({"mode": "train"})
         train_step = 0
         for epoch in range(self.epochs):
             ds_iter = self.pipeline.dataset_schedule["train"].get_current_value(epoch)
@@ -136,7 +135,7 @@ class Estimator:
         print("FastEstimator: training finished!")
 
     def val(self, epoch, batch_size, train_step):
-        self._run_traces_begin({"mode": "eval"})
+        self._run_traces_on_begin({"mode": "eval"})
         ops, model_list = self.network.load_epoch(epoch, "eval")
         ds_iter = self.pipeline.dataset_schedule["eval"].get_current_value(epoch)
         if self.validation_steps:
@@ -170,70 +169,70 @@ class Estimator:
         })
         self._run_traces_end({"mode": "eval"})
 
-    def _run_traces_begin(self, state):
+    def _run_traces_on_begin(self, state):
         trace_outputs = {}
         for trace in self.traces:
-            if trace.mode and state["mode"] not in trace.mode:
+            if (not trace.begin) or (trace.begin.mode and (state["mode"] not in trace.begin.mode)):
                 continue
-            data = get_inputs_by_op(trace, trace_outputs, throw_on_absent=False)
-            data = trace.begin(data, state)
-            if trace.outputs and data is not None:
-                write_outputs_by_key(trace_outputs, data, trace.outputs)
+            data = get_inputs_by_op(trace.begin, trace_outputs, throw_on_absent=False)
+            data = trace.on_begin(data, state)
+            if trace.begin.outputs and data is not None:
+                write_outputs_by_key(trace_outputs, data, trace.begin.outputs)
 
     def _run_traces_on_epoch_begin(self, state):
         self.losses = []
         trace_outputs = {}
         for trace in self.traces:
-            if trace.mode and state["mode"] not in trace.mode:
+            if (not trace.epoch_begin) or (trace.epoch_begin.mode and (state["mode"] not in trace.epoch_begin.mode)):
                 continue
-            data = get_inputs_by_op(trace, trace_outputs, throw_on_absent=False)
+            data = get_inputs_by_op(trace.epoch_begin, trace_outputs, throw_on_absent=False)
             data = trace.on_epoch_begin(data, state)
-            if trace.outputs and data is not None:
-                write_outputs_by_key(trace_outputs, data, trace.outputs)
+            if trace.epoch_begin.outputs and data is not None:
+                write_outputs_by_key(trace_outputs, data, trace.epoch_begin.outputs)
 
     def _run_traces_on_batch_begin(self, state):
         trace_outputs = {}
         for trace in self.traces:
-            if trace.mode and state["mode"] not in trace.mode:
+            if (not trace.batch_begin) or (trace.batch_begin.mode and (state["mode"] not in trace.batch_begin.mode)):
                 continue
-            data = get_inputs_by_op(trace, trace_outputs, throw_on_absent=False)
+            data = get_inputs_by_op(trace.batch_begin, trace_outputs, throw_on_absent=False)
             data = trace.on_batch_begin(data, state)
-            if trace.outputs and data is not None:
-                write_outputs_by_key(trace_outputs, data, trace.outputs)
+            if trace.batch_begin.outputs and data is not None:
+                write_outputs_by_key(trace_outputs, data, trace.batch_begin.outputs)
 
     def _run_traces_on_batch_end(self, batch, state):
         self.losses.append(state["loss"])
         trace_dict = {}
         trace_outputs = ChainMap(trace_dict, batch)
         for trace in self.traces:
-            if trace.mode and state["mode"] not in trace.mode:
+            if (not trace.batch_end) or (trace.batch_end.mode and (state["mode"] not in trace.batch_end.mode)):
                 continue
-            data = get_inputs_by_op(trace, trace_outputs, throw_on_absent=False)
+            data = get_inputs_by_op(trace.batch_end, trace_outputs, throw_on_absent=False)
             data = trace.on_batch_end(data, state)
-            if trace.outputs and data is not None:
-                write_outputs_by_key(trace_outputs, data, trace.outputs)
+            if trace.batch_end.outputs and data is not None:
+                write_outputs_by_key(trace_outputs, data, trace.batch_end.outputs)
         self._print_message(trace_dict.items(), state["train_step"], state["mode"])
 
     def _run_traces_on_epoch_end(self, state):
         trace_outputs = {}
         for trace in self.traces:
-            if trace.mode and state["mode"] not in trace.mode:
+            if (not trace.epoch_end) or (trace.epoch_end.mode and (state["mode"] not in trace.epoch_end.mode)):
                 continue
-            data = get_inputs_by_op(trace, trace_outputs, throw_on_absent=False)
+            data = get_inputs_by_op(trace.epoch_end, trace_outputs, throw_on_absent=False)
             data = trace.on_epoch_end(data, state)
-            if trace.outputs and data is not None:
-                write_outputs_by_key(trace_outputs, data, trace.outputs)
+            if trace.epoch_end.outputs and data is not None:
+                write_outputs_by_key(trace_outputs, data, trace.epoch_end.outputs)
         self._print_message(trace_outputs.items(), state["train_step"], state["mode"])
 
     def _run_traces_end(self, state):
         trace_outputs = {}
         for trace in self.traces:
-            if trace.mode and state["mode"] not in trace.mode:
+            if (not trace.end) or (trace.end.mode and (state["mode"] not in trace.end.mode)):
                 continue
-            data = get_inputs_by_op(trace, trace_outputs, throw_on_absent=False)
-            data = trace.end(data, state)
-            if trace.outputs and data is not None:
-                write_outputs_by_key(trace_outputs, data, trace.outputs)
+            data = get_inputs_by_op(trace.end, trace_outputs, throw_on_absent=False)
+            data = trace.on_end(data, state)
+            if trace.end.outputs and data is not None:
+                write_outputs_by_key(trace_outputs, data, trace.end.outputs)
 
     @staticmethod
     def _format_log_message(message, metric_name, metric_value):

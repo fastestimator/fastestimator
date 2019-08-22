@@ -34,12 +34,15 @@ from fastestimator.util.op import TensorOp
 
 class GifGenerator(Trace):
     def __init__(self, inputs, save_path, export_name="anim.gif", mode='eval'):
-        super().__init__(inputs=inputs, mode=mode)
+        super().__init__()
         self.save_path = save_path
         self.prefix = "image_at_epoch_{0:04d}.png"
         self.export_name = os.path.join(self.save_path, export_name)
+        self._init_begin(mode='train')
+        self._init_batch_end(mode=mode, inputs=inputs)
+        self._init_end(mode='train')
 
-    def begin(self, data, state):
+    def on_begin(self, data, state):
         if not (os.path.exists(self.save_path)):
             os.makedirs(self.save_path)
 
@@ -54,7 +57,7 @@ class GifGenerator(Trace):
         img_path = os.path.join(self.save_path, self.prefix.format(epoch))
         cv2.imwrite(img_path, img.astype("uint8"))
 
-    def end(self, data, state):
+    def on_end(self, data, state):
         with imageio.get_writer(self.export_name, mode='I') as writer:
             filenames = glob(os.path.join(self.save_path, "*.png"))
             filenames = sorted(filenames)

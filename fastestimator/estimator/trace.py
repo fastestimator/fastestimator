@@ -22,18 +22,40 @@ from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_
 from fastestimator.util.op import Op
 
 
-class Trace(Op):
+class Trace:
     """Trace base class.
     User can use `Trace` to customize their own operations during training, validation and testing.
     The `Network` instance can be accessible by `self.network`.
     """
-    def __init__(self, inputs=None, outputs=None, mode=None):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+    def __init__(self):
         self.network = None
+        self.begin = None
+        self.epoch_begin = None
+        self.batch_begin = None
+        self.batch_end = None
+        self.epoch_end = None
+        self.end = None
 
-    def begin(self, data, state):
-        """Runs at the beginning of the mode.
+    def _init_begin(self, inputs=None, outputs=None, mode=None):
+        self.begin = Op(inputs=inputs, outputs=outputs, mode=mode)
 
+    def _init_epoch_begin(self, inputs=None, outputs=None, mode=None):
+        self.epoch_begin = Op(inputs=inputs, outputs=outputs, mode=mode)
+
+    def _init_batch_begin(self, inputs=None, outputs=None, mode=None):
+        self.batch_begin = Op(inputs=inputs, outputs=outputs, mode=mode)
+
+    def _init_batch_end(self, inputs=None, outputs=None, mode=None):
+        self.batch_end = Op(inputs=inputs, outputs=outputs, mode=mode)
+
+    def _init_epoch_end(self, inputs=None, outputs=None, mode=None):
+        self.epoch_end = Op(inputs=inputs, outputs=outputs, mode=mode)
+
+    def _init_end(self, inputs=None, outputs=None, mode=None):
+        self.end = Op(inputs=inputs, outputs=outputs, mode=mode)
+
+    def on_begin(self, data, state):
+        """
         Args:
             data: the elements from the execution dictionary corresponding to this Traces' input keys
             state (dict): dictionary of run time that has the following key(s):
@@ -89,7 +111,7 @@ class Trace(Op):
                 * "train_step": current global training step starting from 0
                 * "loss": the average loss of all batches (only available when mode is "train" or "eval")
         """
-    def end(self, data, state):
+    def on_end(self, data, state):
         """Runs at the end of the mode.
 
         Args:
@@ -108,36 +130,32 @@ class TrainLogger(Trace):
             log_steps (int, optional): Logging interval. Default value is 100.
             num_process (int, optional): Number of distributed training processes. Default is 1.
         """
-        super().__init__(mode="train", outputs=("train_loss", "examples/sec"))
+        super().__init__()
         self.log_steps = log_steps
         self.num_process = num_process
         self.epochs_since_best = 0
         self.best_loss = None
         self.time_start = None
+        self.best_loss = math.inf
+        self.epochs_since_best = 0
+        self._init_batch_begin(mode="train")
+        self._init_batch_end(outputs=("train_loss", "examples/sec"), mode="train")
+        self._init_epoch_end(outputs=("val_loss", "min_val_loss", "since_best"), mode="eval")
 
     def on_batch_begin(self, data, state):
         if state["train_step"] % self.log_steps == 0:
-            self.time_start = time.time()
+            self.time_start = time.perf_counter()
 
     def on_batch_end(self, data, state):
         if state["train_step"] % self.log_steps == 0:
             if state["train_step"] == 0:
                 example_per_sec = 0.0
             else:
-                example_per_sec = state["batch_size"] / (time.time() - self.time_start)
+                example_per_sec = state["batch_size"] / (time.perf_counter() - self.time_start)
             loss = np.array(state["loss"])
             if loss.size == 1:
                 loss = loss.ravel()[0]
             return loss, round(example_per_sec * self.num_process, 2)
-
-
-class EvalLogger(Trace):
-    """Eval logger, automatically applied by default.
-    """
-    def __init__(self):
-        super().__init__(mode="eval", outputs=("val_loss", "min_val_loss", "since_best"))
-        self.best_loss = math.inf
-        self.epochs_since_best = 0
 
     def on_epoch_end(self, data, state):
         current_eval_loss = state["loss"]
@@ -160,10 +178,12 @@ class Accuracy(Trace):
         pred_key (str): Name of the key that corresponds to predicted score in batch dictionary
     """
     def __init__(self, true_key, pred_key, outputs="accuracy", mode="eval"):
-        inputs = (true_key, pred_key)
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        super().__init__()
         self.total = 0
         self.correct = 0
+        self._init_epoch_begin(mode=mode)
+        self._init_batch_end(inputs=(true_key, pred_key), mode=mode)
+        self._init_epoch_end(mode=mode, outputs=outputs)
 
     def on_epoch_begin(self, data, state):
         self.total = 0
@@ -197,10 +217,12 @@ class ConfusionMatrix(Trace):
         pred_key (str): Name of the key that corresponds to predicted score in batch dictionary
     """
     def __init__(self, true_key, pred_key, num_classes, outputs="confusion_matrix", mode="eval"):
-        inputs = (true_key, pred_key)
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        super().__init__()
         self.num_classes = num_classes
         self.confusion = None
+        self._init_epoch_begin(mode=mode)
+        self._init_batch_end(inputs=(true_key, pred_key), mode=mode)
+        self._init_epoch_end(outputs=outputs, mode=mode)
 
     def on_epoch_begin(self, data, state):
         self.confusion = None
@@ -243,8 +265,7 @@ class Precision(Trace):
                  sample_weight=None,
                  outputs='precision',
                  mode='eval'):
-        inputs = (true_key, pred_key)
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        super().__init__()
         self.labels = labels
         self.pos_label = pos_label
         self.average = average
@@ -252,6 +273,9 @@ class Precision(Trace):
         self.y_true = []
         self.y_pred = []
         self.binary_classification = None
+        self._init_epoch_begin(mode=mode)
+        self._init_batch_end(inputs=(true_key, pred_key), mode=mode)
+        self._init_epoch_end(outputs=outputs, mode=mode)
 
     def on_epoch_begin(self, data, state):
         self.y_true = []
@@ -314,8 +338,7 @@ class Recall(Trace):
                  sample_weight=None,
                  outputs="recall",
                  mode="eval"):
-        inputs = (true_key, pred_key)
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        super().__init__()
         self.labels = labels
         self.pos_label = pos_label
         self.average = average
@@ -323,6 +346,9 @@ class Recall(Trace):
         self.y_true = []
         self.y_pred = []
         self.binary_classification = None
+        self._init_epoch_begin(mode=mode)
+        self._init_batch_end(inputs=(true_key, pred_key), mode=mode)
+        self._init_epoch_end(outputs=outputs, mode=mode)
 
     def on_epoch_begin(self, data, state):
         self.y_true = []
@@ -385,8 +411,7 @@ class F1Score(Trace):
                  sample_weight=None,
                  outputs="f1score",
                  mode='eval'):
-        inputs = (true_key, pred_key)
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        super().__init__()
         self.labels = labels
         self.pos_label = pos_label
         self.average = average
@@ -394,6 +419,9 @@ class F1Score(Trace):
         self.y_true = []
         self.y_pred = []
         self.binary_classification = None
+        self._init_epoch_begin(mode=mode)
+        self._init_batch_end(inputs=(true_key, pred_key), mode=mode)
+        self._init_epoch_end(outputs=outputs, mode=mode)
 
     def on_epoch_begin(self, data, state):
         self.y_true = []
@@ -449,11 +477,13 @@ class Dice(Trace):
                                   Default is `None`.
     """
     def __init__(self, true_key, pred_key=None, threshold=0.5, outputs="dice", mode='eval'):
-        inputs = (true_key, pred_key)
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        super().__init__()
         self.smooth = 1e-7
         self.threshold = threshold
         self.dice = None
+        self._init_epoch_begin(mode=mode)
+        self._init_batch_end(inputs=(true_key, pred_key), mode=mode)
+        self._init_epoch_end(outputs=outputs, mode=mode)
 
     def on_epoch_begin(self, data, state):
         self.dice = None
