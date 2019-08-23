@@ -30,7 +30,7 @@ from fastestimator.util.util import convert_tf_dtype
 
 class Pipeline:
     def __init__(self,
-                 batch_size,
+                 batch_per_device,
                  data=None,
                  ops=None,
                  read_feature=None,
@@ -38,7 +38,7 @@ class Pipeline:
                  expand_dims=False,
                  max_shuffle_buffer_mb=3000):
 
-        self.batch_size = batch_size
+        self.batch_per_device = batch_per_device
         self.data = data
         self.ops = ops
         self.read_feature = read_feature
@@ -80,8 +80,9 @@ class Pipeline:
         self.record_feature_shape = {"train": [], "eval": []}
         self.compression = {"train": [], "eval": []}
         self.file_names = {"train": [], "eval": []}
+        self.global_batch_multiplier = 1
 
-    def prepare(self, inputs, distributed=False):
+    def prepare(self, inputs, distribute_strategy=None):
         self.inputs = inputs
         if isinstance(self.data, dict):
             self._get_numpy_config()
@@ -95,7 +96,7 @@ class Pipeline:
         for mode in self.mode_list:
             self._get_feature_name(mode)
             self._extract_dataset(mode)
-            self._transform_dataset(mode, distributed)
+            self._transform_dataset(mode, distribute_strategy)
 
     def _get_numpy_config(self):
         for mode in self.possible_mode:
@@ -195,7 +196,7 @@ class Pipeline:
             dataset = ds_tuple[0]
         self.extracted_dataset[mode] = dataset
 
-    def _transform_dataset(self, mode, distributed):
+    def _transform_dataset(self, mode, distribute_strategy):
         signature_epoch, mode_ops = self._get_signature_epoch(mode)
         extracted_ds = self.extracted_dataset[mode]
         state = {"mode": mode}
@@ -206,7 +207,7 @@ class Pipeline:
             filter_ops_epoch = []
             forward_ops_between_filter = []
             # get batch size for the epoch
-            batch_size = self.get_batch_size(epoch)
+            global_batch_size = self.get_global_batch_size(epoch)
             # generate ops for specific mode and epoch
             for op in mode_ops:
                 if isinstance(op, Scheduler):
@@ -234,10 +235,12 @@ class Pipeline:
                 dataset = dataset.flat_map(lambda ds: tf.data.Dataset.from_tensor_slices(ds))
             if self.padded_batch:
                 padded_shape = dataset.map(self._get_padded_shape)
-                dataset = dataset.padded_batch(batch_size, padded_shapes=padded_shape)
+                dataset = dataset.padded_batch(global_batch_size, padded_shapes=padded_shape)
             else:
-                dataset = dataset.batch(batch_size)
+                dataset = dataset.batch(global_batch_size)
             dataset = dataset.prefetch(buffer_size=1)
+            if distribute_strategy:
+                dataset = distribute_strategy.experimental_distribute_dataset(dataset)
             dataset_map[epoch] = iter(dataset)
         self.dataset_schedule[mode] = Scheduler(epoch_dict=dataset_map)
 
@@ -278,8 +281,8 @@ class Pipeline:
 
     def _get_signature_epoch(self, mode):
         signature_epoch = [0]
-        if isinstance(self.batch_size, Scheduler):
-            signature_epoch.extend(self.batch_size.keys)
+        if isinstance(self.batch_per_device, Scheduler):
+            signature_epoch.extend(self.batch_per_device.keys)
         mode_ops = get_op_from_mode(self.ops, mode)
         for op in mode_ops:
             if isinstance(op, Scheduler):
@@ -310,14 +313,16 @@ class Pipeline:
                 combined_dict[key] = ds[key]
         return combined_dict
 
-    def get_batch_size(self, epoch):
-        batch_size = self.batch_size
-        if isinstance(batch_size, Scheduler):
-            batch_size = batch_size.get_current_value(epoch)
-        return batch_size
+    def get_global_batch_size(self, epoch):
+        batch_per_device = self.batch_per_device
+        if isinstance(batch_per_device, Scheduler):
+            batch_per_device = batch_per_device.get_current_value(epoch)
+        global_batch_size = batch_per_device * self.global_batch_multiplier
+        return global_batch_size
 
-    def show_results(self, inputs=None, mode="train", num_steps=1, current_epoch=0):
+    def show_results(self, inputs=None, mode="train", num_steps=1, current_epoch=0, num_devices=1):
         data = []
+        self.global_batch_multiplier = num_devices
         self.prepare(inputs=inputs)
         ds_iter = self.dataset_schedule[mode].get_current_value(current_epoch)
         for _ in range(num_steps):
@@ -325,10 +330,11 @@ class Pipeline:
         self._reset()
         return data
 
-    def benchmark(self, inputs=None, mode="train", num_steps=1000, log_interval=100, current_epoch=0):
+    def benchmark(self, inputs=None, mode="train", num_steps=1000, log_interval=100, current_epoch=0, num_devices=1):
+        self.global_batch_multiplier = num_devices
         self.prepare(inputs=inputs)
         ds_iter = self.dataset_schedule[mode].get_current_value(current_epoch)
-        batch_size = self.get_batch_size(current_epoch)
+        global_batch_size = self.get_global_batch_size(current_epoch)
         start = time.time()
         for idx in range(num_steps + 1):
             _ = next(ds_iter)
@@ -337,8 +343,8 @@ class Pipeline:
                     start = time.time()
                 else:
                     duration = time.time() - start
-                    example_per_sec = log_interval * batch_size / duration
+                    example_per_sec = log_interval * global_batch_size / duration
                     print("FastEstimator: Step: %d, Epoch: %d, Batch Size %d, Example/sec %.2f" %
-                          (idx, current_epoch, batch_size, example_per_sec))
+                          (idx, current_epoch, global_batch_size, example_per_sec))
                     start = time.time()
         self._reset()

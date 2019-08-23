@@ -39,27 +39,26 @@ class Estimator:
         self.traces = traces
         self.devices = devices
         self.log_steps = log_steps
-        self.configure_gpu()
-        self.distributed = False
-        self.strategy = None
+        self.configure_device()
+        self.distribution_strategy = None
 
-    def configure_gpu(self):
+    def configure_device(self):
         device_map, num_gpu = get_gpu_info()
         if self.devices is None:
             if num_gpu > 1:
-                self.distributed = True
-                self.strategy = tf.distribute.MirroredStrategy()
+                self.distribution_strategy = tf.distribute.MirroredStrategy()
         elif isinstance(self.devices, (list, int)):
             if isinstance(self.devices, int):
                 self.devices = list(range(self.devices))
+            else:
+                assert len(self.devices) > 1, "please provide more than one gpu when using device list"
             assert len(self.devices) <= num_gpu, "requested {} devices but only {} available".format(len(self.devices), num_gpu)
-            if len(device_map) > 1:
+            if len(self.devices) > 1:
                 device_list = []
                 for device_idx in self.devices:
                     assert device_idx in device_map, "cannot find key {} in the device map {}".format(device_idx, device_map)
                     device_list.append(device_map[device_idx])
-                self.distributed = True
-                self.strategy = tf.distribute.MirroredStrategy(devices=device_list)
+                self.distribution_strategy = tf.distribute.MirroredStrategy(devices=device_list)
         else:
             raise ValueError("unrecognized device input: {}".format(self.devices))
 
@@ -81,11 +80,11 @@ class Estimator:
         self.train()
 
     def _prepare_pipeline(self):
-        self.pipeline.prepare(inputs=self.inputs)
+        self.pipeline.prepare(inputs=self.inputs, distribute_strategy=self.distribution_strategy)
         self.do_eval = "eval" in self.pipeline.mode_list
 
     def _prepare_network(self):
-        self.network.prepare(mode_list=self.pipeline.mode_list)
+        self.network.prepare(mode_list=self.pipeline.mode_list, distribution_strategy=self.distribution_strategy)
 
     def _prepare_estimator(self):
         if self.traces is None:
@@ -117,16 +116,16 @@ class Estimator:
         train_step = 0
         for epoch in range(self.epochs):
             ds_iter = self.pipeline.dataset_schedule["train"].get_current_value(epoch)
-            batch_size = self.pipeline.get_batch_size(epoch)
+            global_batch_size = self.pipeline.get_global_batch_size(epoch)
             if self.steps_per_epoch:
                 max_steps = self.steps_per_epoch
             else:
-                max_steps = min(self.pipeline.num_examples["train"]) // batch_size
+                max_steps = min(self.pipeline.num_examples["train"]) // global_batch_size
             ops, model_list = self.network.load_epoch(epoch, "train")
             self._run_traces_on_epoch_begin({"mode": "train", "epoch": epoch, "train_step": train_step})
             for _ in range(max_steps):
                 self._run_traces_on_batch_begin({
-                    "mode": "train", "epoch": epoch, "train_step": train_step, "batch_size": batch_size
+                    "mode": "train", "epoch": epoch, "train_step": train_step, "batch_size": global_batch_size
                 })
                 batch = next(ds_iter)
                 prediction, loss = self.forward_step(batch, ops, model_list, {"mode": "train"})
@@ -135,7 +134,7 @@ class Estimator:
                     "mode": "train",
                     "epoch": epoch,
                     "train_step": train_step,
-                    "batch_size": batch_size,
+                    "batch_size": global_batch_size,
                     "batch": batch,
                     "loss": loss
                 })
@@ -147,18 +146,18 @@ class Estimator:
                 "loss": np.mean(np.array(self.losses), axis=0)
             })
             if self.do_eval:
-                self.val(epoch, batch_size, train_step)
+                self.val(epoch, global_batch_size, train_step)
         self._run_traces_end({"mode": "train"})
         print("FastEstimator: training finished!")
 
-    def val(self, epoch, batch_size, train_step):
+    def val(self, epoch, global_batch_size, train_step):
         self._run_traces_begin({"mode": "eval"})
         ops, model_list = self.network.load_epoch(epoch, "eval")
         ds_iter = self.pipeline.dataset_schedule["eval"].get_current_value(epoch)
         if self.validation_steps:
             max_steps = self.validation_steps
         else:
-            max_steps = min(self.pipeline.num_examples["eval"]) // batch_size
+            max_steps = min(self.pipeline.num_examples["eval"]) // global_batch_size
         self._run_traces_on_epoch_begin({"mode": "eval", "epoch": epoch, "train_step": train_step})
         for eval_step in range(max_steps):
             self._run_traces_on_batch_begin({
@@ -166,7 +165,7 @@ class Estimator:
                 "epoch": epoch,
                 "train_step": train_step,
                 "eval_step": eval_step,
-                "batch_size": batch_size
+                "batch_size": global_batch_size
             })
             batch = next(ds_iter)
             prediction, loss = self.forward_step(batch, ops, model_list, {"mode": "eval"})
@@ -176,7 +175,7 @@ class Estimator:
                 "epoch": epoch,
                 "train_step": train_step,
                 "eval_step": eval_step,
-                "batch_size": batch_size,
+                "batch_size": global_batch_size,
                 "batch": batch,
                 "loss": loss
             })

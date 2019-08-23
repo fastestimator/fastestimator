@@ -16,7 +16,7 @@ import tensorflow as tf
 from tensorflow.python.framework import ops as tfops
 
 from fastestimator.network.model import ModelOp
-from fastestimator.util.op import get_op_from_mode, verify_ops, get_inputs_by_key, write_outputs_by_key
+from fastestimator.util.op import get_inputs_by_key, get_op_from_mode, verify_ops, write_outputs_by_key
 from fastestimator.util.schedule import Scheduler
 from fastestimator.util.util import NonContext
 
@@ -30,8 +30,9 @@ class Network:
         self.op_schedule = {}
         self.current_epoch_ops = {}
         self.current_epoch_model = {}
+        self.model = {}
 
-    def prepare(self, mode_list):
+    def prepare(self, mode_list, distribute_strategy):
         for mode in mode_list:
             signature_epoch, mode_ops = self._get_signature_epoch(mode)
             epoch_ops_map = {}
@@ -51,8 +52,16 @@ class Network:
                 verify_ops(epoch_ops, "Network")
                 # create model list
                 for op in epoch_ops:
-                    if isinstance(op, ModelOp) and op.model not in epoch_model:
-                        epoch_model.append(op.model)
+                    if isinstance(op, ModelOp):
+                        if not hasattr(op.bundle, "model"):
+                            with distribute_strategy.scope() if distribute_strategy else NonContext():
+                                op.bundle.model = op.bundle.model_def()
+                                op.bundle.model.loss = op.bundle.loss
+                                op.bundle.model.optimizer = op.bundle.optimizer
+                                assert op.bundle.name not in self.model, "duplicated model name: {}".format(op.bundle.name)
+                                self.model[op.bundle.name] = op.bundle.model
+                        if op.bundle.model not in epoch_model:
+                            epoch_model.append(op.bundle.model)
                 assert epoch_model, "Network has no model for epoch {}".format(epoch)
                 epoch_ops_map[epoch] = epoch_ops
                 epoch_model_map[epoch] = epoch_model

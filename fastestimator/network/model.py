@@ -20,9 +20,9 @@ from fastestimator.network.loss import Loss
 from fastestimator.util.op import TensorOp
 
 
-class CompileModel:
+class BundleModel:
     def __init__(self, model_def, loss, optimizer, name):
-        assert isinstance(model_def, types.FunctionType), "must provide function definition as model_def"
+        assert isinstance(model_def, types.FunctionType), "must provide function definition or lambda function as model_def"
         assert isinstance(loss, Loss), "must provide loss from fastestimator.network.loss"
         self.model_def = model_def
         self.loss = loss
@@ -47,16 +47,16 @@ class CompileModel:
 
 
 class ModelOp(TensorOp):
-    def __init__(self, compile_model, inputs=None, outputs=None, mode=None, track_input=False):
+    def __init__(self, bundle, inputs=None, outputs=None, mode=None, track_input=False):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        self.compile_model = compile_model
+        assert isinstance(bundle, BundleModel), "must provide BundleModel in as budle input"
+        self.bundle = bundle
         self.track_input = track_input
-        assert isinstance(self.compile_model, CompileModel), "must provide CompileModel in ModelOp"
 
     def forward(self, data, state):
         training = state['mode'] == "train"
         if self.track_input and training:
             tape = state['tape']
             tape.watch(data)
-        data = self.compile_model.model(data, training=training)
+        data = self.bundle.model(data, training=training)
         return data
