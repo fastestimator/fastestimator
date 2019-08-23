@@ -60,8 +60,8 @@ class Augmentation2D(TensorOp):
         self.flip_left_right_boolean = flip_left_right
         self.flip_up_down_boolean = flip_up_down
         self.transform_matrix = tf.eye(3)
-        # There appears to be a bug in TF2 which breaks compatibility between boolean control flow and gradient tapes.
-        # Using 0/1 instead for the time being. Test against future versions of TF by running caricature visualization
+        self.width = None
+        self.height = None
         self.do_flip_lr_tensor = tf.convert_to_tensor(0)
         self.do_flip_up_tensor = tf.convert_to_tensor(0)
 
@@ -224,6 +224,8 @@ class Augmentation2D(TensorOp):
             None
         """
         # \NOTE(JP): tracing behavior from dataset.map causes issue when any tensor id defined as tf.constant
+        assert(self.width is not None, "width is not set yet")
+        assert(self.height is not None, "height is not set yet")
         transform_matrix = tf.convert_to_tensor([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=tf.float32)
         do_rotate = False
         do_shift = False
