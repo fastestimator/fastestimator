@@ -44,7 +44,6 @@ class Augmentation2D(TensorOp):
                  inputs=None,
                  outputs=None,
                  mode=None,
-                 reuse=False,
                  rotation_range=0.,
                  width_shift_range=0.,
                  height_shift_range=0.,
@@ -53,8 +52,6 @@ class Augmentation2D(TensorOp):
                  flip_left_right=False,
                  flip_up_down=False):
         super().__init__(inputs, outputs, mode)
-        self.mode = mode
-        self.reuse = reuse
         self.rotation_range = rotation_range
         self.width_shift_range = width_shift_range
         self.height_shift_range = height_shift_range
