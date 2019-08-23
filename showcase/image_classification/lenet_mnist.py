@@ -23,7 +23,7 @@ from fastestimator.network.model import CompileModel, ModelOp
 from fastestimator.pipeline.processing import Minmax
 
 
-def get_estimator():
+def get_estimator(epochs=2, batch_size=32):
     # step 1. prepare data
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.mnist.load_data()
     data = {
@@ -34,7 +34,7 @@ def get_estimator():
             "x": np.expand_dims(x_eval, -1), "y": y_eval
         }
     }
-    pipeline = fe.Pipeline(batch_size=32, data=data, ops=Minmax(inputs="x", outputs="x"))
+    pipeline = fe.Pipeline(batch_size=batch_size, data=data, ops=Minmax(inputs="x", outputs="x"))
     # step 2. prepare model
     model = CompileModel(model_def=LeNet,
                          loss=SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred"),
@@ -43,6 +43,6 @@ def get_estimator():
     # step 3.prepare estimator
     estimator = fe.Estimator(network=network,
                              pipeline=pipeline,
-                             epochs=2,
+                             epochs=epochs,
                              traces=Accuracy(true_key="y", pred_key="y_pred"))
     return estimator
