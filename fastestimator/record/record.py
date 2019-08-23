@@ -21,7 +21,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-from fastestimator.util.op import get_op_from_mode, verify_ops, get_inputs_by_key, write_outputs_by_key
+from fastestimator.util.op import get_op_from_mode, verify_ops, get_inputs_by_op, write_outputs_by_key
 
 
 class RecordWriter:
@@ -136,7 +136,7 @@ class RecordWriter:
         self.global_feature_key[mode].extend(self.feature_name[mode])
         assert len(set(self.global_feature_key[mode])) == len(
             self.global_feature_key[mode]), "found duplicate key in feature name during {}: {}".format(
-                mode, self.global_feature_key[mode])
+            mode, self.global_feature_key[mode])
         self.mb_per_csv_example[mode] = 0
         self.mb_per_record_example[mode] = 0
         self.feature_dtype[mode] = {}
@@ -291,13 +291,13 @@ class RecordWriter:
             assert data.size > 0, "found empty data on feature '{}'".format(key)
             if len(expected_shape) > 1:
                 assert expected_shape == data.shape, \
-                    "inconsistent shape on same feature `{}` among different examples, expected `{}`, found `{}`"\
-                    .format(key, expected_shape, data.shape)
+                    "inconsistent shape on same feature `{}` among different examples, expected `{}`, found `{}`" \
+                        .format(key, expected_shape, data.shape)
             else:
                 if data.size > 1:
                     assert max(data.shape) == np.prod(data.shape), \
                         "inconsistent shape on same feature `{}` among different examples,\
-                         expected 0 or 1 dimensional array, found `{}`"\
+                         expected 0 or 1 dimensional array, found `{}`" \
                             .format(key, expected_shape, data.shape)
                     if not expected_shape:
                         self.feature_shape[mode][key] = [-1]
@@ -316,8 +316,7 @@ class RecordWriter:
     def _preprocessing(self, feature, mode):
         data = None
         for op in self.mode_ops[mode]:
-            if op.inputs:
-                data = get_inputs_by_key(feature, op.inputs)
+            data = get_inputs_by_op(op, feature, data)
             data = op.forward(data, state={"mode": mode})
             if op.outputs:
                 feature = write_outputs_by_key(feature, data, op.outputs)
