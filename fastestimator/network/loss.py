@@ -22,6 +22,8 @@ class Loss(TensorOp):
     A base class for loss operations. It can be used directly to perform value pass-through (see the adversarial
     training showcase for an example of when this is useful)
     """
+
+
 class MeanSquaredError(Loss):
     def __init__(self, y_true=None, y_pred=None, inputs=None, outputs=None, mode=None, **kwargs):
         """Calculate mean squared error loss, the rest of the keyword argument will be passed to
@@ -38,10 +40,11 @@ class MeanSquaredError(Loss):
         inputs = validate_loss_inputs(inputs, y_true, y_pred)
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.loss_obj = tf.losses.MeanSquaredError(**kwargs)
-        
+
     def forward(self, data, state):
         true, pred = data
         return self.loss_obj(true, pred)
+
 
 class SparseCategoricalCrossentropy(Loss):
     def __init__(self, y_true=None, y_pred=None, inputs=None, outputs=None, mode=None, **kwargs):
