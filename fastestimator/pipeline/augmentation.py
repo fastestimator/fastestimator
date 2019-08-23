@@ -68,9 +68,6 @@ class Augmentation2D(TensorOp):
     def _get_transform(self):
         return self.transform_matrix
 
-    def _get_transform(self):
-        return self.transform_matrix
-
     def rotate(self):
         """
         Creates affine transformation matrix for 2D rotation
