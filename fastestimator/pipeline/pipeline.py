@@ -335,16 +335,16 @@ class Pipeline:
         self.prepare(inputs=inputs)
         ds_iter = self.dataset_schedule[mode].get_current_value(current_epoch)
         global_batch_size = self.get_global_batch_size(current_epoch)
-        start = time.time()
+        start = time.perf_counter()
         for idx in range(num_steps + 1):
             _ = next(ds_iter)
             if idx % log_interval == 0:
                 if idx == 0:
-                    start = time.time()
+                    start = time.perf_counter()
                 else:
-                    duration = time.time() - start
+                    duration = time.perf_counter() - start
                     example_per_sec = log_interval * global_batch_size / duration
                     print("FastEstimator: Step: %d, Epoch: %d, Batch Size %d, Example/sec %.2f" %
                           (idx, current_epoch, global_batch_size, example_per_sec))
-                    start = time.time()
+                    start = time.perf_counter()
         self._reset()

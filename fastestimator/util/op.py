@@ -46,6 +46,16 @@ def get_op_from_mode(ops, current_mode):
     return selected_ops
 
 
+def get_inputs_by_op(op, store, default=None):
+    data = default
+    if op.inputs:
+        if hasattr(op.inputs, "__call__"):
+            data = op.inputs()
+        else:
+            data = get_inputs_by_key(store, op.inputs)
+    return data
+
+
 def get_inputs_by_key(store, inputs_key):
     if isinstance(inputs_key, list):
         data = [store[key] for key in inputs_key]

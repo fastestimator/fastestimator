@@ -16,30 +16,12 @@ import tensorflow as tf
 from sklearn.preprocessing import StandardScaler
 from tensorflow.keras import layers
 
-from fastestimator.estimator.estimator import Estimator
-from fastestimator.pipeline.pipeline import Pipeline
+from fastestimator import Estimator, Pipeline, Network
+from fastestimator.network.loss import MeanSquaredError
+from fastestimator.network.model import ModelOp, build
 
 
-class Network:
-    def __init__(self):
-        self.model = self.create_dnn()
-        self.optimizer = tf.optimizers.Adam(learning_rate=0.1)
-        self.loss = tf.losses.MeanSquaredError()
-
-    def train_op(self, batch):
-        with tf.GradientTape() as tape:
-            predictions = self.model(batch["x"])
-            loss = self.loss(batch["y"], predictions)
-        gradients = tape.gradient(loss, self.model.trainable_variables)
-        self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
-        return predictions, loss
-
-    def eval_op(self, batch):
-        predictions = self.model(batch["x"], training=False)
-        loss = self.loss(batch["y"], predictions)
-        return predictions, loss
-
-    def create_dnn(self):
+def create_dnn():
         model = tf.keras.Sequential()
         model.add(layers.Dense(10, activation="relu"))
         model.add(layers.Dropout(0.5))
@@ -50,20 +32,18 @@ class Network:
         model.add(layers.Dense(1, activation="linear"))
         return model
 
-
 def get_estimator(epochs=30, batch_size=32):
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.boston_housing.load_data()
     scaler = StandardScaler()
     x_train = scaler.fit_transform(x_train)
     x_eval = scaler.transform(x_eval)
+    data = {"train": {"x": x_train, "y": y_train}, "eval": {"x": x_eval, "y": y_eval}}
+    pipeline = Pipeline(batch_size=batch_size, data=data)
 
-    pipeline = Pipeline(batch_size=batch_size, feature_name=["x", "y"], train_data={
-        "x": x_train,
-        "y": y_train
-    }, validation_data={
-        "x": x_eval,
-        "y": y_eval
-    }, transform_train=[[], []])
+    #prepare model
+    model = build(keras_model=create_dnn(), loss=MeanSquaredError(y_true="y", y_pred="y_pred"), optimizer="adam")
+    network = Network(ops=ModelOp(inputs="x", model=model, outputs="y_pred"))
 
-    estimator = Estimator(network=Network(), pipeline=pipeline, epochs=epochs, log_steps=10)
+    #create estimator
+    estimator = Estimator(network=network, pipeline=pipeline, epochs=epochs, log_steps=10)
     return estimator
