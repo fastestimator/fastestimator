@@ -41,17 +41,20 @@ class Augmentation2D(TensorOp):
        mode: Augmentation on 'training' data or 'evaluation' data.
    """
     def __init__(self,
+                 inputs=None,
+                 outputs=None,
+                 mode=None,
+                 reuse=False,
                  rotation_range=0.,
                  width_shift_range=0.,
                  height_shift_range=0.,
                  shear_range=0.,
                  zoom_range=1.,
                  flip_left_right=False,
-                 flip_up_down=False,
-                 mode='train'):
+                 flip_up_down=False):
+        super().__init__(inputs, outputs, mode)
         self.mode = mode
-        self.height = None
-        self.width = None
+        self.reuse = reuse
         self.rotation_range = rotation_range
         self.width_shift_range = width_shift_range
         self.height_shift_range = height_shift_range
@@ -62,8 +65,14 @@ class Augmentation2D(TensorOp):
         self.transform_matrix = tf.eye(3)
         # There appears to be a bug in TF2 which breaks compatibility between boolean control flow and gradient tapes.
         # Using 0/1 instead for the time being. Test against future versions of TF by running caricature visualization
-        self.do_flip_lr_tensor = tf.Variable(0, trainable=False)
-        self.do_flip_ud_tensor = tf.Variable(0, trainable=False)
+        self.do_flip_lr_tensor = tf.convert_to_tensor(0)
+        self.do_flip_up_tensor = tf.convert_to_tensor(0)
+
+    def _get_transform(self):
+        return self.transform_matrix
+
+    def _get_transform(self):
+        return self.transform_matrix
 
     def rotate(self):
         """
@@ -180,8 +189,10 @@ class Augmentation2D(TensorOp):
         Returns:
             A boolean that represents whether or not to flip
         """
-        do_flip = tf.greater(tf.random.uniform([], minval=0, maxval=1), 0.5)
-        return 1 if do_flip else 0
+        return tf.cond(
+            tf.random.uniform([], minval=0, maxval=1) > 0.5,
+            lambda: tf.convert_to_tensor(1),
+            lambda: tf.convert_to_tensor(0))
 
     def transform_matrix_offset_center(self, matrix):
         """
@@ -224,8 +235,8 @@ class Augmentation2D(TensorOp):
         do_shift = False
         do_zoom = False
         do_shear = False
-        self.do_flip_lr_tensor.assign(0)
-        self.do_flip_ud_tensor.assign(0)
+        self.do_flip_lr_tensor = tf.convert_to_tensor(0)
+        self.do_flip_ud_tensor = tf.convert_to_tensor(0)
 
         if type(self.rotation_range) is not tuple and type(self.rotation_range) is not list:
             if self.rotation_range > 0.:
@@ -288,9 +299,9 @@ class Augmentation2D(TensorOp):
         self.transform_matrix = transform_matrix
 
         if self.flip_left_right_boolean:
-            self.do_flip_lr_tensor.assign(self.flip())
+            self.do_flip_lr_tensor = self.flip()
         if self.flip_up_down_boolean:
-            self.do_flip_ud_tensor.assign(self.flip())
+            self.do_flip_ud_tensor = self.flip()
 
     def forward(self, data, state):
         """
@@ -304,47 +315,64 @@ class Augmentation2D(TensorOp):
             Transformed (augmented) data
 
         """
-        augment_data = self._transform(data)
+        # ensure the data is list in order to prevent syntax error at 322
+        if not isinstance(data, list):
+            if isinstance(data, tuple):
+                data = list(data)
+            else:
+                data = [data]
+        self.width = tf.cast(data[0].shape[-3], tf.float32)
+        self.height = tf.cast(data[0].shape[-2], tf.float32)
 
-        if self.do_flip_lr_tensor == 1:
-            augment_data = tf.image.flip_left_right(augment_data)
-        if self.do_flip_ud_tensor == 1:
-            augment_data = tf.image.flip_up_down(augment_data)
-
-        return augment_data
+        self.setup()
+        for idx, single_data in enumerate(data):
+            augment_data = self._transform(single_data)
+            augment_data = tf.cond(tf.equal(self.do_flip_lr_tensor, 1),
+                                   lambda: tf.image.flip_left_right(augment_data),
+                                   lambda: augment_data)
+            augment_data = tf.cond(tf.equal(self.do_flip_ud_tensor, 1),
+                                   lambda: tf.image.flip_up_down(augment_data),
+                                   lambda: augment_data)
+            data[idx] = augment_data
+        return data
 
     def _transform(self, data):
         dtype = data.dtype
-        x_shape, y_shape, z_shape = data.get_shape()[0], data.get_shape()[1], data.get_shape()[2]
+
+        assert (self.width is not None)
+        assert (self.height is not None)
+
+        x_shape = self.width
+        y_shape = self.height
+        z_shape = tf.cast(data.shape[-1], tf.float32)
+
         x_range = tf.range(x_shape)
         y_range = tf.range(y_shape)
         z_range = tf.range(z_shape)
         x_, y_, z_ = tf.meshgrid(x_range, y_range, z_range, indexing='ij')
+
         x_ = tf.reshape(x_, [-1])
         y_ = tf.reshape(y_, [-1])
         z_ = tf.reshape(z_, [-1])
+
         coords = tf.stack([x_, y_, tf.ones_like(x_)])
-
         M = tf.linalg.inv(self.transform_matrix)
-        coords = tf.matmul(tf.cast(M, tf.float32), tf.cast(coords, tf.float32))
+        coords = tf.matmul(M, coords)
 
-        x_ = tf.cast(coords[0], tf.int32)
-        y_ = tf.cast(coords[1], tf.int32)
+        x_ = coords[0]
+        y_ = coords[1]
 
-        mask = (x_ > -1) & (x_ < x_shape) & (y_ > -1) & (y_ < y_shape)
-        # mask_inv = ~mask
-        mask = tf.cast(mask, dtype)
-        # mask_inv = tf.cast(mask_inv, tf.int32)
-        # mask_inv = tf.multiply(mask_inv, fill_val)
         x_ = tf.cast(tf.clip_by_value(tf.round(x_), 0, x_shape - 1), tf.int32)
-
         y_ = tf.cast(tf.clip_by_value(tf.round(y_), 0, y_shape - 1), tf.int32)
+        z_ = tf.cast(z_, tf.int32)
+        final_coords = tf.stack([x_, y_, z_], axis=-1)
+        gather_and_reshape = lambda ex: tf.reshape(tf.gather_nd(ex, final_coords), ex.shape)
 
-        result_flat = tf.gather_nd(data, tf.stack([x_, y_, z_], axis=-1))
-        # result_flat = result_flat * tf.cast(mask, tf.int32) +
-        result_flat = tf.multiply(result_flat, mask)
-        return tf.convert_to_tensor(tf.reshape(result_flat, data.shape))
-
+        if len(data.shape) > 3:
+            result = tf.map_fn(fn=gather_and_reshape, elems=data, dtype=dtype)
+        else:
+            result = gather_and_reshape(data)
+        return result
 
 class MixUpBatch(TensorOp):
     """
