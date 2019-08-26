@@ -100,7 +100,6 @@ class Logger(Trace):
         self.eval_average_key = self._initialize_keys(eval_average_key)
         self.epochs_since_best = 0
         self.best_loss = None
-        self.time_start = None
 
     def on_epoch_begin(self, state):
         self.eval_results = None
@@ -111,15 +110,18 @@ class Logger(Trace):
 
     def on_batch_end(self, state):
         if state["mode"] == "train" and state["train_step"] % self.log_steps == 0:
-            results = dict((key, state["batch"][key]) for key in self.train_watch_key if key in state["batch"])
+            elapse_time = time.perf_counter() - self.time_start
+            results = dict(
+                (key, round(state["batch"][key].numpy(), 6)) for key in self.train_watch_key if key in state["batch"])
             if state["train_step"] == 0:
                 results["example_per_sec"] = 0.0
             else:
-                results["example_per_sec"] = state["batch_size"] / (time.perf_counter() - self.time_start)
+                results["example_per_sec"] = round(state["batch_size"] / elapse_time, 2)
             self._print_message("FastEstimator-Train: step: {}; ".format(state["train_step"]), results)
         elif state["mode"] == "eval":
             if self.eval_results is None:
-                self.eval_results = dict((key, [state["batch"][key]]) for key in self.eval_average_key if key in state["batch"])
+                self.eval_results = dict(
+                    (key, [state["batch"][key]]) for key in self.eval_average_key if key in state["batch"])
             else:
                 for key in self.eval_results.keys():
                     self.eval_results[key].append(state["batch"][key])
@@ -128,9 +130,17 @@ class Logger(Trace):
         if state["mode"] == "eval":
             for key in self.eval_results.keys():
                 self.eval_results[key] = np.mean(np.array(self.eval_results[key]), axis=0)
-            #if there is only one loss, add several keys 
+            if len(self.eval_results) == 1:
+                key = list(self.eval_results.keys())[0]
+                if self.best_loss is None or self.eval_results[key] < self.best_loss:
+                    self.best_loss = self.eval_results[key]
+                    self.epochs_since_best = 0
+                else:
+                    self.epochs_since_best += 1
+                self.eval_results["min_" + key] = self.best_loss
+                self.eval_results["since_best"] = self.epochs_since_best
             state["epoch_log"].update(self.eval_results)
-            self._print_message("FastEstimator-Eval: step: {}; ".format(state["train_step"]),  state["epoch_log"])
+            self._print_message("FastEstimator-Eval: step: {}; ".format(state["train_step"]), state["epoch_log"])
 
     @staticmethod
     def _initialize_keys(keys):
@@ -139,7 +149,7 @@ class Logger(Trace):
         elif not isinstance(keys, list):
             keys = [keys]
         return keys
-    
+
     @staticmethod
     def _print_message(header, results):
         log_message = header
@@ -185,7 +195,7 @@ class Accuracy(Trace):
         self.total += len(prediction_label.ravel())
 
     def on_epoch_end(self, state):
-        state["epoch_info"][self.name] = self.correct / self.total
+        state["epoch_log"][self.name] = self.correct / self.total
 
 
 class ConfusionMatrix(Trace):

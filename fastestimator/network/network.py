@@ -57,12 +57,12 @@ class Network:
                         if not hasattr(op.bundle, "model"):
                             with distribute_strategy.scope() if distribute_strategy else NonContext():
                                 op.bundle.model = op.bundle.model_def()
-                                op.bundle.model.loss = op.bundle.loss
+                                op.bundle.model.loss_name = op.bundle.loss_name
                                 op.bundle.model.optimizer = op.bundle.optimizer
                                 assert op.bundle.name not in self.model, "duplicated model name: {}".format(op.bundle.name)
                                 self.model[op.bundle.name] = op.bundle.model
-                                if op.bundle.loss not in self.all_losses:
-                                    self.all_losses.append(op.bundle.loss)
+                                if op.bundle.loss_name not in self.all_losses:
+                                    self.all_losses.append(op.bundle.loss_name)
                         if op.bundle.model not in epoch_model:
                             epoch_model.append(op.bundle.model)
                 assert epoch_model, "Network has no model for epoch {}".format(epoch)
@@ -84,8 +84,8 @@ class Network:
         model_list = self.model_schedule[mode].get_current_value(epoch)
         loss_list = []
         for model in model_list:
-            if model.loss not in loss_list:
-                loss_list.append(model.loss)
+            if model.loss_name not in loss_list:
+                loss_list.append(model.loss_name)
         return ops, model_list, loss_list
 
     def run_step(self, batch, ops, model_list, loss_list, state, warm_up=False):
@@ -101,7 +101,7 @@ class Network:
         if mode == "train":
             for idx in range(num_model):
                 model = model_list[idx]
-                loss = batch[model.loss]
+                loss = batch[model.loss_name]
                 optimizer = model.optimizer
                 if warm_up:
                     with tfops.init_scope():

@@ -22,7 +22,7 @@ import tensorflow as tf
 
 from fastestimator.pipeline.processing import TensorFilter
 from fastestimator.record.record import RecordWriter
-from fastestimator.util.op import get_inputs_by_op, get_op_from_mode, verify_ops, write_outputs_by_key
+from fastestimator.util.op import get_inputs_by_key, get_op_from_mode, verify_ops, write_outputs_by_key
 from fastestimator.util.schedule import Scheduler
 from fastestimator.util.tfrecord import get_features
 from fastestimator.util.util import convert_tf_dtype
@@ -264,15 +264,15 @@ class Pipeline:
 
     @staticmethod
     def _filter_fn(feature, filter_op, state):
-        data = get_inputs_by_op(filter_op, feature)
+        data = get_inputs_by_key(feature, filter_op.inputs)
         data = filter_op.forward(data, state)
         return data
 
     @staticmethod
     def _preprocess_fn(feature, forward_ops, state):
-        data = None
         for op in forward_ops:
-            data = get_inputs_by_op(op, feature, data)
+            if op.inputs:
+                data = get_inputs_by_key(feature, op.inputs)
             data = op.forward(data, state)
             if op.outputs:
                 feature = write_outputs_by_key(feature, data, op.outputs)

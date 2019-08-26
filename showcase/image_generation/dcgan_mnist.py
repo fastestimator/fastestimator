@@ -19,7 +19,7 @@ from tensorflow.python.keras import layers
 
 from fastestimator.estimator.estimator import Estimator
 from fastestimator.network.loss import Loss
-from fastestimator.network.model import ModelOp, build
+from fastestimator.network.model import Bundle, ModelOp
 from fastestimator.network.network import Network
 from fastestimator.pipeline.pipeline import Pipeline
 from fastestimator.util.op import TensorOp
@@ -29,7 +29,7 @@ class GLoss(Loss):
     """Compute generator loss."""
     def __init__(self, inputs, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        self.cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+        self.cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
 
     def forward(self, data, state):
         return self.cross_entropy(tf.ones_like(data), data)
@@ -39,7 +39,7 @@ class DLoss(Loss):
     """Compute discrimator loss."""
     def __init__(self, inputs, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        self.cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+        self.cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
 
     def forward(self, data, state):
         true, fake = data
@@ -94,18 +94,16 @@ def get_estimator(batch_size=256, epochs=10):
     # prepare data
     (x_train, _), (x_eval, _) = tf.keras.datasets.mnist.load_data()
     data = {"train": {"x": np.expand_dims(x_train, -1)}, "eval": {"x": np.expand_dims(x_eval, -1)}}
-    pipeline = Pipeline(batch_size=batch_size, data=data, ops=Myrescale(inputs="x", outputs="x"))
+    pipeline = Pipeline(batch_per_device=batch_size, data=data, ops=Myrescale(inputs="x", outputs="x"))
     # prepare model
-    g_model = build(keras_model=make_generator_model(),
-                    loss=GLoss(inputs="pred_fake"),
-                    optimizer=tf.optimizers.Adam(1e-4))
-    d_model = build(keras_model=make_discriminator_model(),
-                    loss=DLoss(inputs=("pred_true", "pred_fake")),
-                    optimizer=tf.optimizers.Adam(1e-4))
+    g_bundle = Bundle(model_def=make_generator_model, loss_name="gloss", optimizer=tf.optimizers.Adam(1e-4), name="gen")
+    d_bundle = Bundle(model_def=make_discriminator_model, loss_name="dloss", optimizer=tf.optimizers.Adam(1e-4), name="disc")
     network = Network(ops=[
-        ModelOp(inputs=lambda: tf.random.normal([batch_size, 100]), model=g_model),
-        ModelOp(model=d_model, outputs="pred_fake"),
-        ModelOp(inputs="x", model=d_model, outputs="pred_true")
+        ModelOp(inputs=lambda: tf.random.normal([batch_size, 100]), bundle=g_bundle),
+        ModelOp(bundle=d_bundle, outputs="pred_fake"),
+        ModelOp(inputs="x", bundle=d_bundle, outputs="pred_true"),
+        GLoss(inputs=("pred_fake"), outputs="gloss"),
+        DLoss(inputs=("pred_true", "pred_fake"), outputs="dloss")
     ])
     # prepare estimator
     estimator = Estimator(network=network, pipeline=pipeline, epochs=epochs)

@@ -21,11 +21,11 @@ from fastestimator.util.op import TensorOp
 
 
 class Bundle:
-    def __init__(self, model_def, loss_key, optimizer, name):
+    def __init__(self, model_def, loss_name, optimizer, name):
         assert isinstance(model_def, types.FunctionType), "must provide function definition or lambda function as model_def"
-        assert isinstance(loss_key, str), "loss must be a string key of loss tensor"
+        assert isinstance(loss_name, str), "loss must be a string key of loss tensor"
         self.model_def = model_def
-        self.loss_key = loss_key
+        self.loss_name = loss_name
         self.optimizer = optimizer
         self.name = name
         self._check_optimizer()
@@ -49,7 +49,7 @@ class Bundle:
 class ModelOp(TensorOp):
     def __init__(self, bundle, inputs=None, outputs=None, mode=None, track_input=False):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        assert isinstance(compile, Bundle), "must provide Bundle in as input"
+        assert isinstance(bundle, Bundle), "must provide Bundle in as input"
         self.bundle = bundle
         self.track_input = track_input
 
