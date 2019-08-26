@@ -89,19 +89,21 @@ class Trace:
 class Logger(Trace):
     """Logger, automatically applied by default.
     """
-    def __init__(self, log_steps=100, watch_key=None):
+    def __init__(self, log_steps=100, train_watch_key=None, eval_average_key=None):
         """
         Args:
             log_steps (int, optional): Logging interval. Default value is 100.
         """
         super().__init__()
         self.log_steps = log_steps
-        self.watch_key = watch_key
-        if self.watch_key and not isinstance(self.watch_key, list):
-            self.watch_key = [self.watch_key]
+        self.train_watch_key = self._initialize_keys(train_watch_key)
+        self.eval_average_key = self._initialize_keys(eval_average_key)
         self.epochs_since_best = 0
         self.best_loss = None
         self.time_start = None
+
+    def on_epoch_begin(self, state):
+        self.eval_results = None
 
     def on_batch_begin(self, state):
         if state["mode"] == "train" and state["train_step"] % self.log_steps == 0:
@@ -109,37 +111,44 @@ class Logger(Trace):
 
     def on_batch_end(self, state):
         if state["mode"] == "train" and state["train_step"] % self.log_steps == 0:
+            results = dict((key, state["batch"][key]) for key in self.train_watch_key if key in state["batch"])
             if state["train_step"] == 0:
-                example_per_sec = 0.0
+                results["example_per_sec"] = 0.0
             else:
-                example_per_sec = state["batch_size"] / (time.perf_counter() - self.time_start)
-
-
-        
-            loss = np.array(state["loss"])
-            if loss.size == 1:
-                loss = loss.ravel()[0]
-            state["train_loss"] = str(loss)
-            state["examples/sec"] = round(example_per_sec * self.num_process, 2)
+                results["example_per_sec"] = state["batch_size"] / (time.perf_counter() - self.time_start)
+            self._print_message("FastEstimator-Train: step: {}; ".format(state["train_step"]), results)
+        elif state["mode"] == "eval":
+            if self.eval_results is None:
+                self.eval_results = dict((key, [state["batch"][key]]) for key in self.eval_average_key if key in state["batch"])
+            else:
+                for key in self.eval_results.keys():
+                    self.eval_results[key].append(state["batch"][key])
 
     def on_epoch_end(self, state):
-        if state["mode"] != "eval":
-            return
-        current_eval_loss = state["loss"]
-        if current_eval_loss.size == 1:
-            current_eval_loss = current_eval_loss.ravel()[0]
-        state["val_los"] = current_eval_loss
-        if np.isscalar(current_eval_loss):
-            if self.best_loss is None or current_eval_loss < self.best_loss:
-                self.best_loss = current_eval_loss
-                self.epochs_since_best = 0
-            else:
-                self.epochs_since_best += 1
-            state["min_val_loss"] = self.best_loss
-            state["since_best"] = self.epochs_since_best
+        if state["mode"] == "eval":
+            for key in self.eval_results.keys():
+                self.eval_results[key] = np.mean(np.array(self.eval_results[key]), axis=0)
+            #if there is only one loss, add several keys 
+            state["epoch_log"].update(self.eval_results)
+            self._print_message("FastEstimator-Eval: step: {}; ".format(state["train_step"]),  state["epoch_log"])
 
-    def on_end(self, state):
-        state["time_to_train"] = "{} sec".format(round(state["train_time"], 2))
+    @staticmethod
+    def _initialize_keys(keys):
+        if keys is None:
+            keys = []
+        elif not isinstance(keys, list):
+            keys = [keys]
+        return keys
+    
+    @staticmethod
+    def _print_message(header, results):
+        log_message = header
+        for key in results.keys():
+            if isinstance(results[key], np.ndarray):
+                log_message += "\n{}:\n{};".format(key, np.array2string(results[key], separator=','))
+            else:
+                log_message += "{}: {}; ".format(key, str(results[key]))
+        print(log_message)
 
 
 class Accuracy(Trace):

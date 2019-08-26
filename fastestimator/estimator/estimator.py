@@ -98,7 +98,7 @@ class Estimator:
 
     def _add_traces(self):
         #get by default, logger watches all losses
-        self.traces.append(Logger(log_steps=self.log_steps, watch_key=self.network.all_losses))
+        self.traces.append(Logger(log_steps=self.log_steps, train_watch_key=self.network.all_losses, eval_average_key=self.network.all_losses))
 
     def _warmup(self):
         mode_list = self.pipeline.mode_list
