@@ -17,11 +17,10 @@ import json
 import os
 import sys
 
-from fastestimator.util.util import parse_cli_to_dictionary, get_gpu_count
+from fastestimator.util.util import parse_cli_to_dictionary
 
 
 def train(args, unknown):
-    num_process = args['num_process']
     entry_point = args['entry_point']
     inputs_path = args['inputs']
 
@@ -37,21 +36,23 @@ def train(args, unknown):
     sys.path.insert(0, dir_name)
     spec_module = __import__(module_name, globals(), locals(), ["get_estimator"])
     estimator = spec_module.get_estimator(**hyperparameters)
-    estimator.num_process = num_process
     estimator.fit(inputs=inputs_path)
 
 
 def configure_train_parser(subparsers):
-    parser = subparsers.add_parser('train', description='Train a FastEstimator model',
-                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter, allow_abbrev=False)
+    parser = subparsers.add_parser('train',
+                                   description='Train a FastEstimator model',
+                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+                                   allow_abbrev=False)
     # use an argument group for required flag arguments since otherwise they will show up as optional in the help
     parser.add_argument('entry_point', type=str, help='The path to the model python file')
-    parser.add_argument('--num_process', type=int, help='The number of parallel training processes',
-                        default=max(1, get_gpu_count()))
     parser.add_argument('--inputs', type=str, help='The path where tfrecord is saved or will be saved')
-    parser.add_argument('--hyperparameters', dest='hyperparameters_json', type=str,
+    parser.add_argument('--hyperparameters',
+                        dest='hyperparameters_json',
+                        type=str,
                         help="The path to the hyperparameters JSON file")
     parser.add_argument_group(
-        'hyperparameter arguments', 'Arguments to be passed through to the get_estimator() call. \
+        'hyperparameter arguments',
+        'Arguments to be passed through to the get_estimator() call. \
         Examples might look like --epochs <int>, --batch_size <int>, --optimizer <str>, etc...')
     parser.set_defaults(func=train)

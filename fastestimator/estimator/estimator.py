@@ -110,13 +110,14 @@ class Estimator:
             for epoch in signature_epochs:
                 ds_iter = self.pipeline.dataset_schedule[mode].get_current_value(epoch)
                 batch = next(ds_iter)
-                ops, model_list = self.network.load_epoch(epoch, mode)
-                self.network.run_step(batch, ops, model_list, state, warm_up=True)
+                global_batch_size = self.pipeline.get_global_batch_size(epoch)
+                state["batch_size"] = global_batch_size
+                ops, model_list, loss_list = self.network.load_epoch(epoch, mode)
+                self.network.run_step(batch, ops, model_list, loss_list, state, warm_up=True)
 
     def train(self):
-        train_start = time.perf_counter()
-        self._run_traces_on_begin({"num_process": self.num_gpu})
         train_step = 0
+        self._run_traces_on_begin()
         for epoch in range(self.epochs):
             ds_iter = self.pipeline.dataset_schedule["train"].get_current_value(epoch)
             global_batch_size = self.pipeline.get_global_batch_size(epoch)
@@ -124,7 +125,7 @@ class Estimator:
                 max_steps = self.steps_per_epoch
             else:
                 max_steps = min(self.pipeline.num_examples["train"]) // global_batch_size
-            ops, model_list = self.network.load_epoch(epoch, "train")
+            ops, model_list, loss_list = self.network.load_epoch(epoch, "train")
             self._run_traces_on_epoch_begin({"mode": "train", "epoch": epoch, "train_step": train_step})
             for batch_idx in range(max_steps):
                 batch = next(ds_iter)
@@ -133,19 +134,18 @@ class Estimator:
                     "epoch": epoch,
                     "train_step": train_step,
                     "batch_idx": batch_idx,
-                    "batch_size": batch_size,
+                    "batch_size": global_batch_size,
                     "batch": batch
                 })
-                prediction, loss = self.forward_step(batch, ops, model_list, {"mode": "train"})
+                prediction = self.forward_step(batch, ops, model_list, loss_list, {"mode": "train"})
                 batch = ChainMap(prediction, batch)
                 self._run_traces_on_batch_end({
                     "mode": "train",
                     "epoch": epoch,
                     "train_step": train_step,
                     "batch_idx": batch_idx,
-                    "batch_size": batch_size,
+                    "batch_size": global_batch_size,
                     "batch": batch,
-                    "loss": loss
                 })
                 train_step += 1
             self._run_traces_on_epoch_end({
@@ -155,13 +155,12 @@ class Estimator:
                 "loss": np.mean(np.array(self.losses), axis=0)
             })
             if self.do_eval:
-                self.val(epoch, batch_size, train_step)
-        elapsed_time = time.perf_counter() - train_start
-        self._run_traces_on_end({"train_step": train_step, "train_time": elapsed_time})
+                self.val(epoch, global_batch_size, train_step)
+        self._run_traces_on_end()
         print("FastEstimator: training finished!")
 
-    def val(self, epoch, batch_size, train_step):
-        ops, model_list = self.network.load_epoch(epoch, "eval")
+    def val(self, epoch, global_batch_size, train_step):
+        ops, model_list, loss_list = self.network.load_epoch(epoch, "eval")
         ds_iter = self.pipeline.dataset_schedule["eval"].get_current_value(epoch)
         if self.validation_steps:
             max_steps = self.validation_steps
@@ -175,27 +174,26 @@ class Estimator:
                 "epoch": epoch,
                 "train_step": train_step,
                 "batch_idx": batch_idx,
-                "batch_size": batch_size,
+                "batch_size": global_batch_size,
                 "batch": batch
             })
-            prediction, loss = self.forward_step(batch, ops, model_list, {"mode": "eval"})
+            prediction = self.forward_step(batch, ops, model_list, loss_list, {"mode": "eval"})
             batch = ChainMap(prediction, batch)
             self._run_traces_on_batch_end({
                 "mode": "eval",
                 "epoch": epoch,
                 "train_step": train_step,
                 "batch_idx": batch_idx,
-                "batch_size": batch_size,
-                "batch": batch,
-                "loss": loss
+                "batch_size": global_batch_size,
+                "batch": batch
             })
         self._run_traces_on_epoch_end({
             "mode": "eval", "epoch": epoch, "train_step": train_step, "loss": np.mean(np.array(self.losses), axis=0)
         })
 
-    def _run_traces_on_begin(self, state):
+    def _run_traces_on_begin(self):
         for trace in self.traces:
-            trace.on_begin(state)
+            trace.on_begin()
 
     def _run_traces_on_epoch_begin(self, state):
         self.losses = []
@@ -229,12 +227,12 @@ class Estimator:
             trace.on_epoch_end(trace_state)
         self._print_message(trace_outputs.items(), state["train_step"], state["mode"])
 
-    def _run_traces_on_end(self, state):
+    def _run_traces_on_end(self):
         trace_outputs = {}
-        trace_state = ChainMap(trace_outputs, state)
+        trace_state = ChainMap(trace_outputs)
         for trace in self.traces:
             trace.on_end(trace_state)
-        self._print_message(trace_outputs.items(), state["train_step"], "End")
+        self._print_message(trace_outputs.items())
 
     @staticmethod
     def _format_log_message(message, metric_name, metric_value):
@@ -257,8 +255,8 @@ class Estimator:
         print(log_message)
 
     @tf.function
-    def forward_step(self, batch, ops, model_list, state):
+    def forward_step(self, batch, ops, model_list, loss_list, state):
         prediction = {}
         batch = ChainMap(prediction, batch)
-        losses = self.network.run_step(batch, ops, model_list, state)
-        return prediction, losses
+        self.network.run_step(batch, ops, model_list, loss_list, state)
+        return prediction

@@ -16,7 +16,7 @@ import tensorflow as tf
 from tensorflow.python.framework import ops as tfops
 
 from fastestimator.network.model import ModelOp
-from fastestimator.util.op import get_op_from_mode, verify_ops, get_inputs_by_op, write_outputs_by_key
+from fastestimator.util.op import get_inputs_by_key, get_op_from_mode, verify_ops, write_outputs_by_key
 from fastestimator.util.schedule import Scheduler
 from fastestimator.util.util import NonContext
 
@@ -79,36 +79,54 @@ class Network:
     def load_epoch(self, epoch, mode):
         ops = self.op_schedule[mode].get_current_value(epoch)
         model_list = self.model_schedule[mode].get_current_value(epoch)
-        return ops, model_list
+        loss_list = []
+        for model in model_list:
+            if model.loss not in loss_list:
+                loss_list.append(model.loss)
+        return ops, model_list, loss_list
 
-    def run_step(self, batch, ops, model_list, state, warm_up=False):
+    def run_step(self, batch, ops, model_list, loss_list, state, warm_up=False):
         mode = state["mode"]
+        global_batch_size = state["batch_size"]
         num_model = len(model_list)
         # use gradient tape for train, otherwise use a dummy tape
         with tf.GradientTape(persistent=True) if mode == "train" else NonContext() as tape:
             state['tape'] = tape
-            Network._forward(batch, state, ops)
-            losses = Network._forward(batch, state, map(lambda x: x.loss, model_list), recycle=False, ret_response=True)
+            self._forward(batch, state, ops)
+            self._reduce_loss(batch, global_batch_size, loss_list, warm_up)
         # update model only for train mode
         if mode == "train":
             for idx in range(num_model):
-                gradients = tape.gradient(losses[idx], model_list[idx].trainable_variables)
+                model = model_list[idx]
+                loss = batch[model.loss]
+                optimizer = model.optimizer
                 if warm_up:
                     with tfops.init_scope():
-                        _ = model_list[idx].optimizer.iterations
-                        model_list[idx].optimizer._create_hypers()
-                        model_list[idx].optimizer._create_slots(model_list[idx].trainable_variables)
+                        _ = optimizer.iterations
+                        optimizer._create_hypers()
+                        optimizer._create_slots(model_list[idx].trainable_variables)
                 else:
-                    model_list[idx].optimizer.apply_gradients(zip(gradients, model_list[idx].trainable_variables))
+                    gradients = tape.gradient(loss, model.trainable_variables)
+                    optimizer.apply_gradients(zip(gradients, model.trainable_variables))
         del state['tape']
         del tape
-        return losses
 
     @staticmethod
     def _forward(batch, state, ops):
-        data = None
         for op in ops:
-            data = get_inputs_by_op(op, batch, data)
+            if op.inputs:
+                if hasattr(op.inputs, "__call__"):
+                    data = op.inputs()
+                else:
+                    data = get_inputs_by_key(batch, op.inputs)
             data = op.forward(data, state)
             if op.outputs:
                 write_outputs_by_key(batch, data, op.outputs)
+
+    @staticmethod
+    def _reduce_loss(batch, global_batch_size, loss_list, warm_up):
+        for loss_key in loss_list:
+            loss = batch[loss_key]
+            if warm_up:
+                assert loss.shape.num_elements() > 1, "please make sure loss is element-wise loss"
+            batch[loss_key] = tf.reduce_sum(loss) / global_batch_size

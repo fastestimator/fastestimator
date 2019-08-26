@@ -47,7 +47,7 @@ class MeanSquaredError(Loss):
 
 
 class SparseCategoricalCrossentropy(Loss):
-    def __init__(self, y_true=None, y_pred=None, inputs=None, outputs=None, mode=None, **kwargs):
+    def __init__(self, y_true=None, y_pred=None, inputs=None, outputs=None, mode=None):
         """Calculate sparse categorical cross entropy, the rest of the keyword argument will be passed to
            tf.losses.SparseCategoricalCrossentropy
 
@@ -61,11 +61,11 @@ class SparseCategoricalCrossentropy(Loss):
         """
         inputs = validate_loss_inputs(inputs, y_true, y_pred)
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        self.loss_obj = tf.losses.SparseCategoricalCrossentropy(**kwargs)
+        self.loss_obj = tf.losses.SparseCategoricalCrossentropy(reduction=tf.keras.losses.Reduction.NONE)
 
     def forward(self, data, state):
-        true, pred = data
-        return self.loss_obj(true, pred)
+        y_true, y_pred = data
+        return self.loss_obj(y_true, y_pred)
 
 
 class BinaryCrossentropy(Loss):

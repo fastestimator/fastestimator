@@ -32,13 +32,8 @@ class Trace:
         self.network = None
         self.mode = mode
 
-    def on_begin(self, state):
+    def on_begin(self):
         """Runs once at the beginning of training
-
-        Args:
-            state (dict): dictionary of run time that has the following key(s):
-                * "num_process":  The number of parallel processing units in use by this fastEstimator instance 
-                                    (number of utilized GPUs, or 1 if only running on the CPU)
         """
     def on_epoch_begin(self, state):
         """Runs at the beginning of each epoch of the mode.
@@ -48,7 +43,6 @@ class Trace:
                 * "mode":  current run time mode, can be "train", "eval" or "test"
                 * "epoch": current epoch index starting from 0
                 * "train_step": current global training step starting from 0
-                * "batch_idx": current local evaluation step starting from 0
         """
     def on_batch_begin(self, state):
         """Runs at the beginning of every batch of the mode.
@@ -58,8 +52,8 @@ class Trace:
                 * "mode":  current run time mode, can be "train", "eval" or "test"
                 * "epoch": current epoch index starting from 0
                 * "train_step": current global training step starting from 0
-                * "batch_idx": current local evaluation step starting from 0
-                * "batch_size": current batch size per gpu
+                * "batch_idx": current local step of the epoch starting from 0
+                * "batch_size": current global batch size
                 * "batch": the batch data before the Network execution
 
         """
@@ -72,11 +66,9 @@ class Trace:
                 * "mode":  current run time mode, can be "train", "eval" or "test"
                 * "epoch": current epoch index starting from 0
                 * "train_step": current global training step starting from 0
-                * "eval_step": current local evaluation step starting from 0 (only available when mode is "eval",
-                                resets every evaluation)
-                * "batch_size": current batch size on single machine
+                * "batch_idx": current local step of the epoch starting from 0
+                * "batch_size": current global batch size
                 * "batch": the batch data after the Network execution
-                * "loss": the batch loss (only available when mode is "train" or "eval")
         """
     def on_epoch_end(self, state):
         """Runs at the end of every epoch of the mode. Anything written into the state dictionary will be logged
