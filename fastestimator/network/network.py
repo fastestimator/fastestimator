@@ -31,6 +31,7 @@ class Network:
         self.current_epoch_ops = {}
         self.current_epoch_model = {}
         self.model = {}
+        self.all_losses = []
 
     def prepare(self, mode_list, distribute_strategy):
         for mode in mode_list:
@@ -60,6 +61,8 @@ class Network:
                                 op.bundle.model.optimizer = op.bundle.optimizer
                                 assert op.bundle.name not in self.model, "duplicated model name: {}".format(op.bundle.name)
                                 self.model[op.bundle.name] = op.bundle.model
+                                if op.bundle.loss not in self.all_losses:
+                                    self.all_losses.append(op.bundle.loss)
                         if op.bundle.model not in epoch_model:
                             epoch_model.append(op.bundle.model)
                 assert epoch_model, "Network has no model for epoch {}".format(epoch)

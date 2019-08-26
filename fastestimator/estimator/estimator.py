@@ -18,7 +18,7 @@ from collections import ChainMap
 import numpy as np
 import tensorflow as tf
 
-from fastestimator.estimator.trace import Trace, TrainLogger
+from fastestimator.estimator.trace import Trace, Logger
 from fastestimator.util.util import NonContext, get_gpu_info
 
 
@@ -97,8 +97,8 @@ class Estimator:
         self._add_traces()
 
     def _add_traces(self):
-        if not any(map(lambda x: isinstance(x, TrainLogger), self.traces)):
-            self.traces.insert(0, TrainLogger(log_steps=self.log_steps))
+        #get by default, logger watches all losses
+        self.traces.append(Logger(log_steps=self.log_steps, watch_key=self.network.all_losses))
 
     def _warmup(self):
         mode_list = self.pipeline.mode_list
@@ -126,7 +126,8 @@ class Estimator:
             else:
                 max_steps = min(self.pipeline.num_examples["train"]) // global_batch_size
             ops, model_list, loss_list = self.network.load_epoch(epoch, "train")
-            self._run_traces_on_epoch_begin({"mode": "train", "epoch": epoch, "train_step": train_step})
+            epoch_log = {}
+            self._run_traces_on_epoch_begin({"mode": "train", "epoch": epoch, "train_step": train_step, "epoch_log": epoch_log})
             for batch_idx in range(max_steps):
                 batch = next(ds_iter)
                 self._run_traces_on_batch_begin({
@@ -152,7 +153,7 @@ class Estimator:
                 "mode": "train",
                 "epoch": epoch,
                 "train_step": train_step,
-                "loss": np.mean(np.array(self.losses), axis=0)
+                "epoch_log": epoch_log
             })
             if self.do_eval:
                 self.val(epoch, global_batch_size, train_step)
@@ -166,7 +167,8 @@ class Estimator:
             max_steps = self.validation_steps
         else:
             max_steps = min(self.pipeline.num_examples["eval"]) // global_batch_size
-        self._run_traces_on_epoch_begin({"mode": "eval", "epoch": epoch, "train_step": train_step})
+        epoch_log = {}
+        self._run_traces_on_epoch_begin({"mode": "eval", "epoch": epoch, "train_step": train_step, "epoch_log": epoch_log})
         for batch_idx in range(max_steps):
             batch = next(ds_iter)
             self._run_traces_on_batch_begin({
@@ -188,7 +190,7 @@ class Estimator:
                 "batch": batch
             })
         self._run_traces_on_epoch_end({
-            "mode": "eval", "epoch": epoch, "train_step": train_step, "loss": np.mean(np.array(self.losses), axis=0)
+            "mode": "eval", "epoch": epoch, "train_step": train_step, "epoch_log": epoch_log
         })
 
     def _run_traces_on_begin(self):
@@ -196,63 +198,28 @@ class Estimator:
             trace.on_begin()
 
     def _run_traces_on_epoch_begin(self, state):
-        self.losses = []
         for trace in self.traces:
-            if trace.mode and state['mode'] not in trace.mode:
-                continue
-            trace.on_epoch_begin(state)
+            if trace.mode is None or state['mode'] in trace.mode:
+                trace.on_epoch_begin(state)
 
     def _run_traces_on_batch_begin(self, state):
         for trace in self.traces:
-            if trace.mode and state['mode'] not in trace.mode:
-                continue
-            trace.on_batch_begin(state)
+            if trace.mode is None or state['mode'] in trace.mode:
+                trace.on_batch_begin(state)
 
     def _run_traces_on_batch_end(self, state):
-        self.losses.append(state["loss"])
-        trace_outputs = {}
-        trace_state = ChainMap(trace_outputs, state)
         for trace in self.traces:
-            if trace.mode and state['mode'] not in trace.mode:
-                continue
-            trace.on_batch_end(trace_state)
-        self._print_message(trace_outputs.items(), state["train_step"], state["mode"])
+            if trace.mode is None or state['mode'] in trace.mode:
+                trace.on_batch_end(state)
 
     def _run_traces_on_epoch_end(self, state):
-        trace_outputs = {}
-        trace_state = ChainMap(trace_outputs, state)
         for trace in self.traces:
-            if trace.mode and state['mode'] not in trace.mode:
-                continue
-            trace.on_epoch_end(trace_state)
-        self._print_message(trace_outputs.items(), state["train_step"], state["mode"])
+            if trace.mode is None or state['mode'] in trace.mode:
+                trace.on_epoch_end(state)
 
     def _run_traces_on_end(self):
-        trace_outputs = {}
-        trace_state = ChainMap(trace_outputs)
         for trace in self.traces:
-            trace.on_end(trace_state)
-        self._print_message(trace_outputs.items())
-
-    @staticmethod
-    def _format_log_message(message, metric_name, metric_value):
-        if not isinstance(metric_value, np.ndarray):
-            log_message = "{}{}: {}; ".format(message, metric_name, str(metric_value))
-        else:
-            log_message = "{}\n{}:\n{};\n".format(message, metric_name, np.array2string(metric_value, separator=','))
-        return log_message
-
-    def _print_message(self, output_list, train_step, mode):
-        if not output_list:  # Don't print anything if no metrics are available
-            return
-        log_message = "FastEstimator-{}: step: {}; ".format(mode.capitalize(), train_step)
-        for metric_name, metric_result in output_list:
-            if isinstance(metric_result, dict):
-                for key in metric_result.keys():
-                    log_message = self._format_log_message(log_message, key, metric_result[key])
-            else:
-                log_message = self._format_log_message(log_message, metric_name, metric_result)
-        print(log_message)
+            trace.on_end()
 
     @tf.function
     def forward_step(self, batch, ops, model_list, loss_list, state):

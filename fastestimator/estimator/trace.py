@@ -43,6 +43,7 @@ class Trace:
                 * "mode":  current run time mode, can be "train", "eval" or "test"
                 * "epoch": current epoch index starting from 0
                 * "train_step": current global training step starting from 0
+                * "epoch_log": a dictionary that stores epoch related information, it can be used for sharing data between traces
         """
     def on_batch_begin(self, state):
         """Runs at the beginning of every batch of the mode.
@@ -78,53 +79,48 @@ class Trace:
                 * "mode":  current run time mode, can be "train", "eval" or "test"
                 * "epoch": current epoch index starting from 0
                 * "train_step": current global training step starting from 0
-                * "loss": the average loss of all batches (only available when mode is "train" or "eval")
+                * "epoch_log": a dictionary that stores epoch related information, it can be used for sharing data between traces
         """
-    def on_end(self, state):
+    def on_end(self):
         """Runs once at the end training. Anything written into the state dictionary will be logged
-
-        Args:
-            state (dict): dictionary of run time that has the following key(s):
-                * "train_step": the total number of train steps during the training process
-                * "train_time": the total amount of time (seconds) elapsed during the course of training
         """
 
 
-class TrainLogger(Trace):
-    """Training logger, automatically applied by default.
+class Logger(Trace):
+    """Logger, automatically applied by default.
     """
-    def __init__(self, log_steps=100):
+    def __init__(self, log_steps=100, watch_key=None):
         """
         Args:
             log_steps (int, optional): Logging interval. Default value is 100.
         """
         super().__init__()
         self.log_steps = log_steps
-        self.num_process = None
+        self.watch_key = watch_key
+        if self.watch_key and not isinstance(self.watch_key, list):
+            self.watch_key = [self.watch_key]
         self.epochs_since_best = 0
         self.best_loss = None
         self.time_start = None
 
-    def on_begin(self, state):
-        self.num_process = state["num_process"]
-
     def on_batch_begin(self, state):
-        if state["mode"] != "train" or state["train_step"] % self.log_steps != 0:
-            return
-        self.time_start = time.perf_counter()
+        if state["mode"] == "train" and state["train_step"] % self.log_steps == 0:
+            self.time_start = time.perf_counter()
 
     def on_batch_end(self, state):
-        if state["mode"] != "train" or state["train_step"] % self.log_steps != 0:
-            return
-        if state["train_step"] == 0:
-            example_per_sec = 0.0
-        else:
-            example_per_sec = state["batch_size"] / (time.perf_counter() - self.time_start)
-        loss = np.array(state["loss"])
-        if loss.size == 1:
-            loss = loss.ravel()[0]
-        state["train_loss"] = str(loss)
-        state["examples/sec"] = round(example_per_sec * self.num_process, 2)
+        if state["mode"] == "train" and state["train_step"] % self.log_steps == 0:
+            if state["train_step"] == 0:
+                example_per_sec = 0.0
+            else:
+                example_per_sec = state["batch_size"] / (time.perf_counter() - self.time_start)
+
+
+        
+            loss = np.array(state["loss"])
+            if loss.size == 1:
+                loss = loss.ravel()[0]
+            state["train_loss"] = str(loss)
+            state["examples/sec"] = round(example_per_sec * self.num_process, 2)
 
     def on_epoch_end(self, state):
         if state["mode"] != "eval":
@@ -153,13 +149,13 @@ class Accuracy(Trace):
         true_key (str): Name of the key that corresponds to ground truth in batch dictionary
         pred_key (str): Name of the key that corresponds to predicted score in batch dictionary
     """
-    def __init__(self, true_key, pred_key, mode="eval", output_name="accuracy"):
+    def __init__(self, true_key, pred_key, mode="eval", name="accuracy"):
         super().__init__(mode=mode)
         self.true_key = true_key
         self.pred_key = pred_key
         self.total = 0
         self.correct = 0
-        self.output_name = output_name
+        self.name = name
 
     def on_epoch_begin(self, state):
         self.total = 0
@@ -180,7 +176,7 @@ class Accuracy(Trace):
         self.total += len(prediction_label.ravel())
 
     def on_epoch_end(self, state):
-        state[self.output_name] = self.correct / self.total
+        state["epoch_info"][self.name] = self.correct / self.total
 
 
 class ConfusionMatrix(Trace):
