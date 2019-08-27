@@ -13,13 +13,13 @@
 # limitations under the License.
 # ==============================================================================
 import time
+import types
 from collections import ChainMap
 
-import numpy as np
 import tensorflow as tf
 
 from fastestimator.estimator.trace import Logger, MonitorLoss, Trace
-from fastestimator.util.util import NonContext, get_num_devices
+from fastestimator.util.util import get_num_devices
 
 
 class Estimator:
@@ -79,9 +79,9 @@ class Estimator:
             trace.network = self.network
 
     def _add_traces(self):
-        #change later to check user's trace
         self.traces.insert(0, MonitorLoss())
-        self.traces.append(Logger(log_steps=self.log_steps))
+        if not any(map(lambda x: isinstance(x, Logger), self.traces)):
+            self.traces.append(Logger(log_steps=self.log_steps))
 
     def _warmup(self):
         mode_list = self.pipeline.mode_list
@@ -118,7 +118,8 @@ class Estimator:
                     "epoch": epoch,
                     "train_step": train_step,
                     "batch_idx": batch_idx,
-                    "batch_size": global_batch_size
+                    "batch_size": global_batch_size,
+                    "batch": types.MappingProxyType(batch)  # A read-only view of the batch data
                 })
                 prediction = self.forward_step(batch,
                                                ops,
@@ -160,7 +161,8 @@ class Estimator:
                 "epoch": epoch,
                 "train_step": train_step,
                 "batch_idx": batch_idx,
-                "batch_size": global_batch_size
+                "batch_size": global_batch_size,
+                "batch": types.MappingProxyType(batch)  # A read-only view of the batch data
             })
             prediction = self.forward_step(batch,
                                            ops,

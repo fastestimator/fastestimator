@@ -23,7 +23,7 @@ from fastestimator.network.model import FEModel, ModelOp
 from fastestimator.pipeline.processing import Minmax
 
 
-def get_estimator():
+def get_estimator(epochs=2, batch_size=32):
     # step 1. prepare data
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.mnist.load_data()
     data = {
@@ -34,15 +34,15 @@ def get_estimator():
             "x": np.expand_dims(x_eval, -1), "y": y_eval
         }
     }
-    pipeline = fe.Pipeline(batch_size=32, data=data, ops=Minmax(inputs="x", outputs="x"))
+    pipeline = fe.Pipeline(batch_size=batch_size, data=data, ops=Minmax(inputs="x", outputs="x"))
     # step 2. prepare model
-    femodel = FEModel(model_def=LeNet, model_name="lenet", optimizer="adam")
+    fe_model = FEModel(model_def=LeNet, model_name="lenet", optimizer="adam")
     network = fe.Network(ops=[
-        ModelOp(inputs="x", femodel=femodel, outputs="y_pred"), SparseCategoricalCrossentropy(inputs=("y", "y_pred"))
+        ModelOp(inputs="x", fe_model=fe_model, outputs="y_pred"), SparseCategoricalCrossentropy(inputs=("y", "y_pred"))
     ])
     # step 3.prepare estimator
     estimator = fe.Estimator(network=network,
                              pipeline=pipeline,
-                             epochs=2,
+                             epochs=epochs,
                              traces=Accuracy(true_key="y", pred_key="y_pred"))
     return estimator

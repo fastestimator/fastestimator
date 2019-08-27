@@ -16,7 +16,7 @@ import tensorflow as tf
 from tensorflow.python.framework import ops as tfops
 
 from fastestimator.network.model import ModelOp
-from fastestimator.util.op import get_inputs_by_key, get_op_from_mode, verify_ops, write_outputs_by_key
+from fastestimator.util.op import get_inputs_by_op, get_op_from_mode, verify_ops, write_outputs_by_key
 from fastestimator.util.schedule import Scheduler
 from fastestimator.util.util import NonContext
 
@@ -55,17 +55,18 @@ class Network:
                 # create model list
                 for op in epoch_ops:
                     if isinstance(op, ModelOp):
-                        if not hasattr(op.femodel, "model"):
+                        if not hasattr(op.fe_model, "model"):
                             with distribute_strategy.scope() if distribute_strategy else NonContext():
-                                op.femodel.model = op.femodel.model_def()
-                                op.femodel.model.optimizer = op.femodel.optimizer
-                                op.femodel.model.loss_name = op.femodel.loss_name
-                                assert op.femodel.model_name not in self.model, "duplicated model name: {}".format(op.femodel.model_name)
-                                self.model[op.femodel.model_name] = op.femodel.model
-                                if op.femodel.loss_name not in self.all_losses:
-                                    self.all_losses.append(op.femodel.loss_name)
-                        if op.femodel.model not in epoch_model:
-                            epoch_model.append(op.femodel.model)
+                                op.fe_model.model = op.fe_model.model_def()
+                                op.fe_model.model.optimizer = op.fe_model.optimizer
+                                op.fe_model.model.loss_name = op.fe_model.loss_name
+                                assert op.fe_model.model_name not in self.model, \
+                                    "duplicated model name: {}".format(op.fe_model.model_name)
+                                self.model[op.fe_model.model_name] = op.fe_model.model
+                                if op.fe_model.loss_name not in self.all_losses:
+                                    self.all_losses.append(op.fe_model.loss_name)
+                        if op.fe_model.model not in epoch_model:
+                            epoch_model.append(op.fe_model.model)
                 assert epoch_model, "Network has no model for epoch {}".format(epoch)
                 epoch_ops_map[epoch] = epoch_ops
                 epoch_model_map[epoch] = epoch_model
@@ -118,12 +119,9 @@ class Network:
 
     @staticmethod
     def _forward(batch, state, ops):
+        data = None
         for op in ops:
-            if op.inputs:
-                if hasattr(op.inputs, "__call__"):
-                    data = op.inputs()
-                else:
-                    data = get_inputs_by_key(batch, op.inputs)
+            data = get_inputs_by_op(op, batch, data)
             data = op.forward(data, state)
             if op.outputs:
                 write_outputs_by_key(batch, data, op.outputs)

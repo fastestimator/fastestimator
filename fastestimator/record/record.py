@@ -21,7 +21,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-from fastestimator.util.op import get_inputs_by_key, get_op_from_mode, verify_ops, write_outputs_by_key
+from fastestimator.util.op import get_op_from_mode, verify_ops, write_outputs_by_key, get_inputs_by_op
 
 
 class RecordWriter:
@@ -292,12 +292,12 @@ class RecordWriter:
             if len(expected_shape) > 1:
                 assert expected_shape == data.shape, \
                     "inconsistent shape on same feature `{}` among different examples, expected `{}`, found `{}`" \
-                        .format(key, expected_shape, data.shape)
+                    .format(key, expected_shape, data.shape)
             else:
                 if data.size > 1:
                     assert max(data.shape) == np.prod(data.shape), \
                         "inconsistent shape on same feature `{}` among different examples,\
-                         expected 0 or 1 dimensional array, found `{}`"                                                                                                                                                                                                                     .format(key, data.shape)
+                         expected 0 or 1 dimensional array, found `{}`".format(key, data.shape)
                     if not expected_shape:
                         self.feature_shape[mode][key] = [-1]
             feature_tfrecord[key] = self._bytes_feature(data.tostring())
@@ -313,9 +313,9 @@ class RecordWriter:
         return feature_slice
 
     def _preprocessing(self, feature, mode):
+        data = None
         for op in self.mode_ops[mode]:
-            if op.inputs:
-                data = get_inputs_by_key(feature, op.inputs)
+            data = get_inputs_by_op(op, feature, data)
             data = op.forward(data, state={"mode": mode})
             if op.outputs:
                 feature = write_outputs_by_key(feature, data, op.outputs)

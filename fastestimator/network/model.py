@@ -16,19 +16,20 @@ import types
 
 import tensorflow as tf
 
-from fastestimator.network.loss import Loss
 from fastestimator.util.op import TensorOp
 
 
 class FEModel:
     def __init__(self, model_def, model_name, optimizer, loss_name="loss"):
-        assert isinstance(model_def, types.FunctionType), "must provide function definition or lambda function as model_def"
+        assert isinstance(model_def, types.FunctionType), \
+            "must provide function definition or lambda function as model_def"
         assert isinstance(loss_name, str), "loss must be a string key of loss tensor"
         self.model_def = model_def
         self.loss_name = loss_name
         self.optimizer = optimizer
         self.model_name = model_name
         self._check_optimizer()
+        self.model = None
 
     def _check_optimizer(self):
         if isinstance(self.optimizer, str):
@@ -43,14 +44,15 @@ class FEModel:
             }
             self.optimizer = optimizer_fn[self.optimizer]()
         else:
-            assert isinstance(self.optimizer, tf.optimizers.Optimizer), "must provide provide must provide tf.optimizer.Optimizer instance as optimizer"
+            assert isinstance(self.optimizer, tf.optimizers.Optimizer), \
+                "must provide provide must provide tf.optimizer.Optimizer instance as optimizer"
 
 
 class ModelOp(TensorOp):
-    def __init__(self, femodel, inputs=None, outputs=None, mode=None, track_input=False):
+    def __init__(self, fe_model, inputs=None, outputs=None, mode=None, track_input=False):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        assert isinstance(femodel, FEModel), "must provide femodel in as input"
-        self.femodel = femodel
+        assert isinstance(fe_model, FEModel), "must provide a FEModel in as input"
+        self.fe_model = fe_model
         self.track_input = track_input
 
     def forward(self, data, state):
@@ -58,5 +60,5 @@ class ModelOp(TensorOp):
         if self.track_input and training:
             tape = state['tape']
             tape.watch(data)
-        data = self.femodel.model(data, training=training)
+        data = self.fe_model.model(data, training=training)
         return data
