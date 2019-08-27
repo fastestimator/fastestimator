@@ -47,7 +47,7 @@ class MeanSquaredError(Loss):
 
 
 class SparseCategoricalCrossentropy(Loss):
-    def __init__(self, y_true=None, y_pred=None, inputs=None, outputs=None, mode=None):
+    def __init__(self, y_true=None, y_pred=None, inputs=None, outputs="loss", mode=None):
         """Calculate sparse categorical cross entropy, the rest of the keyword argument will be passed to
            tf.losses.SparseCategoricalCrossentropy
 

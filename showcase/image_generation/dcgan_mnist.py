@@ -19,7 +19,7 @@ from tensorflow.python.keras import layers
 
 from fastestimator.estimator.estimator import Estimator
 from fastestimator.network.loss import Loss
-from fastestimator.network.model import Bundle, ModelOp
+from fastestimator.network.model import FEModel, ModelOp
 from fastestimator.network.network import Network
 from fastestimator.pipeline.pipeline import Pipeline
 from fastestimator.util.op import TensorOp
@@ -96,8 +96,8 @@ def get_estimator(batch_size=256, epochs=10):
     data = {"train": {"x": np.expand_dims(x_train, -1)}, "eval": {"x": np.expand_dims(x_eval, -1)}}
     pipeline = Pipeline(batch_per_device=batch_size, data=data, ops=Myrescale(inputs="x", outputs="x"))
     # prepare model
-    g_bundle = Bundle(model_def=make_generator_model, loss_name="gloss", optimizer=tf.optimizers.Adam(1e-4), name="gen")
-    d_bundle = Bundle(model_def=make_discriminator_model, loss_name="dloss", optimizer=tf.optimizers.Adam(1e-4), name="disc")
+    g_bundle = FEModel(model_def=make_generator_model, model_name="gen", loss_name="gloss", optimizer=tf.optimizers.Adam(1e-4))
+    d_bundle = FEModel(model_def=make_discriminator_model, model_name="disc", loss_name="dloss", optimizer=tf.optimizers.Adam(1e-4))
     network = Network(ops=[
         ModelOp(inputs=lambda: tf.random.normal([batch_size, 100]), bundle=g_bundle),
         ModelOp(bundle=d_bundle, outputs="pred_fake"),

@@ -32,6 +32,7 @@ class Network:
         self.current_epoch_model = {}
         self.model = {}
         self.all_losses = []
+        self.loss_list = []
 
     def prepare(self, mode_list, distribute_strategy):
         for mode in mode_list:
@@ -59,8 +60,8 @@ class Network:
                                 op.bundle.model = op.bundle.model_def()
                                 op.bundle.model.loss_name = op.bundle.loss_name
                                 op.bundle.model.optimizer = op.bundle.optimizer
-                                assert op.bundle.name not in self.model, "duplicated model name: {}".format(op.bundle.name)
-                                self.model[op.bundle.name] = op.bundle.model
+                                assert op.bundle.model_name not in self.model, "duplicated model name: {}".format(op.bundle.model_name)
+                                self.model[op.bundle.model_name] = op.bundle.model
                                 if op.bundle.loss_name not in self.all_losses:
                                     self.all_losses.append(op.bundle.loss_name)
                         if op.bundle.model not in epoch_model:
@@ -86,6 +87,7 @@ class Network:
         for model in model_list:
             if model.loss_name not in loss_list:
                 loss_list.append(model.loss_name)
+        self.loss_list = loss_list
         return ops, model_list, loss_list
 
     def run_step(self, batch, ops, model_list, loss_list, state, warm_up=False):

@@ -19,7 +19,7 @@ import fastestimator as fe
 from fastestimator.architecture import LeNet
 from fastestimator.estimator.trace import Accuracy
 from fastestimator.network.loss import SparseCategoricalCrossentropy
-from fastestimator.network.model import Bundle, ModelOp
+from fastestimator.network.model import FEModel, ModelOp
 from fastestimator.pipeline.processing import Minmax
 
 
@@ -36,10 +36,9 @@ def get_estimator():
     }
     pipeline = fe.Pipeline(batch_per_device=32, data=data, ops=Minmax(inputs="x", outputs="x"))
     # step 2. prepare model
-    bundle = Bundle(model_def=LeNet, loss_name="loss", optimizer="adam", name="lenet")
+    bundle = FEModel(model_def=LeNet, model_name="lenet", optimizer="adam")
     network = fe.Network(ops=[
-        ModelOp(inputs="x", bundle=bundle, outputs="y_pred"),
-        SparseCategoricalCrossentropy(inputs=("y", "y_pred"), outputs="loss")
+        ModelOp(inputs="x", bundle=bundle, outputs="y_pred"), SparseCategoricalCrossentropy(inputs=("y", "y_pred"))
     ])
     # step 3.prepare estimator
     estimator = fe.Estimator(network=network,
