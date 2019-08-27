@@ -17,8 +17,8 @@ from unittest import TestCase
 
 from tensorflow.python.client import device_lib
 
-from .util import get_gpu_count, remove_blacklist_keys, strip_suffix, prettify_metric_name, parse_string_to_python, \
-    parse_cli_to_dictionary
+from .util import (get_num_devices, parse_cli_to_dictionary, parse_string_to_python, prettify_metric_name,
+                   remove_blacklist_keys, strip_suffix)
 
 
 class TestUtil(TestCase):
@@ -41,11 +41,14 @@ class TestUtil(TestCase):
     # ---------------------------------------------- GPU Count ----------------------------------------------- #
     # -------------------------------------------------------------------------------------------------------- #
 
-    def test_get_num_GPU(self):
-        local_device_protos = device_lib.list_local_devices()
-        num_gpu = len([x.name for x in local_device_protos if x.device_type == 'GPU'])
-
-        assert num_gpu == get_gpu_count()
+    def test_get_num_devices(self):
+        try:
+            result = subprocess.run(['nvidia-smi', '-q'], stdout=subprocess.PIPE).stdout.decode('utf-8')
+            lines = [line.split() for line in result.splitlines() if line.startswith("Attached GPUs")]
+            devices = int(lines[0][-1])
+        except:
+            devices = 1
+        assert devices == get_num_devices()
 
     # -------------------------------------------------------------------------------------------------------- #
     # ------------------------------------------- KEY Blacklisting ------------------------------------------- #
