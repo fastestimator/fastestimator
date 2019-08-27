@@ -41,9 +41,9 @@ class FEModel:
                 'rmsprop': tf.optimizers.RMSprop,
                 'sgd': tf.optimizers.SGD
             }
-            self.optimizer = optimizer_fn[self.optimizer]
+            self.optimizer = optimizer_fn[self.optimizer]()
         else:
-            assert isinstance(self.optimizer, types.FunctionType), "must provide provide lambda function type for customized optimizer"
+            assert isinstance(self.optimizer, tf.optimizers.Optimizer), "must provide provide must provide tf.optimizer.Optimizer instance as optimizer"
 
 
 class ModelOp(TensorOp):

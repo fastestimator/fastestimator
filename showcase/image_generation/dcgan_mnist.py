@@ -101,11 +101,11 @@ def get_estimator(batch_size=256, epochs=10):
     g_femodel = FEModel(model_def=make_generator_model,
                         model_name="gen",
                         loss_name="gloss",
-                        optimizer=lambda: tf.optimizers.Adam(1e-4))
+                        optimizer=tf.optimizers.Adam(1e-4))
     d_femodel = FEModel(model_def=make_discriminator_model,
                         model_name="disc",
                         loss_name="dloss",
-                        optimizer=lambda: tf.optimizers.Adam(1e-4))
+                        optimizer=tf.optimizers.Adam(1e-4))
     network = Network(ops=[
         ModelOp(inputs=lambda: tf.random.normal([batch_size, 100]), femodel=g_femodel),
         ModelOp(femodel=d_femodel, outputs="pred_fake"),
