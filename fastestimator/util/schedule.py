@@ -18,6 +18,7 @@ from fastestimator.util.op import TensorOp
 class Scheduler:
     def __init__(self, epoch_dict):
         self.epoch_dict = epoch_dict
+        self.value = None
         self._verify_inputs()
 
     def _verify_inputs(self):
@@ -32,22 +33,8 @@ class Scheduler:
 
     def get_current_value(self, epoch):
         if epoch in self.keys:
-            value = self.epoch_dict[epoch]
-        else:
-            last_key = self._get_last_key(epoch)
-            if last_key is None:
-                value = None
-            else:
-                value = self.epoch_dict[last_key]
-        return value
-
-    def _get_last_key(self, epoch):
-        last_key = None
-        for key in self.keys:
-            if key > epoch:
-                break
-            last_key = key
-        return last_key
+            self.value = self.epoch_dict[epoch]
+        return self.value
 
     def _get_sample_content(self):
         sample_content = None
