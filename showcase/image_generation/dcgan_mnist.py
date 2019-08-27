@@ -107,9 +107,9 @@ def get_estimator(batch_size=256, epochs=10):
                         loss_name="dloss",
                         optimizer=tf.optimizers.Adam(1e-4))
     network = Network(ops=[
-        ModelOp(inputs=lambda: tf.random.normal([batch_size, 100]), femodel=g_femodel),
-        ModelOp(femodel=d_femodel, outputs="pred_fake"),
-        ModelOp(inputs="x", femodel=d_femodel, outputs="pred_true"),
+        ModelOp(inputs=lambda: tf.random.normal([batch_size, 100]), fe_model=g_femodel),
+        ModelOp(fe_model=d_femodel, outputs="pred_fake"),
+        ModelOp(inputs="x", fe_model=d_femodel, outputs="pred_true"),
         GLoss(inputs=("pred_fake"), outputs="gloss"),
         DLoss(inputs=("pred_true", "pred_fake"), outputs="dloss")
     ])

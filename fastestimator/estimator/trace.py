@@ -55,11 +55,12 @@ class Trace:
 
         Args:
             state (dict): dictionary of run time that has the following key(s):
-                * "mode":  current run time mode, can be "train", "eval" or "test"
+                * "mode": current run time mode, can be "train", "eval" or "test"
                 * "epoch": current epoch index starting from 0
                 * "train_step": current global training step starting from 0
                 * "batch_idx": current local step of the epoch starting from 0
                 * "batch_size": current global batch size
+                * "batch": a read only view of the current batch data
                 * any keys written by 'on_batch_begin' of previous traces
         """
     def on_batch_end(self, state):
@@ -67,7 +68,7 @@ class Trace:
             printed in the logs. Things written only to the batch sub-dictionary will not be logged
 
         Args:
-            state (dict): dictionary of run time that has the following key(s):
+            state (ChainMap): dictionary of run time that has the following key(s):
                 * "mode":  current run time mode, can be "train", "eval" or "test"
                 * "epoch": current epoch index starting from 0
                 * "train_step": current global training step starting from 0
@@ -81,7 +82,7 @@ class Trace:
         """Runs at the end of every epoch of the mode. Anything written into the state dictionary will be logged
 
         Args:
-            state (dict): dictionary of run time that has the following key(s):
+            state (ChainMap): dictionary of run time that has the following key(s):
                 * "mode":  current run time mode, can be "train", "eval" or "test"
                 * "epoch": current epoch index starting from 0
                 * "train_step": current global training step starting from 0
@@ -92,9 +93,9 @@ class Trace:
         """Runs once at the end training. Anything written into the state dictionary will be logged
 
         Args:
-            state (dict): dictionary of run time that has the following key(s):
+            state (ChainMap): dictionary of run time that has the following key(s):
                 * "train_step":  current global training step starting from 0
-                * "num_devices": number of devices(mainly gpu) that are being used, if cpu only, the number is 1
+                * "num_devices": number of devices (mainly gpu) that are being used. If cpu only, the number is 1
                 * "elapsed_time": time since the start of training in seconds
                 * any keys written by 'on_end' of previous traces
         """
@@ -154,6 +155,7 @@ class Logger(Trace):
         self.log_steps = log_steps
         self.elapse_times = []
         self.num_example = 0
+        self.time_start = None
 
     def on_epoch_begin(self, state):
         if state["mode"] == "train":
