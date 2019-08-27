@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import pdb
+
 import tensorflow as tf
 from tensorflow.python.framework import ops as tfops
 
@@ -55,7 +57,7 @@ class Network:
                 # create model list
                 for op in epoch_ops:
                     if isinstance(op, ModelOp):
-                        if not hasattr(op.fe_model, "model"):
+                        if op.fe_model.model is None:
                             with distribute_strategy.scope() if distribute_strategy else NonContext():
                                 op.fe_model.model = op.fe_model.model_def()
                                 op.fe_model.model.optimizer = op.fe_model.optimizer
