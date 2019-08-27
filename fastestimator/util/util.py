@@ -297,9 +297,7 @@ class NonContext(object):
         pass
 
 
-def get_gpu_info():
+def get_num_devices():
     local_device_protos = device_lib.list_local_devices()
     gpu_list = [x.name for x in local_device_protos if x.device_type == 'GPU']
-    num_gpu = len(gpu_list)
-    device_map = dict(zip(range(num_gpu), gpu_list))
-    return device_map, num_gpu
+    return max(1, len(gpu_list))

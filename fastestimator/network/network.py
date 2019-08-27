@@ -58,8 +58,8 @@ class Network:
                         if not hasattr(op.bundle, "model"):
                             with distribute_strategy.scope() if distribute_strategy else NonContext():
                                 op.bundle.model = op.bundle.model_def()
+                                op.bundle.model.optimizer = op.bundle.optimizer()
                                 op.bundle.model.loss_name = op.bundle.loss_name
-                                op.bundle.model.optimizer = op.bundle.optimizer
                                 assert op.bundle.model_name not in self.model, "duplicated model name: {}".format(op.bundle.model_name)
                                 self.model[op.bundle.model_name] = op.bundle.model
                                 if op.bundle.loss_name not in self.all_losses:

@@ -19,7 +19,7 @@ import numpy as np
 import tensorflow as tf
 
 from fastestimator.estimator.trace import Logger, MonitorLoss, Trace
-from fastestimator.util.util import NonContext, get_gpu_info
+from fastestimator.util.util import NonContext, get_num_devices
 
 
 class Estimator:
@@ -30,7 +30,6 @@ class Estimator:
                  steps_per_epoch=None,
                  validation_steps=None,
                  traces=None,
-                 devices=None,
                  log_steps=100):
         self.pipeline = pipeline
         self.network = network
@@ -38,30 +37,12 @@ class Estimator:
         self.steps_per_epoch = steps_per_epoch
         self.validation_steps = validation_steps
         self.traces = traces
-        self.devices = devices
         self.log_steps = log_steps
-        self.configure_device()
-        self.distribute_strategy = None
-
-    def configure_device(self):
-        device_map, num_gpu = get_gpu_info()
-        if self.devices is None:
-            if num_gpu > 1:
-                self.distribute_strategy = tf.distribute.MirroredStrategy()
-        elif isinstance(self.devices, (list, int)):
-            if isinstance(self.devices, int):
-                self.devices = list(range(self.devices))
-            else:
-                assert len(self.devices) > 1, "please provide more than one gpu when using device list"
-            assert len(self.devices) <= num_gpu, "requested {} devices but only {} available".format(len(self.devices), num_gpu)
-            if len(self.devices) > 1:
-                device_list = []
-                for device_idx in self.devices:
-                    assert device_idx in device_map, "cannot find key {} in the device map {}".format(device_idx, device_map)
-                    device_list.append(device_map[device_idx])
-                self.distribute_strategy = tf.distribute.MirroredStrategy(devices=device_list)
+        self.num_devices = get_num_devices()
+        if self.num_devices > 1:
+            self.distribute_strategy = tf.distribute.MirroredStrategy()
         else:
-            raise ValueError("unrecognized device input: {}".format(self.devices))
+            self.distribute_strategy = None
 
     def fit(self, inputs=None):
         """

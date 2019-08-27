@@ -148,20 +148,28 @@ class Logger(Trace):
         """
         super().__init__()
         self.log_steps = log_steps
+        self.elapse_times = []
+        self.num_example = 0
 
-    def on_batch_begin(self, state):
-        if state["mode"] == "train" and state["train_step"] % self.log_steps == 0:
+    def on_epoch_begin(self, state):
+        if state["mode"] == "train":
             self.time_start = time.perf_counter()
 
     def on_batch_end(self, state):
-        if state["mode"] == "train" and state["train_step"] % self.log_steps == 0:
-            if state["train_step"] == 0:
-                state["example_per_sec"] = 0.0
-            else:
-                state["example_per_sec"] = round(state["batch_size"] / (time.perf_counter() - self.time_start), 2)
-            self._print_message("FastEstimator-Train: step: {}; ".format(state["train_step"]), state.maps[0])
+        if state["mode"] == "train":
+            self.num_example += state["batch_size"]
+            if state["train_step"] % self.log_steps == 0:
+                if state["train_step"] > 0:
+                    self.elapse_times.append(time.perf_counter() - self.time_start)
+                    state["example_per_sec"] = round(self.num_example / np.sum(self.elapse_times), 2)
+                self._print_message("FastEstimator-Train: step: {}; ".format(state["train_step"]), state.maps[0])
+                self.elapse_times = []
+                self.num_example = 0
+                self.time_start = time.perf_counter()
 
     def on_epoch_end(self, state):
+        if state["mode"] == "train":
+            self.elapse_times.append(time.perf_counter() - self.time_start)
         if state["mode"] == "eval":
             self._print_message("FastEstimator-Eval: step: {}; ".format(state["train_step"]), state.maps[0])
 
