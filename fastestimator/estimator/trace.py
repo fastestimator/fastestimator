@@ -37,6 +37,7 @@ class Trace:
 
         Args:
             state (dict): dictionary of run time that has the following key(s):
+                * "num_devices": number of devices(mainly gpu) that are being used, if cpu only, the number is 1
                 * any keys written by 'on_begin' of previous traces
         """
     def on_epoch_begin(self, state):
@@ -92,6 +93,9 @@ class Trace:
 
         Args:
             state (dict): dictionary of run time that has the following key(s):
+                * "train_step":  current global training step starting from 0
+                * "num_devices": number of devices(mainly gpu) that are being used, if cpu only, the number is 1
+                * "elapsed_time": time since the start of training in seconds
                 * any keys written by 'on_end' of previous traces
         """
 
