@@ -34,7 +34,7 @@ def get_estimator():
             "x": np.expand_dims(x_eval, -1), "y": y_eval
         }
     }
-    pipeline = fe.Pipeline(batch_per_device=32, data=data, ops=Minmax(inputs="x", outputs="x"))
+    pipeline = fe.Pipeline(batch_size=32, data=data, ops=Minmax(inputs="x", outputs="x"))
     # step 2. prepare model
     bundle = FEModel(model_def=LeNet, model_name="lenet", optimizer="adam")
     network = fe.Network(ops=[

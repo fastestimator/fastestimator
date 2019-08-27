@@ -96,7 +96,7 @@ def get_estimator(batch_size=256, epochs=10):
     # prepare data
     (x_train, _), (x_eval, _) = tf.keras.datasets.mnist.load_data()
     data = {"train": {"x": np.expand_dims(x_train, -1)}, "eval": {"x": np.expand_dims(x_eval, -1)}}
-    pipeline = Pipeline(batch_per_device=batch_size, data=data, ops=Myrescale(inputs="x", outputs="x"))
+    pipeline = Pipeline(batch_size=batch_size, data=data, ops=Myrescale(inputs="x", outputs="x"))
     # prepare model
     g_bundle = FEModel(model_def=make_generator_model,
                        model_name="gen",

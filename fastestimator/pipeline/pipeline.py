@@ -30,7 +30,7 @@ from fastestimator.util.util import convert_tf_dtype
 
 class Pipeline:
     def __init__(self,
-                 batch_per_device,
+                 batch_size,
                  data=None,
                  ops=None,
                  read_feature=None,
@@ -38,7 +38,7 @@ class Pipeline:
                  expand_dims=False,
                  max_shuffle_buffer_mb=3000):
 
-        self.batch_per_device = batch_per_device
+        self.batch_size = batch_size
         self.data = data
         self.ops = ops
         self.read_feature = read_feature
@@ -280,8 +280,8 @@ class Pipeline:
 
     def _get_signature_epoch(self, mode):
         signature_epoch = [0]
-        if isinstance(self.batch_per_device, Scheduler):
-            signature_epoch.extend(self.batch_per_device.keys)
+        if isinstance(self.batch_size, Scheduler):
+            signature_epoch.extend(self.batch_size.keys)
         mode_ops = get_op_from_mode(self.ops, mode)
         for op in mode_ops:
             if isinstance(op, Scheduler):
@@ -313,7 +313,7 @@ class Pipeline:
         return combined_dict
 
     def get_global_batch_size(self, epoch):
-        batch_per_device = self.batch_per_device
+        batch_per_device = self.batch_size
         if isinstance(batch_per_device, Scheduler):
             batch_per_device = batch_per_device.get_current_value(epoch)
         global_batch_size = batch_per_device * self.global_batch_multiplier
