@@ -25,7 +25,7 @@ from fastestimator.network.network import Network
 from fastestimator.pipeline.pipeline import Pipeline
 from fastestimator.util.op import TensorOp
 
-latent_dim = 50
+LATENT_DIM = 50
 
 def inference_net():
     infer_model = tf.keras.Sequential()
@@ -33,18 +33,20 @@ def inference_net():
     infer_model.add(tf.keras.layers.Conv2D(filters=32, kernel_size=3, strides=(2, 2), activation='relu'))
     infer_model.add(tf.keras.layers.Conv2D(filters=64, kernel_size=3, strides=(2, 2), activation='relu'))
     infer_model.add(tf.keras.layers.Flatten())
-    infer_model.add(tf.keras.layers.Dense(latent_dim + latent_dim))
+    infer_model.add(tf.keras.layers.Dense(LATENT_DIM + LATENT_DIM))
     return infer_model
 
 
 def generative_net():
     generative_model = tf.keras.Sequential()
-    generative_model.add(tf.keras.layers.InputLayer(input_shape=(latent_dim,)))
+    generative_model.add(tf.keras.layers.InputLayer(input_shape=(LATENT_DIM,)))
     generative_model.add(tf.keras.layers.Dense(units=7*7*32, activation=tf.nn.relu))
     generative_model.add(tf.keras.layers.Reshape(target_shape=(7, 7, 32)))
-    generative_model.add(tf.keras.layers.Conv2DTranspose( filters=64, kernel_size=3, strides=(2, 2), padding="SAME", activation='relu'))
-    generative_model.add(tf.keras.layers.Conv2DTranspose( filters=32, kernel_size=3, strides=(2, 2), padding="SAME", activation='relu'))
-    generative_model.add(tf.keras.layers.Conv2DTranspose( filters=1, kernel_size=3, strides=(1, 1), padding="SAME"))
+    generative_model.add(tf.keras.layers.Conv2DTranspose(filters=64, kernel_size=3, strides=(2, 2), padding="SAME",
+                                                         activation='relu'))
+    generative_model.add(tf.keras.layers.Conv2DTranspose(filters=32, kernel_size=3, strides=(2, 2), padding="SAME",
+                                                         activation='relu'))
+    generative_model.add(tf.keras.layers.Conv2DTranspose(filters=1, kernel_size=3, strides=(1, 1), padding="SAME"))
     return generative_model
 
 
@@ -97,10 +99,11 @@ class CVAELoss(Loss):
 def get_estimator(batch_size=100, epochs=100):
     # prepare data
     (x_train, _), (x_eval, _) = tf.keras.datasets.mnist.load_data()
-    x_train = x_train.reshape( x_train.shape[0], 28, 28, 1).astype('float32')
-    x_eval = x_eval.reshape( x_eval.shape[0], 28, 28, 1).astype('float32')
+    x_train = x_train.reshape(x_train.shape[0], 28, 28, 1).astype('float32')
+    x_eval = x_eval.reshape(x_eval.shape[0], 28, 28, 1).astype('float32')
     data = {"train": {"x": x_train}, "eval": {"x": x_eval}}
-    pipeline = Pipeline(batch_size=batch_size, data=data, ops=[Myrescale(inputs="x", outputs="x"), Mybinarize(inputs="x", outputs="x")])
+    pipeline = Pipeline(batch_size=batch_size, data=data,
+                        ops=[Myrescale(inputs="x", outputs="x"), Mybinarize(inputs="x", outputs="x")])
     # prepare model
     infer_model = build(keras_model=inference_net(), loss=Loss(inputs="loss"), optimizer=tf.optimizers.Adam(1e-4))
     gen_model = build(keras_model=generative_net(), loss=Loss(inputs="loss"), optimizer=tf.optimizers.Adam(1e-4))
