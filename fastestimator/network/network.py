@@ -55,17 +55,17 @@ class Network:
                 # create model list
                 for op in epoch_ops:
                     if isinstance(op, ModelOp):
-                        if not hasattr(op.bundle, "model"):
+                        if not hasattr(op.femodel, "model"):
                             with distribute_strategy.scope() if distribute_strategy else NonContext():
-                                op.bundle.model = op.bundle.model_def()
-                                op.bundle.model.optimizer = op.bundle.optimizer()
-                                op.bundle.model.loss_name = op.bundle.loss_name
-                                assert op.bundle.model_name not in self.model, "duplicated model name: {}".format(op.bundle.model_name)
-                                self.model[op.bundle.model_name] = op.bundle.model
-                                if op.bundle.loss_name not in self.all_losses:
-                                    self.all_losses.append(op.bundle.loss_name)
-                        if op.bundle.model not in epoch_model:
-                            epoch_model.append(op.bundle.model)
+                                op.femodel.model = op.femodel.model_def()
+                                op.femodel.model.optimizer = op.femodel.optimizer()
+                                op.femodel.model.loss_name = op.femodel.loss_name
+                                assert op.femodel.model_name not in self.model, "duplicated model name: {}".format(op.femodel.model_name)
+                                self.model[op.femodel.model_name] = op.femodel.model
+                                if op.femodel.loss_name not in self.all_losses:
+                                    self.all_losses.append(op.femodel.loss_name)
+                        if op.femodel.model not in epoch_model:
+                            epoch_model.append(op.femodel.model)
                 assert epoch_model, "Network has no model for epoch {}".format(epoch)
                 epoch_ops_map[epoch] = epoch_ops
                 epoch_model_map[epoch] = epoch_model

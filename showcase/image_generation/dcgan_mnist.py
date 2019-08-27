@@ -98,18 +98,18 @@ def get_estimator(batch_size=256, epochs=10):
     data = {"train": {"x": np.expand_dims(x_train, -1)}, "eval": {"x": np.expand_dims(x_eval, -1)}}
     pipeline = Pipeline(batch_size=batch_size, data=data, ops=Myrescale(inputs="x", outputs="x"))
     # prepare model
-    g_bundle = FEModel(model_def=make_generator_model,
-                       model_name="gen",
-                       loss_name="gloss",
-                       optimizer=lambda: tf.optimizers.Adam(1e-4))
-    d_bundle = FEModel(model_def=make_discriminator_model,
-                       model_name="disc",
-                       loss_name="dloss",
-                       optimizer=lambda: tf.optimizers.Adam(1e-4))
+    g_femodel = FEModel(model_def=make_generator_model,
+                        model_name="gen",
+                        loss_name="gloss",
+                        optimizer=lambda: tf.optimizers.Adam(1e-4))
+    d_femodel = FEModel(model_def=make_discriminator_model,
+                        model_name="disc",
+                        loss_name="dloss",
+                        optimizer=lambda: tf.optimizers.Adam(1e-4))
     network = Network(ops=[
-        ModelOp(inputs=lambda: tf.random.normal([batch_size, 100]), bundle=g_bundle),
-        ModelOp(bundle=d_bundle, outputs="pred_fake"),
-        ModelOp(inputs="x", bundle=d_bundle, outputs="pred_true"),
+        ModelOp(inputs=lambda: tf.random.normal([batch_size, 100]), femodel=g_femodel),
+        ModelOp(femodel=d_femodel, outputs="pred_fake"),
+        ModelOp(inputs="x", femodel=d_femodel, outputs="pred_true"),
         GLoss(inputs=("pred_fake"), outputs="gloss"),
         DLoss(inputs=("pred_true", "pred_fake"), outputs="dloss")
     ])

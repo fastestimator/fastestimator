@@ -47,10 +47,10 @@ class FEModel:
 
 
 class ModelOp(TensorOp):
-    def __init__(self, bundle, inputs=None, outputs=None, mode=None, track_input=False):
+    def __init__(self, femodel, inputs=None, outputs=None, mode=None, track_input=False):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        assert isinstance(bundle, FEModel), "must provide Bundle in as input"
-        self.bundle = bundle
+        assert isinstance(femodel, FEModel), "must provide femodel in as input"
+        self.femodel = femodel
         self.track_input = track_input
 
     def forward(self, data, state):
@@ -58,5 +58,5 @@ class ModelOp(TensorOp):
         if self.track_input and training:
             tape = state['tape']
             tape.watch(data)
-        data = self.bundle.model(data, training=training)
+        data = self.femodel.model(data, training=training)
         return data

@@ -36,9 +36,9 @@ def get_estimator():
     }
     pipeline = fe.Pipeline(batch_size=32, data=data, ops=Minmax(inputs="x", outputs="x"))
     # step 2. prepare model
-    bundle = FEModel(model_def=LeNet, model_name="lenet", optimizer="adam")
+    femodel = FEModel(model_def=LeNet, model_name="lenet", optimizer="adam")
     network = fe.Network(ops=[
-        ModelOp(inputs="x", bundle=bundle, outputs="y_pred"), SparseCategoricalCrossentropy(inputs=("y", "y_pred"))
+        ModelOp(inputs="x", femodel=femodel, outputs="y_pred"), SparseCategoricalCrossentropy(inputs=("y", "y_pred"))
     ])
     # step 3.prepare estimator
     estimator = fe.Estimator(network=network,
