@@ -103,7 +103,7 @@ class Estimator:
         train_step = 0
         self._run_traces_on_begin({"num_devices": self.num_devices})
         for epoch in range(self.epochs):
-            ds_iter = self.pipeline.dataset_schedule["train"].get_current_value(epoch)
+            ds_iter = self.pipeline.dataset_schedule["train"].get_sequential_value(epoch)
             global_batch_size = self.pipeline.get_global_batch_size(epoch)
             if self.steps_per_epoch:
                 max_steps = self.steps_per_epoch
@@ -148,7 +148,7 @@ class Estimator:
 
     def val(self, epoch, global_batch_size, train_step):
         ops, model_list, loss_list = self.network.load_epoch(epoch, "eval")
-        ds_iter = self.pipeline.dataset_schedule["eval"].get_current_value(epoch)
+        ds_iter = self.pipeline.dataset_schedule["eval"].get_sequential_value(epoch)
         if self.validation_steps:
             max_steps = self.validation_steps
         else:

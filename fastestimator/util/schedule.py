@@ -18,6 +18,7 @@ from fastestimator.util.op import TensorOp
 class Scheduler:
     def __init__(self, epoch_dict):
         self.epoch_dict = epoch_dict
+        self.value = None
         self._verify_inputs()
 
     def _verify_inputs(self):
@@ -29,6 +30,11 @@ class Scheduler:
             assert key >= 0, "found negative key: {}".format(key)
             if isinstance(sample_content, TensorOp) and self.epoch_dict[key]:
                 assert self.mode == self.epoch_dict[key].mode, "schedule contents must have same mode"
+
+    def get_sequential_value(self, epoch):
+        if epoch in self.keys:
+            self.value = self.epoch_dict[epoch]
+        return self.value
 
     def get_current_value(self, epoch):
         if epoch in self.keys:
