@@ -544,8 +544,8 @@ class ReduceLROnPlateau(Trace):
                  min_delta=0.0001,
                  cooldown=0,
                  min_lr=0,
-                 verbose=0):
-        super().__init__(mode="train")
+                 verbose=False):
+        super().__init__(mode="eval")
         self.model_name = model_name
         self.monitor_name = monitor_name
         self.monitor_mode = monitor_mode
@@ -555,11 +555,11 @@ class ReduceLROnPlateau(Trace):
             print("Unknown mode. Setting the mode to auto")
             self.monitor_mode = "auto"
 
-        if self.monitor_mode == "min" or (monitor_mode == "auto" and "acc" in lower(monitor_name)):
+        if self.monitor_mode == "min" or (monitor_mode == "auto" and "acc" not in monitor_name.lower()):
             self.monitor_op = lambda a, b: np.less(a, b - min_delta)
             self.default_val = np.Inf
         else:
-            self.monitor_op = lambda a, b: np.gretaer(a, b + min_delta)
+            self.monitor_op = lambda a, b: np.greater(a, b + min_delta)
             self.default_val = -np.Inf
 
         self.patience = patience
@@ -576,7 +576,7 @@ class ReduceLROnPlateau(Trace):
 
     def on_epoch_end(self, state):
         try:
-            current_value = state[self.monitor_name]
+            current_value = state.maps[0][self.monitor_name]
             if self.in_cooldown():
                 self.cooldown_counter -= 1
                 self.wait = 0
@@ -593,7 +593,8 @@ class ReduceLROnPlateau(Trace):
                         curr_lr = max(curr_lr, self.min_lr)
                         K.set_value(self.network.model[self.model_name].optimizer.lr, curr_lr)
                         if self.verbose:
-                            print("\nEpoch{05d}: ReduceLROnPlateau reducing learning rate to %s".format(state["epoch"], curr_lr))
+                            print("\nEpoch %d: ReduceLROnPlateau reducing learning rate to %f." % (
+                                state.maps[1]["epoch"], curr_lr))
                         self.cooldown_counter = self.cooldown
                         self.wait = 0
         except KeyError:
@@ -606,6 +607,7 @@ class ReduceLROnPlateau(Trace):
 
     def in_cooldown(self):
         return self.cooldown_counter > 0
+
 
 class TerminateOnNaN(Trace):
     """
