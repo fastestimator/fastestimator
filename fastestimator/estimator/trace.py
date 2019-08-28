@@ -17,7 +17,10 @@ import time
 
 import numpy as np
 from tensorflow.keras import backend as K
+import tensorflow as tf
 from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score
+
+from fastestimator.util.util import as_iterable
 
 
 class Trace:
@@ -32,6 +35,7 @@ class Trace:
         """
         self.network = None
         self.mode = mode
+        # TODO - Add self.inputs and self.outputs to allow for a rudimentary automatic re-ordering of traces
 
     def on_begin(self, state):
         """Runs once at the beginning of training
@@ -602,3 +606,44 @@ class ReduceLROnPlateau(Trace):
 
     def in_cooldown(self):
         return self.cooldown_counter > 0
+
+class TerminateOnNaN(Trace):
+    """
+    End Training if a NaN value is detected. By default (inputs=None) it will monitor all loss values at the end of each
+     batch. If one or more inputs are specified, it will only monitor those values. Inputs may be loss keys and/or the 
+     keys corresponding to the outputs of other traces (ex. accuracy) but then the other traces must be given before 
+     TerminateOnNaN in the trace list
+    """
+    def __init__(self, inputs=None):
+        super().__init__()
+        self.all_loss_keys = {}
+        self.monitored_keys = inputs if inputs is None else {x for x in as_iterable(inputs)}
+        self.monitored_loss_keys = {}
+        self.monitored_state_keys = {}
+
+    def on_epoch_begin(self, state):
+        self.all_loss_keys = {x for x in self.network.loss_list}
+        if self.monitored_keys is None:
+            self.monitored_loss_keys = self.all_loss_keys
+        else:
+            self.monitored_loss_keys = self.monitored_keys & self.all_loss_keys
+            self.monitored_state_keys = self.monitored_keys - self.monitored_loss_keys
+
+    def on_batch_end(self, state):
+        for key in self.monitored_loss_keys:
+            loss = state["batch"][key]
+            if tf.reduce_any(tf.math.is_nan(loss)):
+                self.network.stop_training = True
+                print("FastEstimator-TerminateOnNaN: NaN Detected in Loss: {}".format(key))
+        for key in self.monitored_state_keys:
+            val = state.get(key, None)
+            if val is not None and tf.reduce_any(tf.math.is_nan(val)):
+                self.network.stop_training = True
+                print("FastEstimator-TerminateOnNaN: NaN Detected in: {}".format(key))
+
+    def on_epoch_end(self, state):
+        for key in self.monitored_state_keys:
+            val = state.get(key, None)
+            if val is not None and tf.reduce_any(tf.math.is_nan(val)):
+                self.network.stop_training = True
+                print("FastEstimator-TerminateOnNaN: NaN Detected in: {}".format(key))
