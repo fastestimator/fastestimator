@@ -17,11 +17,10 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import layers
 
-from fastestimator.estimator.estimator import Estimator
+import fastestimator as fe
+from fastestimator.estimator.trace import ModelCheckpoint
 from fastestimator.network.loss import Loss
 from fastestimator.network.model import FEModel, ModelOp
-from fastestimator.network.network import Network
-from fastestimator.pipeline.pipeline import Pipeline
 from fastestimator.util.op import TensorOp
 
 
@@ -96,7 +95,7 @@ def get_estimator(batch_size=256, epochs=50):
     # prepare data
     (x_train, _), (_, _) = tf.keras.datasets.mnist.load_data()
     data = {"train": {"x": np.expand_dims(x_train, -1)}}
-    pipeline = Pipeline(batch_size=batch_size, data=data, ops=Myrescale(inputs="x", outputs="x"))
+    pipeline = fe.Pipeline(batch_size=batch_size, data=data, ops=Myrescale(inputs="x", outputs="x"))
     # prepare model
     g_femodel = FEModel(model_def=make_generator_model,
                         model_name="gen",
@@ -106,7 +105,7 @@ def get_estimator(batch_size=256, epochs=50):
                         model_name="disc",
                         loss_name="dloss",
                         optimizer=tf.optimizers.Adam(1e-4))
-    network = Network(ops=[
+    network = fe.Network(ops=[
         ModelOp(inputs=lambda: tf.random.normal([batch_size, 100]), model=g_femodel),
         ModelOp(model=d_femodel, outputs="pred_fake"),
         ModelOp(inputs="x", model=d_femodel, outputs="pred_true"),
@@ -114,5 +113,6 @@ def get_estimator(batch_size=256, epochs=50):
         DLoss(inputs=("pred_true", "pred_fake"), outputs="dloss")
     ])
     # prepare estimator
-    estimator = Estimator(network=network, pipeline=pipeline, epochs=epochs)
+    traces = [ModelCheckpoint('./dcgan_models', mode='train', model_names='gen', save_freq=25)]
+    estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces)
     return estimator
