@@ -20,12 +20,12 @@ import tensorflow as tf
 
 from fastestimator.estimator.estimator import Estimator
 from fastestimator.network.loss import Loss
-from fastestimator.network.model import ModelOp, build
+from fastestimator.network.model import FEModel, ModelOp
 from fastestimator.network.network import Network
 from fastestimator.pipeline.pipeline import Pipeline
 from fastestimator.util.op import TensorOp
 
-latent_dim = 50
+LATENT_DIM = 50
 
 
 def inference_net():
@@ -34,13 +34,13 @@ def inference_net():
     infer_model.add(tf.keras.layers.Conv2D(filters=32, kernel_size=3, strides=(2, 2), activation='relu'))
     infer_model.add(tf.keras.layers.Conv2D(filters=64, kernel_size=3, strides=(2, 2), activation='relu'))
     infer_model.add(tf.keras.layers.Flatten())
-    infer_model.add(tf.keras.layers.Dense(latent_dim + latent_dim))
+    infer_model.add(tf.keras.layers.Dense(LATENT_DIM + LATENT_DIM))
     return infer_model
 
 
 def generative_net():
     generative_model = tf.keras.Sequential()
-    generative_model.add(tf.keras.layers.InputLayer(input_shape=(latent_dim, )))
+    generative_model.add(tf.keras.layers.InputLayer(input_shape=(LATENT_DIM, )))
     generative_model.add(tf.keras.layers.Dense(units=7 * 7 * 32, activation=tf.nn.relu))
     generative_model.add(tf.keras.layers.Reshape(target_shape=(7, 7, 32)))
     generative_model.add(
@@ -94,7 +94,7 @@ class CVAELoss(Loss):
         logpx_z = -tf.reduce_sum(cross_ent, axis=[1, 2, 3])
         logpz = _log_normal_pdf(z, 0., 0.)
         logqz_x = _log_normal_pdf(z, mean, logvar)
-        return -tf.reduce_mean(logpx_z + logpz - logqz_x)
+        return -(logpx_z + logpz - logqz_x)
 
 
 def get_estimator(batch_size=100, epochs=100):
@@ -107,13 +107,20 @@ def get_estimator(batch_size=100, epochs=100):
                         data=data,
                         ops=[Myrescale(inputs="x", outputs="x"), Mybinarize(inputs="x", outputs="x")])
     # prepare model
-    infer_model = build(keras_model=inference_net(), loss=Loss(inputs="loss"), optimizer=tf.optimizers.Adam(1e-4))
-    gen_model = build(keras_model=generative_net(), loss=Loss(inputs="loss"), optimizer=tf.optimizers.Adam(1e-4))
+    infer_model = FEModel(model_def=inference_net,
+                          model_name="infer",
+                          loss_name="loss",
+                          optimizer=tf.optimizers.Adam(1e-4))
+    gen_model = FEModel(model_def=generative_net,
+                        model_name="generative",
+                        loss_name="loss",
+                        optimizer=tf.optimizers.Adam(1e-4))
+
     network = Network(ops=[
-        ModelOp(inputs="x", model=infer_model, outputs="meanlogvar", mode=None),
+        ModelOp(inputs="x", fe_model=infer_model, outputs="meanlogvar", mode=None),
         SplitOp(inputs="meanlogvar", outputs=("mean", "logvar"), mode=None),
         ReparameterizepOp(inputs=("mean", "logvar"), outputs="z", mode=None),
-        ModelOp(inputs="z", model=gen_model, outputs="x_logit"),
+        ModelOp(inputs="z", fe_model=gen_model, outputs="x_logit"),
         CVAELoss(inputs=("x", "mean", "logvar", "z", "x_logit"), outputs="loss", mode=None)
     ])
     # prepare estimator
