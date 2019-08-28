@@ -16,6 +16,7 @@
 import time
 
 import numpy as np
+from tensorflow.keras import backend as K
 import tensorflow as tf
 from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score
 
@@ -531,6 +532,75 @@ class Dice(Trace):
 
     def on_epoch_end(self, state):
         state[self.output_name] = np.mean(self.dice)
+
+
+class ReduceLROnPlateau(Trace):
+    def __init__(self,
+                 model_name,
+                 monitor_name="loss",
+                 reduce_mode="on_increase",
+                 patience=10,
+                 factor=0.1,
+                 min_delta=0.0001,
+                 cooldown=0,
+                 min_lr=0,
+                 verbose=False):
+        super().__init__(mode="eval")
+        self.model_name = model_name
+        self.monitor_name = monitor_name
+        self.reduce_mode = reduce_mode
+
+        assert reduce_mode in ["on_increase", "on_decrease"], "reduce_mode should be either on_increase|on_decrease"
+
+        if self.reduce_mode == "on_increase":
+            self.monitor_op = lambda a, b: np.less(a, b - min_delta)
+            self.default_val = np.Inf
+        else:
+            self.monitor_op = lambda a, b: np.greater(a, b + min_delta)
+            self.default_val = -np.Inf
+
+        self.patience = patience
+        self.factor = factor
+        self.min_delta = min_delta
+        self.cooldown = cooldown
+        self.min_lr = min_lr
+        self.verbose = verbose
+
+        self.cooldown_counter = 0
+
+    def on_begin(self, state):
+        self.reset()
+
+    def on_epoch_end(self, state):
+        current_value = state[self.monitor_name]
+        if self.in_cooldown():
+            self.cooldown_counter -= 1
+            self.wait = 0
+
+        if self.monitor_op(current_value, self.best):
+            self.best = current_value
+            self.wait = 0
+        elif not self.in_cooldown():
+            self.wait += 1
+            if self.wait >= self.patience:
+                curr_lr = float(K.get_value(self.network.model[self.model_name].optimizer.lr))
+                if curr_lr > self.min_lr:
+                    curr_lr *= self.factor
+                    curr_lr = max(curr_lr, self.min_lr)
+                    K.set_value(self.network.model[self.model_name].optimizer.lr, curr_lr)
+                    if self.verbose:
+                        print("FastEstimator-ReduceLROnPlateau: Epoch %d reducing learning rate to %f." % (
+                            state["epoch"], curr_lr))
+                    self.cooldown_counter = self.cooldown
+                    self.wait = 0
+
+    def reset(self):
+        self.cooldown_counter = 0
+        self.wait = 0
+        self.best = self.default_val
+
+    def in_cooldown(self):
+        return self.cooldown_counter > 0
 
 
 class TerminateOnNaN(Trace):
