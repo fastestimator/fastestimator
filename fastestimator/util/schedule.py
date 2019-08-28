@@ -31,10 +31,29 @@ class Scheduler:
             if isinstance(sample_content, TensorOp) and self.epoch_dict[key]:
                 assert self.mode == self.epoch_dict[key].mode, "schedule contents must have same mode"
 
-    def get_current_value(self, epoch):
+    def get_sequential_value(self, epoch):
         if epoch in self.keys:
             self.value = self.epoch_dict[epoch]
         return self.value
+
+    def get_current_value(self, epoch):
+        if epoch in self.keys:
+            value = self.epoch_dict[epoch]
+        else:
+            last_key = self._get_last_key(epoch)
+            if last_key is None:
+                value = None
+            else:
+                value = self.epoch_dict[last_key]
+        return value
+
+    def _get_last_key(self, epoch):
+        last_key = None
+        for key in self.keys:
+            if key > epoch:
+                break
+            last_key = key
+        return last_key
 
     def _get_sample_content(self):
         sample_content = None
