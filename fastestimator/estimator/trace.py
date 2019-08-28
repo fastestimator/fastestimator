@@ -552,7 +552,7 @@ class ReduceLROnPlateau(Trace):
 
         assert reduce_mode in ["on_increase", "on_decrease"], "reduce_mode should be either on_increase|on_decrease"
 
-        if self.reduce_mode == "on_decrease":
+        if self.reduce_mode == "on_increase":
             self.monitor_op = lambda a, b: np.less(a, b - min_delta)
             self.default_val = np.Inf
         else:
