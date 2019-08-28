@@ -38,6 +38,7 @@ class Estimator:
         self.validation_steps = validation_steps
         self.traces = traces
         self.log_steps = log_steps
+        self.inputs = None
         self.num_devices = get_num_devices()
         if self.num_devices > 1:
             self.distribute_strategy = tf.distribute.MirroredStrategy()
@@ -184,16 +185,19 @@ class Estimator:
     def _run_traces_on_begin(self, state):
         for trace in self.traces:
             trace.on_begin(state)
+        self._check_early_exit()
 
     def _run_traces_on_epoch_begin(self, state):
         for trace in self.traces:
             if trace.mode is None or state['mode'] in trace.mode:
                 trace.on_epoch_begin(state)
+        self._check_early_exit()
 
     def _run_traces_on_batch_begin(self, state):
         for trace in self.traces:
             if trace.mode is None or state['mode'] in trace.mode:
                 trace.on_batch_begin(state)
+        self._check_early_exit()
 
     def _run_traces_on_batch_end(self, state):
         trace_outputs = {}
@@ -201,6 +205,7 @@ class Estimator:
         for trace in self.traces:
             if trace.mode is None or state['mode'] in trace.mode:
                 trace.on_batch_end(trace_state)
+        self._check_early_exit()
 
     def _run_traces_on_epoch_end(self, state):
         trace_outputs = {}
@@ -208,12 +213,18 @@ class Estimator:
         for trace in self.traces:
             if trace.mode is None or state['mode'] in trace.mode:
                 trace.on_epoch_end(trace_state)
+        self._check_early_exit()
 
     def _run_traces_on_end(self, state):
         trace_outputs = {}
         trace_state = ChainMap(trace_outputs, state)
         for trace in self.traces:
             trace.on_end(trace_state)
+        self._check_early_exit()
+
+    def _check_early_exit(self):
+        if self.network.stop_training:
+            exit(0)
 
     @tf.function
     def forward_step(self, batch, ops, model_list, loss_list, state):

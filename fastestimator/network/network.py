@@ -33,6 +33,7 @@ class Network:
         self.model = {}
         self.all_losses = []
         self.loss_list = []
+        self.stop_training = False
 
     def prepare(self, mode_list, distribute_strategy):
         for mode in mode_list:
