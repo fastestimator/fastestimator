@@ -538,7 +538,7 @@ class ReduceLROnPlateau(Trace):
     def __init__(self,
                  model_name,
                  monitor_name="loss",
-                 monitor_mode="auto",
+                 reduce_mode="on_increase",
                  patience=10,
                  factor=0.1,
                  min_delta=0.0001,
@@ -548,14 +548,11 @@ class ReduceLROnPlateau(Trace):
         super().__init__(mode="eval")
         self.model_name = model_name
         self.monitor_name = monitor_name
-        self.monitor_mode = monitor_mode
+        self.reduce_mode = reduce_mode
 
-        if monitor_mode not in ["auto", "min", "max"]:
-            # unknown mode set to auto
-            print("Unknown mode. Setting the mode to auto")
-            self.monitor_mode = "auto"
+        assert reduce_mode in ["on_increase", "on_decrease"], "reduce_mode should be either on_increase|on_decrease"
 
-        if self.monitor_mode == "min" or (monitor_mode == "auto" and "acc" not in monitor_name.lower()):
+        if self.reduce_mode == "on_decrease":
             self.monitor_op = lambda a, b: np.less(a, b - min_delta)
             self.default_val = np.Inf
         else:
@@ -575,30 +572,27 @@ class ReduceLROnPlateau(Trace):
         self.reset()
 
     def on_epoch_end(self, state):
-        try:
-            current_value = state.maps[0][self.monitor_name]
-            if self.in_cooldown():
-                self.cooldown_counter -= 1
-                self.wait = 0
+        current_value = state[self.monitor_name]
+        if self.in_cooldown():
+            self.cooldown_counter -= 1
+            self.wait = 0
 
-            if self.monitor_op(current_value, self.best):
-                self.best = current_value
-                self.wait = 0
-            elif not self.in_cooldown():
-                self.wait += 1
-                if self.wait >= self.patience:
-                    curr_lr = float(K.get_value(self.network.model[self.model_name].optimizer.lr))
-                    if curr_lr > self.min_lr:
-                        curr_lr *= self.factor
-                        curr_lr = max(curr_lr, self.min_lr)
-                        K.set_value(self.network.model[self.model_name].optimizer.lr, curr_lr)
-                        if self.verbose:
-                            print("\nEpoch %d: ReduceLROnPlateau reducing learning rate to %f." % (
-                                state.maps[1]["epoch"], curr_lr))
-                        self.cooldown_counter = self.cooldown
-                        self.wait = 0
-        except KeyError:
-            print("Unable to monitor %s".format(self.monitor_name))
+        if self.monitor_op(current_value, self.best):
+            self.best = current_value
+            self.wait = 0
+        elif not self.in_cooldown():
+            self.wait += 1
+            if self.wait >= self.patience:
+                curr_lr = float(K.get_value(self.network.model[self.model_name].optimizer.lr))
+                if curr_lr > self.min_lr:
+                    curr_lr *= self.factor
+                    curr_lr = max(curr_lr, self.min_lr)
+                    K.set_value(self.network.model[self.model_name].optimizer.lr, curr_lr)
+                    if self.verbose:
+                        print("FastEstimator-ReduceLROnPlateau: Epoch %d reducing learning rate to %f." % (
+                            state["epoch"], curr_lr))
+                    self.cooldown_counter = self.cooldown
+                    self.wait = 0
 
     def reset(self):
         self.cooldown_counter = 0
