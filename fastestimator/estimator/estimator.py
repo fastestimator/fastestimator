@@ -14,7 +14,7 @@
 # ==============================================================================
 import time
 import types
-from collections import ChainMap
+from collections import ChainMap, deque
 
 import tensorflow as tf
 
@@ -78,11 +78,60 @@ class Estimator:
         for trace in self.traces:
             assert isinstance(trace, Trace)
             trace.network = self.network
+        self._sort_traces()
 
     def _add_traces(self):
         self.traces.insert(0, MonitorLoss())
         if not any(map(lambda x: isinstance(x, Logger), self.traces)):
             self.traces.append(Logger(log_steps=self.log_steps))
+
+    def _sort_traces(self):
+        sorted_traces = []
+        available_outputs = {
+            "num_devices", "mode", "epoch", "train_step", "batch_idx", "batch_size", "batch", "elapsed_time"
+        } | {loss
+             for loss in self.network.all_losses}
+        end_traces = deque()
+
+        intermediate_traces = deque()
+        intermediate_outputs = set()
+
+        trace_deque = deque(self.traces)
+        while len(trace_deque) > 0:
+            trace = trace_deque.popleft()
+            if not trace.inputs:
+                sorted_traces.append(trace)
+                available_outputs |= trace.outputs
+            elif "*" in trace.inputs:
+                if trace.outputs:
+                    end_traces.appendleft(trace)
+                else:
+                    end_traces.append(trace)
+            elif trace.inputs <= available_outputs:
+                sorted_traces.append(trace)
+                available_outputs |= trace.outputs
+            else:
+                intermediate_traces.append(trace)
+                intermediate_outputs |= trace.outputs
+
+        already_seen = set()
+        while len(intermediate_traces) > 0:
+            trace = intermediate_traces.popleft()
+            already_seen.add(trace)
+            if trace.inputs <= available_outputs:
+                sorted_traces.append(trace)
+                available_outputs |= trace.outputs
+                already_seen.clear()
+            elif trace.inputs <= (available_outputs | intermediate_outputs):
+                intermediate_traces.append(trace)
+            else:
+                raise AssertionError("Trace {} has unsatisfiable inputs: {}".format(
+                    type(trace).__name__, ", ".join(trace.inputs - (available_outputs | intermediate_outputs))))
+            if 0 < len(already_seen) == len(intermediate_traces):
+                raise AssertionError("Dependency cycle detected amongst traces: {}".format(", ".join(
+                    [type(tr).__name__ for tr in already_seen])))
+        sorted_traces.extend(list(end_traces))
+        self.traces = sorted_traces
 
     def _warmup(self):
         mode_list = self.pipeline.mode_list
