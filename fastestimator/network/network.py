@@ -63,7 +63,7 @@ class Network:
                                 op.fe_model.model.loss_name = op.fe_model.loss_name
                                 assert op.fe_model.model_name not in self.model, \
                                     "duplicated model name: {}".format(op.fe_model.model_name)
-                                self.model[op.fe_model.model_name] = op.fe_model
+                                self.model[op.fe_model.model_name] = op.fe_model.model
                                 if op.fe_model.loss_name not in self.all_losses:
                                     self.all_losses.append(op.fe_model.loss_name)
                         if op.fe_model.model not in epoch_model:
