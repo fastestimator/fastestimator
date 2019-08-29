@@ -22,21 +22,17 @@ from fastestimator.util.util import parse_cli_to_dictionary
 
 def train(args, unknown):
     entry_point = args['entry_point']
-    inputs_path = args['inputs']
-
     hyperparameters = {}
     if args['hyperparameters_json']:
         hyperparameters = os.path.abspath(args['hyperparameters_json'])
         hyperparameters = json.load(open(hyperparameters, 'r'))
-
     hyperparameters.update(parse_cli_to_dictionary(unknown))
-
     module_name = os.path.splitext(os.path.basename(entry_point))[0]
     dir_name = os.path.abspath(os.path.dirname(entry_point))
     sys.path.insert(0, dir_name)
     spec_module = __import__(module_name, globals(), locals(), ["get_estimator"])
     estimator = spec_module.get_estimator(**hyperparameters)
-    estimator.fit(inputs=inputs_path)
+    estimator.fit()
 
 
 def configure_train_parser(subparsers):
@@ -46,7 +42,6 @@ def configure_train_parser(subparsers):
                                    allow_abbrev=False)
     # use an argument group for required flag arguments since otherwise they will show up as optional in the help
     parser.add_argument('entry_point', type=str, help='The path to the model python file')
-    parser.add_argument('--inputs', type=str, help='The path where tfrecord is saved or will be saved')
     parser.add_argument('--hyperparameters',
                         dest='hyperparameters_json',
                         type=str,
