@@ -213,13 +213,13 @@ class Accuracy(Trace):
         true_key (str): Name of the key that corresponds to ground truth in batch dictionary
         pred_key (str): Name of the key that corresponds to predicted score in batch dictionary
     """
-    def __init__(self, true_key, pred_key, mode="eval", name="accuracy"):
-        super().__init__(outputs=name, mode=mode)
+    def __init__(self, true_key, pred_key, mode="eval", output_name="accuracy"):
+        super().__init__(outputs=output_name, mode=mode)
         self.true_key = true_key
         self.pred_key = pred_key
         self.total = 0
         self.correct = 0
-        self.name = name
+        self.name = output_name
 
     def on_epoch_begin(self, state):
         self.total = 0
