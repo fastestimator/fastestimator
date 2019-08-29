@@ -652,8 +652,8 @@ class TerminateOnNaN(Trace):
                 self.network.stop_training = True
                 print("FastEstimator-TerminateOnNaN: NaN Detected in: {}".format(key))
 
-    @staticmethod
     def _is_floating(val):
-        return isinstance(val, float) or (
-            hasattr(val, "dtype")
-            and val.dtype in {tf.float16, tf.float32, tf.float64, tf.bfloat16, np.float, np.float32, np.float64})
+        return isinstance(val, float) or (isinstance(val, tf.Tensor)
+                                          and val.dtype.is_floating) or (isinstance(val, np.ndarray)
+                                                                         and np.issubdtype(val.dtype, np.floating))
+
