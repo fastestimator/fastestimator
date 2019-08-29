@@ -15,7 +15,6 @@
 import json
 import re
 import string
-import subprocess
 import sys
 import time
 from ast import literal_eval
@@ -304,4 +303,5 @@ def get_num_devices():
 
 
 def as_iterable(elem):
-    return elem if isinstance(elem, list) else list(elem) if isinstance(elem, tuple) else [elem]
+    return elem if isinstance(
+        elem, list) else list(elem) if isinstance(elem, tuple) else list(elem) if isinstance(elem, set) else [elem]
