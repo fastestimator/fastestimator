@@ -16,7 +16,7 @@
 import time
 
 import numpy as np
-from tensorflow.keras import backend as K
+from tensorflow.python.keras import backend as keras
 import tensorflow as tf
 from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score
 
@@ -550,7 +550,7 @@ class ReduceLROnPlateau(Trace):
                  cooldown=0,
                  min_lr=0,
                  verbose=False):
-        super().__init__(mode="eval")
+        super().__init__(inputs=monitor_name, mode="eval")
         self.model_name = model_name
         self.monitor_name = monitor_name
         self.reduce_mode = reduce_mode
@@ -572,39 +572,33 @@ class ReduceLROnPlateau(Trace):
         self.verbose = verbose
 
         self.cooldown_counter = 0
-
-    def on_begin(self, state):
-        self.reset()
+        self.wait = 0
+        self.best = self.default_val
 
     def on_epoch_end(self, state):
         current_value = state[self.monitor_name]
-        if self.in_cooldown():
+        if self._in_cooldown():
             self.cooldown_counter -= 1
             self.wait = 0
 
         if self.monitor_op(current_value, self.best):
             self.best = current_value
             self.wait = 0
-        elif not self.in_cooldown():
+        elif not self._in_cooldown():
             self.wait += 1
             if self.wait >= self.patience:
-                curr_lr = float(K.get_value(self.network.model[self.model_name].optimizer.lr))
+                curr_lr = float(keras.get_value(self.network.model[self.model_name].optimizer.lr))
                 if curr_lr > self.min_lr:
                     curr_lr *= self.factor
                     curr_lr = max(curr_lr, self.min_lr)
-                    K.set_value(self.network.model[self.model_name].optimizer.lr, curr_lr)
+                    keras.set_value(self.network.model[self.model_name].optimizer.lr, curr_lr)
                     if self.verbose:
-                        print("FastEstimator-ReduceLROnPlateau: Epoch %d reducing learning rate to %f." % (
-                            state["epoch"], curr_lr))
+                        print("FastEstimator-ReduceLROnPlateau: Epoch %d reducing learning rate to %f." %
+                              (state["epoch"], curr_lr))
                     self.cooldown_counter = self.cooldown
                     self.wait = 0
 
-    def reset(self):
-        self.cooldown_counter = 0
-        self.wait = 0
-        self.best = self.default_val
-
-    def in_cooldown(self):
+    def _in_cooldown(self):
         return self.cooldown_counter > 0
 
 
