@@ -44,6 +44,8 @@ class Estimator:
             self.distribute_strategy = tf.distribute.MirroredStrategy()
         else:
             self.distribute_strategy = None
+        self.train_start = 0
+        self.train_step = 0
 
     def fit(self):
         """
@@ -151,8 +153,8 @@ class Estimator:
                 self.network.run_step(batch, ops, model_list, loss_list, state, warm_up=True)
 
     def train(self):
-        train_start = time.perf_counter()
-        train_step = 0
+        self.train_start = time.perf_counter()
+        self.train_step = 0
         self._run_traces_on_begin({"num_devices": self.num_devices})
         for epoch in range(self.epochs):
             ds_iter = self.pipeline.dataset_schedule["train"].get_sequential_value(epoch)
@@ -162,13 +164,13 @@ class Estimator:
             else:
                 max_steps = min(self.pipeline.num_examples["train"]) // global_batch_size
             ops, model_list, loss_list = self.network.load_epoch(epoch, "train")
-            self._run_traces_on_epoch_begin({"mode": "train", "epoch": epoch, "train_step": train_step})
+            self._run_traces_on_epoch_begin({"mode": "train", "epoch": epoch, "train_step": self.train_step})
             for batch_idx in range(max_steps):
                 batch = next(ds_iter)
                 self._run_traces_on_batch_begin({
                     "mode": "train",
                     "epoch": epoch,
-                    "train_step": train_step,
+                    "train_step": self.train_step,
                     "batch_idx": batch_idx,
                     "batch_size": global_batch_size,
                     "batch": types.MappingProxyType(batch)  # A read-only view of the batch data
@@ -183,19 +185,19 @@ class Estimator:
                 self._run_traces_on_batch_end({
                     "mode": "train",
                     "epoch": epoch,
-                    "train_step": train_step,
+                    "train_step": self.train_step,
                     "batch_idx": batch_idx,
                     "batch_size": global_batch_size,
                     "batch": batch,
                 })
-                train_step += 1
-            self._run_traces_on_epoch_end({"mode": "train", "epoch": epoch, "train_step": train_step})
+                self.train_step += 1
+            self._run_traces_on_epoch_end({"mode": "train", "epoch": epoch, "train_step": self.train_step})
             if self.do_eval:
-                self.val(epoch, global_batch_size, train_step)
+                self.val(epoch, global_batch_size, self.train_step)
         self._run_traces_on_end({
-            "train_step": train_step,
+            "train_step": self.train_step,
             "num_devices": self.num_devices,
-            "elapsed_time": time.perf_counter() - train_start
+            "elapsed_time": time.perf_counter() - self.train_start
         })
 
     def val(self, epoch, global_batch_size, train_step):
@@ -271,10 +273,14 @@ class Estimator:
         trace_state = ChainMap(trace_outputs, state)
         for trace in self.traces:
             trace.on_end(trace_state)
-        self._check_early_exit()
 
     def _check_early_exit(self):
         if self.network.stop_training:
+            self._run_traces_on_end({
+                "train_step": self.train_step,
+                "num_devices": self.num_devices,
+                "elapsed_time": time.perf_counter() - self.train_start
+            })
             exit(0)
 
     @tf.function
