@@ -86,6 +86,8 @@ class Estimator:
             self.traces.append(Logger(log_steps=self.log_steps))
 
     def _sort_traces(self):
+        # This is essentially a topological sort, but it doesn't seem worthwhile to convert the data into a graph
+        # representation in order to get the slightly better asymptotic runtime complexity
         sorted_traces = []
         available_outputs = {
             "num_devices", "mode", "epoch", "train_step", "batch_idx", "batch_size", "batch", "elapsed_time"
