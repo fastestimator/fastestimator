@@ -16,7 +16,6 @@ import json
 import multiprocessing as mp
 import os
 import time
-import pdb
 
 import numpy as np
 import tensorflow as tf
