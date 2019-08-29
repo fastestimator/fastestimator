@@ -40,8 +40,7 @@ class Estimator:
         self.log_steps = log_steps
         self.num_devices = get_num_devices()
         if self.num_devices > 1:
-            # self.distribute_strategy = tf.distribute.MirroredStrategy()
-            self.distribute_strategy = None
+            self.distribute_strategy = tf.distribute.MirroredStrategy()
         else:
             self.distribute_strategy = None
 
@@ -218,5 +217,23 @@ class Estimator:
 
     @tf.function
     def forward_step(self, batch, ops, model_list, losses_epoch, state):
-        prediction = self.network.run_step(batch, ops, model_list, losses_epoch, state)
-        return prediction
+        if self.distribute_strategy:
+            prediction = self.distribute_strategy.experimental_run_v2(
+                self.network.run_step, args=(
+                    batch,
+                    ops,
+                    model_list,
+                    losses_epoch,
+                    state, ))
+            prediction = self._per_replica_to_global(prediction)
+            batch = self._per_replica_to_global(batch)
+        else:
+            prediction = self.network.run_step(batch, ops, model_list, losses_epoch, state)
+        return prediction, batch
+
+    @staticmethod
+    def _per_replica_to_global(data):
+        new_data = {}
+        for key, value in data.items():
+            new_data[key] = tf.concat(value.values, axis=0)
+        return new_data

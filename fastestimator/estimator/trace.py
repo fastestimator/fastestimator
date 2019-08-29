@@ -144,8 +144,9 @@ class MonitorLoss(Trace):
     def on_end(self, state):
         state['total_time'] = "{} sec".format(round(state["elapsed_time"], 2))
 
+    @staticmethod
     @tf.function
-    def _reduce_loss(self, element_wise_loss, global_batch_size):
+    def _reduce_loss(element_wise_loss, global_batch_size):
         return tf.reduce_sum(element_wise_loss) / global_batch_size
 
 
