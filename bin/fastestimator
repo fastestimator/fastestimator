@@ -18,7 +18,6 @@ import argparse
 from fastestimator.cli.predict import configure_predict_parser
 from fastestimator.cli.train import configure_train_parser
 from fastestimator.cli.visualize import configure_visualization_parser
-from fastestimator.util.cli_util import draw
 
 
 def run():
@@ -31,7 +30,6 @@ def run():
     configure_predict_parser(subparsers)
     configure_visualization_parser(subparsers)
     args, unknown = parser.parse_known_args()
-    draw()
     args.func(vars(args), unknown)
 
 

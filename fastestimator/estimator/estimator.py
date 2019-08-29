@@ -20,6 +20,7 @@ import tensorflow as tf
 
 from fastestimator.estimator.trace import Logger, MonitorLoss, Trace
 from fastestimator.util.util import get_num_devices
+from fastestimator.util.cli_util import draw
 
 
 class Estimator:
@@ -44,7 +45,7 @@ class Estimator:
         else:
             self.distribute_strategy = None
 
-    def fit(self, inputs=None):
+    def fit(self):
         """
         Function to perform training on the estimator
 
@@ -54,7 +55,7 @@ class Estimator:
         Returns:
             None
         """
-        self.inputs = inputs
+        draw()
         self._prepare_pipeline()
         self._prepare_network()
         self._prepare_estimator()
@@ -62,7 +63,7 @@ class Estimator:
         self.train()
 
     def _prepare_pipeline(self):
-        self.pipeline.prepare(inputs=self.inputs, distribute_strategy=self.distribute_strategy)
+        self.pipeline.prepare(distribute_strategy=self.distribute_strategy)
         self.do_eval = "eval" in self.pipeline.mode_list
 
     def _prepare_network(self):
@@ -184,16 +185,19 @@ class Estimator:
     def _run_traces_on_begin(self, state):
         for trace in self.traces:
             trace.on_begin(state)
+        self._check_early_exit()
 
     def _run_traces_on_epoch_begin(self, state):
         for trace in self.traces:
             if trace.mode is None or state['mode'] in trace.mode:
                 trace.on_epoch_begin(state)
+        self._check_early_exit()
 
     def _run_traces_on_batch_begin(self, state):
         for trace in self.traces:
             if trace.mode is None or state['mode'] in trace.mode:
                 trace.on_batch_begin(state)
+        self._check_early_exit()
 
     def _run_traces_on_batch_end(self, state):
         trace_outputs = {}
@@ -201,6 +205,7 @@ class Estimator:
         for trace in self.traces:
             if trace.mode is None or state['mode'] in trace.mode:
                 trace.on_batch_end(trace_state)
+        self._check_early_exit()
 
     def _run_traces_on_epoch_end(self, state):
         trace_outputs = {}
@@ -208,12 +213,18 @@ class Estimator:
         for trace in self.traces:
             if trace.mode is None or state['mode'] in trace.mode:
                 trace.on_epoch_end(trace_state)
+        self._check_early_exit()
 
     def _run_traces_on_end(self, state):
         trace_outputs = {}
         trace_state = ChainMap(trace_outputs, state)
         for trace in self.traces:
             trace.on_end(trace_state)
+        self._check_early_exit()
+
+    def _check_early_exit(self):
+        if self.network.stop_training:
+            exit(0)
 
     @tf.function
     def forward_step(self, batch, ops, model_list, losses_epoch, state):
