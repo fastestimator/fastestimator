@@ -19,9 +19,9 @@ import time
 import numpy as np
 import tensorflow as tf
 from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score
-from tensorflow.python.keras import backend as keras
+from tensorflow.python.keras import backend
 
-from fastestimator.util.util import as_iterable, is_number
+from fastestimator.util.util import is_number
 
 
 class Trace:
@@ -40,8 +40,8 @@ class Trace:
         """
         self.network = None
         self.mode = mode
-        self.inputs = set() if inputs is None else {x for x in as_iterable(inputs)}
-        self.outputs = set() if outputs is None else {x for x in as_iterable(outputs)}
+        self.inputs = set() if inputs is None else {x for x in list(inputs)}
+        self.outputs = set() if outputs is None else {x for x in list(outputs)}
 
     def on_begin(self, state):
         """Runs once at the beginning of training
@@ -588,11 +588,11 @@ class ReduceLROnPlateau(Trace):
         elif not self._in_cooldown():
             self.wait += 1
             if self.wait >= self.patience:
-                curr_lr = float(keras.get_value(self.network.model[self.model_name].optimizer.lr))
+                curr_lr = float(backend.get_value(self.network.model[self.model_name].optimizer.lr))
                 if curr_lr > self.min_lr:
                     curr_lr *= self.factor
                     curr_lr = max(curr_lr, self.min_lr)
-                    keras.set_value(self.network.model[self.model_name].optimizer.lr, curr_lr)
+                    backend.set_value(self.network.model[self.model_name].optimizer.lr, curr_lr)
                     if self.verbose:
                         print("FastEstimator-ReduceLROnPlateau: Epoch %d reducing learning rate to %f." %
                               (state["epoch"], curr_lr))
@@ -617,7 +617,7 @@ class TerminateOnNaN(Trace):
                                          - None (default) will monitor all loss values.
                                          - "*" will monitor all state keys and losses.
         """
-        self.monitored_keys = monitor_names if monitor_names is None else {x for x in as_iterable(monitor_names)}
+        self.monitored_keys = monitor_names if monitor_names is None else {x for x in list(monitor_names)}
         super().__init__(inputs=self.monitored_keys)
         self.all_loss_keys = {}
         self.monitored_loss_keys = {}
@@ -662,7 +662,7 @@ class TerminateOnNaN(Trace):
 
 class CSVLogger(Trace):
     def __init__(self, filename, monitor_names=None, separator=", ", append=False, mode="eval"):
-        self.keys = monitor_names if monitor_names is None else as_iterable(monitor_names)
+        self.keys = monitor_names if monitor_names is None else list(monitor_names)
         super().__init__(inputs="*" if self.keys is None else monitor_names, mode=mode)
         self.separator = separator
         self.file = open(filename, 'a' if append else 'w')

@@ -50,12 +50,6 @@ class Estimator:
     def fit(self):
         """
         Function to perform training on the estimator
-
-        Args:
-            inputs: Path to input data
-
-        Returns:
-            None
         """
         draw()
         self._prepare_pipeline()
@@ -93,8 +87,7 @@ class Estimator:
         sorted_traces = []
         available_outputs = {
             "num_devices", "mode", "epoch", "train_step", "batch_idx", "batch_size", "batch", "elapsed_time"
-        } | {loss
-             for loss in self.network.all_losses}
+        } | set(self.network.all_losses)
         end_traces = deque()
 
         intermediate_traces = deque()
