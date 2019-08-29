@@ -16,6 +16,7 @@
 import time
 
 import numpy as np
+import tensorflow as tf
 from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score
 
 
@@ -106,24 +107,25 @@ class MonitorLoss(Trace):
         super().__init__()
         self.epochs_since_best = 0
         self.best_loss = None
-        self.loss_list = []
+        self.losses_epoch = []
         self.eval_results = None
 
     def on_epoch_begin(self, state):
-        self.loss_list = self.network.loss_list
+        self.losses_epoch = self.network.losses_epoch
         if state["mode"] == "eval":
             self.eval_results = None
 
     def on_batch_end(self, state):
         if state["mode"] == "train":
-            for key in self.loss_list:
-                state[key] = state["batch"][key]
+            for key in self.losses_epoch:
+                state[key] = self._reduce_loss(state["batch"][key], state["batch_size"])
         elif state["mode"] == "eval":
             if self.eval_results is None:
-                self.eval_results = dict((key, [state["batch"][key]]) for key in self.loss_list)
+                self.eval_results = dict(
+                    (key, [self._reduce_loss(state["batch"][key], state["batch_size"])]) for key in self.losses_epoch)
             else:
                 for key in self.eval_results.keys():
-                    self.eval_results[key].append(state["batch"][key])
+                    self.eval_results[key].append(self._reduce_loss(state["batch"][key], state["batch_size"]))
 
     def on_epoch_end(self, state):
         if state["mode"] == "eval":
@@ -141,6 +143,10 @@ class MonitorLoss(Trace):
 
     def on_end(self, state):
         state['total_time'] = "{} sec".format(round(state["elapsed_time"], 2))
+
+    @tf.function
+    def _reduce_loss(self, element_wise_loss, global_batch_size):
+        return tf.reduce_sum(element_wise_loss) / global_batch_size
 
 
 class Logger(Trace):
