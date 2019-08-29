@@ -27,6 +27,7 @@ from fastestimator.util.op import get_op_from_mode, verify_ops, write_outputs_by
 class RecordWriter:
     def __init__(self,
                  train_data,
+                 save_dir,
                  validation_data=None,
                  ops=None,
                  write_feature=None,
@@ -34,6 +35,7 @@ class RecordWriter:
                  max_record_size_mb=300,
                  compression=None):
         self.train_data = train_data
+        self.save_dir = save_dir
         self.validation_data = validation_data
         self.ops = ops
         self.write_feature = write_feature
@@ -101,8 +103,8 @@ class RecordWriter:
     def _float_feature(value):
         return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
 
-    def create_tfrecord(self, save_dir):
-        self._prepare_savepath(save_dir)
+    def write(self):
+        self._prepare_savepath(self.save_dir)
         for train_data, validation_data, write_feature, ops in zip(self.train_data, self.validation_data,
                                                                    self.write_feature, self.ops):
             self._create_record_local(train_data, validation_data, write_feature, ops)

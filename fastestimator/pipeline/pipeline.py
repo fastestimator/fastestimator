@@ -16,6 +16,7 @@ import json
 import multiprocessing as mp
 import os
 import time
+import pdb
 
 import numpy as np
 import tensorflow as tf
@@ -31,8 +32,8 @@ from fastestimator.util.util import convert_tf_dtype
 
 class Pipeline:
     def __init__(self,
+                 data,
                  batch_size,
-                 data=None,
                  ops=None,
                  read_feature=None,
                  padded_batch=False,
@@ -49,16 +50,14 @@ class Pipeline:
         self.possible_mode = ["train", "eval"]
         self.global_batch_multiplier = 1
         self.num_core = mp.cpu_count()
-        self.inputs = None
         self._verify_input()
         self._reset()
 
     def _verify_input(self):
-        if self.data:
-            assert isinstance(self.data, (dict, RecordWriter)), "data must be either RecordWriter, dictionary"
+        assert isinstance(self.data, (dict, RecordWriter, str)), "data must be either RecordWriter, dictionary or record path"
         if self.read_feature:
             assert isinstance(self.read_feature,
-                              (list, tuple, dict)), "write_feature must be either list, tuple or dictionary"
+                                (list, tuple, dict)), "read_feature must be either list, tuple or dictionary"
             if not isinstance(self.read_feature, tuple):
                 self.read_feature = [self.read_feature]
         if self.ops:
@@ -84,17 +83,20 @@ class Pipeline:
         self.file_names = {"train": [], "eval": []}
         self.global_batch_multiplier = 1
 
-    def prepare(self, inputs, distribute_strategy=None):
-        self.inputs = inputs
+    def prepare(self, distribute_strategy=None):
         if isinstance(self.data, dict):
             self._get_numpy_config()
-        else:
-            assert inputs, "Must specify the data path of tfrecords"
-            if isinstance(self.data, RecordWriter) and (not os.path.exists(inputs) or not os.listdir(inputs)):
-                self.data.create_tfrecord(save_dir=inputs)
+        elif isinstance(self.data, (RecordWriter, str)):
+            if isinstance(self.data, RecordWriter):
+                data_path = self.data.save_dir
+                if not os.path.exists(data_path) or not os.listdir(data_path):
+                    self.data.write()
             else:
-                print("FastEstimator: Reading non-empty directory: {}".format(inputs))
-            self._get_tfrecord_config()
+                data_path = self.data
+            print("FastEstimator: Reading non-empty directory: {}".format(data_path))
+            self._get_tfrecord_config(data_path)
+        else:
+            raise ValueError("data must be one of the following: dictionary, RecordWriter or record path")
         for mode in self.mode_list:
             self._get_feature_name(mode)
             self._extract_dataset(mode)
@@ -123,24 +125,24 @@ class Pipeline:
         self.num_examples[mode].append(set(num_examples_list).pop())
         self.shuffle_buffer[mode].append(set(num_examples_list).pop())
 
-    def _get_tfrecord_config(self):
+    def _get_tfrecord_config(self, data_path):
         found_data = False
         for mode in self.possible_mode:
             self.summary_file[mode] = [
-                os.path.join(self.inputs, f) for f in os.listdir(self.inputs)
+                os.path.join(data_path, f) for f in os.listdir(data_path)
                 if f.endswith(".json") and f.startswith("%s_summary" % mode)
             ]
             if len(self.summary_file[mode]) > 0:
                 self.mode_list.append(mode)
-                self._get_tfrecord_config_mode(mode)
+                self._get_tfrecord_config_mode(data_path, mode)
                 found_data = True
-        assert found_data, "could not find data summary file in {}".format(self.inputs)
+        assert found_data, "could not find data summary file in {}".format(data_path)
 
-    def _get_tfrecord_config_mode(self, mode):
+    def _get_tfrecord_config_mode(self, data_path, mode):
         for json_file in self.summary_file[mode]:
             with open(json_file, 'r') as fp:
                 summary = json.load(fp)
-            file_names = [os.path.join(self.inputs, f) for f in summary["file_names"]]
+            file_names = [os.path.join(data_path, f) for f in summary["file_names"]]
             self.file_names[mode].append(file_names)
             num_examples = np.sum(summary["num_examples"])
             example_size_mb = summary["example_size_mb"]

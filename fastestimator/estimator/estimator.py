@@ -20,6 +20,7 @@ import tensorflow as tf
 
 from fastestimator.estimator.trace import Logger, MonitorLoss, Trace
 from fastestimator.util.util import get_num_devices
+from fastestimator.util.cli_util import draw
 
 
 class Estimator:
@@ -38,14 +39,13 @@ class Estimator:
         self.validation_steps = validation_steps
         self.traces = traces
         self.log_steps = log_steps
-        self.inputs = None
         self.num_devices = get_num_devices()
         if self.num_devices > 1:
             self.distribute_strategy = tf.distribute.MirroredStrategy()
         else:
             self.distribute_strategy = None
 
-    def fit(self, inputs=None):
+    def fit(self):
         """
         Function to perform training on the estimator
 
@@ -55,7 +55,7 @@ class Estimator:
         Returns:
             None
         """
-        self.inputs = inputs
+        draw()
         self._prepare_pipeline()
         self._prepare_network()
         self._prepare_estimator()
@@ -63,7 +63,7 @@ class Estimator:
         self.train()
 
     def _prepare_pipeline(self):
-        self.pipeline.prepare(inputs=self.inputs, distribute_strategy=self.distribute_strategy)
+        self.pipeline.prepare(distribute_strategy=self.distribute_strategy)
         self.do_eval = "eval" in self.pipeline.mode_list
 
     def _prepare_network(self):
