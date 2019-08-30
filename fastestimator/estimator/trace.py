@@ -681,9 +681,7 @@ class CSVLogger(Trace):
 
     def _infer_keys(self, state):
         monitored_keys = []
-        available_items = state.items()
-        for item in available_items:
-            key, val = item
+        for key, val in state.items():
             if isinstance(val, str) or is_number(val):
                 monitored_keys.append(key)
             elif hasattr(val, "numpy") and len(val.numpy().shape) == 1:
