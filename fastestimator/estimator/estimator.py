@@ -15,7 +15,7 @@
 import pdb
 import time
 import types
-from collections import ChainMap
+from collections import ChainMap, deque
 
 import tensorflow as tf
 
@@ -45,16 +45,12 @@ class Estimator:
             self.distribute_strategy = tf.distribute.MirroredStrategy()
         else:
             self.distribute_strategy = None
+        self.train_start = 0
+        self.train_step = 0
 
     def fit(self):
         """
         Function to perform training on the estimator
-
-        Args:
-            inputs: Path to input data
-
-        Returns:
-            None
         """
         draw()
         self._prepare_pipeline()
@@ -79,11 +75,61 @@ class Estimator:
         for trace in self.traces:
             assert isinstance(trace, Trace)
             trace.network = self.network
+        self._sort_traces()
 
     def _add_traces(self):
         self.traces.insert(0, MonitorLoss())
         if not any(map(lambda x: isinstance(x, Logger), self.traces)):
             self.traces.append(Logger(log_steps=self.log_steps))
+
+    def _sort_traces(self):
+        # This is essentially a topological sort, but it doesn't seem worthwhile to convert the data into a graph
+        # representation in order to get the slightly better asymptotic runtime complexity
+        sorted_traces = []
+        available_outputs = {
+            "num_devices", "mode", "epoch", "train_step", "batch_idx", "batch_size", "batch", "elapsed_time"
+        } | set(self.network.all_losses)
+        end_traces = deque()
+
+        intermediate_traces = deque()
+        intermediate_outputs = set()
+
+        trace_deque = deque(self.traces)
+        while len(trace_deque) > 0:
+            trace = trace_deque.popleft()
+            if not trace.inputs:
+                sorted_traces.append(trace)
+                available_outputs |= trace.outputs
+            elif "*" in trace.inputs:
+                if trace.outputs:
+                    end_traces.appendleft(trace)
+                else:
+                    end_traces.append(trace)
+            elif trace.inputs <= available_outputs:
+                sorted_traces.append(trace)
+                available_outputs |= trace.outputs
+            else:
+                intermediate_traces.append(trace)
+                intermediate_outputs |= trace.outputs
+
+        already_seen = set()
+        while len(intermediate_traces) > 0:
+            trace = intermediate_traces.popleft()
+            already_seen.add(trace)
+            if trace.inputs <= available_outputs:
+                sorted_traces.append(trace)
+                available_outputs |= trace.outputs
+                already_seen.clear()
+            elif trace.inputs <= (available_outputs | intermediate_outputs):
+                intermediate_traces.append(trace)
+            else:
+                raise AssertionError("Trace {} has unsatisfiable inputs: {}".format(
+                    type(trace).__name__, ", ".join(trace.inputs - (available_outputs | intermediate_outputs))))
+            if 0 < len(already_seen) == len(intermediate_traces):
+                raise AssertionError("Dependency cycle detected amongst traces: {}".format(", ".join(
+                    [type(tr).__name__ for tr in already_seen])))
+        sorted_traces.extend(list(end_traces))
+        self.traces = sorted_traces
 
     def _warmup(self):
         mode_list = self.pipeline.mode_list
@@ -115,8 +161,8 @@ class Estimator:
                     self.network.run_step(batch, ops, model_list, losses_epoch, state, warm_up=True)
 
     def train(self):
-        train_start = time.perf_counter()
-        train_step = 0
+        self.train_start = time.perf_counter()
+        self.train_step = 0
         self._run_traces_on_begin({"num_devices": self.num_devices})
         for epoch in range(self.epochs):
             ds_iter = self.pipeline.dataset_schedule["train"].get_sequential_value(epoch)
@@ -130,13 +176,13 @@ class Estimator:
             else:
                 max_steps = min(self.pipeline.num_examples["train"]) // global_batch_size
             ops, model_list, losses_epoch = self.network.load_epoch(epoch, "train")
-            self._run_traces_on_epoch_begin({"mode": "train", "epoch": epoch, "train_step": train_step})
+            self._run_traces_on_epoch_begin({"mode": "train", "epoch": epoch, "train_step": self.train_step})
             for batch_idx in range(max_steps):
                 batch = next(ds_iter)
                 self._run_traces_on_batch_begin({
                     "mode": "train",
                     "epoch": epoch,
-                    "train_step": train_step,
+                    "train_step": self.train_step,
                     "batch_idx": batch_idx,
                     "batch_size": global_batch_size,
                     "batch": types.MappingProxyType(batch)  # A read-only view of the batch data
@@ -159,19 +205,19 @@ class Estimator:
                 self._run_traces_on_batch_end({
                     "mode": "train",
                     "epoch": epoch,
-                    "train_step": train_step,
+                    "train_step": self.train_step,
                     "batch_idx": batch_idx,
                     "batch_size": global_batch_size,
                     "batch": batch,
                 })
-                train_step += 1
-            self._run_traces_on_epoch_end({"mode": "train", "epoch": epoch, "train_step": train_step})
+                self.train_step += 1
+            self._run_traces_on_epoch_end({"mode": "train", "epoch": epoch, "train_step": self.train_step})
             if self.do_eval:
-                self.val(epoch, train_step)
+                self.val(epoch, self.train_step)
         self._run_traces_on_end({
-            "train_step": train_step,
+            "train_step": self.train_step,
             "num_devices": self.num_devices,
-            "elapsed_time": time.perf_counter() - train_start
+            "elapsed_time": time.perf_counter() - self.train_start
         })
 
     def val(self, epoch, train_step):
@@ -248,10 +294,14 @@ class Estimator:
         trace_state = ChainMap(trace_outputs, state)
         for trace in self.traces:
             trace.on_end(trace_state)
-        self._check_early_exit()
 
     def _check_early_exit(self):
         if self.network.stop_training:
+            self._run_traces_on_end({
+                "train_step": self.train_step,
+                "num_devices": self.num_devices,
+                "elapsed_time": time.perf_counter() - self.train_start
+            })
             exit(0)
 
     @tf.function

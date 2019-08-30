@@ -15,7 +15,6 @@
 import json
 import re
 import string
-import subprocess
 import sys
 import time
 from ast import literal_eval
@@ -215,7 +214,7 @@ def is_number(s):
     try:
         float(s)
         return True
-    except ValueError:
+    except (ValueError, TypeError):
         return False
 
 
@@ -301,7 +300,3 @@ def get_num_devices():
     local_device_protos = device_lib.list_local_devices()
     gpu_list = [x.name for x in local_device_protos if x.device_type == 'GPU']
     return max(1, len(gpu_list))
-
-
-def as_iterable(elem):
-    return elem if isinstance(elem, list) else list(elem) if isinstance(elem, tuple) else [elem]

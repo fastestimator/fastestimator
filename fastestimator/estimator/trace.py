@@ -13,29 +13,35 @@
 # limitations under the License.
 # ==============================================================================
 """Trace contains metrics and other information users want to track."""
+import os
 import time
 
 import numpy as np
 import tensorflow as tf
 from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score
-from tensorflow.keras import backend as K
+from tensorflow.python.keras import backend
 
-from fastestimator.util.util import as_iterable
+from fastestimator.util.util import is_number
 
 
 class Trace:
     """Trace base class.
     User can use `Trace` to customize their own operations during training, validation and testing.
-    The `Network` instance can be accessible by `self.network`.
+    The `Network` instance can be accessible by `self.network`. Trace execution order will attempt to be inferred
+    whenever possible based on the provided inputs and outputs variables.
     """
-    def __init__(self, mode=None):
+    def __init__(self, inputs=None, outputs=None, mode=None):
         """
         Args:
-            mode: Restrict the trace to run only on given modes ('train', 'eval', 'test'). None will always execute
+            inputs (str, list, set): A set of keys that this trace intends to read from the state dictionary as inputs
+            outputs (str, list, set): A set of keys that this trace intends to write into the state dictionary
+            mode (string): Restrict the trace to run only on given modes ('train', 'eval', 'test'). None will always
+                            execute
         """
         self.network = None
         self.mode = mode
-        # TODO - Add self.inputs and self.outputs to allow for a rudimentary automatic re-ordering of traces
+        self.inputs = set() if inputs is None else set(inputs)
+        self.outputs = set() if outputs is None else set(outputs)
 
     def on_begin(self, state):
         """Runs once at the beginning of training
@@ -162,7 +168,7 @@ class Logger(Trace):
         Args:
             log_steps (int, optional): Logging interval. Default value is 100.
         """
-        super().__init__()
+        super().__init__(inputs="*")
         self.log_steps = log_steps
         self.elapse_times = []
         self.num_example = 0
@@ -213,13 +219,13 @@ class Accuracy(Trace):
         true_key (str): Name of the key that corresponds to ground truth in batch dictionary
         pred_key (str): Name of the key that corresponds to predicted score in batch dictionary
     """
-    def __init__(self, true_key, pred_key, mode="eval", name="accuracy"):
-        super().__init__(mode=mode)
+    def __init__(self, true_key, pred_key, mode="eval", output_name="accuracy"):
+        super().__init__(outputs=output_name, mode=mode)
         self.true_key = true_key
         self.pred_key = pred_key
         self.total = 0
         self.correct = 0
-        self.name = name
+        self.name = output_name
 
     def on_epoch_begin(self, state):
         self.total = 0
@@ -252,7 +258,7 @@ class ConfusionMatrix(Trace):
         pred_key (str): Name of the key that corresponds to predicted score in batch dictionary
     """
     def __init__(self, true_key, pred_key, num_classes, mode="eval", output_name="confusion_matrix"):
-        super().__init__(mode=mode)
+        super().__init__(outputs=output_name, mode=mode)
         self.true_key = true_key
         self.pred_key = pred_key
         self.num_classes = num_classes
@@ -299,7 +305,7 @@ class Precision(Trace):
                  sample_weight=None,
                  mode="eval",
                  output_name="precision"):
-        super().__init__(mode=mode)
+        super().__init__(outputs=output_name, mode=mode)
         self.true_key = true_key
         self.pred_key = pred_key
         self.labels = labels
@@ -372,7 +378,7 @@ class Recall(Trace):
                  sample_weight=None,
                  mode="eval",
                  output_name="recall"):
-        super().__init__(mode=mode)
+        super().__init__(outputs=output_name, mode=mode)
         self.true_key = true_key
         self.pred_key = pred_key
         self.labels = labels
@@ -445,7 +451,7 @@ class F1Score(Trace):
                  sample_weight=None,
                  mode="eval",
                  output_name="f1score"):
-        super().__init__(mode=mode)
+        super().__init__(outputs=output_name, mode=mode)
         self.true_key = true_key
         self.pred_key = pred_key
         self.labels = labels
@@ -511,7 +517,7 @@ class Dice(Trace):
                                   Default is `None`.
     """
     def __init__(self, true_key, pred_key=None, threshold=0.5, mode="eval", output_name="dice"):
-        super().__init__(mode=mode)
+        super().__init__(outputs=output_name, mode=mode)
         self.true_key = true_key
         self.pred_key = pred_key
         self.smooth = 1e-7
@@ -551,7 +557,7 @@ class ReduceLROnPlateau(Trace):
                  cooldown=0,
                  min_lr=0,
                  verbose=False):
-        super().__init__(mode="eval")
+        super().__init__(inputs=monitor_name, mode="eval")
         self.model_name = model_name
         self.monitor_name = monitor_name
         self.reduce_mode = reduce_mode
@@ -573,39 +579,33 @@ class ReduceLROnPlateau(Trace):
         self.verbose = verbose
 
         self.cooldown_counter = 0
-
-    def on_begin(self, state):
-        self.reset()
+        self.wait = 0
+        self.best = self.default_val
 
     def on_epoch_end(self, state):
         current_value = state[self.monitor_name]
-        if self.in_cooldown():
+        if self._in_cooldown():
             self.cooldown_counter -= 1
             self.wait = 0
 
         if self.monitor_op(current_value, self.best):
             self.best = current_value
             self.wait = 0
-        elif not self.in_cooldown():
+        elif not self._in_cooldown():
             self.wait += 1
             if self.wait >= self.patience:
-                curr_lr = float(K.get_value(self.network.model[self.model_name].optimizer.lr))
+                curr_lr = float(backend.get_value(self.network.model[self.model_name].optimizer.lr))
                 if curr_lr > self.min_lr:
                     curr_lr *= self.factor
                     curr_lr = max(curr_lr, self.min_lr)
-                    K.set_value(self.network.model[self.model_name].optimizer.lr, curr_lr)
+                    backend.set_value(self.network.model[self.model_name].optimizer.lr, curr_lr)
                     if self.verbose:
                         print("FastEstimator-ReduceLROnPlateau: Epoch %d reducing learning rate to %f." %
                               (state["epoch"], curr_lr))
                     self.cooldown_counter = self.cooldown
                     self.wait = 0
 
-    def reset(self):
-        self.cooldown_counter = 0
-        self.wait = 0
-        self.best = self.default_val
-
-    def in_cooldown(self):
+    def _in_cooldown(self):
         return self.cooldown_counter > 0
 
 
@@ -616,17 +616,26 @@ class TerminateOnNaN(Trace):
      keys corresponding to the outputs of other traces (ex. accuracy) but then the other traces must be given before
      TerminateOnNaN in the trace list
     """
-    def __init__(self, inputs=None):
-        super().__init__()
+    def __init__(self, monitor_names=None):
+        """
+        Args:
+            monitor_names (str, list): What key(s) to monitor for NaN values.
+                                         - None (default) will monitor all loss values.
+                                         - "*" will monitor all state keys and losses.
+        """
+        self.monitored_keys = monitor_names if monitor_names is None else set(monitor_names)
+        super().__init__(inputs=self.monitored_keys)
         self.all_loss_keys = {}
-        self.monitored_keys = inputs if inputs is None else {x for x in as_iterable(inputs)}
         self.monitored_loss_keys = {}
         self.monitored_state_keys = {}
 
     def on_epoch_begin(self, state):
-        self.all_loss_keys = {x for x in self.network.losses_epoch}
+        self.all_loss_keys = set(self.network.losses_epoch)
         if self.monitored_keys is None:
             self.monitored_loss_keys = self.all_loss_keys
+        elif "*" in self.monitored_keys:
+            self.monitored_loss_keys = self.all_loss_keys
+            self.monitored_state_keys = {"*"}
         else:
             self.monitored_loss_keys = self.monitored_keys & self.all_loss_keys
             self.monitored_state_keys = self.monitored_keys - self.monitored_loss_keys
@@ -637,15 +646,53 @@ class TerminateOnNaN(Trace):
             if tf.reduce_any(tf.math.is_nan(loss)):
                 self.network.stop_training = True
                 print("FastEstimator-TerminateOnNaN: NaN Detected in Loss: {}".format(key))
-        for key in self.monitored_state_keys:
+        for key in state.keys() if "*" in self.monitored_state_keys else self.monitored_state_keys:
             val = state.get(key, None)
-            if val is not None and tf.reduce_any(tf.math.is_nan(val)):
+            if self._is_floating(val) and tf.reduce_any(tf.math.is_nan(val)):
                 self.network.stop_training = True
                 print("FastEstimator-TerminateOnNaN: NaN Detected in: {}".format(key))
 
     def on_epoch_end(self, state):
-        for key in self.monitored_state_keys:
+        for key in state.keys() if "*" in self.monitored_state_keys else self.monitored_state_keys:
             val = state.get(key, None)
-            if val is not None and tf.reduce_any(tf.math.is_nan(val)):
+            if self._is_floating(val) and tf.reduce_any(tf.math.is_nan(val)):
                 self.network.stop_training = True
                 print("FastEstimator-TerminateOnNaN: NaN Detected in: {}".format(key))
+
+    @staticmethod
+    def _is_floating(val):
+        return isinstance(val, float) or (isinstance(val, tf.Tensor)
+                                          and val.dtype.is_floating) or (isinstance(val, np.ndarray)
+                                                                         and np.issubdtype(val.dtype, np.floating))
+
+
+class CSVLogger(Trace):
+    def __init__(self, filename, monitor_names=None, separator=", ", append=False, mode="eval"):
+        self.keys = monitor_names if monitor_names is None else list(monitor_names)
+        super().__init__(inputs="*" if self.keys is None else monitor_names, mode=mode)
+        self.separator = separator
+        self.file = open(filename, 'a' if append else 'w')
+        self.file_empty = os.stat(filename).st_size == 0
+
+    def on_epoch_end(self, state):
+        if self.keys is None:
+            self._infer_keys(state)
+        vals = [state.get(key, "") for key in self.keys]
+        vals = [str(val.numpy()) if hasattr(val, "numpy") else str(val) for val in vals]
+        self.file.write("\n" + self.separator.join(vals))
+
+    def on_end(self, state):
+        self.file.flush()
+        self.file.close()
+
+    def _infer_keys(self, state):
+        monitored_keys = []
+        for key, val in state.items():
+            if isinstance(val, str) or is_number(val):
+                monitored_keys.append(key)
+            elif hasattr(val, "numpy") and len(val.numpy().shape) == 1:
+                monitored_keys.append(key)
+        self.keys = sorted(monitored_keys)
+        if self.file_empty:
+            self.file.write(self.separator.join(self.keys))
+            self.file_empty = False
