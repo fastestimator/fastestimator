@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from collections import ChainMap
+
 import tensorflow as tf
 from tensorflow.python.framework import ops as tfops
 
@@ -32,8 +34,9 @@ class Network:
         self.current_epoch_model = {}
         self.model = {}
         self.all_losses = []
-        self.loss_list = []
+        self.epoch_losses = []
         self.stop_training = False
+        self.num_devices = 1
 
     def prepare(self, mode_list, distribute_strategy):
         for mode in mode_list:
@@ -85,14 +88,16 @@ class Network:
     def load_epoch(self, epoch, mode):
         ops = self.op_schedule[mode].get_current_value(epoch)
         model_list = self.model_schedule[mode].get_current_value(epoch)
-        loss_list = []
+        epoch_losses = []
         for model in model_list:
-            if model.loss_name not in loss_list:
-                loss_list.append(model.loss_name)
-        self.loss_list = loss_list
-        return ops, model_list, loss_list
+            if model.loss_name not in epoch_losses:
+                epoch_losses.append(model.loss_name)
+        self.epoch_losses = epoch_losses
+        return ops, model_list, epoch_losses
 
-    def run_step(self, batch, ops, model_list, loss_list, state, warm_up=False):
+    def run_step(self, batch, ops, model_list, epoch_losses, state, warm_up=False):
+        prediction = {}
+        batch = ChainMap(prediction, batch)
         mode = state["mode"]
         global_batch_size = state["batch_size"]
         num_model = len(model_list)
@@ -100,12 +105,12 @@ class Network:
         with tf.GradientTape(persistent=True) if mode == "train" else NonContext() as tape:
             state['tape'] = tape
             self._forward(batch, state, ops)
-            self._reduce_loss(batch, global_batch_size, loss_list, warm_up)
+            reduced_loss = self._reduce_loss(batch, global_batch_size, epoch_losses, warm_up)
         # update model only for train mode
         if mode == "train":
             for idx in range(num_model):
                 model = model_list[idx]
-                loss = batch[model.loss_name]
+                loss = reduced_loss[model.loss_name]
                 optimizer = model.optimizer
                 if warm_up:
                     with tfops.init_scope():
@@ -117,6 +122,7 @@ class Network:
                     optimizer.apply_gradients(zip(gradients, model.trainable_variables))
         del state['tape']
         del tape
+        return prediction
 
     @staticmethod
     def _forward(batch, state, ops):
@@ -127,10 +133,11 @@ class Network:
             if op.outputs:
                 write_outputs_by_key(batch, data, op.outputs)
 
-    @staticmethod
-    def _reduce_loss(batch, global_batch_size, loss_list, warm_up):
-        for loss_key in loss_list:
-            loss = batch[loss_key]
+    def _reduce_loss(self, batch, global_batch_size, epoch_losses, warm_up):
+        reduced_loss = {}
+        for loss_name in epoch_losses:
+            element_wise_loss = batch[loss_name]
             if warm_up:
-                assert loss.shape.num_elements() > 1, "please make sure loss is element-wise loss"
-            batch[loss_key] = tf.reduce_sum(loss) / global_batch_size
+                assert element_wise_loss.shape[0] == global_batch_size / self.num_devices, "please make sure loss is element-wise loss"
+            reduced_loss[loss_name] = tf.reduce_sum(element_wise_loss) / global_batch_size
+        return reduced_loss

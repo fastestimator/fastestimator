@@ -71,7 +71,6 @@ class Trace:
                 * "train_step": current global training step starting from 0
                 * "batch_idx": current local step of the epoch starting from 0
                 * "batch_size": current global batch size
-                * "batch": a read only view of the current batch data
                 * any keys written by 'on_batch_begin' of previous traces
         """
     def on_batch_end(self, state):
@@ -117,24 +116,25 @@ class MonitorLoss(Trace):
         super().__init__()
         self.epochs_since_best = 0
         self.best_loss = None
-        self.loss_list = []
+        self.epoch_losses = []
         self.eval_results = None
 
     def on_epoch_begin(self, state):
-        self.loss_list = self.network.loss_list
+        self.epoch_losses = self.network.epoch_losses
         if state["mode"] == "eval":
             self.eval_results = None
 
     def on_batch_end(self, state):
         if state["mode"] == "train":
-            for key in self.loss_list:
-                state[key] = state["batch"][key]
+            for key in self.epoch_losses:
+                state[key] = self._reduce_loss(state["batch"][key], state["batch_size"])
         elif state["mode"] == "eval":
             if self.eval_results is None:
-                self.eval_results = dict((key, [state["batch"][key]]) for key in self.loss_list)
+                self.eval_results = dict(
+                    (key, [self._reduce_loss(state["batch"][key], state["batch_size"])]) for key in self.epoch_losses)
             else:
                 for key in self.eval_results.keys():
-                    self.eval_results[key].append(state["batch"][key])
+                    self.eval_results[key].append(self._reduce_loss(state["batch"][key], state["batch_size"]))
 
     def on_epoch_end(self, state):
         if state["mode"] == "eval":
@@ -152,6 +152,11 @@ class MonitorLoss(Trace):
 
     def on_end(self, state):
         state['total_time'] = "{} sec".format(round(state["elapsed_time"], 2))
+
+    @staticmethod
+    @tf.function
+    def _reduce_loss(element_wise_loss, global_batch_size):
+        return tf.reduce_sum(element_wise_loss) / global_batch_size
 
 
 class Logger(Trace):
@@ -624,7 +629,7 @@ class TerminateOnNaN(Trace):
         self.monitored_state_keys = {}
 
     def on_epoch_begin(self, state):
-        self.all_loss_keys = set(self.network.loss_list)
+        self.all_loss_keys = set(self.network.epoch_losses)
         if self.monitored_keys is None:
             self.monitored_loss_keys = self.all_loss_keys
         elif "*" in self.monitored_keys:

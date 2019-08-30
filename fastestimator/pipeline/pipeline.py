@@ -22,11 +22,14 @@ import tensorflow as tf
 
 from fastestimator.pipeline.processing import TensorFilter
 from fastestimator.record.record import RecordWriter
-from fastestimator.util.op import get_inputs_by_key, get_op_from_mode, verify_ops, write_outputs_by_key, \
-    get_inputs_by_op
+from fastestimator.util.op import (get_inputs_by_key,
+                                   get_inputs_by_op,
+                                   get_op_from_mode,
+                                   verify_ops,
+                                   write_outputs_by_key)
 from fastestimator.util.schedule import Scheduler
 from fastestimator.util.tfrecord import get_features
-from fastestimator.util.util import convert_tf_dtype
+from fastestimator.util.util import convert_tf_dtype, get_num_devices
 
 
 class Pipeline:
@@ -56,7 +59,7 @@ class Pipeline:
         assert isinstance(self.data, (dict, RecordWriter, str)), "data must be either RecordWriter, dictionary or record path"
         if self.read_feature:
             assert isinstance(self.read_feature,
-                                (list, tuple, dict)), "read_feature must be either list, tuple or dictionary"
+                              (list, tuple, dict)), "read_feature must be either list, tuple or dictionary"
             if not isinstance(self.read_feature, tuple):
                 self.read_feature = [self.read_feature]
         if self.ops:
@@ -322,21 +325,21 @@ class Pipeline:
         global_batch_size = batch_per_device * self.global_batch_multiplier
         return global_batch_size
 
-    def show_results(self, inputs=None, mode="train", num_steps=1, current_epoch=0, num_devices=1):
+    def show_results(self, mode="train", num_steps=1, current_epoch=0):
         data = []
-        self.global_batch_multiplier = num_devices
-        self.prepare(inputs=inputs)
+        self.global_batch_multiplier = get_num_devices()
+        self.prepare()
         ds_iter = self.dataset_schedule[mode].get_current_value(current_epoch)
         for _ in range(num_steps):
             data.append(next(ds_iter))
         self._reset()
         return data
 
-    def benchmark(self, inputs=None, mode="train", num_steps=1000, log_interval=100, current_epoch=0, num_devices=1):
-        self.global_batch_multiplier = num_devices
-        self.prepare(inputs=inputs)
-        ds_iter = self.dataset_schedule[mode].get_current_value(current_epoch)
+    def benchmark(self, mode="train", num_steps=1000, log_interval=100, current_epoch=0):
+        self.global_batch_multiplier = get_num_devices()
         global_batch_size = self.get_global_batch_size(current_epoch)
+        self.prepare()
+        ds_iter = self.dataset_schedule[mode].get_current_value(current_epoch)
         start = time.perf_counter()
         for idx in range(num_steps + 1):
             _ = next(ds_iter)
