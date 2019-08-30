@@ -40,8 +40,8 @@ class Trace:
         """
         self.network = None
         self.mode = mode
-        self.inputs = set() if inputs is None else {x for x in list(inputs)}
-        self.outputs = set() if outputs is None else {x for x in list(outputs)}
+        self.inputs = set() if inputs is None else set(inputs)
+        self.outputs = set() if outputs is None else set(outputs)
 
     def on_begin(self, state):
         """Runs once at the beginning of training
@@ -617,14 +617,14 @@ class TerminateOnNaN(Trace):
                                          - None (default) will monitor all loss values.
                                          - "*" will monitor all state keys and losses.
         """
-        self.monitored_keys = monitor_names if monitor_names is None else {x for x in list(monitor_names)}
+        self.monitored_keys = monitor_names if monitor_names is None else set(monitor_names)
         super().__init__(inputs=self.monitored_keys)
         self.all_loss_keys = {}
         self.monitored_loss_keys = {}
         self.monitored_state_keys = {}
 
     def on_epoch_begin(self, state):
-        self.all_loss_keys = {x for x in self.network.loss_list}
+        self.all_loss_keys = set(self.network.loss_list)
         if self.monitored_keys is None:
             self.monitored_loss_keys = self.all_loss_keys
         elif "*" in self.monitored_keys:
