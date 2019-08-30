@@ -92,10 +92,10 @@ class Myrescale(TensorOp):
         return data
 
 
-def get_estimator(batch_size=256, epochs=10):
+def get_estimator(batch_size=256, epochs=50):
     # prepare data
-    (x_train, _), (x_eval, _) = tf.keras.datasets.mnist.load_data()
-    data = {"train": {"x": np.expand_dims(x_train, -1)}, "eval": {"x": np.expand_dims(x_eval, -1)}}
+    (x_train, _), (_, _) = tf.keras.datasets.mnist.load_data()
+    data = {"train": {"x": np.expand_dims(x_train, -1)}}
     pipeline = Pipeline(batch_size=batch_size, data=data, ops=Myrescale(inputs="x", outputs="x"))
     # prepare model
     g_femodel = FEModel(model_def=make_generator_model,
