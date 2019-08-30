@@ -50,6 +50,7 @@ class Pipeline:
         self.expand_dims = expand_dims
         self.max_shuffle_buffer_mb = max_shuffle_buffer_mb
         self.possible_mode = ["train", "eval"]
+        self.global_batch_multiplier = 1
         self.num_core = mp.cpu_count()
         self._verify_input()
         self._reset()
@@ -58,7 +59,7 @@ class Pipeline:
         assert isinstance(self.data, (dict, RecordWriter, str)), "data must be either RecordWriter, dictionary or record path"
         if self.read_feature:
             assert isinstance(self.read_feature,
-                                (list, tuple, dict)), "read_feature must be either list, tuple or dictionary"
+                              (list, tuple, dict)), "read_feature must be either list, tuple or dictionary"
             if not isinstance(self.read_feature, tuple):
                 self.read_feature = [self.read_feature]
         if self.ops:
@@ -82,6 +83,7 @@ class Pipeline:
         self.record_feature_shape = {"train": [], "eval": []}
         self.compression = {"train": [], "eval": []}
         self.file_names = {"train": [], "eval": []}
+        self.global_batch_multiplier = 1
 
     def prepare(self, distribute_strategy=None):
         if isinstance(self.data, dict):
@@ -100,8 +102,6 @@ class Pipeline:
         for mode in self.mode_list:
             self._get_feature_name(mode)
             self._extract_dataset(mode)
-            if mode != "train":
-                distribute_strategy = None
             self._transform_dataset(mode, distribute_strategy)
 
     def _get_numpy_config(self):
@@ -213,10 +213,7 @@ class Pipeline:
             filter_ops_epoch = []
             forward_ops_between_filter = []
             # get batch size for the epoch
-            if distribute_strategy:
-                global_batch_size = self.get_global_batch_size(epoch, distribute_strategy.num_replicas_in_sync)
-            else:
-                global_batch_size = self.get_global_batch_size(epoch)
+            global_batch_size = self.get_global_batch_size(epoch)
             # generate ops for specific mode and epoch
             for op in mode_ops:
                 if isinstance(op, Scheduler):
@@ -321,20 +318,17 @@ class Pipeline:
                 combined_dict[key] = ds[key]
         return combined_dict
 
-    def get_global_batch_size(self, epoch, num_devices=1):
+    def get_global_batch_size(self, epoch):
         batch_per_device = self.batch_size
         if isinstance(batch_per_device, Scheduler):
             batch_per_device = batch_per_device.get_current_value(epoch)
-        global_batch_size = batch_per_device * num_devices
+        global_batch_size = batch_per_device * self.global_batch_multiplier
         return global_batch_size
 
     def show_results(self, mode="train", num_steps=1, current_epoch=0):
         data = []
-        if get_num_devices() > 1 and mode == "train":
-            distribute_strategy = tf.distribute.MirroredStrategy()
-        else:
-            distribute_strategy = None
-        self.prepare(distribute_strategy=distribute_strategy)
+        self.global_batch_multiplier = get_num_devices()
+        self.prepare()
         ds_iter = self.dataset_schedule[mode].get_current_value(current_epoch)
         for _ in range(num_steps):
             data.append(next(ds_iter))
@@ -342,13 +336,9 @@ class Pipeline:
         return data
 
     def benchmark(self, mode="train", num_steps=1000, log_interval=100, current_epoch=0):
-        if get_num_devices() > 1 and mode == "train":
-            distribute_strategy = tf.distribute.MirroredStrategy()
-            global_batch_size = self.get_global_batch_size(current_epoch, distribute_strategy.num_replicas_in_sync)
-        else:
-            distribute_strategy = None
-            global_batch_size = self.get_global_batch_size(current_epoch)
-        self.prepare(distribute_strategy=distribute_strategy)
+        self.global_batch_multiplier = get_num_devices()
+        global_batch_size = self.get_global_batch_size(current_epoch)
+        self.prepare()
         ds_iter = self.dataset_schedule[mode].get_current_value(current_epoch)
         start = time.perf_counter()
         for idx in range(num_steps + 1):

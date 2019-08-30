@@ -34,8 +34,9 @@ class Network:
         self.current_epoch_model = {}
         self.model = {}
         self.all_losses = []
-        self.losses_epoch = []
+        self.epoch_losses = []
         self.stop_training = False
+        self.num_devices = 1
 
     def prepare(self, mode_list, distribute_strategy):
         for mode in mode_list:
@@ -87,14 +88,14 @@ class Network:
     def load_epoch(self, epoch, mode):
         ops = self.op_schedule[mode].get_current_value(epoch)
         model_list = self.model_schedule[mode].get_current_value(epoch)
-        losses_epoch = []
+        epoch_losses = []
         for model in model_list:
-            if model.loss_name not in losses_epoch:
-                losses_epoch.append(model.loss_name)
-        self.losses_epoch = losses_epoch
-        return ops, model_list, losses_epoch
+            if model.loss_name not in epoch_losses:
+                epoch_losses.append(model.loss_name)
+        self.epoch_losses = epoch_losses
+        return ops, model_list, epoch_losses
 
-    def run_step(self, batch, ops, model_list, losses_epoch, state, warm_up=False):
+    def run_step(self, batch, ops, model_list, epoch_losses, state, warm_up=False):
         prediction = {}
         batch = ChainMap(prediction, batch)
         mode = state["mode"]
@@ -104,7 +105,7 @@ class Network:
         with tf.GradientTape(persistent=True) if mode == "train" else NonContext() as tape:
             state['tape'] = tape
             self._forward(batch, state, ops)
-            reduced_loss = self._reduce_loss(batch, global_batch_size, losses_epoch, warm_up)
+            reduced_loss = self._reduce_loss(batch, global_batch_size, epoch_losses, warm_up)
         # update model only for train mode
         if mode == "train":
             for idx in range(num_model):
@@ -132,12 +133,11 @@ class Network:
             if op.outputs:
                 write_outputs_by_key(batch, data, op.outputs)
 
-    @staticmethod
-    def _reduce_loss(batch, global_batch_size, losses_epoch, warm_up):
+    def _reduce_loss(self, batch, global_batch_size, epoch_losses, warm_up):
         reduced_loss = {}
-        for loss_name in losses_epoch:
+        for loss_name in epoch_losses:
             element_wise_loss = batch[loss_name]
             if warm_up:
-                assert element_wise_loss.shape.num_elements() > 1, "please make sure loss is element-wise loss"
+                assert element_wise_loss.shape[0] == global_batch_size / self.num_devices, "please make sure loss is element-wise loss"
             reduced_loss[loss_name] = tf.reduce_sum(element_wise_loss) / global_batch_size
         return reduced_loss
