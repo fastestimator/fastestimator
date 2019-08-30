@@ -624,7 +624,7 @@ class TerminateOnNaN(Trace):
         self.monitored_state_keys = {}
 
     def on_epoch_begin(self, state):
-        self.all_loss_keys = {x for x in self.network.loss_list}
+        self.all_loss_keys = {x for x in self.network.losses_epoch}
         if self.monitored_keys is None:
             self.monitored_loss_keys = self.all_loss_keys
         else:
