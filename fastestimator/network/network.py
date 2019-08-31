@@ -59,18 +59,18 @@ class Network:
                 # create model list
                 for op in epoch_ops:
                     if isinstance(op, ModelOp):
-                        if op.fe_model.model is None:
+                        if op.model.model is None:
                             with distribute_strategy.scope() if distribute_strategy else NonContext():
-                                op.fe_model.model = op.fe_model.model_def()
-                                op.fe_model.model.optimizer = op.fe_model.optimizer
-                                op.fe_model.model.loss_name = op.fe_model.loss_name
-                                assert op.fe_model.model_name not in self.model, \
-                                    "duplicated model name: {}".format(op.fe_model.model_name)
-                                self.model[op.fe_model.model_name] = op.fe_model.model
-                                if op.fe_model.loss_name not in self.all_losses:
-                                    self.all_losses.append(op.fe_model.loss_name)
-                        if op.fe_model.model not in epoch_model:
-                            epoch_model.append(op.fe_model.model)
+                                op.model.model = op.model.model_def()
+                                op.model.model.optimizer = op.model.optimizer
+                                op.model.model.loss_name = op.model.loss_name
+                                assert op.model.model_name not in self.model, \
+                                    "duplicated model name: {}".format(op.model.model_name)
+                                self.model[op.model.model_name] = op.model.model
+                                if op.model.loss_name not in self.all_losses:
+                                    self.all_losses.append(op.model.loss_name)
+                        if op.model.model not in epoch_model:
+                            epoch_model.append(op.model.model)
                 assert epoch_model, "Network has no model for epoch {}".format(epoch)
                 epoch_ops_map[epoch] = epoch_ops
                 epoch_model_map[epoch] = epoch_model
