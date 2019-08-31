@@ -19,8 +19,8 @@ from fastestimator import Network
 from fastestimator import Pipeline
 from fastestimator.architecture import LeNet
 from fastestimator.estimator.trace import Accuracy, ConfusionMatrix
-from fastestimator.network.loss import SparseCategoricalCrossentropy, Loss
-from fastestimator.network.model import build, ModelOp
+from fastestimator.network.loss import SparseCategoricalCrossentropy
+from fastestimator.network.model import FEModel, ModelOp
 from fastestimator.pipeline.processing import Minmax
 from fastestimator.pipeline.augmentation import AdversarialSample, Average
 from fastestimator.util.schedule import Scheduler
@@ -33,9 +33,9 @@ def get_estimator(epochs=2, batch_size=32, epsilon=0.01, warmup=0):
 
     pipeline = Pipeline(batch_size=batch_size, data=data, ops=Minmax(inputs="x", outputs="x"))
 
-    model = build(keras_model=LeNet(input_shape=x_train.shape[1:], classes=num_classes),
-                  loss=Loss(inputs="loss"),
-                  optimizer="adam")
+    model = FEModel(model_def=lambda: LeNet(input_shape=x_train.shape[1:], classes=num_classes),
+                    model_name="LeNet",
+                    optimizer="adam")
 
     adv_img = {warmup: AdversarialSample(inputs=("loss", "x"), outputs="x_adverse", epsilon=epsilon, mode="train")}
     adv_eval = {warmup: ModelOp(inputs="x_adverse", model=model, outputs="y_pred_adverse", mode="train")}
