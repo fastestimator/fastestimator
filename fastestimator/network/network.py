@@ -138,6 +138,7 @@ class Network:
         for loss_name in epoch_losses:
             element_wise_loss = batch[loss_name]
             if warm_up:
-                assert element_wise_loss.shape[0] == global_batch_size / self.num_devices, "please make sure loss is element-wise loss"
+                assert element_wise_loss.shape[0] == global_batch_size / self.num_devices, \
+                    "please make sure loss is element-wise loss"
             reduced_loss[loss_name] = tf.reduce_sum(element_wise_loss) / global_batch_size
         return reduced_loss

@@ -18,8 +18,8 @@ from tensorflow.python.keras.losses import SparseCategoricalCrossentropy as Kera
 from fastestimator import Estimator, Network, Pipeline
 from fastestimator.architecture import LeNet
 from fastestimator.estimator.trace import Accuracy, ConfusionMatrix
-from fastestimator.network.loss import Loss, MixUpLoss, SparseCategoricalCrossentropy
-from fastestimator.network.model import ModelOp, build
+from fastestimator.network.loss import MixUpLoss, SparseCategoricalCrossentropy
+from fastestimator.network.model import ModelOp, FEModel
 from fastestimator.pipeline.augmentation import MixUpBatch
 from fastestimator.pipeline.processing import Minmax
 from fastestimator.util.schedule import Scheduler
@@ -31,20 +31,20 @@ def get_estimator(epochs=2, batch_size=32, alpha=1.0, warmup=0):
     num_classes = 10
     pipeline = Pipeline(batch_size=batch_size, data=data, ops=Minmax(inputs="x", outputs="x"))
 
-    model = build(keras_model=LeNet(input_shape=x_train.shape[1:], classes=num_classes),
-                  loss=Loss(inputs="loss"),
-                  optimizer="adam")
+    model = FEModel(model_def=lambda: LeNet(input_shape=x_train.shape[1:], classes=num_classes),
+                    model_name="LeNet",
+                    optimizer="adam")
 
     mixup_map = {warmup: MixUpBatch(inputs="x", outputs=["x", "lambda"], alpha=alpha, mode="train")}
     mixup_loss = {
-        0: SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred", outputs="loss", mode="train"),
-        warmup: MixUpLoss(KerasCrossentropy(), lam="lambda", y_true="y", y_pred="y_pred", outputs="loss", mode="train")
+        0: SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred", mode="train"),
+        warmup: MixUpLoss(KerasCrossentropy(), lam="lambda", y_true="y", y_pred="y_pred", mode="train")
     }
     network = Network(ops=[
         Scheduler(mixup_map),
         ModelOp(inputs="x", model=model, outputs="y_pred"),
         Scheduler(mixup_loss),
-        SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred", outputs="loss", mode="eval")
+        SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred", mode="eval")
     ])
 
     traces = [
