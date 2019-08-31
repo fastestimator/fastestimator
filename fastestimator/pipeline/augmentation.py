@@ -224,8 +224,8 @@ class Augmentation2D(TensorOp):
             None
         """
         # \NOTE(JP): tracing behavior from dataset.map causes issue when any tensor id defined as tf.constant
-        assert(self.width is not None, "width is not set yet")
-        assert(self.height is not None, "height is not set yet")
+        assert self.width is not None, "width is not set yet"
+        assert self.height is not None, "height is not set yet"
         transform_matrix = tf.convert_to_tensor([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=tf.float32)
         do_rotate = False
         do_shift = False
