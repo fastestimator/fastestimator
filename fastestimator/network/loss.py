@@ -25,7 +25,7 @@ class Loss(TensorOp):
 
 
 class MeanSquaredError(Loss):
-    def __init__(self, y_true=None, y_pred=None, inputs=None, outputs=None, mode=None, **kwargs):
+    def __init__(self, y_true=None, y_pred=None, inputs=None, outputs="loss", mode=None, **kwargs):
         """Calculate mean squared error loss, the rest of the keyword argument will be passed to
            tf.losses.MeanSquaredError
 
@@ -72,7 +72,7 @@ class SparseCategoricalCrossentropy(Loss):
 
 
 class BinaryCrossentropy(Loss):
-    def __init__(self, y_true=None, y_pred=None, inputs=None, outputs=None, mode=None, **kwargs):
+    def __init__(self, y_true=None, y_pred=None, inputs=None, outputs="loss", mode=None, **kwargs):
         """Calculate binary cross entropy, the rest of the keyword argument will be passed to
                   tf.losses.BinaryCrossentropy
 
@@ -98,7 +98,7 @@ class MixUpLoss(Loss):
     This class should be used in conjunction with MixUpBatch to perform mix-up training, which helps to reduce
     over-fitting, stabilize GAN training, and harden against adversarial attacks (https://arxiv.org/abs/1710.09412)
     """
-    def __init__(self, loss, lam=None, y_true=None, y_pred=None, inputs=None, outputs=None, mode=None):
+    def __init__(self, loss, lam=None, y_true=None, y_pred=None, inputs=None, outputs="loss", mode=None):
         """
         Args:
             loss (func): A loss object (tf.losses) which can be invoked like "loss(true, pred)"

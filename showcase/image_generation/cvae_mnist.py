@@ -117,10 +117,10 @@ def get_estimator(batch_size=100, epochs=100):
                         optimizer=tf.optimizers.Adam(1e-4))
 
     network = Network(ops=[
-        ModelOp(inputs="x", fe_model=infer_model, outputs="meanlogvar", mode=None),
+        ModelOp(inputs="x", model=infer_model, outputs="meanlogvar", mode=None),
         SplitOp(inputs="meanlogvar", outputs=("mean", "logvar"), mode=None),
         ReparameterizepOp(inputs=("mean", "logvar"), outputs="z", mode=None),
-        ModelOp(inputs="z", fe_model=gen_model, outputs="x_logit"),
+        ModelOp(inputs="z", model=gen_model, outputs="x_logit"),
         CVAELoss(inputs=("x", "mean", "logvar", "z", "x_logit"), outputs="loss", mode=None)
     ])
     # prepare estimator

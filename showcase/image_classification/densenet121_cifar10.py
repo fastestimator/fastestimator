@@ -21,7 +21,7 @@ import fastestimator as fe
 from fastestimator.architecture import LeNet
 from fastestimator.estimator.trace import Accuracy
 from fastestimator.network.loss import SparseCategoricalCrossentropy
-from fastestimator.network.model import ModelOp, build
+from fastestimator.network.model import FEModel, ModelOp
 from fastestimator.pipeline.processing import Minmax, Resize
 
 
@@ -36,15 +36,15 @@ def DenseNet121(input_shape, classes=10, weights=None):
 def get_estimator():
     # step 1. prepare data
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.cifar10.load_data()
-
     data = {"train": {"x": x_train, "y": y_train}, "eval": {"x": x_eval, "y": y_eval}}
     pipeline = fe.Pipeline(batch_size=64, data=data, ops=Minmax(inputs="x", outputs="x"))
     # step 2. prepare model
-    model = build(keras_model=DenseNet121(input_shape=(32, 32, 3)),
-                  loss=SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred"),
-                  optimizer="adam")
+    model = FEModel(model_def=lambda: DenseNet121(input_shape=(32, 32, 3)), model_name="densenet121", optimizer="adam")
 
-    network = fe.Network(ops=ModelOp(inputs="x", model=model, outputs="y_pred"))
+    network = fe.Network(ops=[
+        ModelOp(inputs="x", model=model, outputs="y_pred"),
+        SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred")
+    ])
     # step 3.prepare estimator
     estimator = fe.Estimator(network=network,
                              pipeline=pipeline,
