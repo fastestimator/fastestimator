@@ -34,7 +34,7 @@ def load_data(path=None):
     url = {"train": "http://images.cocodataset.org/zips/train2014.zip"}
     path = os.path.abspath(path)
     if path is None:
-        path = os.path.join(tempfile.gettempdir(), "FE_MSCOCO2014")
+        path = os.path.join(tempfile.gettempdir(), ".fe", "MSCOCO2014")
 
     os.makedirs(path, exist_ok=True)
     train_csv_path = os.path.join(path, "coco_train.csv")
