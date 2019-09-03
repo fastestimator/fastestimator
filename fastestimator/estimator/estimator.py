@@ -56,7 +56,7 @@ class Estimator:
         self._prepare_pipeline()
         self._prepare_network()
         self._prepare_estimator()
-        self._warmup()
+        # self._warmup()
         self._start()
 
     def _prepare_pipeline(self):
