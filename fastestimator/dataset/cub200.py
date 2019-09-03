@@ -34,53 +34,31 @@ def load_data(path=None):
     Raises:
         FileNotFoundError: When the gernerated CSV file does not match with the extracted dataset.
     """
-    if path:
-        os.makedirs(path, exist_ok=True)
-    else:
-        path = os.path.join(tempfile.gettempdir(), 'FE_CUB200')
-
+    if path is None:
+        path = os.path.join(tempfile.gettempdir(), ".fe", "CUB200")
+    if not os.path.exists(path):
+        os.makedirs(path)
     csv_path = os.path.join(path, 'cub200.csv')
-
-    if os.path.isfile(csv_path):
-        print('Found existing {}.'.format(csv_path))
-        df = pd.read_csv(csv_path)
-        found_images = df['image'].apply(lambda x: os.path.join(path, x)).apply(os.path.isfile).all()
-        found_annoation = df['annotation'].apply(lambda x: os.path.join(path, x)).apply(os.path.isfile).all()
-        if not (found_images and found_annoation):
-            print('There are missing files. Will download dataset again.')
-        else:
-            print('All files exist, using existing {}.'.format(csv_path))
-            return csv_path, path
-
-    url = {
-        'image': 'http://www.vision.caltech.edu/visipedia-data/CUB-200/images.tgz',
-        'annotation': 'http://www.vision.caltech.edu/visipedia-data/CUB-200/annotations.tgz'
-    }
-
-    img_path = os.path.join(path, 'images.tgz')
-    anno_path = os.path.join(path, 'annotations.tgz')
-
-    print("Downloading data to {} ...".format(path))
-    wget.download(url['image'], path)
-    wget.download(url['annotation'], path)
-
-    print('\nExtracting files ...')
-    with tarfile.open(img_path) as img_tar:
-        img_tar.extractall(path)
-    with tarfile.open(anno_path) as anno_tar:
-        anno_tar.extractall(path)
-
-    img_list = glob(os.path.join(path, 'images', '**', '*.jpg'))
-
-    df = pd.DataFrame(data={'image': img_list})
-    df['image'] = df['image'].apply(lambda x: os.path.relpath(x, path))
-    df['image'] = df['image'].apply(os.path.normpath)
-    df['annotation'] = df['image'].str.replace('images', 'annotations-mat').str.replace('jpg', 'mat')
-
-    if not (df['annotation'].apply(lambda x: os.path.join(path, x))).apply(os.path.exists).all():
-        raise FileNotFoundError
-
-    df.to_csv(os.path.join(path, 'cub200.csv'), index=False)
-    print('Data summary is saved at {}'.format(csv_path))
-
+    image_compressed_path = os.path.join(path, 'images.tgz')
+    annotation_compressed_path = os.path.join(path, 'annotations.tgz')
+    image_extracted_path = os.path.join(path, 'images')
+    annotation_extracted_path = os.path.join(path, 'annotations-mat')
+    if not (os.path.exists(image_compressed_path) and os.path.exists(annotation_compressed_path)):
+        print("Downloading data to {} ...".format(path))
+        wget.download('http://www.vision.caltech.edu/visipedia-data/CUB-200/images.tgz', path)
+        wget.download('http://www.vision.caltech.edu/visipedia-data/CUB-200/annotations.tgz', path)
+    if not (os.path.exists(image_extracted_path) and os.path.exists(annotation_extracted_path)):
+        print('\nExtracting files ...')
+        with tarfile.open(image_compressed_path) as img_tar:
+            img_tar.extractall(path)
+        with tarfile.open(annotation_compressed_path) as anno_tar:
+            anno_tar.extractall(path)
+    if not os.path.exists(csv_path):
+        img_list = glob(os.path.join(path, 'images', '**', '*.jpg'))
+        df = pd.DataFrame(data={'image': img_list})
+        df['image'] = df['image'].apply(lambda x: os.path.relpath(x, path))
+        df['image'] = df['image'].apply(os.path.normpath)
+        df['annotation'] = df['image'].str.replace('images', 'annotations-mat').str.replace('jpg', 'mat')
+        df.to_csv(csv_path, index=False)
+        print('Data summary is saved at {}'.format(csv_path))
     return csv_path, path
