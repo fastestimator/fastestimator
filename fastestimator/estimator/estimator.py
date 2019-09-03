@@ -19,6 +19,7 @@ import tensorflow as tf
 
 from fastestimator.estimator.trace import Logger, MonitorLoss, Trace
 from fastestimator.util.cli_util import draw
+from fastestimator.util.schedule import Scheduler
 from fastestimator.util.util import get_num_devices
 
 
@@ -90,7 +91,10 @@ class Estimator:
         sorted_traces = []
         available_outputs = {
             "num_devices", "mode", "epoch", "train_step", "batch_idx", "batch_size", "batch", "elapsed_time"
-        } | set(self.network.all_losses)
+        } | set().union(*[{item.outputs} if isinstance(item.outputs, str) else set(item.outputs)
+                          for sublist in (list(op.epoch_dict.values()) if isinstance(op, Scheduler) else [op]
+                                          for op in self.network.ops) for item in sublist])
+        # available_outputs starts with all of our default keys plus all of the outputs listed within any network ops
         end_traces = deque()
 
         intermediate_traces = deque()
@@ -192,10 +196,10 @@ class Estimator:
             })
             if self.distribute_strategy:
                 prediction, batch = self._forward_step_parallel(batch, ops,
-                                            model_list,
-                                            epoch_losses, {
-                                                "mode": mode, "batch_size": global_batch_size
-                                            })
+                                                                model_list,
+                                                                epoch_losses, {
+                                                                    "mode": mode, "batch_size": global_batch_size
+                                                                })
             else:
                 prediction = self._forward_step(batch,
                                                 ops,
