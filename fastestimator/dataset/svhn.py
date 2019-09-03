@@ -46,7 +46,7 @@ def img_boundingbox_data_constructor(data_folder, mode, csv_path):
     print("found %d number of examples for %s" % (num_example, mode))
     for j in range(num_example):
         if j % logging_interval == 0:
-            print("retrieving bounding box for %s: %f%%" % (mode, j / num_example * 100))
+            print("retrieving bounding box for %s: %.2f%%" % (mode, j / num_example * 100))
         img_name = get_name(j, f)
         bbox = get_bbox(j, f)
         row_dict = {
@@ -65,26 +65,28 @@ def img_boundingbox_data_constructor(data_folder, mode, csv_path):
 
 def load_data(path=None):
     if path is None:
-        path = os.path.join(tempfile.gettempdir(), "FE_SVHN")
+        path = os.path.join(tempfile.gettempdir(), ".fe", "SVHN")
     if not os.path.exists(path):
-        os.mkdir(path)
+        os.makedirs(path)
     train_csv = os.path.join(path, "train_data.csv")
     test_csv = os.path.join(path, "test_data.csv")
-    if not (os.path.exists(os.path.join(path, "train.tar.gz")) and os.path.exists(os.path.join(path, "test.tar.gz"))):
-        print("downloading data to %s" % path)
+    train_compressed_path = os.path.join(path, "train.tar.gz")
+    test_compressed_path = os.path.join(path, "test.tar.gz")
+    train_folder_path = os.path.join(path, "train")
+    test_folder_path = os.path.join(path, "test")
+    if not (os.path.exists(train_compressed_path) and os.path.exists(test_compressed_path)):
+        print("Downloading data to %s" % path)
         wget.download('http://ufldl.stanford.edu/housenumbers/train.tar.gz', path)
         wget.download("http://ufldl.stanford.edu/housenumbers/test.tar.gz", path)
-    if not (os.path.exists(os.path.join(path, "train")) and os.path.exists(os.path.join(path, "test"))):
+    if not (os.path.exists(train_folder_path) and os.path.exists(test_folder_path)):
         print(" ")
         print("extracting data...")
-        test_file = tarfile.open(os.path.join(path, "test.tar.gz"))
-        train_file = tarfile.open(os.path.join(path, "train.tar.gz"))
-        test_file.extractall(path=path)
-        train_file.extractall(path=path)
+        with tarfile.open(train_compressed_path) as tar:
+            tar.extractall(path)
+        with tarfile.open(test_compressed_path) as tar:
+            tar.extractall(path)
     if not (os.path.exists(train_csv) and os.path.exists(test_csv)):
         print("constructing bounding box data...")
-        train_folder = os.path.join(path, "train")
-        test_folder = os.path.join(path, "test")
-        img_boundingbox_data_constructor(train_folder, "train", train_csv)
-        img_boundingbox_data_constructor(test_folder, "test", test_csv)
+        img_boundingbox_data_constructor(train_folder_path, "train", train_csv)
+        img_boundingbox_data_constructor(test_folder_path, "test", test_csv)
     return train_csv, test_csv, path

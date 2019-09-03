@@ -16,13 +16,13 @@ import numpy as np
 import tensorflow as tf
 
 from fastestimator.architecture.retinanet import RetinaNet, get_fpn_anchor_box, get_target
-from fastestimator.dataset import svhn_data
+from fastestimator.dataset import svhn
 from fastestimator.estimator.estimator import Estimator
 from fastestimator.network.loss import Loss
-from fastestimator.network.model import ModelOp, build
+from fastestimator.network.model import ModelOp, FEModel
 from fastestimator.network.network import Network
 from fastestimator.pipeline.pipeline import Pipeline
-from fastestimator.pipeline.preprocess import Minmax
+from fastestimator.pipeline.processing import Minmax
 from fastestimator.record.preprocess import ImageReader, Resize
 from fastestimator.record.record import RecordWriter
 from fastestimator.util.op import NumpyOp, TensorOp
@@ -77,7 +77,7 @@ class RetinaLoss(Loss):
         alpha_factor = tf.where(tf.equal(cls_gt, 1), alpha_factor, 1 - alpha_factor)
         focal_weight = tf.where(tf.equal(cls_gt, 1), 1 - cls_pred, cls_pred)
         focal_weight = alpha_factor * focal_weight**gamma / object_count
-        focal_loss = tf.losses.BinaryCrossentropy()(cls_gt, cls_pred, sample_weight=focal_weight)
+        focal_loss = tf.losses.BinaryCrossentropy(reduction=tf.keras.losses.Reduction.NONE)(cls_gt, cls_pred, sample_weight=focal_weight)
         return focal_loss, obj_idx
 
     def smooth_l1(self, loc_gt, loc_pred, obj_idx):
@@ -88,7 +88,6 @@ class RetinaLoss(Loss):
         loc_pred = tf.reshape(loc_pred, (-1, 1))
         loc_diff = tf.abs(loc_gt - loc_pred)
         smooth_l1_loss = tf.where(tf.less(loc_diff, 1), 0.5 * loc_diff**2, loc_diff - 0.5)
-        smooth_l1_loss = tf.reduce_mean(smooth_l1_loss)
         return smooth_l1_loss
 
     def forward(self, data, state):
@@ -150,10 +149,11 @@ class PredictBox(TensorOp):
         return cls_selected, loc_selected, valid_outputs
 
 
-def get_estimator():
+def get_estimator(data_dir="/data/data/SVHN/"):
     # prepare data in disk
-    train_csv, val_csv, path = svhn_data.load_data()
+    train_csv, val_csv, path = svhn.load_data()
     writer = RecordWriter(
+        save_dir=data_dir,
         train_data=train_csv,
         validation_data=val_csv,
         ops=[
@@ -164,13 +164,14 @@ def get_estimator():
             GenerateTarget(inputs=("label", "x1", "y1", "x2", "y2"), outputs=("target_cls", "target_loc"))
         ])
     # prepare pipeline
-    pipeline = Pipeline(batch_size=256, data=writer, ops=Minmax(inputs="image", outputs="image"), padded_batch=True)
+    pipeline = Pipeline(batch_size=256, data=writer, ops=Minmax(inputs="image", outputs="image"), padded_batch=False)
     # prepare model
-    model = build(keras_model=RetinaNet(input_shape=(64, 128, 3), num_classes=10),
-                  loss=RetinaLoss(inputs=("target_cls", "target_loc", "pred_cls", "pred_loc")),
-                  optimizer=tf.optimizers.Adam(learning_rate=0.0001))
+    model = FEModel(model_def=lambda: RetinaNet(input_shape=(64, 128, 3), num_classes=10),
+                    model_name="retinanet",
+                    optimizer=tf.optimizers.Adam(learning_rate=0.0001))
     network = Network(ops=[
         ModelOp(inputs="image", model=model, outputs=["pred_cls", "pred_loc"]),
+        RetinaLoss(inputs=("target_cls", "target_loc", "pred_cls", "pred_loc"), outputs="loss"),
         PredictBox(outputs=("cls_selected", "loc_selected", "valid_outputs"), mode="eval")
     ])
     # prepare estimator
