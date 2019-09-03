@@ -723,7 +723,10 @@ class TensorBoard(Trace):
                                     layers of the model. If set to 0, histograms won't be computed.
             write_graph (bool): whether to visualize the graph in TensorBoard. The log file can become quite large when
                             write_graph is set to True.
-            write_images (bool): whether to write model weights to visualize as image in TensorBoard.
+            write_images (bool, str, list): If True will write model weights to visualize as an image in TensorBoard. If
+                                            a string or list of strings is provided, the corresponding keys will be
+                                            written to tensorboard images. To get weights and specific keys use
+                                            [True, 'key1', 'key2',...]
             update_freq (str, int): 'batch' or 'epoch' or integer. When using 'batch', writes the losses and metrics to
                             TensorBoard after each batch. The same applies for 'epoch'. If using an integer, let's say
                             1000, the callback will write the metrics and losses to TensorBoard every 1000 samples. Note
@@ -750,7 +753,7 @@ class TensorBoard(Trace):
             "TensorBoard update_freq must be either 'epoch', 'batch', or a positive integer"
         self.ignore_keys = {'mode', 'epoch', 'train_step', 'batch_idx', 'batch_size', 'batch'}
         self.write_graph = write_graph
-        self.write_images = write_images
+        self.write_images = {write_images} if isinstance(write_images, (str, bool)) else set(write_images)
         self.histogram_freq = histogram_freq
         self.profile_batch = profile_batch
         self.is_tracing = False
@@ -783,6 +786,10 @@ class TensorBoard(Trace):
                 val = state[key]
                 if is_number(val):
                     tf.summary.scalar("batch_" + key, val, step=state['train_step'])
+            for key in self.write_images - {True, False}:
+                data = state.get(key)
+                if data is not None:
+                    tf.summary.image(key, data, step=state['train_step'])
 
     def on_epoch_end(self, state):
         with self.summary_writers[state['mode']].as_default():
@@ -790,10 +797,14 @@ class TensorBoard(Trace):
                 val = state[key]
                 if is_number(val):
                     tf.summary.scalar("epoch_" + key, val, step=state['epoch'])
+            for key in self.write_images - {True, False}:
+                data = state.get(key)
+                if data is not None:
+                    tf.summary.image(key, data, step=state['epoch'])
             if state['mode'] == 'train' and self.histogram_freq and state['epoch'] % self.histogram_freq == 0:
                 self._log_weights(epoch=state['epoch'])
-        if state['mode'] == 'train' and self.embeddings_freq and state['epoch'] % self.embeddings_freq == 0:
-            self._log_embeddings(state)
+            if state['mode'] == 'train' and self.embeddings_freq and state['epoch'] % self.embeddings_freq == 0:
+                self._log_embeddings(state)
 
     def on_end(self, state):
         if self.is_tracing:
@@ -830,7 +841,7 @@ class TensorBoard(Trace):
                         with tfops.init_scope():
                             weight = backend.get_value(weight)
                         summary_ops_v2.histogram(weight_name, weight, step=epoch)
-                        if self.write_images:
+                        if True in self.write_images:
                             self._log_weight_as_image(weight, weight_name, epoch)
         writer.flush()
 
