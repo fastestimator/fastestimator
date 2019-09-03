@@ -187,7 +187,7 @@ class Logger(Trace):
             if state["train_step"] % self.log_steps == 0:
                 if state["train_step"] > 0:
                     self.elapse_times.append(time.perf_counter() - self.time_start)
-                    state["example_per_sec"] = round(self.num_example / np.sum(self.elapse_times), 2)
+                    state["examples_per_sec"] = round(self.num_example / np.sum(self.elapse_times), 2)
                 self._print_message("FastEstimator-Train: step: {}; ".format(state["train_step"]), state.maps[0])
                 self.elapse_times = []
                 self.num_example = 0
