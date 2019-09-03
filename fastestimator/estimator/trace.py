@@ -44,8 +44,8 @@ class Trace:
         """
         self.network = None
         self.mode = mode
-        self.inputs = set() if inputs is None else set(inputs)
-        self.outputs = set() if outputs is None else set(outputs)
+        self.inputs = set(filter(None, inputs or {})) if not isinstance(inputs, str) else {inputs}
+        self.outputs = set(filter(None, outputs or {})) if not isinstance(outputs, str) else {outputs}
 
     def on_begin(self, state):
         """Runs once at the beginning of training
