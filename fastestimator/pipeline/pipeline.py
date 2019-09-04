@@ -16,6 +16,7 @@ import json
 import multiprocessing as mp
 import os
 import time
+from itertools import chain
 
 import numpy as np
 import tensorflow as tf
@@ -30,7 +31,6 @@ from fastestimator.util.op import (get_inputs_by_key,
 from fastestimator.util.schedule import Scheduler
 from fastestimator.util.tfrecord import get_features
 from fastestimator.util.util import convert_tf_dtype, get_num_devices
-from itertools import chain
 
 
 class Pipeline:
