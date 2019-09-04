@@ -22,10 +22,7 @@ import tensorflow as tf
 
 from fastestimator.pipeline.processing import TensorFilter
 from fastestimator.record.record import RecordWriter
-from fastestimator.util.op import (get_inputs_by_key,
-                                   get_inputs_by_op,
-                                   get_op_from_mode,
-                                   verify_ops,
+from fastestimator.util.op import (get_inputs_by_key, get_inputs_by_op, get_op_from_mode, verify_ops,
                                    write_outputs_by_key)
 from fastestimator.util.schedule import Scheduler
 from fastestimator.util.tfrecord import get_features
@@ -51,6 +48,7 @@ class Pipeline:
         self.expand_dims = expand_dims
         self.max_shuffle_buffer_mb = max_shuffle_buffer_mb
         self.possible_mode = ["train", "eval"]
+        self.padded_shape = None
         self.global_batch_multiplier = 1
         self.num_core = mp.cpu_count()
         self._verify_input()
@@ -246,10 +244,10 @@ class Pipeline:
             dataset = self._execute_ops(extracted_ds, forward_ops_epoch, filter_ops_epoch, state)
             # rest of the dataset setup
             if self.expand_dims:
-                dataset = dataset.flat_map(lambda ds: tf.data.Dataset.from_tensor_slices(ds))
+                dataset = dataset.flat_map(tf.data.Dataset.from_tensor_slices)
             if self.padded_batch:
-                padded_shape = dataset.map(self._get_padded_shape)
-                dataset = dataset.padded_batch(global_batch_size, padded_shapes=padded_shape)
+                _ = dataset.map(self._get_padded_shape)
+                dataset = dataset.padded_batch(global_batch_size, padded_shapes=self.padded_shape)
             else:
                 dataset = dataset.batch(global_batch_size)
             dataset = dataset.prefetch(buffer_size=1)
@@ -258,12 +256,12 @@ class Pipeline:
             dataset_map[epoch] = iter(dataset)
         self.dataset_schedule[mode] = Scheduler(epoch_dict=dataset_map)
 
-    @staticmethod
-    def _get_padded_shape(dataset):
+    def _get_padded_shape(self, dataset):
         padded_shape = {}
         for key in dataset:
             padded_shape[key] = dataset[key].shape
-        return padded_shape
+        self.padded_shape = padded_shape
+        return dataset
 
     def _execute_ops(self, dataset, forward_ops_epoch, filter_ops_epoch, state):
         num_filters = len(filter_ops_epoch)

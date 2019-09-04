@@ -20,19 +20,39 @@ from tensorflow.python.keras import layers, models
 def classification_sub_net(num_classes, num_anchor=9):
     model = models.Sequential()
     model.add(
-        layers.Conv2D(256, kernel_size=3, strides=1, padding='same', activation='relu',
+        layers.Conv2D(256,
+                      kernel_size=3,
+                      strides=1,
+                      padding='same',
+                      activation='relu',
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(
-        layers.Conv2D(256, kernel_size=3, strides=1, padding='same', activation='relu',
+        layers.Conv2D(256,
+                      kernel_size=3,
+                      strides=1,
+                      padding='same',
+                      activation='relu',
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(
-        layers.Conv2D(256, kernel_size=3, strides=1, padding='same', activation='relu',
+        layers.Conv2D(256,
+                      kernel_size=3,
+                      strides=1,
+                      padding='same',
+                      activation='relu',
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(
-        layers.Conv2D(256, kernel_size=3, strides=1, padding='same', activation='relu',
+        layers.Conv2D(256,
+                      kernel_size=3,
+                      strides=1,
+                      padding='same',
+                      activation='relu',
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(
-        layers.Conv2D(num_classes * num_anchor, kernel_size=3, strides=1, padding='same', activation='sigmoid',
+        layers.Conv2D(num_classes * num_anchor,
+                      kernel_size=3,
+                      strides=1,
+                      padding='same',
+                      activation='sigmoid',
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01),
                       bias_initializer=tf.initializers.constant(np.log(1 / 99))))
     model.add(layers.Reshape((-1, num_classes)))  # the output dimension is [batch, #anchor, #classes]
@@ -42,19 +62,38 @@ def classification_sub_net(num_classes, num_anchor=9):
 def regression_sub_net(num_anchor=9):
     model = models.Sequential()
     model.add(
-        layers.Conv2D(256, kernel_size=3, strides=1, padding='same', activation='relu',
+        layers.Conv2D(256,
+                      kernel_size=3,
+                      strides=1,
+                      padding='same',
+                      activation='relu',
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(
-        layers.Conv2D(256, kernel_size=3, strides=1, padding='same', activation='relu',
+        layers.Conv2D(256,
+                      kernel_size=3,
+                      strides=1,
+                      padding='same',
+                      activation='relu',
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(
-        layers.Conv2D(256, kernel_size=3, strides=1, padding='same', activation='relu',
+        layers.Conv2D(256,
+                      kernel_size=3,
+                      strides=1,
+                      padding='same',
+                      activation='relu',
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(
-        layers.Conv2D(256, kernel_size=3, strides=1, padding='same', activation='relu',
+        layers.Conv2D(256,
+                      kernel_size=3,
+                      strides=1,
+                      padding='same',
+                      activation='relu',
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(
-        layers.Conv2D(4 * num_anchor, kernel_size=3, strides=1, padding='same',
+        layers.Conv2D(4 * num_anchor,
+                      kernel_size=3,
+                      strides=1,
+                      padding='same',
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(layers.Reshape((-1, 4)))  # the output dimension is [batch, #anchor, 4]
     return model
@@ -64,11 +103,11 @@ def RetinaNet(input_shape, num_classes, num_anchor=9):
     inputs = tf.keras.Input(shape=input_shape)
     # FPN
     resnet50 = tf.keras.applications.ResNet50(weights="imagenet", include_top=False, input_tensor=inputs, pooling=None)
-    assert resnet50.layers[80].name == "activation_21"
+    assert resnet50.layers[80].name == "conv3_block4_out"
     C3 = resnet50.layers[80].output
-    assert resnet50.layers[142].name == "activation_39"
+    assert resnet50.layers[142].name == "conv4_block6_out"
     C4 = resnet50.layers[142].output
-    assert resnet50.layers[-1].name == "activation_48"
+    assert resnet50.layers[-1].name == "conv5_block3_out"
     C5 = resnet50.layers[-1].output
     P5 = layers.Conv2D(256, kernel_size=1, strides=1, padding='same')(C5)
     P5_upsampling = layers.UpSampling2D()(P5)
