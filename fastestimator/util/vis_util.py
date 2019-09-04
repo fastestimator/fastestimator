@@ -51,7 +51,13 @@ def show_image(axis, im, title=None):
     if axis is None:
         fig, axis = plt.subplots(1, 1)
     axis.axis('off')
-    im = ((np.asarray(im) + 1) * 127.5).astype(np.uint8)
+    im = np.asarray(im)
+    if np.max(im) <= 1 and np.min(im) >= 0:  # im is [0,1]
+        im = (im * 255).astype(np.uint8)
+    elif np.max(im) <= 1:  # im is [-1, 1]
+        im = ((im + 1) * 127.5).astype(np.uint8)
+    else:  # im is already 255
+        im = im.astype(np.uint8)
     # matplotlib doesn't support (x,y,1) images, so convert them to (x,y)
     if len(im.shape) == 3 and im.shape[2] == 1:
         im = np.reshape(im, (im.shape[0], im.shape[1]))

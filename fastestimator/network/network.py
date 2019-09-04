@@ -38,6 +38,11 @@ class Network:
         self.stop_training = False
         self.num_devices = 1
 
+    def get_all_output_keys(self):
+        return set().union(*[{item.outputs} if isinstance(item.outputs, str) else set(item.outputs)
+                             for sublist in (list(op.epoch_dict.values()) if isinstance(op, Scheduler) else [op]
+                                             for op in self.ops) for item in sublist])
+
     def prepare(self, mode_list, distribute_strategy):
         for mode in mode_list:
             signature_epoch, mode_ops = self._get_signature_epoch(mode)

@@ -30,6 +30,7 @@ from fastestimator.util.op import (get_inputs_by_key,
 from fastestimator.util.schedule import Scheduler
 from fastestimator.util.tfrecord import get_features
 from fastestimator.util.util import convert_tf_dtype, get_num_devices
+from itertools import chain
 
 
 class Pipeline:
@@ -54,6 +55,13 @@ class Pipeline:
         self.num_core = mp.cpu_count()
         self._verify_input()
         self._reset()
+
+    def get_all_output_keys(self):
+        return set().union(*[{item.outputs} if isinstance(item.outputs, str) else set(item.outputs)
+                             for sublist in (list(op.epoch_dict.values()) if isinstance(op, Scheduler) else [op]
+                                             for op in self.ops)
+                             for item in sublist]) | set(
+                                 chain.from_iterable(list(chain.from_iterable(self.feature_name.values()))))
 
     def _verify_input(self):
         assert isinstance(self.data, (dict, RecordWriter, str)), "data must be either RecordWriter, dictionary or record path"
