@@ -183,5 +183,5 @@ def get_estimator(data_dir="/data/data/SVHN/"):
         RetinaLoss(inputs=("target_cls", "target_loc", "pred_cls", "pred_loc"), outputs="loss"),
     ])
     # prepare estimator
-    estimator = Estimator(network=network, pipeline=pipeline, epochs=15, log_steps=20, steps_per_epoch=40)
+    estimator = Estimator(network=network, pipeline=pipeline, epochs=15, log_steps=20)
     return estimator
