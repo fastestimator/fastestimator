@@ -172,7 +172,6 @@ def get_estimator(data_dir="/data/data/SVHN/"):
     pipeline = Pipeline(batch_size=128,
                         data=writer,
                         ops=Minmax(inputs="image", outputs="image"),
-                        padded_batch=False,
                         read_feature=["image", "target_cls", "target_loc"])
     # prepare model
     model = FEModel(model_def=lambda: RetinaNet(input_shape=(64, 128, 3), num_classes=10),
@@ -184,5 +183,5 @@ def get_estimator(data_dir="/data/data/SVHN/"):
         RetinaLoss(inputs=("target_cls", "target_loc", "pred_cls", "pred_loc"), outputs="loss"),
     ])
     # prepare estimator
-    estimator = Estimator(network=network, pipeline=pipeline, epochs=15, log_steps=20)
+    estimator = Estimator(network=network, pipeline=pipeline, epochs=15, log_steps=20, steps_per_epoch=40)
     return estimator
