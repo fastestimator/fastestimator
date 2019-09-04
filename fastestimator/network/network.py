@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 from collections import ChainMap
+from itertools import chain
 
 import tensorflow as tf
 from tensorflow.python.framework import ops as tfops
@@ -39,9 +40,16 @@ class Network:
         self.num_devices = 1
 
     def get_all_output_keys(self):
-        return set().union(*[{item.outputs} if isinstance(item.outputs, str) else set(item.outputs)
-                             for sublist in (list(op.epoch_dict.values()) if isinstance(op, Scheduler) else [op]
-                                             for op in self.ops) for item in sublist])
+        return set(
+            chain.from_iterable(
+                map(
+                    lambda x: [x] if isinstance(x, str) or x is None else x,
+                    map(
+                        lambda x: x.outputs,
+                        list(
+                            chain.from_iterable([
+                                list(op.epoch_dict.values()) if isinstance(op, Scheduler) else [op] for op in self.ops
+                            ])))))) - {None}
 
     def prepare(self, mode_list, distribute_strategy):
         for mode in mode_list:

@@ -22,7 +22,10 @@ import tensorflow as tf
 
 from fastestimator.pipeline.processing import TensorFilter
 from fastestimator.record.record import RecordWriter
-from fastestimator.util.op import (get_inputs_by_key, get_inputs_by_op, get_op_from_mode, verify_ops,
+from fastestimator.util.op import (get_inputs_by_key,
+                                   get_inputs_by_op,
+                                   get_op_from_mode,
+                                   verify_ops,
                                    write_outputs_by_key)
 from fastestimator.util.schedule import Scheduler
 from fastestimator.util.tfrecord import get_features
@@ -55,14 +58,21 @@ class Pipeline:
         self._reset()
 
     def get_all_output_keys(self):
-        return set().union(*[{item.outputs} if isinstance(item.outputs, str) else set(item.outputs)
-                             for sublist in (list(op.epoch_dict.values()) if isinstance(op, Scheduler) else [op]
-                                             for op in self.ops)
-                             for item in sublist]) | set(
-                                 chain.from_iterable(list(chain.from_iterable(self.feature_name.values()))))
+        return set(
+            chain.from_iterable(
+                map(
+                    lambda x: [x] if isinstance(x, str) or x is None else x,
+                    map(
+                        lambda x: x.outputs,
+                        list(
+                            chain.from_iterable([
+                                list(op.epoch_dict.values()) if isinstance(op, Scheduler) else [op] for op in self.ops
+                            ])))))) - {None} | set(
+                                chain.from_iterable(list(chain.from_iterable(self.feature_name.values()))))
 
     def _verify_input(self):
-        assert isinstance(self.data, (dict, RecordWriter, str)), "data must be either RecordWriter, dictionary or record path"
+        assert isinstance(self.data, (dict, RecordWriter, str)), \
+            "data must be either RecordWriter, dictionary or record path"
         if self.read_feature:
             assert isinstance(self.read_feature,
                               (list, tuple, dict)), "read_feature must be either list, tuple or dictionary"
