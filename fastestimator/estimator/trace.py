@@ -953,7 +953,8 @@ class ModelCheckpoint(Trace):
                  mode='eval',
                  save_best_only=False,
                  save_mode='auto',
-                 save_freq=1):
+                 save_freq=1,
+                 verbose=1):
         super().__init__(mode=mode)
         self.save_dir = os.path.normpath(save_dir)
         self._make_dir()
@@ -962,6 +963,7 @@ class ModelCheckpoint(Trace):
         self.save_freq = save_freq
         self.save_mode = save_mode
         self.monitor_name = monitor_name
+        self.verbose = verbose
         self.monitor_op = None
         self.best = None
         self._last_saved_files = []
@@ -977,7 +979,8 @@ class ModelCheckpoint(Trace):
 
         if self.monitor_name is not None and not self.save_best_only:
             self.save_best_only = True
-            print("FastEstimator-ModelCheckpoint: `monitor_name` detected, set `save_best_only=True`.")
+            if self.verbose > 0:
+                print("FastEstimator-ModelCheckpoint: `monitor_name` detected, set `save_best_only=True`.")
 
     def _make_dir(self):
         os.makedirs(self.save_dir, exist_ok=True)
@@ -1006,7 +1009,9 @@ class ModelCheckpoint(Trace):
         else:
             raise ValueError("save_mode='auto' cannot be resolved.")
 
-        print("FastEstimator-ModelCheckpoint: Save models when '{}' is {}.".format(self.monitor_name, self.save_mode))
+        if self.verbose > 0:
+            print("FastEstimator-ModelCheckpoint: Save models when '{}' is {}.".format(
+                self.monitor_name, self.save_mode))
 
     def on_begin(self, state):
         # TODO: load latest saved model
@@ -1052,4 +1057,5 @@ class ModelCheckpoint(Trace):
                     self.save_dir, '{}_epoch_{}_step_{}.h5'.format(model_key, state['epoch'], state['train_step']))
                 self.network.model[model_key].save(save_path, include_optimizer=False)
                 self._last_saved_files.append(save_path)
-                print("FastEstimator-ModelCheckpoint: Saving '{}' to {}".format(model_key, save_path))
+                if self.verbose > 0:
+                    print("FastEstimator-ModelCheckpoint: Saving '{}' to {}".format(model_key, save_path))
