@@ -39,7 +39,6 @@ class Estimator:
         self.traces = traces
         self.log_steps = log_steps
         self.inputs = None
-        self.do_eval = None
         self.num_devices = get_num_devices()
         if self.num_devices > 1:
             self.distribute_strategy = tf.distribute.MirroredStrategy()
