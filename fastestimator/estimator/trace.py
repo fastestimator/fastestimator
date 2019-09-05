@@ -152,7 +152,7 @@ class MonitorLoss(Trace):
                 else:
                     self.epochs_since_best += 1
                 state["min_" + key] = self.best_loss
-                state["since_best"] = self.epochs_since_best
+                state["since_best_loss"] = self.epochs_since_best
 
     def on_end(self, state):
         state['total_time'] = "{} sec".format(round(state["elapsed_time"], 2))
@@ -228,7 +228,11 @@ class Accuracy(Trace):
         self.pred_key = pred_key
         self.total = 0
         self.correct = 0
-        self.name = output_name
+        self.output_name = output_name
+        self._model_save_mode = 'max'
+
+    def on_begin(self, state):
+        state['{}_save_mode'.format(self.output_name)] = self._model_save_mode
 
     def on_epoch_begin(self, state):
         self.total = 0
@@ -249,7 +253,7 @@ class Accuracy(Trace):
         self.total += len(prediction_label.ravel())
 
     def on_epoch_end(self, state):
-        state[self.name] = self.correct / self.total
+        state[self.output_name] = self.correct / self.total
 
 
 class ConfusionMatrix(Trace):
@@ -319,6 +323,10 @@ class Precision(Trace):
         self.y_pred = []
         self.binary_classification = None
         self.output_name = output_name
+        self._model_save_mode = 'max'
+
+    def on_begin(self, state):
+        state['{}_save_mode'.format(self.output_name)] = self._model_save_mode
 
     def on_epoch_begin(self, state):
         self.y_true = []
@@ -392,6 +400,10 @@ class Recall(Trace):
         self.y_pred = []
         self.binary_classification = None
         self.output_name = output_name
+        self._model_save_mode = 'max'
+
+    def on_begin(self, state):
+        state['{}_save_mode'.format(self.output_name)] = self._model_save_mode
 
     def on_epoch_begin(self, state):
         self.y_true = []
@@ -465,6 +477,10 @@ class F1Score(Trace):
         self.y_pred = []
         self.binary_classification = None
         self.output_name = output_name
+        self._model_save_mode = 'max'
+
+    def on_begin(self, state):
+        state['{}_save_mode'.format(self.output_name)] = self._model_save_mode
 
     def on_epoch_begin(self, state):
         self.y_true = []
@@ -527,6 +543,10 @@ class Dice(Trace):
         self.threshold = threshold
         self.dice = None
         self.output_name = output_name
+        self._model_save_mode = 'max'
+
+    def on_begin(self, state):
+        state['{}_save_mode'.format(self.output_name)] = self._model_save_mode
 
     def on_epoch_begin(self, state):
         self.dice = None
@@ -911,3 +931,132 @@ class TensorBoard(Trace):
 
         writer = DummyWriter(self.train_log_dir)
         projector.visualize_embeddings(writer, config)
+
+
+# TODO: Support saving optimizer state, so user can resume from the previous training optimizer state.
+class ModelCheckpoint(Trace):
+    """Save trained model in hdf5 format.
+
+    Args:
+        save_dir (str): The directory to save the trained models.
+        model_names (list): The list of models to save. If not proveded, save all available models.
+        monitor_name (str): The trace name to be monitored when `save_best_only=True`.
+        mode (str): Save models during either `train` or `eval`. Default is `eval`.
+        verbose (int): verbosity mode, 0 or 1
+        save_best_only (bool): Keep only the best model.
+        save_mode: Can be `'min'`, `'max'`, or `'auto'`.
+        save_freq: Number of epochs to save models. Cannot be used with `save_best_only=True`.
+    """
+    def __init__(self,
+                 save_dir,
+                 model_names=None,
+                 monitor_name=None,
+                 mode='eval',
+                 save_best_only=False,
+                 save_mode='auto',
+                 save_freq=1,
+                 verbose=1):
+        super().__init__(mode=mode)
+        self.save_dir = os.path.normpath(save_dir)
+        self._make_dir()
+        self.model_names = model_names
+        self.save_best_only = save_best_only
+        self.save_freq = save_freq
+        self.save_mode = save_mode
+        self.monitor_name = monitor_name
+        self.verbose = verbose
+        self.monitor_op = None
+        self.best = None
+        self._last_saved_files = []
+
+        if self.mode not in ['train', 'eval']:
+            raise ValueError("mode can only be `train` or `eval`")
+
+        if not isinstance(self.save_freq, int):
+            raise ValueError("Unrecognized save_freq: {}".format(self.save_freq))
+
+        if self.save_freq > 1 and self.save_best_only:
+            raise ValueError("save_freq can only be 1 when save_best_only=True")
+
+        if self.monitor_name is not None and not self.save_best_only:
+            self.save_best_only = True
+            if self.verbose > 0:
+                print("FastEstimator-ModelCheckpoint: `monitor_name` detected, set `save_best_only=True`.")
+
+    def _make_dir(self):
+        os.makedirs(self.save_dir, exist_ok=True)
+
+    def _resolve_monitor_name(self):
+        if len(self.network.all_losses) == 1:
+            self.monitor_name = self.network.all_losses[0]
+        else:
+            raise ValueError("Multiple losses defined in Network, specify one loss in monitor_name for save_best_only")
+
+    def _resolve_auto_save_model(self, state):
+        if self.monitor_name in self.network.all_losses:
+            self.save_mode = 'min'
+        else:
+            try:
+                self.save_mode = state['{}_save_mode'.format(self.monitor_name)]
+            except KeyError:
+                raise ValueError("save_mode='auto' cannot be resolved.")
+
+        if self.save_mode == 'min':
+            self.monitor_op = np.less
+            self.best = np.Inf
+        elif self.save_mode == 'max':
+            self.monitor_op = np.greater
+            self.best = -np.Inf
+        else:
+            raise ValueError("save_mode='auto' cannot be resolved.")
+
+        if self.verbose > 0:
+            print("FastEstimator-ModelCheckpoint: Save models when '{}' is {}.".format(
+                self.monitor_name, self.save_mode))
+
+    def on_begin(self, state):
+        # TODO: load latest saved model
+        if self.monitor_name is None and self.save_best_only:
+            self._resolve_monitor_name()
+
+        if self.save_mode == 'auto' and self.save_best_only:
+            self._resolve_auto_save_model(state)
+
+        if self.model_names is None:
+            self.model_names = self.network.model.keys()
+        elif isinstance(self.model_names, str):
+            self.model_names = [self.model_names]
+
+        if self.mode == 'train' and self.save_best_only and self.monitor_name in self.network.all_losses:
+            raise ValueError("`mode=train` and `save_best_only=True` only support non-loss metrics.")
+
+    def on_epoch_end(self, state):
+        if state['mode'] == self.mode and (state['epoch'] % self.save_freq == 0):
+            self._save_model(state)
+
+    def _is_best_model(self, state):
+        if self.monitor_op(state[self.monitor_name], self.best):
+            self.best = state[self.monitor_name]
+            return True
+
+        return False
+
+    def _save_model(self, state):
+        if self.save_best_only:
+            is_best_model = self._is_best_model(state)
+
+        # remove existing saved files when save_best_only=True
+        if self._last_saved_files and self.save_best_only and is_best_model:
+            for saved_file in self._last_saved_files:
+                os.remove(saved_file)
+            self._last_saved_files = []
+
+        # save all specified models
+        if (self.save_best_only and is_best_model) or (not self.save_best_only):
+            for model_key in self.model_names:
+                save_path = os.path.join(
+                    self.save_dir, '{}_epoch_{}_step_{}.h5'.format(model_key, state['epoch'], state['train_step']))
+                self.network.model[model_key].save(save_path, include_optimizer=False)
+                self._last_saved_files.append(save_path)
+                if self.verbose > 0:
+                    print("FastEstimator-ModelCheckpoint: Saving '{}' to {}".format(model_key, save_path))

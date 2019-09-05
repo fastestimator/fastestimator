@@ -32,7 +32,6 @@ class Network:
         self.model_schedule = {}
         self.op_schedule = {}
         self.current_epoch_ops = {}
-        self.current_epoch_model = {}
         self.model = {}
         self.all_losses = []
         self.epoch_losses = []
@@ -126,10 +125,10 @@ class Network:
                 loss = reduced_loss[model.loss_name]
                 optimizer = model.optimizer
                 if warm_up:
-                    with tfops.init_scope():
+                    with tfops.init_scope():  # pylint: disable=not-context-manager
                         _ = optimizer.iterations
-                        optimizer._create_hypers()
-                        optimizer._create_slots(model_list[idx].trainable_variables)
+                        optimizer._create_hypers()  # pylint: disable=protected-access
+                        optimizer._create_slots(model_list[idx].trainable_variables)  # pylint: disable=protected-access
                 else:
                     gradients = tape.gradient(loss, model.trainable_variables)
                     optimizer.apply_gradients(zip(gradients, model.trainable_variables))

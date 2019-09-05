@@ -17,7 +17,7 @@ import tensorflow as tf
 
 import fastestimator as fe
 from fastestimator.architecture import LeNet
-from fastestimator.estimator.trace import Accuracy
+from fastestimator.estimator.trace import Accuracy, ModelCheckpoint
 from fastestimator.network.loss import SparseCategoricalCrossentropy
 from fastestimator.network.model import FEModel, ModelOp
 from fastestimator.pipeline.processing import Minmax
@@ -37,12 +37,12 @@ def get_estimator(epochs=2, batch_size=32):
     pipeline = fe.Pipeline(batch_size=batch_size, data=data, ops=Minmax(inputs="x", outputs="x"))
     # step 2. prepare model
     model = FEModel(model_def=LeNet, model_name="lenet", optimizer="adam")
-    network = fe.Network(ops=[
-        ModelOp(inputs="x", model=model, outputs="y_pred"), SparseCategoricalCrossentropy(inputs=("y", "y_pred"))
-    ])
+    network = fe.Network(
+        ops=[ModelOp(inputs="x", model=model, outputs="y_pred"), SparseCategoricalCrossentropy(inputs=("y", "y_pred"))])
     # step 3.prepare estimator
-    estimator = fe.Estimator(network=network,
-                             pipeline=pipeline,
-                             epochs=epochs,
-                             traces=Accuracy(true_key="y", pred_key="y_pred"))
+    traces = [
+        Accuracy(true_key="y", pred_key="y_pred", output_name='acc'),
+        ModelCheckpoint('./lenet_model', monitor_name='acc', save_best_only=True)
+    ]
+    estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces)
     return estimator
