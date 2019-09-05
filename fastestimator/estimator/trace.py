@@ -942,6 +942,7 @@ class ModelCheckpoint(Trace):
         model_names (list): The list of models to save. If not proveded, save all available models.
         monitor_name (str): The trace name to be monitored when `save_best_only=True`.
         mode (str): Save models during either `train` or `eval`. Default is `eval`.
+        verbose (int): verbosity mode, 0 or 1
         save_best_only (bool): Keep only the best model.
         save_mode: Can be `'min'`, `'max'`, or `'auto'`.
         save_freq: Number of epochs to save models. Cannot be used with `save_best_only=True`.
