@@ -54,3 +54,7 @@ def get_estimator(epochs=2, batch_size=32, alpha=1.0, warmup=0):
 
     estimator = Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces)
     return estimator
+
+if __name__ == "__main__":
+    estimator = get_estimator()
+    estimator.fit()

@@ -116,3 +116,8 @@ def get_estimator(batch_size=256, epochs=50):
     traces = [ModelCheckpoint('./dcgan_models', mode='train', model_names='gen', save_freq=25)]
     estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces)
     return estimator
+
+
+if __name__ == "__main__":
+    estimator = get_estimator()
+    estimator.fit()
