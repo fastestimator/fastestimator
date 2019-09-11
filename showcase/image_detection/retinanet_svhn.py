@@ -185,3 +185,8 @@ def get_estimator(data_dir="/data/data/SVHN/"):
     # prepare estimator
     estimator = Estimator(network=network, pipeline=pipeline, epochs=15, log_steps=20)
     return estimator
+
+
+if __name__ == "__main__":
+    estimator = get_estimator()
+    estimator.fit()

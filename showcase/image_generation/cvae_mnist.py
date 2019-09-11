@@ -126,3 +126,8 @@ def get_estimator(batch_size=100, epochs=100):
     # prepare estimator
     estimator = Estimator(network=network, pipeline=pipeline, epochs=epochs)
     return estimator
+
+
+if __name__ == "__main__":
+    estimator = get_estimator()
+    estimator.fit()
