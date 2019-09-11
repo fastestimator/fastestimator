@@ -14,37 +14,44 @@
 # ==============================================================================
 """U-Net lung segmentation example.
 """
-
 import tensorflow as tf
 
+import fastestimator as fe
+from fastestimator.architecture import UNet
 from fastestimator.dataset import montgomery
-from fastestimator.estimator.estimator import Estimator
 from fastestimator.estimator.trace import Dice
 from fastestimator.network.loss import BinaryCrossentropy
-from fastestimator.network.model import ModelOp, build
-from fastestimator.network.network import Network
-from fastestimator.pipeline.pipeline import Pipeline
+from fastestimator.network.model import FEModel, ModelOp
 from fastestimator.pipeline.processing import Minmax, Reshape
 from fastestimator.record.preprocess import ImageReader, Resize
-from fastestimator.record.record import RecordWriter
-from fastestimator.architecture import UNet
+from fastestimator.util.op import NumpyOp
 
 
-def get_estimator():
+class CombineLeftRightMask(NumpyOp):
+    def forward(self, data, state):
+        mask_left, mask_right = data
+        data = mask_left + mask_right
+        return data
 
-    train_csv_path, eval_cvs_path, path = montgomery.load_and_set_data()
-    writer = RecordWriter(
-        train_data=train_csv_path,
-        validation_data=eval_cvs_path,
+
+def get_estimator(save_dir="/data/data/Montgomery"):
+    csv_path, path = montgomery.load_data()
+    writer = fe.RecordWriter(
+        save_dir=save_dir,
+        train_data=csv_path,
+        validation_data=0.2,
         ops=[
-            ImageReader(grey_scale=True, inputs="imgpath", parent_path=path, outputs="image"),
-            ImageReader(grey_scale=True, inputs="mask", parent_path=path, outputs="mask"),
+            ImageReader(grey_scale=True, inputs="image", parent_path=path, outputs="image"),
+            ImageReader(grey_scale=True, inputs="mask_left", parent_path=path, outputs="mask_left"),
+            ImageReader(grey_scale=True, inputs="mask_right", parent_path=path, outputs="mask_right"),
+            CombineLeftRightMask(inputs=("mask_left", "mask_right")),
+            Resize(target_size=(512, 512), outputs="mask"),
             Resize(inputs="image", target_size=(512, 512), outputs="image"),
-            Resize(inputs="mask", target_size=(512, 512), outputs="mask"),
-        ])
+        ],
+        write_feature=["image", "mask"])
 
-    pipeline = Pipeline(
-        batch_size=8,
+    pipeline = fe.Pipeline(
+        batch_size=4,
         data=writer,
         ops=[
             Minmax(inputs="image", outputs="image"),
@@ -53,18 +60,23 @@ def get_estimator():
             Reshape(shape=(512, 512, 1), inputs="mask", outputs="mask")
         ])
 
-    model = build(keras_model=UNet("imgpath", "mask", input_size=(512, 512, 1)),
-                  loss=BinaryCrossentropy(y_true="mask", y_pred="pred_segment"),
-                  optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001))
-    network = Network(ops=[ModelOp(inputs="image", model=model, outputs="pred_segment")])
+    model = FEModel(model_def=lambda: UNet("imgpath", "mask", input_size=(512, 512, 1)),
+                    model_name="lungsegmentation",
+                    optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001))
 
-    estimator = Estimator(network=network,
-                          pipeline=pipeline,
-                          epochs=25,
-                          log_steps=20,
-                          traces=[Dice("mask", "pred_segment")])
+    network = fe.Network(ops=[
+        ModelOp(inputs="image", model=model, outputs="pred_segment"),
+        BinaryCrossentropy(y_true="mask", y_pred="pred_segment")
+    ])
 
+    estimator = fe.Estimator(network=network,
+                             pipeline=pipeline,
+                             epochs=25,
+                             log_steps=20,
+                             traces=Dice(true_key="mask", pred_key="pred_segment"))
     return estimator
 
 
-# command to run this script: fastestimator train lung_segmentation.py --inputs /tmp/FE_MONTGOMERY/FE
+if __name__ == "__main__":
+    estimator = get_estimator()
+    estimator.fit()

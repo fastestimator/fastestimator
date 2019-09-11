@@ -535,7 +535,7 @@ class Dice(Trace):
         pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label.
                                   Default is `None`.
     """
-    def __init__(self, true_key, pred_key=None, threshold=0.5, mode="eval", output_name="dice"):
+    def __init__(self, true_key, pred_key, threshold=0.5, mode="eval", output_name="dice"):
         super().__init__(outputs=output_name, mode=mode)
         self.true_key = true_key
         self.pred_key = pred_key

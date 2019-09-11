@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import pdb
+
 import tensorflow as tf
 from tensorflow.python.keras.losses import Loss as tfLoss
 
@@ -95,7 +97,11 @@ class BinaryCrossentropy(Loss):
 
     def forward(self, data, state):
         true, pred = data
-        return self.loss_obj(true, pred)
+        loss = self.loss_obj(true, pred)
+        loss_dim = len(loss.shape)
+        if loss_dim > 1:
+            loss = tf.reduce_mean(loss, axis=list(range(1, loss_dim)))
+        return loss
 
 
 class MixUpLoss(Loss):
