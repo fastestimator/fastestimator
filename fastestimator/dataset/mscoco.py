@@ -4,17 +4,18 @@ import zipfile
 import wget
 
 import pandas as pd
-
 from glob import glob
 
 NUM_IMG_FILES = 82783
 
 
 def _download_and_extract(url, filename, path):
-    print("Downloading data to {}".format(path))
-    wget.download(url, path)
-    with zipfile.ZipFile(filename, 'r') as zip_file:
-        print("Extracting {}".format(filename))
+    if not os.path.exists(os.path.join(path, filename)):
+        print("Downloading data to {}".format(path))
+        wget.download(url, path)
+
+    with zipfile.ZipFile(os.path.join(path, filename), 'r') as zip_file:
+        print("Extracting {}".format(os.path.join(path, filename)))
         zip_file.extractall(path)
 
 
@@ -32,9 +33,9 @@ def _create_csv(data_path):
 
 def load_data(path=None):
     url = {"train": "http://images.cocodataset.org/zips/train2014.zip"}
-    path = os.path.abspath(path)
     if path is None:
         path = os.path.join(tempfile.gettempdir(), ".fe", "MSCOCO2014")
+    path = os.path.abspath(path)
 
     os.makedirs(path, exist_ok=True)
     train_csv_path = os.path.join(path, "coco_train.csv")
