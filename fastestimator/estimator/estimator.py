@@ -37,6 +37,7 @@ class Estimator:
         self.steps_per_epoch = steps_per_epoch
         self.validation_steps = validation_steps
         self.traces = traces
+        assert log_steps is None or log_steps > 0, "log step must be positive or None"
         self.log_steps = log_steps
         self.inputs = None
         self.num_devices = get_num_devices()
