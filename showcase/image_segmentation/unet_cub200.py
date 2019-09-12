@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""U-Net bird segmentation example."""
 import os
 import tempfile
 
@@ -24,8 +23,8 @@ from fastestimator.dataset import cub200
 from fastestimator.estimator.trace import Dice
 from fastestimator.network.loss import BinaryCrossentropy
 from fastestimator.network.model import FEModel, ModelOp
-from fastestimator.pipeline.processing import Minmax, Reshape
-from fastestimator.record.preprocess import ImageReader, MatReader, Resize
+from fastestimator.pipeline.processing import Minmax
+from fastestimator.record.preprocess import ImageReader, MatReader, Reshape, Resize
 from fastestimator.util.op import NumpyOp
 
 
@@ -36,7 +35,7 @@ class SelectDictKey(NumpyOp):
 
 
 def get_estimator():
-    # Download CUB200 dataset.
+    # load CUB200 dataset.
     csv_path, path = cub200.load_data()
     writer = fe.RecordWriter(
         save_dir=os.path.join(path, "FEdata"),
@@ -45,14 +44,16 @@ def get_estimator():
         ops=[
             ImageReader(inputs='image', parent_path=path),
             Resize(target_size=(128, 128), keep_ratio=True, outputs='image'),
-            MatReader(inputs='annotation', parent_path=path, select=["seg", "seg2"], outputs=[""]),
-            Resize((128, 128), keep_ratio=True, outputs='annotation')
+            MatReader(inputs='annotation', parent_path=path),
+            SelectDictKey(),
+            Resize((128, 128), keep_ratio=True),
+            Reshape(shape=(128, 128, 1), outputs="annotation")
         ])
     #data pipeline
     pipeline = fe.Pipeline(batch_size=32, data=writer, ops=Minmax(inputs='image', outputs='image'))
 
     #Netowrk
-    model = FEModel(model_def=UNet, model_name="cub200", optimizer=tf.optimizers.Adam(learning_rate=0.0001))
+    model = FEModel(model_def=UNet, model_name="cub200", optimizer=tf.optimizers.Adam())
     network = fe.Network(ops=[
         ModelOp(inputs='image', model=model, outputs='mask_pred'),
         BinaryCrossentropy(y_true='annotation', y_pred='mask_pred')
@@ -62,10 +63,11 @@ def get_estimator():
     estimator = fe.Estimator(network=network,
                              pipeline=pipeline,
                              traces=Dice(true_key="annotation", pred_key='mask_pred'),
-                             epochs=400,
-                             steps_per_epoch=10)
+                             epochs=26,
+                             log_steps=50)
     return estimator
 
 
 if __name__ == "__main__":
     estimator = get_estimator()
+    estimator.fit()
