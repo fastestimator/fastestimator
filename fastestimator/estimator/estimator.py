@@ -17,7 +17,7 @@ from collections import ChainMap, deque
 
 import tensorflow as tf
 
-from fastestimator.estimator.trace import Logger, MonitorLoss, Trace, TrainInfo
+from fastestimator.estimator.trace import Logger, MonitorLoss, Trace, TrainInfo, ModelCheckpoint
 from fastestimator.util.cli_util import draw
 from fastestimator.util.util import get_num_devices
 
@@ -75,10 +75,15 @@ class Estimator:
         elif not isinstance(self.traces, list):
             self.traces = [self.traces]
         self._add_traces()
+        no_save_warning = True
         for trace in self.traces:
             assert isinstance(trace, Trace)
+            if isinstance(trace, ModelCheckpoint):
+                no_save_warning = False
             trace.network = self.network
         self._sort_traces()
+        if no_save_warning:
+            print("FastEstimator-Warn: No ModelCheckpoint Trace detected. Models will not be saved.")
 
     def _add_traces(self):
         if self.log_steps:
