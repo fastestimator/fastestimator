@@ -17,7 +17,7 @@ from collections import ChainMap, deque
 
 import tensorflow as tf
 
-from fastestimator.estimator.trace import Logger, MonitorLoss, Trace
+from fastestimator.estimator.trace import Logger, MonitorLoss, Trace, TrainInfo
 from fastestimator.util.cli_util import draw
 from fastestimator.util.util import get_num_devices
 
@@ -37,6 +37,7 @@ class Estimator:
         self.steps_per_epoch = steps_per_epoch
         self.validation_steps = validation_steps
         self.traces = traces
+        assert log_steps is None or log_steps > 0, "log_steps must be positive or None"
         self.log_steps = log_steps
         self.inputs = None
         self.num_devices = get_num_devices()
@@ -44,7 +45,6 @@ class Estimator:
             self.distribute_strategy = tf.distribute.MirroredStrategy()
         else:
             self.distribute_strategy = None
-        self.train_start = 0
         self.train_step = 0
         self.train_epoch = 0
         self.do_eval = False
@@ -81,9 +81,11 @@ class Estimator:
         self._sort_traces()
 
     def _add_traces(self):
+        if self.log_steps:
+            self.traces.insert(0, TrainInfo(log_steps=self.log_steps))
+            if not any(map(lambda x: isinstance(x, Logger), self.traces)):
+                self.traces.append(Logger(log_steps=self.log_steps))
         self.traces.insert(0, MonitorLoss())
-        if not any(map(lambda x: isinstance(x, Logger), self.traces)):
-            self.traces.append(Logger(log_steps=self.log_steps))
 
     def _sort_traces(self):
         # This is essentially a topological sort, but it doesn't seem worthwhile to convert the data into a graph
@@ -91,7 +93,7 @@ class Estimator:
         sorted_traces = []
         available_outputs = {
             "num_devices", "mode", "epoch", "train_step", "batch_idx", "batch_size", "batch", "elapsed_time"
-        } | self.pipeline.get_all_output_keys() | self.network.get_all_output_keys()
+        } | self.pipeline.all_output_keys | self.network.all_output_keys
         end_traces = deque()
 
         intermediate_traces = deque()
@@ -159,7 +161,6 @@ class Estimator:
                     self.network.run_step(batch, ops, model_list, epoch_losses, state, warm_up=True)
 
     def _start(self):
-        self.train_start = time.perf_counter()
         self.train_step = 0
         self._run_traces_on_begin({"num_devices": self.num_devices})
         for self.train_epoch in range(self.epochs):
@@ -167,10 +168,7 @@ class Estimator:
             if self.do_eval:
                 self._run_epoch("eval")
         self._run_traces_on_end({
-            "train_step": self.train_step,
-            "epoch": self.train_epoch,
-            "num_devices": self.num_devices,
-            "elapsed_time": time.perf_counter() - self.train_start
+            "train_step": self.train_step, "epoch": self.train_epoch, "num_devices": self.num_devices
         })
 
     def _run_epoch(self, mode):
@@ -261,9 +259,7 @@ class Estimator:
             self._run_traces_on_end({
                 "train_step": self.train_step,
                 "train_epoch": self.train_epoch,
-                "num_devices": self.num_devices,
-                "elapsed_time": time.perf_counter() - self.train_start
-            })
+                "num_devices": self.num_devices, })
             exit(0)
 
     @tf.function

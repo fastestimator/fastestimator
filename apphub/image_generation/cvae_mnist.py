@@ -129,5 +129,5 @@ def get_estimator(batch_size=100, epochs=100):
 
 
 if __name__ == "__main__":
-    estimator = get_estimator()
-    estimator.fit()
+    est = get_estimator()
+    est.fit()

@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 from collections import ChainMap
-from itertools import chain
 
 import tensorflow as tf
 from tensorflow.python.framework import ops as tfops
@@ -21,7 +20,7 @@ from tensorflow.python.framework import ops as tfops
 from fastestimator.network.model import ModelOp
 from fastestimator.util.op import get_inputs_by_op, get_op_from_mode, verify_ops, write_outputs_by_key
 from fastestimator.util.schedule import Scheduler
-from fastestimator.util.util import NonContext
+from fastestimator.util.util import NonContext, flatten_list
 
 
 class Network:
@@ -35,22 +34,13 @@ class Network:
         self.model = {}
         self.all_losses = []
         self.epoch_losses = []
+        self.epoch_models = []
+        self.all_output_keys = set()
         self.stop_training = False
         self.num_devices = 1
 
-    def get_all_output_keys(self):
-        return set(
-            chain.from_iterable(
-                map(
-                    lambda x: [x] if isinstance(x, str) or x is None else x,
-                    map(
-                        lambda x: x.outputs,
-                        list(
-                            chain.from_iterable([
-                                list(op.epoch_dict.values()) if isinstance(op, Scheduler) else [op] for op in self.ops
-                            ])))))) - {None}
-
     def prepare(self, mode_list, distribute_strategy):
+        all_output_keys = []
         for mode in mode_list:
             signature_epoch, mode_ops = self._get_signature_epoch(mode)
             epoch_ops_map = {}
@@ -70,12 +60,14 @@ class Network:
                 verify_ops(epoch_ops, "Network")
                 # create model list
                 for op in epoch_ops:
+                    all_output_keys.append(op.outputs)
                     if isinstance(op, ModelOp):
                         if op.model.model is None:
                             with distribute_strategy.scope() if distribute_strategy else NonContext():
                                 op.model.model = op.model.model_def()
                                 op.model.model.optimizer = op.model.optimizer
                                 op.model.model.loss_name = op.model.loss_name
+                                op.model.model.model_name = op.model.model_name
                                 assert op.model.model_name not in self.model, \
                                     "duplicated model name: {}".format(op.model.model_name)
                                 self.model[op.model.model_name] = op.model.model
@@ -88,6 +80,7 @@ class Network:
                 epoch_model_map[epoch] = epoch_model
             self.op_schedule[mode] = Scheduler(epoch_dict=epoch_ops_map)
             self.model_schedule[mode] = Scheduler(epoch_dict=epoch_model_map)
+        self.all_output_keys = set(flatten_list(all_output_keys)) - {None}
 
     def _get_signature_epoch(self, mode):
         signature_epoch = [0]
@@ -105,6 +98,7 @@ class Network:
             if model.loss_name not in epoch_losses:
                 epoch_losses.append(model.loss_name)
         self.epoch_losses = epoch_losses
+        self.epoch_models = model_list
         return ops, model_list, epoch_losses
 
     def run_step(self, batch, ops, model_list, epoch_losses, state, warm_up=False):

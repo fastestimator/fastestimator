@@ -14,15 +14,13 @@
 # ==============================================================================
 import tensorflow as tf
 
-from fastestimator import Estimator
-from fastestimator import Network
-from fastestimator import Pipeline
+from fastestimator import Estimator, Network, Pipeline
 from fastestimator.architecture import LeNet
 from fastestimator.estimator.trace import Accuracy, ConfusionMatrix
 from fastestimator.network.loss import SparseCategoricalCrossentropy
 from fastestimator.network.model import FEModel, ModelOp
-from fastestimator.pipeline.processing import Minmax
 from fastestimator.pipeline.augmentation import AdversarialSample, Average
+from fastestimator.pipeline.processing import Minmax
 from fastestimator.util.schedule import Scheduler
 
 
@@ -64,5 +62,5 @@ def get_estimator(epochs=2, batch_size=32, epsilon=0.01, warmup=0):
 
 
 if __name__ == "__main__":
-    estimator = get_estimator()
-    estimator.fit()
+    est = get_estimator()
+    est.fit()

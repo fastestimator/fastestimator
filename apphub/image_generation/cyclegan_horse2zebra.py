@@ -16,15 +16,15 @@ import os
 from glob import glob
 
 import cv2
-import imageio
 import tensorflow as tf
-from fastestimator.dataset.horse2zebra import load_data
 
-from fastestimator.architecture.cyclegan import build_generator, build_discriminator
+import imageio
+from fastestimator.architecture.cyclegan import build_discriminator, build_generator
+from fastestimator.dataset.horse2zebra import load_data
 from fastestimator.estimator.estimator import Estimator
 from fastestimator.estimator.trace import Trace
 from fastestimator.network.loss import Loss
-from fastestimator.network.model import ModelOp, FEModel
+from fastestimator.network.model import FEModel, ModelOp
 from fastestimator.network.network import Network
 from fastestimator.pipeline.pipeline import Pipeline
 from fastestimator.record.preprocess import ImageReader
@@ -130,7 +130,7 @@ class DLoss(Loss):
 
 def get_estimator(weight=10.0, epochs=200):
     trainA_csv, trainB_csv, testA_csv, testB_csv, parent_path = load_data()
-    tfr_save_dir = os.path.join(parent_path, 'tfr')
+    tfr_save_dir = os.path.join(parent_path, 'FEdata')
     # Step 1: Define Pipeline
     writer = RecordWriter(
         train_data=(trainA_csv, trainB_csv),
@@ -191,5 +191,5 @@ def get_estimator(weight=10.0, epochs=200):
 
 
 if __name__ == "__main__":
-    estimator = get_estimator()
-    estimator.fit()
+    est = get_estimator()
+    est.fit()

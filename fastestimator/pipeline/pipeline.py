@@ -16,7 +16,6 @@ import json
 import multiprocessing as mp
 import os
 import time
-from itertools import chain
 
 import numpy as np
 import tensorflow as tf
@@ -27,7 +26,7 @@ from fastestimator.util.op import get_inputs_by_key, get_inputs_by_op, get_op_fr
     write_outputs_by_key
 from fastestimator.util.schedule import Scheduler
 from fastestimator.util.tfrecord import get_features
-from fastestimator.util.util import convert_tf_dtype, get_num_devices
+from fastestimator.util.util import convert_tf_dtype, flatten_list, get_num_devices
 
 
 class Pipeline:
@@ -54,19 +53,6 @@ class Pipeline:
         self._verify_input()
         self._reset()
 
-    def get_all_output_keys(self):
-        return set(
-            chain.from_iterable(
-                map(
-                    lambda x: [x] if isinstance(x, str) or x is None else x,
-                    map(
-                        lambda x: x.outputs,
-                        list(
-                            chain.from_iterable([
-                                list(op.epoch_dict.values()) if isinstance(op, Scheduler) else [op] for op in self.ops
-                            ])))))) - {None} | set(
-                                chain.from_iterable(list(chain.from_iterable(self.feature_name.values()))))
-
     def _verify_input(self):
         assert isinstance(self.data, (dict, RecordWriter, str)), \
             "data must be either RecordWriter, dictionary or record path"
@@ -90,6 +76,7 @@ class Pipeline:
         self.extracted_dataset = {}
         self.transformed_dataset = {}
         self.dataset_schedule = {}
+        self.all_output_keys = set()
         # TFrecord only
         self.summary_file = {}
         self.feature_dtype = {"train": [], "eval": []}
@@ -112,10 +99,12 @@ class Pipeline:
             self._get_tfrecord_config(data_path)
         else:
             raise ValueError("data must be one of the following: dictionary, RecordWriter or record path")
+        self.all_output_keys = self.all_output_keys | set(flatten_list(list(self.feature_name.values())))
         for mode in self.mode_list:
             self._get_feature_name(mode)
             self._extract_dataset(mode)
             self._transform_dataset(mode, distribute_strategy)
+        self.all_output_keys = self.all_output_keys - {None}
 
     def _get_numpy_config(self):
         for mode in self.possible_mode:
@@ -216,6 +205,7 @@ class Pipeline:
         self.extracted_dataset[mode] = dataset
 
     def _transform_dataset(self, mode, distribute_strategy):
+        all_output_keys = []
         signature_epoch, mode_ops = self._get_signature_epoch(mode)
         extracted_ds = self.extracted_dataset[mode]
         state = {"mode": mode}
@@ -240,6 +230,7 @@ class Pipeline:
             verify_ops(epoch_ops_without_filter, "Pipeline")
             # arrange operation according to filter location
             for op in epoch_ops_all:
+                all_output_keys.append(op.outputs)
                 if not isinstance(op, TensorFilter):
                     forward_ops_between_filter.append(op)
                 else:
@@ -262,6 +253,7 @@ class Pipeline:
                 dataset = distribute_strategy.experimental_distribute_dataset(dataset)
             dataset_map[epoch] = iter(dataset)
         self.dataset_schedule[mode] = Scheduler(epoch_dict=dataset_map)
+        self.all_output_keys = self.all_output_keys | set(flatten_list(all_output_keys))
 
     def _get_padded_shape(self, dataset):
         padded_shape = {}

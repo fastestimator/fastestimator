@@ -19,7 +19,7 @@ from fastestimator import Estimator, Network, Pipeline
 from fastestimator.architecture import LeNet
 from fastestimator.estimator.trace import Accuracy, ConfusionMatrix
 from fastestimator.network.loss import MixUpLoss, SparseCategoricalCrossentropy
-from fastestimator.network.model import ModelOp, FEModel
+from fastestimator.network.model import FEModel, ModelOp
 from fastestimator.pipeline.augmentation import MixUpBatch
 from fastestimator.pipeline.processing import Minmax
 from fastestimator.util.schedule import Scheduler
@@ -55,6 +55,7 @@ def get_estimator(epochs=2, batch_size=32, alpha=1.0, warmup=0):
     estimator = Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces)
     return estimator
 
+
 if __name__ == "__main__":
-    estimator = get_estimator()
-    estimator.fit()
+    est = get_estimator()
+    est.fit()

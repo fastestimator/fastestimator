@@ -69,5 +69,5 @@ def get_estimator():
 
 
 if __name__ == "__main__":
-    estimator = get_estimator()
-    estimator.fit()
+    est = get_estimator()
+    est.fit()
