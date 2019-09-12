@@ -18,13 +18,13 @@ from glob import glob
 import cv2
 import imageio
 import tensorflow as tf
-from fastestimator.dataset.zebra2horse_data import load_data
+from fastestimator.dataset.horse2zebra import load_data
 
 from fastestimator.architecture.cyclegan import build_generator, build_discriminator
 from fastestimator.estimator.estimator import Estimator
 from fastestimator.estimator.trace import Trace
 from fastestimator.network.loss import Loss
-from fastestimator.network.model import ModelOp, build
+from fastestimator.network.model import ModelOp, FEModel
 from fastestimator.network.network import Network
 from fastestimator.pipeline.pipeline import Pipeline
 from fastestimator.record.preprocess import ImageReader
@@ -94,17 +94,18 @@ class RandomJitter(TensorOp):
 class GLoss(Loss):
     def __init__(self, inputs, weight, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        self.cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+        self.cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True,
+                                                                reduction=tf.keras.losses.Reduction.NONE)
         self.LAMBDA = weight
 
     def _adversarial_loss(self, fake_img):
-        return self.cross_entropy(tf.ones_like(fake_img), fake_img)
+        return tf.reduce_mean(self.cross_entropy(tf.ones_like(fake_img), fake_img), axis=(1,2))
 
     def _identity_loss(self, real_img, same_img):
-        return 0.5 * self.LAMBDA * tf.reduce_mean(tf.abs(real_img - same_img))
+        return 0.5 * self.LAMBDA * tf.reduce_mean(tf.abs(real_img - same_img), axis=(1,2,3))
 
     def _cycle_loss(self, real_img, cycled_img):
-        return self.LAMBDA * tf.reduce_mean(tf.abs(real_img - cycled_img))
+        return self.LAMBDA * tf.reduce_mean(tf.abs(real_img - cycled_img), axis=(1,2,3))
 
     def forward(self, data, state):
         real_img, fake_img, cycled_img, same_img = data
@@ -116,24 +117,26 @@ class GLoss(Loss):
 class DLoss(Loss):
     def __init__(self, inputs, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        self.cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+        self.cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True,
+                                                                reduction=tf.keras.losses.Reduction.NONE)
 
     def forward(self, data, state):
         real_img, fake_img = data
-        real_img_loss = self.cross_entropy(tf.ones_like(real_img), real_img)
-        fake_img_loss = self.cross_entropy(tf.zeros_like(real_img), fake_img)
+        real_img_loss = tf.reduce_mean(self.cross_entropy(tf.ones_like(real_img), real_img), axis=(1,2))
+        fake_img_loss = tf.reduce_mean(self.cross_entropy(tf.zeros_like(real_img), fake_img), axis=(1,2))
         total_loss = real_img_loss + fake_img_loss
         return 0.5 * total_loss
 
 
-def get_estimator(epochs=200):
+def get_estimator(weight=10.0, epochs=200):
     trainA_csv, trainB_csv, testA_csv, testB_csv, parent_path = load_data()
-
+    tfr_save_dir = os.path.join(parent_path, 'tfr')
     # Step 1: Define Pipeline
     writer = RecordWriter(
         train_data=(trainA_csv, trainB_csv),
-        ops=(ImageReader(inputs="imgA", outputs="imgA", parent_path=parent_path),
-             ImageReader(inputs="imgB", outputs="imgB", parent_path=parent_path)))
+        save_dir=tfr_save_dir,
+        ops=([ImageReader(inputs="imgA", outputs="imgA", parent_path=parent_path)],
+             [ImageReader(inputs="imgB", outputs="imgB", parent_path=parent_path)]))
 
     pipeline = Pipeline(
         data=writer,
@@ -145,32 +148,48 @@ def get_estimator(epochs=200):
             RandomJitter(inputs="imgB", outputs="real_B")
         ])
     # Step2: Define Network
-    g_AtoB = build(keras_model=build_generator(),
-                   loss=GLoss(inputs=("real_A", "D_fake_B", "cycled_A", "same_A"), weight=10.0),
-                   optimizer=tf.keras.optimizers.Adam(2e-4, 0.5))
-    g_BtoA = build(keras_model=build_generator(),
-                   loss=GLoss(inputs=("real_B", "D_fake_A", "cycled_B", "same_B"), weight=10.0),
-                   optimizer=tf.keras.optimizers.Adam(2e-4, 0.5))
-    d_A = build(keras_model=build_discriminator(),
-                loss=DLoss(inputs=("D_real_A", "D_fake_A")),
-                optimizer=tf.keras.optimizers.Adam(2e-4, 0.5))
-    d_B = build(keras_model=build_discriminator(),
-                loss=DLoss(inputs=("D_real_B", "D_fake_B")),
-                optimizer=tf.keras.optimizers.Adam(2e-4, 0.5))
+    g_AtoB = FEModel(model_def=build_generator,
+                     model_name="g_AtoB",
+                     loss_name="g_AtoB_loss",
+                     optimizer=tf.keras.optimizers.Adam(2e-4, 0.5))
+
+    g_BtoA = FEModel(model_def=build_generator,
+                     model_name="g_BtoA",
+                     loss_name="g_BtoA_loss",
+                     optimizer=tf.keras.optimizers.Adam(2e-4, 0.5))
+
+    d_A = FEModel(model_def=build_discriminator,
+                  model_name="d_A",
+                  loss_name="d_A_loss",
+                  optimizer=tf.keras.optimizers.Adam(2e-4, 0.5))
+
+    d_B = FEModel(model_def=build_discriminator,
+                  model_name="d_B",
+                  loss_name="d_B_loss",
+                  optimizer=tf.keras.optimizers.Adam(2e-4, 0.5))
 
     network = Network(ops=[
         ModelOp(inputs="real_A", model=g_AtoB, outputs="fake_B"),
-        ModelOp(inputs="real_A", model=d_A, outputs="D_real_A"),
-        ModelOp(inputs="real_A", model=g_BtoA, outputs="same_A"),
         ModelOp(inputs="real_B", model=g_BtoA, outputs="fake_A"),
-        ModelOp(inputs="real_B", model=d_B, outputs="D_real_B"),
-        ModelOp(inputs="real_B", model=g_AtoB, outputs="same_B"),
+        ModelOp(inputs="real_A", model=d_A, outputs="d_real_A"),
+        ModelOp(inputs="fake_A", model=d_A, outputs="d_fake_A"),
+        ModelOp(inputs="real_B", model=d_B, outputs="d_real_B"),
+        ModelOp(inputs="fake_B", model=d_B, outputs="d_fake_B"),
+        ModelOp(inputs="real_A", model=g_BtoA, outputs="same_A"),
         ModelOp(inputs="fake_B", model=g_BtoA, outputs="cycled_A"),
-        ModelOp(inputs="fake_B", model=d_B, outputs="D_fake_B"),
+        ModelOp(inputs="real_B", model=g_AtoB, outputs="same_B"),
         ModelOp(inputs="fake_A", model=g_AtoB, outputs="cycled_B"),
-        ModelOp(inputs="fake_A", model=d_A, outputs="D_fake_A")
+        GLoss(inputs=("real_A", "d_fake_B", "cycled_A", "same_A"), weight=weight, outputs="g_AtoB_loss"),
+        GLoss(inputs=("real_B", "d_fake_A", "cycled_B", "same_B"), weight=weight, outputs="g_BtoA_loss"),
+        DLoss(inputs=("d_real_A", "d_fake_A"), outputs="d_A_loss"),
+        DLoss(inputs=("d_real_B", "d_fake_B"), outputs="d_B_loss")
     ])
     # Step3: Define Estimator
     # traces = [GifGenerator("/root/data/public/horse2zebra/images")]
     estimator = Estimator(network=network, pipeline=pipeline, epochs=epochs)
     return estimator
+
+
+if __name__ == "__main__":
+    estimator = get_estimator()
+    estimator.fit()
