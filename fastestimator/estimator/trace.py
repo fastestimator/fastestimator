@@ -182,9 +182,10 @@ class TrainInfo(Trace):
         if state["train_step"] % self.log_steps == 0:
             if state["train_step"] > 0:
                 self.elapse_times.append(time.perf_counter() - self.time_start)
+                epoch_models = self.network.epoch_models
+                for model in epoch_models:
+                    state[model.model_name + "_lr"] = round(backend.get_value(model.optimizer.lr), 6)
                 state["examples_per_sec"] = round(self.num_example / np.sum(self.elapse_times), 2)
-                epoch_model_list = self.ne
-
             self.elapse_times = []
             self.num_example = 0
             self.time_start = time.perf_counter()

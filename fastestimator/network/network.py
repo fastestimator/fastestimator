@@ -67,6 +67,7 @@ class Network:
                                 op.model.model = op.model.model_def()
                                 op.model.model.optimizer = op.model.optimizer
                                 op.model.model.loss_name = op.model.loss_name
+                                op.model.model.model_name = op.model.model_name
                                 assert op.model.model_name not in self.model, \
                                     "duplicated model name: {}".format(op.model.model_name)
                                 self.model[op.model.model_name] = op.model.model
