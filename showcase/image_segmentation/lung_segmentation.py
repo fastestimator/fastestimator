@@ -14,6 +14,8 @@
 # ==============================================================================
 """U-Net lung segmentation example.
 """
+import os
+
 import tensorflow as tf
 
 import fastestimator as fe
@@ -34,10 +36,10 @@ class CombineLeftRightMask(NumpyOp):
         return data
 
 
-def get_estimator(save_dir="/data/data/Montgomery"):
+def get_estimator():
     csv_path, path = montgomery.load_data()
     writer = fe.RecordWriter(
-        save_dir=save_dir,
+        save_dir=os.path.join(path, "FEdata"),
         train_data=csv_path,
         validation_data=0.2,
         ops=[
@@ -60,7 +62,7 @@ def get_estimator(save_dir="/data/data/Montgomery"):
             Reshape(shape=(512, 512, 1), inputs="mask", outputs="mask")
         ])
 
-    model = FEModel(model_def=lambda: UNet("imgpath", "mask", input_size=(512, 512, 1)),
+    model = FEModel(model_def=lambda: UNet(input_size=(512, 512, 1)),
                     model_name="lungsegmentation",
                     optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001))
 

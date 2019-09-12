@@ -18,21 +18,17 @@ from tensorflow.python.keras.layers import Conv2D, Dropout, Input, MaxPooling2D,
 from tensorflow.python.keras.models import Model
 
 
-def UNet(input_name, output_name, input_size=(128, 128, 3)):
+def UNet(input_size=(128, 128, 3)):
     """U-Net model.
 
     Args:
-        input_name (str): Input feature name.
-        output_name (str): Output feature name.
         input_size (tuple, optional): Input image size. Defaults to (128, 128, 3).
 
     Returns:
         A `Model` object.
     """
     conv_config = {'activation': 'relu', 'padding': 'same', 'kernel_initializer': 'he_normal'}
-
-    inputs = Input(input_size, name=input_name)
-
+    inputs = Input(input_size)
     conv1 = Conv2D(64, 3, **conv_config)(inputs)
     conv1 = Conv2D(64, 3, **conv_config)(conv1)
     pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
@@ -74,8 +70,6 @@ def UNet(input_name, output_name, input_size=(128, 128, 3)):
     conv9 = Conv2D(64, 3, **conv_config)(merge9)
     conv9 = Conv2D(64, 3, **conv_config)(conv9)
     conv9 = Conv2D(2, 3, **conv_config)(conv9)
-    conv10 = Conv2D(1, 1, activation='sigmoid', name=output_name)(conv9)
-
-    model = Model(inputs=[inputs], outputs=[conv10])
-
+    conv10 = Conv2D(1, 1, activation='sigmoid')(conv9)
+    model = Model(inputs=inputs, outputs=conv10)
     return model
