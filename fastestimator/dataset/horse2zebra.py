@@ -32,7 +32,7 @@ def _create_csv(img, key_name, parent_path, csv_name):
 
 def load_data(path=None):
     if path is None:
-        path = os.path.join(tempfile.gettempdir(), ".fe","HORSE2ZEBRA")
+        path = os.path.join(tempfile.gettempdir(), ".fe", "HORSE2ZEBRA")
     if not (os.path.exists(path)):
         os.makedirs(path)
     data_compressed_path = os.path.join(path, 'horse2zebra.zip')
@@ -55,9 +55,9 @@ def load_data(path=None):
         trainB_img = glob(os.path.join(path, 'horse2zebra', 'trainB', '*.jpg'))
         _create_csv(trainB_img, 'imgB', path, trainB_csv)
     if not os.path.exists(testA_csv):
-        testA_img = glob(os.path.join(path, 'horese2zebra', 'testA', '*.jpg'))
+        testA_img = glob(os.path.join(path, 'horse2zebra', 'testA', '*.jpg'))
         _create_csv(testA_img, 'imgA', path, testA_csv)
     if not os.path.exists(testB_csv):
-        testB_img = glob(os.path.join(path, 'horese2zebra', 'testB', '*.jpg'))
+        testB_img = glob(os.path.join(path, 'horse2zebra', 'testB', '*.jpg'))
         _create_csv(testB_img, 'imgB', path, testB_csv)
     return trainA_csv, trainB_csv, testA_csv, testB_csv, path
