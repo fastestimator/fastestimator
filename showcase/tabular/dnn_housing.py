@@ -16,23 +16,24 @@ import tensorflow as tf
 from sklearn.preprocessing import StandardScaler
 from tensorflow.keras import layers
 
-from fastestimator import Estimator, Pipeline, Network
+from fastestimator import Estimator, Network, Pipeline
 from fastestimator.network.loss import MeanSquaredError
-from fastestimator.network.model import ModelOp, build
+from fastestimator.network.model import FEModel, ModelOp
 
 
 def create_dnn():
-        model = tf.keras.Sequential()
-        model.add(layers.Dense(10, activation="relu"))
-        model.add(layers.Dropout(0.5))
-        model.add(layers.Dense(10, activation="relu"))
-        model.add(layers.Dropout(0.5))
-        model.add(layers.Dense(10, activation="relu"))
-        model.add(layers.Dropout(0.5))
-        model.add(layers.Dense(1, activation="linear"))
-        return model
+    model = tf.keras.Sequential()
+    model.add(layers.Dense(10, activation="relu"))
+    model.add(layers.Dropout(0.5))
+    model.add(layers.Dense(10, activation="relu"))
+    model.add(layers.Dropout(0.5))
+    model.add(layers.Dense(10, activation="relu"))
+    model.add(layers.Dropout(0.5))
+    model.add(layers.Dense(1, activation="linear"))
+    return model
 
-def get_estimator(epochs=30, batch_size=32):
+
+def get_estimator(epochs=50, batch_size=32):
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.boston_housing.load_data()
     scaler = StandardScaler()
     x_train = scaler.fit_transform(x_train)
@@ -41,9 +42,15 @@ def get_estimator(epochs=30, batch_size=32):
     pipeline = Pipeline(batch_size=batch_size, data=data)
 
     #prepare model
-    model = build(keras_model=create_dnn(), loss=MeanSquaredError(y_true="y", y_pred="y_pred"), optimizer="adam")
-    network = Network(ops=ModelOp(inputs="x", model=model, outputs="y_pred"))
+    model = FEModel(model_def=create_dnn, model_name="dnn", optimizer="adam")
+    network = Network(
+        ops=[ModelOp(inputs="x", model=model, outputs="y_pred"), MeanSquaredError(y_true="y", y_pred="y_pred")])
 
     #create estimator
     estimator = Estimator(network=network, pipeline=pipeline, epochs=epochs, log_steps=10)
     return estimator
+
+
+if __name__ == "__main__":
+    estimator = get_estimator()
+    estimator.fit()

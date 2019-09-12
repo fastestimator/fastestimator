@@ -13,11 +13,12 @@
 # limitations under the License.
 # ==============================================================================
 import os
+
 import cv2
 import numpy as np
 import tensorflow as tf
 
-from fastestimator.architecture.stnet import styleTransferNet, lossNet
+from fastestimator.architecture.stnet import lossNet, styleTransferNet
 from fastestimator.dataset.mscoco import load_data
 from fastestimator.estimator.estimator import Estimator
 from fastestimator.network.loss import Loss
@@ -95,7 +96,7 @@ def get_estimator(style_img_path, data_path=None, style_weight=5.0, content_weig
     train_csv, path = load_data(data_path)
     style_img = cv2.imread(style_img_path)
     assert (style_img is not None), "Invalid style reference image"
-    tfr_save_dir = os.path.join(path, 'tfr')
+    tfr_save_dir = os.path.join(path, 'FEdata')
     style_img = (style_img.astype(np.float32) / 127.5) / 127.5
     style_img_t = tf.convert_to_tensor(np.expand_dims(style_img, axis=0))
     writer = RecordWriter(

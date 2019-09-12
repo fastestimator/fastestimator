@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import os
+
 import numpy as np
 import tensorflow as tf
 
@@ -154,11 +156,11 @@ class PredictBox(TensorOp):
         return cls_selected, loc_selected, valid_outputs
 
 
-def get_estimator(data_dir="/data/data/SVHN/"):
+def get_estimator():
     # prepare data in disk
     train_csv, val_csv, path = svhn.load_data()
     writer = RecordWriter(
-        save_dir=data_dir,
+        save_dir=os.path.join(path, "FEdata"),
         train_data=train_csv,
         validation_data=val_csv,
         ops=[
