@@ -19,6 +19,7 @@ import sys
 import time
 from ast import literal_eval
 from contextlib import ContextDecorator
+from itertools import chain
 
 import numpy as np
 import PIL
@@ -300,3 +301,19 @@ def get_num_devices():
     local_device_protos = device_lib.list_local_devices()
     gpu_list = [x.name for x in local_device_protos if x.device_type == 'GPU']
     return max(1, len(gpu_list))
+
+
+def flatten_list(input_list):
+    for idx, ele in enumerate(input_list):
+        input_list[idx] = to_list(ele)
+    output_list = list(chain.from_iterable(input_list))
+    return output_list
+
+
+def to_list(data):
+    if not isinstance(data, list):
+        try:
+            data = list(data)
+        except:
+            data = [data]
+    return data

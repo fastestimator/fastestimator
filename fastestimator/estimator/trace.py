@@ -154,48 +154,61 @@ class MonitorLoss(Trace):
                 state["min_" + key] = self.best_loss
                 state["since_best_loss"] = self.epochs_since_best
 
-    def on_end(self, state):
-        state['total_time'] = "{} sec".format(round(state["elapsed_time"], 2))
-
     @staticmethod
     @tf.function
     def _reduce_loss(element_wise_loss, global_batch_size):
         return tf.reduce_sum(element_wise_loss) / global_batch_size
 
 
+class TrainInfo(Trace):
+    """Essential training information for the logging purpose during training
+    """
+    def __init__(self, log_steps):
+        super().__init__(mode="train")
+        self.log_steps = log_steps
+        self.elapse_times = []
+        self.num_example = 0
+        self.time_start = None
+        self.train_start = None
+
+    def on_begin(self, state):
+        self.train_start = time.perf_counter()
+
+    def on_epoch_begin(self, state):
+        self.time_start = time.perf_counter()
+
+    def on_batch_end(self, state):
+        self.num_example += state["batch_size"]
+        if state["train_step"] % self.log_steps == 0:
+            if state["train_step"] > 0:
+                self.elapse_times.append(time.perf_counter() - self.time_start)
+                state["examples_per_sec"] = round(self.num_example / np.sum(self.elapse_times), 2)
+            self.elapse_times = []
+            self.num_example = 0
+            self.time_start = time.perf_counter()
+
+    def on_epoch_end(self, state):
+        self.elapse_times.append(time.perf_counter() - self.time_start)
+
+    def on_end(self, state):
+        state['total_time'] = "{} sec".format(round(time.perf_counter() - self.train_start, 2))
+
 class Logger(Trace):
     """Logger, automatically applied by default.
     """
-    def __init__(self, log_steps=100):
+    def __init__(self, log_steps):
         """
         Args:
             log_steps (int, optional): Logging interval. Default value is 100.
         """
         super().__init__(inputs="*")
         self.log_steps = log_steps
-        self.elapse_times = []
-        self.num_example = 0
-        self.time_start = None
-
-    def on_epoch_begin(self, state):
-        if state["mode"] == "train":
-            self.time_start = time.perf_counter()
 
     def on_batch_end(self, state):
-        if state["mode"] == "train":
-            self.num_example += state["batch_size"]
-            if state["train_step"] % self.log_steps == 0:
-                if state["train_step"] > 0:
-                    self.elapse_times.append(time.perf_counter() - self.time_start)
-                    state["examples_per_sec"] = round(self.num_example / np.sum(self.elapse_times), 2)
-                self._print_message("FastEstimator-Train: step: {}; ".format(state["train_step"]), state.maps[0])
-                self.elapse_times = []
-                self.num_example = 0
-                self.time_start = time.perf_counter()
+        if state["mode"] == "train" and state["train_step"] % self.log_steps == 0:
+            self._print_message("FastEstimator-Train: step: {}; ".format(state["train_step"]), state.maps[0])
 
     def on_epoch_end(self, state):
-        if state["mode"] == "train":
-            self.elapse_times.append(time.perf_counter() - self.time_start)
         if state["mode"] == "eval":
             self._print_message("FastEstimator-Eval: step: {}; ".format(state["train_step"]), state.maps[0])
 
