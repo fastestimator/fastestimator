@@ -135,5 +135,5 @@ def get_estimator(style_img_path=None, data_path=None, style_weight=5.0, content
 
 
 if __name__ == "__main__":
-    estimator = get_estimator()
-    estimator.fit()
+    est = get_estimator()
+    est.fit()

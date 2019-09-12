@@ -70,5 +70,5 @@ def get_estimator(epochs=10, batch_size=64):
 
 
 if __name__ == "__main__":
-    estimator = get_estimator()
-    estimator.fit()
+    est = get_estimator()
+    est.fit()

@@ -214,7 +214,8 @@ class Logger(Trace):
 
     def on_epoch_end(self, state):
         if state["mode"] == "eval":
-            self._print_message("FastEstimator-Eval: step: {}; ".format(state["train_step"]), state.maps[0])
+            self._print_message(
+                "FastEstimator-Eval: step: {}; epoch: {}; ".format(state["train_step"], state["epoch"]), state.maps[0])
 
     def on_end(self, state):
         self._print_message("FastEstimator-Finished: step: {}; ".format(state["train_step"]), state.maps[0])

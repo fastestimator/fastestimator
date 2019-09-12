@@ -42,8 +42,7 @@ def get_estimator():
     model = FEModel(model_def=lambda: DenseNet121(input_shape=(32, 32, 3)), model_name="densenet121", optimizer="adam")
 
     network = fe.Network(ops=[
-        ModelOp(inputs="x", model=model, outputs="y_pred"),
-        SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred")
+        ModelOp(inputs="x", model=model, outputs="y_pred"), SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred")
     ])
     # step 3.prepare estimator
     estimator = fe.Estimator(network=network,
@@ -54,5 +53,5 @@ def get_estimator():
 
 
 if __name__ == "__main__":
-    estimator = get_estimator()
-    estimator.fit()
+    est = get_estimator()
+    est.fit()

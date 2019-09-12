@@ -191,5 +191,5 @@ def get_estimator(weight=10.0, epochs=200):
 
 
 if __name__ == "__main__":
-    estimator = get_estimator()
-    estimator.fit()
+    est = get_estimator()
+    est.fit()
