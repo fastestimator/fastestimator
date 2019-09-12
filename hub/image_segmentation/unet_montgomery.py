@@ -24,8 +24,9 @@ from fastestimator.dataset import montgomery
 from fastestimator.estimator.trace import Dice
 from fastestimator.network.loss import BinaryCrossentropy
 from fastestimator.network.model import FEModel, ModelOp
-from fastestimator.pipeline.processing import Minmax, Reshape
-from fastestimator.record.preprocess import ImageReader, Resize
+from fastestimator.pipeline.augmentation import Augmentation2D
+from fastestimator.pipeline.processing import Minmax
+from fastestimator.record.preprocess import ImageReader, Reshape, Resize
 from fastestimator.util.op import NumpyOp
 
 
@@ -47,8 +48,10 @@ def get_estimator():
             ImageReader(grey_scale=True, inputs="mask_left", parent_path=path, outputs="mask_left"),
             ImageReader(grey_scale=True, inputs="mask_right", parent_path=path, outputs="mask_right"),
             CombineLeftRightMask(inputs=("mask_left", "mask_right")),
-            Resize(target_size=(512, 512), outputs="mask"),
-            Resize(inputs="image", target_size=(512, 512), outputs="image"),
+            Resize(target_size=(512, 512)),
+            Reshape(shape=(512, 512, 1), outputs="mask"),
+            Resize(inputs="image", target_size=(512, 512)),
+            Reshape(shape=(512, 512, 1), outputs="image"),
         ],
         write_feature=["image", "mask"])
 
@@ -56,10 +59,13 @@ def get_estimator():
         batch_size=4,
         data=writer,
         ops=[
+            Augmentation2D(inputs=["image", "mask"],
+                           outputs=["image", "mask"],
+                           mode="train",
+                           rotation_range=10,
+                           flip_left_right=True),
             Minmax(inputs="image", outputs="image"),
-            Minmax(inputs="mask", outputs="mask"),
-            Reshape(shape=(512, 512, 1), inputs="image", outputs="image"),
-            Reshape(shape=(512, 512, 1), inputs="mask", outputs="mask")
+            Minmax(inputs="mask", outputs="mask")
         ])
 
     model = FEModel(model_def=lambda: UNet(input_size=(512, 512, 1)),

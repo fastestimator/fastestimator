@@ -92,8 +92,13 @@ class StyleContentLoss(Loss):
         return style_loss + content_loss + total_variation_reg
 
 
-def get_estimator(style_img_path, data_path=None, style_weight=5.0, content_weight=1.0, tv_weight=1e-4):
+def get_estimator(style_img_path=None, data_path=None, style_weight=5.0, content_weight=1.0, tv_weight=1e-4):
     train_csv, path = load_data(data_path)
+    if style_img_path is None:
+        style_img_path = tf.keras.utils.get_file(
+            'kandinsky.jpg',
+            'https://storage.googleapis.com/download.tensorflow.org/example_images/Vassily_Kandinsky%2C_1913_-_Composition_7.jpg'
+        )
     style_img = cv2.imread(style_img_path)
     assert (style_img is not None), "Invalid style reference image"
     tfr_save_dir = os.path.join(path, 'FEdata')
