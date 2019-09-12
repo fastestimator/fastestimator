@@ -97,6 +97,7 @@ class Network:
             if model.loss_name not in epoch_losses:
                 epoch_losses.append(model.loss_name)
         self.epoch_losses = epoch_losses
+        self.epoch_models = model_list
         return ops, model_list, epoch_losses
 
     def run_step(self, batch, ops, model_list, epoch_losses, state, warm_up=False):

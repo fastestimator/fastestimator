@@ -312,8 +312,8 @@ def flatten_list(input_list):
 
 def to_list(data):
     if not isinstance(data, list):
-        try:
+        if isinstance(data, (tuple, set)):
             data = list(data)
-        except:
+        else:
             data = [data]
     return data
