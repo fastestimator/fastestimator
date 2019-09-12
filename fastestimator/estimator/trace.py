@@ -720,13 +720,11 @@ class EarlyStopping(Trace):
             patience (int): Number of epochs with no improvement
               after which training will be stopped.
             verbose (int): verbosity mode.
-            save_mode (str): One of `{"auto", "min", "max"}`. In `min` mode,
+            compare (str): One of `{"min", "max"}`. In `min` mode,
               training will stop when the quantity
               monitored has stopped decreasing; in `max`
               mode it will stop when the quantity
-              monitored has stopped increasing; in `auto`
-              mode, the direction is automatically inferred
-              from the name of the monitored quantity.
+              monitored has stopped increasing.
             baseline (float): Baseline value for the monitored quantity.
               Training will stop if the model doesn't show improvement over the
               baseline.
@@ -742,7 +740,7 @@ class EarlyStopping(Trace):
                  min_delta=0,
                  patience=0,
                  verbose=0,
-                 save_mode='min',
+                 compare='min',
                  baseline=None,
                  restore_best_weights=False,
                  mode='eval'):
@@ -750,8 +748,8 @@ class EarlyStopping(Trace):
 
         if len(self.inputs) != 1:
             raise ValueError("EarlyStopping supports only one monitor key")
-        if save_mode not in ['min', 'max']:
-            raise ValueError("save_mode can only be `min` or `max`")
+        if compare not in ['min', 'max']:
+            raise ValueError("compare_mode can only be `min` or `max`")
 
         self.monitored_key = monitor
         self.min_delta = abs(min_delta)
@@ -762,7 +760,7 @@ class EarlyStopping(Trace):
         self.verbose = verbose
         self.restore_best_weights = restore_best_weights
         self.best_weights = None
-        if save_mode == 'min':
+        if compare == 'min':
             self.monitor_op = np.less
             self.min_delta *= -1
         else:
