@@ -99,6 +99,7 @@ class Pipeline:
             self._get_tfrecord_config(data_path)
         else:
             raise ValueError("data must be one of the following: dictionary, RecordWriter or record path")
+        self.all_output_keys = self.all_output_keys | set(flatten_list(list(self.feature_name.values())))
         for mode in self.mode_list:
             self._get_feature_name(mode)
             self._extract_dataset(mode)
