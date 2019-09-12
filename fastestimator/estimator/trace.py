@@ -161,7 +161,7 @@ class MonitorLoss(Trace):
 
 
 class TrainInfo(Trace):
-    """Essential training information for the logging purpose during training
+    """Essential training information for logging during training
     """
     def __init__(self, log_steps):
         super().__init__(mode="train")
@@ -183,6 +183,8 @@ class TrainInfo(Trace):
             if state["train_step"] > 0:
                 self.elapse_times.append(time.perf_counter() - self.time_start)
                 state["examples_per_sec"] = round(self.num_example / np.sum(self.elapse_times), 2)
+                epoch_model_list = self.ne
+
             self.elapse_times = []
             self.num_example = 0
             self.time_start = time.perf_counter()
@@ -192,6 +194,7 @@ class TrainInfo(Trace):
 
     def on_end(self, state):
         state['total_time'] = "{} sec".format(round(time.perf_counter() - self.train_start, 2))
+
 
 class Logger(Trace):
     """Logger, automatically applied by default.

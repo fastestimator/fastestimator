@@ -83,7 +83,8 @@ class Estimator:
     def _add_traces(self):
         if self.log_steps:
             self.traces.insert(0, TrainInfo(log_steps=self.log_steps))
-            self.traces.append(Logger(log_steps=self.log_steps))
+            if not any(map(lambda x: isinstance(x, Logger), self.traces)):
+                self.traces.append(Logger(log_steps=self.log_steps))
         self.traces.insert(0, MonitorLoss())
 
     def _sort_traces(self):
