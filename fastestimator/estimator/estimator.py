@@ -14,9 +14,11 @@
 # ==============================================================================
 from collections import ChainMap, deque
 
+import numpy as np
 import tensorflow as tf
 
-from fastestimator.estimator.trace import Logger, MonitorLoss, Trace, TrainInfo, ModelCheckpoint
+from fastestimator.estimator.trace import Logger, LRController, ModelCheckpoint, MonitorLoss, Trace, TrainInfo
+from fastestimator.network.lrschedule import LRSchedule
 from fastestimator.util.cli_util import draw
 from fastestimator.util.util import get_num_devices
 
@@ -46,6 +48,7 @@ class Estimator:
             self.distribute_strategy = None
         self.train_step = 0
         self.train_epoch = 0
+        self.total_train_steps = 0
         self.do_eval = False
 
     def fit(self):
@@ -55,8 +58,8 @@ class Estimator:
         draw()
         self._prepare_pipeline()
         self._prepare_network()
-        self._prepare_estimator()
         self._warmup()
+        self._prepare_estimator()
         self._start()
 
     def _prepare_pipeline(self):
@@ -79,6 +82,9 @@ class Estimator:
             assert isinstance(trace, Trace)
             if isinstance(trace, ModelCheckpoint):
                 no_save_warning = False
+            if isinstance(trace, LRController) and trace.lr_schedule:
+                trace.lr_schedule.total_epochs = self.epochs
+                trace.lr_schedule.total_steps = self.total_train_steps
             trace.network = self.network
         self._sort_traces()
         if no_save_warning:
@@ -99,10 +105,8 @@ class Estimator:
             "num_devices", "mode", "epoch", "train_step", "batch_idx", "batch_size", "batch", "elapsed_time"
         } | self.pipeline.all_output_keys | self.network.all_output_keys
         end_traces = deque()
-
         intermediate_traces = deque()
         intermediate_outputs = set()
-
         trace_deque = deque(self.traces)
         while len(trace_deque) > 0:
             trace = trace_deque.popleft()
@@ -142,13 +146,24 @@ class Estimator:
 
     def _warmup(self):
         mode_list = self.pipeline.mode_list
+        self.total_train_steps = 0
         for mode in mode_list:
             epochs_pipeline = self.pipeline.dataset_schedule[mode].keys
             epochs_network = self.network.op_schedule[mode].keys
             signature_epochs = list(set(epochs_pipeline) | set(epochs_network))
+            if mode == "train":
+                elapse_epochs = np.diff(signature_epochs + [self.epochs])
+                assert np.all(elapse_epochs > 0), "signature epoch is not sorted correctly"
             state = {"mode": mode}
-            for epoch in signature_epochs:
+            for idx, epoch in enumerate(signature_epochs):
                 ds_iter = self.pipeline.dataset_schedule[mode].get_current_value(epoch)
+                if mode == "train":
+                    global_batch_size = self.pipeline.get_global_batch_size(epoch)
+                    if self.steps_per_epoch:
+                        max_steps = self.steps_per_epoch
+                    else:
+                        max_steps = min(self.pipeline.num_examples[mode]) // global_batch_size
+                    self.total_train_steps += max_steps * elapse_epochs[idx]
                 batch = next(ds_iter)
                 state["batch_size"] = self.pipeline.get_global_batch_size(epoch)
                 ops, model_list, epoch_losses = self.network.load_epoch(epoch, mode)

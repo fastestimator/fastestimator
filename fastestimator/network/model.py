@@ -29,7 +29,7 @@ class FEModel:
         self.optimizer = optimizer
         self.model_name = model_name
         self._check_optimizer()
-        self.model = None
+        self.keras_model = None
 
     def _check_optimizer(self):
         if isinstance(self.optimizer, str):
@@ -60,5 +60,5 @@ class ModelOp(TensorOp):
         if self.track_input and training:
             tape = state['tape']
             tape.watch(data)
-        data = self.model.model(data, training=training)
+        data = self.model.keras_model(data, training=training)
         return data

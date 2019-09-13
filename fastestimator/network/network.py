@@ -61,18 +61,19 @@ class Network:
                 for op in epoch_ops:
                     all_output_keys.append(op.outputs)
                     if isinstance(op, ModelOp):
-                        if op.model.model is None:
+                        if op.model.keras_model is None:
                             with distribute_strategy.scope() if distribute_strategy else NonContext():
-                                op.model.model = op.model.model_def()
-                                op.model.model.optimizer = op.model.optimizer
-                                op.model.model.loss_name = op.model.loss_name
+                                op.model.keras_model = op.model.model_def()
+                                op.model.keras_model.optimizer = op.model.optimizer
+                                op.model.keras_model.loss_name = op.model.loss_name
+                                op.model.keras_model.model_name = op.model.model_name
                                 assert op.model.model_name not in self.model, \
                                     "duplicated model name: {}".format(op.model.model_name)
-                                self.model[op.model.model_name] = op.model.model
+                                self.model[op.model.model_name] = op.model.keras_model
                                 if op.model.loss_name not in self.all_losses:
                                     self.all_losses.append(op.model.loss_name)
-                        if op.model.model not in epoch_model:
-                            epoch_model.append(op.model.model)
+                        if op.model.keras_model not in epoch_model:
+                            epoch_model.append(op.model.keras_model)
                 assert epoch_model, "Network has no model for epoch {}".format(epoch)
                 epoch_ops_map[epoch] = epoch_ops
                 epoch_model_map[epoch] = epoch_model

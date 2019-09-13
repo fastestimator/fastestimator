@@ -25,6 +25,7 @@ from tensorflow.python.keras import backend
 from tensorflow.python.keras.layers import embeddings
 from tensorflow.python.ops import array_ops, summary_ops_v2
 
+from fastestimator.network.lrschedule import LRSchedule
 from fastestimator.util.util import is_number
 
 
@@ -198,11 +199,10 @@ class TrainInfo(Trace):
             state[model_name + "_lr"] = round(backend.get_value(model.optimizer.lr), 6)
 
 
-class LearningRateChanger(Trace):
-    def __init__(self, 
-                 model_name, 
-                 schedule_fn=None, 
-                 schedule_mode="epoch", 
+class LRController(Trace):
+    def __init__(self,
+                 model,
+                 lr_schedule=None,
                  reduce_on_eval=False,
                  reduce_patience=10,
                  reduce_factor=0.1,
@@ -213,9 +213,8 @@ class LearningRateChanger(Trace):
             super().__init__(inputs=reduce_metric)
         else:
             super().__init__()
-        self.model_name = model_name
-        self.schedule_fn = schedule_fn
-        self.schedule_mode = schedule_mode
+        self.model = model
+        self.lr_schedule = lr_schedule
         self.reduce_on_eval = reduce_on_eval
         self.reduce_patience = reduce_patience
         self.reduce_factor = reduce_factor
@@ -227,33 +226,37 @@ class LearningRateChanger(Trace):
         self.current_lr = None
         self.change_lr = False
         self.wait = 0
-        assert self.schedule_mode in {"epoch", "step"}, "lrschedule mode is either 'epoch' or 'step'"
-        assert self.reduce_metric_mode in {"min", "max"}, "reduce_metric_mode is either 'min' or 'max'"
+        if self.lr_schedule:
+            assert isinstance(self.lr_schedule, LRSchedule), "lr_schedule must be instance of LRSchedule"
         if self.reduce_metric_mode == "min":
             self.reduce_metric_best = np.Inf
-        else:
+        elif self.reduce_metric_mode == "max":
             self.reduce_metric_best = -np.Inf
+        else:
+            raise ValueError("reduce_metric_mode is either 'min' or 'max'")
 
     def on_begin(self, state):
-        self.base_lr = backend.get_value(self.network.model[self.model_name].optimizer.lr)
+        self.base_lr = backend.get_value(self.model.keras_model.optimizer.lr)
         self.current_lr = max(self.base_lr * self.reduce_lr_ratio, self.min_lr)
+        if self.lr_schedule:
+            self.lr_schedule.initial_lr = self.current_lr
 
     def on_epoch_begin(self, state):
-        if self.schedule_fn and self.schedule_mode == "epoch":
-            self.base_lr = self.schedule_fn(state["epoch"], self.base_lr)
+        if self.lr_schedule and self.lr_schedule.schedule_mode == "epoch":
+            self.base_lr = self.lr_schedule.schedule_fn(state["epoch"], self.base_lr)
             self.change_lr = True
 
     def on_batch_begin(self, state):
         if state["mode"] == "train":
-            if self.schedule_fn and self.schedule_mode == "step":
-                self.base_lr = self.schedule_fn(state["train_step"], self.base_lr)
+            if self.lr_schedule and self.lr_schedule.schedule_mode == "step":
+                self.base_lr = self.lr_schedule.schedule_fn(state["train_step"], self.base_lr)
                 self.change_lr = True
             if self.change_lr:
                 self._update_lr()
 
     def on_batch_end(self, state):
         if state["mode"] == "train":
-            state[self.model_name + "_lr"] = round(self.current_lr, 6)
+            state[self.model.keras_model.model_name + "_lr"] = round(self.current_lr, 6)
 
     def on_epoch_end(self, state):
         if state["mode"] == "eval" and self.reduce_on_eval:
@@ -266,11 +269,12 @@ class LearningRateChanger(Trace):
                 if self.wait >= self.reduce_patience:
                     self.reduce_lr_ratio *= self.reduce_factor
                     self.change_lr = True
-                    print("FastEstimator-LearningRateChanger: learning rate reduced by factor of {}".format(self.reduce_factor))
+                    print("FastEstimator-LearningRateChanger: learning rate reduced by factor of {}".format(
+                        self.reduce_factor))
 
     def _update_lr(self):
         self.current_lr = max(self.base_lr * self.reduce_lr_ratio, self.min_lr)
-        backend.set_value(self.network.model[self.model_name].optimizer.lr, self.current_lr)
+        backend.set_value(self.model.keras_model.optimizer.lr, self.current_lr)
         self.change_lr = False
 
     def _is_better(self, value):
@@ -734,7 +738,7 @@ class TerminateOnNaN(Trace):
 class EarlyStopping(Trace):
     """
     Stop training when a monitored quantity has stopped improving.
-    
+
     Args:
             monitor (str): Quantity to be monitored.
             min_delta (float): Minimum change in the monitored quantity
@@ -816,7 +820,7 @@ class EarlyStopping(Trace):
                     for name, model in self.network.model.items():
                         model.set_weights(self.best_weights[name])
                 print("FastEstimator-EarlyStopping: '{}' triggered an early stop. Its best value was {} at epoch {}\
-                        ".format(self.monitored_key, self.best, state['epoch'] - self.wait))
+                        "                         .format(self.monitored_key, self.best, state['epoch'] - self.wait))
 
 
 class CSVLogger(Trace):
