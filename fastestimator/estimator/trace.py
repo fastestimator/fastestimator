@@ -198,6 +198,89 @@ class TrainInfo(Trace):
             state[model_name + "_lr"] = round(backend.get_value(model.optimizer.lr), 6)
 
 
+class LearningRateChanger(Trace):
+    def __init__(self, 
+                 model_name, 
+                 schedule_fn=None, 
+                 schedule_mode="epoch", 
+                 reduce_on_eval=False,
+                 reduce_patience=10,
+                 reduce_factor=0.1,
+                 reduce_metric="loss",
+                 reduce_metric_mode="min",
+                 min_lr=1e-6):
+        if reduce_on_eval:
+            super().__init__(inputs=reduce_metric)
+        else:
+            super().__init__()
+        self.model_name = model_name
+        self.schedule_fn = schedule_fn
+        self.schedule_mode = schedule_mode
+        self.reduce_on_eval = reduce_on_eval
+        self.reduce_patience = reduce_patience
+        self.reduce_factor = reduce_factor
+        self.reduce_metric = reduce_metric
+        self.reduce_metric_mode = reduce_metric_mode
+        self.min_lr = min_lr
+        self.reduce_lr_ratio = 1.0
+        self.base_lr = None
+        self.current_lr = None
+        self.change_lr = False
+        self.wait = 0
+        assert self.schedule_mode in {"epoch", "step"}, "lrschedule mode is either 'epoch' or 'step'"
+        assert self.reduce_metric_mode in {"min", "max"}, "reduce_metric_mode is either 'min' or 'max'"
+        if self.reduce_metric_mode == "min":
+            self.reduce_metric_best = np.Inf
+        else:
+            self.reduce_metric_best = -np.Inf
+
+    def on_begin(self, state):
+        self.base_lr = backend.get_value(self.network.model[self.model_name].optimizer.lr)
+        self.current_lr = max(self.base_lr * self.reduce_lr_ratio, self.min_lr)
+
+    def on_epoch_begin(self, state):
+        if self.schedule_fn and self.schedule_mode == "epoch":
+            self.base_lr = self.schedule_fn(state["epoch"], self.base_lr)
+            self.change_lr = True
+
+    def on_batch_begin(self, state):
+        if state["mode"] == "train":
+            if self.schedule_fn and self.schedule_mode == "step":
+                self.base_lr = self.schedule_fn(state["train_step"], self.base_lr)
+                self.change_lr = True
+            if self.change_lr:
+                self._update_lr()
+
+    def on_batch_end(self, state):
+        if state["mode"] == "train":
+            state[self.model_name + "_lr"] = round(self.current_lr, 6)
+
+    def on_epoch_end(self, state):
+        if state["mode"] == "eval" and self.reduce_on_eval:
+            current_value = state[self.reduce_metric]
+            if self._is_better(current_value):
+                self.reduce_metric_best = current_value
+                self.wait = 0
+            else:
+                self.wait += 1
+                if self.wait >= self.reduce_patience:
+                    self.reduce_lr_ratio *= self.reduce_factor
+                    self.change_lr = True
+                    print("FastEstimator-LearningRateChanger: learning rate reduced by factor of {}".format(self.reduce_factor))
+
+    def _update_lr(self):
+        self.current_lr = max(self.base_lr * self.reduce_lr_ratio, self.min_lr)
+        backend.set_value(self.network.model[self.model_name].optimizer.lr, self.current_lr)
+        self.change_lr = False
+
+    def _is_better(self, value):
+        if self.reduce_metric_mode == "min":
+            better = value < self.reduce_metric_best
+        else:
+            better = value > self.reduce_metric_best
+        return better
+
+
 class Logger(Trace):
     """Logger, automatically applied by default.
     """
@@ -589,69 +672,6 @@ class Dice(Trace):
 
     def on_epoch_end(self, state):
         state[self.output_name] = np.mean(self.dice)
-
-
-class ReduceLROnPlateau(Trace):
-    def __init__(self,
-                 model_name,
-                 monitor_name="loss",
-                 reduce_mode="on_increase",
-                 patience=10,
-                 factor=0.1,
-                 min_delta=0.0001,
-                 cooldown=0,
-                 min_lr=0,
-                 verbose=False):
-        super().__init__(inputs=monitor_name, mode="eval")
-        self.model_name = model_name
-        self.monitor_name = monitor_name
-        self.reduce_mode = reduce_mode
-
-        assert reduce_mode in ["on_increase", "on_decrease"], "reduce_mode should be either on_increase|on_decrease"
-
-        if self.reduce_mode == "on_increase":
-            self.monitor_op = lambda a, b: np.less(a, b - min_delta)
-            self.default_val = np.Inf
-        else:
-            self.monitor_op = lambda a, b: np.greater(a, b + min_delta)
-            self.default_val = -np.Inf
-
-        self.patience = patience
-        self.factor = factor
-        self.min_delta = min_delta
-        self.cooldown = cooldown
-        self.min_lr = min_lr
-        self.verbose = verbose
-
-        self.cooldown_counter = 0
-        self.wait = 0
-        self.best = self.default_val
-
-    def on_epoch_end(self, state):
-        current_value = state[self.monitor_name]
-        if self._in_cooldown():
-            self.cooldown_counter -= 1
-            self.wait = 0
-
-        if self.monitor_op(current_value, self.best):
-            self.best = current_value
-            self.wait = 0
-        elif not self._in_cooldown():
-            self.wait += 1
-            if self.wait >= self.patience:
-                curr_lr = float(backend.get_value(self.network.model[self.model_name].optimizer.lr))
-                if curr_lr > self.min_lr:
-                    curr_lr *= self.factor
-                    curr_lr = max(curr_lr, self.min_lr)
-                    backend.set_value(self.network.model[self.model_name].optimizer.lr, curr_lr)
-                    if self.verbose:
-                        print("FastEstimator-ReduceLROnPlateau: Epoch %d reducing learning rate to %f." %
-                              (state["epoch"], curr_lr))
-                    self.cooldown_counter = self.cooldown
-                    self.wait = 0
-
-    def _in_cooldown(self):
-        return self.cooldown_counter > 0
 
 
 class TerminateOnNaN(Trace):
