@@ -218,8 +218,8 @@ class Logger(Trace):
 
     def on_epoch_end(self, state):
         if state["mode"] == "eval":
-            self._print_message(
-                "FastEstimator-Eval: step: {}; epoch: {}; ".format(state["train_step"], state["epoch"]), state.maps[0])
+            self._print_message("FastEstimator-Eval: step: {}; epoch: {}; ".format(state["train_step"], state["epoch"]),
+                                state.maps[0])
 
     def on_end(self, state):
         self._print_message("FastEstimator-Finish: step: {}; ".format(state["train_step"]), state.maps[0])
@@ -709,6 +709,94 @@ class TerminateOnNaN(Trace):
         return isinstance(val, float) or (isinstance(val, tf.Tensor)
                                           and val.dtype.is_floating) or (isinstance(val, np.ndarray)
                                                                          and np.issubdtype(val.dtype, np.floating))
+
+
+class EarlyStopping(Trace):
+    """
+    Stop training when a monitored quantity has stopped improving.
+    
+    Args:
+            monitor (str): Quantity to be monitored.
+            min_delta (float): Minimum change in the monitored quantity
+              to qualify as an improvement, i.e. an absolute
+              change of less than min_delta, will count as no
+              improvement.
+            patience (int): Number of epochs with no improvement
+              after which training will be stopped.
+            verbose (int): verbosity mode.
+            compare (str): One of `{"min", "max"}`. In `min` mode,
+              training will stop when the quantity
+              monitored has stopped decreasing; in `max`
+              mode it will stop when the quantity
+              monitored has stopped increasing.
+            baseline (float): Baseline value for the monitored quantity.
+              Training will stop if the model doesn't show improvement over the
+              baseline.
+            restore_best_weights (bool): Whether to restore model weights from
+              the epoch with the best value of the monitored quantity.
+              If False, the model weights obtained at the last step of
+              training are used.
+            mode (str): Restrict the trace to run only on given modes ('train', 'eval', 'test'). None will always
+                        execute
+    """
+    def __init__(self,
+                 monitor="loss",
+                 min_delta=0,
+                 patience=0,
+                 verbose=0,
+                 compare='min',
+                 baseline=None,
+                 restore_best_weights=False,
+                 mode='eval'):
+        super().__init__(inputs=monitor, mode=mode)
+
+        if len(self.inputs) != 1:
+            raise ValueError("EarlyStopping supports only one monitor key")
+        if compare not in ['min', 'max']:
+            raise ValueError("compare_mode can only be `min` or `max`")
+
+        self.monitored_key = monitor
+        self.min_delta = abs(min_delta)
+        self.wait = 0
+        self.best = 0
+        self.patience = patience
+        self.baseline = baseline
+        self.verbose = verbose
+        self.restore_best_weights = restore_best_weights
+        self.best_weights = None
+        if compare == 'min':
+            self.monitor_op = np.less
+            self.min_delta *= -1
+        else:
+            self.monitor_op = np.greater
+
+    def on_begin(self, state):
+        self.wait = 0
+        if self.baseline is not None:
+            self.best = self.baseline
+        else:
+            self.best = np.Inf if self.monitor_op == np.less else -np.Inf
+
+    def on_epoch_end(self, state):
+        current = state.get(self.monitored_key, None) or state['batch'].get(self.monitored_key, None)
+        if current is None:
+            return
+        if self.monitor_op(current - self.min_delta, self.best):
+            self.best = current
+            self.wait = 0
+            if self.restore_best_weights:
+                self.best_weights = dict(map(lambda x: (x[0], x[1].get_weights()), self.network.model.items()))
+        else:
+            self.wait += 1
+            if self.wait >= self.patience:
+                self.network.stop_training = True
+                if self.restore_best_weights:
+                    if self.verbose > 0:
+                        print('FastEstimator-EarlyStopping: Restoring best model weights')
+                    for name, model in self.network.model.items():
+                        model.set_weights(self.best_weights[name])
+                print("FastEstimator-EarlyStopping: '{}' triggered an early stop. Its best value was {} at epoch {}\
+                        ".format(self.monitored_key, self.best, state['epoch'] - self.wait))
 
 
 class CSVLogger(Trace):
