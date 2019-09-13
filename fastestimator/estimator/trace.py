@@ -185,7 +185,7 @@ class TrainInfo(Trace):
         if state["train_step"] % self.log_steps == 0:
             if state["train_step"] > 0:
                 self.elapse_times.append(time.perf_counter() - self.time_start)
-                state["examples_per_sec"] = round(self.num_example / np.sum(self.elapse_times), 2)
+                state["examples/sec"] = round(self.num_example / np.sum(self.elapse_times), 2)
             self.elapse_times = []
             self.num_example = 0
             self.time_start = time.perf_counter()
@@ -224,6 +224,7 @@ class LRController(Trace):
         self.reduce_lr_ratio = 1.0
         self.base_lr = None
         self.current_lr = None
+        self.log_steps = None
         self.change_lr = False
         self.wait = 0
         if self.lr_schedule:
@@ -255,7 +256,7 @@ class LRController(Trace):
                 self._update_lr()
 
     def on_batch_end(self, state):
-        if state["mode"] == "train":
+        if state["mode"] == "train" and self.log_steps and state["train_step"] % self.log_steps == 0:
             state[self.model.keras_model.model_name + "_lr"] = round(self.current_lr, 6)
 
     def on_epoch_end(self, state):

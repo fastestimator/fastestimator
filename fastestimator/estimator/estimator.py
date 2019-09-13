@@ -82,9 +82,11 @@ class Estimator:
             assert isinstance(trace, Trace)
             if isinstance(trace, ModelCheckpoint):
                 no_save_warning = False
-            if isinstance(trace, LRController) and trace.lr_schedule:
-                trace.lr_schedule.total_epochs = self.epochs
-                trace.lr_schedule.total_steps = self.total_train_steps
+            if isinstance(trace, LRController):
+                trace.log_steps = self.log_steps
+                if trace.lr_schedule:
+                    trace.lr_schedule.total_epochs = self.epochs
+                    trace.lr_schedule.total_steps = self.total_train_steps
             trace.network = self.network
         self._sort_traces()
         if no_save_warning:
