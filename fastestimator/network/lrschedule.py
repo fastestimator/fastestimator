@@ -6,9 +6,9 @@ import numpy as np
 class LRSchedule:
     def __init__(self, schedule_mode):
         self.schedule_mode = schedule_mode
-        self.total_epochs = None  #will be filled on runtime
-        self.total_steps = None  #will be filled on runtime
-        self.initial_lr = None  #will be filled on runtime
+        self.total_epochs = None  #will be filled by runtime
+        self.total_steps = None  #will be filled by runtime
+        self.initial_lr = None  #will be filled by runtime
 
     def schedule_fn(self, current_step_or_epoch, lr):
         #do something to change lr

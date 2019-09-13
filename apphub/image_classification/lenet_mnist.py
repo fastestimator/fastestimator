@@ -17,8 +17,9 @@ import tensorflow as tf
 
 import fastestimator as fe
 from fastestimator.architecture import LeNet
-from fastestimator.estimator.trace import Accuracy, ModelCheckpoint
+from fastestimator.estimator.trace import Accuracy, LRController, ModelCheckpoint
 from fastestimator.network.loss import SparseCategoricalCrossentropy
+from fastestimator.network.lrschedule import CyclicLRSchedule
 from fastestimator.network.model import FEModel, ModelOp
 from fastestimator.pipeline.processing import Minmax
 
@@ -42,7 +43,7 @@ def get_estimator(epochs=2, batch_size=32):
     # step 3.prepare estimator
     traces = [
         Accuracy(true_key="y", pred_key="y_pred", output_name='acc'),
-        ModelCheckpoint('./lenet_model', monitor_name='acc', save_best_only=True)
+        LRController(model_name="lenet", lr_schedule=CyclicLRSchedule())
     ]
     estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces)
     return estimator

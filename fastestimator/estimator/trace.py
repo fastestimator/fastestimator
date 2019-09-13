@@ -201,44 +201,46 @@ class TrainInfo(Trace):
 
 class LRController(Trace):
     def __init__(self,
-                 model,
+                 model_name,
                  lr_schedule=None,
                  reduce_on_eval=False,
                  reduce_patience=10,
                  reduce_factor=0.1,
-                 reduce_metric="loss",
-                 reduce_metric_mode="min",
+                 reduce_mode="min",
                  min_lr=1e-6):
-        if reduce_on_eval:
-            super().__init__(inputs=reduce_metric)
+        if reduce_on_eval and isinstance(reduce_on_eval, str):
+            super().__init__(inputs=reduce_on_eval)
         else:
             super().__init__()
-        self.model = model
+        self.model_name = model_name
         self.lr_schedule = lr_schedule
         self.reduce_on_eval = reduce_on_eval
         self.reduce_patience = reduce_patience
         self.reduce_factor = reduce_factor
-        self.reduce_metric = reduce_metric
-        self.reduce_metric_mode = reduce_metric_mode
+        self.reduce_mode = reduce_mode
         self.min_lr = min_lr
         self.reduce_lr_ratio = 1.0
         self.base_lr = None
         self.current_lr = None
         self.log_steps = None
+        self.model = None
         self.change_lr = False
         self.wait = 0
         if self.lr_schedule:
             assert isinstance(self.lr_schedule, LRSchedule), "lr_schedule must be instance of LRSchedule"
-        if self.reduce_metric_mode == "min":
+        if self.reduce_mode == "min":
             self.reduce_metric_best = np.Inf
-        elif self.reduce_metric_mode == "max":
+        elif self.reduce_mode == "max":
             self.reduce_metric_best = -np.Inf
         else:
-            raise ValueError("reduce_metric_mode is either 'min' or 'max'")
+            raise ValueError("reduce_mode must be either 'min' or 'max'")
 
     def on_begin(self, state):
-        self.base_lr = backend.get_value(self.model.keras_model.optimizer.lr)
+        self.model = self.network.model[self.model_name]
+        self.base_lr = backend.get_value(self.model.optimizer.lr)
         self.current_lr = max(self.base_lr * self.reduce_lr_ratio, self.min_lr)
+        if self.reduce_on_eval is True:
+            self.reduce_on_eval = self.model.loss_name
         if self.lr_schedule:
             self.lr_schedule.initial_lr = self.current_lr
 
@@ -257,11 +259,11 @@ class LRController(Trace):
 
     def on_batch_end(self, state):
         if state["mode"] == "train" and self.log_steps and state["train_step"] % self.log_steps == 0:
-            state[self.model.keras_model.model_name + "_lr"] = round(self.current_lr, 6)
+            state[self.model_name + "_lr"] = round(self.current_lr, 6)
 
     def on_epoch_end(self, state):
         if state["mode"] == "eval" and self.reduce_on_eval:
-            current_value = state[self.reduce_metric]
+            current_value = state[self.reduce_on_eval]
             if self._is_better(current_value):
                 self.reduce_metric_best = current_value
                 self.wait = 0
@@ -270,16 +272,16 @@ class LRController(Trace):
                 if self.wait >= self.reduce_patience:
                     self.reduce_lr_ratio *= self.reduce_factor
                     self.change_lr = True
-                    print("FastEstimator-LearningRateChanger: learning rate reduced by factor of {}".format(
+                    print("FastEstimator-LRController: learning rate reduced by factor of {}".format(
                         self.reduce_factor))
 
     def _update_lr(self):
         self.current_lr = max(self.base_lr * self.reduce_lr_ratio, self.min_lr)
-        backend.set_value(self.model.keras_model.optimizer.lr, self.current_lr)
+        backend.set_value(self.model.optimizer.lr, self.current_lr)
         self.change_lr = False
 
     def _is_better(self, value):
-        if self.reduce_metric_mode == "min":
+        if self.reduce_mode == "min":
             better = value < self.reduce_metric_best
         else:
             better = value > self.reduce_metric_best
@@ -821,7 +823,7 @@ class EarlyStopping(Trace):
                     for name, model in self.network.model.items():
                         model.set_weights(self.best_weights[name])
                 print("FastEstimator-EarlyStopping: '{}' triggered an early stop. Its best value was {} at epoch {}\
-                        "                         .format(self.monitored_key, self.best, state['epoch'] - self.wait))
+                        ".format(self.monitored_key, self.best, state['epoch'] - self.wait))
 
 
 class CSVLogger(Trace):
@@ -1074,27 +1076,25 @@ class ModelCheckpoint(Trace):
 
     Args:
         save_dir (str): The directory to save the trained models.
-        model_names (list): The list of models to save. If not proveded, save all available models.
+        model (list): The list of models to save. If not proveded, save all available models.
         monitor_name (str): The trace name to be monitored when `save_best_only=True`.
         mode (str): Save models during either `train` or `eval`. Default is `eval`.
-        verbose (int): verbosity mode, 0 or 1
         save_best_only (bool): Keep only the best model.
         save_mode: Can be `'min'`, `'max'`, or `'auto'`.
         save_freq: Number of epochs to save models. Cannot be used with `save_best_only=True`.
     """
     def __init__(self,
                  save_dir,
-                 model_names=None,
+                 models,
                  monitor_name=None,
                  mode='eval',
                  save_best_only=False,
                  save_mode='auto',
-                 save_freq=1,
-                 verbose=1):
+                 save_freq=1):
         super().__init__(mode=mode)
         self.save_dir = os.path.normpath(save_dir)
         self._make_dir()
-        self.model_names = model_names
+        self.models = models
         self.save_best_only = save_best_only
         self.save_freq = save_freq
         self.save_mode = save_mode
