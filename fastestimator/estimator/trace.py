@@ -173,6 +173,8 @@ class TrainInfo(Trace):
 
     def on_begin(self, state):
         self.train_start = time.perf_counter()
+        for model_name, model in self.network.model.items():
+            state[model_name + "_lr"] = round(backend.get_value(model.optimizer.lr), 6)
 
     def on_epoch_begin(self, state):
         self.time_start = time.perf_counter()
@@ -182,9 +184,6 @@ class TrainInfo(Trace):
         if state["train_step"] % self.log_steps == 0:
             if state["train_step"] > 0:
                 self.elapse_times.append(time.perf_counter() - self.time_start)
-                epoch_models = self.network.epoch_models
-                for model in epoch_models:
-                    state[model.model_name + "_lr"] = round(backend.get_value(model.optimizer.lr), 6)
                 state["examples_per_sec"] = round(self.num_example / np.sum(self.elapse_times), 2)
             self.elapse_times = []
             self.num_example = 0
@@ -195,6 +194,8 @@ class TrainInfo(Trace):
 
     def on_end(self, state):
         state['total_time'] = "{} sec".format(round(time.perf_counter() - self.train_start, 2))
+        for model_name, model in self.network.model.items():
+            state[model_name + "_lr"] = round(backend.get_value(model.optimizer.lr), 6)
 
 
 class Logger(Trace):
@@ -208,6 +209,9 @@ class Logger(Trace):
         super().__init__(inputs="*")
         self.log_steps = log_steps
 
+    def on_begin(self, state):
+        self._print_message("FastEstimator-Start: step: {}; ".format(state["train_step"]), state.maps[0])
+
     def on_batch_end(self, state):
         if state["mode"] == "train" and state["train_step"] % self.log_steps == 0:
             self._print_message("FastEstimator-Train: step: {}; ".format(state["train_step"]), state.maps[0])
@@ -218,7 +222,7 @@ class Logger(Trace):
                 "FastEstimator-Eval: step: {}; epoch: {}; ".format(state["train_step"], state["epoch"]), state.maps[0])
 
     def on_end(self, state):
-        self._print_message("FastEstimator-Finished: step: {}; ".format(state["train_step"]), state.maps[0])
+        self._print_message("FastEstimator-Finish: step: {}; ".format(state["train_step"]), state.maps[0])
 
     @staticmethod
     def _print_message(header, results):

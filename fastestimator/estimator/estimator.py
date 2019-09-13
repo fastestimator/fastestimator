@@ -161,7 +161,7 @@ class Estimator:
 
     def _start(self):
         self.train_step = 0
-        self._run_traces_on_begin({"num_devices": self.num_devices})
+        self._run_traces_on_begin({"train_step": self.train_step, "num_devices": self.num_devices})
         for self.train_epoch in range(self.epochs):
             self._run_epoch("train")
             if self.do_eval:
@@ -215,20 +215,26 @@ class Estimator:
         self._run_traces_on_epoch_end({"mode": mode, "epoch": self.train_epoch, "train_step": self.train_step})
 
     def _run_traces_on_begin(self, state):
+        trace_outputs = {}
+        trace_state = ChainMap(trace_outputs, state)
         for trace in self.traces:
-            trace.on_begin(state)
+            trace.on_begin(trace_state)
         self._check_early_exit()
 
     def _run_traces_on_epoch_begin(self, state):
+        trace_outputs = {}
+        trace_state = ChainMap(trace_outputs, state)
         for trace in self.traces:
             if trace.mode is None or state['mode'] in trace.mode:
-                trace.on_epoch_begin(state)
+                trace.on_epoch_begin(trace_state)
         self._check_early_exit()
 
     def _run_traces_on_batch_begin(self, state):
+        trace_outputs = {}
+        trace_state = ChainMap(trace_outputs, state)
         for trace in self.traces:
             if trace.mode is None or state['mode'] in trace.mode:
-                trace.on_batch_begin(state)
+                trace.on_batch_begin(trace_state)
         self._check_early_exit()
 
     def _run_traces_on_batch_end(self, state):

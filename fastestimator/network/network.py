@@ -34,7 +34,6 @@ class Network:
         self.model = {}
         self.all_losses = []
         self.epoch_losses = []
-        self.epoch_models = []
         self.all_output_keys = set()
         self.stop_training = False
         self.num_devices = 1
@@ -67,7 +66,6 @@ class Network:
                                 op.model.model = op.model.model_def()
                                 op.model.model.optimizer = op.model.optimizer
                                 op.model.model.loss_name = op.model.loss_name
-                                op.model.model.model_name = op.model.model_name
                                 assert op.model.model_name not in self.model, \
                                     "duplicated model name: {}".format(op.model.model_name)
                                 self.model[op.model.model_name] = op.model.model
@@ -98,7 +96,6 @@ class Network:
             if model.loss_name not in epoch_losses:
                 epoch_losses.append(model.loss_name)
         self.epoch_losses = epoch_losses
-        self.epoch_models = model_list
         return ops, model_list, epoch_losses
 
     def run_step(self, batch, ops, model_list, epoch_losses, state, warm_up=False):
