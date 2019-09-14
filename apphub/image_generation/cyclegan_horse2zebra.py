@@ -56,13 +56,13 @@ class GLoss(Loss):
         self.LAMBDA = weight
 
     def _adversarial_loss(self, fake_img):
-        return tf.reduce_mean(self.cross_entropy(tf.ones_like(fake_img), fake_img), axis=(1,2))
+        return tf.reduce_mean(self.cross_entropy(tf.ones_like(fake_img), fake_img), axis=(1, 2))
 
     def _identity_loss(self, real_img, same_img):
-        return 0.5 * self.LAMBDA * tf.reduce_mean(tf.abs(real_img - same_img), axis=(1,2,3))
+        return 0.5 * self.LAMBDA * tf.reduce_mean(tf.abs(real_img - same_img), axis=(1, 2, 3))
 
     def _cycle_loss(self, real_img, cycled_img):
-        return self.LAMBDA * tf.reduce_mean(tf.abs(real_img - cycled_img), axis=(1,2,3))
+        return self.LAMBDA * tf.reduce_mean(tf.abs(real_img - cycled_img), axis=(1, 2, 3))
 
     def forward(self, data, state):
         real_img, fake_img, cycled_img, same_img = data
@@ -79,8 +79,8 @@ class DLoss(Loss):
 
     def forward(self, data, state):
         real_img, fake_img = data
-        real_img_loss = tf.reduce_mean(self.cross_entropy(tf.ones_like(real_img), real_img), axis=(1,2))
-        fake_img_loss = tf.reduce_mean(self.cross_entropy(tf.zeros_like(real_img), fake_img), axis=(1,2))
+        real_img_loss = tf.reduce_mean(self.cross_entropy(tf.ones_like(real_img), real_img), axis=(1, 2))
+        fake_img_loss = tf.reduce_mean(self.cross_entropy(tf.zeros_like(real_img), fake_img), axis=(1, 2))
         total_loss = real_img_loss + fake_img_loss
         return 0.5 * total_loss
 
@@ -142,8 +142,10 @@ def get_estimator(weight=10.0, epochs=200, model_dir=tempfile.mkdtemp()):
         DLoss(inputs=("d_real_B", "d_fake_B"), outputs="d_B_loss")
     ])
     # Step3: Define Estimator
-    traces = [ModelSaver(model_name="g_AtoB", save_dir=model_dir, save_freq=10),
-              ModelSaver(model_name="g_BtoA", save_dir=model_dir, save_freq=10)]
+    traces = [
+        ModelSaver(model_name="g_AtoB", save_dir=model_dir, save_freq=10),
+        ModelSaver(model_name="g_BtoA", save_dir=model_dir, save_freq=10)
+    ]
     estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces)
     return estimator
 

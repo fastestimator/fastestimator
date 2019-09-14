@@ -12,14 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import tempfile
+
 import tensorflow as tf
 from sklearn.preprocessing import StandardScaler
 from tensorflow.keras import layers
-import tempfile
+
 import fastestimator as fe
+from fastestimator.estimator.trace import ModelSaver
 from fastestimator.network.loss import MeanSquaredError
 from fastestimator.network.model import FEModel, ModelOp
-from fastestimator.estimator.trace import ModelSaver
 
 
 def create_dnn():
@@ -48,7 +50,11 @@ def get_estimator(epochs=50, batch_size=32, model_dir=tempfile.mkdtemp()):
         ops=[ModelOp(inputs="x", model=model, outputs="y_pred"), MeanSquaredError(y_true="y", y_pred="y_pred")])
 
     #create estimator
-    estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, log_steps=10, traces=ModelSaver(model_name="dnn", save_dir=model_dir, save_best=True))
+    estimator = fe.Estimator(network=network,
+                             pipeline=pipeline,
+                             epochs=epochs,
+                             log_steps=10,
+                             traces=ModelSaver(model_name="dnn", save_dir=model_dir, save_best=True))
     return estimator
 
 

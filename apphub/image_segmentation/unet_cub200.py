@@ -60,12 +60,11 @@ def get_estimator(batch_size=32, epochs=25, model_dir=tempfile.mkdtemp()):
     ])
 
     #estimator
-    traces = [Dice(true_key="annotation", pred_key='mask_pred'), ModelSaver(model_name="unet_cub", save_dir=model_dir, save_best=True)]
-    estimator = fe.Estimator(network=network,
-                             pipeline=pipeline,
-                             traces=traces,
-                             epochs=epochs,
-                             log_steps=50)
+    traces = [
+        Dice(true_key="annotation", pred_key='mask_pred'),
+        ModelSaver(model_name="unet_cub", save_dir=model_dir, save_best=True)
+    ]
+    estimator = fe.Estimator(network=network, pipeline=pipeline, traces=traces, epochs=epochs, log_steps=50)
     return estimator
 
 

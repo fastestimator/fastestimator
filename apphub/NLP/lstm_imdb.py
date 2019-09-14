@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import tempfile
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import layers
-import tempfile
+
 import fastestimator as fe
 from fastestimator.estimator.trace import Accuracy, ModelSaver
 from fastestimator.network.loss import BinaryCrossentropy
@@ -60,12 +62,11 @@ def get_estimator(epochs=10, batch_size=64, model_dir=tempfile.mkdtemp()):
     network = fe.Network(
         ops=[ModelOp(inputs="x", model=model, outputs="y_pred"), BinaryCrossentropy(y_true="y", y_pred="y_pred")])
 
-    traces = [Accuracy(true_key="y", pred_key="y_pred"), ModelSaver(model_name="lstm", save_dir=model_dir, save_best=True)]
+    traces = [
+        Accuracy(true_key="y", pred_key="y_pred"), ModelSaver(model_name="lstm", save_dir=model_dir, save_best=True)
+    ]
     # step 3.prepare estimator
-    estimator = fe.Estimator(network=network,
-                             pipeline=pipeline,
-                             epochs=epochs,
-                             traces=traces)
+    estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces)
 
     return estimator
 
