@@ -339,10 +339,6 @@ class Accuracy(Trace):
         self.total = 0
         self.correct = 0
         self.output_name = output_name
-        self._model_save_mode = 'max'
-
-    def on_begin(self, state):
-        state['{}_save_mode'.format(self.output_name)] = self._model_save_mode
 
     def on_epoch_begin(self, state):
         self.total = 0
@@ -433,10 +429,6 @@ class Precision(Trace):
         self.y_pred = []
         self.binary_classification = None
         self.output_name = output_name
-        self._model_save_mode = 'max'
-
-    def on_begin(self, state):
-        state['{}_save_mode'.format(self.output_name)] = self._model_save_mode
 
     def on_epoch_begin(self, state):
         self.y_true = []
@@ -510,10 +502,6 @@ class Recall(Trace):
         self.y_pred = []
         self.binary_classification = None
         self.output_name = output_name
-        self._model_save_mode = 'max'
-
-    def on_begin(self, state):
-        state['{}_save_mode'.format(self.output_name)] = self._model_save_mode
 
     def on_epoch_begin(self, state):
         self.y_true = []
@@ -587,10 +575,6 @@ class F1Score(Trace):
         self.y_pred = []
         self.binary_classification = None
         self.output_name = output_name
-        self._model_save_mode = 'max'
-
-    def on_begin(self, state):
-        state['{}_save_mode'.format(self.output_name)] = self._model_save_mode
 
     def on_epoch_begin(self, state):
         self.y_true = []
@@ -653,10 +637,6 @@ class Dice(Trace):
         self.threshold = threshold
         self.dice = None
         self.output_name = output_name
-        self._model_save_mode = 'max'
-
-    def on_begin(self, state):
-        state['{}_save_mode'.format(self.output_name)] = self._model_save_mode
 
     def on_epoch_begin(self, state):
         self.dice = None
@@ -821,7 +801,7 @@ class EarlyStopping(Trace):
                     for name, model in self.network.model.items():
                         model.set_weights(self.best_weights[name])
                 print("FastEstimator-EarlyStopping: '{}' triggered an early stop. Its best value was {} at epoch {}\
-                        "                                                  .format(self.monitored_key, self.best, state['epoch'] - self.wait))
+                        "                                                                                                    .format(self.monitored_key, self.best, state['epoch'] - self.wait))
 
 
 class CSVLogger(Trace):
@@ -1085,11 +1065,11 @@ class ModelSaver(Trace):
                  save_best_mode='min',
                  save_freq=1):
         if isinstance(save_best, str):
-            super().__init__(inputs=save_best, mode="eval")
+            super().__init__(inputs=save_best)
         else:
-            super().__init__(mode="eval")
+            super().__init__()
         self.model_name = model_name
-        self.save_dir = os.path.normpath(save_dir)
+        self.save_dir = save_dir
         self.save_best = save_best
         self.save_best_mode = save_best_mode
         self.save_freq = save_freq
@@ -1105,22 +1085,23 @@ class ModelSaver(Trace):
         self.model = None
 
     def on_begin(self, state):
-        os.makedirs(self.save_dir, exist_ok=True)
+        if self.save_dir:
+            self.save_dir = os.path.normpath(self.save_dir)
+            os.makedirs(self.save_dir, exist_ok=True)
         self.model = self.network.model[self.model_name]
         if self.save_best is True:
             self.save_best = self.model.loss_name
 
     def on_epoch_end(self, state):
         if self.save_best:
-            current_value = state[self.save_best]
-            if self.monitor_op(current_value, self.best):
-                self.best = current_value
+            if state["mode"] == "eval" and self.monitor_op(state[self.save_best], self.best):
+                self.best = state[self.save_best]
                 self._save_model("{}_best_{}.h5".format(self.model_name, self.save_best))
-        else:
-            if state["epoch"] % self.save_freq == 0:
-                self._save_model("{}_epoch_{}_step_{}.h5".format(self.model_name, state['epoch'], state['train_step']))
+        elif state["mode"] == "train" and state["epoch"] % self.save_freq == 0:
+            self._save_model("{}_epoch_{}_step_{}.h5".format(self.model_name, state['epoch'], state['train_step']))
 
     def _save_model(self, name):
-        save_path = os.path.join(self.save_dir, name)
-        self.model.save(save_path, include_optimizer=False)
-        print("FastEstimator-ModelSaver: Saving model to {}".format(save_path))
+        if self.save_dir:
+            save_path = os.path.join(self.save_dir, name)
+            self.model.save(save_path, include_optimizer=False)
+            print("FastEstimator-ModelSaver: Saving model to {}".format(save_path))

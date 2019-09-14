@@ -26,7 +26,7 @@ from fastestimator.network.model import FEModel, ModelOp
 from fastestimator.pipeline.processing import Minmax
 
 
-def get_estimator(epochs=2, batch_size=32):
+def get_estimator(epochs=2, batch_size=32, save_dir=tempfile.mkdtemp()):
     # step 1. prepare data
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.mnist.load_data()
     data = {
@@ -48,7 +48,7 @@ def get_estimator(epochs=2, batch_size=32):
     traces = [
         Accuracy(true_key="y", pred_key="y_pred", output_name='acc'),
         LRController(model_name="lenet", lr_schedule=CyclicLRSchedule()),
-        ModelSaver(model_name="lenet", save_dir=tempfile.mkdtemp(), save_best="acc", save_best_mode="max")
+        ModelSaver(model_name="lenet", save_dir=save_dir, save_best="acc", save_best_mode="max")
     ]
     estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces)
     return estimator
