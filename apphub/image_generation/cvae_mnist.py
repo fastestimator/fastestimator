@@ -16,11 +16,12 @@
 
 import math
 import tempfile
+
 import tensorflow as tf
 
 import fastestimator as fe
-from fastestimator.network.loss import Loss
 from fastestimator.estimator.trace import ModelSaver
+from fastestimator.network.loss import Loss
 from fastestimator.network.model import FEModel, ModelOp
 from fastestimator.util.op import TensorOp
 
@@ -102,8 +103,8 @@ def get_estimator(batch_size=100, epochs=100, model_dir=tempfile.mkdtemp()):
     x_train = x_train.reshape(x_train.shape[0], 28, 28, 1).astype('float32')
     x_eval = x_eval.reshape(x_eval.shape[0], 28, 28, 1).astype('float32')
     data = {"train": {"x": x_train}, "eval": {"x": x_eval}}
-    pipeline = fe.Pipeline(batch_size=batch_size,
-                        data=data,
+                           data=data,
+                           ops=[Myrescale(inputs="x", outputs="x"), Mybinarize(inputs="x", outputs="x")])
                         ops=[Myrescale(inputs="x", outputs="x"), Mybinarize(inputs="x", outputs="x")])
     # prepare model
     infer_model = FEModel(model_def=inference_net,
@@ -122,12 +123,10 @@ def get_estimator(batch_size=100, epochs=100, model_dir=tempfile.mkdtemp()):
         ModelOp(inputs="z", model=gen_model, outputs="x_logit"),
         CVAELoss(inputs=("x", "mean", "logvar", "z", "x_logit"), mode=None)
     ])
-    # prepare estimator
-    estimator = fe.Estimator(
-        network=network, 
-        pipeline=pipeline, 
-        epochs=epochs, 
-        traces=ModelSaver(model_name="decoder", save_dir=model_dir, save_best=True)
+    estimator = fe.Estimator(network=network,
+                             pipeline=pipeline,
+                             epochs=epochs,
+                             traces=ModelSaver(model_name="decoder", save_dir=model_dir, save_best=True))
     )
     return estimator
 

@@ -12,15 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.pipeline.processing import Minmax
-from fastestimator.pipeline.pipeline import Pipeline
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
 
+from fastestimator.pipeline.pipeline import Pipeline
+from fastestimator.pipeline.processing import Minmax
 
 if __name__ == "__main__":
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.mnist.load_data()
     x_train = np.expand_dims(x_train, -1)
     data = {"train": {"x": x_train, "y": y_train}, "eval": {"x": x_eval, "y": y_eval}}
     pipeline = Pipeline(batch_size=32, data=data, ops=Minmax(inputs="x", outputs="x"))
-    pipeline.benchmark(num_steps=3000, mode="train")

@@ -78,12 +78,11 @@ def get_estimator(batch_size=4, epochs=25, model_dir=tempfile.mkdtemp()):
         BinaryCrossentropy(y_true="mask", y_pred="pred_segment")
     ])
 
-    traces = [Dice(true_key="mask", pred_key="pred_segment"), ModelSaver(model_name="lungsegmentation", save_dir=model_dir, save_best=True)]
-    estimator = fe.Estimator(network=network,
-                             pipeline=pipeline,
-                             epochs=epochs,
-                             log_steps=20,
-                             traces=traces)
+    traces = [
+        Dice(true_key="mask", pred_key="pred_segment"),
+        ModelSaver(model_name="lungsegmentation", save_dir=model_dir, save_best=True)
+    ]
+    estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, log_steps=20, traces=traces)
     return estimator
 
 
