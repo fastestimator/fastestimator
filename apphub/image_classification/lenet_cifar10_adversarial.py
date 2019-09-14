@@ -26,7 +26,7 @@ from fastestimator.pipeline.processing import Minmax
 from fastestimator.util.schedule import Scheduler
 
 
-def get_estimator(epochs=10, batch_size=32, epsilon=0.01, warmup=0, save_dir=tempfile.mkdtemp()):
+def get_estimator(epochs=10, batch_size=32, epsilon=0.01, warmup=0, model_dir=tempfile.mkdtemp()):
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.cifar10.load_data()
     data = {"train": {"x": x_train, "y": y_train}, "eval": {"x": x_eval, "y": y_eval}}
     num_classes = 10
@@ -56,7 +56,7 @@ def get_estimator(epochs=10, batch_size=32, epsilon=0.01, warmup=0, save_dir=tem
     traces = [
         Accuracy(true_key="y", pred_key="y_pred"),
         ConfusionMatrix(true_key="y", pred_key="y_pred", num_classes=num_classes),
-        ModelSaver(model_name="LeNet", save_dir=save_dir, save_freq=2)
+        ModelSaver(model_name="LeNet", save_dir=model_dir, save_freq=2)
     ]
 
     estimator = Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces)

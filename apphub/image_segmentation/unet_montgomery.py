@@ -15,13 +15,14 @@
 """U-Net lung segmentation example.
 """
 import os
+import tempfile
 
 import tensorflow as tf
 
 import fastestimator as fe
 from fastestimator.architecture import UNet
 from fastestimator.dataset import montgomery
-from fastestimator.estimator.trace import Dice
+from fastestimator.estimator.trace import Dice, ModelSaver
 from fastestimator.network.loss import BinaryCrossentropy
 from fastestimator.network.model import FEModel, ModelOp
 from fastestimator.pipeline.augmentation import Augmentation2D
@@ -37,7 +38,7 @@ class CombineLeftRightMask(NumpyOp):
         return data
 
 
-def get_estimator():
+def get_estimator(batch_size=4, epochs=25, model_dir=tempfile.mkdtemp()):
     csv_path, path = montgomery.load_data()
     writer = fe.RecordWriter(
         save_dir=os.path.join(path, "FEdata"),
@@ -56,7 +57,7 @@ def get_estimator():
         write_feature=["image", "mask"])
 
     pipeline = fe.Pipeline(
-        batch_size=4,
+        batch_size=batch_size,
         data=writer,
         ops=[
             Augmentation2D(inputs=["image", "mask"],
@@ -77,11 +78,12 @@ def get_estimator():
         BinaryCrossentropy(y_true="mask", y_pred="pred_segment")
     ])
 
+    traces = [Dice(true_key="mask", pred_key="pred_segment"), ModelSaver(model_name="lungsegmentation", save_dir=model_dir, save_best=True)]
     estimator = fe.Estimator(network=network,
                              pipeline=pipeline,
-                             epochs=25,
+                             epochs=epochs,
                              log_steps=20,
-                             traces=Dice(true_key="mask", pred_key="pred_segment"))
+                             traces=traces)
     return estimator
 
 

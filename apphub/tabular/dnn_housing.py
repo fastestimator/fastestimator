@@ -15,10 +15,11 @@
 import tensorflow as tf
 from sklearn.preprocessing import StandardScaler
 from tensorflow.keras import layers
-
-from fastestimator import Estimator, Network, Pipeline
+import tempfile
+import fastestimator as fe
 from fastestimator.network.loss import MeanSquaredError
 from fastestimator.network.model import FEModel, ModelOp
+from fastestimator.estimator.trace import ModelSaver
 
 
 def create_dnn():
@@ -33,21 +34,21 @@ def create_dnn():
     return model
 
 
-def get_estimator(epochs=50, batch_size=32):
+def get_estimator(epochs=50, batch_size=32, model_dir=tempfile.mkdtemp()):
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.boston_housing.load_data()
     scaler = StandardScaler()
     x_train = scaler.fit_transform(x_train)
     x_eval = scaler.transform(x_eval)
     data = {"train": {"x": x_train, "y": y_train}, "eval": {"x": x_eval, "y": y_eval}}
-    pipeline = Pipeline(batch_size=batch_size, data=data)
+    pipeline = fe.Pipeline(batch_size=batch_size, data=data)
 
     #prepare model
     model = FEModel(model_def=create_dnn, model_name="dnn", optimizer="adam")
-    network = Network(
+    network = fe.Network(
         ops=[ModelOp(inputs="x", model=model, outputs="y_pred"), MeanSquaredError(y_true="y", y_pred="y_pred")])
 
     #create estimator
-    estimator = Estimator(network=network, pipeline=pipeline, epochs=epochs, log_steps=10)
+    estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, log_steps=10, traces=ModelSaver(model_name="dnn", save_dir=model_dir, save_best=True))
     return estimator
 
 

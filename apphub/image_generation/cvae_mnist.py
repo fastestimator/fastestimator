@@ -15,14 +15,13 @@
 """Convolutional Variational Autoencoder example using MNIST data set."""
 
 import math
-
+import tempfile
 import tensorflow as tf
 
-from fastestimator.estimator.estimator import Estimator
+import fastestimator as fe
 from fastestimator.network.loss import Loss
+from fastestimator.estimator.trace import ModelSaver
 from fastestimator.network.model import FEModel, ModelOp
-from fastestimator.network.network import Network
-from fastestimator.pipeline.pipeline import Pipeline
 from fastestimator.util.op import TensorOp
 
 LATENT_DIM = 50
@@ -97,34 +96,39 @@ class CVAELoss(Loss):
         return -(logpx_z + logpz - logqz_x)
 
 
-def get_estimator(batch_size=100, epochs=100):
+def get_estimator(batch_size=100, epochs=100, model_dir=tempfile.mkdtemp()):
     # prepare data
     (x_train, _), (x_eval, _) = tf.keras.datasets.mnist.load_data()
     x_train = x_train.reshape(x_train.shape[0], 28, 28, 1).astype('float32')
     x_eval = x_eval.reshape(x_eval.shape[0], 28, 28, 1).astype('float32')
     data = {"train": {"x": x_train}, "eval": {"x": x_eval}}
-    pipeline = Pipeline(batch_size=batch_size,
+    pipeline = fe.Pipeline(batch_size=batch_size,
                         data=data,
                         ops=[Myrescale(inputs="x", outputs="x"), Mybinarize(inputs="x", outputs="x")])
     # prepare model
     infer_model = FEModel(model_def=inference_net,
-                          model_name="infer",
+                          model_name="encoder",
                           loss_name="loss",
                           optimizer=tf.optimizers.Adam(1e-4))
     gen_model = FEModel(model_def=generative_net,
-                        model_name="generative",
+                        model_name="decoder",
                         loss_name="loss",
                         optimizer=tf.optimizers.Adam(1e-4))
 
-    network = Network(ops=[
+    network = fe.Network(ops=[
         ModelOp(inputs="x", model=infer_model, outputs="meanlogvar", mode=None),
         SplitOp(inputs="meanlogvar", outputs=("mean", "logvar"), mode=None),
         ReparameterizepOp(inputs=("mean", "logvar"), outputs="z", mode=None),
         ModelOp(inputs="z", model=gen_model, outputs="x_logit"),
-        CVAELoss(inputs=("x", "mean", "logvar", "z", "x_logit"), outputs="loss", mode=None)
+        CVAELoss(inputs=("x", "mean", "logvar", "z", "x_logit"), mode=None)
     ])
     # prepare estimator
-    estimator = Estimator(network=network, pipeline=pipeline, epochs=epochs)
+    estimator = fe.Estimator(
+        network=network, 
+        pipeline=pipeline, 
+        epochs=epochs, 
+        traces=ModelSaver(model_name="decoder", save_dir=model_dir, save_best=True)
+    )
     return estimator
 
 

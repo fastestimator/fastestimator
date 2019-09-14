@@ -23,6 +23,8 @@ class Loss(TensorOp):
     A base class for loss operations. It can be used directly to perform value pass-through (see the adversarial
     training showcase for an example of when this is useful)
     """
+    def __init__(self, inputs=None, outputs="loss", mode=None):
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
 
 
 class MeanSquaredError(Loss):

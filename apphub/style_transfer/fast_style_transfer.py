@@ -13,21 +13,19 @@
 # limitations under the License.
 # ==============================================================================
 import os
-
+import tempfile
 import cv2
 import numpy as np
 import tensorflow as tf
 
+import fastestimator as fe
 from fastestimator.architecture.stnet import lossNet, styleTransferNet
 from fastestimator.dataset.mscoco import load_data
-from fastestimator.estimator.estimator import Estimator
 from fastestimator.network.loss import Loss
 from fastestimator.network.model import FEModel, ModelOp
-from fastestimator.network.network import Network
-from fastestimator.pipeline.pipeline import Pipeline
 from fastestimator.record.preprocess import ImageReader, Resize
-from fastestimator.record.record import RecordWriter
 from fastestimator.util.op import TensorOp
+from fastestimator.estimator.trace import ModelSaver
 
 
 class Rescale(TensorOp):
@@ -92,7 +90,7 @@ class StyleContentLoss(Loss):
         return style_loss + content_loss + total_variation_reg
 
 
-def get_estimator(style_img_path=None, data_path=None, style_weight=5.0, content_weight=1.0, tv_weight=1e-4):
+def get_estimator(style_img_path=None, data_path=None, style_weight=5.0, content_weight=1.0, tv_weight=1e-4, model_dir=tempfile.mkdtemp()):
     train_csv, path = load_data(data_path)
     if style_img_path is None:
         style_img_path = tf.keras.utils.get_file(
@@ -104,7 +102,7 @@ def get_estimator(style_img_path=None, data_path=None, style_weight=5.0, content
     tfr_save_dir = os.path.join(path, 'FEdata')
     style_img = (style_img.astype(np.float32) / 127.5) / 127.5
     style_img_t = tf.convert_to_tensor(np.expand_dims(style_img, axis=0))
-    writer = RecordWriter(
+    writer = fe.RecordWriter(
         train_data=train_csv,
         save_dir=tfr_save_dir,
         ops=[
@@ -112,14 +110,14 @@ def get_estimator(style_img_path=None, data_path=None, style_weight=5.0, content
             Resize(inputs="image", target_size=(256, 256), outputs="image")
         ])
 
-    pipeline = Pipeline(batch_size=4, data=writer, ops=[Rescale(inputs="image", outputs="image")])
+    pipeline = fe.Pipeline(batch_size=4, data=writer, ops=[Rescale(inputs="image", outputs="image")])
 
     model = FEModel(model_def=styleTransferNet,
                     model_name="style_transfer_net",
                     loss_name="loss",
                     optimizer=tf.keras.optimizers.Adam(1e-3))
 
-    network = Network(ops=[
+    network = fe.Network(ops=[
         ModelOp(inputs="image", model=model, outputs="image_out"),
         ExtractVGGFeatures(inputs=lambda: style_img_t, outputs="y_style"),
         ExtractVGGFeatures(inputs="image", outputs="y_content"),
@@ -130,7 +128,7 @@ def get_estimator(style_img_path=None, data_path=None, style_weight=5.0, content
                          inputs=('y_pred', 'y_style', 'y_content', 'image_out'),
                          outputs='loss')
     ])
-    estimator = Estimator(network=network, pipeline=pipeline, epochs=2)
+    estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=2, traces=ModelSaver(model_name="style_transfer_net", save_dir=model_dir))
     return estimator
 
 

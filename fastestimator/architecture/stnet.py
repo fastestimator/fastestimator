@@ -2,10 +2,13 @@ import tensorflow as tf
 
 
 class ReflectionPadding2D(tf.keras.layers.Layer):
-    def __init__(self, padding=(1, 1), **kwargs):
+    def __init__(self, padding=(1, 1)):
         self.padding = tuple(padding)
         self.input_spec = [tf.keras.layers.InputSpec(ndim=4)]
-        super().__init__(**kwargs)
+        super().__init__()
+
+    def get_config(self):
+        return {'padding': self.padding}
 
     def compute_output_shape(self, s):
         return (s[0], s[1] + 2 * self.padding[0], s[2] + 2 * self.padding[1], s[3])
@@ -20,6 +23,9 @@ class InstanceNormalization(tf.keras.layers.Layer):
     def __init__(self, epsilon=1e-5):
         super().__init__()
         self.epsilon = epsilon
+
+    def get_config(self):
+        return {'epsilon': self.epsilon}
 
     def build(self, input_shape):
         self.scale = self.add_weight(name='scale', shape=input_shape[-1:],
