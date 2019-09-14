@@ -103,9 +103,9 @@ def get_estimator(batch_size=100, epochs=100, model_dir=tempfile.mkdtemp()):
     x_train = x_train.reshape(x_train.shape[0], 28, 28, 1).astype('float32')
     x_eval = x_eval.reshape(x_eval.shape[0], 28, 28, 1).astype('float32')
     data = {"train": {"x": x_train}, "eval": {"x": x_eval}}
+    pipeline = fe.Pipeline(batch_size=batch_size,
                            data=data,
                            ops=[Myrescale(inputs="x", outputs="x"), Mybinarize(inputs="x", outputs="x")])
-                        ops=[Myrescale(inputs="x", outputs="x"), Mybinarize(inputs="x", outputs="x")])
     # prepare model
     infer_model = FEModel(model_def=inference_net,
                           model_name="encoder",
@@ -127,7 +127,6 @@ def get_estimator(batch_size=100, epochs=100, model_dir=tempfile.mkdtemp()):
                              pipeline=pipeline,
                              epochs=epochs,
                              traces=ModelSaver(model_name="decoder", save_dir=model_dir, save_best=True))
-    )
     return estimator
 
 
