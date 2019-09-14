@@ -25,6 +25,7 @@ from tensorflow.python.keras import backend
 from tensorflow.python.keras.layers import embeddings
 from tensorflow.python.ops import array_ops, summary_ops_v2
 
+from fastestimator.network.lrschedule import LRSchedule
 from fastestimator.util.util import is_number
 
 
@@ -173,6 +174,8 @@ class TrainInfo(Trace):
 
     def on_begin(self, state):
         self.train_start = time.perf_counter()
+        for model_name, model in self.network.model.items():
+            state[model_name + "_lr"] = round(backend.get_value(model.optimizer.lr), 6)
 
     def on_epoch_begin(self, state):
         self.time_start = time.perf_counter()
@@ -182,10 +185,7 @@ class TrainInfo(Trace):
         if state["train_step"] % self.log_steps == 0:
             if state["train_step"] > 0:
                 self.elapse_times.append(time.perf_counter() - self.time_start)
-                epoch_models = self.network.epoch_models
-                for model in epoch_models:
-                    state[model.model_name + "_lr"] = round(backend.get_value(model.optimizer.lr), 6)
-                state["examples_per_sec"] = round(self.num_example / np.sum(self.elapse_times), 2)
+                state["examples/sec"] = round(self.num_example / np.sum(self.elapse_times), 2)
             self.elapse_times = []
             self.num_example = 0
             self.time_start = time.perf_counter()
@@ -195,6 +195,95 @@ class TrainInfo(Trace):
 
     def on_end(self, state):
         state['total_time'] = "{} sec".format(round(time.perf_counter() - self.train_start, 2))
+        for model_name, model in self.network.model.items():
+            state[model_name + "_lr"] = round(backend.get_value(model.optimizer.lr), 6)
+
+
+class LRController(Trace):
+    def __init__(self,
+                 model_name,
+                 lr_schedule=None,
+                 reduce_on_eval=False,
+                 reduce_patience=10,
+                 reduce_factor=0.1,
+                 reduce_mode="min",
+                 min_lr=1e-6):
+        if isinstance(reduce_on_eval, str):
+            super().__init__(inputs=reduce_on_eval)
+        else:
+            super().__init__()
+        self.model_name = model_name
+        self.lr_schedule = lr_schedule
+        self.reduce_on_eval = reduce_on_eval
+        self.reduce_patience = reduce_patience
+        self.reduce_factor = reduce_factor
+        self.reduce_mode = reduce_mode
+        self.min_lr = min_lr
+        self.reduce_lr_ratio = 1.0
+        self.base_lr = None
+        self.current_lr = None
+        self.log_steps = None
+        self.model = None
+        self.change_lr = False
+        self.wait = 0
+        if self.lr_schedule:
+            assert isinstance(self.lr_schedule, LRSchedule), "lr_schedule must be instance of LRSchedule"
+        if self.reduce_mode == "min":
+            self.reduce_metric_best = np.Inf
+            self.monitor_op = np.less
+        elif self.reduce_mode == "max":
+            self.reduce_metric_best = -np.Inf
+            self.monitor_op = np.greater
+        else:
+            raise ValueError("reduce_mode must be either 'min' or 'max'")
+
+    def on_begin(self, state):
+        self.log_steps = state["log_steps"]
+        self.model = self.network.model[self.model_name]
+        self.base_lr = backend.get_value(self.model.optimizer.lr)
+        self.current_lr = max(self.base_lr * self.reduce_lr_ratio, self.min_lr)
+        if self.reduce_on_eval is True:
+            self.reduce_on_eval = self.model.loss_name
+        if self.lr_schedule:
+            self.lr_schedule.total_epochs = state["total_epochs"]
+            self.lr_schedule.total_train_steps = state["total_train_steps"]
+            self.lr_schedule.initial_lr = self.current_lr
+
+    def on_epoch_begin(self, state):
+        if self.lr_schedule and self.lr_schedule.schedule_mode == "epoch":
+            self.base_lr = self.lr_schedule.schedule_fn(state["epoch"], self.base_lr)
+            self.change_lr = True
+
+    def on_batch_begin(self, state):
+        if state["mode"] == "train":
+            if self.lr_schedule and self.lr_schedule.schedule_mode == "step":
+                self.base_lr = self.lr_schedule.schedule_fn(state["train_step"], self.base_lr)
+                self.change_lr = True
+            if self.change_lr:
+                self._update_lr()
+
+    def on_batch_end(self, state):
+        if state["mode"] == "train" and self.log_steps and state["train_step"] % self.log_steps == 0:
+            state[self.model_name + "_lr"] = round(self.current_lr, 6)
+
+    def on_epoch_end(self, state):
+        if state["mode"] == "eval" and self.reduce_on_eval:
+            current_value = state[self.reduce_on_eval]
+            if self.monitor_op(current_value, self.reduce_metric_best):
+                self.reduce_metric_best = current_value
+                self.wait = 0
+            else:
+                self.wait += 1
+                if self.wait >= self.reduce_patience:
+                    self.reduce_lr_ratio *= self.reduce_factor
+                    self.change_lr = True
+                    print("FastEstimator-LRController: learning rate reduced by factor of {}".format(
+                        self.reduce_factor))
+
+    def _update_lr(self):
+        self.current_lr = max(self.base_lr * self.reduce_lr_ratio, self.min_lr)
+        backend.set_value(self.model.optimizer.lr, self.current_lr)
+        self.change_lr = False
 
 
 class Logger(Trace):
@@ -208,6 +297,9 @@ class Logger(Trace):
         super().__init__(inputs="*")
         self.log_steps = log_steps
 
+    def on_begin(self, state):
+        self._print_message("FastEstimator-Start: step: {}; ".format(state["train_step"]), state.maps[0])
+
     def on_batch_end(self, state):
         if state["mode"] == "train" and state["train_step"] % self.log_steps == 0:
             self._print_message("FastEstimator-Train: step: {}; ".format(state["train_step"]), state.maps[0])
@@ -218,7 +310,7 @@ class Logger(Trace):
                                 state.maps[0])
 
     def on_end(self, state):
-        self._print_message("FastEstimator-Finished: step: {}; ".format(state["train_step"]), state.maps[0])
+        self._print_message("FastEstimator-Finish: step: {}; ".format(state["train_step"]), state.maps[0])
 
     @staticmethod
     def _print_message(header, results):
@@ -247,10 +339,6 @@ class Accuracy(Trace):
         self.total = 0
         self.correct = 0
         self.output_name = output_name
-        self._model_save_mode = 'max'
-
-    def on_begin(self, state):
-        state['{}_save_mode'.format(self.output_name)] = self._model_save_mode
 
     def on_epoch_begin(self, state):
         self.total = 0
@@ -341,10 +429,6 @@ class Precision(Trace):
         self.y_pred = []
         self.binary_classification = None
         self.output_name = output_name
-        self._model_save_mode = 'max'
-
-    def on_begin(self, state):
-        state['{}_save_mode'.format(self.output_name)] = self._model_save_mode
 
     def on_epoch_begin(self, state):
         self.y_true = []
@@ -418,10 +502,6 @@ class Recall(Trace):
         self.y_pred = []
         self.binary_classification = None
         self.output_name = output_name
-        self._model_save_mode = 'max'
-
-    def on_begin(self, state):
-        state['{}_save_mode'.format(self.output_name)] = self._model_save_mode
 
     def on_epoch_begin(self, state):
         self.y_true = []
@@ -495,10 +575,6 @@ class F1Score(Trace):
         self.y_pred = []
         self.binary_classification = None
         self.output_name = output_name
-        self._model_save_mode = 'max'
-
-    def on_begin(self, state):
-        state['{}_save_mode'.format(self.output_name)] = self._model_save_mode
 
     def on_epoch_begin(self, state):
         self.y_true = []
@@ -561,10 +637,6 @@ class Dice(Trace):
         self.threshold = threshold
         self.dice = None
         self.output_name = output_name
-        self._model_save_mode = 'max'
-
-    def on_begin(self, state):
-        state['{}_save_mode'.format(self.output_name)] = self._model_save_mode
 
     def on_epoch_begin(self, state):
         self.dice = None
@@ -585,69 +657,6 @@ class Dice(Trace):
 
     def on_epoch_end(self, state):
         state[self.output_name] = np.mean(self.dice)
-
-
-class ReduceLROnPlateau(Trace):
-    def __init__(self,
-                 model_name,
-                 monitor_name="loss",
-                 reduce_mode="on_increase",
-                 patience=10,
-                 factor=0.1,
-                 min_delta=0.0001,
-                 cooldown=0,
-                 min_lr=0,
-                 verbose=False):
-        super().__init__(inputs=monitor_name, mode="eval")
-        self.model_name = model_name
-        self.monitor_name = monitor_name
-        self.reduce_mode = reduce_mode
-
-        assert reduce_mode in ["on_increase", "on_decrease"], "reduce_mode should be either on_increase|on_decrease"
-
-        if self.reduce_mode == "on_increase":
-            self.monitor_op = lambda a, b: np.less(a, b - min_delta)
-            self.default_val = np.Inf
-        else:
-            self.monitor_op = lambda a, b: np.greater(a, b + min_delta)
-            self.default_val = -np.Inf
-
-        self.patience = patience
-        self.factor = factor
-        self.min_delta = min_delta
-        self.cooldown = cooldown
-        self.min_lr = min_lr
-        self.verbose = verbose
-
-        self.cooldown_counter = 0
-        self.wait = 0
-        self.best = self.default_val
-
-    def on_epoch_end(self, state):
-        current_value = state[self.monitor_name]
-        if self._in_cooldown():
-            self.cooldown_counter -= 1
-            self.wait = 0
-
-        if self.monitor_op(current_value, self.best):
-            self.best = current_value
-            self.wait = 0
-        elif not self._in_cooldown():
-            self.wait += 1
-            if self.wait >= self.patience:
-                curr_lr = float(backend.get_value(self.network.model[self.model_name].optimizer.lr))
-                if curr_lr > self.min_lr:
-                    curr_lr *= self.factor
-                    curr_lr = max(curr_lr, self.min_lr)
-                    backend.set_value(self.network.model[self.model_name].optimizer.lr, curr_lr)
-                    if self.verbose:
-                        print("FastEstimator-ReduceLROnPlateau: Epoch %d reducing learning rate to %f." %
-                              (state["epoch"], curr_lr))
-                    self.cooldown_counter = self.cooldown
-                    self.wait = 0
-
-    def _in_cooldown(self):
-        return self.cooldown_counter > 0
 
 
 class TerminateOnNaN(Trace):
@@ -710,7 +719,7 @@ class TerminateOnNaN(Trace):
 class EarlyStopping(Trace):
     """
     Stop training when a monitored quantity has stopped improving.
-    
+
     Args:
             monitor (str): Quantity to be monitored.
             min_delta (float): Minimum change in the monitored quantity
@@ -792,7 +801,7 @@ class EarlyStopping(Trace):
                     for name, model in self.network.model.items():
                         model.set_weights(self.best_weights[name])
                 print("FastEstimator-EarlyStopping: '{}' triggered an early stop. Its best value was {} at epoch {}\
-                        ".format(self.monitored_key, self.best, state['epoch'] - self.wait))
+                      ".format(self.monitored_key, self.best, state['epoch'] - self.wait))
 
 
 class CSVLogger(Trace):
@@ -1039,130 +1048,60 @@ class TensorBoard(Trace):
         projector.visualize_embeddings(writer, config)
 
 
-# TODO: Support saving optimizer state, so user can resume from the previous training optimizer state.
-class ModelCheckpoint(Trace):
+class ModelSaver(Trace):
     """Save trained model in hdf5 format.
 
     Args:
+        model_name (str): The name of FE model.
         save_dir (str): The directory to save the trained models.
-        model_names (list): The list of models to save. If not proveded, save all available models.
-        monitor_name (str): The trace name to be monitored when `save_best_only=True`.
-        mode (str): Save models during either `train` or `eval`. Default is `eval`.
-        verbose (int): verbosity mode, 0 or 1
-        save_best_only (bool): Keep only the best model.
-        save_mode: Can be `'min'`, `'max'`, or `'auto'`.
+        save_best (bool, str): best model saving monitor name. If True, the model loss is used.
+        save_best_mode: Can be `'min'`, `'max'`, or `'auto'`.
         save_freq: Number of epochs to save models. Cannot be used with `save_best_only=True`.
     """
     def __init__(self,
+                 model_name,
                  save_dir,
-                 model_names=None,
-                 monitor_name=None,
-                 mode='eval',
-                 save_best_only=False,
-                 save_mode='auto',
-                 save_freq=1,
-                 verbose=1):
-        super().__init__(mode=mode)
-        self.save_dir = os.path.normpath(save_dir)
-        self._make_dir()
-        self.model_names = model_names
-        self.save_best_only = save_best_only
+                 save_best=False,
+                 save_best_mode='min',
+                 save_freq=1):
+        if isinstance(save_best, str):
+            super().__init__(inputs=save_best)
+        else:
+            super().__init__()
+        self.model_name = model_name
+        self.save_dir = save_dir
+        self.save_best = save_best
+        self.save_best_mode = save_best_mode
         self.save_freq = save_freq
-        self.save_mode = save_mode
-        self.monitor_name = monitor_name
-        self.verbose = verbose
-        self.monitor_op = None
-        self.best = None
-        self._last_saved_files = []
-
-        if self.mode not in ['train', 'eval']:
-            raise ValueError("mode can only be `train` or `eval`")
-
-        if not isinstance(self.save_freq, int):
-            raise ValueError("Unrecognized save_freq: {}".format(self.save_freq))
-
-        if self.save_freq > 1 and self.save_best_only:
-            raise ValueError("save_freq can only be 1 when save_best_only=True")
-
-        if self.monitor_name is not None and not self.save_best_only:
-            self.save_best_only = True
-            if self.verbose > 0:
-                print("FastEstimator-ModelCheckpoint: `monitor_name` detected, set `save_best_only=True`.")
-
-    def _make_dir(self):
-        os.makedirs(self.save_dir, exist_ok=True)
-
-    def _resolve_monitor_name(self):
-        if len(self.network.all_losses) == 1:
-            self.monitor_name = self.network.all_losses[0]
-        else:
-            raise ValueError("Multiple losses defined in Network, specify one loss in monitor_name for save_best_only")
-
-    def _resolve_auto_save_model(self, state):
-        if self.monitor_name in self.network.all_losses:
-            self.save_mode = 'min'
-        else:
-            try:
-                self.save_mode = state['{}_save_mode'.format(self.monitor_name)]
-            except KeyError:
-                raise ValueError("save_mode='auto' cannot be resolved.")
-
-        if self.save_mode == 'min':
-            self.monitor_op = np.less
+        assert isinstance(self.save_freq, int), "save_freq must be integer"
+        if self.save_best_mode == "min":
             self.best = np.Inf
-        elif self.save_mode == 'max':
-            self.monitor_op = np.greater
+            self.monitor_op = np.less
+        elif self.save_best_mode == "max":
             self.best = -np.Inf
+            self.monitor_op = np.greater
         else:
-            raise ValueError("save_mode='auto' cannot be resolved.")
-
-        if self.verbose > 0:
-            print("FastEstimator-ModelCheckpoint: Save models when '{}' is {}.".format(
-                self.monitor_name, self.save_mode))
+            raise ValueError("save_best_mode must be either 'min' or 'max'")
+        self.model = None
 
     def on_begin(self, state):
-        # TODO: load latest saved model
-        if self.monitor_name is None and self.save_best_only:
-            self._resolve_monitor_name()
-
-        if self.save_mode == 'auto' and self.save_best_only:
-            self._resolve_auto_save_model(state)
-
-        if self.model_names is None:
-            self.model_names = self.network.model.keys()
-        elif isinstance(self.model_names, str):
-            self.model_names = [self.model_names]
-
-        if self.mode == 'train' and self.save_best_only and self.monitor_name in self.network.all_losses:
-            raise ValueError("`mode=train` and `save_best_only=True` only support non-loss metrics.")
+        if self.save_dir:
+            self.save_dir = os.path.normpath(self.save_dir)
+            os.makedirs(self.save_dir, exist_ok=True)
+        self.model = self.network.model[self.model_name]
+        if self.save_best is True:
+            self.save_best = self.model.loss_name
 
     def on_epoch_end(self, state):
-        if state['mode'] == self.mode and (state['epoch'] % self.save_freq == 0):
-            self._save_model(state)
+        if self.save_best:
+            if state["mode"] == "eval" and self.monitor_op(state[self.save_best], self.best):
+                self.best = state[self.save_best]
+                self._save_model("{}_best_{}.h5".format(self.model_name, self.save_best))
+        elif state["mode"] == "train" and state["epoch"] % self.save_freq == 0:
+            self._save_model("{}_epoch_{}_step_{}.h5".format(self.model_name, state['epoch'], state['train_step']))
 
-    def _is_best_model(self, state):
-        if self.monitor_op(state[self.monitor_name], self.best):
-            self.best = state[self.monitor_name]
-            return True
-
-        return False
-
-    def _save_model(self, state):
-        if self.save_best_only:
-            is_best_model = self._is_best_model(state)
-
-        # remove existing saved files when save_best_only=True
-        if self._last_saved_files and self.save_best_only and is_best_model:
-            for saved_file in self._last_saved_files:
-                os.remove(saved_file)
-            self._last_saved_files = []
-
-        # save all specified models
-        if (self.save_best_only and is_best_model) or (not self.save_best_only):
-            for model_key in self.model_names:
-                save_path = os.path.join(
-                    self.save_dir, '{}_epoch_{}_step_{}.h5'.format(model_key, state['epoch'], state['train_step']))
-                self.network.model[model_key].save(save_path, include_optimizer=False)
-                self._last_saved_files.append(save_path)
-                if self.verbose > 0:
-                    print("FastEstimator-ModelCheckpoint: Saving '{}' to {}".format(model_key, save_path))
+    def _save_model(self, name):
+        if self.save_dir:
+            save_path = os.path.join(self.save_dir, name)
+            self.model.save(save_path, include_optimizer=False)
+            print("FastEstimator-ModelSaver: Saving model to {}".format(save_path))

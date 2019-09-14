@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import os
+import tempfile
 
 import numpy as np
 import tensorflow as tf
@@ -20,6 +21,7 @@ import tensorflow as tf
 from fastestimator.architecture.retinanet import RetinaNet, get_fpn_anchor_box, get_target
 from fastestimator.dataset import svhn
 from fastestimator.estimator.estimator import Estimator
+from fastestimator.estimator.trace import ModelSaver
 from fastestimator.network.loss import Loss
 from fastestimator.network.model import FEModel, ModelOp
 from fastestimator.network.network import Network
@@ -156,7 +158,7 @@ class PredictBox(TensorOp):
         return cls_selected, loc_selected, valid_outputs
 
 
-def get_estimator():
+def get_estimator(batch_size=128, epochs=15, save_dir=tempfile.mkdtemp()):
     # prepare data in disk
     train_csv, val_csv, path = svhn.load_data()
     writer = RecordWriter(
@@ -171,7 +173,7 @@ def get_estimator():
             GenerateTarget(inputs=("label", "x1", "y1", "x2", "y2"), outputs=("target_cls", "target_loc"))
         ])
     # prepare pipeline
-    pipeline = Pipeline(batch_size=128,
+    pipeline = Pipeline(batch_size=batch_size,
                         data=writer,
                         ops=Minmax(inputs="image", outputs="image"),
                         read_feature=["image", "target_cls", "target_loc"])
@@ -185,7 +187,11 @@ def get_estimator():
         RetinaLoss(inputs=("target_cls", "target_loc", "pred_cls", "pred_loc"), outputs="loss"),
     ])
     # prepare estimator
-    estimator = Estimator(network=network, pipeline=pipeline, epochs=15, log_steps=20)
+    estimator = Estimator(network=network,
+                          pipeline=pipeline,
+                          epochs=epochs,
+                          log_steps=20,
+                          traces=ModelSaver(model_name="retinanet", save_dir=save_dir, save_best=True))
     return estimator
 
 

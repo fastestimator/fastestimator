@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import tempfile
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.applications.densenet import DenseNet121 as DenseNet121_keras
@@ -19,7 +21,7 @@ from tensorflow.keras.layers import Dense, Input
 
 import fastestimator as fe
 from fastestimator.architecture import LeNet
-from fastestimator.estimator.trace import Accuracy
+from fastestimator.estimator.trace import Accuracy, ModelSaver
 from fastestimator.network.loss import SparseCategoricalCrossentropy
 from fastestimator.network.model import FEModel, ModelOp
 from fastestimator.pipeline.processing import Minmax, Resize
@@ -33,11 +35,11 @@ def DenseNet121(input_shape, classes=10, weights=None):
     return model
 
 
-def get_estimator():
+def get_estimator(epochs=50, batch_size=64, save_dir=tempfile.mkdtemp()):
     # step 1. prepare data
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.cifar10.load_data()
     data = {"train": {"x": x_train, "y": y_train}, "eval": {"x": x_eval, "y": y_eval}}
-    pipeline = fe.Pipeline(batch_size=64, data=data, ops=Minmax(inputs="x", outputs="x"))
+    pipeline = fe.Pipeline(batch_size=batch_size, data=data, ops=Minmax(inputs="x", outputs="x"))
     # step 2. prepare model
     model = FEModel(model_def=lambda: DenseNet121(input_shape=(32, 32, 3)), model_name="densenet121", optimizer="adam")
 
@@ -45,10 +47,14 @@ def get_estimator():
         ModelOp(inputs="x", model=model, outputs="y_pred"), SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred")
     ])
     # step 3.prepare estimator
-    estimator = fe.Estimator(network=network,
-                             pipeline=pipeline,
-                             epochs=50,
-                             traces=Accuracy(true_key="y", pred_key="y_pred"))
+    estimator = fe.Estimator(
+        network=network,
+        pipeline=pipeline,
+        epochs=epochs,
+        traces=[
+            Accuracy(true_key="y", pred_key="y_pred"),
+            ModelSaver(model_name="densenet121", save_dir=save_dir, save_best=True)
+        ])
     return estimator
 
 
