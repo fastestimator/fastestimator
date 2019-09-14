@@ -7,7 +7,7 @@ class LRSchedule:
     def __init__(self, schedule_mode):
         self.schedule_mode = schedule_mode
         self.total_epochs = None  #will be filled by runtime
-        self.total_steps = None  #will be filled by runtime
+        self.total_train_steps = None  #will be filled by runtime
         self.initial_lr = None  #will be filled by runtime
 
     def schedule_fn(self, current_step_or_epoch, lr):
@@ -40,7 +40,7 @@ class CyclicLRSchedule(LRSchedule):
             total_unit_cycles = self.num_cycle
         else:
             total_unit_cycles = (self.cycle_multiplier**self.num_cycle - 1) / (self.cycle_multiplier - 1)
-        unit_cycle_length = self.total_steps // total_unit_cycles
+        unit_cycle_length = self.total_train_steps // total_unit_cycles
         step_start = 0
         for i in range(self.num_cycle):
             current_cycle_length = unit_cycle_length * self.cycle_multiplier**i
@@ -49,7 +49,7 @@ class CyclicLRSchedule(LRSchedule):
                 break
             else:
                 if i == (self.num_cycle - 1):
-                    step_end = self.total_steps
+                    step_end = self.total_train_steps
                 else:
                     step_start = step_start + current_cycle_length
         lr = self.decay_fn_map[self.decrease_method](current_step_or_epoch, self.initial_lr, 1e-6, step_start, step_end)

@@ -17,7 +17,7 @@ from collections import ChainMap, deque
 import numpy as np
 import tensorflow as tf
 
-from fastestimator.estimator.trace import Logger, LRController, ModelCheckpoint, MonitorLoss, Trace, TrainInfo
+from fastestimator.estimator.trace import Logger, LRController, ModelSaver, MonitorLoss, Trace, TrainInfo
 from fastestimator.network.lrschedule import LRSchedule
 from fastestimator.util.cli_util import draw
 from fastestimator.util.util import get_num_devices
@@ -80,17 +80,12 @@ class Estimator:
         no_save_warning = True
         for trace in self.traces:
             assert isinstance(trace, Trace)
-            if isinstance(trace, ModelCheckpoint):
-                no_save_warning = False
-            if isinstance(trace, LRController):
-                trace.log_steps = self.log_steps
-                if trace.lr_schedule:
-                    trace.lr_schedule.total_epochs = self.epochs
-                    trace.lr_schedule.total_steps = self.total_train_steps
             trace.network = self.network
-        self._sort_traces()
+            if isinstance(trace, ModelSaver):
+                no_save_warning = False
         if no_save_warning:
-            print("FastEstimator-Warn: No ModelCheckpoint Trace detected. Models will not be saved.")
+            print("FastEstimator-Warn: No ModelSaver Trace detected. Models will not be saved.")
+        self._sort_traces()
 
     def _add_traces(self):
         if self.log_steps:
@@ -183,7 +178,13 @@ class Estimator:
 
     def _start(self):
         self.train_step = 0
-        self._run_traces_on_begin({"train_step": self.train_step, "num_devices": self.num_devices})
+        self._run_traces_on_begin({
+            "train_step": self.train_step,
+            "num_devices": self.num_devices,
+            "log_steps": self.log_steps,
+            "total_epochs": self.epochs,
+            "total_train_steps": self.total_train_steps
+        })
         for self.train_epoch in range(self.epochs):
             self._run_epoch("train")
             if self.do_eval:

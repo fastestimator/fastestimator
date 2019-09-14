@@ -208,7 +208,7 @@ class LRController(Trace):
                  reduce_factor=0.1,
                  reduce_mode="min",
                  min_lr=1e-6):
-        if reduce_on_eval and isinstance(reduce_on_eval, str):
+        if isinstance(reduce_on_eval, str):
             super().__init__(inputs=reduce_on_eval)
         else:
             super().__init__()
@@ -230,18 +230,23 @@ class LRController(Trace):
             assert isinstance(self.lr_schedule, LRSchedule), "lr_schedule must be instance of LRSchedule"
         if self.reduce_mode == "min":
             self.reduce_metric_best = np.Inf
+            self.monitor_op = np.less
         elif self.reduce_mode == "max":
             self.reduce_metric_best = -np.Inf
+            self.monitor_op = np.greater
         else:
             raise ValueError("reduce_mode must be either 'min' or 'max'")
 
     def on_begin(self, state):
+        self.log_steps = state["log_steps"]
         self.model = self.network.model[self.model_name]
         self.base_lr = backend.get_value(self.model.optimizer.lr)
         self.current_lr = max(self.base_lr * self.reduce_lr_ratio, self.min_lr)
         if self.reduce_on_eval is True:
             self.reduce_on_eval = self.model.loss_name
         if self.lr_schedule:
+            self.lr_schedule.total_epochs = state["total_epochs"]
+            self.lr_schedule.total_train_steps = state["total_train_steps"]
             self.lr_schedule.initial_lr = self.current_lr
 
     def on_epoch_begin(self, state):
@@ -264,7 +269,7 @@ class LRController(Trace):
     def on_epoch_end(self, state):
         if state["mode"] == "eval" and self.reduce_on_eval:
             current_value = state[self.reduce_on_eval]
-            if self._is_better(current_value):
+            if self.monitor_op(current_value, self.reduce_metric_best):
                 self.reduce_metric_best = current_value
                 self.wait = 0
             else:
@@ -279,13 +284,6 @@ class LRController(Trace):
         self.current_lr = max(self.base_lr * self.reduce_lr_ratio, self.min_lr)
         backend.set_value(self.model.optimizer.lr, self.current_lr)
         self.change_lr = False
-
-    def _is_better(self, value):
-        if self.reduce_mode == "min":
-            better = value < self.reduce_metric_best
-        else:
-            better = value > self.reduce_metric_best
-        return better
 
 
 class Logger(Trace):
@@ -823,7 +821,7 @@ class EarlyStopping(Trace):
                     for name, model in self.network.model.items():
                         model.set_weights(self.best_weights[name])
                 print("FastEstimator-EarlyStopping: '{}' triggered an early stop. Its best value was {} at epoch {}\
-                        ".format(self.monitored_key, self.best, state['epoch'] - self.wait))
+                        "                                                  .format(self.monitored_key, self.best, state['epoch'] - self.wait))
 
 
 class CSVLogger(Trace):
@@ -1070,128 +1068,59 @@ class TensorBoard(Trace):
         projector.visualize_embeddings(writer, config)
 
 
-# TODO: Support saving optimizer state, so user can resume from the previous training optimizer state.
-class ModelCheckpoint(Trace):
+class ModelSaver(Trace):
     """Save trained model in hdf5 format.
 
     Args:
+        model_name (str): The name of FE model.
         save_dir (str): The directory to save the trained models.
-        model (list): The list of models to save. If not proveded, save all available models.
-        monitor_name (str): The trace name to be monitored when `save_best_only=True`.
-        mode (str): Save models during either `train` or `eval`. Default is `eval`.
-        save_best_only (bool): Keep only the best model.
-        save_mode: Can be `'min'`, `'max'`, or `'auto'`.
+        save_best (bool, str): best model saving monitor name. If True, the model loss is used.
+        save_best_mode: Can be `'min'`, `'max'`, or `'auto'`.
         save_freq: Number of epochs to save models. Cannot be used with `save_best_only=True`.
     """
     def __init__(self,
+                 model_name,
                  save_dir,
-                 models,
-                 monitor_name=None,
-                 mode='eval',
-                 save_best_only=False,
-                 save_mode='auto',
+                 save_best=False,
+                 save_best_mode='min',
                  save_freq=1):
-        super().__init__(mode=mode)
+        if isinstance(save_best, str):
+            super().__init__(inputs=save_best, mode="eval")
+        else:
+            super().__init__(mode="eval")
+        self.model_name = model_name
         self.save_dir = os.path.normpath(save_dir)
-        self._make_dir()
-        self.models = models
-        self.save_best_only = save_best_only
+        self.save_best = save_best
+        self.save_best_mode = save_best_mode
         self.save_freq = save_freq
-        self.save_mode = save_mode
-        self.monitor_name = monitor_name
-        self.verbose = verbose
-        self.monitor_op = None
-        self.best = None
-        self._last_saved_files = []
-
-        if self.mode not in ['train', 'eval']:
-            raise ValueError("mode can only be `train` or `eval`")
-
-        if not isinstance(self.save_freq, int):
-            raise ValueError("Unrecognized save_freq: {}".format(self.save_freq))
-
-        if self.save_freq > 1 and self.save_best_only:
-            raise ValueError("save_freq can only be 1 when save_best_only=True")
-
-        if self.monitor_name is not None and not self.save_best_only:
-            self.save_best_only = True
-            if self.verbose > 0:
-                print("FastEstimator-ModelCheckpoint: `monitor_name` detected, set `save_best_only=True`.")
-
-    def _make_dir(self):
-        os.makedirs(self.save_dir, exist_ok=True)
-
-    def _resolve_monitor_name(self):
-        if len(self.network.all_losses) == 1:
-            self.monitor_name = self.network.all_losses[0]
-        else:
-            raise ValueError("Multiple losses defined in Network, specify one loss in monitor_name for save_best_only")
-
-    def _resolve_auto_save_model(self, state):
-        if self.monitor_name in self.network.all_losses:
-            self.save_mode = 'min'
-        else:
-            try:
-                self.save_mode = state['{}_save_mode'.format(self.monitor_name)]
-            except KeyError:
-                raise ValueError("save_mode='auto' cannot be resolved.")
-
-        if self.save_mode == 'min':
-            self.monitor_op = np.less
+        assert isinstance(self.save_freq, int), "save_freq must be integer"
+        if self.save_best_mode == "min":
             self.best = np.Inf
-        elif self.save_mode == 'max':
-            self.monitor_op = np.greater
+            self.monitor_op = np.less
+        elif self.save_best_mode == "max":
             self.best = -np.Inf
+            self.monitor_op = np.greater
         else:
-            raise ValueError("save_mode='auto' cannot be resolved.")
-
-        if self.verbose > 0:
-            print("FastEstimator-ModelCheckpoint: Save models when '{}' is {}.".format(
-                self.monitor_name, self.save_mode))
+            raise ValueError("save_best_mode must be either 'min' or 'max'")
+        self.model = None
 
     def on_begin(self, state):
-        # TODO: load latest saved model
-        if self.monitor_name is None and self.save_best_only:
-            self._resolve_monitor_name()
-
-        if self.save_mode == 'auto' and self.save_best_only:
-            self._resolve_auto_save_model(state)
-
-        if self.model_names is None:
-            self.model_names = self.network.model.keys()
-        elif isinstance(self.model_names, str):
-            self.model_names = [self.model_names]
-
-        if self.mode == 'train' and self.save_best_only and self.monitor_name in self.network.all_losses:
-            raise ValueError("`mode=train` and `save_best_only=True` only support non-loss metrics.")
+        os.makedirs(self.save_dir, exist_ok=True)
+        self.model = self.network.model[self.model_name]
+        if self.save_best is True:
+            self.save_best = self.model.loss_name
 
     def on_epoch_end(self, state):
-        if state['mode'] == self.mode and (state['epoch'] % self.save_freq == 0):
-            self._save_model(state)
+        if self.save_best:
+            current_value = state[self.save_best]
+            if self.monitor_op(current_value, self.best):
+                self.best = current_value
+                self._save_model("{}_best_{}.h5".format(self.model_name, self.save_best))
+        else:
+            if state["epoch"] % self.save_freq == 0:
+                self._save_model("{}_epoch_{}_step_{}.h5".format(self.model_name, state['epoch'], state['train_step']))
 
-    def _is_best_model(self, state):
-        if self.monitor_op(state[self.monitor_name], self.best):
-            self.best = state[self.monitor_name]
-            return True
-
-        return False
-
-    def _save_model(self, state):
-        if self.save_best_only:
-            is_best_model = self._is_best_model(state)
-
-        # remove existing saved files when save_best_only=True
-        if self._last_saved_files and self.save_best_only and is_best_model:
-            for saved_file in self._last_saved_files:
-                os.remove(saved_file)
-            self._last_saved_files = []
-
-        # save all specified models
-        if (self.save_best_only and is_best_model) or (not self.save_best_only):
-            for model_key in self.model_names:
-                save_path = os.path.join(
-                    self.save_dir, '{}_epoch_{}_step_{}.h5'.format(model_key, state['epoch'], state['train_step']))
-                self.network.model[model_key].save(save_path, include_optimizer=False)
-                self._last_saved_files.append(save_path)
-                if self.verbose > 0:
-                    print("FastEstimator-ModelCheckpoint: Saving '{}' to {}".format(model_key, save_path))
+    def _save_model(self, name):
+        save_path = os.path.join(self.save_dir, name)
+        self.model.save(save_path, include_optimizer=False)
+        print("FastEstimator-ModelSaver: Saving model to {}".format(save_path))
