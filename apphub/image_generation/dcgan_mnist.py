@@ -13,12 +13,14 @@
 # limitations under the License.
 # ==============================================================================
 """DCGAN example using MNIST data set."""
+import tempfile
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import layers
 
 import fastestimator as fe
-from fastestimator.estimator.trace import ModelCheckpoint
+from fastestimator.estimator.trace import ModelSaver
 from fastestimator.network.loss import Loss
 from fastestimator.network.model import FEModel, ModelOp
 from fastestimator.util.op import TensorOp
@@ -91,7 +93,7 @@ class Myrescale(TensorOp):
         return data
 
 
-def get_estimator(batch_size=256, epochs=50):
+def get_estimator(batch_size=256, epochs=50, model_dir=tempfile.mkdtemp()):
     # prepare data
     (x_train, _), (_, _) = tf.keras.datasets.mnist.load_data()
     data = {"train": {"x": np.expand_dims(x_train, -1)}}
@@ -113,7 +115,7 @@ def get_estimator(batch_size=256, epochs=50):
         DLoss(inputs=("pred_true", "pred_fake"), outputs="dloss")
     ])
     # prepare estimator
-    traces = [ModelCheckpoint('./dcgan_models', mode='train', model_names='gen', save_freq=25)]
+    traces = [ModelSaver(model_name='gen', save_dir=model_dir, save_freq=5)]
     estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces)
     return estimator
 

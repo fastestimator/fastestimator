@@ -24,6 +24,9 @@ class InstanceNormalization(layers.Layer):
         super().__init__()
         self.epsilon = epsilon
 
+    def get_config(self):
+        return {'epsilon': self.epsilon}
+
     def build(self, input_shape):
         self.scale = self.add_weight(name='scale',
                                      shape=input_shape[-1:],
@@ -41,10 +44,13 @@ class InstanceNormalization(layers.Layer):
 
 # Code borrowd from https://stackoverflow.com/questions/50677544/reflection-padding-conv2d
 class ReflectionPadding2D(layers.Layer):
-    def __init__(self, padding=(1, 1), **kwargs):
+    def __init__(self, padding=(1, 1)):
         self.padding = tuple(padding)
         self.input_spec = [layers.InputSpec(ndim=4)]
-        super().__init__(**kwargs)
+        super().__init__()
+
+    def get_config(self):
+        return {'padding': self.padding}
 
     def compute_output_shape(self, s):
         """ If you are using "channels_last" configuration"""

@@ -13,61 +13,18 @@
 # limitations under the License.
 # ==============================================================================
 import os
-from glob import glob
+import tempfile
 
-import cv2
 import tensorflow as tf
 
-import imageio
+import fastestimator as fe
 from fastestimator.architecture.cyclegan import build_discriminator, build_generator
 from fastestimator.dataset.horse2zebra import load_data
-from fastestimator.estimator.estimator import Estimator
-from fastestimator.estimator.trace import Trace
+from fastestimator.estimator.trace import ModelSaver
 from fastestimator.network.loss import Loss
 from fastestimator.network.model import FEModel, ModelOp
-from fastestimator.network.network import Network
-from fastestimator.pipeline.pipeline import Pipeline
 from fastestimator.record.preprocess import ImageReader
-from fastestimator.record.record import RecordWriter
 from fastestimator.util.op import TensorOp
-
-
-class GifGenerator(Trace):
-    def __init__(self, save_path, export_name="anim.gif", mode="eval"):
-        super().__init__(mode=mode)
-        self.save_path = save_path
-        self.prefix = "image_at_epoch_{0:04d}.png"
-        self.export_name = os.path.join(self.save_path, export_name)
-
-    def on_begin(self, state):
-        if not (os.path.exists(self.save_path)):
-            os.makedirs(self.save_path)
-
-    def on_batch_end(self, state):
-        epoch = state['epoch']
-        img = state['batch']['prediction']['Y_fake']
-        img = img[0, ...].numpy()
-        img += 1
-        img /= 2
-        img *= 255
-        img_path = os.path.join(self.save_path, self.prefix.format(epoch))
-        cv2.imwrite(img_path, img.astype("uint8"))
-
-    def on_end(self, state):
-        with imageio.get_writer(self.export_name, mode='I') as writer:
-            filenames = glob(os.path.join(self.save_path, "*.png"))
-            filenames = sorted(filenames)
-            last = -1
-            for i, filename in enumerate(filenames):
-                frame = 5 * (i**0.5)
-                if round(frame) > round(last):
-                    last = frame
-                else:
-                    continue
-                image = imageio.imread(filename)
-                writer.append_data(image)
-                image = imageio.imread(filename)
-                writer.append_data(image)
 
 
 class Myrescale(TensorOp):
@@ -99,13 +56,13 @@ class GLoss(Loss):
         self.LAMBDA = weight
 
     def _adversarial_loss(self, fake_img):
-        return tf.reduce_mean(self.cross_entropy(tf.ones_like(fake_img), fake_img), axis=(1,2))
+        return tf.reduce_mean(self.cross_entropy(tf.ones_like(fake_img), fake_img), axis=(1, 2))
 
     def _identity_loss(self, real_img, same_img):
-        return 0.5 * self.LAMBDA * tf.reduce_mean(tf.abs(real_img - same_img), axis=(1,2,3))
+        return 0.5 * self.LAMBDA * tf.reduce_mean(tf.abs(real_img - same_img), axis=(1, 2, 3))
 
     def _cycle_loss(self, real_img, cycled_img):
-        return self.LAMBDA * tf.reduce_mean(tf.abs(real_img - cycled_img), axis=(1,2,3))
+        return self.LAMBDA * tf.reduce_mean(tf.abs(real_img - cycled_img), axis=(1, 2, 3))
 
     def forward(self, data, state):
         real_img, fake_img, cycled_img, same_img = data
@@ -122,23 +79,23 @@ class DLoss(Loss):
 
     def forward(self, data, state):
         real_img, fake_img = data
-        real_img_loss = tf.reduce_mean(self.cross_entropy(tf.ones_like(real_img), real_img), axis=(1,2))
-        fake_img_loss = tf.reduce_mean(self.cross_entropy(tf.zeros_like(real_img), fake_img), axis=(1,2))
+        real_img_loss = tf.reduce_mean(self.cross_entropy(tf.ones_like(real_img), real_img), axis=(1, 2))
+        fake_img_loss = tf.reduce_mean(self.cross_entropy(tf.zeros_like(real_img), fake_img), axis=(1, 2))
         total_loss = real_img_loss + fake_img_loss
         return 0.5 * total_loss
 
 
-def get_estimator(weight=10.0, epochs=200):
-    trainA_csv, trainB_csv, testA_csv, testB_csv, parent_path = load_data()
+def get_estimator(weight=10.0, epochs=200, model_dir=tempfile.mkdtemp()):
+    trainA_csv, trainB_csv, _, _, parent_path = load_data()
     tfr_save_dir = os.path.join(parent_path, 'FEdata')
     # Step 1: Define Pipeline
-    writer = RecordWriter(
+    writer = fe.RecordWriter(
         train_data=(trainA_csv, trainB_csv),
         save_dir=tfr_save_dir,
         ops=([ImageReader(inputs="imgA", outputs="imgA", parent_path=parent_path)],
              [ImageReader(inputs="imgB", outputs="imgB", parent_path=parent_path)]))
 
-    pipeline = Pipeline(
+    pipeline = fe.Pipeline(
         data=writer,
         batch_size=1,
         ops=[
@@ -168,7 +125,7 @@ def get_estimator(weight=10.0, epochs=200):
                   loss_name="d_B_loss",
                   optimizer=tf.keras.optimizers.Adam(2e-4, 0.5))
 
-    network = Network(ops=[
+    network = fe.Network(ops=[
         ModelOp(inputs="real_A", model=g_AtoB, outputs="fake_B"),
         ModelOp(inputs="real_B", model=g_BtoA, outputs="fake_A"),
         ModelOp(inputs="real_A", model=d_A, outputs="d_real_A"),
@@ -185,8 +142,11 @@ def get_estimator(weight=10.0, epochs=200):
         DLoss(inputs=("d_real_B", "d_fake_B"), outputs="d_B_loss")
     ])
     # Step3: Define Estimator
-    # traces = [GifGenerator("/root/data/public/horse2zebra/images")]
-    estimator = Estimator(network=network, pipeline=pipeline, epochs=epochs)
+    traces = [
+        ModelSaver(model_name="g_AtoB", save_dir=model_dir, save_freq=10),
+        ModelSaver(model_name="g_BtoA", save_dir=model_dir, save_freq=10)
+    ]
+    estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces)
     return estimator
 
 

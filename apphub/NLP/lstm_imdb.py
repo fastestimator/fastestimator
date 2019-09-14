@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import tempfile
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import layers
 
 import fastestimator as fe
-from fastestimator.estimator.trace import Accuracy
+from fastestimator.estimator.trace import Accuracy, ModelSaver
 from fastestimator.network.loss import BinaryCrossentropy
 from fastestimator.network.model import FEModel, ModelOp
 from fastestimator.pipeline.processing import Reshape
@@ -41,7 +43,7 @@ def pad(input_list, padding_size, padding_value):
     return input_list + [padding_value] * abs((len(input_list) - padding_size))
 
 
-def get_estimator(epochs=10, batch_size=64):
+def get_estimator(epochs=10, batch_size=64, model_dir=tempfile.mkdtemp()):
     # step 1. prepare data
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.imdb.load_data(maxlen=MAX_LEN, num_words=MAX_WORDS)
     data = {
@@ -60,11 +62,11 @@ def get_estimator(epochs=10, batch_size=64):
     network = fe.Network(
         ops=[ModelOp(inputs="x", model=model, outputs="y_pred"), BinaryCrossentropy(y_true="y", y_pred="y_pred")])
 
+    traces = [
+        Accuracy(true_key="y", pred_key="y_pred"), ModelSaver(model_name="lstm", save_dir=model_dir, save_best=True)
+    ]
     # step 3.prepare estimator
-    estimator = fe.Estimator(network=network,
-                             pipeline=pipeline,
-                             epochs=epochs,
-                             traces=Accuracy(true_key="y", pred_key="y_pred"))
+    estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces)
 
     return estimator
 

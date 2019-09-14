@@ -2,10 +2,13 @@ import tensorflow as tf
 
 
 class ReflectionPadding2D(tf.keras.layers.Layer):
-    def __init__(self, padding=(1, 1), **kwargs):
+    def __init__(self, padding=(1, 1)):
         self.padding = tuple(padding)
         self.input_spec = [tf.keras.layers.InputSpec(ndim=4)]
-        super().__init__(**kwargs)
+        super().__init__()
+
+    def get_config(self):
+        return {'padding': self.padding}
 
     def compute_output_shape(self, s):
         return (s[0], s[1] + 2 * self.padding[0], s[2] + 2 * self.padding[1], s[3])
@@ -21,9 +24,14 @@ class InstanceNormalization(tf.keras.layers.Layer):
         super().__init__()
         self.epsilon = epsilon
 
+    def get_config(self):
+        return {'epsilon': self.epsilon}
+
     def build(self, input_shape):
-        self.scale = self.add_weight(name='scale', shape=input_shape[-1:],
-                                     initializer=tf.random_normal_initializer(0., 0.02), trainable=True)
+        self.scale = self.add_weight(name='scale',
+                                     shape=input_shape[-1:],
+                                     initializer=tf.random_normal_initializer(0., 0.02),
+                                     trainable=True)
 
         self.offset = self.add_weight(name='offset', shape=input_shape[-1:], initializer='zeros', trainable=True)
 
@@ -38,12 +46,16 @@ def _residual_block(x0, num_filter, kernel_size=(3, 3), strides=(1, 1)):
     initializer = tf.random_normal_initializer(0., 0.02)
     x0_cropped = tf.keras.layers.Cropping2D(cropping=2)(x0)
 
-    x = tf.keras.layers.Conv2D(filters=num_filter, kernel_size=kernel_size, strides=strides,
+    x = tf.keras.layers.Conv2D(filters=num_filter,
+                               kernel_size=kernel_size,
+                               strides=strides,
                                kernel_initializer=initializer)(x0)
     x = InstanceNormalization()(x)
     x = tf.keras.layers.ReLU()(x)
 
-    x = tf.keras.layers.Conv2D(filters=num_filter, kernel_size=kernel_size, strides=strides,
+    x = tf.keras.layers.Conv2D(filters=num_filter,
+                               kernel_size=kernel_size,
+                               strides=strides,
                                kernel_initializer=initializer)(x)
 
     x = InstanceNormalization()(x)
@@ -53,7 +65,10 @@ def _residual_block(x0, num_filter, kernel_size=(3, 3), strides=(1, 1)):
 
 def _conv_block(x0, num_filter, kernel_size=(9, 9), strides=(1, 1), padding="same", apply_relu=True):
     initializer = tf.random_normal_initializer(0., 0.02)
-    x = tf.keras.layers.Conv2D(filters=num_filter, kernel_size=kernel_size, strides=strides, padding=padding,
+    x = tf.keras.layers.Conv2D(filters=num_filter,
+                               kernel_size=kernel_size,
+                               strides=strides,
+                               padding=padding,
                                kernel_initializer=initializer)(x0)
 
     x = InstanceNormalization()(x)
@@ -64,7 +79,10 @@ def _conv_block(x0, num_filter, kernel_size=(9, 9), strides=(1, 1), padding="sam
 
 def _upsample(x0, num_filter, kernel_size=(3, 3), strides=(2, 2), padding="same"):
     initializer = tf.random_normal_initializer(0., 0.02)
-    x = tf.keras.layers.Conv2DTranspose(filters=num_filter, kernel_size=kernel_size, strides=strides, padding=padding,
+    x = tf.keras.layers.Conv2DTranspose(filters=num_filter,
+                                        kernel_size=kernel_size,
+                                        strides=strides,
+                                        padding=padding,
                                         kernel_initializer=initializer)(x0)
 
     x = InstanceNormalization()(x)
@@ -74,7 +92,10 @@ def _upsample(x0, num_filter, kernel_size=(3, 3), strides=(2, 2), padding="same"
 
 def _downsample(x0, num_filter, kernel_size=(3, 3), strides=(2, 2), padding="same"):
     initializer = tf.random_normal_initializer(0., 0.02)
-    x = tf.keras.layers.Conv2D(filters=num_filter, kernel_size=kernel_size, strides=strides, padding=padding,
+    x = tf.keras.layers.Conv2D(filters=num_filter,
+                               kernel_size=kernel_size,
+                               strides=strides,
+                               padding=padding,
                                kernel_initializer=initializer)(x0)
 
     x = InstanceNormalization()(x)
@@ -99,7 +120,8 @@ def styleTransferNet(input_shape=(256, 256, 3), num_resblock=5):
     return tf.keras.Model(inputs=x0, outputs=x)
 
 
-def lossNet(input_shape=(256, 256, 3), stlyeLayers=["block1_conv2", "block2_conv2", "block3_conv3", "block4_conv3"],
+def lossNet(input_shape=(256, 256, 3),
+            stlyeLayers=["block1_conv2", "block2_conv2", "block3_conv3", "block4_conv3"],
             contentLayers=["block3_conv3"]):
     x0 = tf.keras.layers.Input(shape=input_shape)
     mdl = tf.keras.applications.vgg16.VGG16(include_top=False, weights='imagenet', input_tensor=x0)

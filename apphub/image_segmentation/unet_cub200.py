@@ -20,7 +20,7 @@ import tensorflow as tf
 import fastestimator as fe
 from fastestimator.architecture.unet import UNet
 from fastestimator.dataset import cub200
-from fastestimator.estimator.trace import Dice
+from fastestimator.estimator.trace import Dice, ModelSaver
 from fastestimator.network.loss import BinaryCrossentropy
 from fastestimator.network.model import FEModel, ModelOp
 from fastestimator.pipeline.processing import Minmax
@@ -34,7 +34,7 @@ class SelectDictKey(NumpyOp):
         return data
 
 
-def get_estimator():
+def get_estimator(batch_size=32, epochs=25, model_dir=tempfile.mkdtemp()):
     # load CUB200 dataset.
     csv_path, path = cub200.load_data()
     writer = fe.RecordWriter(
@@ -50,21 +50,21 @@ def get_estimator():
             Reshape(shape=(128, 128, 1), outputs="annotation")
         ])
     #data pipeline
-    pipeline = fe.Pipeline(batch_size=32, data=writer, ops=Minmax(inputs='image', outputs='image'))
+    pipeline = fe.Pipeline(batch_size=batch_size, data=writer, ops=Minmax(inputs='image', outputs='image'))
 
     #Netowrk
-    model = FEModel(model_def=UNet, model_name="cub200", optimizer=tf.optimizers.Adam())
+    model = FEModel(model_def=UNet, model_name="unet_cub", optimizer=tf.optimizers.Adam())
     network = fe.Network(ops=[
         ModelOp(inputs='image', model=model, outputs='mask_pred'),
         BinaryCrossentropy(y_true='annotation', y_pred='mask_pred')
     ])
 
     #estimator
-    estimator = fe.Estimator(network=network,
-                             pipeline=pipeline,
-                             traces=Dice(true_key="annotation", pred_key='mask_pred'),
-                             epochs=26,
-                             log_steps=50)
+    traces = [
+        Dice(true_key="annotation", pred_key='mask_pred'),
+        ModelSaver(model_name="unet_cub", save_dir=model_dir, save_best=True)
+    ]
+    estimator = fe.Estimator(network=network, pipeline=pipeline, traces=traces, epochs=epochs, log_steps=50)
     return estimator
 
 
