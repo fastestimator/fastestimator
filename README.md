@@ -18,8 +18,8 @@ FastEstimator is a high-level deep learning API. With the help of FastEstimator,
 ## [Docker Hub](https://hub.docker.com/r/fastestimator/fastestimator/tags)
 Docker container creates isolated virtual environment that shares resources with host machine. Docker provides an easy way to set up FastEstimator environment, users can pull image from Docker Hub.
 
-* GPU: `docker pull fastestimator/fastestimator:latest-gpu`
-* CPU: `docker pull fastestimator/fastestimator:latest-cpu`
+* GPU: `docker pull fastestimator/fastestimator:1.0a0-gpu`
+* CPU: `docker pull fastestimator/fastestimator:1.0a0-gpu`
 
 ## Running your first FastEstimator training
 
