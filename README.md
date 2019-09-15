@@ -21,7 +21,7 @@ Docker container creates isolated virtual environment that shares resources with
 * GPU: `docker pull fastestimator/fastestimator:1.0a0-gpu`
 * CPU: `docker pull fastestimator/fastestimator:1.0a0-cpu`
 
-## Running your first FastEstimator training
+## Start your first FastEstimator training
 
 ```
 $ python ./apphub/image_classification/lenet_mnist.py
