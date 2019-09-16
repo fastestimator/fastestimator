@@ -17,8 +17,7 @@ from collections import ChainMap, deque
 import numpy as np
 import tensorflow as tf
 
-from fastestimator.estimator.trace import Logger, LRController, ModelSaver, MonitorLoss, Trace, TrainInfo
-from fastestimator.network.lrschedule import LRSchedule
+from fastestimator.estimator.trace import Logger, ModelSaver, MonitorLoss, Trace, TrainInfo
 from fastestimator.util.cli_util import draw
 from fastestimator.util.util import get_num_devices
 
