@@ -30,8 +30,8 @@ def get_estimator(epochs=2, batch_size=32, model_dir=tempfile.mkdtemp()):
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.mnist.load_data()
     train_data = {"x": np.expand_dims(x_train, -1), "y": y_train}
     eval_data = {"x": np.expand_dims(x_eval, -1), "y": y_eval}
-    total_data = {"train": train_data, "eval": eval_data}
-    pipeline = fe.Pipeline(batch_size=batch_size, data=total_data, ops=Minmax(inputs="x", outputs="x"))
+    data = {"train": train_data, "eval": eval_data}
+    pipeline = fe.Pipeline(batch_size=batch_size, data=data, ops=Minmax(inputs="x", outputs="x"))
 
     # step 2. prepare model
     model = FEModel(model_def=LeNet, model_name="lenet", optimizer="adam")
