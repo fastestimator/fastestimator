@@ -19,9 +19,8 @@ import tensorflow as tf
 
 import fastestimator as fe
 from fastestimator.architecture import LeNet
-from fastestimator.estimator.trace import Accuracy, LRController, ModelSaver
+from fastestimator.estimator.trace import Accuracy, ModelSaver
 from fastestimator.network.loss import SparseCategoricalCrossentropy
-from fastestimator.network.lrschedule import CyclicLRSchedule
 from fastestimator.network.model import FEModel, ModelOp
 from fastestimator.pipeline.processing import Minmax
 
@@ -29,15 +28,10 @@ from fastestimator.pipeline.processing import Minmax
 def get_estimator(epochs=2, batch_size=32, model_dir=tempfile.mkdtemp()):
     # step 1. prepare data
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.mnist.load_data()
-    data = {
-        "train": {
-            "x": np.expand_dims(x_train, -1), "y": y_train
-        },
-        "eval": {
-            "x": np.expand_dims(x_eval, -1), "y": y_eval
-        }
-    }
-    pipeline = fe.Pipeline(batch_size=batch_size, data=data, ops=Minmax(inputs="x", outputs="x"))
+    train_data = {"x": np.expand_dims(x_train, -1), "y": y_train}
+    eval_data = {"x": np.expand_dims(x_eval, -1), "y": y_eval}
+    total_data = {"train": train_data, "eval": eval_data}
+    pipeline = fe.Pipeline(batch_size=batch_size, data=total_data, ops=Minmax(inputs="x", outputs="x"))
 
     # step 2. prepare model
     model = FEModel(model_def=LeNet, model_name="lenet", optimizer="adam")
@@ -47,8 +41,7 @@ def get_estimator(epochs=2, batch_size=32, model_dir=tempfile.mkdtemp()):
     # step 3.prepare estimator
     traces = [
         Accuracy(true_key="y", pred_key="y_pred", output_name='acc'),
-        LRController(model_name="lenet", lr_schedule=CyclicLRSchedule()),
-        ModelSaver(model_name="lenet", save_dir=model_dir, save_best="acc", save_best_mode="max")
+        ModelSaver(model_name="lenet", save_dir=model_dir, save_best=True)
     ]
     estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces)
     return estimator
