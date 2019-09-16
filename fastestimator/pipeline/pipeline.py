@@ -50,7 +50,6 @@ class Pipeline:
         self.padded_shape = None
         self.global_batch_multiplier = 1
         self.num_core = mp.cpu_count()
-        self.all_output_keys = set()
         self._verify_input()
         self._reset()
 
