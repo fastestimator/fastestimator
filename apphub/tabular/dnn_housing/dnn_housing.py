@@ -20,7 +20,7 @@ from sklearn.preprocessing import StandardScaler
 from tensorflow.keras import layers
 
 import fastestimator as fe
-from fastestimator.estimator.trace import ModelSaver, Accuracy
+from fastestimator.estimator.trace import ModelSaver
 from fastestimator.network.loss import MeanSquaredError
 from fastestimator.network.model import FEModel, ModelOp
 
