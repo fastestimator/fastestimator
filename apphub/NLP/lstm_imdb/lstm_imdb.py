@@ -24,17 +24,17 @@ from fastestimator.network.loss import BinaryCrossentropy
 from fastestimator.network.model import FEModel, ModelOp
 from fastestimator.pipeline.processing import Reshape
 
-MAX_WORDS = 1000
-MAX_LEN = 300
+MAX_WORDS = 10000
+MAX_LEN = 500
 
 
 def create_lstm():
     model = tf.keras.Sequential()
-    model.add(layers.Embedding(MAX_WORDS, 100, input_length=MAX_LEN))
-    model.add(layers.Dropout(0.2))
-    model.add(layers.Conv1D(64, 5, activation='relu'))
+    model.add(layers.Embedding(MAX_WORDS, 64, input_length=MAX_LEN))
+    model.add(layers.Conv1D(32, 3, padding='same', activation='relu'))
     model.add(layers.MaxPooling1D(pool_size=4))
-    model.add(layers.LSTM(100))
+    model.add(layers.LSTM(64))
+    model.add(layers.Dense(250, activation='relu'))
     model.add(layers.Dense(1, activation="sigmoid"))
     return model
 
@@ -58,12 +58,13 @@ def get_estimator(epochs=10, batch_size=64, model_dir=tempfile.mkdtemp()):
     pipeline = fe.Pipeline(batch_size=batch_size, data=data, ops=Reshape([1], inputs="y", outputs="y"))
 
     # step 2. prepare model
-    model = FEModel(model_def=create_lstm, model_name="lstm", optimizer="adam")
+    model = FEModel(model_def=create_lstm, model_name="lstm_imdb", optimizer="adam")
     network = fe.Network(
         ops=[ModelOp(inputs="x", model=model, outputs="y_pred"), BinaryCrossentropy(y_true="y", y_pred="y_pred")])
 
     traces = [
-        Accuracy(true_key="y", pred_key="y_pred"), ModelSaver(model_name="lstm", save_dir=model_dir, save_best=True)
+        Accuracy(true_key="y", pred_key="y_pred"),
+        ModelSaver(model_name="lstm_imdb", save_dir=model_dir, save_best=True)
     ]
     # step 3.prepare estimator
     estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces)
