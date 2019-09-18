@@ -49,6 +49,7 @@ class Pipeline:
         self.possible_mode = ["train", "eval"]
         self.padded_shape = None
         self.global_batch_multiplier = 1
+        self.eval_shuffle = False
         self.num_core = mp.cpu_count()
         self._verify_input()
         self._reset()
@@ -193,7 +194,8 @@ class Pipeline:
                     ds = tf.data.TFRecordDataset(self.file_names[mode][idx],
                                                  compression_type=self.compression[mode][idx])
                 ds = ds.map(lambda ds_lam: self._decode_records(ds_lam, mode, idx), num_parallel_calls=self.num_core)
-            ds = ds.shuffle(self.shuffle_buffer[mode][idx])
+            if mode == "train" or self.eval_shuffle:
+                ds = ds.shuffle(self.shuffle_buffer[mode][idx])
             ds = ds.repeat()
             ds_tuple += ds,
         # Combine dataset from different unpaired feature sets
