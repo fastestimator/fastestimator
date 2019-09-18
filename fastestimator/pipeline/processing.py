@@ -133,8 +133,12 @@ class Minmax(TensorOp):
             Tensor after minmax
         """
         data = tf.cast(data, tf.float32)
-        data = tf.math.divide(tf.subtract(data, tf.reduce_min(data)),
-                              tf.maximum(tf.subtract(tf.reduce_max(data), tf.reduce_min(data)), EPSILON))
+        data = tf.math.divide(
+            tf.subtract(data, tf.reduce_min(data)),
+            tf.maximum(
+                tf.subtract(tf.reduce_max(data), tf.reduce_min(data)),
+                EPSILON)
+        )
         return data
 
 
