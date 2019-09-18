@@ -63,6 +63,7 @@ class Estimator:
 
     def _prepare_pipeline(self):
         self.pipeline.global_batch_multiplier = get_num_devices()
+        self.pipeline.eval_shuffle = self.validation_steps is not None
         self.pipeline.prepare(distribute_strategy=self.distribute_strategy)
         self.do_eval = "eval" in self.pipeline.mode_list
 
@@ -195,8 +196,10 @@ class Estimator:
     def _run_epoch(self, mode):
         ds_iter = self.pipeline.dataset_schedule[mode].get_sequential_value(self.train_epoch)
         global_batch_size = self.pipeline.get_global_batch_size(self.train_epoch)
-        if self.steps_per_epoch:
+        if self.steps_per_epoch and mode == "train":
             max_steps = self.steps_per_epoch
+        elif self.validation_steps and mode == "eval":
+            max_steps = self.validation_steps
         else:
             max_steps = min(self.pipeline.num_examples[mode]) // global_batch_size
         ops, model_list, epoch_losses = self.network.load_epoch(self.train_epoch, mode)
