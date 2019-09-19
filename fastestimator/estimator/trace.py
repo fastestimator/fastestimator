@@ -16,6 +16,7 @@
 import datetime
 import os
 import time
+from collections import defaultdict
 
 import numpy as np
 import tensorflow as tf
@@ -52,7 +53,7 @@ class Trace:
         """Runs once at the beginning of training
 
         Args:
-            state (dict): dictionary of run time that has the following key(s):
+            state (ChainMap): dictionary of run time that has the following key(s):
                 * "num_devices": number of devices(mainly gpu) that are being used, if cpu only, the number is 1
                 * any keys written by 'on_begin' of previous traces
         """
@@ -60,7 +61,7 @@ class Trace:
         """Runs at the beginning of each epoch of the mode.
 
         Args:
-            state (dict): dictionary of run time that has the following key(s):
+            state (ChainMap): dictionary of run time that has the following key(s):
                 * "mode":  current run time mode, can be "train", "eval" or "test"
                 * "epoch": current epoch index starting from 0
                 * "train_step": current global training step starting from 0
@@ -70,7 +71,7 @@ class Trace:
         """Runs at the beginning of every batch of the mode.
 
         Args:
-            state (dict): dictionary of run time that has the following key(s):
+            state (ChainMap): dictionary of run time that has the following key(s):
                 * "mode": current run time mode, can be "train", "eval" or "test"
                 * "epoch": current epoch index starting from 0
                 * "train_step": current global training step starting from 0
@@ -164,9 +165,9 @@ class MonitorLoss(Trace):
 class TrainInfo(Trace):
     """Essential training information for logging during training
     """
-    def __init__(self, log_steps):
+    def __init__(self):
         super().__init__(mode="train")
-        self.log_steps = log_steps
+        self.log_steps = 0
         self.elapse_times = []
         self.num_example = 0
         self.time_start = None
@@ -174,6 +175,7 @@ class TrainInfo(Trace):
 
     def on_begin(self, state):
         self.train_start = time.perf_counter()
+        self.log_steps = state['log_steps']
         for model_name, model in self.network.model.items():
             state[model_name + "_lr"] = round(backend.get_value(model.optimizer.lr), 6)
 
@@ -289,35 +291,43 @@ class LRController(Trace):
 class Logger(Trace):
     """Logger, automatically applied by default.
     """
-    def __init__(self, log_steps):
-        """
-        Args:
-            log_steps (int, optional): Logging interval. Default value is 100.
-        """
+    def __init__(self):
         super().__init__(inputs="*")
-        self.log_steps = log_steps
+        self.log_steps = 0
+        self.persist_history = False
+        self.history = defaultdict(lambda: defaultdict(dict))  # {mode: {key: {step: value}}}
 
     def on_begin(self, state):
-        self._print_message("FastEstimator-Start: step: {}; ".format(state["train_step"]), state.maps[0])
+        self.log_steps = state['log_steps']
+        self.persist_history = state['persist_history']
+        self._print_message("FastEstimator-Start: step: {}; ".format(state["train_step"]), state)
 
     def on_batch_end(self, state):
         if state["mode"] == "train" and state["train_step"] % self.log_steps == 0:
-            self._print_message("FastEstimator-Train: step: {}; ".format(state["train_step"]), state.maps[0])
+            self._print_message("FastEstimator-Train: step: {}; ".format(state["train_step"]), state)
 
     def on_epoch_end(self, state):
         if state["mode"] == "eval":
-            self._print_message("FastEstimator-Eval: step: {}; epoch: {}; ".format(state["train_step"], state["epoch"]),
-                                state.maps[0])
+            self._print_message("FastEstimator-Eval: step: {}; ".format(state["train_step"]), state, True)
 
     def on_end(self, state):
-        self._print_message("FastEstimator-Finish: step: {}; ".format(state["train_step"]), state.maps[0])
+        self._print_message("FastEstimator-Finish: step: {}; ".format(state["train_step"]), state)
+        for mode, sub in self.history.items():
+            for key, val in sub.items():
+                state['history'][mode][key].update(val)
 
-    @staticmethod
-    def _print_message(header, results):
+    def _print_message(self, header, state, log_epoch=False):
         log_message = header
+        if log_epoch:
+            log_message += "epoch: {}; ".format(state["epoch"])
+            if self.persist_history:
+                self.history[state.get("mode", "train")]['epoch'][state["train_step"]] = state["epoch"]
+        results = state.maps[0]
         for key, val in results.items():
             if hasattr(val, "numpy"):
                 val = val.numpy()
+            if self.persist_history:
+                self.history[state.get("mode", "train")][key][state["train_step"]] = val
             if isinstance(val, np.ndarray):
                 log_message += "\n{}:\n{};".format(key, np.array2string(val, separator=','))
             else:
@@ -1058,12 +1068,7 @@ class ModelSaver(Trace):
         save_best_mode: Can be `'min'`, `'max'`, or `'auto'`.
         save_freq: Number of epochs to save models. Cannot be used with `save_best_only=True`.
     """
-    def __init__(self,
-                 model_name,
-                 save_dir,
-                 save_best=False,
-                 save_best_mode='min',
-                 save_freq=1):
+    def __init__(self, model_name, save_dir, save_best=False, save_best_mode='min', save_freq=1):
         if isinstance(save_best, str):
             super().__init__(inputs=save_best)
         else:
