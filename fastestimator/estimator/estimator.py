@@ -30,8 +30,7 @@ class Estimator:
                  steps_per_epoch=None,
                  validation_steps=None,
                  traces=None,
-                 log_steps=100,
-                 persist_history=True):
+                 log_steps=100):
         self.pipeline = pipeline
         self.network = network
         self.epochs = epochs
@@ -40,8 +39,7 @@ class Estimator:
         self.traces = traces
         assert log_steps is None or log_steps > 0, "log_steps must be positive or None"
         self.log_steps = log_steps
-        assert persist_history in (True, False), "persist_history must be either True or False"
-        self.persist_history = persist_history  # This will be overridden to False automatically if using the CLI
+        self.persist_history = False
         self.inputs = None
         self.num_devices = get_num_devices()
         if self.num_devices > 1:
@@ -53,11 +51,12 @@ class Estimator:
         self.total_train_steps = 0
         self.do_eval = False
 
-    def fit(self):
+    def fit(self, persist_history=False):
         """
         Function to perform training on the estimator
         """
         draw()
+        self.persist_history = persist_history
         self._prepare_pipeline()
         self._prepare_network()
         self._warmup()

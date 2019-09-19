@@ -32,7 +32,6 @@ def train(args, unknown):
     sys.path.insert(0, dir_name)
     spec_module = __import__(module_name, globals(), locals(), ["get_estimator"])
     estimator = spec_module.get_estimator(**hyperparameters)
-    estimator.persist_history = False
     estimator.fit()
 
 
