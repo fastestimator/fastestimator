@@ -12,7 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.visualization import caricature
-from fastestimator.visualization import umaps
-from fastestimator.visualization import logs
-from fastestimator.visualization import saliency_masks
+from collections import defaultdict
+
+
+class Experiment:
+    def __init__(self, name):
+        self.name = name
+        self.history = defaultdict(lambda: defaultdict(dict))  # {mode: {key: {step: value}}}
+
+    def merge(self, other):
+        for mode, sub in other.history.items():
+            for key, val in sub.items():
+                self.history[mode][key].update(val)
