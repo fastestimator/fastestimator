@@ -31,16 +31,16 @@ from fastestimator.util.util import convert_tf_dtype, flatten_list, get_num_devi
 
 class Pipeline:
     """
-        Class representing the data pipeline required for fastestimator
-        Args:
-            data: The input for the pipeline. This can be either a dictionary, a tfrecord path or a RecordWriter.
-            batch_size: Integer representing the batch size per device for training the model.
-            ops: List of fastestimator operations that needs to be applied on the data in the pipeline.
-            read_feature: List of features that should be used in training. If None all the features available are used.
-            padded_batch: Boolean representing if a batch should be padded or not.
-            expand_dims: Boolean representing if a batch dimensions should be expanded or not.
-            max_shuffle_buffer_mb: Maximum buffer size to shuffle data. This is used only if the number of examples are
-                more than that could fit in the buffer. Defaults to 3000.
+    Class representing the data pipeline required for fastestimator
+    Args:
+        data: The input for the pipeline. This can be either a dictionary, a tfrecord path or a RecordWriter.
+        batch_size: Integer representing the batch size per device for training the model.
+        ops: List of fastestimator operations that needs to be applied on the data in the pipeline.
+        read_feature: List of features that should be used in training. If None all the features available are used.
+        padded_batch: Boolean representing if a batch should be padded or not.
+        expand_dims: Boolean representing if a batch dimensions should be expanded or not.
+        max_shuffle_buffer_mb: Maximum buffer size to shuffle data. This is used only if the number of examples are
+            more than that could fit in the buffer. Defaults to 3000.
     """
     def __init__(self,
                  data,
