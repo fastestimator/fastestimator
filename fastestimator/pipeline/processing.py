@@ -20,8 +20,7 @@ EPSILON = 1e-7
 
 
 class TensorFilter(TensorOp):
-    """
-    Base class for all the filtering TensorOps.
+    """Base class for all the filtering TensorOps.
 
     Args:
          inputs: Name of the key in the dataset that is to be filtered.
@@ -35,8 +34,7 @@ class TensorFilter(TensorOp):
 
 
 class ScalarFilter(TensorFilter):
-    """
-    Class for performing filtering on dataset based on scalar values.
+    """Class for performing filtering on dataset based on scalar values.
 
     Args:
         inputs: Name of the key in the dataset that is to be filtered.
@@ -66,8 +64,7 @@ class ScalarFilter(TensorFilter):
         return data
 
     def forward(self, data, state):
-        """
-        Filters the data based on the scalar filter_value.
+        """Filters the data based on the scalar filter_value.
 
         Args:
             data: Data to be filtered.
@@ -86,8 +83,7 @@ class ScalarFilter(TensorFilter):
 
 
 class Binarize(TensorOp):
-    """
-    Binarize data based on threshold between 0 and 1.
+    """Binarize data based on threshold between 0 and 1.
 
     Args:
         threshold: Threshold for binarizing.
@@ -100,8 +96,7 @@ class Binarize(TensorOp):
         self.thresh = threshold
 
     def forward(self, data, state):
-        """
-        Transforms the image to binary based on threshold.
+        """Transforms the image to binary based on threshold.
 
         Args:
             data: Data to be binarized.
@@ -117,12 +112,10 @@ class Binarize(TensorOp):
 
 
 class Zscore(TensorOp):
-    """
-    Standardize data using zscore method.
+    """Standardize data using zscore method.
     """
     def forward(self, data, state):
-        """
-        Standardizes the data tensor.
+        """Standardizes the data tensor.
 
         Args:
             data: Data to be standardized.
@@ -141,12 +134,10 @@ class Zscore(TensorOp):
 
 
 class Minmax(TensorOp):
-    """
-    Normalize data using the minmax method.
+    """Normalize data using the minmax method.
     """
     def forward(self, data, state):
-        """
-        Normalizes the data tensor.
+        """Normalizes the data tensor.
 
         Args:
             data: Data to be normalized.
@@ -166,8 +157,7 @@ class Minmax(TensorOp):
 
 
 class Scale(TensorOp):
-    """
-    Preprocessing class for scaling dataset.
+    """Preprocessing class for scaling dataset.
 
     Args:
         scalar: Scalar for scaling the data.
@@ -180,8 +170,7 @@ class Scale(TensorOp):
         self.scalar = scalar
 
     def forward(self, data, state):
-        """
-        Scales the data tensor.
+        """Scales the data tensor.
 
         Args:
             data: Data to be scaled.
@@ -196,8 +185,7 @@ class Scale(TensorOp):
 
 
 class Onehot(TensorOp):
-    """
-    Preprocessing class for converting categorical labels to onehot encoding.
+    """Preprocessing class for converting categorical labels to onehot encoding.
 
     Args:
         num_dim: Number of dimensions of the labels.
@@ -210,8 +198,7 @@ class Onehot(TensorOp):
         self.num_dim = num_dim
 
     def forward(self, data, state):
-        """
-        Transforms categorical labels to onehot encodings.
+        """Transforms categorical labels to onehot encodings.
 
         Args:
             data: Data to be preprocessed.
@@ -226,8 +213,7 @@ class Onehot(TensorOp):
 
 
 class Resize(TensorOp):
-    """
-    Preprocessing class for resizing the images.
+    """Preprocessing class for resizing the images.
 
     Args:
         size: Destination shape of the images.
@@ -242,8 +228,7 @@ class Resize(TensorOp):
         self.resize_method = resize_method
 
     def forward(self, data, state):
-        """
-        Resizes data tensor.
+        """Resizes data tensor.
 
         Args:
             data: Tensor to be resized.
@@ -257,8 +242,7 @@ class Resize(TensorOp):
 
 
 class Reshape(TensorOp):
-    """
-    Preprocessing class for reshaping the data.
+    """Preprocessing class for reshaping the data.
 
     Args:
         shape: target shape.
@@ -271,8 +255,7 @@ class Reshape(TensorOp):
         self.shape = shape
 
     def forward(self, data, state):
-        """
-        Reshapes data tensor.
+        """Reshapes data tensor.
 
         Args:
             data: Data to be reshaped.

@@ -30,8 +30,7 @@ from fastestimator.util.util import convert_tf_dtype, flatten_list, get_num_devi
 
 
 class Pipeline:
-    """
-    Class representing the data pipeline required for fastestimator
+    """Class representing the data pipeline required for fastestimator
     Args:
         data: The input for the pipeline. This can be either a dictionary, a tfrecord path or a RecordWriter.
         batch_size: Integer representing the batch size per device for training the model.
@@ -99,8 +98,7 @@ class Pipeline:
         self.global_batch_multiplier = 1
 
     def prepare(self, distribute_strategy=None):
-        """
-        Create the dataset used by the pipeline by running all the ops specified.
+        """Create the dataset used by the pipeline by running all the ops specified.
 
         Args:
             distribute_strategy: Type of strategy to be used for multi GPU setup.
@@ -344,8 +342,7 @@ class Pipeline:
         return combined_dict
 
     def get_global_batch_size(self, epoch):
-        """
-        Gets the global batch size for the current epoch. Batch size changes if there is a schedule which specifies a change
+        """Gets the global batch size for the current epoch. Batch size changes if there is a schedule which specifies a change
         for the given epoch.
 
         Args:
@@ -358,8 +355,7 @@ class Pipeline:
         return global_batch_size
 
     def show_results(self, mode="train", num_steps=1, current_epoch=0):
-        """
-        Processes the pipeline ops on the given input data.
+        """Processes the pipeline ops on the given input data.
 
         Args:
             mode: can be either "train" or "eval".
@@ -378,8 +374,7 @@ class Pipeline:
         return data
 
     def benchmark(self, mode="train", num_steps=1000, log_interval=100, current_epoch=0):
-        """
-        Runs benchmarks for the current epoch.
+        """Runs benchmarks for the current epoch.
 
         Args:
             mode: can be either "train" or "eval".
