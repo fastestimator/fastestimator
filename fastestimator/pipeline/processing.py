@@ -20,6 +20,13 @@ EPSILON = 1e-7
 
 
 class TensorFilter(TensorOp):
+    """
+    Base class for all the filtering TensorOps.
+
+    Args:
+         inputs: Name of the key in the dataset that is to be filtered.
+         mode: Mode that the filter acts on. This could be either "train" or "eval".
+    """
     def __init__(self, inputs, mode="train"):
         super().__init__(inputs=inputs, mode=mode)
 
@@ -28,13 +35,14 @@ class TensorFilter(TensorOp):
 
 
 class ScalarFilter(TensorFilter):
-    """Class for performing filtering on dataset based on scalar values.
+    """
+    Class for performing filtering on dataset based on scalar values.
 
     Args:
-        inputs: Name of the key in the dataset that is to be filtered
+        inputs: Name of the key in the dataset that is to be filtered.
         filter_value: The values in the dataset that are to be filtered.
-        keep_prob: The probability of keeping the example
-        mode: mode that the filter acts on
+        keep_prob: The probability of keeping the example.
+        mode: mode that the filter acts on.
     """
     def __init__(self, inputs, filter_value, keep_prob, mode="train"):
         super().__init__(inputs=inputs, mode=mode)
@@ -58,6 +66,16 @@ class ScalarFilter(TensorFilter):
         return data
 
     def forward(self, data, state):
+        """
+        Filters the data based on the scalar filter_value.
+
+        Args:
+            data: Data to be filtered.
+            state: Information about the current execution context.
+
+        Returns:
+            Tensor containing filtered data.
+        """
         pass_filter = tf.constant(True)
         for filter_value, keep_prob in zip(self.filter_value, self.keep_prob):
             pass_current_filter = tf.cond(tf.equal(data, filter_value),
@@ -69,10 +87,13 @@ class ScalarFilter(TensorFilter):
 
 class Binarize(TensorOp):
     """
-    Binarize data based on threshold between 0 and 1
+    Binarize data based on threshold between 0 and 1.
 
     Args:
-        threshold: Threshold for binarizing
+        threshold: Threshold for binarizing.
+        inputs: Name of the key in the dataset that is to be filtered.
+        outputs: Name of the key to be created/used in the dataset to store the results.
+        mode: mode that the filter acts on.
     """
     def __init__(self, threshold, inputs=None, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
@@ -80,57 +101,59 @@ class Binarize(TensorOp):
 
     def forward(self, data, state):
         """
-        Transforms the image to binary based on threshold
+        Transforms the image to binary based on threshold.
 
         Args:
-            data: Data to be binarized
-            state: Information about the current execution context
+            data: Data to be binarized.
+            state: Information about the current execution context.
 
         Returns:
-            Tensor containing binarized data
+            Tensor containing binarized data.
         """
         data = tf.math.greater(data, self.thresh)
         data = tf.cast(data, tf.float32)
+
         return data
 
 
 class Zscore(TensorOp):
     """
-    Standardize data using zscore method
+    Standardize data using zscore method.
     """
     def forward(self, data, state):
         """
-        Standardizes the data tensor
+        Standardizes the data tensor.
 
         Args:
-            data: Data to be standardized
-            state: Information about the current execution context
+            data: Data to be standardized.
+            state: Information about the current execution context.
 
         Returns:
-            Tensor containing standardized data
+            Tensor containing standardized data.
         """
         data = tf.cast(data, tf.float32)
         mean = tf.reduce_mean(data)
         std = tf.keras.backend.std(data)
         data = tf.math.divide(tf.subtract(data, mean), tf.maximum(std, EPSILON))
         data = tf.cast(data, tf.float32)
+
         return data
 
 
 class Minmax(TensorOp):
     """
-    Normalize data using the minmax method
+    Normalize data using the minmax method.
     """
     def forward(self, data, state):
         """
-        Normalizes the data tensor
+        Normalizes the data tensor.
 
         Args:
-            data: Data to be normalized
-            state: Information about the current execution context
+            data: Data to be normalized.
+            state: Information about the current execution context.
 
         Returns:
-            Tensor after minmax
+            Tensor after minmax.
         """
         data = tf.cast(data, tf.float32)
         data = tf.math.divide(
@@ -144,10 +167,13 @@ class Minmax(TensorOp):
 
 class Scale(TensorOp):
     """
-    Preprocessing class for scaling dataset
+    Preprocessing class for scaling dataset.
 
     Args:
-        scalar: Scalar for scaling the data
+        scalar: Scalar for scaling the data.
+        inputs: Name of the key in the dataset that is to be filtered.
+        outputs: Name of the key to be created/used in the dataset to store the results.
+        mode: mode that the filter acts on.
     """
     def __init__(self, scalar, inputs=None, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
@@ -155,11 +181,11 @@ class Scale(TensorOp):
 
     def forward(self, data, state):
         """
-        Scales the data tensor
+        Scales the data tensor.
 
         Args:
-            data: Data to be scaled
-            state: Information about the current execution context
+            data: Data to be scaled.
+            state: Information about the current execution context.
 
         Returns:
             Scaled data tensor
@@ -171,10 +197,13 @@ class Scale(TensorOp):
 
 class Onehot(TensorOp):
     """
-    Preprocessing class for converting categorical labels to onehot encoding
+    Preprocessing class for converting categorical labels to onehot encoding.
 
     Args:
-        num_dim: Number of dimensions of the labels
+        num_dim: Number of dimensions of the labels.
+        inputs: Name of the key in the dataset that is to be filtered.
+        outputs: Name of the key to be created/used in the dataset to store the results.
+        mode: mode that the filter acts on.
     """
     def __init__(self, num_dim, inputs=None, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
@@ -182,14 +211,14 @@ class Onehot(TensorOp):
 
     def forward(self, data, state):
         """
-        Transforms categorical labels to onehot encodings
+        Transforms categorical labels to onehot encodings.
 
         Args:
-            data: Data to be preprocessed
-            state: Information about the current execution context
+            data: Data to be preprocessed.
+            state: Information about the current execution context.
 
         Returns:
-            Transformed labels
+            Transformed labels.
         """
         data = tf.cast(data, tf.int32)
         data = tf.one_hot(data, self.num_dim)
@@ -198,11 +227,14 @@ class Onehot(TensorOp):
 
 class Resize(TensorOp):
     """
-    Preprocessing class for resizing the images
+    Preprocessing class for resizing the images.
 
     Args:
-        size: Destination shape of the images
-        resize_method: One of resize methods provided by tensorflow to be used
+        size: Destination shape of the images.
+        resize_method: One of resize methods provided by tensorflow to be used.
+        inputs: Name of the key in the dataset that is to be filtered.
+        outputs: Name of the key to be created/used in the dataset to store the results.
+        mode: mode that the filter acts on.
     """
     def __init__(self, size, resize_method=tf.image.ResizeMethod.BILINEAR, inputs=None, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
@@ -211,14 +243,14 @@ class Resize(TensorOp):
 
     def forward(self, data, state):
         """
-        Resizes data tensor
+        Resizes data tensor.
 
         Args:
-            data: Tensor to be resized
-            state: Information about the current execution context
+            data: Tensor to be resized.
+            state: Information about the current execution context.
 
         Returns:
-            Resized tensor
+            Resized tensor.
         """
         preprocessed_data = tf.image.resize(data, self.size, self.resize_method)
         return preprocessed_data
@@ -226,10 +258,13 @@ class Resize(TensorOp):
 
 class Reshape(TensorOp):
     """
-    Preprocessing class for reshaping the data
+    Preprocessing class for reshaping the data.
 
     Args:
-        shape: target shape
+        shape: target shape.
+        inputs: Name of the key in the dataset that is to be filtered.
+        outputs: Name of the key to be created/used in the dataset to store the results.
+        mode: mode that the filter acts on.
     """
     def __init__(self, shape, inputs=None, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
@@ -237,14 +272,15 @@ class Reshape(TensorOp):
 
     def forward(self, data, state):
         """
-        Reshapes data tensor
+        Reshapes data tensor.
 
         Args:
-            data: Data to be reshaped
-            state: Information about the current execution context
+            data: Data to be reshaped.
+            state: Information about the current execution context.
 
         Returns:
-            Reshaped tensor
+            Reshaped tensor.
         """
         data = tf.reshape(data, self.shape)
+
         return data
