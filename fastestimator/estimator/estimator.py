@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from collections import ChainMap, deque
+from collections import ChainMap, deque, defaultdict
 
 import numpy as np
 import tensorflow as tf
@@ -39,6 +39,7 @@ class Estimator:
         self.traces = traces
         assert log_steps is None or log_steps > 0, "log_steps must be positive or None"
         self.log_steps = log_steps
+        self.persist_history = False
         self.inputs = None
         self.num_devices = get_num_devices()
         if self.num_devices > 1:
@@ -50,16 +51,17 @@ class Estimator:
         self.total_train_steps = 0
         self.do_eval = False
 
-    def fit(self):
+    def fit(self, persist_history=False):
         """
         Function to perform training on the estimator
         """
         draw()
+        self.persist_history = persist_history
         self._prepare_pipeline()
         self._prepare_network()
         self._warmup()
         self._prepare_estimator()
-        self._start()
+        return self._start()
 
     def _prepare_pipeline(self):
         self.pipeline.global_batch_multiplier = get_num_devices()
@@ -89,9 +91,9 @@ class Estimator:
 
     def _add_traces(self):
         if self.log_steps:
-            self.traces.insert(0, TrainInfo(log_steps=self.log_steps))
+            self.traces.insert(0, TrainInfo())
             if not any(map(lambda x: isinstance(x, Logger), self.traces)):
-                self.traces.append(Logger(log_steps=self.log_steps))
+                self.traces.append(Logger())
         self.traces.insert(0, MonitorLoss())
 
     def _sort_traces(self):
@@ -182,6 +184,7 @@ class Estimator:
             "train_step": self.train_step,
             "num_devices": self.num_devices,
             "log_steps": self.log_steps,
+            "persist_history": self.persist_history,
             "total_epochs": self.epochs,
             "total_train_steps": self.total_train_steps
         })
@@ -189,9 +192,14 @@ class Estimator:
             self._run_epoch("train")
             if self.do_eval:
                 self._run_epoch("eval")
+        history = defaultdict(lambda: defaultdict(dict))  # {mode: {key: {step: value}}}
         self._run_traces_on_end({
-            "train_step": self.train_step, "epoch": self.train_epoch, "num_devices": self.num_devices
+            "train_step": self.train_step,
+            "epoch": self.train_epoch,
+            "num_devices": self.num_devices,
+            "history": history
         })
+        return history
 
     def _run_epoch(self, mode):
         ds_iter = self.pipeline.dataset_schedule[mode].get_sequential_value(self.train_epoch)
