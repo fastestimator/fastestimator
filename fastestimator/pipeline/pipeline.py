@@ -30,6 +30,17 @@ from fastestimator.util.util import convert_tf_dtype, flatten_list, get_num_devi
 
 
 class Pipeline:
+    """Class representing the data pipeline required for fastestimator
+    Args:
+        data: The input for the pipeline. This can be either a dictionary, a tfrecord path or a RecordWriter.
+        batch_size: Integer representing the batch size per device for training the model.
+        ops: List of fastestimator operations that needs to be applied on the data in the pipeline.
+        read_feature: List of features that should be used in training. If None all the features available are used.
+        padded_batch: Boolean representing if a batch should be padded or not.
+        expand_dims: Boolean representing if a batch dimensions should be expanded or not.
+        max_shuffle_buffer_mb: Maximum buffer size to shuffle data. This is used only if the number of examples are
+            more than that could fit in the buffer. Defaults to 3000.
+    """
     def __init__(self,
                  data,
                  batch_size,
@@ -87,6 +98,11 @@ class Pipeline:
         self.global_batch_multiplier = 1
 
     def prepare(self, distribute_strategy=None):
+        """Create the dataset used by the pipeline by running all the ops specified.
+
+        Args:
+            distribute_strategy: Type of strategy to be used for multi GPU setup.
+        """
         if isinstance(self.data, dict):
             self._get_numpy_config()
         elif isinstance(self.data, (RecordWriter, str)):
@@ -326,6 +342,12 @@ class Pipeline:
         return combined_dict
 
     def get_global_batch_size(self, epoch):
+        """Gets the global batch size for the current epoch. Batch size changes if there is a schedule which specifies a change
+        for the given epoch.
+
+        Args:
+            epoch: The epoch number in the training
+        """
         batch_per_device = self.batch_size
         if isinstance(batch_per_device, Scheduler):
             batch_per_device = batch_per_device.get_current_value(epoch)
@@ -333,6 +355,14 @@ class Pipeline:
         return global_batch_size
 
     def show_results(self, mode="train", num_steps=1, current_epoch=0):
+        """Processes the pipeline ops on the given input data.
+
+        Args:
+            mode: can be either "train" or "eval".
+            num_steps: the number of steps for the pipeline to run.
+            current_epoch: to specify the current epoch in the training. This is useful if you are using a schedule to
+                change the pipeline during training.
+        """
         data = []
         self.global_batch_multiplier = get_num_devices()
         self.prepare()
@@ -340,9 +370,18 @@ class Pipeline:
         for _ in range(num_steps):
             data.append(next(ds_iter))
         self._reset()
+
         return data
 
     def benchmark(self, mode="train", num_steps=1000, log_interval=100, current_epoch=0):
+        """Runs benchmarks for the current epoch.
+
+        Args:
+            mode: can be either "train" or "eval".
+            num_steps: the number of steps to show the results for.
+            log_interval:
+            current_epoch: to specify the current epoch in the training.
+        """
         self.global_batch_multiplier = get_num_devices()
         global_batch_size = self.get_global_batch_size(current_epoch)
         self.prepare()

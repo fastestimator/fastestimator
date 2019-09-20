@@ -12,4 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.dataset import cub200, horse2zebra, svhn, montgomery
+from fastestimator.dataset import cub200, horse2zebra, mnist, montgomery, svhn
