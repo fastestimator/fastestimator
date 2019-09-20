@@ -35,6 +35,7 @@ class ImageReader(NumpyOp):
         import cv2
         self.parent_path = parent_path
         self.color_flag = cv2.IMREAD_COLOR
+        self.grey_scale = grey_scale
         if grey_scale:
             self.color_flag = cv2.IMREAD_GRAYSCALE
         self.forward_fn = cv2.imread
@@ -54,6 +55,8 @@ class ImageReader(NumpyOp):
         data = self.forward_fn(path, self.color_flag)
         if not isinstance(data, np.ndarray):
             raise ValueError('cv2 did not read correctly for file "{}"'.format(path))
+        if self.grey_scale:
+            data = np.expand_dims(data, -1)
         return data
 
 
