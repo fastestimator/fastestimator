@@ -52,7 +52,7 @@ def write_csv(y, csv_path, mode):
         x_names.append("{}_{}.png".format(mode, idx))
         y_names.append(y[idx])
     df = pd.DataFrame(data={'x': x_names, 'y': y_names})
-    df.to_csv(csv_path)
+    df.to_csv(csv_path, index=False)
 
 
 def load_data(path=None):
