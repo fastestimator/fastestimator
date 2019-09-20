@@ -18,6 +18,15 @@ from tensorflow.python.keras import layers, models
 
 
 def classification_sub_net(num_classes, num_anchor=9):
+    """Creates an object classification sub-network for the RetinaNet.
+    
+    Args:
+        num_classes (int): number of classes.
+        num_anchor (int, optional): number of anchor boxes. Defaults to 9.
+    
+    Returns:
+        'Model' object: classification sub-network.
+    """
     model = models.Sequential()
     model.add(
         layers.Conv2D(256,
@@ -60,6 +69,14 @@ def classification_sub_net(num_classes, num_anchor=9):
 
 
 def regression_sub_net(num_anchor=9):
+    """Creates a regression sub-network for the RetinaNet.
+    
+    Args:
+        num_anchor (int, optional): number of anchor boxes. Defaults to 9.
+    
+    Returns:
+        'Model' object: regression sub-network.
+    """
     model = models.Sequential()
     model.add(
         layers.Conv2D(256,
@@ -100,6 +117,17 @@ def regression_sub_net(num_anchor=9):
 
 
 def RetinaNet(input_shape, num_classes, num_anchor=9):
+    """Creates the RetinaNet.
+    RetinaNet is composed of an FPN, a classification sub-network and a localization regression sub-network.
+    
+    Args:
+        input_shape (tuple): shape of input image.
+        num_classes (int): number of classes.
+        num_anchor (int, optional): number of anchor boxes. Defaults to 9.
+    
+    Returns:
+        'Model' object: RetinaNet.
+    """
     inputs = tf.keras.Input(shape=input_shape)
     # FPN
     resnet50 = tf.keras.applications.ResNet50(weights="imagenet", include_top=False, input_tensor=inputs, pooling=None)
@@ -142,6 +170,14 @@ def RetinaNet(input_shape, num_classes, num_anchor=9):
 
 
 def get_fpn_anchor_box(input_shape):
+    """Returns the anchor boxes of the Feature Pyramid Net.
+    
+    Args:
+        input_shape (tuple): shape of input image.
+    
+    Returns:
+        array: numpy array with all anchor boxes.
+    """
     assert len(input_shape) == 3
     h, w, _ = input_shape
     assert h % 32 == 0 and w % 32 == 0
@@ -175,6 +211,21 @@ def get_fpn_anchor_box(input_shape):
 
 
 def get_target(anchorbox, label, x1, y1, x2, y2, num_classes=10):
+    """Generates classification and localization ground-truths.
+    
+    Args:
+        anchorbox (array): anchor boxes
+        label (array): labels for each anchor box.
+        x1 (array): x-coordinate of top left point of the box.
+        y1 (array): y-coordinate of top left point of the box.
+        x2 (array): x-coordinate of bottom right point of the box.
+        y2 (array): x-coordinate of bottom right point of the box.
+        num_classes (int, optional): number of classes. Defaults to 10.
+    
+    Returns:
+        array: classification groundtruths for each anchor box.
+        array: localization groundtruths for each anchor box.
+    """
     num_anchor = anchorbox.shape[0]
     target_cls = np.zeros(shape=(num_anchor), dtype=np.int64)
     target_loc = np.zeros(shape=(num_anchor, 4), dtype=np.float32)
@@ -199,6 +250,18 @@ def get_target(anchorbox, label, x1, y1, x2, y2, num_classes=10):
 
 
 def get_loc_offset(box_gt, box_anchor):
+    """Computes the offset of a groundtruth box and an anchor box.
+    
+    Args:
+        box_gt (array): groundtruth box.
+        box_anchor (array): anchor box.
+    
+    Returns:
+        float: offset between x1 coordinate of the two boxes.
+        float: offset between y1 coordinate of the two boxes.
+        float: offset between x2 coordinate of the two boxes.
+        float: offset between y2 coordinate of the two boxes.
+    """
     gt_x1, gt_y1, gt_x2, gt_y2 = tuple(box_gt)
     ac_x1, ac_y1, ac_x2, ac_y2 = tuple(box_anchor)
     anchor_width = ac_x2 - ac_x1
@@ -211,6 +274,15 @@ def get_loc_offset(box_gt, box_anchor):
 
 
 def get_iou(box1, box2):
+    """Computes the value of intersection over union (IoU) of two boxes.
+    
+    Args:
+        box1 (array): first box
+        box2 (array): second box
+    
+    Returns:
+        float: IoU value
+    """
     b1_x1, b1_y1, b1_x2, b1_y2 = tuple(box1)
     b2_x1, b2_y1, b2_x2, b2_y2 = tuple(box2)
     xA = max(b1_x1, b2_x1)
