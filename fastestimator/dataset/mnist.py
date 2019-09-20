@@ -49,7 +49,7 @@ def write_csv(y, csv_path, mode):
     y_names = []
     num_example = len(y)
     for idx in range(num_example):
-        x_names.append("{}_{}.png".format(mode, idx))
+        x_names.append(os.path.join("image", "{}_{}.png".format(mode, idx)))
         y_names.append(y[idx])
     df = pd.DataFrame(data={'x': x_names, 'y': y_names})
     df.to_csv(csv_path, index=False)
@@ -73,4 +73,4 @@ def load_data(path=None):
         write_csv(y_train, train_csv_path, "train")
     if not os.path.exists(eval_csv_path):
         write_csv(y_test, eval_csv_path, "eval")
-    return train_csv_path, eval_csv_path, image_path
+    return train_csv_path, eval_csv_path, path
