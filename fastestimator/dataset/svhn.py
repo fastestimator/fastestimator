@@ -28,6 +28,15 @@ def get_name(index, hdf5_data):
 
 
 def get_bbox(index, hdf5_data):
+    """Retrieves the bounding box from hdf5 data for a specific index.
+    
+    Args:
+        index (int): index of image.
+        hdf5_data (h5py file): h5py file containing bounding box information.
+    
+    Returns:
+        dictionnary: label, left, top, width and height values for the bounding box.
+    """
     attrs = {}
     item = hdf5_data['digitStruct']['bbox'][index].item()
     for key in ['label', 'left', 'top', 'width', 'height']:
@@ -39,6 +48,17 @@ def get_bbox(index, hdf5_data):
 
 
 def img_boundingbox_data_constructor(data_folder, mode, csv_path):
+    """Creates bounding boxes for all images. This will generate a csv file indicating for each image the label and bounding box coordinates 
+    and return the corresponding DataFrame.
+    
+    Args:
+        data_folder (string): path to data directory containing digitStruct.mat file.
+        mode (string): training or testing.
+        csv_path (string): path to save the csv file containing the bounding boxes information.
+    
+    Returns:
+        DataFrame: bounding boxes information (image, label and coordinates)
+    """
     f = h5py.File(os.path.join(data_folder, "digitStruct.mat"), 'r')
     row_list = []
     num_example = f['/digitStruct/bbox'].shape[0]
@@ -64,6 +84,17 @@ def img_boundingbox_data_constructor(data_folder, mode, csv_path):
 
 
 def load_data(path=None):
+    """Downloads the svhn dataset to local storage, if not already downloaded. This will generate 2 csv files (train and test), which contain all the path
+        information.
+
+    Args:
+        path (str, optional): The path to store the svhn data. Defaults to None, will save at `tempfile.gettempdir()`.
+
+    Returns:
+    string: path to train csv file.
+    string: path to test csv file.
+    string: path to data directory.
+    """
     if path is None:
         path = os.path.join(tempfile.gettempdir(), ".fe", "SVHN")
     if not os.path.exists(path):

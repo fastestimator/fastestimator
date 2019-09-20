@@ -2,6 +2,11 @@ import tensorflow as tf
 
 
 class ReflectionPadding2D(tf.keras.layers.Layer):
+    """Class for performing Reflection Padding on 2D arrays.
+    
+    Args:
+        padding (tuple, optional): padding size. Defaults to (1, 1).
+    """
     def __init__(self, padding=(1, 1)):
         self.padding = tuple(padding)
         self.input_spec = [tf.keras.layers.InputSpec(ndim=4)]
@@ -19,7 +24,11 @@ class ReflectionPadding2D(tf.keras.layers.Layer):
 
 
 class InstanceNormalization(tf.keras.layers.Layer):
-    """Instance Normalization Layer (https://arxiv.org/abs/1607.08022)."""
+    """Class for performing instance normalization. (See https://arxiv.org/abs/1607.08022).
+
+    Args:
+        epsilon (float, optional): value  of epsilon parameter that will be added to the variance. Defaults to 1e-5.
+    """
     def __init__(self, epsilon=1e-5):
         super().__init__()
         self.epsilon = epsilon
@@ -104,6 +113,15 @@ def _downsample(x0, num_filter, kernel_size=(3, 3), strides=(2, 2), padding="sam
 
 
 def styleTransferNet(input_shape=(256, 256, 3), num_resblock=5):
+    """Creates the style Transfer Network.
+    
+    Args:
+        input_shape (tuple, optional): shape of input image. Defaults to (256, 256, 3).
+        num_resblock (int, optional): number of resblocks for the network. Defaults to 5.
+    
+    Returns:
+        'Model' object: style Transfer Network.
+    """
     x0 = tf.keras.layers.Input(shape=input_shape)
     x = ReflectionPadding2D(padding=(40, 40))(x0)
     x = _conv_block(x, num_filter=32)
@@ -121,12 +139,23 @@ def styleTransferNet(input_shape=(256, 256, 3), num_resblock=5):
 
 
 def lossNet(input_shape=(256, 256, 3),
-            stlyeLayers=["block1_conv2", "block2_conv2", "block3_conv3", "block4_conv3"],
+            styleLayers=["block1_conv2", "block2_conv2", "block3_conv3", "block4_conv3"],
             contentLayers=["block3_conv3"]):
+    """Creates the network to compute the style loss.
+    This network outputs a dictionary with outputs values for style and content, based on a list of layers from VGG16 for each.
+    
+    Args:
+        input_shape (tuple, optional): shape of input image. Defaults to (256, 256, 3).
+        styleLayers (list, optional): list of style layers from VGG16. Defaults to ["block1_conv2", "block2_conv2", "block3_conv3", "block4_conv3"].
+        contentLayers (list, optional): list of content layers from VGG16. Defaults to ["block3_conv3"].
+
+    Returns:
+    'Model' object: style loss Network.
+    """
     x0 = tf.keras.layers.Input(shape=input_shape)
     mdl = tf.keras.applications.vgg16.VGG16(include_top=False, weights='imagenet', input_tensor=x0)
     # Compute style loss
-    styleOutput = [mdl.get_layer(name).output for name in stlyeLayers]
+    styleOutput = [mdl.get_layer(name).output for name in styleLayers]
     contentOutput = [mdl.get_layer(name).output for name in contentLayers]
     output = {"style": styleOutput, "content": contentOutput}
     return tf.keras.Model(inputs=x0, outputs=output)

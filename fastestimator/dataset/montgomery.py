@@ -26,6 +26,16 @@ import pandas as pd
 import wget
 
 def load_data(path=None):
+    """Downloads the Montgomery dataset to local storage, if not already downloaded. This will generate one csv file montgomery.csv, which contains all the path
+    information.
+
+    Args:
+        path (str, optional): The path to store the Montgomery data. Defaults to None, will save at `tempfile.gettempdir()`.
+
+    Returns:
+    string: path to csv file.
+    string: path to data directory.
+    """
     if path is None:
         path = os.path.join(tempfile.gettempdir(), ".fe", 'MONTGOMERY')
     if not os.path.exists(path):

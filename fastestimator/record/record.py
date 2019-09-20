@@ -86,10 +86,11 @@ class RecordWriter:
                 assert isinstance(self.write_feature[idx],
                                   (list, dict)), "write_feature must be either list or dictionary"
             if self.ops[idx]:
-                if not isinstance(self.ops, list):
+                if not isinstance(self.ops[idx], list):
                     self.ops[idx] = [self.ops[idx]]
             else:
                 self.ops[idx] = []
+
 
     @staticmethod
     def _int64_feature(value):
