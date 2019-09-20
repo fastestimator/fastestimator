@@ -52,7 +52,8 @@ def plot_logs(experiments, smooth_factor=0, share_legend=True, ignore_metrics=No
         history = experiment.history
         for mode, metrics in history.items():
             for key, value in metrics.items():
-                max_time = max(max_time, max(value.keys()))
+                if value.keys():
+                    max_time = max(max_time, max(value.keys()))
                 if key in ignore_keys:
                     continue
                 if any(map(lambda x: isinstance(x[1], np.ndarray), value.items())):
