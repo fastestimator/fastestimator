@@ -25,6 +25,11 @@ from fastestimator.util.util import NonContext, flatten_list
 
 class Network:
     def __init__(self, ops):
+        """A class representing network operations for FastEstimator model training.
+
+        Args:
+            ops : Specifies the series of operations for training model
+        """
         if not isinstance(ops, list):
             ops = [ops]
         self.ops = ops
@@ -39,6 +44,13 @@ class Network:
         self.num_devices = 1
 
     def prepare(self, mode_list, distribute_strategy):
+        """This function constructs the model specified in model definition and create replica of model
+         for distributed training across multiple devices if there are multiple GPU available.
+
+        Args:
+            mode_list : can be either 'train' or 'eval'
+            distribute_strategy : Tensorflow class that defines distribution strategy (e.g. tf.distribute.MirroredStrategy)
+        """
         all_output_keys = []
         for mode in mode_list:
             signature_epoch, mode_ops = self._get_signature_epoch(mode)
@@ -90,6 +102,15 @@ class Network:
         return list(set(signature_epoch)), mode_ops
 
     def load_epoch(self, epoch, mode):
+        """This function loads stable computational graph for the current epoch.
+
+        Args:
+            epoch: Training epoch number
+            mode: 'train' or 'eval'
+
+        Returns:
+             list of the models, epoch losses
+        """
         ops = self.op_schedule[mode].get_current_value(epoch)
         model_list = self.model_schedule[mode].get_current_value(epoch)
         epoch_losses = []
@@ -100,6 +121,20 @@ class Network:
         return ops, model_list, epoch_losses
 
     def run_step(self, batch, ops, model_list, epoch_losses, state, warm_up=False):
+        """Function that calculates the loss and gradients for curent step in training. It also constructs the higher
+        level computational graph between the models before the training.
+
+        Args:
+            batch : dictionary that contains batch data and predictions from last epoch
+            ops : Model operation dictionary that contains 'Inputs','Mode', and 'Outputs'
+            model_list : List of the models
+            epoch_losses : List of epoch losses.
+            state : run time dictionary that contains following keys 'mode' and 'batch size'
+            warm_up (bool, optional): Specifies if it's in warm up phase or not. Defaults to False.
+
+        Returns:
+            dictionary containing the predictions of current epoch
+        """
         prediction = {}
         batch = ChainMap(prediction, batch)
         mode = state["mode"]
