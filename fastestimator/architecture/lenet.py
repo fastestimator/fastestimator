@@ -16,6 +16,15 @@ from tensorflow.python.keras import layers, Sequential
 
 
 def LeNet(input_shape=(28, 28, 1), classes=10):
+    """Creates a LeNet model with 3 convolutional and 2 dense layers.
+    
+    Args:
+        input_shape (tuple, optional): shape of the input data. Defaults to (28, 28, 1).
+        classes (int, optional): number of classes. Defaults to 10.
+    
+    Returns:
+        'Model' object: LeNet model.
+    """
     model = Sequential()
     model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=input_shape))
     model.add(layers.MaxPooling2D((2, 2)))

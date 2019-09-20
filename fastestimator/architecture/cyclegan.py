@@ -19,7 +19,12 @@ from tensorflow.python.keras.initializers import RandomNormal
 
 # Code borrowed from https://github.com/tensorflow/examples/blob/master/tensorflow_examples/models/pix2pix/pix2pix.py
 class InstanceNormalization(layers.Layer):
-    """Instance Normalization Layer (https://arxiv.org/abs/1607.08022)."""
+    """Class for performing instance normalization. (See https://arxiv.org/abs/1607.08022).
+
+    Args:
+        epsilon (float, optional): value  of epsilon parameter that will be added to the variance. Defaults to 1e-5.
+    """
+
     def __init__(self, epsilon=1e-5):
         super().__init__()
         self.epsilon = epsilon
@@ -42,8 +47,14 @@ class InstanceNormalization(layers.Layer):
         return self.scale * normalized + self.offset
 
 
-# Code borrowd from https://stackoverflow.com/questions/50677544/reflection-padding-conv2d
+# Code borrowed from https://stackoverflow.com/questions/50677544/reflection-padding-conv2d
 class ReflectionPadding2D(layers.Layer):
+    """Class for performing Reflection Padding on 2D arrays.
+
+    Args:
+    padding (tuple, optional): padding size. Defaults to (1, 1).
+    """
+
     def __init__(self, padding=(1, 1)):
         self.padding = tuple(padding)
         self.input_spec = [layers.InputSpec(ndim=4)]
@@ -77,6 +88,14 @@ def _resblock(x0, num_filter=256, kernel_size=3):
 
 
 def build_discriminator(input_shape=(256, 256, 3)):
+    """Returns the discriminator network of the GAN.
+    
+    Args:
+        input_shape (tuple, optional): shape of the input image. Defaults to (256, 256, 3).
+    
+    Returns:
+        'Model' object: GAN discriminator.
+    """
     x0 = layers.Input(input_shape)
     x = layers.Conv2D(filters=64,
                       kernel_size=4,
@@ -116,6 +135,15 @@ def build_discriminator(input_shape=(256, 256, 3)):
 
 
 def build_generator(input_shape=(256, 256, 3), num_blocks=9):
+    """Returns the generator of the GAN.
+    
+    Args:
+        input_shape (tuple, optional): shape of the input image. Defaults to (256, 256, 3).
+        num_blocks (int, optional): number of resblocks for the generator. Defaults to 9.
+    
+    Returns:
+        'Model' object: GAN generator.
+    """
     x0 = layers.Input(input_shape)
 
     x = ReflectionPadding2D(padding=(3, 3))(x0)

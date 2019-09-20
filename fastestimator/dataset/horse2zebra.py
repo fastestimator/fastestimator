@@ -31,6 +31,19 @@ def _create_csv(img, key_name, parent_path, csv_name):
 
 
 def load_data(path=None):
+    """Downloads the horse2zebra dataset to local storage, if not already downloaded. This will generate 4 csv files (trainA, trainB, testA, testB), which contain all the path
+        information.
+
+    Args:
+        path (str, optional): The path to store the horse2zebra data. Defaults to None, will save at `tempfile.gettempdir()`.
+
+    Returns:
+    string: path to trainA csv file.
+    string: path to trainB csv file.
+    string: path to testA csv file.
+    string: path to testB csv file.
+    string: path to data directory.
+    """
     if path is None:
         path = os.path.join(tempfile.gettempdir(), ".fe", "HORSE2ZEBRA")
     if not (os.path.exists(path)):

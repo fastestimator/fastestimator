@@ -19,14 +19,16 @@ from tensorflow.python.keras.models import Model
 
 
 def UNet(input_size=(128, 128, 3)):
-    """U-Net model.
+    """Creates a U-Net model.
+    This U-Net model is composed of 5 "contracting blocks" and 5 "expansive blocks".
 
     Args:
-        input_size (tuple, optional): Input image size. Defaults to (128, 128, 3).
+        input_size (tuple, optional): Shape of input image. Defaults to (128, 128, 3).
 
     Returns:
-        A `Model` object.
+        'Model' object: U-Net model.
     """
+    
     conv_config = {'activation': 'relu', 'padding': 'same', 'kernel_initializer': 'he_normal'}
     inputs = Input(input_size)
     conv1 = Conv2D(64, 3, **conv_config)(inputs)
