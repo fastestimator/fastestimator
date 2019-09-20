@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from collections import ChainMap, deque, defaultdict
+from collections import ChainMap, deque
 
 import numpy as np
 import tensorflow as tf
 
+from fastestimator.estimator.experiment import Experiment
 from fastestimator.estimator.trace import Logger, ModelSaver, MonitorLoss, Trace, TrainInfo
 from fastestimator.util.cli_util import draw
 from fastestimator.util.util import get_num_devices
@@ -58,7 +59,7 @@ class Estimator:
         self.traces = traces
         assert log_steps is None or log_steps > 0, "log_steps must be positive or None"
         self.log_steps = log_steps
-        self.persist_history = False
+        self.summary = False
         self.inputs = None
         self.num_devices = get_num_devices()
         if self.num_devices > 1:
@@ -70,12 +71,12 @@ class Estimator:
         self.total_train_steps = 0
         self.do_eval = False
 
-    def fit(self, persist_history=False):
+    def fit(self, summary=None):
         """
         Function to perform training on the estimator.
         """
         draw()
-        self.persist_history = persist_history
+        self.summary = summary
         self._prepare_pipeline()
         self._prepare_network()
         self._warmup()
@@ -203,7 +204,7 @@ class Estimator:
             "train_step": self.train_step,
             "num_devices": self.num_devices,
             "log_steps": self.log_steps,
-            "persist_history": self.persist_history,
+            "persist_summary": not not self.summary,
             "total_epochs": self.epochs,
             "total_train_steps": self.total_train_steps
         })
@@ -211,14 +212,14 @@ class Estimator:
             self._run_epoch("train")
             if self.do_eval:
                 self._run_epoch("eval")
-        history = defaultdict(lambda: defaultdict(dict))  # {mode: {key: {step: value}}}
+        summary = Experiment(self.summary)
         self._run_traces_on_end({
             "train_step": self.train_step,
             "epoch": self.train_epoch,
             "num_devices": self.num_devices,
-            "history": history
+            "summary": summary
         })
-        return history
+        return None if not self.summary else summary
 
     def _run_epoch(self, mode):
         ds_iter = self.pipeline.dataset_schedule[mode].get_sequential_value(self.train_epoch)

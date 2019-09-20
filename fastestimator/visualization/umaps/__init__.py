@@ -12,4 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.visualization.traces.umap import UMap
+from fastestimator.visualization.umaps.umap_plot import UmapPlotter
+from fastestimator.visualization.umaps.umap_trace import UMap
+from fastestimator.visualization.umaps.umap_parse import umap_layers
