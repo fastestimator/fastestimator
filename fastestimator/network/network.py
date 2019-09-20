@@ -121,8 +121,8 @@ class Network:
         return ops, model_list, epoch_losses
 
     def run_step(self, batch, ops, model_list, epoch_losses, state, warm_up=False):
-        """Function that calculates the loss and gradients for curent step in training. It also constructs the higher level
-        computational graph between the models before the training.
+        """Function that calculates the loss and gradients for curent step in training. It also constructs the higher
+        level computational graph between the models before the training.
 
         Args:
             batch : dictionary that contains batch data and predictions from last epoch

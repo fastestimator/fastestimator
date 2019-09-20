@@ -4,10 +4,14 @@ import numpy as np
 
 
 class LRSchedule:
-    """A base class for learning rate scheduler.
+    """A base class for learning rate scheduler
 
-    """
+        Args:
+            schedule_mode : Mode of the learning rate scheduler. Either can be 'step' or 'epoch'
+            based learning rate decay
+        """
     def __init__(self, schedule_mode):
+
         self.schedule_mode = schedule_mode
         self.total_epochs = None  #will be filled by runtime
         self.total_train_steps = None  #will be filled by runtime
@@ -23,7 +27,7 @@ class CyclicLRSchedule(LRSchedule):
 
     Args:
         num_cycle: The number of cycles to be used by the learning rate scheduler
-        cycle_multiplier: The length of each next cycle's multiplier
+        cycle_multiplier: Multiplier of the next cycle length with respect to previous cycle length
         decrease_method: The decay method to be used with cyclic learning rate scheduler
     """
     def __init__(self, num_cycle=1, cycle_multiplier=2, decrease_method="cosine"):
