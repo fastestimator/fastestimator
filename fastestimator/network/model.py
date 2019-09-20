@@ -21,6 +21,14 @@ from fastestimator.util.op import TensorOp
 
 class FEModel:
     def __init__(self, model_def, model_name, optimizer, loss_name="loss"):
+        """A class for representing the model for FastEstimator
+
+        Args:
+            model_def : Model definition
+            model_name : Model name
+            optimizer : Instance of the optimizer or string value indicating optimizer
+            loss_name : String key of loss tensor. Defaults to "loss".
+        """
         assert isinstance(model_def, types.FunctionType), \
             "must provide function definition or lambda function as model_def"
         assert isinstance(loss_name, str), "loss must be a string key of loss tensor"
@@ -50,6 +58,15 @@ class FEModel:
 
 class ModelOp(TensorOp):
     def __init__(self, model, inputs=None, outputs=None, mode=None, track_input=False):
+        """This class represents the Model operator that defines String keys for storing batch data and predictions
+
+        Args:
+            model : Input FEModel
+            inputs : String key of input training data. Defaults to None.
+            outputs : String key of predictions. Defaults to None.
+            mode : 'train' or 'eval'. Defaults to None.
+            track_input : If 'true' it tracks the gradients with respect to inputs. Defaults to False.
+        """
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         assert isinstance(model, FEModel), "must provide a FEModel in as input"
         self.model = model
