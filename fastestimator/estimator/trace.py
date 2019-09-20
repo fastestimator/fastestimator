@@ -16,7 +16,6 @@
 import datetime
 import os
 import time
-from collections import defaultdict
 
 import numpy as np
 import tensorflow as tf
@@ -26,6 +25,7 @@ from tensorflow.python.keras import backend
 from tensorflow.python.keras.layers import embeddings
 from tensorflow.python.ops import array_ops, summary_ops_v2
 
+from fastestimator.estimator.experiment import Experiment
 from fastestimator.network.lrschedule import LRSchedule
 from fastestimator.util.util import is_number
 
@@ -54,7 +54,12 @@ class Trace:
 
         Args:
             state (ChainMap): dictionary of run time that has the following key(s):
-                * "num_devices": number of devices(mainly gpu) that are being used, if cpu only, the number is 1
+                * "train_step" (int): current global training step starting from 0
+                * "num_devices" (int): number of devices(mainly gpu) that are being used, if cpu only, the number is 1
+                * "log_steps" (int): how many training steps between logging intervals
+                * "persist_summary" (bool): whether to persist the experiment history/summary
+                * "total_epochs" (int): how many epochs the training is scheduled to run for
+                * "total_train_steps" (int): how many training steps the training is scheduled to run for
                 * any keys written by 'on_begin' of previous traces
         """
     def on_epoch_begin(self, state):
@@ -62,9 +67,9 @@ class Trace:
 
         Args:
             state (ChainMap): dictionary of run time that has the following key(s):
-                * "mode":  current run time mode, can be "train", "eval" or "test"
-                * "epoch": current epoch index starting from 0
-                * "train_step": current global training step starting from 0
+                * "mode" (str):  current run time mode, can be "train", "eval" or "test"
+                * "epoch" (int): current epoch index starting from 0
+                * "train_step" (int): current global training step starting from 0
                 * any keys written by 'on_epoch_begin' of previous traces
         """
     def on_batch_begin(self, state):
@@ -72,11 +77,11 @@ class Trace:
 
         Args:
             state (ChainMap): dictionary of run time that has the following key(s):
-                * "mode": current run time mode, can be "train", "eval" or "test"
-                * "epoch": current epoch index starting from 0
-                * "train_step": current global training step starting from 0
-                * "batch_idx": current local step of the epoch starting from 0
-                * "batch_size": current global batch size
+                * "mode" (str): current run time mode, can be "train", "eval" or "test"
+                * "epoch" (int): current epoch index starting from 0
+                * "train_step" (int): current global training step starting from 0
+                * "batch_idx" (int): current local step of the epoch starting from 0
+                * "batch_size" (int): current global batch size
                 * any keys written by 'on_batch_begin' of previous traces
         """
     def on_batch_end(self, state):
@@ -85,13 +90,13 @@ class Trace:
 
         Args:
             state (ChainMap): dictionary of run time that has the following key(s):
-                * "mode":  current run time mode, can be "train", "eval" or "test"
-                * "epoch": current epoch index starting from 0
-                * "train_step": current global training step starting from 0
-                * "batch_idx": current local step of the epoch starting from 0
-                * "batch_size": current global batch size
-                * "batch": the batch data after the Network execution
-                * <loss_name> defined in FEModel: loss of current batch (only available when mode is "train")
+                * "mode" (str):  current run time mode, can be "train", "eval" or "test"
+                * "epoch" (int): current epoch index starting from 0
+                * "train_step" (int): current global training step starting from 0
+                * "batch_idx" (int): current local step of the epoch starting from 0
+                * "batch_size" (int): current global batch size
+                * "batch" (dict): the batch data after the Network execution
+                * <loss_name> defined in FEModel (float): loss of current batch (only available when mode is "train")
                 * any keys written by 'on_batch_end' of previous traces
         """
     def on_epoch_end(self, state):
@@ -99,10 +104,10 @@ class Trace:
 
         Args:
             state (ChainMap): dictionary of run time that has the following key(s):
-                * "mode":  current run time mode, can be "train", "eval" or "test"
-                * "epoch": current epoch index starting from 0
-                * "train_step": current global training step starting from 0
-                * <loss_name> defined in FEModel: average loss of the epoch (only available when mode is "eval")
+                * "mode" (str):  current run time mode, can be "train", "eval" or "test"
+                * "epoch" (int): current epoch index starting from 0
+                * "train_step" (int): current global training step starting from 0
+                * <loss_name> defined in FEModel (float): average loss of the epoch (only available when mode is "eval")
                 * any keys written by 'on_epoch_end' of previous traces
         """
     def on_end(self, state):
@@ -110,9 +115,10 @@ class Trace:
 
         Args:
             state (ChainMap): dictionary of run time that has the following key(s):
-                * "train_step":  current global training step starting from 0
-                * "num_devices": number of devices (mainly gpu) that are being used. If cpu only, the number is 1
-                * "elapsed_time": time since the start of training in seconds
+                * "train_step" (int): current global training step starting from 0
+                * "epoch" (int): current epoch index starting from 0
+                * "num_devices" (int): number of devices (mainly gpu) that are being used. If cpu only, the number is 1
+                * "summary" (Experiment): will be returned from estimator.fit() if a summary input was specified
                 * any keys written by 'on_end' of previous traces
         """
 
@@ -294,12 +300,12 @@ class Logger(Trace):
     def __init__(self):
         super().__init__(inputs="*")
         self.log_steps = 0
-        self.persist_history = False
-        self.history = defaultdict(lambda: defaultdict(dict))  # {mode: {key: {step: value}}}
+        self.persist_summary = False
+        self.summary = Experiment("")
 
     def on_begin(self, state):
         self.log_steps = state['log_steps']
-        self.persist_history = state['persist_history']
+        self.persist_summary = state['persist_summary']
         self._print_message("FastEstimator-Start: step: {}; ".format(state["train_step"]), state)
 
     def on_batch_end(self, state):
@@ -312,22 +318,20 @@ class Logger(Trace):
 
     def on_end(self, state):
         self._print_message("FastEstimator-Finish: step: {}; ".format(state["train_step"]), state)
-        for mode, sub in self.history.items():
-            for key, val in sub.items():
-                state['history'][mode][key].update(val)
+        state['summary'].merge(self.summary)
 
     def _print_message(self, header, state, log_epoch=False):
         log_message = header
         if log_epoch:
             log_message += "epoch: {}; ".format(state["epoch"])
-            if self.persist_history:
-                self.history[state.get("mode", "train")]['epoch'][state["train_step"]] = state["epoch"]
+            if self.persist_summary:
+                self.summary.history[state.get("mode", "train")]['epoch'][state["train_step"]] = state["epoch"]
         results = state.maps[0]
         for key, val in results.items():
             if hasattr(val, "numpy"):
                 val = val.numpy()
-            if self.persist_history:
-                self.history[state.get("mode", "train")][key][state["train_step"]] = val
+            if self.persist_summary:
+                self.summary.history[state.get("mode", "train")][key][state["train_step"]] = val
             if isinstance(val, np.ndarray):
                 log_message += "\n{}:\n{};".format(key, np.array2string(val, separator=','))
             else:
