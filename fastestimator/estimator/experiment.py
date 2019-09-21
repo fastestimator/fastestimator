@@ -16,11 +16,22 @@ from collections import defaultdict
 
 
 class Experiment:
+    """The summary object that record the training history
+
+    Args:
+        name (str): Name of the experiment.
+    """
     def __init__(self, name):
+
         self.name = name
         self.history = defaultdict(lambda: defaultdict(dict))  # {mode: {key: {step: value}}}
 
     def merge(self, other):
+        """Merge other experiment
+
+        Args:
+            other (obj): Other experiment object need to be merged
+        """
         for mode, sub in other.history.items():
             for key, val in sub.items():
                 self.history[mode][key].update(val)

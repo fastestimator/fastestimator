@@ -27,7 +27,7 @@ from tensorflow.python.ops import array_ops, summary_ops_v2
 
 from fastestimator.estimator.experiment import Experiment
 from fastestimator.network.lrschedule import LRSchedule
-from fastestimator.util.util import is_number
+from fastestimator.util.util import is_number, to_list
 
 
 class Trace:
@@ -35,15 +35,14 @@ class Trace:
     User can use `Trace` to customize their own operations during training, validation and testing.
     The `Network` instance can be accessible by `self.network`. Trace execution order will attempt to be inferred
     whenever possible based on the provided inputs and outputs variables.
+
+    Args:
+    inputs (str, list, set): A set of keys that this trace intends to read from the state dictionary as inputs
+    outputs (str, list, set): A set of keys that this trace intends to write into the state dictionary
+    mode (string): Restrict the trace to run only on given modes ('train', 'eval', 'test'). None will always
+                    execute
     """
     def __init__(self, inputs=None, outputs=None, mode=None):
-        """
-        Args:
-            inputs (str, list, set): A set of keys that this trace intends to read from the state dictionary as inputs
-            outputs (str, list, set): A set of keys that this trace intends to write into the state dictionary
-            mode (string): Restrict the trace to run only on given modes ('train', 'eval', 'test'). None will always
-                            execute
-        """
         self.network = None
         self.mode = mode
         self.inputs = set(filter(None, inputs or {})) if not isinstance(inputs, str) else {inputs}
@@ -124,6 +123,9 @@ class Trace:
 
 
 class MonitorLoss(Trace):
+    """Records loss value. Please don't add this trace into an estimator manually. An estimator will add it
+        automatically.
+    """
     def __init__(self):
         super().__init__()
         self.epochs_since_best = 0
@@ -169,7 +171,11 @@ class MonitorLoss(Trace):
 
 
 class TrainInfo(Trace):
-    """Essential training information for logging during training
+    """Essential training information for logging during training. Please don't add this trace into an estimator
+        manually. An estimator will add it automatically.
+
+    Args:
+        log_steps (int): Interval steps of logging
     """
     def __init__(self):
         super().__init__(mode="train")
@@ -208,6 +214,22 @@ class TrainInfo(Trace):
 
 
 class LRController(Trace):
+    """Learning rate controller that makes learning rate follow the custom schedule and optionally reduces learning
+        rate whenever evaluation loss meets certain condition.
+
+    Args:
+        model_name (str): Model name of target model
+        lr_schedule (object, optional): Scheduler that defines how learning rate changes. It should be `LRSchedule`
+            object. Defaults to None.
+        reduce_on_eval (bool, optional): If true, it will reduce the learning rate when evaluation loss have been not
+            improving for several times. Defaults to False.
+        reduce_patience (int, optional): Maximum accumulation of times of not being improving. Defaults to 10.
+        reduce_factor (float, optional): Reduce factor of learning rate. Defaults to 0.1.
+        reduce_mode (str, optional): It should be {"max", "min"}. If "max", the learning rate will reduce if
+            monitored number is too low. If "min", the learning rate will reduce if target is too high. Defaults to
+            "min".
+        min_lr (float, optional): Minimum learning rate. Defaults to 1e-6.
+    """
     def __init__(self,
                  model_name,
                  lr_schedule=None,
@@ -216,6 +238,7 @@ class LRController(Trace):
                  reduce_factor=0.1,
                  reduce_mode="min",
                  min_lr=1e-6):
+
         if isinstance(reduce_on_eval, str):
             super().__init__(inputs=reduce_on_eval)
         else:
@@ -295,7 +318,8 @@ class LRController(Trace):
 
 
 class Logger(Trace):
-    """Logger, automatically applied by default.
+    """Logger that prints log. Please don't add this trace into an estimator manually. An estimators will add it
+        automatically.
     """
     def __init__(self):
         super().__init__(inputs="*")
@@ -345,8 +369,12 @@ class Accuracy(Trace):
     Args:
         true_key (str): Name of the key that corresponds to ground truth in batch dictionary
         pred_key (str): Name of the key that corresponds to predicted score in batch dictionary
+        mode (str, optional): Restrict the trace to run only on given modes {'train', 'eval', 'test'}. None will always
+                    execute. Defaults to 'eval'.
+        output_name (str, optional): Name of the key to store to the state. Defaults to "accuracy".
     """
     def __init__(self, true_key, pred_key, mode="eval", output_name="accuracy"):
+
         super().__init__(outputs=output_name, mode=mode)
         self.true_key = true_key
         self.pred_key = pred_key
@@ -380,9 +408,12 @@ class ConfusionMatrix(Trace):
     """Computes confusion matrix between y_true and y_predict.
 
     Args:
-        num_classes (int): Total number of classes of the confusion matrix.
         true_key (str): Name of the key that corresponds to ground truth in batch dictionary
         pred_key (str): Name of the key that corresponds to predicted score in batch dictionary
+        num_classes (int): Total number of classes of the confusion matrix.
+        mode (str, optional): Restrict the trace to run only on given modes {'train', 'eval', 'test'}. None will always
+                    execute. Defaults to 'eval'.
+        output_name (str, optional): Name of the key to store to the state. Defaults to "confusion_matrix".
     """
     def __init__(self, true_key, pred_key, num_classes, mode="eval", output_name="confusion_matrix"):
         super().__init__(outputs=output_name, mode=mode)
@@ -417,11 +448,23 @@ class ConfusionMatrix(Trace):
 
 
 class Precision(Trace):
-    """Calculates precision for classification task and report it back to logger.
+    """Computes precision for classification task and report it back to logger.
+
     Args:
         true_key (str): Name of the keys in the ground truth label in data pipeline.
-        pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label.
-                                  Default is `None`.
+        pred_key (str, optional): Name of the keys in predicted label. Defaults to None.
+        labels (list, optional): The set of labels to include. For more details please refer to
+            sklearn.metrics.precision_score. Defaults to None.
+        pos_label (str or int, optional): The class to report. For more details please refer to
+            sklearn.metrics.precision_score. Defaults to 1.
+        average (str, optional): It should be one of {"auto", "binary", "micro", "macro", "weighted", "samples", None}.
+            If "auto", the trace will detect the input data type and choose the right average for you. Otherwise, it
+            will pass its to sklearn.metrics.precision_score. Defaults to "auto".
+        sample_weight (1d array-like, optional): Sample weight. If None, it will not apply sample weight. For more
+            details please refer to sklearn.metrics.precision_score. Defaults to None.
+        mode (str, optional): Restrict the trace to run only on given modes {'train', 'eval', 'test'}. None will always
+                    execute. Defaults to 'eval'.
+        output_name (str, optional): Name of the key to store to the state. Defaults to "precision".
     """
     def __init__(self,
                  true_key,
@@ -490,11 +533,23 @@ class Precision(Trace):
 
 
 class Recall(Trace):
-    """Calculates recall for classification task and report it back to logger.
+    """Compute recall for classification task and report it back to logger.
+
     Args:
         true_key (str): Name of the keys in the ground truth label in data pipeline.
-        pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label.
-                                  Default is `None`.
+        pred_key (str, optional): Name of the keys in predicted label. Defaults to None.
+        labels (list, optional): The set of labels to include. For more details, please refer to
+            sklearn.netrics.recall_score. Defaults to None.
+        pos_label (str or int, optional): The class to report. For more details, please refer to
+            sklearn.netrics.recall_score. Defaults to 1.
+        average (str, optional): It should be one of {"auto", "binary", "micro", "macro", "weighted", "samples", None}.
+            If "auto", the trace will detect the input data type and choose the right average for you. Otherwise, it
+            will pass its to sklearn.metrics.recall_score. Defaults to "auto".
+        sample_weight (array-like of shape, optional): Sample weights, For more details, please refer to
+            sklearn.netrics.recall_score. Defaults to None.
+        mode (str, optional): Restrict the trace to run only on given modes {'train', 'eval', 'test'}. None will always
+                    execute. Defaults to 'eval'.
+        output_name (str, optional): Name of the key to store to the state. Defaults to "recall".
     """
     def __init__(self,
                  true_key,
@@ -505,6 +560,7 @@ class Recall(Trace):
                  sample_weight=None,
                  mode="eval",
                  output_name="recall"):
+
         super().__init__(outputs=output_name, mode=mode)
         self.true_key = true_key
         self.pred_key = pred_key
@@ -563,11 +619,23 @@ class Recall(Trace):
 
 
 class F1Score(Trace):
-    """Calculates F1 score for classification task and report it back to logger.
+    """Calculate F1 score for classification task and report it back to logger.
+
     Args:
         true_key (str): Name of the keys in the ground truth label in data pipeline.
-        pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label.
-                                  Default is `None`.
+        pred_key (str, optional): Name of the keys in predicted label. Default is `None`.
+        labels (list, optional): The set of labels to include. For more details, please refer to
+            sklearn.netrics.f1_score. Defaults to None.
+        pos_label (str or int, optional): The class to report. For more details, please refer to
+            sklearn.netrics.f1_score. Defaults to 1.
+        average (str, optional): It should be one of {"auto", "binary", "micro", "macro", "weighted", "samples", None}.
+            If "auto", the trace will detect the input data type and choose the right average for you. Otherwise, it
+            will pass its to sklearn.metrics.f1_score. Defaults to "auto".
+        sample_weight (array-like of shape, optional): Sample weights, For more details, please refer to
+            sklearn.netrics.f1_score. Defaults to None.
+        mode (str, optional): Restrict the trace to run only on given modes {'train', 'eval', 'test'}. None will always
+                    execute. Defaults to 'eval'.
+        output_name (str, optional): Name of the key to store back to the state. Defaults to "f1score".
     """
     def __init__(self,
                  true_key,
@@ -640,8 +708,11 @@ class Dice(Trace):
 
     Args:
         true_key (str): Name of the keys in the ground truth label in data pipeline.
-        pred_key (str, optional): If the network's output is a dictionary, name of the keys in predicted label.
-                                  Default is `None`.
+        pred_key (str, optional): Mame of the keys in predicted label. Default is `None`.
+        threshold (float, optional): Threshold of the prediction. Defaults to 0.5.
+        mode (str, optional): Restrict the trace to run only on given modes {'train', 'eval', 'test'}. None will always
+                    execute. Defaults to 'eval'.
+        output_name (str, optional): Name of the key to store to the state. Defaults to "dice".
     """
     def __init__(self, true_key, pred_key, threshold=0.5, mode="eval", output_name="dice"):
         super().__init__(outputs=output_name, mode=mode)
@@ -674,19 +745,18 @@ class Dice(Trace):
 
 
 class TerminateOnNaN(Trace):
-    """
-    End Training if a NaN value is detected. By default (inputs=None) it will monitor all loss values at the end of each
-     batch. If one or more inputs are specified, it will only monitor those values. Inputs may be loss keys and/or the
-     keys corresponding to the outputs of other traces (ex. accuracy) but then the other traces must be given before
-     TerminateOnNaN in the trace list
+    """End Training if a NaN value is detected. By default (inputs=None) it will monitor all loss values at the end
+        of each batch. If one or more inputs are specified, it will only monitor those values. Inputs may be loss keys
+        and/or the keys corresponding to the outputs of other traces (ex. accuracy) but then the other traces must be
+        given before TerminateOnNaN in the trace list.
+
+        Args:
+            monitor_names (str, list, optional): What key(s) to monitor for NaN values.
+                                                - None (default) will monitor all loss values.
+                                                - "*" will monitor all state keys and losses.
+                                                Defaults to None.
     """
     def __init__(self, monitor_names=None):
-        """
-        Args:
-            monitor_names (str, list): What key(s) to monitor for NaN values.
-                                         - None (default) will monitor all loss values.
-                                         - "*" will monitor all state keys and losses.
-        """
         self.monitored_keys = monitor_names if monitor_names is None else set(monitor_names)
         super().__init__(inputs=self.monitored_keys)
         self.all_loss_keys = {}
@@ -731,32 +801,25 @@ class TerminateOnNaN(Trace):
 
 
 class EarlyStopping(Trace):
-    """
-    Stop training when a monitored quantity has stopped improving.
+    """Stop training when a monitored quantity has stopped improving.
 
     Args:
-            monitor (str): Quantity to be monitored.
-            min_delta (float): Minimum change in the monitored quantity
-              to qualify as an improvement, i.e. an absolute
-              change of less than min_delta, will count as no
-              improvement.
-            patience (int): Number of epochs with no improvement
-              after which training will be stopped.
-            verbose (int): verbosity mode.
-            compare (str): One of `{"min", "max"}`. In `min` mode,
-              training will stop when the quantity
-              monitored has stopped decreasing; in `max`
-              mode it will stop when the quantity
-              monitored has stopped increasing.
-            baseline (float): Baseline value for the monitored quantity.
-              Training will stop if the model doesn't show improvement over the
-              baseline.
-            restore_best_weights (bool): Whether to restore model weights from
-              the epoch with the best value of the monitored quantity.
-              If False, the model weights obtained at the last step of
-              training are used.
-            mode (str): Restrict the trace to run only on given modes ('train', 'eval', 'test'). None will always
-                        execute
+        monitor (str, optional): Quantity to be monitored.. Defaults to "loss".
+        min_delta (int, optional): Minimum change in the monitored quantity to qualify as an improvement, i.e. an
+            absolute change of less than min_delta, will count as no improvement. Defaults to 0.
+        patience (int, optional): Number of epochs with no improvement after which training will be stopped. Defaults
+            to 0.
+        verbose (int, optional): Verbosity mode.. Defaults to 0.
+        compare (str, optional): One of {"min", "max"}. In "min" mode, training will stop when the quantity monitored
+            has stopped decreasing; in `max` mode it will stop when the quantity monitored has stopped increasing.
+            Defaults to 'min'.
+        baseline (float, optional): Baseline value for the monitored quantity. Training will stop if the model doesn't
+            show improvement over the baseline. Defaults to None.
+        restore_best_weights (bool, optional): Whether to restore model weights from the epoch with the best value of
+            the monitored quantity. If False, the model weights obtained at the last step of training are used.
+            Defaults to False.
+        mode (str, optional): Restrict the trace to run only on given modes {'train', 'eval', 'test'}. None will always
+                    execute. Defaults to 'eval'.
     """
     def __init__(self,
                  monitor="loss",
@@ -815,12 +878,24 @@ class EarlyStopping(Trace):
                     for name, model in self.network.model.items():
                         model.set_weights(self.best_weights[name])
                 print("FastEstimator-EarlyStopping: '{}' triggered an early stop. Its best value was {} at epoch {}\
-                      ".format(self.monitored_key, self.best, state['epoch'] - self.wait))
+                      "                                                                                                                                                                                                               .format(self.monitored_key, self.best, state['epoch'] - self.wait))
 
 
 class CSVLogger(Trace):
+    """Log monitored quantity in CSV file manner
+
+    Args:
+        filename (str): Output filename.
+        monitor_names (list of str, optional): List of key names to monitor. The names can be {"mode", "epoch",
+            "train_step", or output names that other traces create}. If None, it will record all. Defaults to None.
+        separator (str, optional): Seperator for numbers. Defaults to ", ".
+        append (bool, optional): If true, it will write csv file in append mode. Otherwise, it will overwrite the
+            existed file. Defaults to False.
+        mode (str, optional): Restrict the trace to run only on given modes {'train', 'eval', 'test'}. None will always
+            execute. Defaults to 'eval'.
+    """
     def __init__(self, filename, monitor_names=None, separator=", ", append=False, mode="eval"):
-        self.keys = monitor_names if monitor_names is None else list(monitor_names)
+        self.keys = monitor_names if monitor_names is None else to_list(monitor_names)
         super().__init__(inputs="*" if self.keys is None else monitor_names, mode=mode)
         self.separator = separator
         self.file = open(filename, 'a' if append else 'w')
@@ -829,6 +904,7 @@ class CSVLogger(Trace):
     def on_epoch_end(self, state):
         if self.keys is None:
             self._infer_keys(state)
+        self._make_header()
         vals = [state.get(key, "") for key in self.keys]
         vals = [str(val.numpy()) if hasattr(val, "numpy") else str(val) for val in vals]
         self.file.write("\n" + self.separator.join(vals))
@@ -845,50 +921,46 @@ class CSVLogger(Trace):
             elif hasattr(val, "numpy") and len(val.numpy().shape) == 1:
                 monitored_keys.append(key)
         self.keys = sorted(monitored_keys)
+
+    def _make_header(self):
         if self.file_empty:
             self.file.write(self.separator.join(self.keys))
             self.file_empty = False
 
 
 class TensorBoard(Trace):
+    """ Output data for use in TensorBoard.
+    Args:
+        log_dir (str, optional): Path of the directory where to save the log files to be parsed by TensorBoard.
+            Defaults to 'logs'.
+        histogram_freq (int, optional): Frequency (in epochs) at which to compute activation and weight histograms for
+            the layers of the model. If set to 0, histograms won't be computed. Defaults to 0.
+        write_graph (bool, optional): Whether to visualize the graph in TensorBoard. The log file can become quite large
+            when write_graph is set to True. Defaults to True.
+        write_images (bool, str, list, optional): If True will write model weights to visualize as an image in
+            TensorBoard. If a string or list of strings is provided, the corresponding keys will be written to
+            Tensorboard images. To get weights and specific keys use [True, 'key1', 'key2',...] Defaults to False.
+        update_freq (str, int, optional): 'batch' or 'epoch' or integer. When using 'batch', writes the losses and
+            metrics to TensorBoard after each batch. The same applies for 'epoch'. If using an integer, let's say 1000,
+            the callback will write the metrics and losses to TensorBoard every 1000 samples. Note that writing too
+            frequently to TensorBoard can slow down your training. Defaults to 'epoch'.
+        profile_batch (int, optional): Which batch to run profiling on. 0 to disable. Note that FE batch numbering
+            starts from 0 rather than 1. Defaults to 2.
+        embeddings_freq (int, optional): Frequency (in epochs) at which embedding layers will be visualized. If set to
+            0, embeddings won't be visualized.Defaults to 0.
+        embeddings_metadata (str, dict, optional): A dictionary which maps layer name to a file name in which metadata
+            for this embedding layer is saved. See the details about metadata files format. In case if the same
+            metadata file is used for all embedding layers, string can be passed. Defaults to None.
     """
-    Output data for use in TensorBoard.
-    """
-    def __init__(
-            self,
-            log_dir='logs',
-            histogram_freq=0,
-            write_graph=True,
-            write_images=False,
-            update_freq='epoch',
-            profile_batch=2,
-            embeddings_freq=0,
-            embeddings_metadata=None,
-    ):
-        """
-        Args:
-            log_dir (str): the path of the directory where to save the log files to be parsed by TensorBoard.
-            histogram_freq (int): frequency (in epochs) at which to compute activation and weight histograms for the
-                                    layers of the model. If set to 0, histograms won't be computed.
-            write_graph (bool): whether to visualize the graph in TensorBoard. The log file can become quite large when
-                            write_graph is set to True.
-            write_images (bool, str, list): If True will write model weights to visualize as an image in TensorBoard. If
-                                            a string or list of strings is provided, the corresponding keys will be
-                                            written to tensorboard images. To get weights and specific keys use
-                                            [True, 'key1', 'key2',...]
-            update_freq (str, int): 'batch' or 'epoch' or integer. When using 'batch', writes the losses and metrics to
-                            TensorBoard after each batch. The same applies for 'epoch'. If using an integer, let's say
-                            1000, the callback will write the metrics and losses to TensorBoard every 1000 samples. Note
-                            that writing too frequently to TensorBoard can slow down your training.
-            profile_batch (int): Which batch to run profiling on. 0 to disable. Note that FE batch numbering starts from
-                                 0 rather than 1
-            embeddings_freq (int): frequency (in epochs) at which embedding layers will be visualized. If set to 0,
-                                    embeddings won't be visualized.
-            embeddings_metadata (str, dict): a dictionary which maps layer name to a file name in which metadata for
-                                            this embedding layer is saved. See the details about metadata files format.
-                                            In case if the same metadata file is used for all embedding layers, string
-                                            can be passed.
-        """
+    def __init__(self,
+                 log_dir='logs',
+                 histogram_freq=0,
+                 write_graph=True,
+                 write_images=False,
+                 update_freq='epoch',
+                 profile_batch=2,
+                 embeddings_freq=0,
+                 embeddings_metadata=None):
         super().__init__(inputs="*")
         current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         self.train_log_dir = os.path.join(os.path.join(log_dir, current_time), 'train')
@@ -1066,11 +1138,13 @@ class ModelSaver(Trace):
     """Save trained model in hdf5 format.
 
     Args:
-        model_name (str): The name of FE model.
-        save_dir (str): The directory to save the trained models.
-        save_best (bool, str): best model saving monitor name. If True, the model loss is used.
-        save_best_mode: Can be `'min'`, `'max'`, or `'auto'`.
-        save_freq: Number of epochs to save models. Cannot be used with `save_best_only=True`.
+        model_name (str): Name of FE model.
+        save_dir (str): Directory to save the trained models.
+        save_best (bool, str, optional): Best model saving monitor name. If True, the model loss is used. Defaults to
+            False.
+        save_best_mode (str, optional): Can be `'min'`, `'max'`, or `'auto'`. Defaults to 'min'.
+        save_freq (int, optional): Number of epochs to save models. Cannot be used with `save_best_only=True`. Defaults
+            to 1.
     """
     def __init__(self, model_name, save_dir, save_best=False, save_best_mode='min', save_freq=1):
         if isinstance(save_best, str):
