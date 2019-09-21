@@ -72,9 +72,15 @@ class Estimator:
         self.do_eval = False
 
     def fit(self, summary=None):
+        """Function to perform training on the estimator.
+
+        Args:
+            summary (str, optional): Experiment name to return. If None, it won't return anything. Defaults to None.
+
+        Returns:
+            [obj]: Experiment object. 
         """
-        Function to perform training on the estimator.
-        """
+
         draw()
         self.summary = summary
         self._prepare_pipeline()
