@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+"""Utility for writing TFRecords."""
 import json
 import multiprocessing as mp
 import os
@@ -20,11 +21,38 @@ import time
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-
-from fastestimator.util.op import get_op_from_mode, verify_ops, write_outputs_by_key, get_inputs_by_op
+from fastestimator.util.op import get_inputs_by_op, get_op_from_mode, verify_ops, write_outputs_by_key
 
 
 class RecordWriter:
+    """Write data into TFRecords.
+
+    This class can handle unpaired features. For example, in cycle-gan the hourse and zebra images are unpaired, which
+    means during training you do not have one-to-one correspondance between hourse image and zebra image. When the
+    `RecordWriter` instance is sent to `Pipeline` create random pairs between hourse and zebra images. See the cycle-gan
+    example in apphub directory.
+
+    Args:
+        train_data (Union[dict, str]): A `dict` that contains train data or a CSV file path. For the CSV file, the
+            column header will be used as feature name. Under each column in the CSV file the paths to train data should
+            be provided.
+        save_dir (str): The directory to save the TFRecords.
+        validation_data (Union[dict, str, float], optional): A `dict` that contains validation data, a CSV file path, or
+            a `float` that is between 0 and 1. For the CSV file, the column header will be used as feature name. Under
+            each column in the CSV file the paths to validation data should be provided. When this argument is a
+            `float`, `RecordWriter` will reserve `validation_data` fraction of the `train_data` as validation data.
+            Defaults to None.
+        ops (obj, optional): Transformation operations before TFRecords creation. Defaults to None.
+        write_feature (str, optional): Users can specify what features they want to write to TFRecords. Defaults to
+            None.
+        expand_dims (bool, optional): When set to `True`, the first dimension of each feature will be used as batch
+            dimension. `RecordWriter` will split the batch into single examples and write one example at a time into
+            TFRecord. Defaults to False.
+        max_record_size_mb (int, optional): Maximum size of single TFRecord file. Defaults to 300 MB.
+        compression (str, optional): Compression type can be `"GZIP"`, `"ZLIB"`, or `""` (no compression). Defaults to
+            None.
+
+    """
     def __init__(self,
                  train_data,
                  save_dir,
@@ -49,12 +77,17 @@ class RecordWriter:
         self.feature_set_idx = 0
         self._verify_inputs()
 
+        self.num_example_csv, self.num_example_record, self.mb_per_csv_example, self.mb_per_record_example = \
+            {}, {}, {}, {}
+        self.mode_ops, self.feature_name, self.feature_dtype, self.feature_shape = {}, {}, {}, {}
+        self.train_data_local, self.validation_data_local, self.write_feature_local, self.ops_local = {}, {}, {}, {}
+
     def _verify_inputs(self):
         if any(isinstance(inp, tuple) for inp in [self.train_data, self.validation_data, self.ops, self.write_feature]):
             num_unpaired_feature_sets = [len(self.train_data)]
             if self.validation_data:
-                assert isinstance(self.validation_data,
-                                  tuple), "validation data must be tuple when creating unpaired feature set"
+                assert isinstance(self.validation_data, tuple), \
+                    "validation data must be tuple when creating unpaired feature set"
                 num_unpaired_feature_sets.append(len(self.validation_data))
             else:
                 self.validation_data = [None] * len(self.train_data)
@@ -77,10 +110,10 @@ class RecordWriter:
             self.train_data, self.validation_data, self.ops, self.write_feature = \
                 [self.train_data], [self.validation_data], [self.ops], [self.write_feature]
         for idx in range(len(self.train_data)):
-            assert type(self.train_data[idx]) is dict or self.train_data[idx].endswith(
+            assert isinstance(self.train_data[idx], dict) or self.train_data[idx].endswith(
                 ".csv"), "train data should either be a dictionary or a csv path"
             if self.validation_data[idx]:
-                assert type(self.validation_data[idx]) in [dict, float] or self.validation_data[idx].endswith(
+                assert isinstance(self.validation_data[idx], (dict, float)) or self.validation_data[idx].endswith(
                     ".csv"), "validation data supports partition ratio (float), csv file or dictionary"
             if self.write_feature[idx]:
                 assert isinstance(self.write_feature[idx],
@@ -105,6 +138,7 @@ class RecordWriter:
         return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
 
     def write(self):
+        """Write TFRecods in parallel. Number of processes is set to number of CPU cores."""
         self._prepare_savepath(self.save_dir)
         for train_data, validation_data, write_feature, ops in zip(self.train_data, self.validation_data,
                                                                    self.write_feature, self.ops):
@@ -139,7 +173,7 @@ class RecordWriter:
         self.global_feature_key[mode].extend(self.feature_name[mode])
         assert len(set(self.global_feature_key[mode])) == len(
             self.global_feature_key[mode]), "found duplicate key in feature name during {}: {}".format(
-            mode, self.global_feature_key[mode])
+                mode, self.global_feature_key[mode])
         self.mb_per_csv_example[mode] = 0
         self.mb_per_record_example[mode] = 0
         self.feature_dtype[mode] = {}
@@ -298,9 +332,9 @@ class RecordWriter:
                     .format(key, expected_shape, data.shape)
             else:
                 if data.size > 1:
-                    assert max(data.shape) == np.prod(data.shape), \
-                        "inconsistent shape on same feature `{}` among different examples,\
-                         expected 0 or 1 dimensional array, found `{}`".format(key, data.shape)
+                    assert max(data.shape) == np.prod(data.shape), "inconsistent shape on same feature `{}` among \
+                        different examples, expected 0 or 1 dimensional array, found `{}`" \
+                        .format(key, data.shape)
                     if not expected_shape:
                         self.feature_shape[mode][key] = [-1]
             feature_tfrecord[key] = self._bytes_feature(data.tostring())
@@ -332,9 +366,9 @@ class RecordWriter:
         num_example_list = []
         for key in feature_name:
             feature_data = dictionary[key]
-            if type(feature_data) is list:
+            if isinstance(feature_data, list):
                 num_example_list.append(len(feature_data))
-            elif type(feature_data) is np.ndarray:
+            elif isinstance(feature_data, np.ndarray):
                 num_example_list.append(feature_data.shape[0])
             else:
                 raise ValueError("the feature only supports list or numpy array")
@@ -342,14 +376,14 @@ class RecordWriter:
         return set(num_example_list).pop()
 
     def _prepare_train(self):
-        if type(self.train_data_local) is str:
+        if isinstance(self.train_data_local, str):
             df = pd.read_csv(self.train_data_local)
             self.train_data_local = df.to_dict('list')
         self.num_example_csv["train"] = self._verify_dict(self.train_data_local)
         self._check_ops("train")
 
     def _prepare_validation(self):
-        if type(self.validation_data_local) is float:
+        if isinstance(self.validation_data_local, float):
             num_example_takeout = int(self.validation_data_local * self.num_example_csv["train"])
             train_idx = range(self.num_example_csv["train"])
             eval_idx = np.random.choice(train_idx, num_example_takeout, replace=False)
@@ -357,14 +391,14 @@ class RecordWriter:
             self.validation_data_local = {}
             for key in self.train_data_local.keys():
                 total_data = self.train_data_local[key]
-                if type(total_data) is list:
+                if isinstance(total_data, list):
                     self.train_data_local[key] = [total_data[x] for x in train_idx]
                     self.validation_data_local[key] = [total_data[x] for x in eval_idx]
                 else:
                     self.train_data_local[key] = total_data[train_idx]
                     self.validation_data_local[key] = total_data[eval_idx]
             self.num_example_csv["train"] = self.num_example_csv["train"] - num_example_takeout
-        elif type(self.validation_data_local) is str:
+        elif isinstance(self.validation_data_local, str):
             df = pd.read_csv(self.validation_data_local)
             self.validation_data_local = df.to_dict('list')
         self.num_example_csv["eval"] = self._verify_dict(self.validation_data_local)
