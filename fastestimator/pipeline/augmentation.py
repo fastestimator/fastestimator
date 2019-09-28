@@ -319,7 +319,6 @@ class Augmentation2D(TensorOp):
                 data = [data]
         self.width = tf.cast(data[0].shape[-3], tf.float32)
         self.height = tf.cast(data[0].shape[-2], tf.float32)
-
         self.setup()
         for idx, single_data in enumerate(data):
             augment_data = self._transform(single_data)
@@ -330,6 +329,8 @@ class Augmentation2D(TensorOp):
                                    lambda: tf.image.flip_up_down(augment_data),
                                    lambda: augment_data)
             data[idx] = augment_data
+        if not isinstance(self.inputs, (list, tuple)):
+            data = data[0]
         return data
 
     def _transform(self, data):
@@ -369,6 +370,7 @@ class Augmentation2D(TensorOp):
         else:
             result = gather_and_reshape(data)
         return result
+
 
 class MixUpBatch(TensorOp):
     """
