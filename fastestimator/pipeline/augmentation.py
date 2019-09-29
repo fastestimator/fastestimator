@@ -312,7 +312,6 @@ class Augmentation2D(TensorOp):
 
         """
         # ensure the data is list in order to prevent syntax error at 322
-
         if not isinstance(data, list):
             if isinstance(data, tuple):
                 data = list(data)
