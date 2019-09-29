@@ -258,7 +258,6 @@ class Pipeline:
             forward_ops_epoch.append(forward_ops_between_filter)
             # execute the operations
             dataset = self._execute_ops(extracted_ds, forward_ops_epoch, filter_ops_epoch, state)
-            # rest of the dataset setup
             if self.expand_dims:
                 dataset = dataset.flat_map(tf.data.Dataset.from_tensor_slices)
             if self.padded_batch:
