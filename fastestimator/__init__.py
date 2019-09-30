@@ -18,4 +18,4 @@ from fastestimator.network.network import Network
 from fastestimator.pipeline.pipeline import Pipeline
 from fastestimator.record.record import RecordWriter
 
-__version__ = '1.0-alpha0'
+__version__ = '1.0-alpha1'
