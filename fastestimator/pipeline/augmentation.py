@@ -373,24 +373,31 @@ class Augmentation2D(TensorOp):
 
 
 class MixUpBatch(TensorOp):
-    """
-    This class should be used in conjunction with MixUpLoss to perform mix-up training, which helps to reduce
+    """ This class should be used in conjunction with MixUpLoss to perform mix-up training, which helps to reduce
     over-fitting, stabilize GAN training, and against adversarial attacks (https://arxiv.org/abs/1710.09412)
-    """
-    def __init__(self, inputs=None, outputs=None, mode=None, alpha=1.0):
-        """
-        Args:
+
+    Args:
             inputs: key of the input to be mixed up
             outputs: key to store the mixed-up input
             mode: what mode to execute in. Probably 'train'
             alpha: the alpha value defining the beta distribution to be drawn from during training
-        """
+    """
+    def __init__(self, inputs=None, outputs=None, mode=None, alpha=1.0):
         assert alpha > 0, "Mixup alpha value must be greater than zero"
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.alpha = tf.constant(alpha)
         self.beta = tfp.distributions.Beta(alpha, alpha)
 
     def forward(self, data, state):
+        """ Forward method to perform mixup batch augmentation
+        
+        Args:
+            data: Batch data to be augmented
+            state: Information about the current execution context.
+        
+        Returns:
+            Mixed-up batch data
+        """
         iterdata = data if isinstance(data, list) else list(data) if isinstance(data, tuple) else [data]
         lam = self.beta.sample()
         # Could do random mix-up using tf.gather() on a shuffled index list, but batches are already randomly ordered,
@@ -401,6 +408,14 @@ class MixUpBatch(TensorOp):
 
 
 class AdversarialSample(TensorOp):
+    """ This class is to be used to train the model more robust against adversarial attacks (https://arxiv.org/abs/1412.6572)
+    
+    Args:
+        inputs: key of the input to be mixed up
+        outputs: key to store the mixed-up input
+        mode: what mode to execute in.
+        epsilon: epsilon value to perturb the input to create adversarial examples
+    """
     def __init__(self, inputs, outputs=None, mode=None, epsilon=0.1):
         assert len(inputs) == 2, \
             "AdversarialSample requires 2 inputs: a loss value and the input data which lead to the loss"
@@ -408,6 +423,15 @@ class AdversarialSample(TensorOp):
         self.epsilon = epsilon
 
     def forward(self, data, state):
+        """ Forward method to perform mixup batch augmentation
+        
+        Args:
+            data: Batch data to be augmented
+            state: Information about the current execution context.
+        
+        Returns:
+            Adversarial example created from perturbing the input data
+        """
         clean_loss, clean_data = data
         tape = state['tape']
         with tape.stop_recording():
@@ -418,8 +442,16 @@ class AdversarialSample(TensorOp):
         return adverse_data
 
 
-class Average(TensorOp):
+class Average(TensorOp):  
     def forward(self, data, state):
+        """ This class is to be used to compute the average of input data.
+        
+        Args:
+            data: input data to be averaged
+            state:  Information about the current execution context.
+        Returns:
+            Averaged input data
+        """
         iterdata = data if isinstance(data, list) else list(data) if isinstance(data, tuple) else [data]
         num_entries = len(iterdata)
         result = 0.0
