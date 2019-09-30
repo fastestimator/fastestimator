@@ -5,6 +5,7 @@ from setuptools import find_packages, setup
 
 
 def get_version():
+    check_backend()
     path = os.path.dirname(__file__)
     version_re = re.compile(r'''__version__ = ['"](.+)['"]''')
     with open(os.path.join(path, 'fastestimator', '__init__.py')) as f:
@@ -18,10 +19,9 @@ def check_backend():
         assert tf.__version__ == '2.0.0'
     except:
         raise ValueError("Incorrect tensorflow version, please do 'pip install tensorflow==2.0.0' or 'pip install \
-            tensorflow-gpu==2.0.0'")
+            tensorflow-gpu==2.0.0'"                                   )
 
 
-check_backend()
 setup(
     name="fastestimator",
     version=get_version(),
@@ -29,7 +29,7 @@ setup(
     packages=find_packages(),
     package_dir={'': '.'},
     long_description="FastEstimator is a high-level deep learning API. With the help of FastEstimator, you can easily \
-                    build a high-performance deep learning model and run it anywhere.",
+                    build a high-performance deep learning model and run it anywhere."                                                                                      ,
     author="FastEstimator Dev",
     url='https://github.com/fastestimator/fastestimator',
     license="Apache License 2.0",
