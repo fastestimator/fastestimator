@@ -17,7 +17,7 @@ import sys
 
 from fastestimator.util.cli_util import SaveAction
 from fastestimator.util.util import parse_cli_to_dictionary
-from fastestimator.visualization.caricature import load_and_caricature
+from fastestimator.visualization.caricatures import load_and_caricature
 from fastestimator.visualization.umaps import umap_layers
 from fastestimator.visualization.logs import parse_log_dir
 from fastestimator.visualization.saliency_masks import load_and_interpret

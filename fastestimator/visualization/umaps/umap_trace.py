@@ -21,6 +21,7 @@ from fastestimator.estimator.trace import Trace
 
 
 class UMap(Trace):
+    # TODO: let this take a model+layer instead of restricting it to just an existing key
     def __init__(self,
                  in_vector_key,
                  label_vector_key=None,
