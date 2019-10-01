@@ -259,4 +259,4 @@ def visualize_caricature(model,
         os.makedirs(save_path, exist_ok=True)
         save_file = os.path.join(save_path, 'caricatures.png')
         print("Saving to {}".format(save_file))
-        plt.savefig(save_file, dpi=300)
+        plt.savefig(save_file, dpi=300, bbox_inches="tight")

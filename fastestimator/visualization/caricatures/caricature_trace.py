@@ -57,7 +57,6 @@ class Caricature(Trace):
                                 the caricature. Parameter has no effect on grey scale images.
             sigmoid (bool): Whether to use sigmoid (True) or clipping (False) to bound the caricature pixel values
         """
-        self.in_key = None
         self.data = []
         self.in_key = input_key
         if output_name is None:

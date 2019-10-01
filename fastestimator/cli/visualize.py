@@ -20,7 +20,7 @@ from fastestimator.util.util import parse_cli_to_dictionary
 from fastestimator.visualization.caricatures import load_and_caricature
 from fastestimator.visualization.umaps import umap_layers
 from fastestimator.visualization.logs import parse_log_dir
-from fastestimator.visualization.saliency_masks import load_and_interpret
+from fastestimator.visualization.saliencies import load_and_saliency
 
 
 def logs(args, unknown):
@@ -103,14 +103,14 @@ def saliency(args, unknown):
     if len(unknown) > 0:
         print("error: unrecognized arguments: ", str.join(", ", unknown))
         sys.exit(-1)
-    load_and_interpret(args['model'],
-                       args['inputs'],
-                       baseline=args['baseline'],
-                       dictionary_path=args['dictionary'],
-                       strip_alpha=args['strip_alpha'],
-                       smooth_factor=args['smooth'],
-                       save=args['save'],
-                       save_dir=args['save_dir'])
+    load_and_saliency(args['model'],
+                      args['inputs'],
+                      baseline=args['baseline'],
+                      dictionary_path=args['dictionary'],
+                      strip_alpha=args['strip_alpha'],
+                      smooth_factor=args['smooth'],
+                      save=args['save'],
+                      save_dir=args['save_dir'])
 
 
 def configure_saliency_parser(subparsers):

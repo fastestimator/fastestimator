@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.visualization import caricatures
-from fastestimator.visualization import umaps
-from fastestimator.visualization import logs
-from fastestimator.visualization import saliencies
+from fastestimator.visualization.saliencies.saliency_plot import plot_saliency, visualize_saliency
+from fastestimator.visualization.saliencies.saliency_parse import load_and_saliency
+from fastestimator.visualization.saliencies.saliency_trace import Saliency
