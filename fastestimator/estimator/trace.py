@@ -202,7 +202,7 @@ class TrainInfo(Trace):
         if state["train_step"] % self.log_steps == 0:
             if state["train_step"] > 0:
                 self.elapse_times.append(time.perf_counter() - self.time_start)
-                state["examples/sec"] = round(self.num_example / np.sum(self.elapse_times), 2)
+                state["examples/sec"] = round(self.num_example / np.sum(self.elapse_times), 1)
                 state["progress"] = "{:.1%}".format(state["train_step"]/self.total_train_steps)
             self.elapse_times = []
             self.num_example = 0
@@ -329,12 +329,16 @@ class Logger(Trace):
         super().__init__(inputs="*")
         self.log_steps = 0
         self.persist_summary = False
+        self.epoch_losses = []
         self.summary = Experiment("")
 
     def on_begin(self, state):
         self.log_steps = state['log_steps']
         self.persist_summary = state['persist_summary']
         self._print_message("FastEstimator-Start: step: {}; ".format(state["train_step"]), state)
+
+    def on_epoch_begin(self, state):
+        self.epoch_losses = self.network.epoch_losses
 
     def on_batch_end(self, state):
         if state["mode"] == "train" and state["train_step"] % self.log_steps == 0:
@@ -360,6 +364,8 @@ class Logger(Trace):
                 val = val.numpy()
             if self.persist_summary:
                 self.summary.history[state.get("mode", "train")][key][state["train_step"]] = val
+            if key in self.epoch_losses:
+                val = round(val, 7)
             if isinstance(val, np.ndarray):
                 log_message += "\n{}:\n{};".format(key, np.array2string(val, separator=','))
             else:
@@ -882,7 +888,7 @@ class EarlyStopping(Trace):
                     for name, model in self.network.model.items():
                         model.set_weights(self.best_weights[name])
                 print("FastEstimator-EarlyStopping: '{}' triggered an early stop. Its best value was {} at epoch {}\
-                      ".format(self.monitored_key, self.best, state['epoch'] - self.wait))
+                      "                                                                     .format(self.monitored_key, self.best, state['epoch'] - self.wait))
 
 
 class CSVLogger(Trace):
