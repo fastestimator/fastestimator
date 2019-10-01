@@ -233,9 +233,12 @@ def decode_predictions(predictions, top=3, dictionary=None):
     for prediction in predictions:
         top_indices = prediction.argsort()[-top:][::-1]
         if dictionary is None:
-            result = ["Class {:d}: {:.4f}".format(i, prediction[i]) for i in top_indices]
+            result = ["Class {}: {:.4f}".format(i, prediction[i]) for i in top_indices]
         else:
-            result = ["{:s}: {:.4f}".format(dictionary[str(i)], prediction[i]) for i in top_indices]
+            result = [
+                "{}: {:.4f}".format(dictionary.get(i, dictionary.get(str(i), "Class {}".format(i))), prediction[i])
+                for i in top_indices
+            ]
         max_width = len(max(result, key=lambda s: len(s)))
         result = str.join("\n", [s.rjust(max_width) for s in result])
         results.append(result)

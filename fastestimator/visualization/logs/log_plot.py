@@ -42,7 +42,7 @@ def plot_logs(experiments, smooth_factor=0, share_legend=True, ignore_metrics=No
     experiments = to_list(experiments)
 
     ignore_keys = ignore_metrics or set()
-    ignore_keys |= {'epoch'}
+    ignore_keys |= {'epoch', 'progress', 'total_train_steps'}
     # TODO: epoch should be indicated on the axis (top x axis?)
     # TODO: figure out how ignore_metrics should interact with mode
 

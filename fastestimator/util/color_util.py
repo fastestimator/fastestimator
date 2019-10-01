@@ -38,10 +38,10 @@ def linear_decorelate_color(image):
     to map back to normal colors is multiply the square root of your color
     correlations.
     """
-    # TODO: check that inner dimension is 3
-    t_flat = tf.reshape(image, [-1, 3])
-    t_flat = tf.matmul(t_flat, color_correlation_normalized_transpose)
-    image = tf.reshape(t_flat, tf.shape(image))
+    if image.shape[-1] == 3:
+        t_flat = tf.reshape(image, [-1, 3])
+        t_flat = tf.matmul(t_flat, color_correlation_normalized_transpose)
+        image = tf.reshape(t_flat, tf.shape(image))
     return image
 
 

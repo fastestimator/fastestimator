@@ -191,8 +191,7 @@ class TrainInfo(Trace):
         self.total_train_steps = state["total_train_steps"]
         self.log_steps = state['log_steps']
         state["total_train_steps"] = self.total_train_steps
-        for model_name, model in self.network.model.items():
-            state[model_name + "_lr"] = round(backend.get_value(model.optimizer.lr), 6)
+        self._get_lr(state)
 
     def on_epoch_begin(self, state):
         self.time_start = time.perf_counter()
@@ -203,7 +202,7 @@ class TrainInfo(Trace):
             if state["train_step"] > 0:
                 self.elapse_times.append(time.perf_counter() - self.time_start)
                 state["examples/sec"] = round(self.num_example / np.sum(self.elapse_times), 1)
-                state["progress"] = "{:.1%}".format(state["train_step"]/self.total_train_steps)
+                state["progress"] = "{:.1%}".format(state["train_step"] / self.total_train_steps)
             self.elapse_times = []
             self.num_example = 0
             self.time_start = time.perf_counter()
@@ -213,8 +212,15 @@ class TrainInfo(Trace):
 
     def on_end(self, state):
         state['total_time'] = "{} sec".format(round(time.perf_counter() - self.train_start, 2))
+        self._get_lr(state)
+
+    def _get_lr(self, state):
         for model_name, model in self.network.model.items():
-            state[model_name + "_lr"] = round(backend.get_value(model.optimizer.lr), 6)
+            if hasattr(model.optimizer, "lr"):
+                lr = backend.get_value(model.optimizer.lr)
+            else:
+                lr = backend.get_value(model.optimizer._optimizer.lr)
+            state[model_name + "_lr"] = round(lr, 6)
 
 
 class LRController(Trace):
