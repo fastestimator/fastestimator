@@ -184,10 +184,13 @@ class TrainInfo(Trace):
         self.num_example = 0
         self.time_start = None
         self.train_start = None
+        self.total_train_steps = None
 
     def on_begin(self, state):
         self.train_start = time.perf_counter()
+        self.total_train_steps = state["total_train_steps"]
         self.log_steps = state['log_steps']
+        state["total_train_steps"] = self.total_train_steps
         for model_name, model in self.network.model.items():
             state[model_name + "_lr"] = round(backend.get_value(model.optimizer.lr), 6)
 
@@ -200,6 +203,7 @@ class TrainInfo(Trace):
             if state["train_step"] > 0:
                 self.elapse_times.append(time.perf_counter() - self.time_start)
                 state["examples/sec"] = round(self.num_example / np.sum(self.elapse_times), 2)
+                state["progress"] = "{:.1%}".format(state["train_step"]/self.total_train_steps)
             self.elapse_times = []
             self.num_example = 0
             self.time_start = time.perf_counter()
@@ -878,7 +882,7 @@ class EarlyStopping(Trace):
                     for name, model in self.network.model.items():
                         model.set_weights(self.best_weights[name])
                 print("FastEstimator-EarlyStopping: '{}' triggered an early stop. Its best value was {} at epoch {}\
-                      "                                                                                                                                                                                                               .format(self.monitored_key, self.best, state['epoch'] - self.wait))
+                      "                                                                                                                                                                                                                                                                                    .format(self.monitored_key, self.best, state['epoch'] - self.wait))
 
 
 class CSVLogger(Trace):
