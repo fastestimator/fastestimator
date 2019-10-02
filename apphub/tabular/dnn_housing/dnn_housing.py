@@ -20,9 +20,9 @@ from sklearn.preprocessing import StandardScaler
 from tensorflow.keras import layers
 
 import fastestimator as fe
-from trace.trace import ModelSaver
-from op.tensorop.loss import MeanSquaredError
-from op.tensorop.model.model import FEModel, ModelOp
+from fastestimator import FEModel
+from fastestimator.op.tensorop import MeanSquaredError, ModelOp
+from fastestimator.trace import ModelSaver
 
 
 def create_dnn():
