@@ -20,7 +20,7 @@ import time
 import numpy as np
 import tensorflow as tf
 
-from operation.tensorOp import TensorFilter
+from fastestimator.operation.tensorOp import TensorFilter
 from fastestimator.util import RecordWriter
 from fastestimator.operation import get_inputs_by_key, get_inputs_by_op, get_op_from_mode, verify_ops, \
     write_outputs_by_key
