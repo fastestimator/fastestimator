@@ -20,10 +20,10 @@ import tensorflow as tf
 from tensorflow.python.keras import layers
 
 import fastestimator as fe
-from fastestimator.estimator.trace import ModelSaver
-from fastestimator.network.loss import Loss
-from fastestimator.network.model import FEModel, ModelOp
-from fastestimator.util.op import TensorOp
+from trace.trace import ModelSaver
+from op.tensorOp.loss import Loss
+from op.tensorOp.model.model import FEModel, ModelOp
+from op.op import TensorOp
 
 
 class GLoss(Loss):

@@ -22,11 +22,11 @@ import tensorflow as tf
 import fastestimator as fe
 from fastestimator.architecture.stnet import lossNet, styleTransferNet
 from fastestimator.dataset.mscoco import load_data
-from fastestimator.estimator.trace import ModelSaver
-from fastestimator.network.loss import Loss
-from fastestimator.network.model import FEModel, ModelOp
-from fastestimator.record.preprocess import ImageReader, Resize
-from fastestimator.util.op import TensorOp
+from trace.trace import ModelSaver
+from op.tensorOp.loss import Loss
+from op.tensorOp.model.model import FEModel, ModelOp
+from op.numpyOp.preprocess import ImageReader, Resize
+from op.op import TensorOp
 
 
 class Rescale(TensorOp):

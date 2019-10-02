@@ -12,64 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import tensorflow as tf
 from tensorflow.python.keras import Model, layers
 from tensorflow.python.keras.initializers import RandomNormal
-
-
-# Code borrowed from https://github.com/tensorflow/examples/blob/master/tensorflow_examples/models/pix2pix/pix2pix.py
-class InstanceNormalization(layers.Layer):
-    """Class for performing instance normalization. (See https://arxiv.org/abs/1607.08022).
-
-    Args:
-        epsilon (float, optional): value  of epsilon parameter that will be added to the variance. Defaults to 1e-5.
-    """
-
-    def __init__(self, epsilon=1e-5):
-        super().__init__()
-        self.epsilon = epsilon
-
-    def get_config(self):
-        return {'epsilon': self.epsilon}
-
-    def build(self, input_shape):
-        self.scale = self.add_weight(name='scale',
-                                     shape=input_shape[-1:],
-                                     initializer=tf.random_normal_initializer(0., 0.02),
-                                     trainable=True)
-
-        self.offset = self.add_weight(name='offset', shape=input_shape[-1:], initializer='zeros', trainable=True)
-
-    def call(self, x):
-        mean, variance = tf.nn.moments(x, axes=[1, 2], keepdims=True)
-        inv = tf.math.rsqrt(variance + self.epsilon)
-        normalized = (x - mean) * inv
-        return self.scale * normalized + self.offset
-
-
-# Code borrowed from https://stackoverflow.com/questions/50677544/reflection-padding-conv2d
-class ReflectionPadding2D(layers.Layer):
-    """Class for performing Reflection Padding on 2D arrays.
-
-    Args:
-    padding (tuple, optional): padding size. Defaults to (1, 1).
-    """
-
-    def __init__(self, padding=(1, 1)):
-        self.padding = tuple(padding)
-        self.input_spec = [layers.InputSpec(ndim=4)]
-        super().__init__()
-
-    def get_config(self):
-        return {'padding': self.padding}
-
-    def compute_output_shape(self, s):
-        """ If you are using "channels_last" configuration"""
-        return s[0], s[1] + 2 * self.padding[0], s[2] + 2 * self.padding[1], s[3]
-
-    def call(self, x, mask=None):
-        w_pad, h_pad = self.padding
-        return tf.pad(x, [[0, 0], [h_pad, h_pad], [w_pad, w_pad], [0, 0]], 'REFLECT')
+from fastestimator.layers import InstanceNormalization, ReflectionPadding2D
 
 
 def _resblock(x0, num_filter=256, kernel_size=3):

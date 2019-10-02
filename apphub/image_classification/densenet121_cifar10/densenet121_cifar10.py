@@ -14,17 +14,15 @@
 # ==============================================================================
 import tempfile
 
-import numpy as np
 import tensorflow as tf
 from tensorflow.keras.applications.densenet import DenseNet121
 from tensorflow.keras.layers import Dense, Input
 
 import fastestimator as fe
-from fastestimator.architecture import LeNet
-from fastestimator.estimator.trace import Accuracy, LRController, ModelSaver
-from fastestimator.network.loss import SparseCategoricalCrossentropy
-from fastestimator.network.model import FEModel, ModelOp
-from fastestimator.pipeline.processing import Minmax, Resize
+from trace.trace import Accuracy, LRController, ModelSaver
+from op.tensorOp.loss import SparseCategoricalCrossentropy
+from op.tensorOp.model.model import FEModel, ModelOp
+from op.tensorOp.processing import Minmax
 
 
 def DenseNet121_cifar10():

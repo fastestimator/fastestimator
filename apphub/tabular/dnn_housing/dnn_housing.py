@@ -20,15 +20,15 @@ from sklearn.preprocessing import StandardScaler
 from tensorflow.keras import layers
 
 import fastestimator as fe
-from fastestimator.estimator.trace import ModelSaver
-from fastestimator.network.loss import MeanSquaredError
-from fastestimator.network.model import FEModel, ModelOp
+from trace.trace import ModelSaver
+from op.tensorOp.loss import MeanSquaredError
+from op.tensorOp.model.model import FEModel, ModelOp
 
 
 def create_dnn():
     model = tf.keras.Sequential()
 
-    model.add(layers.Dense(23, activation="relu", input_shape=(13,)))
+    model.add(layers.Dense(23, activation="relu", input_shape=(13, )))
     model.add(layers.Dropout(0.5))
     model.add(layers.Dense(16, activation="relu"))
     model.add(layers.Dropout(0.5))
@@ -47,14 +47,7 @@ def get_estimator(epochs=50, batch_size=32, model_dir=tempfile.mkdtemp()):
     x_train = scaler.fit_transform(x_train)
     x_eval = scaler.transform(x_eval)
 
-    data = {
-        "train": {
-            "x": x_train, "y": y_train
-        },
-        "eval": {
-            "x": x_eval, "y": y_eval
-        }
-    }
+    data = {"train": {"x": x_train, "y": y_train}, "eval": {"x": x_eval, "y": y_eval}}
     pipeline = fe.Pipeline(batch_size=batch_size, data=data)
 
     # step 2. prepare model
@@ -63,14 +56,8 @@ def get_estimator(epochs=50, batch_size=32, model_dir=tempfile.mkdtemp()):
         ops=[ModelOp(inputs="x", model=model, outputs="y_pred"), MeanSquaredError(y_true="y", y_pred="y_pred")])
 
     # step 3.prepare estimator
-    traces = [
-        ModelSaver(model_name="dnn", save_dir=model_dir, save_best=True)
-    ]
-    estimator = fe.Estimator(network=network,
-                             pipeline=pipeline,
-                             epochs=epochs,
-                             log_steps=10,
-                             traces=traces)
+    traces = [ModelSaver(model_name="dnn", save_dir=model_dir, save_best=True)]
+    estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, log_steps=10, traces=traces)
     return estimator
 
 

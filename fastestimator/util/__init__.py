@@ -12,10 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.util import color_util
-from fastestimator.util import loader
-from fastestimator.util import op
-from fastestimator.util import saliencies
-from fastestimator.util import tfrecord
 from fastestimator.util import util
-from fastestimator.util import vis_util
+from fastestimator.util.record_writer import RecordWriter
