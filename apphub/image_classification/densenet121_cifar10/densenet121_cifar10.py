@@ -19,10 +19,8 @@ from tensorflow.keras.applications.densenet import DenseNet121
 from tensorflow.keras.layers import Dense, Input
 
 import fastestimator as fe
-from trace.trace import Accuracy, LRController, ModelSaver
-from op.tensorOp.loss import SparseCategoricalCrossentropy
-from op.tensorOp.model.model import FEModel, ModelOp
-from op.tensorOp.processing import Minmax
+from fastestimator.trace import Accuracy, LRController, ModelSaver
+from fastestimator.op.tensorop import SparseCategoricalCrossentropy, ModelOp, Minmax
 
 
 def DenseNet121_cifar10():
@@ -39,7 +37,7 @@ def get_estimator(epochs=50, batch_size=64, model_dir=tempfile.mkdtemp()):
     data = {"train": {"x": x_train, "y": y_train}, "eval": {"x": x_eval, "y": y_eval}}
     pipeline = fe.Pipeline(batch_size=batch_size, data=data, ops=Minmax(inputs="x", outputs="x"))
     # step 2. prepare model
-    model = FEModel(model_def=DenseNet121_cifar10, model_name="densenet121", optimizer=tf.optimizers.Adam(lr=0.1))
+    model = fe.FEModel(model_def=DenseNet121_cifar10, model_name="densenet121", optimizer=tf.optimizers.Adam(lr=0.1))
 
     network = fe.Network(ops=[
         ModelOp(inputs="x", model=model, outputs="y_pred"), SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred")

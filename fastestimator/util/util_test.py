@@ -15,10 +15,8 @@
 import copy
 from unittest import TestCase
 
-from tensorflow.python.client import device_lib
-
-from .util import (get_num_devices, parse_cli_to_dictionary, parse_string_to_python, prettify_metric_name,
-                   remove_blacklist_keys, strip_suffix)
+from fastestimator.cli.cli_util import parse_cli_to_dictionary
+from .util import (get_num_devices, parse_string_to_python, prettify_metric_name, remove_blacklist_keys, strip_suffix)
 
 
 class TestUtil(TestCase):
@@ -62,8 +60,13 @@ class TestUtil(TestCase):
             "val_image_labels_loss": [[281, 0.7330105359355609], [562, 4.280138591821823]]
         }
         blacklist = [
-            "val_loss", "since_best", "example/sec", "min_val_loss", "val_mask_raw_loss",
-            "val_mask_raw_conditionalDice", "val_image_labels_my_binary_accuracy"
+            "val_loss",
+            "since_best",
+            "example/sec",
+            "min_val_loss",
+            "val_mask_raw_loss",
+            "val_mask_raw_conditionalDice",
+            "val_image_labels_my_binary_accuracy"
         ]
         actual = copy.deepcopy(self.mock_good_parsed_result)
         remove_blacklist_keys(actual, blacklist)
@@ -106,8 +109,14 @@ class TestUtil(TestCase):
             "val_image_labels_loss": [[281, 0.7330105359355609], [562, 4.280138591821823]]
         }
         blacklist = [
-            "val_loss", "since_best", "example/sec", "min_val_loss", "val_mask_raw_loss",
-            "val_mask_raw_conditionalDice", "val_image_labels_my_binary_accuracy", "FAKE_KEY"
+            "val_loss",
+            "since_best",
+            "example/sec",
+            "min_val_loss",
+            "val_mask_raw_loss",
+            "val_mask_raw_conditionalDice",
+            "val_image_labels_my_binary_accuracy",
+            "FAKE_KEY"
         ]
         actual = copy.deepcopy(self.mock_good_parsed_result)
         remove_blacklist_keys(actual, blacklist)

@@ -16,14 +16,11 @@ import tempfile
 
 import tensorflow as tf
 
-from fastestimator import Estimator, Network, Pipeline
+from fastestimator import Estimator, Network, Pipeline, FEModel
 from fastestimator.architecture import LeNet
-from trace.trace import Accuracy, ConfusionMatrix, ModelSaver
-from op.tensorOp.loss import SparseCategoricalCrossentropy
-from op.tensorOp.model.model import FEModel, ModelOp
-from op.tensorOp.augmentation import AdversarialSample, Average
-from op.tensorOp.processing import Minmax
-from schedule.schedule import Scheduler
+from fastestimator.op.tensorop import SparseCategoricalCrossentropy, ModelOp, AdversarialSample, Average, Minmax
+from fastestimator.schedule import Scheduler
+from fastestimator.trace import Accuracy, ConfusionMatrix, ModelSaver
 
 
 def get_estimator(epochs=10, batch_size=32, epsilon=0.01, warmup=0, model_dir=tempfile.mkdtemp()):

@@ -18,13 +18,13 @@ import tempfile
 import tensorflow as tf
 
 import fastestimator as fe
+from fastestimator import FEModel
 from fastestimator.architecture.cyclegan import build_discriminator, build_generator
 from fastestimator.dataset.horse2zebra import load_data
-from trace.trace import ModelSaver
-from op.tensorOp.loss import Loss
-from op.tensorOp.model.model import FEModel, ModelOp
-from op.numpyOp.preprocess import ImageReader
-from op.op import TensorOp
+from fastestimator.op import TensorOp
+from fastestimator.op.numpyop import ImageReader
+from fastestimator.op.tensorop import Loss, ModelOp
+from fastestimator.trace import ModelSaver
 
 
 class Myrescale(TensorOp):

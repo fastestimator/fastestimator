@@ -14,32 +14,28 @@
 # ==============================================================================
 import tensorflow as tf
 
-from fastestimator.op.tensorOp.loss import Loss
+from fastestimator.op.tensorop.loss import Loss
 
 
-class BinaryCrossentropy(Loss):
+class MeanSquaredError(Loss):
     def __init__(self, y_true=None, y_pred=None, inputs=None, outputs="loss", mode=None, **kwargs):
-        """Calculate binary cross entropy, the rest of the keyword argument will be passed to
-                  tf.losses.BinaryCrossentropy
+        """Calculate mean squared error loss, the rest of the keyword argument will be passed to
+           tf.losses.MeanSquaredError
 
-       Args:
-           y_true: ground truth label key
-           y_pred: prediction label key
-           inputs: A tuple or list like: [<y_true>, <y_pred>]
-           outputs: Where to store the computed loss value (not required under normal use cases)
-           mode: 'train', 'eval', 'test', or None
-           kwargs: Arguments to be passed along to the tf.losses constructor
-       """
+           Args:
+            y_true: ground truth label key
+            y_pred: prediction label key
+            inputs: A tuple or list like: [<y_true>, <y_pred>]
+            outputs: Where to store the computed loss value (not required under normal use cases)
+            mode: 'train', 'eval', 'test', or None
+            kwargs: Arguments to be passed along to the tf.losses constructor
+           """
         if 'reduction' in kwargs:
             raise KeyError("parameter 'reduction' not allowed")
         inputs = self.validate_loss_inputs(inputs, y_true, y_pred)
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        self.loss_obj = tf.losses.BinaryCrossentropy(reduction='none', **kwargs)
+        self.loss_obj = tf.losses.MeanSquaredError(reduction='none', **kwargs)
 
     def forward(self, data, state):
         true, pred = data
-        loss = self.loss_obj(true, pred)
-        loss_dim = len(loss.shape)
-        if loss_dim > 1:
-            loss = tf.reduce_mean(loss, axis=list(range(1, loss_dim)))
-        return loss
+        return self.loss_obj(true, pred)

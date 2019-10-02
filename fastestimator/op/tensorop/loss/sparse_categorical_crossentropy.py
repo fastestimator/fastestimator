@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from fastestimator.op.tensorOp.loss import Loss
+from fastestimator.op.tensorop.loss import Loss
 
 
 class SparseCategoricalCrossentropy(Loss):

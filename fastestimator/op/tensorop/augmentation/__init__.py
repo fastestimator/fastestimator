@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.numpyOp.image_reader import ImageReader
-from fastestimator.op.numpyOp.minmax import Minmax
-from fastestimator.op.numpyOp.mat_reader import MatReader
-from fastestimator.op.numpyOp.reshape import Reshape
-from fastestimator.op.numpyOp.resize import Resize
-from fastestimator.op.numpyOp.scale import Scale
-from fastestimator.op.numpyOp.z_score import Zscore
+from fastestimator.op.tensorop.augmentation.adversarial_sample import AdversarialSample
+from fastestimator.op.tensorop.augmentation.augmentation_2d import Augmentation2D
+from fastestimator.op.tensorop.augmentation.mixup_batch import MixUpBatch

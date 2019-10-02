@@ -17,7 +17,7 @@ from collections import ChainMap
 import tensorflow as tf
 from tensorflow.python.framework import ops as tfops
 
-from fastestimator.op.tensorOp import ModelOp
+from fastestimator.op.tensorop import ModelOp
 from fastestimator.op import get_inputs_by_op, get_op_from_mode, verify_ops, write_outputs_by_key
 from fastestimator.schedule import Scheduler
 from fastestimator.util.util import NonContext, flatten_list

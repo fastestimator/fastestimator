@@ -15,7 +15,7 @@
 import tensorflow as tf
 from tensorflow.python.keras.losses import Loss as tfLoss
 
-from fastestimator.op.tensorOp.loss import Loss
+from fastestimator.op.tensorop.loss import Loss
 
 
 class MixUpLoss(Loss):

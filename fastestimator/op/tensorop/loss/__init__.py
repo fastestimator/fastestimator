@@ -12,4 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.tensorOp.model.model import ModelOp
+from fastestimator.op.tensorop.loss.loss import Loss
+from fastestimator.op.tensorop.loss.binary_crossentropy import BinaryCrossentropy
+from fastestimator.op.tensorop.loss.mean_squared_error import MeanSquaredError
+from fastestimator.op.tensorop.loss.mixup_loss import MixUpLoss
+from fastestimator.op.tensorop.loss.sparse_categorical_crossentropy import SparseCategoricalCrossentropy

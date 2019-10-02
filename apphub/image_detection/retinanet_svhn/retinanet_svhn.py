@@ -20,16 +20,12 @@ import tensorflow as tf
 
 from fastestimator.architecture.retinanet import RetinaNet, get_fpn_anchor_box, get_target
 from fastestimator.dataset import svhn
-from estimator import Estimator
-from trace.trace import ModelSaver
-from op.tensorOp.loss import Loss
-from op.tensorOp.model.model import FEModel, ModelOp
-from network import Network
-from pipeline import Pipeline
-from op.tensorOp.processing import Minmax
-from op.numpyOp.preprocess import ImageReader, Resize
-from record import RecordWriter
-from op.op import NumpyOp, TensorOp
+from fastestimator import Estimator, Network, Pipeline, FEModel
+from fastestimator.trace import ModelSaver
+from fastestimator.op import NumpyOp, TensorOp
+from fastestimator.op.tensorop import ModelOp, Minmax, Loss
+from fastestimator.op.numpyop import ImageReader, Resize
+from fastestimator.util import RecordWriter
 
 
 class String2List(NumpyOp):
