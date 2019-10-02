@@ -99,13 +99,13 @@ def plot_saliency(model, model_input, baseline_input=None, decode_dictionary=Non
     if num_rows == 1:
         axs = [axs]  # axs object not wrapped if there's only one row
     for i in range(num_rows):
-        show_text(axs[i][0], np.ones_like(model_input[i]), decoded[i], title="Predictions" if i == 0 else None)
-        show_image(axs[i][1], model_input[i], title="Raw" if i == 0 else None)
-        show_image(axs[i][2], filtered_inputs[i], title="Filtered" if i == 0 else None)
-        show_gray_image(axs[i][3], vanilla_ims[i], color_map=color_map, title="Vanilla" if i == 0 else None)
-        show_gray_image(axs[i][4], smooth_ims[i], color_map=color_map, title="Smoothed" if i == 0 else None)
-        show_gray_image(axs[i][5],
-                        smooth_integrated_ims[i],
+        show_text(np.ones_like(model_input[i]), decoded[i], axis=axs[i][0], title="Predictions" if i == 0 else None)
+        show_image(model_input[i], axis=axs[i][1], title="Raw" if i == 0 else None)
+        show_image(filtered_inputs[i], axis=axs[i][2], title="Filtered" if i == 0 else None)
+        show_gray_image(vanilla_ims[i], axis=axs[i][3], color_map=color_map, title="Vanilla" if i == 0 else None)
+        show_gray_image(smooth_ims[i], axis=axs[i][4], color_map=color_map, title="Smoothed" if i == 0 else None)
+        show_gray_image(smooth_integrated_ims[i],
+                        axis=axs[i][5],
                         color_map=color_map,
                         title="Integrated Smoothed" if i == 0 else None)
     plt.subplots_adjust(top=0.95, bottom=0.01, left=0.01, right=0.99, hspace=0.03, wspace=0.03)

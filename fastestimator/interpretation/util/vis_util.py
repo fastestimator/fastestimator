@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def show_text(axis, background, text, title=None):
+def show_text(background, text, axis=None, title=None):
     """
     Plots a given image onto an axis
 
@@ -26,6 +26,8 @@ def show_text(axis, background, text, title=None):
         text: The text to display
         title: A title for the image
     """
+    if axis is None:
+        fig, axis = plt.subplots(1, 1)
     # matplotlib doesn't support (x,y,1) images, so convert them to (x,y)
     if len(background.shape) == 3 and background.shape[2] == 1:
         background = np.reshape(background, (background.shape[0], background.shape[1]))
@@ -37,12 +39,12 @@ def show_text(axis, background, text, title=None):
         axis.set_title(title)
 
 
-def show_image(axis, im, title=None):
+def show_image(im, axis=None, title=None):
     """
     Plots a given image onto an axis
 
     Args:
-        axis: The matplotlib axis to plot on
+        axis: The matplotlib axis to plot on, or None for a new plot
         im: The image to display (width X height)
         title: A title for the image
     """
@@ -64,16 +66,18 @@ def show_image(axis, im, title=None):
         axis.set_title(title)
 
 
-def show_gray_image(axis, im, title=None, color_map="inferno"):
+def show_gray_image(im, axis=None, title=None, color_map="inferno"):
     """
     Plots a given image onto an axis
 
     Args:
-        axis: The matplotlib axis to plot on
+        axis: The matplotlib axis to plot on, or None for a new plot
         im: The image to display (width X height)
         title: A title for the image
         color_map: The color set to be used (since the image is gray scale)
     """
+    if axis is None:
+        fig, axis = plt.subplots(1, 1)
     axis.axis('off')
     axis.imshow(im, cmap=plt.get_cmap(name=color_map), vmin=0, vmax=1)
     if title is not None:
