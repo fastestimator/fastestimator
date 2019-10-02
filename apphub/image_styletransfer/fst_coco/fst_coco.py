@@ -20,12 +20,12 @@ import numpy as np
 import tensorflow as tf
 
 import fastestimator as fe
+from fastestimator import FEModel
 from fastestimator.architecture.stnet import lossNet, styleTransferNet
 from fastestimator.dataset.mscoco import load_data
-from trace.trace import ModelSaver
-from op.tensorop.loss import Loss
-from op.tensorop.model.model import FEModel, ModelOp
-from op.numpyop.preprocess import ImageReader, Resize
+from fastestimator.op.numpyop import ImageReader, Resize
+from fastestimator.op.tensorop import Loss, ModelOp
+from fastestimator.trace import ModelSaver
 from op.op import TensorOp
 
 
@@ -101,8 +101,8 @@ def get_estimator(style_img_path=None,
     if style_img_path is None:
         style_img_path = tf.keras.utils.get_file(
             'kandinsky.jpg',
-            'https://storage.googleapis.com/download.tensorflow.org/example_images/Vassily_Kandinsky%2C_1913_-_Composition_7.jpg'
-        )
+            'https://storage.googleapis.com/download.tensorflow.org/example_images/Vassily_Kandinsky%2C_1913_'
+            '-_Composition_7.jpg')
     style_img = cv2.imread(style_img_path)
     assert (style_img is not None), "Invalid style reference image"
     tfr_save_dir = os.path.join(path, 'FEdata')
