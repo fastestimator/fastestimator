@@ -18,13 +18,12 @@ import tempfile
 import tensorflow as tf
 
 import fastestimator as fe
+from fastestimator import FEModel
 from fastestimator.architecture.unet import UNet
 from fastestimator.dataset import cub200
-from trace.trace import Dice, ModelSaver
-from op.tensorop.loss import BinaryCrossentropy
-from op.tensorop.model.model import FEModel, ModelOp
-from op.tensorop.processing import Minmax
-from op.numpyop.preprocess import ImageReader, MatReader, Reshape, Resize
+from fastestimator.op.numpyop import ImageReader, MatReader, Reshape, Resize
+from fastestimator.op.tensorop import BinaryCrossentropy, ModelOp, Minmax
+from fastestimator.trace import Dice, ModelSaver
 from op.op import NumpyOp
 
 
@@ -49,17 +48,17 @@ def get_estimator(batch_size=32, epochs=25, model_dir=tempfile.mkdtemp()):
             Resize((128, 128), keep_ratio=True),
             Reshape(shape=(128, 128, 1), outputs="annotation")
         ])
-    #data pipeline
+    # data pipeline
     pipeline = fe.Pipeline(batch_size=batch_size, data=writer, ops=Minmax(inputs='image', outputs='image'))
 
-    #Netowrk
+    # Network
     model = FEModel(model_def=UNet, model_name="unet_cub", optimizer=tf.optimizers.Adam())
     network = fe.Network(ops=[
         ModelOp(inputs='image', model=model, outputs='mask_pred'),
         BinaryCrossentropy(y_true='annotation', y_pred='mask_pred')
     ])
 
-    #estimator
+    # estimator
     traces = [
         Dice(true_key="annotation", pred_key='mask_pred'),
         ModelSaver(model_name="unet_cub", save_dir=model_dir, save_best=True)

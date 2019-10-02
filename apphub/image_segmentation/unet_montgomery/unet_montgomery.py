@@ -20,15 +20,13 @@ import tempfile
 import tensorflow as tf
 
 import fastestimator as fe
+from fastestimator import FEModel
 from fastestimator.architecture import UNet
 from fastestimator.dataset import montgomery
-from trace.trace import Dice, ModelSaver
-from op.tensorop.loss import BinaryCrossentropy
-from op.tensorop.model.model import FEModel, ModelOp
-from op.tensorop.augmentation import Augmentation2D
-from op.tensorop.processing import Minmax
-from op.numpyop.preprocess import ImageReader, Reshape, Resize
-from op.op import NumpyOp
+from fastestimator.op import NumpyOp
+from fastestimator.op.numpyop import ImageReader, Reshape, Resize
+from fastestimator.op.tensorop import BinaryCrossentropy, Minmax, ModelOp, Augmentation2D
+from fastestimator.trace import Dice, ModelSaver
 
 
 class CombineLeftRightMask(NumpyOp):
