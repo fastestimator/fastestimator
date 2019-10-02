@@ -37,8 +37,8 @@ def load_data(path=None):
 
     Returns:
         (tuple): tuple containing:
-            (str): Path to the summary csv file.
-            (str): Path to data root directory.
+            csv_path (str): Path to the summary csv file.
+            path (str): Path to data root directory.
 
     """
     home = str(Path.home())
@@ -61,7 +61,7 @@ def load_data(path=None):
 
     # extract
     if not (os.path.exists(image_extracted_path) and os.path.exists(annotation_extracted_path)):
-        print('\nExtracting files ...')
+        print("\nExtracting files ...")
         with tarfile.open(image_compressed_path) as img_tar:
             img_tar.extractall(path)
         with tarfile.open(annotation_compressed_path) as anno_tar:
@@ -75,6 +75,6 @@ def load_data(path=None):
         df['image'] = df['image'].apply(os.path.normpath)
         df['annotation'] = df['image'].str.replace('images', 'annotations-mat').str.replace('jpg', 'mat')
         df.to_csv(csv_path, index=False)
-        print('Data summary is saved at {}'.format(csv_path))
+        print("Data summary is saved at {}".format(csv_path))
 
     return csv_path, path

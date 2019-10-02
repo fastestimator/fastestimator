@@ -12,24 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+"""Download MNIST Dataset."""
 import multiprocessing as mp
 import os
-import tempfile
+from pathlib import Path
 
 import pandas as pd
 import tensorflow as tf
 from PIL import Image
 
 
-def write_images_serial(start_idx, end_idx, data, image_path, mode):
-    for i in range(start_idx, end_idx):
-        img = Image.fromarray(data[i])
-        img.save(os.path.join(image_path, "{}_{}.png".format(mode, i)))
+def _write_images_serial(start_idx, end_idx, data, image_path, mode):
+    for idx in range(start_idx, end_idx):
+        img = Image.fromarray(data[idx])
+        img.save(os.path.join(image_path, '{}_{}.png'.format(mode, idx)))
 
 
-def write_images_parallel(x, image_path, mode):
+def _write_images_parallel(img, image_path, mode):
     num_cpu = mp.cpu_count()
-    num_example = x.shape[0]
+    num_example = img.shape[0]
     example_per_cpu = num_example // num_cpu
     processes = []
     for rank in range(num_cpu):
@@ -38,39 +39,63 @@ def write_images_parallel(x, image_path, mode):
             end_idx = num_example
         else:
             end_idx = start_idx + example_per_cpu
-        processes.append(mp.Process(target=write_images_serial, args=(start_idx, end_idx, x, image_path, mode)))
-    for p in processes:
-        p.start()
-        p.join()
+        processes.append(mp.Process(target=_write_images_serial, args=(start_idx, end_idx, img, image_path, mode)))
+    for process in processes:
+        process.start()
+        process.join()
 
 
-def write_csv(y, csv_path, mode):
+def _create_csv(label, csv_path, mode):
     x_names = []
     y_names = []
-    num_example = len(y)
+    num_example = len(label)
     for idx in range(num_example):
-        x_names.append(os.path.join("image", "{}_{}.png".format(mode, idx)))
-        y_names.append(y[idx])
+        x_names.append(os.path.join('image', '{}_{}.png'.format(mode, idx)))
+        y_names.append(label[idx])
     df = pd.DataFrame(data={'x': x_names, 'y': y_names})
     df.to_csv(csv_path, index=False)
+    print("Data summary is saved at {}".format(csv_path))
 
 
 def load_data(path=None):
+    """Downloads the MNIST dataset to local storage, if not already downloaded. This will generate 2 csv files
+    (train, eval), which contain all the path information.
+
+    Args:
+        path (str, optional): The path to store the Mendeley data. When `path` is not provided, will save at
+            `fastestimator_data` under user's home directory.
+
+    Returns:
+        (tuple): tuple containing:
+            train_csv (str): Path to train csv file.
+            eval_csv (str): Path to test csv file.
+            path (str): Path to data root directory.
+
+    """
+    home = str(Path.home())
+
     if path is None:
-        path = os.path.join(tempfile.gettempdir(), ".fe", "Mnist")
-    if not os.path.exists(path):
-        os.makedirs(path)
-    image_path = os.path.join(path, "image")
-    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-    train_csv_path = os.path.join(path, "train.csv")
-    eval_csv_path = os.path.join(path, "eval.csv")
+        path = os.path.join(home, 'fastestimator_data', 'MNIST')
+    os.makedirs(path, exist_ok=True)
+
+    image_path = os.path.join(path, 'image')
+    train_csv = os.path.join(path, 'train.csv')
+    eval_csv = os.path.join(path, 'eval.csv')
+
+    # download data to memory
+    (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.mnist.load_data()
+
+    # write to disk
     if not os.path.exists(image_path):
-        print("writing image data to {}".format(image_path))
+        print("Writing image data to {}".format(image_path))
         os.makedirs(image_path)
-        write_images_parallel(x_train, image_path, "train")
-        write_images_parallel(x_test, image_path, "eval")
-    if not os.path.exists(train_csv_path):
-        write_csv(y_train, train_csv_path, "train")
-    if not os.path.exists(eval_csv_path):
-        write_csv(y_test, eval_csv_path, "eval")
-    return train_csv_path, eval_csv_path, path
+        _write_images_parallel(x_train, image_path, 'train')
+        _write_images_parallel(x_eval, image_path, 'eval')
+
+    # generate csv
+    if not os.path.exists(train_csv):
+        _create_csv(y_train, train_csv, 'train')
+    if not os.path.exists(eval_csv):
+        _create_csv(y_eval, eval_csv, 'eval')
+
+    return train_csv, eval_csv, path
