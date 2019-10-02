@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""U-Net architecture.
-"""
+"""U-Net architecture."""
 
 from tensorflow.python.keras.layers import Conv2D, Dropout, Input, MaxPooling2D, UpSampling2D, concatenate, BatchNormalization, Activation
 from tensorflow.python.keras.models import Model
