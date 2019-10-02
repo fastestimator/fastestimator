@@ -25,6 +25,7 @@ from fastestimator.op import TensorOp
 from fastestimator.op.numpyop import ImageReader
 from fastestimator.op.tensorop import Loss, ModelOp
 from fastestimator.trace import ModelSaver
+from fastestimator.util import RecordWriter
 
 
 class Myrescale(TensorOp):
@@ -89,7 +90,7 @@ def get_estimator(weight=10.0, epochs=200, model_dir=tempfile.mkdtemp()):
     trainA_csv, trainB_csv, _, _, parent_path = load_data()
     tfr_save_dir = os.path.join(parent_path, 'FEdata')
     # Step 1: Define Pipeline
-    writer = fe.RecordWriter(
+    writer = RecordWriter(
         train_data=(trainA_csv, trainB_csv),
         save_dir=tfr_save_dir,
         ops=([ImageReader(inputs="imgA", outputs="imgA", parent_path=parent_path)],

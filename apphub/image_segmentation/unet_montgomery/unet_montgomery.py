@@ -27,6 +27,7 @@ from fastestimator.op import NumpyOp
 from fastestimator.op.numpyop import ImageReader, Reshape, Resize
 from fastestimator.op.tensorop import BinaryCrossentropy, Minmax, ModelOp, Augmentation2D
 from fastestimator.trace import Dice, ModelSaver
+from fastestimator.util import RecordWriter
 
 
 class CombineLeftRightMask(NumpyOp):
@@ -38,7 +39,7 @@ class CombineLeftRightMask(NumpyOp):
 
 def get_estimator(batch_size=4, epochs=25, model_dir=tempfile.mkdtemp()):
     csv_path, path = montgomery.load_data()
-    writer = fe.RecordWriter(
+    writer = RecordWriter(
         save_dir=os.path.join(path, "FEdata"),
         train_data=csv_path,
         validation_data=0.2,
