@@ -14,64 +14,76 @@
 # ==============================================================================
 """U-Net architecture.
 """
+
 from tensorflow.python.keras.layers import Conv2D, Dropout, Input, MaxPooling2D, UpSampling2D, concatenate
 from tensorflow.python.keras.models import Model
 
+def conv_block(input, nchannels, window, config, pooling=None, dropout=None):
+    
+    conv1 = Conv2D(nchannels, window, **config)(input)
+    conv2 = Conv2D(nchannels, window, **config)(conv1)
 
-def UNet(input_size=(128, 128, 3)):
+    if dropout is not None:
+        conv2 = Dropout(dropout)(conv2)
+
+    if pooling is not None:
+        pooled = MaxPooling2D(pool_size=(pooling, pooling))(conv2)
+    else:
+        pooled = None
+
+    return conv2, pooled
+
+def upsample(input, factor, nchannels, config):
+    resized = UpSampling2D(size=(factor, factor))(input)
+    up = Conv2D(nchannels, factor, **config)(resized) 
+    
+    return up
+
+def up_concat(conv_pooled, conv, factor, nchannels, window, config, dropout=None):
+    
+    assert len(nchannels) == 2
+
+    F, _ = conv_block(conv_pooled, nchannels[0], window, config, dropout=dropout)
+    upsampled = upsample(F, factor, nchannels[1], config)
+    feat = concatenate([conv, upsampled], axis=3)
+
+    return feat
+
+def UNet(input_size=(128, 128, 3), dropout=0.5, nblocks=5, nclasses=1):
     """Creates a U-Net model.
-    This U-Net model is composed of 5 "contracting blocks" and 5 "expansive blocks".
+    This U-Net model is composed of nblocks "contracting blocks" and nblocks "expansive blocks".
 
     Args:
         input_size (tuple, optional): Shape of input image. Defaults to (128, 128, 3).
+        dropout: If None, applies no dropout; Otherwise, applies dropout of probability equal 
+                 to the parameter value (0-1 only)
 
     Returns:
         'Model' object: U-Net model.
     """
     
+    assert dropout is None or 0 <= dropout <= 1, \
+            "Invalid value for dropout parameter (None or 0 to 1 only)"  
+
     conv_config = {'activation': 'relu', 'padding': 'same', 'kernel_initializer': 'he_normal'}
+
     inputs = Input(input_size)
-    conv1 = Conv2D(64, 3, **conv_config)(inputs)
-    conv1 = Conv2D(64, 3, **conv_config)(conv1)
-    pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
+    
+    C1, C1_pooled = conv_block(inputs, 64, 3, conv_config, pooling=2)
+    C2, C2_pooled = conv_block(C1_pooled, 128, 3, conv_config, pooling=2)
+    C3, C3_pooled = conv_block(C2_pooled, 256, 3, conv_config, pooling=2)
+    C4, C4_pooled = conv_block(C3_pooled, 512, 3, conv_config, pooling=2, dropout=dropout)
+    
+    D4 = up_concat(C4_pooled, C4, 2, (1024, 512), 3, conv_config, dropout)
+    D3 = up_concat(D4, C3, 2, (512, 256), 3, conv_config)
+    D2 = up_concat(D3, C2, 2, (256, 128), 3, conv_config)
+    D1 = up_concat(D2, C1, 2, (128, 64), 3, conv_config)
+    
+    C_end1, _ = conv_block(D1, 64, 3, conv_config)
+    C_end2 = Conv2D(2, 3, **conv_config)(C_end1)
 
-    conv2 = Conv2D(128, 3, **conv_config)(pool1)
-    conv2 = Conv2D(128, 3, **conv_config)(conv2)
-    pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
+    y_dist = Conv2D(nclasses, 1, activation='sigmoid')(C_end2)
 
-    conv3 = Conv2D(256, 3, **conv_config)(pool2)
-    conv3 = Conv2D(256, 3, **conv_config)(conv3)
-    pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
+    model = Model(inputs=inputs, outputs=y_dist)
 
-    conv4 = Conv2D(512, 3, **conv_config)(pool3)
-    conv4 = Conv2D(512, 3, **conv_config)(conv4)
-    drop4 = Dropout(0.5)(conv4)
-    pool4 = MaxPooling2D(pool_size=(2, 2))(drop4)
-
-    conv5 = Conv2D(1024, 3, **conv_config)(pool4)
-    conv5 = Conv2D(1024, 3, **conv_config)(conv5)
-    drop5 = Dropout(0.5)(conv5)
-
-    up6 = Conv2D(512, 2, **conv_config)(UpSampling2D(size=(2, 2))(drop5))
-    merge6 = concatenate([drop4, up6], axis=3)
-    conv6 = Conv2D(512, 3, **conv_config)(merge6)
-    conv6 = Conv2D(512, 3, **conv_config)(conv6)
-
-    up7 = Conv2D(256, 2, **conv_config)(UpSampling2D(size=(2, 2))(conv6))
-    merge7 = concatenate([conv3, up7], axis=3)
-    conv7 = Conv2D(256, 3, **conv_config)(merge7)
-    conv7 = Conv2D(256, 3, **conv_config)(conv7)
-
-    up8 = Conv2D(128, 2, **conv_config)(UpSampling2D(size=(2, 2))(conv7))
-    merge8 = concatenate([conv2, up8], axis=3)
-    conv8 = Conv2D(128, 3, **conv_config)(merge8)
-    conv8 = Conv2D(128, 3, **conv_config)(conv8)
-
-    up9 = Conv2D(64, 2, **conv_config)(UpSampling2D(size=(2, 2))(conv8))
-    merge9 = concatenate([conv1, up9], axis=3)
-    conv9 = Conv2D(64, 3, **conv_config)(merge9)
-    conv9 = Conv2D(64, 3, **conv_config)(conv9)
-    conv9 = Conv2D(2, 3, **conv_config)(conv9)
-    conv10 = Conv2D(1, 1, activation='sigmoid')(conv9)
-    model = Model(inputs=inputs, outputs=conv10)
     return model
