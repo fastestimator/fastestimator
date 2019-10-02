@@ -22,13 +22,13 @@ import tensorflow as tf
 import fastestimator as fe
 from fastestimator.architecture import UNet
 from fastestimator.dataset import montgomery
-from fastestimator.estimator.trace import Dice, ModelSaver
-from fastestimator.network.loss import BinaryCrossentropy
-from fastestimator.network.model import FEModel, ModelOp
-from fastestimator.pipeline.augmentation import Augmentation2D
-from fastestimator.pipeline.processing import Minmax
-from fastestimator.record.preprocess import ImageReader, Reshape, Resize
-from fastestimator.util.op import NumpyOp
+from trace.trace import Dice, ModelSaver
+from operation.tensorOp.loss import BinaryCrossentropy
+from operation.tensorOp.model.model import FEModel, ModelOp
+from operation.tensorOp.augmentation import Augmentation2D
+from operation.tensorOp.processing import Minmax
+from operation.numpyOp.preprocess import ImageReader, Reshape, Resize
+from operation.op import NumpyOp
 
 
 class CombineLeftRightMask(NumpyOp):

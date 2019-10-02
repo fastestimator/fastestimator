@@ -19,10 +19,10 @@ import tensorflow as tf
 from tensorflow.python.keras import layers
 
 import fastestimator as fe
-from fastestimator.estimator.trace import Accuracy, ModelSaver
-from fastestimator.network.loss import BinaryCrossentropy
-from fastestimator.network.model import FEModel, ModelOp
-from fastestimator.pipeline.processing import Reshape
+from trace.trace import Accuracy, ModelSaver
+from operation.tensorOp.loss import BinaryCrossentropy
+from operation.tensorOp.model.model import FEModel, ModelOp
+from operation.tensorOp.processing import Reshape
 
 MAX_WORDS = 10000
 MAX_LEN = 500

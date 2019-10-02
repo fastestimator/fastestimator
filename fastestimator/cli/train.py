@@ -17,7 +17,7 @@ import json
 import os
 import sys
 
-from fastestimator.util.util import parse_cli_to_dictionary
+from fastestimator.cli.cli_util import parse_cli_to_dictionary
 
 
 def train(args, unknown):

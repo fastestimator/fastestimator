@@ -15,12 +15,8 @@
 import argparse
 import sys
 
-from fastestimator.util.cli_util import SaveAction
-from fastestimator.util.util import parse_cli_to_dictionary
-from fastestimator.visualization.caricatures import load_and_caricature
-from fastestimator.visualization.umaps import umap_layers
-from fastestimator.visualization.logs import parse_log_dir
-from fastestimator.visualization.saliencies import load_and_saliency
+from fastestimator.cli.cli_util import load_and_caricature, load_and_saliency, load_and_umap, parse_log_dir, \
+    SaveAction, parse_cli_to_dictionary
 
 
 def logs(args, unknown):
@@ -166,20 +162,20 @@ def configure_saliency_parser(subparsers):
 
 def umap(args, unknown):
     hyperparameters = parse_cli_to_dictionary(unknown)
-    umap_layers(args['model'],
-                args['input_dir'],
-                print_layers=args['print_layers'],
-                strip_alpha=args['strip_alpha'],
-                layers=args['layers'],
-                batch=args['batch'],
-                use_cache=args['cache'],
-                cache_dir=args['cache_dir'],
-                dictionary_path=args['dictionary'],
-                legend_mode=args['legend'],
-                save=args['save'],
-                save_dir=args['save_dir'],
-                umap_parameters=hyperparameters,
-                input_extension=args['extension'])
+    load_and_umap(args['model'],
+                  args['input_dir'],
+                  print_layers=args['print_layers'],
+                  strip_alpha=args['strip_alpha'],
+                  layers=args['layers'],
+                  batch=args['batch'],
+                  use_cache=args['cache'],
+                  cache_dir=args['cache_dir'],
+                  dictionary_path=args['dictionary'],
+                  legend_mode=args['legend'],
+                  save=args['save'],
+                  save_dir=args['save_dir'],
+                  umap_parameters=hyperparameters,
+                  input_extension=args['extension'])
 
 
 def configure_umap_parser(subparsers):

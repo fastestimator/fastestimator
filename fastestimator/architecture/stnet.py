@@ -1,54 +1,6 @@
 import tensorflow as tf
 
-
-class ReflectionPadding2D(tf.keras.layers.Layer):
-    """Class for performing Reflection Padding on 2D arrays.
-    
-    Args:
-        padding (tuple, optional): padding size. Defaults to (1, 1).
-    """
-    def __init__(self, padding=(1, 1)):
-        self.padding = tuple(padding)
-        self.input_spec = [tf.keras.layers.InputSpec(ndim=4)]
-        super().__init__()
-
-    def get_config(self):
-        return {'padding': self.padding}
-
-    def compute_output_shape(self, s):
-        return (s[0], s[1] + 2 * self.padding[0], s[2] + 2 * self.padding[1], s[3])
-
-    def call(self, x, mask=None):
-        w_pad, h_pad = self.padding
-        return tf.pad(x, [[0, 0], [h_pad, h_pad], [w_pad, w_pad], [0, 0]], 'REFLECT')
-
-
-class InstanceNormalization(tf.keras.layers.Layer):
-    """Class for performing instance normalization. (See https://arxiv.org/abs/1607.08022).
-
-    Args:
-        epsilon (float, optional): value  of epsilon parameter that will be added to the variance. Defaults to 1e-5.
-    """
-    def __init__(self, epsilon=1e-5):
-        super().__init__()
-        self.epsilon = epsilon
-
-    def get_config(self):
-        return {'epsilon': self.epsilon}
-
-    def build(self, input_shape):
-        self.scale = self.add_weight(name='scale',
-                                     shape=input_shape[-1:],
-                                     initializer=tf.random_normal_initializer(0., 0.02),
-                                     trainable=True)
-
-        self.offset = self.add_weight(name='offset', shape=input_shape[-1:], initializer='zeros', trainable=True)
-
-    def call(self, x):
-        mean, variance = tf.nn.moments(x, axes=[1, 2], keepdims=True)
-        inv = tf.math.rsqrt(variance + self.epsilon)
-        normalized = (x - mean) * inv
-        return self.scale * normalized + self.offset
+from fastestimator.layers import InstanceNormalization, ReflectionPadding2D
 
 
 def _residual_block(x0, num_filter, kernel_size=(3, 3), strides=(1, 1)):
@@ -114,11 +66,11 @@ def _downsample(x0, num_filter, kernel_size=(3, 3), strides=(2, 2), padding="sam
 
 def styleTransferNet(input_shape=(256, 256, 3), num_resblock=5):
     """Creates the style Transfer Network.
-    
+
     Args:
         input_shape (tuple, optional): shape of input image. Defaults to (256, 256, 3).
         num_resblock (int, optional): number of resblocks for the network. Defaults to 5.
-    
+
     Returns:
         'Model' object: style Transfer Network.
     """
@@ -142,11 +94,13 @@ def lossNet(input_shape=(256, 256, 3),
             styleLayers=["block1_conv2", "block2_conv2", "block3_conv3", "block4_conv3"],
             contentLayers=["block3_conv3"]):
     """Creates the network to compute the style loss.
-    This network outputs a dictionary with outputs values for style and content, based on a list of layers from VGG16 for each.
-    
+    This network outputs a dictionary with outputs values for style and content, based on a list of layers from VGG16
+    for each.
+
     Args:
         input_shape (tuple, optional): shape of input image. Defaults to (256, 256, 3).
-        styleLayers (list, optional): list of style layers from VGG16. Defaults to ["block1_conv2", "block2_conv2", "block3_conv3", "block4_conv3"].
+        styleLayers (list, optional): list of style layers from VGG16. Defaults to ["block1_conv2", "block2_conv2",
+        "block3_conv3", "block4_conv3"].
         contentLayers (list, optional): list of content layers from VGG16. Defaults to ["block3_conv3"].
 
     Returns:
