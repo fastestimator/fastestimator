@@ -19,7 +19,7 @@ from tensorflow.python.keras.losses import SparseCategoricalCrossentropy as Kera
 
 import fastestimator as fe
 from fastestimator.architecture import LeNet
-from fastestimator.operation.tensorOp import MixUpLoss, SparseCategoricalCrossentropy, ModelOp, MixUpBatch, Minmax
+from fastestimator.op.tensorOp import MixUpLoss, SparseCategoricalCrossentropy, ModelOp, MixUpBatch, Minmax
 from fastestimator import FEModel
 from fastestimator.schedule import Scheduler
 from fastestimator.trace import Accuracy, ConfusionMatrix, ModelSaver

@@ -20,7 +20,7 @@ import tensorflow as tf
 import fastestimator as fe
 from fastestimator.trace import Accuracy, ModelSaver
 from fastestimator.architecture import LeNet
-from fastestimator.operation.tensorOp import Minmax, ModelOp, SparseCategoricalCrossentropy
+from fastestimator.op.tensorOp import Minmax, ModelOp, SparseCategoricalCrossentropy
 
 
 def get_estimator(epochs=2, batch_size=32, model_dir=tempfile.mkdtemp()):

@@ -22,14 +22,14 @@ from fastestimator.architecture.retinanet import RetinaNet, get_fpn_anchor_box, 
 from fastestimator.dataset import svhn
 from estimator import Estimator
 from trace.trace import ModelSaver
-from operation.tensorOp.loss import Loss
-from operation.tensorOp.model.model import FEModel, ModelOp
+from op.tensorOp.loss import Loss
+from op.tensorOp.model.model import FEModel, ModelOp
 from network import Network
 from pipeline import Pipeline
-from operation.tensorOp.processing import Minmax
-from operation.numpyOp.preprocess import ImageReader, Resize
+from op.tensorOp.processing import Minmax
+from op.numpyOp.preprocess import ImageReader, Resize
 from record import RecordWriter
-from operation.op import NumpyOp, TensorOp
+from op.op import NumpyOp, TensorOp
 
 
 class String2List(NumpyOp):

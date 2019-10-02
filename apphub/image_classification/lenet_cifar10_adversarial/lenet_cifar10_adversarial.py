@@ -19,10 +19,10 @@ import tensorflow as tf
 from fastestimator import Estimator, Network, Pipeline
 from fastestimator.architecture import LeNet
 from trace.trace import Accuracy, ConfusionMatrix, ModelSaver
-from operation.tensorOp.loss import SparseCategoricalCrossentropy
-from operation.tensorOp.model.model import FEModel, ModelOp
-from operation.tensorOp.augmentation import AdversarialSample, Average
-from operation.tensorOp.processing import Minmax
+from op.tensorOp.loss import SparseCategoricalCrossentropy
+from op.tensorOp.model.model import FEModel, ModelOp
+from op.tensorOp.augmentation import AdversarialSample, Average
+from op.tensorOp.processing import Minmax
 from schedule.schedule import Scheduler
 
 

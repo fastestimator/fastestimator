@@ -21,8 +21,8 @@ from tensorflow.keras import layers
 
 import fastestimator as fe
 from trace.trace import ModelSaver
-from operation.tensorOp.loss import MeanSquaredError
-from operation.tensorOp.model.model import FEModel, ModelOp
+from op.tensorOp.loss import MeanSquaredError
+from op.tensorOp.model.model import FEModel, ModelOp
 
 
 def create_dnn():

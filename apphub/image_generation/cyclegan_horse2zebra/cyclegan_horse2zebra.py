@@ -21,10 +21,10 @@ import fastestimator as fe
 from fastestimator.architecture.cyclegan import build_discriminator, build_generator
 from fastestimator.dataset.horse2zebra import load_data
 from trace.trace import ModelSaver
-from operation.tensorOp.loss import Loss
-from operation.tensorOp.model.model import FEModel, ModelOp
-from operation.numpyOp.preprocess import ImageReader
-from operation.op import TensorOp
+from op.tensorOp.loss import Loss
+from op.tensorOp.model.model import FEModel, ModelOp
+from op.numpyOp.preprocess import ImageReader
+from op.op import TensorOp
 
 
 class Myrescale(TensorOp):

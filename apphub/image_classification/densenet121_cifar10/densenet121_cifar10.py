@@ -20,9 +20,9 @@ from tensorflow.keras.layers import Dense, Input
 
 import fastestimator as fe
 from trace.trace import Accuracy, LRController, ModelSaver
-from operation.tensorOp.loss import SparseCategoricalCrossentropy
-from operation.tensorOp.model.model import FEModel, ModelOp
-from operation.tensorOp.processing import Minmax
+from op.tensorOp.loss import SparseCategoricalCrossentropy
+from op.tensorOp.model.model import FEModel, ModelOp
+from op.tensorOp.processing import Minmax
 
 
 def DenseNet121_cifar10():
