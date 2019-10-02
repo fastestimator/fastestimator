@@ -138,18 +138,6 @@ def UNet(input_size=(128, 128, 3), dropout=0.5, nchannels=[64, 128, 256, 512, 10
         if idx != len(nchannels)-2:
             inp1, inp2 = D, levels[-2-idx][0]
 
-    '''
-    C1, C1_pooled = conv_block(inputs, 64, 3, conv_config, pooling=2, bn=bn)
-    C2, C2_pooled = conv_block(C1_pooled, 128, 3, conv_config, pooling=2, bn=bn)
-    C3, C3_pooled = conv_block(C2_pooled, 256, 3, conv_config, pooling=2, bn=bn)
-    C4, C4_pooled = conv_block(C3_pooled, 512, 3, conv_config, pooling=2, dropout=dropout, bn=bn)
-    
-    D4 = up_concat(C4_pooled, C4, 2, (1024, 512), 3, conv_config, dropout, bn=bn)
-    D3 = up_concat(D4, C3, 2, (512, 256), 3, conv_config, bn=bn)
-    D2 = up_concat(D3, C2, 2, (256, 128), 3, conv_config, bn=bn)
-    D1 = up_concat(D2, C1, 2, (128, 64), 3, conv_config, bn=bn)
-    '''
-
     C_end1, _ = conv_block(D, 64, 3, conv_config, bn=bn)
     
     if bn is not None:
