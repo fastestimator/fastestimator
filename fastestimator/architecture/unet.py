@@ -18,69 +18,6 @@
 from tensorflow.python.keras.layers import Conv2D, Dropout, Input, MaxPooling2D, UpSampling2D, concatenate, BatchNormalization, Activation
 from tensorflow.python.keras.models import Model
 
-def conv_block(input, nchannels, window, config, pooling=None, dropout=None, bn=False):
-    
-    if bn is not None:
-        if bn == 'before':
-            act = config['activation']
-            config['activation'] = None
-
-    conv1 = Conv2D(nchannels, window, **config)(input)
-    
-    if bn is not None:
-        conv1 = BatchNormalization()(conv1)
-
-        if bn == 'before':
-            conv1 = Activation(act)(conv1)
-
-    conv2 = Conv2D(nchannels, window, **config)(conv1)
-
-    if bn is not None:
-        conv2 = BatchNormalization()(conv2)
-        
-        if bn == 'before':
-            conv2 = Activation(act)(conv2)
-            config['activation'] = act # python dicts are reference based 
-    
-    if dropout is not None:
-        conv2 = Dropout(dropout)(conv2)
-
-    if pooling is not None:
-        pooled = MaxPooling2D(pool_size=(pooling, pooling))(conv2)
-    else:
-        pooled = None
-
-    return conv2, pooled
-
-def upsample(input, factor, nchannels, config, bn=None):
-    resized = UpSampling2D(size=(factor, factor))(input)
-    
-    if bn is not None:
-        if bn=='before':
-            act = config['activation'] 
-            config['activation'] = None
-
-    up = Conv2D(nchannels, factor, **config)(resized) 
-    
-    if bn is not None:
-        up = BatchNormalization()(up)
-
-        if bn == 'before':
-            up = Activation(act)(up)
-            config['activation'] = act
-
-    return up
-
-def up_concat(conv_pooled, conv, factor, nchannels, window, config, dropout=None, bn=None):
-    
-    assert len(nchannels) == 2
-
-    F, _ = conv_block(conv_pooled, nchannels[0], window, config, bn=bn, dropout=dropout)
-    upsampled = upsample(F, factor, nchannels[1], config, bn=bn)
-    feat = concatenate([conv, upsampled], axis=3)
-
-    return feat
-
 def UNet(input_size=(128, 128, 3), dropout=0.5, nchannels=[64, 128, 256, 512, 1024], nclasses=1, bn=None, activation='relu'):
     """Creates a U-Net model.
     This U-Net model is composed of len(nchannels) "contracting blocks" and len(nchannels) "expansive blocks".
@@ -159,3 +96,68 @@ def UNet(input_size=(128, 128, 3), dropout=0.5, nchannels=[64, 128, 256, 512, 10
     model = Model(inputs=inp, outputs=y_dist)
 
     return model
+
+def conv_block(input, nchannels, window, config, pooling=None, dropout=None, bn=False):
+    
+    if bn is not None:
+        if bn == 'before':
+            act = config['activation']
+            config['activation'] = None
+
+    conv1 = Conv2D(nchannels, window, **config)(input)
+    
+    if bn is not None:
+        conv1 = BatchNormalization()(conv1)
+
+        if bn == 'before':
+            conv1 = Activation(act)(conv1)
+
+    conv2 = Conv2D(nchannels, window, **config)(conv1)
+
+    if bn is not None:
+        conv2 = BatchNormalization()(conv2)
+        
+        if bn == 'before':
+            conv2 = Activation(act)(conv2)
+            config['activation'] = act # python dicts are reference based 
+    
+    if dropout is not None:
+        conv2 = Dropout(dropout)(conv2)
+
+    if pooling is not None:
+        pooled = MaxPooling2D(pool_size=(pooling, pooling))(conv2)
+    else:
+        pooled = None
+
+    return conv2, pooled
+
+def upsample(input, factor, nchannels, config, bn=None):
+    resized = UpSampling2D(size=(factor, factor))(input)
+    
+    if bn is not None:
+        if bn=='before':
+            act = config['activation'] 
+            config['activation'] = None
+
+    up = Conv2D(nchannels, factor, **config)(resized) 
+    
+    if bn is not None:
+        up = BatchNormalization()(up)
+
+        if bn == 'before':
+            up = Activation(act)(up)
+            config['activation'] = act
+
+    return up
+
+def up_concat(conv_pooled, conv, factor, nchannels, window, config, dropout=None, bn=None):
+    
+    assert len(nchannels) == 2
+
+    F, _ = conv_block(conv_pooled, nchannels[0], window, config, bn=bn, dropout=dropout)
+    upsampled = upsample(F, factor, nchannels[1], config, bn=bn)
+    feat = concatenate([conv, upsampled], axis=3)
+
+    return feat
+
+
