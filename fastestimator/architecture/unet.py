@@ -15,14 +15,33 @@
 """U-Net architecture.
 """
 
-from tensorflow.python.keras.layers import Conv2D, Dropout, Input, MaxPooling2D, UpSampling2D, concatenate
+from tensorflow.python.keras.layers import Conv2D, Dropout, Input, MaxPooling2D, UpSampling2D, concatenate, BatchNormalization, Activation
 from tensorflow.python.keras.models import Model
 
-def conv_block(input, nchannels, window, config, pooling=None, dropout=None):
+def conv_block(input, nchannels, window, config, pooling=None, dropout=None, bn=False):
     
+    if bn is not None:
+        if bn == 'before':
+            act = config['activation']
+            config['activation'] = None
+
     conv1 = Conv2D(nchannels, window, **config)(input)
+    
+    if bn is not None:
+        conv1 = BatchNormalization()(conv1)
+
+        if bn == 'before':
+            conv1 = Activation(act)(conv1)
+
     conv2 = Conv2D(nchannels, window, **config)(conv1)
 
+    if bn is not None:
+        conv2 = BatchNormalization()(conv2)
+        
+        if bn == 'before':
+            conv2 = Activation(act)(conv2)
+            config['activation'] = act # python dicts are reference based 
+    
     if dropout is not None:
         conv2 = Dropout(dropout)(conv2)
 
@@ -33,23 +52,36 @@ def conv_block(input, nchannels, window, config, pooling=None, dropout=None):
 
     return conv2, pooled
 
-def upsample(input, factor, nchannels, config):
+def upsample(input, factor, nchannels, config, bn=None):
     resized = UpSampling2D(size=(factor, factor))(input)
+    
+    if bn is not None:
+        if bn=='before':
+            act = config['activation'] 
+            config['activation'] = None
+
     up = Conv2D(nchannels, factor, **config)(resized) 
     
+    if bn is not None:
+        up = BatchNormalization()(up)
+
+        if bn == 'before':
+            up = Activation(act)(up)
+            config['activation'] = act
+
     return up
 
-def up_concat(conv_pooled, conv, factor, nchannels, window, config, dropout=None):
+def up_concat(conv_pooled, conv, factor, nchannels, window, config, dropout=None, bn=None):
     
     assert len(nchannels) == 2
 
-    F, _ = conv_block(conv_pooled, nchannels[0], window, config, dropout=dropout)
-    upsampled = upsample(F, factor, nchannels[1], config)
+    F, _ = conv_block(conv_pooled, nchannels[0], window, config, bn=bn, dropout=dropout)
+    upsampled = upsample(F, factor, nchannels[1], config, bn=bn)
     feat = concatenate([conv, upsampled], axis=3)
 
     return feat
 
-def UNet(input_size=(128, 128, 3), dropout=0.5, nblocks=5, nclasses=1):
+def UNet(input_size=(128, 128, 3), dropout=0.5, nchannels=[64, 128, 256, 512, 1024], nclasses=1, bn=None, activation='relu'):
     """Creates a U-Net model.
     This U-Net model is composed of nblocks "contracting blocks" and nblocks "expansive blocks".
 
@@ -57,6 +89,12 @@ def UNet(input_size=(128, 128, 3), dropout=0.5, nblocks=5, nclasses=1):
         input_size (tuple, optional): Shape of input image. Defaults to (128, 128, 3).
         dropout: If None, applies no dropout; Otherwise, applies dropout of probability equal 
                  to the parameter value (0-1 only)
+        nchannels: Number of channels for each conv block; len(nchannels) decides number of blocks
+        nclasses: Number of target classes for segmentation
+        bn: [None, before, after] adds batchnorm layers across every convolution,
+            before indicates adding BN before activation function is applied
+            after indicates adding BN after activation function is applied
+            Check https://github.com/ducha-aiki/caffenet-benchmark/blob/master/batchnorm.md for ablations!
 
     Returns:
         'Model' object: U-Net model.
@@ -65,25 +103,73 @@ def UNet(input_size=(128, 128, 3), dropout=0.5, nblocks=5, nclasses=1):
     assert dropout is None or 0 <= dropout <= 1, \
             "Invalid value for dropout parameter (None or 0 to 1 only)"  
 
-    conv_config = {'activation': 'relu', 'padding': 'same', 'kernel_initializer': 'he_normal'}
+    assert bn in [None, "before", "after"], "Invalid bn parameter value"
+    
+    assert len(nchannels) >= 2, "At least 2 channels necessary for UNet"
 
+    conv_config = {'activation': activation, 'padding': 'same', 'kernel_initializer': 'he_normal'}
+    
     inputs = Input(input_size)
+    inp = inputs
+
+    levels = []
+
+    # Contracting blocks
+    for idx, nc in enumerate(nchannels[:-1]):
+        
+        if idx == len(nchannels)-2:
+            d=dropout
+        else:
+            d=None
+
+        C, C_pooled = conv_block(inputs, nc, 3, conv_config, pooling=2, dropout=d, bn=bn)
+        levels.append((C, C_pooled))
+        inputs = C_pooled
+
+    # Expanding blocks
+    inp1, inp2 = levels[-1][1], levels[-1][0]
+    for idx, nc in enumerate(reversed(nchannels[1:])):
+        if idx == 0:
+            d = dropout
+        else:
+            d = None
+        
+        D = up_concat(inp1, inp2, 2, (nchannels[-1-idx], nchannels[-2-idx]), 3, conv_config, d, bn=bn)
+        if idx != len(nchannels)-2:
+            inp1, inp2 = D, levels[-2-idx][0]
+
+    '''
+    C1, C1_pooled = conv_block(inputs, 64, 3, conv_config, pooling=2, bn=bn)
+    C2, C2_pooled = conv_block(C1_pooled, 128, 3, conv_config, pooling=2, bn=bn)
+    C3, C3_pooled = conv_block(C2_pooled, 256, 3, conv_config, pooling=2, bn=bn)
+    C4, C4_pooled = conv_block(C3_pooled, 512, 3, conv_config, pooling=2, dropout=dropout, bn=bn)
     
-    C1, C1_pooled = conv_block(inputs, 64, 3, conv_config, pooling=2)
-    C2, C2_pooled = conv_block(C1_pooled, 128, 3, conv_config, pooling=2)
-    C3, C3_pooled = conv_block(C2_pooled, 256, 3, conv_config, pooling=2)
-    C4, C4_pooled = conv_block(C3_pooled, 512, 3, conv_config, pooling=2, dropout=dropout)
+    D4 = up_concat(C4_pooled, C4, 2, (1024, 512), 3, conv_config, dropout, bn=bn)
+    D3 = up_concat(D4, C3, 2, (512, 256), 3, conv_config, bn=bn)
+    D2 = up_concat(D3, C2, 2, (256, 128), 3, conv_config, bn=bn)
+    D1 = up_concat(D2, C1, 2, (128, 64), 3, conv_config, bn=bn)
+    '''
+
+    C_end1, _ = conv_block(D, 64, 3, conv_config, bn=bn)
     
-    D4 = up_concat(C4_pooled, C4, 2, (1024, 512), 3, conv_config, dropout)
-    D3 = up_concat(D4, C3, 2, (512, 256), 3, conv_config)
-    D2 = up_concat(D3, C2, 2, (256, 128), 3, conv_config)
-    D1 = up_concat(D2, C1, 2, (128, 64), 3, conv_config)
-    
-    C_end1, _ = conv_block(D1, 64, 3, conv_config)
+    if bn is not None:
+        if bn=='before':
+            act = conv_config['activation']
+            conv_config['activation'] = None
+            
     C_end2 = Conv2D(2, 3, **conv_config)(C_end1)
+    
+    if bn is not None:
+        C_end2 = BatchNormalization()(C_end2)
+        
+        if bn == 'before':
+            C_end2 = Activation(act)(C_end2)
 
     y_dist = Conv2D(nclasses, 1, activation='sigmoid')(C_end2)
 
-    model = Model(inputs=inputs, outputs=y_dist)
+    model = Model(inputs=inp, outputs=y_dist)
 
     return model
+
+x = UNet()
+print (x.summary())
