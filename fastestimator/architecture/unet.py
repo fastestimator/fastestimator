@@ -170,6 +170,3 @@ def UNet(input_size=(128, 128, 3), dropout=0.5, nchannels=[64, 128, 256, 512, 10
     model = Model(inputs=inp, outputs=y_dist)
 
     return model
-
-x = UNet()
-print (x.summary())
