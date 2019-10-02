@@ -83,7 +83,7 @@ def up_concat(conv_pooled, conv, factor, nchannels, window, config, dropout=None
 
 def UNet(input_size=(128, 128, 3), dropout=0.5, nchannels=[64, 128, 256, 512, 1024], nclasses=1, bn=None, activation='relu'):
     """Creates a U-Net model.
-    This U-Net model is composed of nblocks "contracting blocks" and nblocks "expansive blocks".
+    This U-Net model is composed of len(nchannels) "contracting blocks" and len(nchannels) "expansive blocks".
 
     Args:
         input_size (tuple, optional): Shape of input image. Defaults to (128, 128, 3).
@@ -95,7 +95,8 @@ def UNet(input_size=(128, 128, 3), dropout=0.5, nchannels=[64, 128, 256, 512, 10
             before indicates adding BN before activation function is applied
             after indicates adding BN after activation function is applied
             Check https://github.com/ducha-aiki/caffenet-benchmark/blob/master/batchnorm.md for ablations!
-
+        activation: Standard Keras activation functions
+        
     Returns:
         'Model' object: U-Net model.
     """
