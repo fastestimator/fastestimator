@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.estimator import Estimator
 from fastestimator.fe_model import FEModel
+from fastestimator.estimator import Estimator
 from fastestimator.network import Network
 from fastestimator.pipeline import Pipeline
 
