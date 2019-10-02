@@ -27,13 +27,13 @@ from fastestimator.util.wget import bar_custom, callback_progress
 wget.callback_progress = callback_progress
 
 
-def _create_csv(img, key_name, parent_path, csv_path):
+def _create_csv(img_path, key_name, parent_path, csv_path):
     df = pd.DataFrame()
-    df[key_name] = img
+    df[key_name] = img_path
     df[key_name] = df[key_name].apply(lambda x: os.path.relpath(x, parent_path))
     df[key_name] = df[key_name].apply(os.path.normpath)
     df.to_csv(csv_path, index=False)
-    print('Data summary is saved at {}'.format(csv_path))
+    print("Data summary is saved at {}".format(csv_path))
 
 
 def load_data(path=None):
@@ -46,21 +46,21 @@ def load_data(path=None):
 
     Returns:
         (tuple): tuple containing:
-            (str): Path to trainA csv file.
-            (str): Path to trainB csv file.
-            (str): Path to testA csv file.
-            (str): Path to testB csv file.
-            (str): Path to data root directory.
+            train_a_csv (str): Path to trainA csv file.
+            train_b_csv (str): Path to trainB csv file.
+            test_a_csv (str): Path to testA csv file.
+            test_b_csv (str): Path to testB csv file.
+            path (str): Path to data root directory.
 
     """
     home = str(Path.home())
 
     if path is None:
-        path = os.path.join(home, "fastestimator_data", "HORSE2ZEBRA")
+        path = os.path.join(home, 'fastestimator_data', 'horse2zebra')
     os.makedirs(path, exist_ok=True)
 
     data_compressed_path = os.path.join(path, 'horse2zebra.zip')
-    data_folder_path = os.path.join(path, 'horse2zebra')
+    data_folder_path = os.path.join(path, 'images')
     train_a_csv = os.path.join(path, 'trainA.csv')
     train_b_csv = os.path.join(path, 'trainB.csv')
     test_a_csv = os.path.join(path, 'testA.csv')
@@ -75,21 +75,22 @@ def load_data(path=None):
 
     # extract
     if not os.path.exists(data_folder_path):
-        print('\nExtracting files...')
+        print("\nExtracting files ...")
         with zipfile.ZipFile(data_compressed_path, 'r') as zip_file:
             zip_file.extractall(path)
+        os.rename(os.path.join(path, 'horse2zebra'), os.path.join(path, 'images'))
 
     # glob and generate csv
     if not os.path.exists(train_a_csv):
-        train_a_img = glob(os.path.join(path, 'horse2zebra', 'trainA', '*.jpg'))
+        train_a_img = glob(os.path.join(data_folder_path, 'trainA', '*.jpg'))
         _create_csv(train_a_img, 'imgA', path, train_a_csv)
     if not os.path.exists(train_b_csv):
-        train_b_img = glob(os.path.join(path, 'horse2zebra', 'trainB', '*.jpg'))
+        train_b_img = glob(os.path.join(data_folder_path, 'trainB', '*.jpg'))
         _create_csv(train_b_img, 'imgB', path, train_b_csv)
     if not os.path.exists(test_a_csv):
-        test_a_img = glob(os.path.join(path, 'horse2zebra', 'testA', '*.jpg'))
+        test_a_img = glob(os.path.join(data_folder_path, 'testA', '*.jpg'))
         _create_csv(test_a_img, 'imgA', path, test_a_csv)
     if not os.path.exists(test_b_csv):
-        test_b_img = glob(os.path.join(path, 'horse2zebra', 'testB', '*.jpg'))
+        test_b_img = glob(os.path.join(data_folder_path, 'testB', '*.jpg'))
         _create_csv(test_b_img, 'imgB', path, test_b_csv)
     return train_a_csv, train_b_csv, test_a_csv, test_b_csv, path
