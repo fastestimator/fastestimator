@@ -38,7 +38,7 @@ class CombineLeftRightMask(NumpyOp):
 
 def get_estimator(batch_size=4, epochs=25, model_dir=tempfile.mkdtemp()):
     csv_path, path = montgomery.load_data()
-    writer = fe.RecordWriter(
+    writer = fe.util.RecordWriter(
         save_dir=os.path.join(path, "FEdata"),
         train_data=csv_path,
         validation_data=0.2,
