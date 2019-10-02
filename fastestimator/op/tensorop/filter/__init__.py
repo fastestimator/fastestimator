@@ -12,6 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.tensorOp.augmentation.adversarial_sample import AdversarialSample
-from fastestimator.op.tensorOp.augmentation.augmentation_2d import Augmentation2D
-from fastestimator.op.tensorOp.augmentation.mixup_batch import MixUpBatch
+from fastestimator.op.tensorop.filter.filter import TensorFilter, ScalarFilter

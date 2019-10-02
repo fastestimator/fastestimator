@@ -23,11 +23,11 @@ import fastestimator as fe
 from fastestimator.architecture import UNet
 from fastestimator.dataset import montgomery
 from trace.trace import Dice, ModelSaver
-from op.tensorOp.loss import BinaryCrossentropy
-from op.tensorOp.model.model import FEModel, ModelOp
-from op.tensorOp.augmentation import Augmentation2D
-from op.tensorOp.processing import Minmax
-from op.numpyOp.preprocess import ImageReader, Reshape, Resize
+from op.tensorop.loss import BinaryCrossentropy
+from op.tensorop.model.model import FEModel, ModelOp
+from op.tensorop.augmentation import Augmentation2D
+from op.tensorop.processing import Minmax
+from op.numpyop.preprocess import ImageReader, Reshape, Resize
 from op.op import NumpyOp
 
 

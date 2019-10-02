@@ -21,7 +21,7 @@ from tqdm import trange
 
 from fastestimator.interpretation.util import to_valid_rgb, blur_image, fft_vars_to_whitened_im, rfft2d_freqs, \
     show_image, show_text
-from fastestimator.op.tensorOp import Augmentation2D
+from fastestimator.op.tensorop import Augmentation2D
 from fastestimator.util.util import decode_predictions
 
 
