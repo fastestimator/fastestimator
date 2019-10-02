@@ -21,10 +21,11 @@ import fastestimator as fe
 from fastestimator import FEModel
 from fastestimator.architecture.unet import UNet
 from fastestimator.dataset import cub200
+from fastestimator.op import NumpyOp
 from fastestimator.op.numpyop import ImageReader, MatReader, Reshape, Resize
 from fastestimator.op.tensorop import BinaryCrossentropy, ModelOp, Minmax
 from fastestimator.trace import Dice, ModelSaver
-from op.op import NumpyOp
+from fastestimator.util import RecordWriter
 
 
 class SelectDictKey(NumpyOp):
@@ -36,7 +37,7 @@ class SelectDictKey(NumpyOp):
 def get_estimator(batch_size=32, epochs=25, model_dir=tempfile.mkdtemp()):
     # load CUB200 dataset.
     csv_path, path = cub200.load_data()
-    writer = fe.RecordWriter(
+    writer = RecordWriter(
         save_dir=os.path.join(path, "FEdata"),
         train_data=csv_path,
         validation_data=0.2,
