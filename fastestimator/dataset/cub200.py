@@ -25,15 +25,15 @@ import wget
 
 
 def load_data(path=None):
-    """Downloads the CUB200 dataset to local storage, if not already downloaded. This will generate a cub200.csv file, which contains all the path
-        information.
+    """Downloads the CUB200 dataset to local storage, if not already downloaded. This will generate a cub200.csv file,
+    which contains all the path information.
 
     Args:
         path (str, optional): The path to store the CUB200 data. Defaults to None, will save at `tempfile.gettempdir()`.
 
     Returns:
-    string: path to csv file.
-    string: path to data directory.
+        string: path to csv file.
+        string: path to data directory.
     """
     if path is None:
         path = os.path.join(tempfile.gettempdir(), ".fe", "CUB200")

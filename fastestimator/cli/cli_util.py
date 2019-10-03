@@ -168,9 +168,8 @@ def load_and_saliency(model_path,
                       smooth_factor=7,
                       save=False,
                       save_dir=None):
-    """
-    A helper class to load input and invoke the saliency api
-    
+    """A helper class to load input and invoke the saliency api
+
     Args:
         model_path: The path the model file (str)
         input_paths: The paths to model input files [(str),...] or to a folder of inputs [(str)]
@@ -288,8 +287,7 @@ def load_and_umap(model_path,
 
 
 def _parse_file(file_path, file_extension):
-    """
-    A function which will parse log files into a dictionary of metrics
+    """ A function which will parse log files into a dictionary of metrics
 
     Args:
         file_path (str): The path to a log file
@@ -325,8 +323,7 @@ def parse_log_files(file_paths,
                     ignore_metrics=None,
                     share_legend=True,
                     pretty_names=False):
-    """
-    A function which will iterate through the given log file paths, parse them to extract metrics, remove any
+    """A function which will iterate through the given log file paths, parse them to extract metrics, remove any
     metrics which are blacklisted, and then pass the necessary information on the graphing function
 
     Args:
@@ -367,8 +364,7 @@ def parse_log_dir(dir_path,
                   ignore_metrics=None,
                   share_legend=True,
                   pretty_names=False):
-    """
-    A function which will gather all log files within a given folder and pass them along for visualization
+    """ A function which will gather all log files within a given folder and pass them along for visualization
 
     Args:
         dir_path: The path to a directory containing log files
