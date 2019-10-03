@@ -19,16 +19,10 @@ import tensorflow as tf
 from tensorflow.keras import layers
 
 import fastestimator as fe
-<<<<<<< ea41860299ca576c63ec86d6cb931de1b839bb92
-from fastestimator import FEModel
-from fastestimator.op.tensorop import MeanSquaredError, ModelOp
-from fastestimator.trace import ModelSaver
-=======
 from fastestimator.estimator.trace import ModelSaver
 from fastestimator.network.loss import MeanSquaredError
 from fastestimator.network.model import FEModel, ModelOp
 from sklearn.preprocessing import StandardScaler
->>>>>>> test script for apphub
 
 
 def create_dnn():
@@ -63,16 +57,7 @@ def get_estimator(epochs=50, batch_size=32, steps_per_epoch=None, model_dir=temp
 
     # step 3.prepare estimator
     traces = [ModelSaver(model_name="dnn", save_dir=model_dir, save_best=True)]
-<<<<<<< ea41860299ca576c63ec86d6cb931de1b839bb92
     estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, log_steps=10, traces=traces)
-=======
-    estimator = fe.Estimator(network=network,
-                             pipeline=pipeline,
-                             epochs=epochs,
-                             steps_per_epoch=steps_per_epoch,
-                             log_steps=10,
-                             traces=traces)
->>>>>>> test script for apphub
     return estimator
 
 
