@@ -36,7 +36,7 @@ from fastestimator.util.util import is_number, load_image, load_dict, strip_suff
 class SaveAction(argparse.Action):
     """
     A custom save action which is used to populate a secondary variable inside of an exclusive group. Used if this file
-        is invoked directly during argument parsing.
+    is invoked directly during argument parsing.
     """
     def __init__(self, option_strings, dest, nargs='?', **kwargs):
         if '?' != nargs:
@@ -168,7 +168,9 @@ def load_and_saliency(model_path,
                       smooth_factor=7,
                       save=False,
                       save_dir=None):
-    """ A helper class to load input and invoke the saliency api
+    """
+    A helper class to load input and invoke the saliency api
+    
     Args:
         model_path: The path the model file (str)
         input_paths: The paths to model input files [(str),...] or to a folder of inputs [(str)]
@@ -325,7 +327,7 @@ def parse_log_files(file_paths,
                     pretty_names=False):
     """
     A function which will iterate through the given log file paths, parse them to extract metrics, remove any
-        metrics which are blacklisted, and then pass the necessary information on the graphing function
+    metrics which are blacklisted, and then pass the necessary information on the graphing function
 
     Args:
         file_paths: A list of paths to various log files
