@@ -37,7 +37,7 @@ def UNet(input_size=(128, 128, 3),
         bn: [None, before, after] adds batchnorm layers across every convolution,
             before indicates adding BN before activation function is applied
             after indicates adding BN after activation function is applied
-            Check https://github.com/ducha-aiki/caffenet-benchmark/blob/master/batchnorm.md for ablations!
+            Check https://github.com/ducha-aiki/caffenet-benchmark/blob/master/batchnorm.md for related ablations!
         activation: Standard Keras activation functions
 
     Returns:
