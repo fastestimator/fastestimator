@@ -17,16 +17,17 @@ from fastestimator.op import TensorOp
 
 
 class ModelOp(TensorOp):
-    def __init__(self, model, inputs=None, outputs=None, mode=None, track_input=False):
-        """This class represents the Model operator that defines String keys for storing batch data and predictions
+    """This class represents the Model operator that defines String keys for storing batch data and predictions
 
-        Args:
-            model : Input FEModel
-            inputs : String key of input training data. Defaults to None.
-            outputs : String key of predictions. Defaults to None.
-            mode : 'train' or 'eval'. Defaults to None.
-            track_input : If 'true' it tracks the gradients with respect to inputs. Defaults to False.
-        """
+    Args:
+        model : Input FEModel
+        inputs : String key of input training data. Defaults to None.
+        outputs : String key of predictions. Defaults to None.
+        mode : 'train' or 'eval'. Defaults to None.
+        track_input : If 'true' it tracks the gradients with respect to inputs. Defaults to False.
+    """
+    def __init__(self, model, inputs=None, outputs=None, mode=None, track_input=False):
+
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         assert isinstance(model, FEModel), "must provide a FEModel in as input"
         self.model = model

@@ -16,8 +16,7 @@ from fastestimator.op import TensorOp
 
 
 class Loss(TensorOp):
-    """
-    A base class for loss operations. It can be used directly to perform value pass-through (see the adversarial
+    """A base class for loss operations. It can be used directly to perform value pass-through (see the adversarial
     training showcase for an example of when this is useful)
     """
     def __init__(self, inputs=None, outputs="loss", mode=None):
@@ -25,8 +24,7 @@ class Loss(TensorOp):
 
     @staticmethod
     def validate_loss_inputs(inputs, *args):
-        """
-        A method to ensure that either the inputs array or individual input arguments are specified, but not both
+        """A method to ensure that either the inputs array or individual input arguments are specified, but not both
         Args:
             inputs: None or a tuple/list of arguments
             *args: a tuple of arguments or Nones

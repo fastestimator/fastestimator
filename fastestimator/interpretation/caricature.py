@@ -84,20 +84,20 @@ def generate_caricatures(model,
                          decorrelate=True,
                          sigmoid=True):
     """
-        Args:
-            model (model): The keras model to be inspected by the Caricature visualization
-            model_input (tensor): The input images to be fed to the model
-            layer_id (int): The layer of the model to be inspected by the Caricature visualization
-            n_steps (int): How many steps of optimization to run when computing caricatures (quality vs time trade)
-            learning_rate (float): The learning rate of the caricature optimizer. Should be higher than usual
-            blur (float): How much blur to add to images during caricature generation
-            cossim_pow (float): How much should similarity in form be valued versus creative license
-            sd (float): The standard deviation of the noise used to seed the caricature
-            fft (bool): Whether to use fft space (True) or image space (False) to create caricatures
-            decorrelate (bool): Whether to use an ImageNet-derived color correlation matrix to de-correlate
-                                colors in the caricature. Parameter has no effect on grey scale images.
-            sigmoid (bool): Whether to use sigmoid (True) or clipping (False) to bound the caricature pixel values
-        """
+    Args:
+        model (model): The keras model to be inspected by the Caricature visualization
+        model_input (tensor): The input images to be fed to the model
+        layer_id (int): The layer of the model to be inspected by the Caricature visualization
+        n_steps (int): How many steps of optimization to run when computing caricatures (quality vs time trade)
+        learning_rate (float): The learning rate of the caricature optimizer. Should be higher than usual
+        blur (float): How much blur to add to images during caricature generation
+        cossim_pow (float): How much should similarity in form be valued versus creative license
+        sd (float): The standard deviation of the noise used to seed the caricature
+        fft (bool): Whether to use fft space (True) or image space (False) to create caricatures
+        decorrelate (bool): Whether to use an ImageNet-derived color correlation matrix to de-correlate
+                            colors in the caricature. Parameter has no effect on grey scale images.
+        sigmoid (bool): Whether to use sigmoid (True) or clipping (False) to bound the caricature pixel values
+    """
     small_model = tf.keras.models.Model(inputs=model.input, outputs=model.layers[layer_id].output)
 
     caricatures, scale = _generate_variable_image(model_input, sd, fft, blur)
@@ -222,22 +222,22 @@ def visualize_caricature(model,
                          decorrelate=True,
                          sigmoid=True):
     """
-        Args:
-            model (model): The keras model to be inspected by the Caricature visualization
-            model_input (tensor): The input images to be fed to the model
-            layer_ids (list): The layers of the model to be inspected by the Caricature visualization
-            decode_dictionary (dict): A dictionary mapping model outputs to class names
-            save_path (str): The directory into which to save the caricature
-            n_steps (int): How many steps of optimization to run when computing caricatures (quality vs time trade)
-            learning_rate (float): The learning rate of the caricature optimizer. Should be higher than usual
-            blur (float): How much blur to add to images during caricature generation
-            cossim_pow (float): How much should similarity in form be valued versus creative license
-            sd (float): The standard deviation of the noise used to seed the caricature
-            fft (bool): Whether to use fft space (True) or image space (False) to create caricatures
-            decorrelate (bool): Whether to use an ImageNet-derived color correlation matrix to de-correlate
-                                colors in the caricature. Parameter has no effect on grey scale images.
-            sigmoid (bool): Whether to use sigmoid (True) or clipping (False) to bound the caricature pixel values
-        """
+    Args:
+        model (model): The keras model to be inspected by the Caricature visualization
+        model_input (tensor): The input images to be fed to the model
+        layer_ids (list): The layers of the model to be inspected by the Caricature visualization
+        decode_dictionary (dict): A dictionary mapping model outputs to class names
+        save_path (str): The directory into which to save the caricature
+        n_steps (int): How many steps of optimization to run when computing caricatures (quality vs time trade)
+        learning_rate (float): The learning rate of the caricature optimizer. Should be higher than usual
+        blur (float): How much blur to add to images during caricature generation
+        cossim_pow (float): How much should similarity in form be valued versus creative license
+        sd (float): The standard deviation of the noise used to seed the caricature
+        fft (bool): Whether to use fft space (True) or image space (False) to create caricatures
+        decorrelate (bool): Whether to use an ImageNet-derived color correlation matrix to de-correlate
+                            colors in the caricature. Parameter has no effect on grey scale images.
+        sigmoid (bool): Whether to use sigmoid (True) or clipping (False) to bound the caricature pixel values
+    """
     plot_caricature(model,
                     model_input=model_input,
                     layer_ids=layer_ids,

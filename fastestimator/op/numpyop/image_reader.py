@@ -20,8 +20,7 @@ from fastestimator.op import NumpyOp
 
 
 class ImageReader(NumpyOp):
-    """
-    Class for reading png or jpg images
+    """Class for reading png or jpg images
 
     Args:
         parent_path: Parent path that will be added on given path
@@ -38,8 +37,7 @@ class ImageReader(NumpyOp):
         self.forward_fn = cv2.imread
 
     def forward(self, path, state):
-        """
-        Reads numpy array from image path
+        """Reads numpy array from image path
 
         Args:
             path: path of the image

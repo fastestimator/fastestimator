@@ -21,12 +21,10 @@ EPSILON = 1e-7
 
 
 class Zscore(NumpyOp):
-    """
-    Standardize data using zscore method
+    """Standardize data using zscore method
     """
     def forward(self, data, state):
-        """
-        Standardizes the data
+        """Standardizes the data
 
         Args:
             data: Data to be standardized

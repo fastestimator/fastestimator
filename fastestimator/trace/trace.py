@@ -21,16 +21,15 @@ from tensorflow.python.keras import backend
 
 
 class Trace:
-    """Trace base class.
-    User can use `Trace` to customize their own operations during training, validation and testing.
+    """Trace base class. User can use `Trace` to customize their own operations during training, validation and testing.
     The `Network` instance can be accessible by `self.network`. Trace execution order will attempt to be inferred
     whenever possible based on the provided inputs and outputs variables.
 
     Args:
-    inputs (str, list, set): A set of keys that this trace intends to read from the state dictionary as inputs
-    outputs (str, list, set): A set of keys that this trace intends to write into the state dictionary
-    mode (string): Restrict the trace to run only on given modes ('train', 'eval', 'test'). None will always
-                    execute
+        inputs (str, list, set): A set of keys that this trace intends to read from the state dictionary as inputs
+        outputs (str, list, set): A set of keys that this trace intends to write into the state dictionary
+        mode (string): Restrict the trace to run only on given modes ('train', 'eval', 'test'). None will always
+                        execute
     """
     def __init__(self, inputs=None, outputs=None, mode=None):
         self.network = None
@@ -75,7 +74,7 @@ class Trace:
         """
     def on_batch_end(self, state):
         """Runs at the end of every batch of the mode. Anything written to the top level of the state dictionary will be
-            printed in the logs. Things written only to the batch sub-dictionary will not be logged
+        printed in the logs. Things written only to the batch sub-dictionary will not be logged
 
         Args:
             state (ChainMap): dictionary of run time that has the following key(s):
@@ -114,7 +113,8 @@ class Trace:
 
 class MonitorLoss(Trace):
     """Records loss value. Please don't add this trace into an estimator manually. An estimator will add it
-        automatically.
+    automatically.
+
     """
     def __init__(self):
         super().__init__()
@@ -162,7 +162,7 @@ class MonitorLoss(Trace):
 
 class TrainInfo(Trace):
     """Essential training information for logging during training. Please don't add this trace into an estimator
-        manually. An estimator will add it automatically.
+    manually. An estimator will add it automatically.
 
     Args:
         log_steps (int): Interval steps of logging

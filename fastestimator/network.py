@@ -17,19 +17,20 @@ from collections import ChainMap
 import tensorflow as tf
 from tensorflow.python.framework import ops as tfops
 
-from fastestimator.op.tensorop import ModelOp
 from fastestimator.op import get_inputs_by_op, get_op_from_mode, verify_ops, write_outputs_by_key
+from fastestimator.op.tensorop import ModelOp
 from fastestimator.schedule import Scheduler
 from fastestimator.util.util import NonContext, flatten_list
 
 
 class Network:
-    def __init__(self, ops):
-        """A class representing network operations for FastEstimator model training.
+    """A class representing network operations for FastEstimator model training.
 
-        Args:
-            ops : Specifies the series of operations for training model
-        """
+    Args:
+        ops : Specifies the series of operations for training model
+    """
+    def __init__(self, ops):
+
         if not isinstance(ops, list):
             ops = [ops]
         self.ops = ops
@@ -44,12 +45,13 @@ class Network:
         self.num_devices = 1
 
     def prepare(self, mode_list, distribute_strategy):
-        """This function constructs the model specified in model definition and create replica of model
-         for distributed training across multiple devices if there are multiple GPU available.
+        """ This function constructs the model specified in model definition and create replica of model
+        for distributed training across multiple devices if there are multiple GPU available.
 
         Args:
             mode_list : can be either 'train' or 'eval'
-            distribute_strategy : Tensorflow class that defines distribution strategy (e.g. tf.distribute.MirroredStrategy)
+            distribute_strategy : Tensorflow class that defines distribution strategy (e.g.
+            tf.distribute.MirroredStrategy)
         """
         all_output_keys = []
         for mode in mode_list:
@@ -102,7 +104,7 @@ class Network:
         return list(set(signature_epoch)), mode_ops
 
     def load_epoch(self, epoch, mode):
-        """This function loads stable computational graph for the current epoch.
+        """ This function loads stable computational graph for the current epoch.
 
         Args:
             epoch: Training epoch number

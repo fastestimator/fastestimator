@@ -21,6 +21,17 @@ from fastestimator.trace import Trace
 
 
 class UMap(Trace):
+    """
+    Args:
+        in_vector_key: The key of the input to be fed into the umap algorithm
+        label_vector_key: The (optional) key of the classes corresponding to the inputs (used for coloring points)
+        label_dict: An (optional) dictionary mapping labels from the label vector to other representations
+                    (ex. {0:'dog', 1:'cat'})
+        output_name: The key which the umap image will be saved into within the state dictionary
+        legend_loc: The location of the legend, or 'off' to disable figure legends
+        im_freq: Frequency (in epochs) during which visualizations should be generated
+        **umap_parameters: Extra parameters to be passed to the umap algorithm, ex. n_neighbors, n_epochs, etc.
+    """
     # TODO: let this take a model+layer instead of restricting it to just an existing key
     def __init__(self,
                  in_vector_key,
@@ -30,17 +41,7 @@ class UMap(Trace):
                  legend_loc='best',
                  im_freq=1,
                  **umap_parameters):
-        """
-        Args:
-            in_vector_key: The key of the input to be fed into the umap algorithm
-            label_vector_key: The (optional) key of the classes corresponding to the inputs (used for coloring points)
-            label_dict: An (optional) dictionary mapping labels from the label vector to other representations
-                        (ex. {0:'dog', 1:'cat'})
-            output_name: The key which the umap image will be saved into within the state dictionary
-            legend_loc: The location of the legend, or 'off' to disable figure legends
-            im_freq: Frequency (in epochs) during which visualizations should be generated
-            **umap_parameters: Extra parameters to be passed to the umap algorithm, ex. n_neighbors, n_epochs, etc.
-        """
+
         if output_name is None:
             output_name = "{}_umap".format(in_vector_key)
         super().__init__(inputs={in_vector_key, label_vector_key}, outputs=output_name, mode='eval')
