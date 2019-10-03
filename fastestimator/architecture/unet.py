@@ -12,66 +12,186 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""U-Net architecture.
-"""
-from tensorflow.python.keras.layers import Conv2D, Dropout, Input, MaxPooling2D, UpSampling2D, concatenate
+"""U-Net architecture."""
+
+from tensorflow.python.keras.layers import Activation, BatchNormalization, Conv2D, Dropout, Input, MaxPooling2D, \
+    UpSampling2D, concatenate
 from tensorflow.python.keras.models import Model
 
 
-def UNet(input_size=(128, 128, 3)):
+def UNet(input_size=(128, 128, 3),
+         dropout=0.5,
+         nchannels=(64, 128, 256, 512, 1024),
+         nclasses=1,
+         bn=None,
+         activation='relu'):
     """Creates a U-Net model.
-    This U-Net model is composed of 5 "contracting blocks" and 5 "expansive blocks".
+    This U-Net model is composed of len(nchannels) "contracting blocks" and len(nchannels) "expansive blocks".
 
     Args:
         input_size (tuple, optional): Shape of input image. Defaults to (128, 128, 3).
+        dropout: If None, applies no dropout; Otherwise, applies dropout of probability equal
+                 to the parameter value (0-1 only)
+        nchannels: Number of channels for each conv block; len(nchannels) decides number of blocks
+        nclasses: Number of target classes for segmentation
+        bn: [None, before, after] adds batchnorm layers across every convolution,
+            before indicates adding BN before activation function is applied
+            after indicates adding BN after activation function is applied
+            Check https://github.com/ducha-aiki/caffenet-benchmark/blob/master/batchnorm.md for related ablations!
+        activation: Standard Keras activation functions
 
     Returns:
         'Model' object: U-Net model.
     """
-    
-    conv_config = {'activation': 'relu', 'padding': 'same', 'kernel_initializer': 'he_normal'}
+
+    assert dropout is None or 0 <= dropout <= 1, \
+            "Invalid value for dropout parameter (None or 0 to 1 only)"
+
+    assert bn in [None, "before", "after"], "Invalid bn parameter value"
+
+    assert len(nchannels) >= 2, "At least 2 channels necessary for UNet"
+
+    # Handle callable activations as well
+    if isinstance(activation, str):
+        act = activation
+    else:
+        act = None
+
+    conv_config = {'activation': act, 'padding': 'same', 'kernel_initializer': 'he_normal'}
+
     inputs = Input(input_size)
-    conv1 = Conv2D(64, 3, **conv_config)(inputs)
-    conv1 = Conv2D(64, 3, **conv_config)(conv1)
-    pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
+    inp = inputs
 
-    conv2 = Conv2D(128, 3, **conv_config)(pool1)
-    conv2 = Conv2D(128, 3, **conv_config)(conv2)
-    pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
+    levels = []
 
-    conv3 = Conv2D(256, 3, **conv_config)(pool2)
-    conv3 = Conv2D(256, 3, **conv_config)(conv3)
-    pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
+    # Contracting blocks
+    for idx, nc in enumerate(nchannels[:-1]):
 
-    conv4 = Conv2D(512, 3, **conv_config)(pool3)
-    conv4 = Conv2D(512, 3, **conv_config)(conv4)
-    drop4 = Dropout(0.5)(conv4)
-    pool4 = MaxPooling2D(pool_size=(2, 2))(drop4)
+        if idx == len(nchannels) - 2:
+            d = dropout
+        else:
+            d = None
 
-    conv5 = Conv2D(1024, 3, **conv_config)(pool4)
-    conv5 = Conv2D(1024, 3, **conv_config)(conv5)
-    drop5 = Dropout(0.5)(conv5)
+        C, C_pooled = conv_block(inputs, nc, 3, conv_config, pooling=2, dropout=d, bn=bn, activation=activation)
+        levels.append((C, C_pooled))
+        inputs = C_pooled
 
-    up6 = Conv2D(512, 2, **conv_config)(UpSampling2D(size=(2, 2))(drop5))
-    merge6 = concatenate([drop4, up6], axis=3)
-    conv6 = Conv2D(512, 3, **conv_config)(merge6)
-    conv6 = Conv2D(512, 3, **conv_config)(conv6)
+    # Expanding blocks
+    inp1, inp2 = levels[-1][1], levels[-1][0]
+    for idx, nc in enumerate(reversed(nchannels[1:])):
+        if idx == 0:
+            d = dropout
+        else:
+            d = None
 
-    up7 = Conv2D(256, 2, **conv_config)(UpSampling2D(size=(2, 2))(conv6))
-    merge7 = concatenate([conv3, up7], axis=3)
-    conv7 = Conv2D(256, 3, **conv_config)(merge7)
-    conv7 = Conv2D(256, 3, **conv_config)(conv7)
+        D = up_concat(inp1,
+                      inp2,
+                      2, (nchannels[-1 - idx], nchannels[-2 - idx]),
+                      3,
+                      conv_config,
+                      d,
+                      bn=bn,
+                      activation=activation)
+        if idx != len(nchannels) - 2:
+            inp1, inp2 = D, levels[-2 - idx][0]
 
-    up8 = Conv2D(128, 2, **conv_config)(UpSampling2D(size=(2, 2))(conv7))
-    merge8 = concatenate([conv2, up8], axis=3)
-    conv8 = Conv2D(128, 3, **conv_config)(merge8)
-    conv8 = Conv2D(128, 3, **conv_config)(conv8)
+    C_end1, _ = conv_block(D, 64, 3, conv_config, bn=bn, activation=activation)
 
-    up9 = Conv2D(64, 2, **conv_config)(UpSampling2D(size=(2, 2))(conv8))
-    merge9 = concatenate([conv1, up9], axis=3)
-    conv9 = Conv2D(64, 3, **conv_config)(merge9)
-    conv9 = Conv2D(64, 3, **conv_config)(conv9)
-    conv9 = Conv2D(2, 3, **conv_config)(conv9)
-    conv10 = Conv2D(1, 1, activation='sigmoid')(conv9)
-    model = Model(inputs=inputs, outputs=conv10)
+    if bn is not None:
+        if bn == 'before':
+            act = conv_config['activation']
+            conv_config['activation'] = None
+
+    C_end2 = Conv2D(2, 3, **conv_config)(C_end1)
+
+    if bn is not None:
+        C_end2 = BatchNormalization()(C_end2)
+
+        if bn == 'before':
+            if act is not None:
+                C_end2 = Activation(act)(C_end2)
+            else:
+                C_end2 = activation(C_end2)
+
+    y_dist = Conv2D(nclasses, 1, activation='sigmoid')(C_end2)
+
+    model = Model(inputs=inp, outputs=y_dist)
+
     return model
+
+
+def conv_block(inp, nchannels, window, config, pooling=None, dropout=None, bn=False, activation=None):
+
+    if bn is not None:
+        if bn == 'before':
+            act = config['activation']
+            config['activation'] = None
+
+    conv1 = Conv2D(nchannels, window, **config)(inp)
+
+    if bn is not None:
+        conv1 = BatchNormalization()(conv1)
+
+        if bn == 'before':
+            if act is not None:
+                conv1 = Activation(act)(conv1)
+            else:
+                conv1 = activation(conv1)
+
+    conv2 = Conv2D(nchannels, window, **config)(conv1)
+
+    if bn is not None:
+        conv2 = BatchNormalization()(conv2)
+
+        if bn == 'before':
+            if act is not None:
+                conv2 = Activation(act)(conv2)
+            else:
+                conv2 = activation(conv2)
+
+            config['activation'] = act  # python dicts are reference based
+
+    if dropout is not None:
+        conv2 = Dropout(dropout)(conv2)
+
+    if pooling is not None:
+        pooled = MaxPooling2D(pool_size=(pooling, pooling))(conv2)
+    else:
+        pooled = None
+
+    return conv2, pooled
+
+
+def upsample(inp, factor, nchannels, config, bn=None, activation=None):
+    resized = UpSampling2D(size=(factor, factor))(inp)
+
+    if bn is not None:
+        if bn == 'before':
+            act = config['activation']
+            config['activation'] = None
+
+    up = Conv2D(nchannels, factor, **config)(resized)
+
+    if bn is not None:
+        up = BatchNormalization()(up)
+
+        if bn == 'before':
+            if act is not None:
+                up = Activation(act)(up)
+            else:
+                up = activation(up)
+
+            config['activation'] = act
+
+    return up
+
+
+def up_concat(conv_pooled, conv, factor, nchannels, window, config, dropout=None, bn=None, activation=None):
+
+    assert len(nchannels) == 2
+
+    F, _ = conv_block(conv_pooled, nchannels[0], window, config, bn=bn, dropout=dropout, activation=activation)
+    upsampled = upsample(F, factor, nchannels[1], config, bn=bn, activation=activation)
+    feat = concatenate([conv, upsampled], axis=3)
+
+    return feat
