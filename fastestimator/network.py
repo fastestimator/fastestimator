@@ -20,7 +20,7 @@ from tensorflow.python.framework import ops as tfops
 from fastestimator.op import get_inputs_by_op, get_op_from_mode, verify_ops, write_outputs_by_key
 from fastestimator.op.tensorop import ModelOp
 from fastestimator.schedule import Scheduler
-from fastestimator.util.util import NonContext, flatten_list, get_num_devices
+from fastestimator.util.util import NonContext, flatten_list, get_num_devices, to_list
 
 
 class Network:
@@ -188,28 +188,19 @@ def build(model_def, model_name, optimizer, loss_name):
     Returns:
         model: model(s) compiled by FastEstimator
     """
-    convert_tuple = False
     if get_num_devices() > 1:
         distribute_strategy = tf.distribute.MirroredStrategy()
     else:
         distribute_strategy = None
     with distribute_strategy.scope() if distribute_strategy else NonContext():
-        model = model_def()
-        if isinstance(model, (list, tuple)):
-            assert isinstance(model_name, (list, tuple)), "model_name must be a list or tuple for multiple models"
-            assert isinstance(optimizer, (list, tuple)), "optimizer must be a list or tuple for multiple models"
-            assert isinstance(loss_name, (list, tuple)), "loss_name must be a list or tuple for multiple models"
-            assert len(model) == len(model_name) == len(optimizer) == len(loss_name)
-            if isinstance(model, tuple):
-                #tuple does not support item assignment so converting to list temporarily
-                convert_tuple = True
-                model = list(model)
-            for idx, (m, m_n, o, l_n) in enumerate(zip(model, model_name, optimizer, loss_name)):
-                model[idx] = _fe_compile(m, m_n, o, l_n, distribute_strategy)
-            if convert_tuple:
-                model = tuple(model)
-        else:
-            model = _fe_compile(model, model_name, optimizer, loss_name, distribute_strategy)
+        model = to_list(model_def())
+        optimizer = to_list(optimizer)
+        loss_name = to_list(loss_name)
+        assert len(model) == len(model_name) == len(optimizer) == len(loss_name)
+        for idx, (m, m_n, o, l_n) in enumerate(zip(model, model_name, optimizer, loss_name)):
+            model[idx] = _fe_compile(m, m_n, o, l_n, distribute_strategy)
+    if len(model) == 1:
+        model = model[0]
     return model
 
 
