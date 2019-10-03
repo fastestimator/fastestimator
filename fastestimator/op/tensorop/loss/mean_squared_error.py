@@ -29,7 +29,7 @@ class MeanSquaredError(Loss):
         mode: 'train', 'eval', 'test', or None
         kwargs: Arguments to be passed along to the tf.losses constructor
     """
-    def __init__(self, y_true=None, y_pred=None, inputs=None, outputs="loss", mode=None, **kwargs):
+    def __init__(self, y_true=None, y_pred=None, inputs=None, outputs=None, mode=None, **kwargs):
 
         if 'reduction' in kwargs:
             raise KeyError("parameter 'reduction' not allowed")

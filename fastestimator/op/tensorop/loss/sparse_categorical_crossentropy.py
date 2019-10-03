@@ -16,7 +16,7 @@ class SparseCategoricalCrossentropy(Loss):
         kwargs: Arguments to be passed along to the tf.losses constructor. Passing the 'reduction' arg will raise a
                 KeyError
     """
-    def __init__(self, y_true=None, y_pred=None, inputs=None, outputs="loss", mode=None, **kwargs):
+    def __init__(self, y_true=None, y_pred=None, inputs=None, outputs=None, mode=None, **kwargs):
         if 'reduction' in kwargs:
             raise KeyError("parameter 'reduction' not allowed")
         inputs = self.validate_loss_inputs(inputs, y_true, y_pred)

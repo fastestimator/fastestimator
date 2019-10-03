@@ -20,7 +20,7 @@ from tensorflow.python.framework import ops as tfops
 from fastestimator.op import get_inputs_by_op, get_op_from_mode, verify_ops, write_outputs_by_key
 from fastestimator.op.tensorop import ModelOp
 from fastestimator.schedule import Scheduler
-from fastestimator.util.util import NonContext, flatten_list
+from fastestimator.util.util import NonContext, flatten_list, get_num_devices, to_list
 
 
 class Network:
@@ -36,24 +36,20 @@ class Network:
         self.ops = ops
         self.model_schedule = {}
         self.op_schedule = {}
-        self.current_epoch_ops = {}
         self.model = {}
-        self.all_losses = []
         self.epoch_losses = []
         self.all_output_keys = set()
         self.stop_training = False
         self.num_devices = 1
+        self.distribute_strategy = 0
 
-    def prepare(self, mode_list, distribute_strategy):
-        """ This function constructs the model specified in model definition and create replica of model
-        for distributed training across multiple devices if there are multiple GPU available.
-
-        Args:
-            mode_list : can be either 'train' or 'eval'
-            distribute_strategy : Tensorflow class that defines distribution strategy (e.g.
-            tf.distribute.MirroredStrategy)
+    def prepare(self):
+        """This function constructs the model specified in model definition and create replica of model
+         for distributed training across multiple devices if there are multiple GPU available.
         """
+        mode_list = ["train", "eval"]
         all_output_keys = []
+        all_models = []
         for mode in mode_list:
             signature_epoch, mode_ops = self._get_signature_epoch(mode)
             epoch_ops_map = {}
@@ -75,25 +71,21 @@ class Network:
                 for op in epoch_ops:
                     all_output_keys.append(op.outputs)
                     if isinstance(op, ModelOp):
-                        if op.model.keras_model is None:
-                            with distribute_strategy.scope() if distribute_strategy else NonContext():
-                                op.model.keras_model = op.model.model_def()
-                                op.model.keras_model.optimizer = op.model.optimizer
-                                op.model.keras_model.loss_name = op.model.loss_name
-                                op.model.keras_model.model_name = op.model.model_name
-                                assert op.model.model_name not in self.model, \
-                                    "duplicated model name: {}".format(op.model.model_name)
-                                self.model[op.model.model_name] = op.model.keras_model
-                                if op.model.loss_name not in self.all_losses:
-                                    self.all_losses.append(op.model.loss_name)
-                        if op.model.keras_model not in epoch_model:
-                            epoch_model.append(op.model.keras_model)
+                        if op.model not in epoch_model:
+                            epoch_model.append(op.model)
+                        if op.model not in all_models:
+                            all_models.append(op.model)
                 assert epoch_model, "Network has no model for epoch {}".format(epoch)
                 epoch_ops_map[epoch] = epoch_ops
                 epoch_model_map[epoch] = epoch_model
             self.op_schedule[mode] = Scheduler(epoch_dict=epoch_ops_map)
             self.model_schedule[mode] = Scheduler(epoch_dict=epoch_model_map)
         self.all_output_keys = set(flatten_list(all_output_keys)) - {None}
+        for model in all_models:
+            assert model.model_name not in self.model, "duplicated model name: {}".format(model.model_name)
+            self.model[model.model_name] = model
+            if self.distribute_strategy == 0:
+                self.distribute_strategy = model.distribute_strategy
 
     def _get_signature_epoch(self, mode):
         signature_epoch = [0]
@@ -183,3 +175,57 @@ class Network:
                     "please make sure loss is element-wise loss"
             reduced_loss[loss_name] = tf.reduce_sum(element_wise_loss) / global_batch_size
         return reduced_loss
+
+
+def build(model_def, model_name, optimizer, loss_name):
+    """build keras model instance in FastEstimator
+
+    Args:
+        model_def (function): function definition of tf.keras model
+        model_name (str, list, tuple): model name(s)
+        optimizer (str, optimizer, list, tuple): optimizer(s)
+        loss_name (str, list, tuple): loss name(s)
+
+    Returns:
+        model: model(s) compiled by FastEstimator
+    """
+    if get_num_devices() > 1:
+        distribute_strategy = tf.distribute.MirroredStrategy()
+    else:
+        distribute_strategy = None
+    with distribute_strategy.scope() if distribute_strategy else NonContext():
+        model = to_list(model_def())
+        model_name = to_list(model_name)
+        optimizer = to_list(optimizer)
+        loss_name = to_list(loss_name)
+        assert len(model) == len(model_name) == len(optimizer) == len(loss_name)
+        for idx, (m, m_n, o, l_n) in enumerate(zip(model, model_name, optimizer, loss_name)):
+            model[idx] = _fe_compile(m, m_n, o, l_n, distribute_strategy)
+    if len(model) == 1:
+        model = model[0]
+    return model
+
+
+def _fe_compile(model, model_name, optimizer, loss_name, distribute_strategy):
+    if isinstance(optimizer, str):
+        optimizer_fn = {
+            'adadelta': tf.optimizers.Adadelta,
+            'adagrad': tf.optimizers.Adagrad,
+            'adam': tf.optimizers.Adam,
+            'adamax': tf.optimizers.Adamax,
+            'nadam': tf.optimizers.Nadam,
+            'rmsprop': tf.optimizers.RMSprop,
+            'sgd': tf.optimizers.SGD
+        }
+        optimizer = optimizer_fn[optimizer]()
+    else:
+        assert isinstance(optimizer, tf.optimizers.Optimizer), \
+            "must provide provide must provide tf.optimizer.Optimizer instance as optimizer"
+    assert isinstance(model_name, str), "model_name must be string"
+    assert isinstance(loss_name, str), "loss_name must be string"
+    model.model_name = model_name
+    model.optimizer = optimizer
+    model.loss_name = loss_name
+    model.distribute_strategy = distribute_strategy
+    model.fe_compiled = True
+    return model
