@@ -194,6 +194,7 @@ def build(model_def, model_name, optimizer, loss_name):
         distribute_strategy = None
     with distribute_strategy.scope() if distribute_strategy else NonContext():
         model = to_list(model_def())
+        model_name = to_list(model_name)
         optimizer = to_list(optimizer)
         loss_name = to_list(loss_name)
         assert len(model) == len(model_name) == len(optimizer) == len(loss_name)
