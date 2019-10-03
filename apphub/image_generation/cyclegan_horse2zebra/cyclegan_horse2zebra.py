@@ -86,7 +86,7 @@ class DLoss(Loss):
         return 0.5 * total_loss
 
 
-def get_estimator(weight=10.0, epochs=200, model_dir=tempfile.mkdtemp()):
+def get_estimator(weight=10.0, epochs=200, steps_per_epoch=None, model_dir=tempfile.mkdtemp()):
     trainA_csv, trainB_csv, _, _, parent_path = load_data()
     tfr_save_dir = os.path.join(parent_path, 'FEdata')
     # Step 1: Define Pipeline
@@ -147,7 +147,7 @@ def get_estimator(weight=10.0, epochs=200, model_dir=tempfile.mkdtemp()):
         ModelSaver(model_name="g_AtoB", save_dir=model_dir, save_freq=10),
         ModelSaver(model_name="g_BtoA", save_dir=model_dir, save_freq=10)
     ]
-    estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces)
+    estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces, steps_per_epoch=steps_per_epoch)
     return estimator
 
 
