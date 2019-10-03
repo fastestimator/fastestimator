@@ -196,6 +196,9 @@ def build(model_def, model_name, optimizer, loss_name):
     with distribute_strategy.scope() if distribute_strategy else NonContext():
         model = model_def()
         if isinstance(model, (list, tuple)):
+            assert isinstance(model_name, (list, tuple)), "model_name must be a list or tuple for multiple models"
+            assert isinstance(optimizer, (list, tuple)), "optimizer must be a list or tuple for multiple models"
+            assert isinstance(loss_name, (list, tuple)), "loss_name must be a list or tuple for multiple models"
             assert len(model) == len(model_name) == len(optimizer) == len(loss_name)
             if isinstance(model, tuple):
                 #tuple does not support item assignment so converting to list temporarily
