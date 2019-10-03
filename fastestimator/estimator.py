@@ -323,6 +323,7 @@ class Estimator:
     @tf.function
     def _forward_step(self, batch, ops, model_list, epoch_losses, state):
         prediction = self.network.run_step(batch, ops, model_list, epoch_losses, state)
+        #expand dimension on scalar value for consistency with distributed training
         for key, value in prediction.items():
             if value.shape.rank == 0:
                 prediction[key] = tf.expand_dims(value, axis=0)
