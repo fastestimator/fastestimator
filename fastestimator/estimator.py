@@ -17,9 +17,9 @@ from collections import ChainMap, deque
 import numpy as np
 import tensorflow as tf
 
-from fastestimator.trace import Logger, ModelSaver, MonitorLoss, Trace, TrainInfo
-from fastestimator.summary import Summary
 from fastestimator.cli.cli_util import draw
+from fastestimator.summary import Summary
+from fastestimator.trace import Logger, ModelSaver, MonitorLoss, Trace, TrainInfo
 from fastestimator.util.util import get_num_devices
 
 
@@ -62,10 +62,7 @@ class Estimator:
         self.summary = False
         self.inputs = None
         self.num_devices = get_num_devices()
-        if self.num_devices > 1:
-            self.distribute_strategy = tf.distribute.MirroredStrategy()
-        else:
-            self.distribute_strategy = None
+        self.distribute_strategy = None
         self.train_step = 0
         self.train_epoch = 0
         self.total_train_steps = 0
@@ -83,8 +80,8 @@ class Estimator:
 
         draw()
         self.summary = summary
-        self._prepare_pipeline()
         self._prepare_network()
+        self._prepare_pipeline()
         self._warmup()
         self._prepare_estimator()
         return self._start()
@@ -97,7 +94,8 @@ class Estimator:
 
     def _prepare_network(self):
         self.network.num_devices = self.num_devices
-        self.network.prepare(mode_list=self.pipeline.mode_list, distribute_strategy=self.distribute_strategy)
+        self.network.prepare()
+        self.distribute_strategy = self.network.distribute_strategy
 
     def _prepare_estimator(self):
         if self.traces is None:
