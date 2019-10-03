@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator import FEModel
 from fastestimator.op import TensorOp
 
 
@@ -21,14 +20,14 @@ class ModelOp(TensorOp):
         """This class represents the Model operator that defines String keys for storing batch data and predictions
 
         Args:
-            model : Input FEModel
+            model : keras model compiled by fe.build
             inputs : String key of input training data. Defaults to None.
             outputs : String key of predictions. Defaults to None.
             mode : 'train' or 'eval'. Defaults to None.
             track_input : If 'true' it tracks the gradients with respect to inputs. Defaults to False.
         """
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        assert isinstance(model, FEModel), "must provide a FEModel in as input"
+        assert hasattr(model, "fe_compiled"), "must use fe.build to compile the model before use"
         self.model = model
         self.track_input = track_input
 
@@ -37,5 +36,5 @@ class ModelOp(TensorOp):
         if self.track_input and training:
             tape = state['tape']
             tape.watch(data)
-        data = self.model.keras_model(data, training=training)
+        data = self.model(data, training=training)
         return data
