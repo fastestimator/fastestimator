@@ -215,7 +215,8 @@ def decode_predictions(predictions, top=3, dictionary=None):
 
 
 class Suppressor(object):
-    """A class which can be used to silence output of function calls. example: ::
+    """
+    A class which can be used to silence output of function calls. example: ::
 
         with Suppressor():
             func(args)
@@ -238,7 +239,8 @@ class Suppressor(object):
 
 
 class Timer(ContextDecorator):
-    """A class that can be used to time things: ::
+    """
+    A class that can be used to time things: ::
 
         with Timer():
             func(args)

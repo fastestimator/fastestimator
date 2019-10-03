@@ -42,6 +42,7 @@ class Trace:
 
         Args:
             state (ChainMap): dictionary of run time that has the following key(s):
+
                 * "train_step" (int): current global training step starting from 0
                 * "num_devices" (int): number of devices(mainly gpu) that are being used, if cpu only, the number is 1
                 * "log_steps" (int): how many training steps between logging intervals
@@ -55,6 +56,7 @@ class Trace:
 
         Args:
             state (ChainMap): dictionary of run time that has the following key(s):
+            
                 * "mode" (str):  current run time mode, can be "train", "eval" or "test"
                 * "epoch" (int): current epoch index starting from 0
                 * "train_step" (int): current global training step starting from 0
@@ -65,6 +67,7 @@ class Trace:
 
         Args:
             state (ChainMap): dictionary of run time that has the following key(s):
+
                 * "mode" (str): current run time mode, can be "train", "eval" or "test"
                 * "epoch" (int): current epoch index starting from 0
                 * "train_step" (int): current global training step starting from 0
@@ -78,6 +81,7 @@ class Trace:
 
         Args:
             state (ChainMap): dictionary of run time that has the following key(s):
+
                 * "mode" (str):  current run time mode, can be "train", "eval" or "test"
                 * "epoch" (int): current epoch index starting from 0
                 * "train_step" (int): current global training step starting from 0
@@ -92,6 +96,7 @@ class Trace:
 
         Args:
             state (ChainMap): dictionary of run time that has the following key(s):
+
                 * "mode" (str):  current run time mode, can be "train", "eval" or "test"
                 * "epoch" (int): current epoch index starting from 0
                 * "train_step" (int): current global training step starting from 0
@@ -103,6 +108,7 @@ class Trace:
 
         Args:
             state (ChainMap): dictionary of run time that has the following key(s):
+
                 * "train_step" (int): current global training step starting from 0
                 * "epoch" (int): current epoch index starting from 0
                 * "num_devices" (int): number of devices (mainly gpu) that are being used. If cpu only, the number is 1
