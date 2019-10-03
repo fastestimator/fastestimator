@@ -25,7 +25,7 @@ from fastestimator.architecture import UNet
 from fastestimator.dataset import montgomery
 from fastestimator.op import NumpyOp
 from fastestimator.op.numpyop import ImageReader, Reshape, Resize
-from fastestimator.op.tensorop import BinaryCrossentropy, Minmax, ModelOp, Augmentation2D
+from fastestimator.op.tensorop import Augmentation2D, BinaryCrossentropy, Minmax, ModelOp
 from fastestimator.trace import Dice, ModelSaver
 from fastestimator.util import RecordWriter
 
