@@ -26,7 +26,8 @@ from fastestimator.dataset.mscoco import load_data
 from fastestimator.op.numpyop import ImageReader, Resize
 from fastestimator.op.tensorop import Loss, ModelOp
 from fastestimator.trace import ModelSaver
-from op.op import TensorOp
+from fastestimator.op import TensorOp
+from fastestimator.util import RecordWriter
 
 
 class Rescale(TensorOp):
@@ -108,7 +109,7 @@ def get_estimator(style_img_path=None,
     tfr_save_dir = os.path.join(path, 'FEdata')
     style_img = (style_img.astype(np.float32) / 127.5) / 127.5
     style_img_t = tf.convert_to_tensor(np.expand_dims(style_img, axis=0))
-    writer = fe.RecordWriter(
+    writer = RecordWriter(
         train_data=train_csv,
         save_dir=tfr_save_dir,
         ops=[
