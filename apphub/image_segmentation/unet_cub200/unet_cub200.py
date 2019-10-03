@@ -34,7 +34,7 @@ class SelectDictKey(NumpyOp):
         return data
 
 
-def get_estimator(batch_size=32, epochs=25, model_dir=tempfile.mkdtemp()):
+def get_estimator(batch_size=32, epochs=25, steps_per_epoch=None, model_dir=tempfile.mkdtemp()):
     # load CUB200 dataset.
     csv_path, path = cub200.load_data()
     writer = RecordWriter(
@@ -64,7 +64,7 @@ def get_estimator(batch_size=32, epochs=25, model_dir=tempfile.mkdtemp()):
         Dice(true_key="annotation", pred_key='mask_pred'),
         ModelSaver(model_name="unet_cub", save_dir=model_dir, save_best=True)
     ]
-    estimator = fe.Estimator(network=network, pipeline=pipeline, traces=traces, epochs=epochs, log_steps=50)
+    estimator = fe.Estimator(network=network, pipeline=pipeline, traces=traces, epochs=epochs, steps_per_epoch=steps_per_epoch, log_steps=50)
     return estimator
 
 

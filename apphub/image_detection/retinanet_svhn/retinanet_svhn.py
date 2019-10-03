@@ -154,7 +154,7 @@ class PredictBox(TensorOp):
         return cls_selected, loc_selected, valid_outputs
 
 
-def get_estimator(batch_size=128, epochs=15, model_dir=tempfile.mkdtemp()):
+def get_estimator(batch_size=128, epochs=15, steps_per_epoch=None, model_dir=tempfile.mkdtemp()):
     # prepare data in disk
     train_csv, val_csv, path = svhn.load_data()
     writer = RecordWriter(
@@ -187,6 +187,7 @@ def get_estimator(batch_size=128, epochs=15, model_dir=tempfile.mkdtemp()):
                           pipeline=pipeline,
                           epochs=epochs,
                           log_steps=20,
+                          steps_per_epoch=steps_per_epoch,
                           traces=ModelSaver(model_name="retinanet", save_dir=model_dir, save_best=True))
     return estimator
 

@@ -31,7 +31,7 @@ def DenseNet121_cifar10():
     return model
 
 
-def get_estimator(epochs=50, batch_size=64, model_dir=tempfile.mkdtemp()):
+def get_estimator(epochs=50, batch_size=64, steps_per_epoch=None, model_dir=tempfile.mkdtemp()):
     # step 1. prepare data
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.cifar10.load_data()
     data = {"train": {"x": x_train, "y": y_train}, "eval": {"x": x_eval, "y": y_eval}}
@@ -47,6 +47,7 @@ def get_estimator(epochs=50, batch_size=64, model_dir=tempfile.mkdtemp()):
         network=network,
         pipeline=pipeline,
         epochs=epochs,
+        steps_per_epoch=steps_per_epoch,
         traces=[
             Accuracy(true_key="y", pred_key="y_pred"),
             ModelSaver(model_name="densenet121", save_dir=model_dir, save_best=True),

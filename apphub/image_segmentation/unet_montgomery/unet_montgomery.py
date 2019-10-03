@@ -36,7 +36,7 @@ class CombineLeftRightMask(NumpyOp):
         return data
 
 
-def get_estimator(batch_size=4, epochs=25, model_dir=tempfile.mkdtemp()):
+def get_estimator(batch_size=4, epochs=25, steps_per_epoch=None, model_dir=tempfile.mkdtemp()):
     csv_path, path = montgomery.load_data()
     writer = RecordWriter(
         save_dir=os.path.join(path, "FEdata"),
@@ -81,7 +81,12 @@ def get_estimator(batch_size=4, epochs=25, model_dir=tempfile.mkdtemp()):
         Dice(true_key="mask", pred_key="pred_segment"),
         ModelSaver(model_name="lungsegmentation", save_dir=model_dir, save_best=True)
     ]
-    estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, log_steps=20, traces=traces)
+    estimator = fe.Estimator(network=network,
+                             pipeline=pipeline,
+                             epochs=epochs,
+                             log_steps=20,
+                             traces=traces,
+                             steps_per_epoch=steps_per_epoch)
     return estimator
 
 
