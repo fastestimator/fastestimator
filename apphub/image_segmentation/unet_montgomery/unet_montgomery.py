@@ -20,7 +20,6 @@ import tempfile
 import tensorflow as tf
 
 import fastestimator as fe
-from fastestimator import FEModel
 from fastestimator.architecture import UNet
 from fastestimator.dataset import montgomery
 from fastestimator.op import NumpyOp
@@ -68,13 +67,14 @@ def get_estimator(batch_size=4, epochs=25, model_dir=tempfile.mkdtemp()):
             Minmax(inputs="mask", outputs="mask")
         ])
 
-    model = FEModel(model_def=lambda: UNet(input_size=(512, 512, 1)),
-                    model_name="lungsegmentation",
-                    optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001))
+    model = fe.build(model_def=lambda: UNet(input_size=(512, 512, 1)),
+                     model_name="lungsegmentation",
+                     optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
+                     loss_name="loss")
 
     network = fe.Network(ops=[
         ModelOp(inputs="image", model=model, outputs="pred_segment"),
-        BinaryCrossentropy(y_true="mask", y_pred="pred_segment")
+        BinaryCrossentropy(y_true="mask", y_pred="pred_segment", outputs="loss")
     ])
 
     traces = [
