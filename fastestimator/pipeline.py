@@ -31,6 +31,7 @@ from fastestimator.util.util import convert_tf_dtype, flatten_list, get_num_devi
 
 class Pipeline:
     """Class representing the data pipeline required for fastestimator
+
     Args:
         data: The input for the pipeline. This can be either a dictionary, a tfrecord path or a RecordWriter.
         batch_size: Integer representing the batch size per device for training the model.
@@ -341,8 +342,8 @@ class Pipeline:
         return combined_dict
 
     def get_global_batch_size(self, epoch):
-        """Gets the global batch size for the current epoch. Batch size changes if there is a schedule which specifies a change
-        for the given epoch.
+        """Gets the global batch size for the current epoch. Batch size changes if there is a schedule which specifies a
+        change for the given epoch.
 
         Args:
             epoch: The epoch number in the training

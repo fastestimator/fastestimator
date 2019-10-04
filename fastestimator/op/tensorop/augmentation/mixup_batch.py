@@ -24,10 +24,10 @@ class MixUpBatch(TensorOp):
     over-fitting, stabilize GAN training, and against adversarial attacks (https://arxiv.org/abs/1710.09412)
 
     Args:
-            inputs: key of the input to be mixed up
-            outputs: key to store the mixed-up input
-            mode: what mode to execute in. Probably 'train'
-            alpha: the alpha value defining the beta distribution to be drawn from during training
+        inputs: key of the input to be mixed up
+        outputs: key to store the mixed-up input
+        mode: what mode to execute in. Probably 'train'
+        alpha: the alpha value defining the beta distribution to be drawn from during training
     """
     def __init__(self, inputs=None, outputs=None, mode=None, alpha=1.0):
         assert alpha > 0, "Mixup alpha value must be greater than zero"

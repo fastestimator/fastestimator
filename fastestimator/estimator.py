@@ -24,7 +24,7 @@ from fastestimator.util.util import get_num_devices
 
 
 class Estimator:
-    """ Estimator is the highest level class that user can directly use for traning a model (estimator.fit). It wraps
+    """Estimator is the highest level class that user can directly use for traning a model (estimator.fit). It wraps
     up `Pipeline`, `Network`, `Trace` objects together and defines the whole optimization process with other training
     necessary information.
 
@@ -75,9 +75,8 @@ class Estimator:
             summary (str, optional): Experiment name to return. If None, it won't return anything. Defaults to None.
 
         Returns:
-            [obj]: Experiment object.
+            Experiment object.
         """
-
         draw()
         self.summary = summary
         self._prepare_network()
