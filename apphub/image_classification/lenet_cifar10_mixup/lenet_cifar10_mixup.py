@@ -37,14 +37,14 @@ def get_estimator(epochs=10, batch_size=32, alpha=1.0, warmup=0, model_dir=tempf
 
     mixup_map = {warmup: MixUpBatch(inputs="x", outputs=["x", "lambda"], alpha=alpha, mode="train")}
     mixup_loss = {
-        0: SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred", mode="train"),
-        warmup: MixUpLoss(KerasCrossentropy(), lam="lambda", y_true="y", y_pred="y_pred", mode="train")
+        0: SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred", mode="train", outputs="loss"),
+        warmup: MixUpLoss(KerasCrossentropy(), lam="lambda", y_true="y", y_pred="y_pred", mode="train", outputs="loss")
     }
     network = fe.Network(ops=[
         Scheduler(mixup_map),
         ModelOp(inputs="x", model=model, outputs="y_pred"),
         Scheduler(mixup_loss),
-        SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred", mode="eval")
+        SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred", mode="eval", outputs="loss")
     ])
 
     traces = [
