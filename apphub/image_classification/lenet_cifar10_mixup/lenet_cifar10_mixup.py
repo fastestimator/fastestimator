@@ -24,7 +24,7 @@ from fastestimator.schedule import Scheduler
 from fastestimator.trace import Accuracy, ConfusionMatrix, ModelSaver
 
 
-def get_estimator(epochs=10, batch_size=32, alpha=1.0, warmup=0, model_dir=tempfile.mkdtemp()):
+def get_estimator(epochs=10, batch_size=32, alpha=1.0, warmup=0, steps_per_epoch=None, model_dir=tempfile.mkdtemp()):
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.cifar10.load_data()
     data = {"train": {"x": x_train, "y": y_train}, "eval": {"x": x_eval, "y": y_eval}}
     num_classes = 10
@@ -53,7 +53,11 @@ def get_estimator(epochs=10, batch_size=32, alpha=1.0, warmup=0, model_dir=tempf
         ModelSaver(model_name="LeNet", save_dir=model_dir, save_best=True)
     ]
 
-    estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces)
+    estimator = fe.Estimator(network=network,
+                             pipeline=pipeline,
+                             epochs=epochs,
+                             traces=traces,
+                             steps_per_epoch=steps_per_epoch)
     return estimator
 
 

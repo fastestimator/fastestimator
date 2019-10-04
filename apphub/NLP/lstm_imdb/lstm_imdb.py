@@ -19,7 +19,6 @@ import tensorflow as tf
 from tensorflow.python.keras import layers
 
 import fastestimator as fe
-from fastestimator import FEModel
 from fastestimator.op.tensorop import BinaryCrossentropy, ModelOp, Reshape
 from fastestimator.trace import Accuracy, ModelSaver
 
@@ -42,7 +41,7 @@ def pad(input_list, padding_size, padding_value):
     return input_list + [padding_value] * abs((len(input_list) - padding_size))
 
 
-def get_estimator(epochs=10, batch_size=64, model_dir=tempfile.mkdtemp()):
+def get_estimator(epochs=10, batch_size=64, steps_per_epoch=None, model_dir=tempfile.mkdtemp()):
     # step 1. prepare data
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.imdb.load_data(maxlen=MAX_LEN, num_words=MAX_WORDS)
     data = {
@@ -57,16 +56,20 @@ def get_estimator(epochs=10, batch_size=64, model_dir=tempfile.mkdtemp()):
     pipeline = fe.Pipeline(batch_size=batch_size, data=data, ops=Reshape([1], inputs="y", outputs="y"))
 
     # step 2. prepare model
-    model = FEModel(model_def=create_lstm, model_name="lstm_imdb", optimizer="adam")
+    model = fe.build(model_def=create_lstm, model_name="lstm_imdb", optimizer="adam", loss_name="loss")
     network = fe.Network(
-        ops=[ModelOp(inputs="x", model=model, outputs="y_pred"), BinaryCrossentropy(y_true="y", y_pred="y_pred")])
+        ops=[ModelOp(inputs="x", model=model, outputs="y_pred"), BinaryCrossentropy(inputs=(y_true="y", y_pred="y_pred"),outputs="loss")])
 
     traces = [
         Accuracy(true_key="y", pred_key="y_pred"),
         ModelSaver(model_name="lstm_imdb", save_dir=model_dir, save_best=True)
     ]
     # step 3.prepare estimator
-    estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces)
+    estimator = fe.Estimator(network=network,
+                             pipeline=pipeline,
+                             epochs=epochs,
+                             traces=traces,
+                             steps_per_epoch=steps_per_epoch)
 
     return estimator
 

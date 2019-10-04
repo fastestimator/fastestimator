@@ -20,10 +20,9 @@ import tensorflow as tf
 from tensorflow.python.keras import layers
 
 import fastestimator as fe
-from fastestimator import FEModel
-from fastestimator.trace import ModelSaver
 from fastestimator.op import TensorOp
 from fastestimator.op.tensorop import Loss, ModelOp
+from fastestimator.trace import ModelSaver
 
 
 class GLoss(Loss):
@@ -93,20 +92,20 @@ class Myrescale(TensorOp):
         return data
 
 
-def get_estimator(batch_size=256, epochs=50, model_dir=tempfile.mkdtemp()):
+def get_estimator(batch_size=256, epochs=50, steps_per_epoch=None, model_dir=tempfile.mkdtemp()):
     # prepare data
     (x_train, _), (_, _) = tf.keras.datasets.mnist.load_data()
     data = {"train": {"x": np.expand_dims(x_train, -1)}}
     pipeline = fe.Pipeline(batch_size=batch_size, data=data, ops=Myrescale(inputs="x", outputs="x"))
     # prepare model
-    g_femodel = FEModel(model_def=make_generator_model,
-                        model_name="gen",
-                        loss_name="gloss",
-                        optimizer=tf.optimizers.Adam(1e-4))
-    d_femodel = FEModel(model_def=make_discriminator_model,
-                        model_name="disc",
-                        loss_name="dloss",
-                        optimizer=tf.optimizers.Adam(1e-4))
+    g_femodel = fe.build(model_def=make_generator_model,
+                         model_name="gen",
+                         loss_name="gloss",
+                         optimizer=tf.optimizers.Adam(1e-4))
+    d_femodel = fe.build(model_def=make_discriminator_model,
+                         model_name="disc",
+                         loss_name="dloss",
+                         optimizer=tf.optimizers.Adam(1e-4))
     network = fe.Network(ops=[
         ModelOp(inputs=lambda: tf.random.normal([batch_size, 100]), model=g_femodel),
         ModelOp(model=d_femodel, outputs="pred_fake"),
@@ -116,7 +115,11 @@ def get_estimator(batch_size=256, epochs=50, model_dir=tempfile.mkdtemp()):
     ])
     # prepare estimator
     traces = [ModelSaver(model_name='gen', save_dir=model_dir, save_freq=5)]
-    estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces)
+    estimator = fe.Estimator(network=network,
+                             pipeline=pipeline,
+                             epochs=epochs,
+                             traces=traces,
+                             steps_per_epoch=steps_per_epoch)
     return estimator
 
 
