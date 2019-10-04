@@ -20,10 +20,9 @@ import tensorflow as tf
 from tensorflow.python.keras import layers
 
 import fastestimator as fe
-from fastestimator import FEModel
-from fastestimator.trace import ModelSaver
 from fastestimator.op import TensorOp
 from fastestimator.op.tensorop import Loss, ModelOp
+from fastestimator.trace import ModelSaver
 
 
 class GLoss(Loss):
@@ -99,14 +98,14 @@ def get_estimator(batch_size=256, epochs=50, steps_per_epoch=None, model_dir=tem
     data = {"train": {"x": np.expand_dims(x_train, -1)}}
     pipeline = fe.Pipeline(batch_size=batch_size, data=data, ops=Myrescale(inputs="x", outputs="x"))
     # prepare model
-    g_femodel = FEModel(model_def=make_generator_model,
-                        model_name="gen",
-                        loss_name="gloss",
-                        optimizer=tf.optimizers.Adam(1e-4))
-    d_femodel = FEModel(model_def=make_discriminator_model,
-                        model_name="disc",
-                        loss_name="dloss",
-                        optimizer=tf.optimizers.Adam(1e-4))
+    g_femodel = fe.build(model_def=make_generator_model,
+                         model_name="gen",
+                         loss_name="gloss",
+                         optimizer=tf.optimizers.Adam(1e-4))
+    d_femodel = fe.build(model_def=make_discriminator_model,
+                         model_name="disc",
+                         loss_name="dloss",
+                         optimizer=tf.optimizers.Adam(1e-4))
     network = fe.Network(ops=[
         ModelOp(inputs=lambda: tf.random.normal([batch_size, 100]), model=g_femodel),
         ModelOp(model=d_femodel, outputs="pred_fake"),

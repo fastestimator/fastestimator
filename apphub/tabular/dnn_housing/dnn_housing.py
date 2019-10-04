@@ -19,9 +19,8 @@ import tensorflow as tf
 from tensorflow.keras import layers
 
 import fastestimator as fe
-from fastestimator.estimator.trace import ModelSaver
-from fastestimator.network.loss import MeanSquaredError
-from fastestimator.network.model import FEModel, ModelOp
+from fastestimator.trace import ModelSaver
+from fastestimator.op.tensorop import ModelOp, MeanSquaredError
 from sklearn.preprocessing import StandardScaler
 
 
@@ -51,9 +50,9 @@ def get_estimator(epochs=50, batch_size=32, steps_per_epoch=None, model_dir=temp
     pipeline = fe.Pipeline(batch_size=batch_size, data=data)
 
     # step 2. prepare model
-    model = FEModel(model_def=create_dnn, model_name="dnn", optimizer="adam")
+    model = fe.build(model_def=create_dnn, model_name="dnn", optimizer="adam", loss_name="loss")
     network = fe.Network(
-        ops=[ModelOp(inputs="x", model=model, outputs="y_pred"), MeanSquaredError(y_true="y", y_pred="y_pred")])
+        ops=[ModelOp(inputs="x", model=model, outputs="y_pred"), MeanSquaredError(inputs=("y","y_pred"), outputs="loss")])
 
     # step 3.prepare estimator
     traces = [ModelSaver(model_name="dnn", save_dir=model_dir, save_best=True)]

@@ -19,7 +19,6 @@ import tensorflow as tf
 from tensorflow.python.keras import layers
 
 import fastestimator as fe
-from fastestimator import FEModel
 from fastestimator.op.tensorop import BinaryCrossentropy, ModelOp, Reshape
 from fastestimator.trace import Accuracy, ModelSaver
 
@@ -57,9 +56,9 @@ def get_estimator(epochs=10, batch_size=64, steps_per_epoch=None, model_dir=temp
     pipeline = fe.Pipeline(batch_size=batch_size, data=data, ops=Reshape([1], inputs="y", outputs="y"))
 
     # step 2. prepare model
-    model = FEModel(model_def=create_lstm, model_name="lstm_imdb", optimizer="adam")
+    model = fe.build(model_def=create_lstm, model_name="lstm_imdb", optimizer="adam", loss_name="loss")
     network = fe.Network(
-        ops=[ModelOp(inputs="x", model=model, outputs="y_pred"), BinaryCrossentropy(y_true="y", y_pred="y_pred")])
+        ops=[ModelOp(inputs="x", model=model, outputs="y_pred"), BinaryCrossentropy(inputs=(y_true="y", y_pred="y_pred"),outputs="loss")])
 
     traces = [
         Accuracy(true_key="y", pred_key="y_pred"),
