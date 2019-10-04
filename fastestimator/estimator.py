@@ -17,9 +17,9 @@ from collections import ChainMap, deque
 import numpy as np
 import tensorflow as tf
 
-from fastestimator.trace import Logger, ModelSaver, MonitorLoss, Trace, TrainInfo
-from fastestimator.summary import Summary
 from fastestimator.cli.cli_util import draw
+from fastestimator.summary import Summary
+from fastestimator.trace import Logger, ModelSaver, MonitorLoss, Trace, TrainInfo
 from fastestimator.util.util import get_num_devices
 
 
@@ -62,10 +62,7 @@ class Estimator:
         self.summary = False
         self.inputs = None
         self.num_devices = get_num_devices()
-        if self.num_devices > 1:
-            self.distribute_strategy = tf.distribute.MirroredStrategy()
-        else:
-            self.distribute_strategy = None
+        self.distribute_strategy = None
         self.train_step = 0
         self.train_epoch = 0
         self.total_train_steps = 0
@@ -83,8 +80,8 @@ class Estimator:
 
         draw()
         self.summary = summary
-        self._prepare_pipeline()
         self._prepare_network()
+        self._prepare_pipeline()
         self._warmup()
         self._prepare_estimator()
         return self._start()
@@ -97,7 +94,8 @@ class Estimator:
 
     def _prepare_network(self):
         self.network.num_devices = self.num_devices
-        self.network.prepare(mode_list=self.pipeline.mode_list, distribute_strategy=self.distribute_strategy)
+        self.network.prepare()
+        self.distribute_strategy = self.network.distribute_strategy
 
     def _prepare_estimator(self):
         if self.traces is None:
@@ -248,11 +246,7 @@ class Estimator:
                 "batch_size": global_batch_size
             })
             if self.distribute_strategy:
-                prediction, batch = self._forward_step_parallel(batch, ops,
-                                                                model_list,
-                                                                epoch_losses, {
-                                                                    "mode": mode, "batch_size": global_batch_size
-                                                                })
+                prediction, batch = self._forward_step_parallel(batch, ops, model_list, epoch_losses, {"mode": mode, "batch_size": global_batch_size})
             else:
                 prediction = self._forward_step(batch,
                                                 ops,
@@ -329,6 +323,10 @@ class Estimator:
     @tf.function
     def _forward_step(self, batch, ops, model_list, epoch_losses, state):
         prediction = self.network.run_step(batch, ops, model_list, epoch_losses, state)
+        #expand dimension on scalar value for consistency with distributed training
+        for key, value in prediction.items():
+            if value.shape.rank == 0:
+                prediction[key] = tf.expand_dims(value, axis=0)
         return prediction
 
     @tf.function
@@ -348,5 +346,8 @@ class Estimator:
     def _per_replica_to_global(data):
         new_data = {}
         for key, value in data.items():
-            new_data[key] = tf.concat(value.values, axis=0)
+            if value.values[0].shape.rank == 0:
+                new_data[key] = tf.stack(value.values)
+            else:
+                new_data[key] = tf.concat(value.values, axis=0)
         return new_data

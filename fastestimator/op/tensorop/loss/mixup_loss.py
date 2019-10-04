@@ -23,7 +23,7 @@ class MixUpLoss(Loss):
     This class should be used in conjunction with MixUpBatch to perform mix-up training, which helps to reduce
     over-fitting, stabilize GAN training, and harden against adversarial attacks (https://arxiv.org/abs/1710.09412)
     """
-    def __init__(self, loss, lam=None, y_true=None, y_pred=None, inputs=None, outputs="loss", mode=None):
+    def __init__(self, loss, lam=None, y_true=None, y_pred=None, inputs=None, outputs=None, mode=None):
         """
         Args:
             loss (func): A loss object (tf.losses) which can be invoked like "loss(true, pred)". It's reduction method

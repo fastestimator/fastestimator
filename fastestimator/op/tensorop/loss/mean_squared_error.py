@@ -18,7 +18,7 @@ from fastestimator.op.tensorop.loss import Loss
 
 
 class MeanSquaredError(Loss):
-    def __init__(self, y_true=None, y_pred=None, inputs=None, outputs="loss", mode=None, **kwargs):
+    def __init__(self, y_true=None, y_pred=None, inputs=None, outputs=None, mode=None, **kwargs):
         """Calculate mean squared error loss, the rest of the keyword argument will be passed to
            tf.losses.MeanSquaredError
 

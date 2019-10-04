@@ -4,7 +4,7 @@ from fastestimator.op.tensorop.loss import Loss
 
 
 class SparseCategoricalCrossentropy(Loss):
-    def __init__(self, y_true=None, y_pred=None, inputs=None, outputs="loss", mode=None, **kwargs):
+    def __init__(self, y_true=None, y_pred=None, inputs=None, outputs=None, mode=None, **kwargs):
         """Calculate sparse categorical cross entropy, the rest of the keyword argument will be passed to
            tf.losses.SparseCategoricalCrossentropy
 

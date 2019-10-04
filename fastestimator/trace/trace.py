@@ -85,7 +85,7 @@ class Trace:
                 * "batch_idx" (int): current local step of the epoch starting from 0
                 * "batch_size" (int): current global batch size
                 * "batch" (dict): the batch data after the Network execution
-                * <loss_name> defined in FEModel (float): loss of current batch (only available when mode is "train")
+                * <loss_name> defined in model (float): loss of current batch (only available when mode is "train")
                 * any keys written by 'on_batch_end' of previous traces
         """
     def on_epoch_end(self, state):
@@ -96,7 +96,7 @@ class Trace:
                 * "mode" (str):  current run time mode, can be "train", "eval" or "test"
                 * "epoch" (int): current epoch index starting from 0
                 * "train_step" (int): current global training step starting from 0
-                * <loss_name> defined in FEModel (float): average loss of the epoch (only available when mode is "eval")
+                * <loss_name> defined in model (float): average loss of the epoch (only available when mode is "eval")
                 * any keys written by 'on_epoch_end' of previous traces
         """
     def on_end(self, state):
