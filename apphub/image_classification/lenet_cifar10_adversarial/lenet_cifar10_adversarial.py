@@ -16,8 +16,7 @@ import tempfile
 
 import tensorflow as tf
 
-import fastestimator as fe
-from fastestimator import Estimator, Network, Pipeline
+from fastestimator import Estimator, Network, Pipeline, build
 from fastestimator.architecture import LeNet
 from fastestimator.op.tensorop import AdversarialSample, Average, Minmax, ModelOp, SparseCategoricalCrossentropy
 from fastestimator.schedule import Scheduler
@@ -31,17 +30,17 @@ def get_estimator(epochs=10, batch_size=32, epsilon=0.01, warmup=0, steps_per_ep
 
     pipeline = Pipeline(batch_size=batch_size, data=data, ops=Minmax(inputs="x", outputs="x"))
 
-    model = fe.build(model_def=lambda: LeNet(input_shape=x_train.shape[1:], classes=num_classes),
-                     model_name="LeNet",
-                     optimizer="adam",
-                     loss_name="loss")
+    model = build(model_def=lambda: LeNet(input_shape=x_train.shape[1:], classes=num_classes),
+                  model_name="LeNet",
+                  optimizer="adam",
+                  loss_name="loss")
 
     adv_img = {warmup: AdversarialSample(inputs=("loss", "x"), outputs="x_adverse", epsilon=epsilon, mode="train")}
     adv_eval = {warmup: ModelOp(inputs="x_adverse", model=model, outputs="y_pred_adverse", mode="train")}
     adv_loss = {
         warmup: SparseCategoricalCrossentropy(y_true="y", y_pred="y_pred_adverse", outputs="adverse_loss", mode="train")
     }
-    adv_avg = {warmup: Average("loss", "adverse_loss", outputs="loss", mode="train")}
+    adv_avg = {warmup: Average(inputs=("loss", "adverse_loss"), outputs="loss", mode="train")}
 
     network = Network(ops=[
         ModelOp(inputs="x", model=model, outputs="y_pred", track_input=True),
