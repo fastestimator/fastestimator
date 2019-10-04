@@ -27,7 +27,8 @@ from fastestimator.util.util import is_number
 
 
 class TensorBoard(Trace):
-    """ Output data for use in TensorBoard.
+    """Output data for use in TensorBoard.
+
     Args:
         log_dir (str, optional): Path of the directory where to save the log files to be parsed by TensorBoard.
             Defaults to 'logs'.

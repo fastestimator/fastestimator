@@ -26,8 +26,7 @@ from fastestimator.util.util import prettify_metric_name, to_list
 
 
 def plot_logs(experiments, smooth_factor=0, share_legend=True, ignore_metrics=None, pretty_names=False):
-    """
-    A function which will plot experiment histories for comparison viewing / analysis
+    """A function which will plot experiment histories for comparison viewing / analysis
 
     Args:
         experiments (list, Experiment): Experiment(s) to plot
@@ -160,8 +159,7 @@ def visualize_logs(experiments,
                    share_legend=True,
                    pretty_names=False,
                    ignore_metrics=None):
-    """
-    A function which will save or display experiment histories for comparison viewing / analysis
+    """A function which will save or display experiment histories for comparison viewing / analysis
 
     Args:
         experiments (list, Experiment): Experiment(s) to plot

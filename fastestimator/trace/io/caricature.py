@@ -22,6 +22,25 @@ from fastestimator.util.util import to_list, Suppressor
 
 
 class Caricature(Trace):
+    """
+    Args:
+        model_name (str): The model to be inspected by the Caricature visualization
+        layer_ids (int, list): The layer(s) of the model to be inspected by the Caricature visualization
+        input_key (str): A string key corresponding to the tensor to be passed to the model
+        n_inputs (int): How many samples should be drawn from the input_key tensor for visualization
+        decode_dictionary (dict): A dictionary mapping model outputs to class names
+        output_name (str): The key which the caricature image will be saved into within the state dictionary
+        im_freq (int): Frequency (in epochs) during which visualizations should be generated
+        n_steps (int): How many steps of optimization to run when computing caricatures (quality vs time trade)
+        learning_rate (float): The learning rate of the caricature optimizer. Should be higher than usual
+        blur (float): How much blur to add to images during caricature generation
+        cossim_pow (float): How much should similarity in form be valued versus creative license
+        sd (float): The standard deviation of the noise used to seed the caricature
+        fft (bool): Whether to use fft space (True) or image space (False) to create caricatures
+        decorrelate (bool): Whether to use an ImageNet-derived color correlation matrix to de-correlate colors in \
+                            the caricature. Parameter has no effect on grey scale images.
+        sigmoid (bool): Whether to use sigmoid (True) or clipping (False) to bound the caricature pixel values
+    """
     def __init__(self,
                  model_name,
                  layer_ids,
@@ -38,25 +57,7 @@ class Caricature(Trace):
                  fft=True,
                  decorrelate=True,
                  sigmoid=True):
-        """
-        Args:
-            model_name (str): The model to be inspected by the Caricature visualization
-            layer_ids (int, list): The layer(s) of the model to be inspected by the Caricature visualization
-            input_key (str): A string key corresponding to the tensor to be passed to the model
-            n_inputs (int): How many samples should be drawn from the input_key tensor for visualization
-            decode_dictionary (dict): A dictionary mapping model outputs to class names
-            output_name (str): The key which the caricature image will be saved into within the state dictionary
-            im_freq (int): Frequency (in epochs) during which visualizations should be generated
-            n_steps (int): How many steps of optimization to run when computing caricatures (quality vs time trade)
-            learning_rate (float): The learning rate of the caricature optimizer. Should be higher than usual
-            blur (float): How much blur to add to images during caricature generation
-            cossim_pow (float): How much should similarity in form be valued versus creative license
-            sd (float): The standard deviation of the noise used to seed the caricature
-            fft (bool): Whether to use fft space (True) or image space (False) to create caricatures
-            decorrelate (bool): Whether to use an ImageNet-derived color correlation matrix to de-correlate colors in \
-                                the caricature. Parameter has no effect on grey scale images.
-            sigmoid (bool): Whether to use sigmoid (True) or clipping (False) to bound the caricature pixel values
-        """
+
         self.data = []
         self.in_key = input_key
         if output_name is None:

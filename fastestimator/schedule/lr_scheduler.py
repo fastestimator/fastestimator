@@ -6,10 +6,9 @@ import numpy as np
 class LRSchedule:
     """A base class for learning rate scheduler
 
-        Args:
-            schedule_mode : Mode of the learning rate scheduler. Either can be 'step' or 'epoch'
-            based learning rate decay
-        """
+    Args:
+        schedule_mode : Mode of the learning rate scheduler. Either can be 'step' or 'epoch' based learning rate decay
+    """
     def __init__(self, schedule_mode):
 
         self.schedule_mode = schedule_mode

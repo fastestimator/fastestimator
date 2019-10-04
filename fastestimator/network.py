@@ -24,12 +24,13 @@ from fastestimator.util.util import NonContext, flatten_list, get_num_devices, t
 
 
 class Network:
-    def __init__(self, ops):
-        """A class representing network operations for FastEstimator model training.
+    """A class representing network operations for FastEstimator model training.
 
-        Args:
-            ops : Specifies the series of operations for training model
-        """
+    Args:
+        ops : Specifies the series of operations for training model
+    """
+    def __init__(self, ops):
+
         if not isinstance(ops, list):
             ops = [ops]
         self.ops = ops
@@ -95,7 +96,7 @@ class Network:
         return list(set(signature_epoch)), mode_ops
 
     def load_epoch(self, epoch, mode):
-        """This function loads stable computational graph for the current epoch.
+        """ This function loads stable computational graph for the current epoch.
 
         Args:
             epoch: Training epoch number

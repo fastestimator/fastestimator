@@ -62,7 +62,8 @@ def convert_for_visualization(batched_masks, percentile=99):
 
 
 def plot_saliency(model, model_input, baseline_input=None, decode_dictionary=None, color_map="inferno", smooth=7):
-    """ Displays or saves a saliency mask interpretation of the given input
+    """Displays or saves a saliency mask interpretation of the given input
+
     Args:
         model: A model to evaluate. Should be a classifier which takes the 0th axis as the batch axis
         model_input: Input tensor, shaped for the model ex. (1, 299, 299, 3)
@@ -120,7 +121,8 @@ def visualize_saliency(model,
                        color_map="inferno",
                        smooth=7,
                        save_path='.'):
-    """ Displays or saves a saliency mask interpretation of the given input
+    """Displays or saves a saliency mask interpretation of the given input
+
     Args:
         model: A model to evaluate. Should be a classifier which takes the 0th axis as the batch axis
         model_input: Input tensor, shaped for the model ex. (1, 299, 299, 3)
