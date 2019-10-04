@@ -22,7 +22,7 @@ from fastestimator.trace import Trace
 
 class LRController(Trace):
     """Learning rate controller that makes learning rate follow the custom schedule and optionally reduces learning
-        rate whenever evaluation loss meets certain condition.
+    rate whenever evaluation loss meets certain condition.
 
     Args:
         model_name (str): Model name of target model

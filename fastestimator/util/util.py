@@ -62,7 +62,7 @@ def load_dict(dict_path, array_key=False):
                     Otherwise it will parse as {K:V,...} or {K:[...,V],...}
     Returns:
         A dictionary corresponding to the info from the file. If the file was formatted with arrays as the values for a
-         key, the last element of the array is used as the value for the key in the parsed dictionary
+        key, the last element of the array is used as the value for the key in the parsed dictionary
     """
     parsed = None
     if dict_path is not None:
@@ -126,8 +126,7 @@ def convert_tf_dtype(datatype):
 
 
 def strip_suffix(target, suffix):
-    """
-    Remove the given suffix from the target if it is present there
+    """Remove the given suffix from the target if it is present there
 
     Args:
         target: A string to be formatted
@@ -145,8 +144,7 @@ def strip_suffix(target, suffix):
 
 
 def prettify_metric_name(metric):
-    """
-    Add spaces to camel case words, then swap _ for space, and capitalize each word
+    """Add spaces to camel case words, then swap _ for space, and capitalize each word
 
     Args:
         metric: A string to be formatted
@@ -158,8 +156,7 @@ def prettify_metric_name(metric):
 
 
 def remove_blacklist_keys(dic, blacklist):
-    """
-    A function which removes the blacklisted elements from a dictionary
+    """A function which removes the blacklisted elements from a dictionary
 
     Args:
         dic: The dictionary to inspect
@@ -219,9 +216,11 @@ def decode_predictions(predictions, top=3, dictionary=None):
 
 class Suppressor(object):
     """
-    A class which can be used to silence output of function calls. example:
-    with Suppressor():
-        func(args)
+    A class which can be used to silence output of function calls. example: ::
+
+        with Suppressor():
+            func(args)
+
     """
     def __enter__(self):
         self.stdout = sys.stdout
@@ -241,12 +240,14 @@ class Suppressor(object):
 
 class Timer(ContextDecorator):
     """
-    A class that can be used to time things:
-    with Timer():
-        func(args)
+    A class that can be used to time things: ::
 
-    @Timer()
-    def func(args)
+        with Timer():
+            func(args)
+
+        @Timer()
+        def func(args)
+
     """
     def __init__(self, name="Task"):
         self.name = name

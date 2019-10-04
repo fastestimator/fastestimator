@@ -17,8 +17,7 @@ from fastestimator.op import NumpyOp
 
 
 class Scale(NumpyOp):
-    """
-    Preprocessing class for scaling dataset
+    """Preprocessing class for scaling dataset
 
     Args:
         scalar: Scalar for scaling the data
@@ -28,8 +27,7 @@ class Scale(NumpyOp):
         self.scalar = scalar
 
     def forward(self, data, state):
-        """
-        Scales the data tensor
+        """Scales the data tensor
 
         Args:
             data: Data to be scaled

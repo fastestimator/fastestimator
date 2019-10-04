@@ -29,12 +29,12 @@ import requests, io
 
 def img_data_constructor(data_folder, mode, csv_path):
     """Creates the csv file containing all paths to images for the indicated mode and their labels.
-    
+
     Args:
         data_folder (string): path to data directory.
         mode (string): training or testing.
         csv_path (string): path where to save csv file.
-    
+
     Returns:
         DataFrame: DataFrame containing the paths to each image x and corresponding labels y.
     """
@@ -61,16 +61,17 @@ def img_data_constructor(data_folder, mode, csv_path):
 
 
 def load_data(path=None):
-    """Downloads the Mendeley dataset to local storage, if not already downloaded. This will generate 2 csv files (train and test), which contain all the path
-        information.
+    """Downloads the Mendeley dataset to local storage, if not already downloaded. This will generate 2 csv files
+    (train and test), which contain all the path information.
 
     Args:
-        path (str, optional): The path to store the Mendeley data. Defaults to None, will save at `tempfile.gettempdir()`.
+        path (str, optional): The path to store the Mendeley data. Defaults to None, will save at
+        `tempfile.gettempdir()`.
 
     Returns:
-    string: path to train csv file.
-    string: path to test csv file.
-    string: path to data directory.
+        string: path to train csv file.
+        string: path to test csv file.
+        string: path to data directory.
     """
 
     if path is None:

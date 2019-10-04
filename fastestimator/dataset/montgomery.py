@@ -33,8 +33,8 @@ def load_data(path=None):
         path (str, optional): The path to store the Montgomery data. Defaults to None, will save at `tempfile.gettempdir()`.
 
     Returns:
-    string: path to csv file.
-    string: path to data directory.
+        string: path to csv file.
+        string: path to data directory.
     """
     if path is None:
         path = os.path.join(tempfile.gettempdir(), ".fe", 'MONTGOMERY')

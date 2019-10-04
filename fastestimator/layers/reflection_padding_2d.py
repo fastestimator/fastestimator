@@ -21,7 +21,7 @@ class ReflectionPadding2D(layers.Layer):
     """Class for performing Reflection Padding on 2D arrays.
 
     Args:
-    padding (tuple, optional): padding size. Defaults to (1, 1).
+        padding (tuple, optional): padding size. Defaults to (1, 1).
     """
     def __init__(self, padding=(1, 1)):
         self.padding = tuple(padding)

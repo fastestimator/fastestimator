@@ -51,8 +51,8 @@ def to_valid_rgb(image, decorrelate=False, sigmoid=True):
 
     In practice this consists of two parts:
     (1) If requested, transform the colors from a decorrelated color space to RGB.
-    (2) Constrain the color channels to be in [-1,1], either using a sigmoid
-        function or clipping.
+    (2) Constrain the color channels to be in [-1,1], either using a sigmoid function or clipping.
+
     Args:
         image: input tensor, innermost dimension will be interpreted as colors and transformed/constrained.
         decorrelate: should the input tensor's colors be interpreted as coming from a whitened space or not?

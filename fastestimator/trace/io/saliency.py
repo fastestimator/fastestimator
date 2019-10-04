@@ -21,7 +21,8 @@ from fastestimator.interpretation import plot_saliency
 
 
 class Saliency(Trace):
-    """Args:
+    """
+    Args:
         model_name (str): The model to be inspected by the Saliency visualization
         input_key (str): A string key corresponding to the tensor to be passed to the model
         baseline_constant (float): What constant value would a blank tensor have
