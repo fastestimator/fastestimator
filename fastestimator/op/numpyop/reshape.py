@@ -19,8 +19,7 @@ from fastestimator.op import NumpyOp
 
 
 class Reshape(NumpyOp):
-    """
-    Preprocessing class for reshaping the data
+    """Preprocessing class for reshaping the data
 
     Args:
         shape: target shape
@@ -30,8 +29,7 @@ class Reshape(NumpyOp):
         self.shape = shape
 
     def forward(self, data, state):
-        """
-        Reshapes data array
+        """Reshapes data array
 
         Args:
             data: Data to be reshaped

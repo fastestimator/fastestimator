@@ -55,9 +55,9 @@ def blur_image(image, std):
 
 @tf.function
 def blur_image_fft(image, std):
-    """
-    This method is equivalent to blur_image(), but is slower right now due to a bug in tensorflow related to graph
+    """This method is equivalent to blur_image(), but is slower right now due to a bug in tensorflow related to graph
     construction for the irfft2d function. TODO re-evaluate performance trade-off as new version of TF2 are released
+
     Args:
         image: An n-channel input image
         std: The standard deviation of the gaussian filter to be applied
@@ -136,12 +136,12 @@ def fft_vars_to_whitened_im(fft_vars, scale, width):
 @tf.function
 def fft_vars_to_im(fft_vars, width):
     """
-        Args:
-            fft_vars: A tensor of dimension: real/imaginary X batch X channel X height X width
-            width: The true width of the pixel image (needed to resolve ambiguity introduced by the fourier transform)
-        Returns:
-            A pixel-space image corresponding to the given input variables
-        """
+    Args:
+        fft_vars: A tensor of dimension: real/imaginary X batch X channel X height X width
+        width: The true width of the pixel image (needed to resolve ambiguity introduced by the fourier transform)
+    Returns:
+        A pixel-space image corresponding to the given input variables
+    """
     spectrum = tf.complex(fft_vars[0], fft_vars[1])
     image = tf.signal.irfft2d(spectrum)
     image = tf.transpose(image, (0, 2, 3, 1))

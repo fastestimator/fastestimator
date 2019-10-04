@@ -19,8 +19,7 @@ import os
 
 
 def get_number_of_examples(file_path, show_warning=True, compression=None):
-    """
-    Returns number of examples in one TFRecord
+    """Returns number of examples in one TFRecord
 
     Args:
         file_path: Path of TFRecord file
@@ -42,8 +41,7 @@ def get_number_of_examples(file_path, show_warning=True, compression=None):
 
 
 def get_features(file_path, compression=None):
-    """
-    Returns the feature information in TFRecords
+    """Returns the feature information in TFRecords
 
     Args:
         file_path: Path of TFRecord file

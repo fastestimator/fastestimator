@@ -19,11 +19,11 @@ from tensorflow.python.keras import layers, models
 
 def classification_sub_net(num_classes, num_anchor=9):
     """Creates an object classification sub-network for the RetinaNet.
-    
+
     Args:
         num_classes (int): number of classes.
         num_anchor (int, optional): number of anchor boxes. Defaults to 9.
-    
+
     Returns:
         'Model' object: classification sub-network.
     """
@@ -70,10 +70,10 @@ def classification_sub_net(num_classes, num_anchor=9):
 
 def regression_sub_net(num_anchor=9):
     """Creates a regression sub-network for the RetinaNet.
-    
+
     Args:
         num_anchor (int, optional): number of anchor boxes. Defaults to 9.
-    
+
     Returns:
         'Model' object: regression sub-network.
     """
@@ -117,14 +117,14 @@ def regression_sub_net(num_anchor=9):
 
 
 def RetinaNet(input_shape, num_classes, num_anchor=9):
-    """Creates the RetinaNet.
-    RetinaNet is composed of an FPN, a classification sub-network and a localization regression sub-network.
-    
+    """Creates the RetinaNet. RetinaNet is composed of an FPN, a classification sub-network and a localization
+    regression sub-network.
+
     Args:
         input_shape (tuple): shape of input image.
         num_classes (int): number of classes.
         num_anchor (int, optional): number of anchor boxes. Defaults to 9.
-    
+
     Returns:
         'Model' object: RetinaNet.
     """
@@ -171,10 +171,10 @@ def RetinaNet(input_shape, num_classes, num_anchor=9):
 
 def get_fpn_anchor_box(input_shape):
     """Returns the anchor boxes of the Feature Pyramid Net.
-    
+
     Args:
         input_shape (tuple): shape of input image.
-    
+
     Returns:
         array: numpy array with all anchor boxes.
     """
@@ -212,7 +212,7 @@ def get_fpn_anchor_box(input_shape):
 
 def get_target(anchorbox, label, x1, y1, x2, y2, num_classes=10):
     """Generates classification and localization ground-truths.
-    
+
     Args:
         anchorbox (array): anchor boxes
         label (array): labels for each anchor box.
@@ -221,7 +221,7 @@ def get_target(anchorbox, label, x1, y1, x2, y2, num_classes=10):
         x2 (array): x-coordinate of bottom right point of the box.
         y2 (array): x-coordinate of bottom right point of the box.
         num_classes (int, optional): number of classes. Defaults to 10.
-    
+
     Returns:
         array: classification groundtruths for each anchor box.
         array: localization groundtruths for each anchor box.
@@ -251,11 +251,11 @@ def get_target(anchorbox, label, x1, y1, x2, y2, num_classes=10):
 
 def get_loc_offset(box_gt, box_anchor):
     """Computes the offset of a groundtruth box and an anchor box.
-    
+
     Args:
         box_gt (array): groundtruth box.
         box_anchor (array): anchor box.
-    
+
     Returns:
         float: offset between x1 coordinate of the two boxes.
         float: offset between y1 coordinate of the two boxes.
@@ -275,11 +275,11 @@ def get_loc_offset(box_gt, box_anchor):
 
 def get_iou(box1, box2):
     """Computes the value of intersection over union (IoU) of two boxes.
-    
+
     Args:
         box1 (array): first box
         box2 (array): second box
-    
+
     Returns:
         float: IoU value
     """

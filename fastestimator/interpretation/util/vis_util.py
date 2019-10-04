@@ -17,8 +17,7 @@ import numpy as np
 
 
 def show_text(background, text, axis=None, title=None):
-    """
-    Plots a given image onto an axis
+    """Plots a given image onto an axis
 
     Args:
         axis: The matplotlib axis to plot on
@@ -40,8 +39,7 @@ def show_text(background, text, axis=None, title=None):
 
 
 def show_image(im, axis=None, title=None):
-    """
-    Plots a given image onto an axis
+    """Plots a given image onto an axis
 
     Args:
         axis: The matplotlib axis to plot on, or None for a new plot
@@ -67,8 +65,7 @@ def show_image(im, axis=None, title=None):
 
 
 def show_gray_image(im, axis=None, title=None, color_map="inferno"):
-    """
-    Plots a given image onto an axis
+    """Plots a given image onto an axis
 
     Args:
         axis: The matplotlib axis to plot on, or None for a new plot

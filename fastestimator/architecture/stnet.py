@@ -104,7 +104,7 @@ def lossNet(input_shape=(256, 256, 3),
         contentLayers (list, optional): list of content layers from VGG16. Defaults to ["block3_conv3"].
 
     Returns:
-    'Model' object: style loss Network.
+        'Model' object: style loss Network.
     """
     x0 = tf.keras.layers.Input(shape=input_shape)
     mdl = tf.keras.applications.vgg16.VGG16(include_top=False, weights='imagenet', input_tensor=x0)

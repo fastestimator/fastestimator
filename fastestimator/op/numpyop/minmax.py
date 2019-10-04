@@ -21,12 +21,10 @@ EPSILON = 1e-7
 
 
 class Minmax(NumpyOp):
-    """
-    Normalize data using the minmax method
+    """Normalize data using the minmax method
     """
     def forward(self, data, state):
-        """
-        Normalizes the data
+        """Normalizes the data
 
         Args:
             data: Data to be normalized

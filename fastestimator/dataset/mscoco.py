@@ -32,15 +32,15 @@ def _create_csv(data_path):
 
 
 def load_data(path=None):
-    """Downloads the Coco dataset to local storage, if not already downloaded. This will generate one csv file coco_train.csv, which contains all the path
-        information.
+    """Downloads the Coco dataset to local storage, if not already downloaded. This will generate one csv file
+    coco_train.csv, which contains all the path information.
 
     Args:
         path (str, optional): The path to store the Coco data. Defaults to None, will save at `tempfile.gettempdir()`.
 
     Returns:
-    string: path to csv file.
-    string: path to data directory.
+        string: path to csv file.
+        string: path to data directory.
     """
     url = {"train": "http://images.cocodataset.org/zips/train2014.zip"}
     if path is None:
