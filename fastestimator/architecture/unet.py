@@ -14,8 +14,8 @@
 # ==============================================================================
 """U-Net architecture."""
 
-from tensorflow.python.keras.layers import Activation, BatchNormalization, Conv2D, Dropout, Input, MaxPooling2D, \
-    UpSampling2D, concatenate
+from tensorflow.python.keras.layers import Activation, BatchNormalization, Conv2D, Conv2DTranspose, Dropout, Input, \
+    MaxPooling2D, UpSampling2D, concatenate
 from tensorflow.python.keras.models import Model
 
 
@@ -24,7 +24,9 @@ def UNet(input_size=(128, 128, 3),
          nchannels=(64, 128, 256, 512, 1024),
          nclasses=1,
          bn=None,
-         activation='relu'):
+         activation='relu',
+         upsampling='bilinear',
+         dilation_rates=(1, 1, 1, 1, 1)):
     """Creates a U-Net model.
     This U-Net model is composed of len(nchannels) "contracting blocks" and len(nchannels) "expansive blocks".
 
@@ -39,6 +41,9 @@ def UNet(input_size=(128, 128, 3),
             after indicates adding BN after activation function is applied
             Check https://github.com/ducha-aiki/caffenet-benchmark/blob/master/batchnorm.md for related ablations!
         activation: Standard Keras activation functions
+        upsampling: (bilinear, nearest, conv) Use bilinear, nearest (nearest neighbour) for predetermined upsampling \
+                    Use conv for transposed convolution based upsampling (learnable)
+        dilation_rates: Add dilation to the encoder block conv layers [len(dilation_rates) == len(nchannels)]
 
     Returns:
         'Model' object: U-Net model.
@@ -49,6 +54,8 @@ def UNet(input_size=(128, 128, 3),
     assert bn in [None, "before", "after"], "Invalid bn parameter value"
 
     assert len(nchannels) >= 2, "At least 2 channels necessary for UNet"
+
+    assert len(nchannels) == len(dilation_rates), "len(nchannels) should be the same as len(dilation_rates)"
 
     # Handle callable activations as well
     if isinstance(activation, str):
@@ -71,7 +78,7 @@ def UNet(input_size=(128, 128, 3),
         else:
             d = None
 
-        C, C_pooled = conv_block(inputs, nc, 3, conv_config, pooling=2, dropout=d, bn=bn, activation=activation)
+        C, C_pooled = conv_block(inputs, nc, 3, conv_config, pooling=2, dropout=d, bn=bn, activation=activation, dilation_rate=dilation_rates[idx])
         levels.append((C, C_pooled))
         inputs = C_pooled
 
@@ -80,8 +87,10 @@ def UNet(input_size=(128, 128, 3),
     for idx, nc in enumerate(reversed(nchannels[1:])):
         if idx == 0:
             d = dropout
+            dilation = dilation_rates[-1]
         else:
             d = None
+            dilation = None
 
         D = up_concat(inp1,
                       inp2,
@@ -90,7 +99,9 @@ def UNet(input_size=(128, 128, 3),
                       conv_config,
                       d,
                       bn=bn,
-                      activation=activation)
+                      activation=activation,
+                      upsampling=upsampling,
+                      dilation=dilation)
         if idx != len(nchannels) - 2:
             inp1, inp2 = D, levels[-2 - idx][0]
 
@@ -119,13 +130,13 @@ def UNet(input_size=(128, 128, 3),
     return model
 
 
-def conv_block(inp, nchannels, window, config, pooling=None, dropout=None, bn=False, activation=None):
+def conv_block(inp, nchannels, window, config, pooling=None, dropout=None, bn=False, activation=None, dilation_rate=1):
 
     if bn and bn == 'before':
         act = config['activation']
         config['activation'] = None
 
-    conv1 = Conv2D(nchannels, window, **config)(inp)
+    conv1 = Conv2D(nchannels, window, dilation_rate=dilation_rate, **config)(inp)
 
     if bn:
         conv1 = BatchNormalization()(conv1)
@@ -136,7 +147,7 @@ def conv_block(inp, nchannels, window, config, pooling=None, dropout=None, bn=Fa
             else:
                 conv1 = activation(conv1)
 
-    conv2 = Conv2D(nchannels, window, **config)(conv1)
+    conv2 = Conv2D(nchannels, window, dilation_rate=dilation_rate, **config)(conv1)
 
     if bn:
         conv2 = BatchNormalization()(conv2)
@@ -160,9 +171,12 @@ def conv_block(inp, nchannels, window, config, pooling=None, dropout=None, bn=Fa
     return conv2, pooled
 
 
-def upsample(inp, factor, nchannels, config, bn=None, activation=None):
+def upsample(inp, factor, nchannels, config, bn=None, activation=None, upsampling='bilinear'):
 
-    resized = UpSampling2D(size=(factor, factor))(inp)
+    if upsampling in ['bilinear', 'nearest']:
+        resized = UpSampling2D(size=(factor, factor), interpolation=upsampling)(inp)
+    else:
+        resized = Conv2DTranspose(nchannels, factor, strides=(factor, factor), padding='same')(inp)
 
     if bn and bn == 'before':
         act = config['activation']
@@ -184,12 +198,22 @@ def upsample(inp, factor, nchannels, config, bn=None, activation=None):
     return up
 
 
-def up_concat(conv_pooled, conv, factor, nchannels, window, config, dropout=None, bn=None, activation=None):
+def up_concat(conv_pooled,
+              conv,
+              factor,
+              nchannels,
+              window,
+              config,
+              dropout=None,
+              bn=None,
+              activation=None,
+              upsampling='bilinear',
+              dilation=1):
 
     assert len(nchannels) == 2
 
-    F, _ = conv_block(conv_pooled, nchannels[0], window, config, bn=bn, dropout=dropout, activation=activation)
-    upsampled = upsample(F, factor, nchannels[1], config, bn=bn, activation=activation)
+    F, _ = conv_block(conv_pooled, nchannels[0], window, config, bn=bn, dropout=dropout, activation=activation, dilation_rate=dilation if dilation else 1)
+    upsampled = upsample(F, factor, nchannels[1], config, bn=bn, activation=activation, upsampling=upsampling)
     feat = concatenate([conv, upsampled], axis=3)
 
     return feat
