@@ -78,7 +78,8 @@ def UNet(input_size=(128, 128, 3),
         else:
             d = None
 
-        C, C_pooled = conv_block(inputs, nc, 3, conv_config, pooling=2, dropout=d, bn=bn, activation=activation, dilation_rate=dilation_rates[idx])
+        C, C_pooled = conv_block(inputs, nc, 3, conv_config, pooling=2, dropout=d, bn=bn, activation=activation, \
+                                    dilation_rate=dilation_rates[idx])
         levels.append((C, C_pooled))
         inputs = C_pooled
 
@@ -212,7 +213,8 @@ def up_concat(conv_pooled,
 
     assert len(nchannels) == 2
 
-    F, _ = conv_block(conv_pooled, nchannels[0], window, config, bn=bn, dropout=dropout, activation=activation, dilation_rate=dilation if dilation else 1)
+    F, _ = conv_block(conv_pooled, nchannels[0], window, config, bn=bn, dropout=dropout, activation=activation, \
+                        dilation_rate=dilation if dilation else 1)
     upsampled = upsample(F, factor, nchannels[1], config, bn=bn, activation=activation, upsampling=upsampling)
     feat = concatenate([conv, upsampled], axis=3)
 
