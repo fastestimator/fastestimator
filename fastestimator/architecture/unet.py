@@ -44,8 +44,7 @@ def UNet(input_size=(128, 128, 3),
         'Model' object: U-Net model.
     """
 
-    assert dropout is None or 0 <= dropout <= 1, \
-            "Invalid value for dropout parameter (None or 0 to 1 only)"
+    assert dropout is None or 0 <= dropout <= 1, "Invalid value for dropout parameter (None or 0 to 1 only)"
 
     assert bn in [None, "before", "after"], "Invalid bn parameter value"
 
@@ -97,18 +96,18 @@ def UNet(input_size=(128, 128, 3),
 
     C_end1, _ = conv_block(D, 64, 3, conv_config, bn=bn, activation=activation)
 
-    if bn is not None:
+    if bn:
         if bn == 'before':
             act = conv_config['activation']
             conv_config['activation'] = None
 
     C_end2 = Conv2D(2, 3, **conv_config)(C_end1)
 
-    if bn is not None:
+    if bn:
         C_end2 = BatchNormalization()(C_end2)
 
         if bn == 'before':
-            if act is not None:
+            if act:
                 C_end2 = Activation(act)(C_end2)
             else:
                 C_end2 = activation(C_end2)
@@ -122,39 +121,38 @@ def UNet(input_size=(128, 128, 3),
 
 def conv_block(inp, nchannels, window, config, pooling=None, dropout=None, bn=False, activation=None):
 
-    if bn is not None:
-        if bn == 'before':
-            act = config['activation']
-            config['activation'] = None
+    if bn and bn == 'before':
+        act = config['activation']
+        config['activation'] = None
 
     conv1 = Conv2D(nchannels, window, **config)(inp)
 
-    if bn is not None:
+    if bn:
         conv1 = BatchNormalization()(conv1)
 
         if bn == 'before':
-            if act is not None:
+            if act:
                 conv1 = Activation(act)(conv1)
             else:
                 conv1 = activation(conv1)
 
     conv2 = Conv2D(nchannels, window, **config)(conv1)
 
-    if bn is not None:
+    if bn:
         conv2 = BatchNormalization()(conv2)
 
         if bn == 'before':
-            if act is not None:
+            if act:
                 conv2 = Activation(act)(conv2)
             else:
                 conv2 = activation(conv2)
 
             config['activation'] = act  # python dicts are reference based
 
-    if dropout is not None:
+    if dropout:
         conv2 = Dropout(dropout)(conv2)
 
-    if pooling is not None:
+    if pooling:
         pooled = MaxPooling2D(pool_size=(pooling, pooling))(conv2)
     else:
         pooled = None
@@ -163,20 +161,20 @@ def conv_block(inp, nchannels, window, config, pooling=None, dropout=None, bn=Fa
 
 
 def upsample(inp, factor, nchannels, config, bn=None, activation=None):
+
     resized = UpSampling2D(size=(factor, factor))(inp)
 
-    if bn is not None:
-        if bn == 'before':
-            act = config['activation']
-            config['activation'] = None
+    if bn and bn == 'before':
+        act = config['activation']
+        config['activation'] = None
 
     up = Conv2D(nchannels, factor, **config)(resized)
 
-    if bn is not None:
+    if bn:
         up = BatchNormalization()(up)
 
         if bn == 'before':
-            if act is not None:
+            if act:
                 up = Activation(act)(up)
             else:
                 up = activation(up)
