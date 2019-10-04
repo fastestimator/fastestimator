@@ -18,13 +18,14 @@ import tempfile
 import numpy as np
 import tensorflow as tf
 
+import fastestimator as fe
+from fastestimator import Estimator, Network, Pipeline
 from fastestimator.architecture.retinanet import RetinaNet, get_fpn_anchor_box, get_target
 from fastestimator.dataset import svhn
-from fastestimator import Estimator, Network, Pipeline, FEModel
-from fastestimator.trace import ModelSaver
 from fastestimator.op import NumpyOp, TensorOp
-from fastestimator.op.tensorop import ModelOp, Minmax, Loss
 from fastestimator.op.numpyop import ImageReader, Resize
+from fastestimator.op.tensorop import Loss, Minmax, ModelOp
+from fastestimator.trace import ModelSaver
 from fastestimator.util import RecordWriter
 
 
@@ -174,9 +175,10 @@ def get_estimator(batch_size=128, epochs=15, steps_per_epoch=None, model_dir=tem
                         ops=Minmax(inputs="image", outputs="image"),
                         read_feature=["image", "target_cls", "target_loc"])
     # prepare model
-    model = FEModel(model_def=lambda: RetinaNet(input_shape=(64, 128, 3), num_classes=10),
-                    model_name="retinanet",
-                    optimizer=tf.optimizers.Adam(learning_rate=0.0001))
+    model = fe.build(model_def=lambda: RetinaNet(input_shape=(64, 128, 3), num_classes=10),
+                     model_name="retinanet",
+                     optimizer=tf.optimizers.Adam(learning_rate=0.0001),
+                     loss_name="loss")
     network = Network(ops=[
         ModelOp(inputs="image", model=model, outputs=["pred_cls", "pred_loc"]),
         PredictBox(outputs=("cls_selected", "loc_selected", "valid_outputs"), mode="eval"),

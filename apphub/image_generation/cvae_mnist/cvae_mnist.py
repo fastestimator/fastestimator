@@ -20,9 +20,9 @@ import tempfile
 import tensorflow as tf
 
 import fastestimator as fe
-from fastestimator.trace import ModelSaver
 from fastestimator.op import TensorOp
 from fastestimator.op.tensorop import Loss, ModelOp
+from fastestimator.trace import ModelSaver
 
 LATENT_DIM = 50
 
@@ -106,21 +106,21 @@ def get_estimator(batch_size=100, epochs=100, steps_per_epoch=None, model_dir=te
                            data=data,
                            ops=[Myrescale(inputs="x", outputs="x"), Mybinarize(inputs="x", outputs="x")])
     # prepare model
-    infer_model = fe.FEModel(model_def=inference_net,
-                             model_name="encoder",
-                             loss_name="loss",
-                             optimizer=tf.optimizers.Adam(1e-4))
-    gen_model = fe.FEModel(model_def=generative_net,
-                           model_name="decoder",
+    infer_model = fe.build(model_def=inference_net,
+                           model_name="encoder",
                            loss_name="loss",
                            optimizer=tf.optimizers.Adam(1e-4))
+    gen_model = fe.build(model_def=generative_net,
+                         model_name="decoder",
+                         loss_name="loss",
+                         optimizer=tf.optimizers.Adam(1e-4))
 
     network = fe.Network(ops=[
         ModelOp(inputs="x", model=infer_model, outputs="meanlogvar", mode=None),
         SplitOp(inputs="meanlogvar", outputs=("mean", "logvar"), mode=None),
         ReparameterizepOp(inputs=("mean", "logvar"), outputs="z", mode=None),
         ModelOp(inputs="z", model=gen_model, outputs="x_logit"),
-        CVAELoss(inputs=("x", "mean", "logvar", "z", "x_logit"), mode=None)
+        CVAELoss(inputs=("x", "mean", "logvar", "z", "x_logit"), mode=None, outputs="loss")
     ])
     estimator = fe.Estimator(network=network,
                              pipeline=pipeline,

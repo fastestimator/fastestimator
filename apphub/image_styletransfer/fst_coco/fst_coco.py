@@ -20,13 +20,12 @@ import tensorflow as tf
 
 import cv2
 import fastestimator as fe
-from fastestimator import FEModel
 from fastestimator.architecture.stnet import lossNet, styleTransferNet
 from fastestimator.dataset.mscoco import load_data
+from fastestimator.op import TensorOp
 from fastestimator.op.numpyop import ImageReader, Resize
 from fastestimator.op.tensorop import Loss, ModelOp
 from fastestimator.trace import ModelSaver
-from fastestimator.op import TensorOp
 from fastestimator.util import RecordWriter
 
 
@@ -120,10 +119,10 @@ def get_estimator(style_img_path=None,
 
     pipeline = fe.Pipeline(batch_size=4, data=writer, ops=[Rescale(inputs="image", outputs="image")])
 
-    model = FEModel(model_def=styleTransferNet,
-                    model_name="style_transfer_net",
-                    loss_name="loss",
-                    optimizer=tf.keras.optimizers.Adam(1e-3))
+    model = fe.build(model_def=styleTransferNet,
+                     model_name="style_transfer_net",
+                     loss_name="loss",
+                     optimizer=tf.keras.optimizers.Adam(1e-3))
 
     network = fe.Network(ops=[
         ModelOp(inputs="image", model=model, outputs="image_out"),
