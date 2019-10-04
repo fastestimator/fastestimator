@@ -112,7 +112,7 @@ echo -en '\n'
 echo '4. LeNet MNIST'
 echo -en '\n'
 
-filepath=${image_classification_path}'lenet_mnist/'
+filepath=${path_image_classification}'lenet_mnist/'
 filename='lenet_mnist.py'
 
 if fastestimator train ${filepath}${filename} ${train_info}; then

@@ -45,6 +45,3 @@ class InstanceNormalization(layers.Layer):
         inv = tf.math.rsqrt(variance + self.epsilon)
         normalized = (x - mean) * inv
         return self.scale * normalized + self.offset
-
-    def __call__(self, *args, **kwargs):
-        super().__call__(*args, **kwargs)

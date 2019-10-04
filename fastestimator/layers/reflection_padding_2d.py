@@ -38,6 +38,3 @@ class ReflectionPadding2D(layers.Layer):
     def call(self, x, mask=None):
         w_pad, h_pad = self.padding
         return tf.pad(x, [[0, 0], [h_pad, h_pad], [w_pad, w_pad], [0, 0]], 'REFLECT')
-
-    def __call__(self, *args, **kwargs):
-        super().__call__(*args, **kwargs)
