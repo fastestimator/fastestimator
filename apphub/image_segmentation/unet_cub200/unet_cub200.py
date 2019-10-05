@@ -37,7 +37,7 @@ def get_estimator(batch_size=32, epochs=25, steps_per_epoch=None, model_dir=temp
     # load CUB200 dataset.
     csv_path, path = cub200.load_data()
     writer = RecordWriter(
-        save_dir=os.path.join(path, "FEdata"),
+        save_dir=os.path.join(path, "tfrecords"),
         train_data=csv_path,
         validation_data=0.2,
         ops=[

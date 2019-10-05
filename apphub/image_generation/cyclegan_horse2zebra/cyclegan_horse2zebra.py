@@ -87,7 +87,7 @@ class DLoss(Loss):
 
 def get_estimator(weight=10.0, epochs=200, steps_per_epoch=None, model_dir=tempfile.mkdtemp()):
     trainA_csv, trainB_csv, _, _, parent_path = load_data()
-    tfr_save_dir = os.path.join(parent_path, 'FEdata')
+    tfr_save_dir = os.path.join(parent_path, 'tfrecords')
     # Step 1: Define Pipeline
     writer = RecordWriter(
         train_data=(trainA_csv, trainB_csv),
