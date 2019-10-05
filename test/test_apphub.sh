@@ -7,15 +7,15 @@ path_image_segmentation=${path_apphub}'image_segmentation/'
 path_image_styletransfer=${path_apphub}'image_styletransfer/'
 path_nlp=${path_apphub}'NLP/'
 path_tabular=${path_apphub}'tabular/'
+path_temp=/tmp/
 
 #training parameters to test the models
 train_info='--epochs 2 --batch_size 2 --steps_per_epoch 10'
 nb_train_info='-p epochs 2 -p batch_size 2 -p steps_per_epoch 10' #notebook parameters
 FILES=$(find ${path_apphub} -type f -name '*.py')
 cnt = 0
-
+echo 'Apphub files'
 for filename in $FILES; do
-    echo $(basename $filename)
     echo $filename
 done
 
@@ -39,17 +39,17 @@ fi
 nb_filename='lenet_cifar10_adversarial.ipynb'
 nb_param_filename='lenet_cifar10_adversarial_param.ipynb'
 #inject a parameter cell and convert to python script
-papermill --prepare-only ${filepath}${nb_filename} ${filepath}${nb_param_filename} ${nb_train_info} -p num_test_samples 10
-jupyter nbconvert --to script ${filepath}${nb_param_filename} --output 'lenet_cifar10_adversarial_param'
+papermill --prepare-only ${filepath}${nb_filename} ${path_temp}${nb_param_filename} ${nb_train_info} -p num_test_samples 10
+jupyter nbconvert --to script ${path_temp}${nb_param_filename} --output 'lenet_cifar10_adversarial_param'
 
-if ipython ${filepath}'lenet_cifar10_adversarial_param.py'; then
+if ipython ${path_temp}'lenet_cifar10_adversarial_param.py'; then
     ((cnt=cnt+1))
 else
     echo 'Testing failed for LeNet'
 fi
 rm -rf /tmp/tmp*
-rm ${filepath}${nb_param_filename}
-rm ${filepath}'lenet_cifar10_adversarial_param.py'
+rm ${path_temp}${nb_param_filename}
+rm ${path_temp}'lenet_cifar10_adversarial_param.py'
 
 # 2. DenseNet
 echo -en '\n'
@@ -68,17 +68,17 @@ fi
 nb_filename='densenet121_cifar10.ipynb'
 nb_param_filename='densenet121_cifar10_param.ipynb'
 #inject a parameter cell
-papermill --prepare-only ${filepath}${nb_filename} ${filepath}${nb_param_filename} ${nb_train_info}
-jupyter nbconvert --to script ${filepath}${nb_param_filename} --output 'densenet121_cifar10_param'
+papermill --prepare-only ${filepath}${nb_filename}  ${path_temp}${nb_param_filename} ${nb_train_info}
+jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'densenet121_cifar10_param'
 
-if ipython ${filepath}'densenet121_cifar10_param.py'; then
-    echo 'notebook passed'
+if ipython  ${path_temp}'densenet121_cifar10_param.py'; then
+    ((cnt=cnt+1))
 else
-    echo 'notebook failed'
+    echo 'Testing on DenseNet notebook failed'
 fi
 rm -rf /tmp/tmp*
-rm ${filepath}${nb_param_filename}
-rm ${filepath}'densenet121_cifar10_param.py'
+rm  ${path_temp}${nb_param_filename}
+rm  ${path_temp}'densenet121_cifar10_param.py'
 
 # 3. LeNet Mixup
 echo -en '\n'
@@ -95,17 +95,17 @@ fi
 nb_filename='lenet_cifar10_mixup.ipynb'
 nb_param_filename='lenet_cifar10_mixup_param.ipynb'
 #inject a parameter cell
-papermill --prepare-only ${filepath}${nb_filename} ${filepath}${nb_param_filename} ${nb_train_info}
-jupyter nbconvert --to script ${filepath}${nb_param_filename} --output 'lenet_cifar10_mixup_param'
+papermill --prepare-only ${filepath}${nb_filename}  ${path_temp}${nb_param_filename} ${nb_train_info}
+jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'lenet_cifar10_mixup_param'
 
-if ipython ${filepath}'lenet_cifar10_mixup_param.py'; then
-    echo 'notebook passed'
+if ipython  ${path_temp}'lenet_cifar10_mixup_param.py'; then
+    ((cnt=cnt+1))
 else
-    echo 'notebook failed'
+    echo 'Testing failed on LeNet Mixup notebook'
 fi
 rm -rf /tmp/tmp*
-rm ${filepath}${nb_param_filename}
-rm ${filepath}'lenet_cifar10_mixup_param.py'
+rm  ${path_temp}${nb_param_filename}
+rm  ${path_temp}'lenet_cifar10_mixup_param.py'
 
 # 4. LeNet MNIST
 echo -en '\n'
@@ -124,17 +124,17 @@ fi
 nb_filename='lenet_mnist.ipynb'
 nb_param_filename='lenet_mnist_param.ipynb'
 #inject a parameter cell
-papermill --prepare-only ${filepath}${nb_filename} ${filepath}${nb_param_filename} ${nb_train_info}
-jupyter nbconvert --to script ${filepath}${nb_param_filename} --output 'lenet_mnist_param'
+papermill --prepare-only ${filepath}${nb_filename}  ${path_temp}${nb_param_filename} ${nb_train_info}
+jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'lenet_mnist_param'
 
-if ipython ${filepath}'lenet_mnist_param.py'; then
-    echo 'notebook passed'
+if ipython  ${path_temp}'lenet_mnist_param.py'; then
+    ((cnt=cnt+1))
 else
-    echo 'notebook failed'
+    echo 'Testing failed on LeNet MNIST notebook'
 fi
 rm -rf /tmp/tmp*
-rm ${filepath}${nb_param_filename}
-rm ${filepath}'lenet_mnist_param.py'
+rm  ${path_temp}${nb_param_filename}
+rm  ${path_temp}'lenet_mnist_param.py'
 
 #-----------------------------IMAGE DETECTION--------------------------------#
 # 5. RetinaNet Svhn
@@ -151,21 +151,6 @@ if fastestimator train ${filepath}${filename} ${train_info}; then
 else
     echo 'Testing failed on RetinaNet Svhn'
 fi
-
-nb_filename='retinanet_svhn.ipynb'
-nb_param_filename='retinanet_svhn_param.ipynb'
-#inject a parameter cell
-papermill --prepare-only ${filepath}${nb_filename} ${filepath}${nb_param_filename} ${nb_train_info}
-jupyter nbconvert --to script ${filepath}${nb_param_filename} --output 'retinanet_svhn_param'
-
-if ipython ${filepath}'retinanet_svhn_param.py'; then
-    echo 'notebook passed'
-else
-    echo 'notebook failed'
-fi
-rm -rf /tmp/tmp*
-rm ${filepath}${nb_param_filename}
-rm ${filepath}'retinanet_svhn_param.py'
 
 #-------------------------------IMAGE GENERATION----------------------------#
 # 6. CVAE MNIST
@@ -186,17 +171,17 @@ fi
 nb_filename='cvae_mnist.ipynb'
 nb_param_filename='cvae_mnist_param.ipynb'
 #inject a parameter cell
-papermill --prepare-only ${filepath}${nb_filename} ${filepath}${nb_param_filename} ${nb_train_info}
-jupyter nbconvert --to script ${filepath}${nb_param_filename} --output 'cvae_mnist_param'
+papermill --prepare-only ${filepath}${nb_filename}  ${path_temp}${nb_param_filename} ${nb_train_info}
+jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'cvae_mnist_param'
 
-if ipython ${filepath}'cvae_mnist_param.py'; then
-    echo 'notebook passed'
+if ipython  ${path_temp}'cvae_mnist_param.py'; then
+    ((cnt=cnt+1))
 else
-    echo 'notebook failed'
+    echo 'Testing failed on CVAE MNIST notebook'
 fi
 rm -rf /tmp/tmp*
-rm ${filepath}${nb_param_filename}
-rm ${filepath}'cvae_mnist_param.py'
+rm  ${path_temp}${nb_param_filename}
+rm  ${path_temp}'cvae_mnist_param.py'
 
 # 7. CycleGAN Horse2Zebra
 echo -en '\n'
@@ -216,17 +201,17 @@ fi
 nb_filename='cyclegan.ipynb'
 nb_param_filename='cyclegan_param.ipynb'
 #inject a parameter cell
-papermill --prepare-only ${filepath}${nb_filename} ${filepath}${nb_param_filename} -p epochs 2 -p steps_per_epoch 10
-jupyter nbconvert --to script ${filepath}${nb_param_filename} --output 'cyclegan_param'
+papermill --prepare-only ${filepath}${nb_filename}  ${path_temp}${nb_param_filename} -p epochs 2 -p steps_per_epoch 10
+jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'cyclegan_param'
 
-if ipython ${filepath}'cyclegan_param.py'; then
-    echo 'notebook passed'
+if ipython  ${path_temp}'cyclegan_param.py'; then
+    ((cnt=cnt+1))
 else
-    echo 'notebook failed'
+    echo 'Testing failed on CycleGAN notebook'
 fi
 rm -rf /tmp/tmp*
-rm ${filepath}${nb_param_filename}
-rm ${filepath}'cyclegan_param.py'
+rm  ${path_temp}${nb_param_filename}
+rm  ${path_temp}'cyclegan_param.py'
 
 # 8. DCGAN MNIST
 echo -en '\n'
@@ -246,13 +231,13 @@ fi
 nb_filename='dcgan_mnist.ipynb'
 nb_param_filename='dcgan_mnist_param.ipynb'
 #inject a parameter cell
-papermill --prepare-only ${filepath}${nb_filename} ${filepath}${nb_param_filename} ${nb_train_info}
-jupyter nbconvert --to script ${filepath}${nb_param_filename} --output 'dcgan_mnist_param'
+papermill --prepare-only ${filepath}${nb_filename}  ${path_temp}${nb_param_filename} ${nb_train_info} -p saved_model_path 'gen_epoch_0_step_10.h5'
+jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'dcgan_mnist_param'
 
-if ipython ${filepath}'dcgan_mnist_param.py'; then
-    echo 'notebook passed'
+if ipython  ${path_temp}'dcgan_mnist_param.py'; then
+    ((cnt=cnt+1))
 else
-    echo 'notebook failed'
+    echo 'Testing failed on DCGAN notebook'
 fi
 rm -rf /tmp/tmp*
 rm ${filepath}${nb_param_filename}
@@ -276,17 +261,17 @@ fi
 nb_filename='unet_cub200.ipynb'
 nb_param_filename='unet_cub200_param.ipynb'
 #inject a parameter cell
-papermill --prepare-only ${filepath}${nb_filename} ${filepath}${nb_param_filename} ${nb_train_info}
-jupyter nbconvert --to script ${filepath}${nb_param_filename} --output 'unet_cub200_param'
+papermill --prepare-only ${filepath}${nb_filename}  ${path_temp}${nb_param_filename} ${nb_train_info}
+jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'unet_cub200_param'
 
-if ipython ${filepath}'unet_cub200_param.py'; then
-    echo 'notebook passed'
+if ipython  ${path_temp}'unet_cub200_param.py'; then
+    ((cnt=cnt+1))
 else
-    echo 'notebook failed'
+    echo 'Testing failed on UNET Cub200 notebook'
 fi
 rm -rf /tmp/tmp*
-rm ${filepath}${nb_param_filename}
-rm ${filepath}'unet_cub200_param.py'
+rm  ${path_temp}${nb_param_filename}
+rm  ${path_temp}'unet_cub200_param.py'
 
 # 10. UNET Montgomery
 echo -en '\n'
@@ -306,17 +291,17 @@ fi
 nb_filename='unet_montgomery.ipynb'
 nb_param_filename='unet_montgomery_param.ipynb'
 #inject a parameter cell
-papermill --prepare-only ${filepath}${nb_filename} ${filepath}${nb_param_filename} ${nb_train_info}
-jupyter nbconvert --to script ${filepath}${nb_param_filename} --output 'unet_montgomery_param'
+papermill --prepare-only ${filepath}${nb_filename}  ${path_temp}${nb_param_filename} ${nb_train_info}
+jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'unet_montgomery_param'
 
-if ipython ${filepath}'unet_montgomery_param.py'; then
-    echo 'notebook passed'
+if ipython  ${path_temp}'unet_montgomery_param.py'; then
+    ((cnt=cnt+1))
 else
-    echo 'notebook failed'
+    echo 'Testing failed on UNET Montgomery notebook'
 fi
 rm -rf /tmp/tmp*
-rm ${filepath}${nb_param_filename}
-rm ${filepath}'unet_montgomery_param.py'
+rm  ${path_temp}${nb_param_filename}
+rm  ${path_temp}'unet_montgomery_param.py'
 
 #----------------------------IMAGE STYLETRANSFER------------------------#
 #11. Fst COCO
@@ -337,17 +322,18 @@ fi
 nb_filename='fst_coco.ipynb'
 nb_param_filename='fst_coco_param.ipynb'
 #inject a parameter cell
-papermill --prepare-only ${filepath}${nb_filename} ${filepath}${nb_param_filename} -p steps_per_epoch 10
-jupyter nbconvert --to script ${filepath}${nb_param_filename} --output 'fst_coco_param'
 
-if ipython ${filepath}'fst_coco_param.py'; then
-    echo 'notebook passed'
+papermill --prepare-only ${filepath}${nb_filename}  ${path_temp}${nb_param_filename} -p steps_per_epoch 10 -p img_path ${filepath}'panda.jpeg' -p saved_model_path 'style_transfer_net_epoch_0_step_10.h5'
+jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'fst_coco_param'
+
+if ipython  ${path_temp}'fst_coco_param.py'; then
+    ((cnt=cnt+1))
 else
-    echo 'notebook failed'
+    echo 'Testing failed on Fst COCO notebook'
 fi
 rm -rf /tmp/tmp*
-rm ${filepath}${nb_param_filename}
-rm ${filepath}'fst_coco_param.py'
+rm  ${path_temp}${nb_param_filename}
+rm  ${path_temp}'fst_coco_param.py'
 
 #--------------------------------NLP----------------------------------#
 # 12. LSTM IMDB
@@ -359,7 +345,7 @@ echo -en '\n'
 filepath=${path_nlp}'lstm_imdb/'
 filename='lstm_imdb.py'
 
-if fastestimator train ${filepath}${filename} ${train_info}; then
+if fastestimator train ${filepath}${filename} ${train_info} --max_len 300; then
     ((cnt=cnt+1))
 else
     echo 'Testing failed on lstm imdb'
@@ -368,17 +354,17 @@ fi
 nb_filename='lstm_imdb.ipynb'
 nb_param_filename='lstm_imdb_param.ipynb'
 #inject a parameter cell
-papermill --prepare-only ${filepath}${nb_filename} ${filepath}${nb_param_filename} ${nb_train_info}
-jupyter nbconvert --to script ${filepath}${nb_param_filename} --output 'lstm_imdb_param'
+papermill --prepare-only ${filepath}${nb_filename}  ${path_temp}${nb_param_filename} ${nb_train_info} -p MAX_LEN 300
+jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'lstm_imdb_param'
 
-if ipython ${filepath}'lstm_imdb_param.py'; then
-    echo 'notebook passed'
+if ipython  ${path_temp}'lstm_imdb_param.py'; then
+    ((cnt=cnt+1))
 else
-    echo 'notebook failed'
+    echo 'Testing failed on LSTM IMDB notebook'
 fi
 rm -rf /tmp/tmp*
-rm ${filepath}${nb_param_filename}
-rm ${filepath}'lstm_imdb_param.py'
+rm  ${path_temp}${nb_param_filename}
+rm  ${path_temp}'lstm_imdb_param.py'
 
 #-------------------------------Tabular-------------------------------#
 echo -en '\n'
@@ -392,21 +378,21 @@ filename='dnn_housing.py'
 if fastestimator train ${filepath}${filename} ${train_info}; then
     ((cnt=cnt+1))
 else
-    echo 'Testing failed on dnn housing'
+    echo 'Testing failed on DNN Housing'
 fi
 
 nb_filename='dnn_housing.ipynb'
 nb_param_filename='dnn_housing_param.ipynb'
 #inject a parameter cell
-papermill --prepare-only ${filepath}${nb_filename} ${filepath}${nb_param_filename} ${nb_train_info}
-jupyter nbconvert --to script ${filepath}${nb_param_filename} --output 'dnn_housing_param'
+papermill --prepare-only ${filepath}${nb_filename}  ${path_temp}${nb_param_filename} ${nb_train_info}
+jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'dnn_housing_param'
 
-if ipython ${filepath}'dnn_housing_param.py'; then
-    echo 'notebook passed'
+if ipython  ${path_temp}'dnn_housing_param.py'; then
+    ((cnt=cnt+1))
 else
-    echo 'notebook failed'
+    echo 'Testing failed on DNN Housing notebook'
 fi
 rm -rf /tmp/tmp*
-rm ${filepath}${nb_param_filename}
-rm ${filepath}'dnn_housing_param.py'
+rm  ${path_temp}${nb_param_filename}
+rm  ${path_temp}'dnn_housing_param.py'
 echo $cnt

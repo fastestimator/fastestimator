@@ -26,9 +26,9 @@ MAX_WORDS = 10000
 MAX_LEN = 500
 
 
-def create_lstm():
+def create_lstm(max_len):
     model = tf.keras.Sequential()
-    model.add(layers.Embedding(MAX_WORDS, 64, input_length=MAX_LEN))
+    model.add(layers.Embedding(MAX_WORDS, 64, input_length=max_len))
     model.add(layers.Conv1D(32, 3, padding='same', activation='relu'))
     model.add(layers.MaxPooling1D(pool_size=4))
     model.add(layers.LSTM(64))
@@ -41,22 +41,22 @@ def pad(input_list, padding_size, padding_value):
     return input_list + [padding_value] * abs((len(input_list) - padding_size))
 
 
-def get_estimator(epochs=10, batch_size=64, steps_per_epoch=None, model_dir=tempfile.mkdtemp()):
+def get_estimator(epochs=10, batch_size=64, max_len=500, steps_per_epoch=None, model_dir=tempfile.mkdtemp()):
     # step 1. prepare data
-    (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.imdb.load_data(maxlen=MAX_LEN, num_words=MAX_WORDS)
+    (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.imdb.load_data(maxlen=max_len, num_words=MAX_WORDS)
     data = {
         "train": {
-            "x": np.array([pad(x, MAX_LEN, 0) for x in x_train]), "y": y_train
+            "x": np.array([pad(x, max_len, 0) for x in x_train]), "y": y_train
         },
         "eval": {
-            "x": np.array([pad(x, MAX_LEN, 0) for x in x_eval]), "y": y_eval
+            "x": np.array([pad(x, max_len, 0) for x in x_eval]), "y": y_eval
         }
     }
 
     pipeline = fe.Pipeline(batch_size=batch_size, data=data, ops=Reshape([1], inputs="y", outputs="y"))
 
     # step 2. prepare model
-    model = fe.build(model_def=create_lstm, model_name="lstm_imdb", optimizer="adam", loss_name="loss")
+    model = fe.build(model_def=lambda: create_lstm(max_len), model_name="lstm_imdb", optimizer="adam", loss_name="loss")
     network = fe.Network(ops=[
         ModelOp(inputs="x", model=model, outputs="y_pred"),
         BinaryCrossentropy(y_true="y", y_pred="y_pred", outputs="loss")
