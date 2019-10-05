@@ -41,7 +41,7 @@ def _create_csv(img_path, parent_path, csv_path):
 
 
 def load_data(path=None):
-    """Downloads the Mendeley dataset to local storage, if not already downloaded. This will generate 2 csv files
+    """Download the Mendeley dataset to local storage, if not already downloaded. This will generate 2 csv files
     (train, test), which contain all the path information.
 
     Args:
@@ -61,6 +61,8 @@ def load_data(path=None):
 
     if path is None:
         path = os.path.join(home, 'fastestimator_data', 'Mendeley')
+    else:
+        path = os.path.abspath(path)
     os.makedirs(path, exist_ok=True)
 
     train_csv = os.path.join(path, 'train.csv')

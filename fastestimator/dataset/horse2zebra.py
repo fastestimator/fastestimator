@@ -37,7 +37,7 @@ def _create_csv(img_path, key_name, parent_path, csv_path):
 
 
 def load_data(path=None):
-    """Downloads the horse2zebra dataset to local storage, if not already downloaded. This will generate 4 csv files
+    """Download the horse2zebra dataset to local storage, if not already downloaded. This will generate 4 csv files
     (trainA, trainB, testA, testB), which contain all the path information.
 
     Args:
@@ -57,6 +57,8 @@ def load_data(path=None):
 
     if path is None:
         path = os.path.join(home, 'fastestimator_data', 'horse2zebra')
+    else:
+        path = os.path.abspath(path)
     os.makedirs(path, exist_ok=True)
 
     data_compressed_path = os.path.join(path, 'horse2zebra.zip')
