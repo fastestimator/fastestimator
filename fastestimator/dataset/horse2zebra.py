@@ -12,66 +12,87 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""
-Download horse2zebra dataset from https://people.eecs.berkeley.edu/~taesung_park/CycleGAN/datasets/horse2zebra.zip
+"""Download horse2zebra dataset from https://people.eecs.berkeley.edu/~taesung_park/CycleGAN/datasets/horse2zebra.zip.
 """
 import os
 import zipfile
-import tempfile
 from glob import glob
+from pathlib import Path
 
 import pandas as pd
 import wget
 
+from fastestimator.util.wget import bar_custom, callback_progress
 
-def _create_csv(img, key_name, parent_path, csv_name):
+wget.callback_progress = callback_progress
+
+
+def _create_csv(img_path, key_name, parent_path, csv_path):
     df = pd.DataFrame()
-    df[key_name] = [img_filename.replace(parent_path, '.') for img_filename in img]
-    df.to_csv(csv_name, index=False)
+    df[key_name] = img_path
+    df[key_name] = df[key_name].apply(lambda x: os.path.relpath(x, parent_path))
+    df[key_name] = df[key_name].apply(os.path.normpath)
+    df.to_csv(csv_path, index=False)
+    print("Data summary is saved at {}".format(csv_path))
 
 
 def load_data(path=None):
-    """Downloads the horse2zebra dataset to local storage, if not already downloaded. This will generate 4 csv files
+    """Download the horse2zebra dataset to local storage, if not already downloaded. This will generate 4 csv files
     (trainA, trainB, testA, testB), which contain all the path information.
 
     Args:
-        path (str, optional): The path to store the horse2zebra data. Defaults to None, will save at
-        `tempfile.gettempdir()`.
+        path (str, optional): The path to store the horse2zebra data. When `path` is not provided, will save at
+            `fastestimator_data` under user's home directory.
 
     Returns:
-        string: path to trainA csv file.
-        string: path to trainB csv file.
-        string: path to testA csv file.
-        string: path to testB csv file.
-        string: path to data directory.
+        (tuple): tuple containing:
+            train_a_csv (str): Path to trainA csv file.
+            train_b_csv (str): Path to trainB csv file.
+            test_a_csv (str): Path to testA csv file.
+            test_b_csv (str): Path to testB csv file.
+            path (str): Path to data root directory.
+
     """
+    home = str(Path.home())
+
     if path is None:
-        path = os.path.join(tempfile.gettempdir(), ".fe", "HORSE2ZEBRA")
-    if not (os.path.exists(path)):
-        os.makedirs(path)
+        path = os.path.join(home, 'fastestimator_data', 'horse2zebra')
+    else:
+        path = os.path.abspath(path)
+    os.makedirs(path, exist_ok=True)
+
     data_compressed_path = os.path.join(path, 'horse2zebra.zip')
-    data_folder_path = os.path.join(path, 'horse2zebra')
-    trainA_csv = os.path.join(path, 'trainA.csv')
-    trainB_csv = os.path.join(path, 'trainB.csv')
-    testA_csv = os.path.join(path, 'testA.csv')
-    testB_csv = os.path.join(path, 'testB.csv')
+    data_folder_path = os.path.join(path, 'images')
+    train_a_csv = os.path.join(path, 'trainA.csv')
+    train_b_csv = os.path.join(path, 'trainB.csv')
+    test_a_csv = os.path.join(path, 'testA.csv')
+    test_b_csv = os.path.join(path, 'testB.csv')
+
+    # download
     if not os.path.exists(data_compressed_path):
-        print("Downloading data to {}:".format(path))
-        wget.download('https://people.eecs.berkeley.edu/~taesung_park/CycleGAN/datasets/horse2zebra.zip', path)
+        print("Downloading data to {}".format(path))
+        wget.download('https://people.eecs.berkeley.edu/~taesung_park/CycleGAN/datasets/horse2zebra.zip',
+                      path,
+                      bar=bar_custom)
+
+    # extract
     if not os.path.exists(data_folder_path):
-        print('\nExtracting files...')
+        print("\nExtracting files ...")
         with zipfile.ZipFile(data_compressed_path, 'r') as zip_file:
             zip_file.extractall(path)
-    if not os.path.exists(trainA_csv):
-        trainA_img = glob(os.path.join(path, 'horse2zebra', 'trainA', '*.jpg'))
-        _create_csv(trainA_img, 'imgA', path, trainA_csv)
-    if not os.path.exists(trainB_csv):
-        trainB_img = glob(os.path.join(path, 'horse2zebra', 'trainB', '*.jpg'))
-        _create_csv(trainB_img, 'imgB', path, trainB_csv)
-    if not os.path.exists(testA_csv):
-        testA_img = glob(os.path.join(path, 'horse2zebra', 'testA', '*.jpg'))
-        _create_csv(testA_img, 'imgA', path, testA_csv)
-    if not os.path.exists(testB_csv):
-        testB_img = glob(os.path.join(path, 'horse2zebra', 'testB', '*.jpg'))
-        _create_csv(testB_img, 'imgB', path, testB_csv)
-    return trainA_csv, trainB_csv, testA_csv, testB_csv, path
+        os.rename(os.path.join(path, 'horse2zebra'), os.path.join(path, 'images'))
+
+    # glob and generate csv
+    if not os.path.exists(train_a_csv):
+        train_a_img = glob(os.path.join(data_folder_path, 'trainA', '*.jpg'))
+        _create_csv(train_a_img, 'imgA', path, train_a_csv)
+    if not os.path.exists(train_b_csv):
+        train_b_img = glob(os.path.join(data_folder_path, 'trainB', '*.jpg'))
+        _create_csv(train_b_img, 'imgB', path, train_b_csv)
+    if not os.path.exists(test_a_csv):
+        test_a_img = glob(os.path.join(data_folder_path, 'testA', '*.jpg'))
+        _create_csv(test_a_img, 'imgA', path, test_a_csv)
+    if not os.path.exists(test_b_csv):
+        test_b_img = glob(os.path.join(data_folder_path, 'testB', '*.jpg'))
+        _create_csv(test_b_img, 'imgB', path, test_b_csv)
+    return train_a_csv, train_b_csv, test_a_csv, test_b_csv, path
