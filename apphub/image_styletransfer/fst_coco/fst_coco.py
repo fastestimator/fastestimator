@@ -106,7 +106,7 @@ def get_estimator(style_img_path=None,
             '-_Composition_7.jpg')
     style_img = cv2.imread(style_img_path)
     assert (style_img is not None), "Invalid style reference image"
-    tfr_save_dir = os.path.join(path, 'FEdata')
+    tfr_save_dir = os.path.join(path, 'tfrecords')
     style_img = (style_img.astype(np.float32) / 127.5) / 127.5
     style_img_t = tf.convert_to_tensor(np.expand_dims(style_img, axis=0))
     writer = RecordWriter(

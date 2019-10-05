@@ -159,7 +159,7 @@ def get_estimator(batch_size=128, epochs=15, steps_per_epoch=None, model_dir=tem
     # prepare data in disk
     train_csv, val_csv, path = svhn.load_data()
     writer = RecordWriter(
-        save_dir=os.path.join(path, "FEdata"),
+        save_dir=os.path.join(path, "tfrecords"),
         train_data=train_csv,
         validation_data=val_csv,
         ops=[
