@@ -12,52 +12,70 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""
-Download montgomery  dataset from  http://openi.nlm.nih.gov/imgs/collections/NLM-MontgomeryCXRSet.zip
-"""
+"""Download Montgomery dataset from  http://openi.nlm.nih.gov/imgs/collections/NLM-MontgomeryCXRSet.zip."""
 import os
-import tempfile
-from glob import glob
 import zipfile
-import shutil
+from glob import glob
+from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import wget
 
+from fastestimator.util.wget import bar_custom, callback_progress
+
+wget.callback_progress = callback_progress
+
+
 def load_data(path=None):
-    """Downloads the Montgomery dataset to local storage, if not already downloaded. This will generate one csv file montgomery.csv, which contains all the path
-    information.
+    """Download the Montgomery dataset to local storage, if not already downloaded. This will generate a montgomery.csv
+    file, which contains all the path information.
 
     Args:
-        path (str, optional): The path to store the Montgomery data. Defaults to None, will save at `tempfile.gettempdir()`.
+        path (str, optional): The path to store the Montgomery data. When `path` is not provided, will save at
+            `fastestimator_data` under user's home directory.
 
     Returns:
-        string: path to csv file.
-        string: path to data directory.
+        (tuple): tuple containing:
+            csv_path (str): Path to the summary csv file.
+            path (str): Path to data root directory.
+
     """
+    home = str(Path.home())
+
     if path is None:
-        path = os.path.join(tempfile.gettempdir(), ".fe", 'MONTGOMERY')
-    if not os.path.exists(path):
-        os.makedirs(path)
+        path = os.path.join(home, 'fastestimator_data', 'Montgomery')
+    else:
+        path = os.path.abspath(path)
+    os.makedirs(path, exist_ok=True)
+
     csv_path = os.path.join(path, "montgomery.csv")
     data_compressed_path = os.path.join(path, 'NLM-MontgomeryCXRSet.zip')
-    extract_folder_path = os.path.join(path, 'MontgomerySet')
+    extract_folder_path = os.path.join(path, 'CXRSet')
+
+    # download
     if not os.path.exists(data_compressed_path):
-        print("Downloading data...")
-        wget.download('http://openi.nlm.nih.gov/imgs/collections/NLM-MontgomeryCXRSet.zip', path)
+        print("Downloading data to {}".format(path))
+        wget.download('http://openi.nlm.nih.gov/imgs/collections/NLM-MontgomeryCXRSet.zip', path, bar=bar_custom)
+
+    # extract
     if not os.path.exists(extract_folder_path):
-        print(" ")
-        print("Extracting data...")
+        print("\nExtracting file ...")
         with zipfile.ZipFile(data_compressed_path, 'r') as zip_file:
             zip_file.extractall(path)
-        shutil.move(os.path.join(extract_folder_path, "ManualMask", "leftMask"), os.path.join(extract_folder_path, "leftMask"))
-        shutil.move(os.path.join(extract_folder_path, "ManualMask", "rightMask"), os.path.join(extract_folder_path, "rightMask"))
+        os.rename(os.path.join(path, 'MontgomerySet'), extract_folder_path)
+        os.rename(os.path.join(extract_folder_path, 'ManualMask', 'leftMask'),
+                  os.path.join(extract_folder_path, 'leftMask'))
+        os.rename(os.path.join(extract_folder_path, 'ManualMask', 'rightMask'),
+                  os.path.join(extract_folder_path, 'rightMask'))
+
+    # glob and generate csv
     if not os.path.exists(csv_path):
-        img_list = glob(os.path.join(extract_folder_path, "CXR_png", '*.png'))
+        img_list = glob(os.path.join(extract_folder_path, 'CXR_png', '*.png'))
         df = pd.DataFrame(data={'image': img_list})
         df['image'] = df['image'].apply(lambda x: os.path.relpath(x, path))
+        df['image'] = df['image'].apply(os.path.normpath)
         df['mask_left'] = df['image'].str.replace('CXR_png', 'leftMask')
         df['mask_right'] = df['image'].str.replace('CXR_png', 'rightMask')
         df.to_csv(csv_path, index=False)
+
     return csv_path, path

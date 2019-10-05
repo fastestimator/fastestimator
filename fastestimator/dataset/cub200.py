@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Download Caltech-UCSD Birds 200 dataset from http://www.vision.caltech.edu/visipedia/CUB-200.html.
-"""
+"""Download Caltech-UCSD Birds 200 dataset from http://www.vision.caltech.edu/visipedia/CUB-200.html."""
 import os
 import tarfile
 from glob import glob
@@ -28,7 +27,7 @@ wget.callback_progress = callback_progress
 
 
 def load_data(path=None):
-    """Downloads the CUB200 dataset to local storage, if not already downloaded. This will generate a cub200.csv file,
+    """Download the CUB200 dataset to local storage, if not already downloaded. This will generate a cub200.csv file,
     which contains all the path information.
 
     Args:
@@ -45,6 +44,8 @@ def load_data(path=None):
 
     if path is None:
         path = os.path.join(home, 'fastestimator_data', 'CUB200')
+    else:
+        path = os.path.abspath(path)
     os.makedirs(path, exist_ok=True)
 
     csv_path = os.path.join(path, 'cub200.csv')
