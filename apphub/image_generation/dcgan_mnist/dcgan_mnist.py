@@ -92,7 +92,7 @@ class Myrescale(TensorOp):
         return data
 
 
-def get_estimator(batch_size=256, epochs=50, steps_per_epoch=None, model_dir=tempfile.mkdtemp()):
+def get_estimator(batch_size=256, epochs=50, steps_per_epoch=None, validation_steps=None, model_dir=tempfile.mkdtemp()):
     # prepare data
     (x_train, _), (_, _) = tf.keras.datasets.mnist.load_data()
     data = {"train": {"x": np.expand_dims(x_train, -1)}}
@@ -119,7 +119,8 @@ def get_estimator(batch_size=256, epochs=50, steps_per_epoch=None, model_dir=tem
                              pipeline=pipeline,
                              epochs=epochs,
                              traces=traces,
-                             steps_per_epoch=steps_per_epoch)
+                             steps_per_epoch=steps_per_epoch,
+                             validation_steps=validation_steps)
     return estimator
 
 

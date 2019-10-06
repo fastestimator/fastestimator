@@ -15,12 +15,11 @@
 from collections import ChainMap
 
 import tensorflow as tf
-from tensorflow.python.framework import ops as tfops
-
 from fastestimator.op import get_inputs_by_op, get_op_from_mode, verify_ops, write_outputs_by_key
 from fastestimator.op.tensorop import ModelOp
 from fastestimator.schedule import Scheduler
 from fastestimator.util.util import NonContext, flatten_list, get_num_devices, to_list
+from tensorflow.python.framework import ops as tfops
 
 
 class Network:
@@ -171,8 +170,8 @@ class Network:
         for loss_name in epoch_losses:
             element_wise_loss = batch[loss_name]
             if warm_up:
-                assert element_wise_loss.shape[0] == global_batch_size / self.num_devices, \
-                    "please make sure loss is element-wise loss"
+                assert element_wise_loss.ndim != 0 and element_wise_loss.shape[0] == global_batch_size / \
+                    self.num_devices, "please make sure loss is element-wise loss"
             reduced_loss[loss_name] = tf.reduce_sum(element_wise_loss) / global_batch_size
         return reduced_loss
 

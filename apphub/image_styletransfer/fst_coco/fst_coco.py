@@ -15,11 +15,11 @@
 import os
 import tempfile
 
-import numpy as np
-import tensorflow as tf
-
 import cv2
+import numpy as np
+
 import fastestimator as fe
+import tensorflow as tf
 from fastestimator.architecture.stnet import lossNet, styleTransferNet
 from fastestimator.dataset.mscoco import load_data
 from fastestimator.op import TensorOp
@@ -97,6 +97,7 @@ def get_estimator(style_img_path=None,
                   content_weight=1.0,
                   tv_weight=1e-4,
                   steps_per_epoch=None,
+                  validation_steps=None,
                   model_dir=tempfile.mkdtemp()):
     train_csv, path = load_data(data_path)
     if style_img_path is None:
@@ -135,10 +136,12 @@ def get_estimator(style_img_path=None,
                          inputs=('y_pred', 'y_style', 'y_content', 'image_out'),
                          outputs='loss')
     ])
+
     estimator = fe.Estimator(network=network,
                              pipeline=pipeline,
                              epochs=2,
                              steps_per_epoch=steps_per_epoch,
+                             validation_steps=validation_steps,
                              traces=ModelSaver(model_name="style_transfer_net", save_dir=model_dir))
     return estimator
 

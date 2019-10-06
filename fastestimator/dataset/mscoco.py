@@ -37,16 +37,14 @@ def _download_and_extract(url, filename, path):
         zip_file.extractall(path)
 
 
-def _create_csv(data_path):
-    filenames = glob(os.path.join(data_path, '*.jpg'))
-    df = None
+def _create_csv(data_folder_path, path):
+    filenames = glob(os.path.join(data_folder_path, '*.jpg'))
     if len(filenames) == NUM_IMG_FILES:
         df = pd.DataFrame()
-        rel_filenames = [f.replace(data_path, '.') for f in filenames]
+        rel_filenames = [os.path.relpath(f, path) for f in filenames]
         df['image'] = rel_filenames
     else:
-        print("One or more images are missing.")
-
+        raise ValueError("One or more images are missing.")
     return df
 
 
@@ -78,19 +76,19 @@ def load_data(path=None):
 
     if not os.path.exists(data_folder_path):
         _download_and_extract(url["train"], "train2014.zip", path)
-        train_df = _create_csv(data_folder_path)
+        train_df = _create_csv(data_folder_path, path)
         train_df.to_csv(csv_path, index=False)
         print("Data summary is saved at {}".format(csv_path))
     else:
         if not len(glob(os.path.join(data_folder_path, '*.jpg'))) == NUM_IMG_FILES:
             print("One or more images are missing.")
             _download_and_extract(url["train"], "train2014.zip", path)
-            train_df = _create_csv(data_folder_path)
+            train_df = _create_csv(data_folder_path, path)
             train_df.to_csv(csv_path, index=False)
             print("Data summary is saved at {}".format(csv_path))
         else:
             if not os.path.exists(csv_path):
-                train_df = _create_csv(data_folder_path)
+                train_df = _create_csv(data_folder_path, path)
                 train_df.to_csv(csv_path, index=False)
                 print("Data summary is saved at {}".format(csv_path))
             else:
