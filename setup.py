@@ -44,7 +44,8 @@ setup(
         'tensorflow-probability',
         'umap-learn',
         'tqdm',
-        'opencv-python'
+        'opencv-python',
+        'papermill'
     ],
     # Declare extra set for installation
     extras_require={},
