@@ -24,11 +24,11 @@ Docker container creates isolated virtual environment that shares resources with
 ## Start your first FastEstimator training
 
 ```
-$ python ./apphub/image_classification/lenet_mnist.py
+$ python ./apphub/image_classification/lenet_mnist/lenet_mnist.py
 ```
 
 ## Documentation
-For more info about building models and training, check  out [FastEstimator documentation](https://fastestimator.org)
+For more info, check out [FastEstimator documentation](https://fastestimator.org)
 
 ## License
 [Apache License 2.0](https://github.com/fastestimator/fastestimator/blob/master/LICENSE)
