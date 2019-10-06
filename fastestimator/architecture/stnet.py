@@ -1,5 +1,4 @@
 import tensorflow as tf
-
 from fastestimator.layers import InstanceNormalization, ReflectionPadding2D
 
 

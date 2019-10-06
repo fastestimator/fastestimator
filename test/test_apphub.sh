@@ -10,8 +10,8 @@ path_tabular=${path_apphub}'tabular/'
 path_temp=/tmp/
 
 #training parameters to test the models
-train_info='--epochs 2 --batch_size 2 --steps_per_epoch 10'
-nb_train_info='-p epochs 2 -p batch_size 2 -p steps_per_epoch 10' #notebook parameters
+train_info='--epochs 2 --batch_size 2 --steps_per_epoch 10 --validation_steps 5 --model_dir None'
+nb_train_info='-p epochs 2 -p batch_size 2 -p steps_per_epoch 10 -p validation_steps 5' #notebook parameters
 FILES=$(find ${path_apphub} -type f -name '*.py')
 cnt = 0
 echo 'Apphub files'
@@ -138,19 +138,19 @@ rm  ${path_temp}'lenet_mnist_param.py'
 
 #-----------------------------IMAGE DETECTION--------------------------------#
 # 5. RetinaNet Svhn
-echo -en '\n'
-echo 'Image Detection'
-echo '5. RetinaNet svhn'
-echo -en '\n'
+# echo -en '\n'
+# echo 'Image Detection'
+# echo '5. RetinaNet svhn'
+# echo -en '\n'
 
-filepath=${path_image_detection}'retinanet_svhn/'
-filename='retinanet_svhn.py'
+# filepath=${path_image_detection}'retinanet_svhn/'
+# filename='retinanet_svhn.py'
 
-if fastestimator train ${filepath}${filename} ${train_info}; then
-    ((cnt=cnt+1))
-else
-    echo 'Testing failed on RetinaNet Svhn'
-fi
+# if fastestimator train ${filepath}${filename} ${train_info}; then
+#     ((cnt=cnt+1))
+# else
+#     echo 'Testing failed on RetinaNet Svhn'
+# fi
 
 #-------------------------------IMAGE GENERATION----------------------------#
 # 6. CVAE MNIST
@@ -395,4 +395,4 @@ fi
 rm -rf /tmp/tmp*
 rm  ${path_temp}${nb_param_filename}
 rm  ${path_temp}'dnn_housing_param.py'
-echo $cnt
+echo $cnt 'tests passed out of 24 tests'

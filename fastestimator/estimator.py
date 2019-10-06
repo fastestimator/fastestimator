@@ -15,8 +15,8 @@
 from collections import ChainMap, deque
 
 import numpy as np
-import tensorflow as tf
 
+import tensorflow as tf
 from fastestimator.cli.cli_util import draw
 from fastestimator.summary import Summary
 from fastestimator.trace import Logger, ModelSaver, MonitorLoss, Trace, TrainInfo
@@ -324,7 +324,7 @@ class Estimator:
         prediction = self.network.run_step(batch, ops, model_list, epoch_losses, state)
         #expand dimension on scalar value for consistency with distributed training
         for key, value in prediction.items():
-            if value.shape.rank == 0:
+            if isinstance(value, tf.Tensor) and value.shape.rank == 0:
                 prediction[key] = tf.expand_dims(value, axis=0)
         return prediction
 
@@ -345,8 +345,9 @@ class Estimator:
     def _per_replica_to_global(data):
         new_data = {}
         for key, value in data.items():
-            if value.values[0].shape.rank == 0:
-                new_data[key] = tf.stack(value.values)
-            else:
-                new_data[key] = tf.concat(value.values, axis=0)
+            if isinstance(value.values[0], tf.Tensor):
+                if value.values[0].shape.rank == 0:
+                    new_data[key] = tf.stack(value.values)
+                else:
+                    new_data[key] = tf.concat(value.values, axis=0)
         return new_data

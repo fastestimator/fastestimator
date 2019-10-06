@@ -41,7 +41,7 @@ def pad(input_list, padding_size, padding_value):
     return input_list + [padding_value] * abs((len(input_list) - padding_size))
 
 
-def get_estimator(epochs=10, batch_size=64, max_len=500, steps_per_epoch=None, model_dir=tempfile.mkdtemp()):
+def get_estimator(epochs=10, batch_size=64, max_len=500, steps_per_epoch=None, validation_steps=None, model_dir=tempfile.mkdtemp()):
     # step 1. prepare data
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.imdb.load_data(maxlen=max_len, num_words=MAX_WORDS)
     data = {
@@ -71,7 +71,8 @@ def get_estimator(epochs=10, batch_size=64, max_len=500, steps_per_epoch=None, m
                              pipeline=pipeline,
                              epochs=epochs,
                              traces=traces,
-                             steps_per_epoch=steps_per_epoch)
+                             steps_per_epoch=steps_per_epoch,
+                             validation_steps=validation_steps)
 
     return estimator
 

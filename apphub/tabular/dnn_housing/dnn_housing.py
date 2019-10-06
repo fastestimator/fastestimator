@@ -15,13 +15,14 @@
 
 import tempfile
 
-import tensorflow as tf
-from tensorflow.keras import layers
+import numpy as np
+from sklearn.preprocessing import StandardScaler
 
 import fastestimator as fe
+import tensorflow as tf
+from fastestimator.op.tensorop import MeanSquaredError, ModelOp
 from fastestimator.trace import ModelSaver
-from fastestimator.op.tensorop import ModelOp, MeanSquaredError
-from sklearn.preprocessing import StandardScaler
+from tensorflow.keras import layers
 
 
 def create_dnn():
@@ -38,25 +39,33 @@ def create_dnn():
     return model
 
 
-def get_estimator(epochs=50, batch_size=32, steps_per_epoch=None, model_dir=tempfile.mkdtemp()):
+def get_estimator(epochs=50, batch_size=32, steps_per_epoch=None, validation_steps=None, model_dir=tempfile.mkdtemp()):
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.boston_housing.load_data()
 
     # step 1. prepare data
     scaler = StandardScaler()
     x_train = scaler.fit_transform(x_train)
     x_eval = scaler.transform(x_eval)
-
-    data = {"train": {"x": x_train, "y": y_train}, "eval": {"x": x_eval, "y": y_eval}}
+    train_data = {"x": x_train, "y": np.expand_dims(y_train, -1)}
+    eval_data = {"x": x_eval, "y": np.expand_dims(y_eval, -1)}
+    data = {"train": train_data, "eval": eval_data}
     pipeline = fe.Pipeline(batch_size=batch_size, data=data)
 
     # step 2. prepare model
     model = fe.build(model_def=create_dnn, model_name="dnn", optimizer="adam", loss_name="loss")
-    network = fe.Network(
-        ops=[ModelOp(inputs="x", model=model, outputs="y_pred"), MeanSquaredError(inputs=("y","y_pred"), outputs="loss")])
+    network = fe.Network(ops=[
+        ModelOp(inputs="x", model=model, outputs="y_pred"), MeanSquaredError(inputs=("y", "y_pred"), outputs="loss")
+    ])
 
     # step 3.prepare estimator
     traces = [ModelSaver(model_name="dnn", save_dir=model_dir, save_best=True)]
-    estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, log_steps=10, traces=traces)
+    estimator = fe.Estimator(network=network,
+                             pipeline=pipeline,
+                             epochs=epochs,
+                             steps_per_epoch=steps_per_epoch,
+                             validation_steps=validation_steps,
+                             log_steps=10,
+                             traces=traces)
     return estimator
 
 
