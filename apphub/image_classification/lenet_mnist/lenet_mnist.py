@@ -23,7 +23,7 @@ from fastestimator.op.tensorop import Minmax, ModelOp, SparseCategoricalCrossent
 from fastestimator.trace import Accuracy, ModelSaver
 
 
-def get_estimator(epochs=2, batch_size=32, steps_per_epoch=None, model_dir=tempfile.mkdtemp()):
+def get_estimator(epochs=2, batch_size=32, steps_per_epoch=None, validation_steps=None, model_dir=tempfile.mkdtemp()):
     # step 1. prepare data
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.mnist.load_data()
     train_data = {"x": np.expand_dims(x_train, -1), "y": y_train}
@@ -44,7 +44,12 @@ def get_estimator(epochs=2, batch_size=32, steps_per_epoch=None, model_dir=tempf
         Accuracy(true_key="y", pred_key="y_pred", output_name='acc'),
         ModelSaver(model_name="lenet", save_dir=model_dir, save_best=True)
     ]
-    estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=epochs, traces=traces, steps_per_epoch=steps_per_epoch)
+    estimator = fe.Estimator(network=network, 
+                             pipeline=pipeline, 
+                             epochs=epochs, 
+                             traces=traces, 
+                             steps_per_epoch=steps_per_epoch,
+                             validation_steps=validation_steps)
     return estimator
 
 

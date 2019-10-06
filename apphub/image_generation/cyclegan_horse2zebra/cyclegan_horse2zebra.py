@@ -15,9 +15,8 @@
 import os
 import tempfile
 
-import tensorflow as tf
-
 import fastestimator as fe
+import tensorflow as tf
 from fastestimator.architecture.cyclegan import build_discriminator, build_generator
 from fastestimator.dataset.horse2zebra import load_data
 from fastestimator.op import TensorOp
@@ -85,7 +84,7 @@ class DLoss(Loss):
         return 0.5 * total_loss
 
 
-def get_estimator(weight=10.0, epochs=200, steps_per_epoch=None, model_dir=tempfile.mkdtemp()):
+def get_estimator(weight=10.0, epochs=200, steps_per_epoch=None, validation_steps=None, model_dir=tempfile.mkdtemp()):
     trainA_csv, trainB_csv, _, _, parent_path = load_data()
     tfr_save_dir = os.path.join(parent_path, 'tfrecords')
     # Step 1: Define Pipeline
@@ -150,7 +149,8 @@ def get_estimator(weight=10.0, epochs=200, steps_per_epoch=None, model_dir=tempf
                              pipeline=pipeline,
                              epochs=epochs,
                              traces=traces,
-                             steps_per_epoch=steps_per_epoch)
+                             steps_per_epoch=steps_per_epoch,
+                             validation_steps=validation_steps)
     return estimator
 
 

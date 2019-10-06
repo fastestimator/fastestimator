@@ -33,7 +33,7 @@ class SelectDictKey(NumpyOp):
         return data
 
 
-def get_estimator(batch_size=32, epochs=25, steps_per_epoch=None, model_dir=tempfile.mkdtemp()):
+def get_estimator(batch_size=32, epochs=25, steps_per_epoch=None, validation_steps=None, model_dir=tempfile.mkdtemp()):
     # load CUB200 dataset.
     csv_path, path = cub200.load_data()
     writer = RecordWriter(
@@ -68,6 +68,7 @@ def get_estimator(batch_size=32, epochs=25, steps_per_epoch=None, model_dir=temp
                              traces=traces,
                              epochs=epochs,
                              steps_per_epoch=steps_per_epoch,
+                             validation_steps=validation_steps,
                              log_steps=50)
     return estimator
 

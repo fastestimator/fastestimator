@@ -96,7 +96,7 @@ class CVAELoss(Loss):
         return -(logpx_z + logpz - logqz_x)
 
 
-def get_estimator(batch_size=100, epochs=100, steps_per_epoch=None, model_dir=tempfile.mkdtemp()):
+def get_estimator(batch_size=100, epochs=100, steps_per_epoch=None, validation_steps=None, model_dir=tempfile.mkdtemp()):
     # prepare data
     (x_train, _), (x_eval, _) = tf.keras.datasets.mnist.load_data()
     x_train = x_train.reshape(x_train.shape[0], 28, 28, 1).astype('float32')
@@ -126,6 +126,7 @@ def get_estimator(batch_size=100, epochs=100, steps_per_epoch=None, model_dir=te
                              pipeline=pipeline,
                              epochs=epochs,
                              steps_per_epoch=steps_per_epoch,
+                             validation_steps=validation_steps,
                              traces=ModelSaver(model_name="decoder", save_dir=model_dir, save_best=True))
     return estimator
 
