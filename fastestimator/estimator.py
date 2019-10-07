@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+"""Estimator Class."""
 from collections import ChainMap, deque
 
 import numpy as np
-
 import tensorflow as tf
+
 from fastestimator.cli.cli_util import draw
 from fastestimator.summary import Summary
 from fastestimator.trace import Logger, ModelSaver, MonitorLoss, Trace, TrainInfo
@@ -130,7 +131,7 @@ class Estimator:
         intermediate_traces = deque()
         intermediate_outputs = set()
         trace_deque = deque(self.traces)
-        while len(trace_deque) > 0:
+        while trace_deque:
             trace = trace_deque.popleft()
             if not trace.inputs:
                 sorted_traces.append(trace)
@@ -148,7 +149,7 @@ class Estimator:
                 intermediate_outputs |= trace.outputs
 
         already_seen = set()
-        while len(intermediate_traces) > 0:
+        while intermediate_traces:
             trace = intermediate_traces.popleft()
             already_seen.add(trace)
             if trace.inputs <= available_outputs:
@@ -160,7 +161,8 @@ class Estimator:
             else:
                 raise AssertionError("Trace {} has unsatisfiable inputs: {}".format(
                     type(trace).__name__, ", ".join(trace.inputs - (available_outputs | intermediate_outputs))))
-            if 0 < len(already_seen) == len(intermediate_traces):
+
+            if intermediate_traces and len(already_seen) == len(intermediate_traces):
                 raise AssertionError("Dependency cycle detected amongst traces: {}".format(", ".join(
                     [type(tr).__name__ for tr in already_seen])))
         sorted_traces.extend(list(end_traces))
@@ -207,7 +209,7 @@ class Estimator:
             "train_step": self.train_step,
             "num_devices": self.num_devices,
             "log_steps": self.log_steps,
-            "persist_summary": not not self.summary,
+            "persist_summary": bool(self.summary),
             "total_epochs": self.epochs,
             "total_train_steps": self.total_train_steps
         })
@@ -245,7 +247,8 @@ class Estimator:
                 "batch_size": global_batch_size
             })
             if self.distribute_strategy:
-                prediction, batch = self._forward_step_parallel(batch, ops, model_list, epoch_losses, {"mode": mode, "batch_size": global_batch_size})
+                prediction, batch = self._forward_step_parallel(
+                    batch, ops, model_list, epoch_losses, {"mode": mode, "batch_size": global_batch_size})
             else:
                 prediction = self._forward_step(batch,
                                                 ops,
