@@ -293,3 +293,12 @@ def to_list(data):
         else:
             data = [data]
     return data
+
+
+def to_set(data):
+    if not isinstance(data, set):
+        if isinstance(data, (tuple, list)):
+            data = set(data)
+        else:
+            data = {data}
+    return data
