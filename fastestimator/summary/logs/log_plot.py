@@ -22,10 +22,15 @@ import numpy as np
 import seaborn as sns
 from scipy.ndimage.filters import gaussian_filter1d
 
-from fastestimator.util.util import prettify_metric_name, to_list
+from fastestimator.util.util import prettify_metric_name, to_list, to_set
 
 
-def plot_logs(experiments, smooth_factor=0, share_legend=True, ignore_metrics=None, pretty_names=False):
+def plot_logs(experiments,
+              smooth_factor=0,
+              share_legend=True,
+              ignore_metrics=None,
+              pretty_names=False,
+              include_metrics=None):
     """A function which will plot experiment histories for comparison viewing / analysis
 
     Args:
@@ -35,13 +40,16 @@ def plot_logs(experiments, smooth_factor=0, share_legend=True, ignore_metrics=No
         share_legend (bool): Whether to have one legend across all graphs (true) or one legend per graph (false)
         pretty_names (bool): Whether to modify the metric names in graph titles (true) or leave them alone (false)
         ignore_metrics (set): Any keys to ignore during plotting
+        include_metrics (set): A whitelist of keys to include during plotting. If None then all will be included.
     Returns:
         The handle of the pyplot figure
     """
     experiments = to_list(experiments)
 
     ignore_keys = ignore_metrics or set()
+    ignore_keys = to_set(ignore_keys)
     ignore_keys |= {'epoch', 'progress', 'total_train_steps'}
+    include_keys = to_set(include_metrics) if include_metrics else None
     # TODO: epoch should be indicated on the axis (top x axis?)
     # TODO: figure out how ignore_metrics should interact with mode
 
@@ -55,9 +63,12 @@ def plot_logs(experiments, smooth_factor=0, share_legend=True, ignore_metrics=No
                     max_time = max(max_time, max(value.keys()))
                 if key in ignore_keys:
                     continue
+                if include_keys and key not in include_keys:
+                    ignore_keys.add(key)
+                    continue
                 if any(map(lambda x: isinstance(x[1], np.ndarray), value.items())):
                     ignore_keys.add(key)
-                    break  # TODO: nd array not currently supported. maybe in future visualize as heat map?
+                    continue  # TODO: nd array not currently supported. maybe in future visualize as heat map?
                 metric_keys.add("{}: {}".format(mode, key))
     metric_list = sorted(list(metric_keys))  # Sort the metrics alphabetically for consistency
     num_metrics = len(metric_list)
@@ -158,7 +169,8 @@ def visualize_logs(experiments,
                    smooth_factor=0,
                    share_legend=True,
                    pretty_names=False,
-                   ignore_metrics=None):
+                   ignore_metrics=None,
+                   include_metrics=None):
     """A function which will save or display experiment histories for comparison viewing / analysis
 
     Args:
@@ -169,6 +181,7 @@ def visualize_logs(experiments,
         share_legend (bool): Whether to have one legend across all graphs (true) or one legend per graph (false)
         pretty_names (bool): Whether to modify the metric names in graph titles (true) or leave them alone (false)
         ignore_metrics (set): Any metrics to ignore during plotting
+        include_metrics (set): A whitelist of metric keys (None whitelists all keys)
     Returns:
         The handle of the pyplot figure
     """
@@ -176,7 +189,8 @@ def visualize_logs(experiments,
               smooth_factor=smooth_factor,
               share_legend=share_legend,
               pretty_names=pretty_names,
-              ignore_metrics=ignore_metrics)
+              ignore_metrics=ignore_metrics,
+              include_metrics=include_metrics)
     if save_path is None:
         plt.show()
     else:
