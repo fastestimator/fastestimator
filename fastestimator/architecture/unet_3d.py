@@ -49,7 +49,7 @@ def UNet3D(input_size=(9, 512, 512, 1),
         dilation_rates: Add dilation to the encoder block conv layers [len(dilation_rates) == len(nchannels)]
 
         NOTE: This particular model squashes down k 3D frames (batch * k * m * m * 1) into
-              1 output frame (batch * 1 * m * m * 1).
+              1 output frame (batch * 1 * m * m * nclasses).
               If different behavior is desired, please change the CNN model as necessary.
 
     Returns:
