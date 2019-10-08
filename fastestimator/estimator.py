@@ -68,6 +68,7 @@ class Estimator:
         self.train_epoch = 0
         self.total_train_steps = 0
         self.do_eval = False
+        self._is_initialized = False
 
     def fit(self, summary=None):
         """Function to perform training on the estimator.
@@ -79,11 +80,14 @@ class Estimator:
             Experiment object.
         """
         draw()
-        self.summary = summary
-        self._prepare_network()
-        self._prepare_pipeline()
-        self._warmup()
-        self._prepare_estimator()
+        if not self._is_initialized:
+            self.summary = summary
+            self._prepare_network()
+            self._prepare_pipeline()
+            self._warmup()
+            self._prepare_estimator()
+            self._is_initialized = True
+
         return self._start()
 
     def _prepare_pipeline(self):
