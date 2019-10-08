@@ -178,7 +178,7 @@ class Estimator:
         for mode in mode_list:
             epochs_pipeline = self.pipeline.dataset_schedule[mode].keys
             epochs_network = self.network.op_schedule[mode].keys
-            signature_epochs = list(set(epochs_pipeline) | set(epochs_network))
+            signature_epochs = sorted(list(set(epochs_pipeline) | set(epochs_network)))
             if mode == "train":
                 elapse_epochs = np.diff(signature_epochs + [self.epochs])
                 assert np.all(elapse_epochs > 0), "signature epoch is not sorted correctly"
