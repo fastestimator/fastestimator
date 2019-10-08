@@ -137,9 +137,11 @@ class RecordWriter:
     def _float_feature(value):
         return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
 
-    def write(self):
+    def write(self, save_dir=None):
         """Write TFRecods in parallel. Number of processes is set to number of CPU cores."""
-        self._prepare_savepath(self.save_dir)
+        if not save_dir:
+            save_dir = self.save_dir
+        self._prepare_savepath(save_dir)
         for train_data, validation_data, write_feature, ops in zip(self.train_data, self.validation_data,
                                                                    self.write_feature, self.ops):
             self._create_record_local(train_data, validation_data, write_feature, ops)
