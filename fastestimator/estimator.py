@@ -68,6 +68,7 @@ class Estimator:
         self.train_epoch = 0
         self.total_train_steps = 0
         self.do_eval = False
+        self._is_initialized = False
 
     def fit(self, summary=None):
         """Function to perform training on the estimator.
@@ -79,11 +80,14 @@ class Estimator:
             Experiment object.
         """
         draw()
-        self.summary = summary
-        self._prepare_network()
-        self._prepare_pipeline()
-        self._warmup()
-        self._prepare_estimator()
+        if not self._is_initialized:
+            self.summary = summary
+            self._prepare_network()
+            self._prepare_pipeline()
+            self._warmup()
+            self._prepare_estimator()
+            self._is_initialized = True
+
         return self._start()
 
     def _prepare_pipeline(self):
@@ -174,7 +178,7 @@ class Estimator:
         for mode in mode_list:
             epochs_pipeline = self.pipeline.dataset_schedule[mode].keys
             epochs_network = self.network.op_schedule[mode].keys
-            signature_epochs = list(set(epochs_pipeline) | set(epochs_network))
+            signature_epochs = sorted(list(set(epochs_pipeline) | set(epochs_network)))
             if mode == "train":
                 elapse_epochs = np.diff(signature_epochs + [self.epochs])
                 assert np.all(elapse_epochs > 0), "signature epoch is not sorted correctly"

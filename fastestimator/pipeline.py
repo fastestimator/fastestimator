@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+"""Pipeline class."""
 import json
 import multiprocessing as mp
 import os
@@ -20,11 +21,10 @@ import time
 import numpy as np
 import tensorflow as tf
 
+from fastestimator.op import get_inputs_by_key, get_inputs_by_op, get_op_from_mode, verify_ops, write_outputs_by_key
 from fastestimator.op.tensorop import TensorFilter
-from fastestimator.util import RecordWriter
-from fastestimator.op import get_inputs_by_key, get_inputs_by_op, get_op_from_mode, verify_ops, \
-    write_outputs_by_key
 from fastestimator.schedule import Scheduler
+from fastestimator.util import RecordWriter
 from fastestimator.util.tfrecord import get_features
 from fastestimator.util.util import convert_tf_dtype, flatten_list, get_num_devices
 
@@ -65,6 +65,8 @@ class Pipeline:
         self.num_core = mp.cpu_count()
         self._verify_input()
         self._reset()
+        self.all_output_keys = set()
+        self._is_prepared = False
 
     def _verify_input(self):
         assert isinstance(self.data, (dict, RecordWriter, str)), \
@@ -124,6 +126,8 @@ class Pipeline:
         self.all_output_keys = self.all_output_keys | set(flatten_list(flatten_list(list(
             self.feature_name.values())))) - {None}
 
+        self._is_prepared = True
+
     def _get_numpy_config(self):
         for mode in self.possible_mode:
             if mode in self.data:
@@ -136,9 +140,9 @@ class Pipeline:
         data = self.data[mode]
         for key in data.keys():
             feature_data = data[key]
-            if type(feature_data) is list:
+            if isinstance(feature_data, list):
                 num_examples_list.append(len(feature_data))
-            elif type(feature_data) is np.ndarray:
+            elif isinstance(feature_data, np.ndarray):
                 num_examples_list.append(feature_data.shape[0])
             else:
                 raise ValueError("the feature only supports list or numpy array")
@@ -198,23 +202,24 @@ class Pipeline:
         # Data Reading
         for idx in range(len(self.all_features[mode])):
             if isinstance(self.data, dict):
-                ds = tf.data.Dataset.from_tensor_slices(self.all_features[mode][idx])
+                ds_temp = tf.data.Dataset.from_tensor_slices(self.all_features[mode][idx])
             else:
                 if mode == "train":
-                    ds = tf.data.Dataset.from_tensor_slices(self.file_names[mode][idx])
-                    ds = ds.shuffle(len(self.file_names[mode][idx]))
-                    ds = ds.interleave(
+                    ds_temp = tf.data.Dataset.from_tensor_slices(self.file_names[mode][idx])
+                    ds_temp = ds_temp.shuffle(len(self.file_names[mode][idx]))
+                    ds_temp = ds_temp.interleave(
                         lambda ds_lam: tf.data.TFRecordDataset(ds_lam, compression_type=self.compression[mode][idx]),
                         cycle_length=self.num_core,
                         block_length=2)
                 else:
-                    ds = tf.data.TFRecordDataset(self.file_names[mode][idx],
-                                                 compression_type=self.compression[mode][idx])
-                ds = ds.map(lambda ds_lam: self._decode_records(ds_lam, mode, idx), num_parallel_calls=self.num_core)
+                    ds_temp = tf.data.TFRecordDataset(self.file_names[mode][idx],
+                                                      compression_type=self.compression[mode][idx])
+                ds_temp = ds_temp.map(lambda ds_lam: self._decode_records(ds_lam, mode, idx),
+                                      num_parallel_calls=self.num_core)
             if mode == "train" or self.eval_shuffle:
-                ds = ds.shuffle(self.shuffle_buffer[mode][idx])
-            ds = ds.repeat()
-            ds_tuple += ds,
+                ds_temp = ds_temp.shuffle(self.shuffle_buffer[mode][idx])
+            ds_temp = ds_temp.repeat()
+            ds_tuple += ds_temp,
         # Combine dataset from different unpaired feature sets
         if len(self.all_features[mode]) > 1:
             dataset = tf.data.Dataset.zip(ds_tuple)
@@ -335,10 +340,10 @@ class Pipeline:
     @staticmethod
     def _combine_dataset(*dataset):
         combined_dict = {}
-        for ds in dataset:
-            for key in ds.keys():
+        for data in dataset:
+            for key in data.keys():
                 assert key not in combined_dict, "found duplicated key {} in unpaird feature sets".format(key)
-                combined_dict[key] = ds[key]
+                combined_dict[key] = data[key]
         return combined_dict
 
     def get_global_batch_size(self, epoch):
@@ -365,7 +370,8 @@ class Pipeline:
         """
         data = []
         self.global_batch_multiplier = get_num_devices()
-        self.prepare()
+        if not self._is_prepared:
+            self.prepare()
         ds_iter = self.dataset_schedule[mode].get_current_value(current_epoch)
         for _ in range(num_steps):
             data.append(next(ds_iter))
