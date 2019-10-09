@@ -157,10 +157,6 @@ def conv_block(inp,
 
     conv1 = Conv2D(nchannels, window, dilation_rate=dilation_rate, **config)(inp)
 
-    if residual:
-        conv1 = Conv2D(nchannels, 1, dilation_rate=dilation_rate, **config)(conv1)
-        conv1 = inp + conv1
-
     if bn:
         conv1 = BatchNormalization()(conv1)
 
@@ -171,13 +167,11 @@ def conv_block(inp,
                 conv1 = activation(conv1)
 
     if residual:
+        conv1 = inp + conv1
+
         conv1 = Conv2D(nchannels, 1, dilation_rate=dilation_rate, **config)(conv1)
 
     conv2 = Conv2D(nchannels, window, dilation_rate=dilation_rate, **config)(conv1)
-
-    if residual:
-        conv2 = Conv2D(nchannels, 1, dilation_rate=dilation_rate, **config)(conv2)
-        conv2 = conv1 + conv2
 
     if bn:
         conv2 = BatchNormalization()(conv2)
@@ -193,6 +187,10 @@ def conv_block(inp,
     if dropout:
         conv2 = Dropout(dropout)(conv2)
 
+    if residual:
+        conv2 = Conv2D(nchannels, 1, dilation_rate=dilation_rate, **config)(conv2)
+        conv2 = conv1 + conv2
+
     if pooling:
         pooled = MaxPooling2D(pool_size=(pooling, pooling))(conv2)
     else:
@@ -203,13 +201,11 @@ def conv_block(inp,
 
 def upsample(inp, factor, nchannels, config, bn=None, activation=None, upsampling='bilinear', residual=False):
 
-    print('nc', nchannels)
-
     if residual:
         r1 = UpSampling2D(size=(factor, factor), interpolation=upsampling)(inp)
-        r1 = Conv2D(nchannels, factor, **config)(r1)
+        up = Conv2D(nchannels, factor, **config)(r1)
         r2 = Conv2DTranspose(nchannels, factor, strides=(factor, factor), padding='same')(inp)
-        up = r1 + r2
+
     else:
         if upsampling in ['bilinear', 'nearest']:
             up = UpSampling2D(size=(factor, factor), interpolation=upsampling)(inp)
@@ -231,6 +227,9 @@ def upsample(inp, factor, nchannels, config, bn=None, activation=None, upsamplin
                 up = activation(up)
 
             config['activation'] = act
+
+    if residual:
+        up = up + r2
 
     return up
 
