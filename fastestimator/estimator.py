@@ -18,6 +18,7 @@ from collections import ChainMap, deque
 import numpy as np
 import tensorflow as tf
 
+import fastestimator as fe
 from fastestimator.cli.cli_util import draw
 from fastestimator.summary import Summary
 from fastestimator.trace import Logger, ModelSaver, MonitorLoss, Trace, TrainInfo
@@ -63,7 +64,6 @@ class Estimator:
         self.summary = False
         self.inputs = None
         self.num_devices = get_num_devices()
-        self.distribute_strategy = None
         self.train_step = 0
         self.train_epoch = 0
         self.total_train_steps = 0
@@ -82,8 +82,8 @@ class Estimator:
         draw()
         if not self._is_initialized:
             self.summary = summary
-            self._prepare_network()
             self._prepare_pipeline()
+            self._prepare_network()
             self._warmup()
             self._prepare_estimator()
             self._is_initialized = True
@@ -93,13 +93,13 @@ class Estimator:
     def _prepare_pipeline(self):
         self.pipeline.global_batch_multiplier = get_num_devices()
         self.pipeline.eval_shuffle = self.validation_steps is not None
-        self.pipeline.prepare(distribute_strategy=self.distribute_strategy)
+        self.pipeline.prepare()
         self.do_eval = "eval" in self.pipeline.mode_list
 
     def _prepare_network(self):
         self.network.num_devices = self.num_devices
-        self.network.prepare()
-        self.distribute_strategy = self.network.distribute_strategy
+        self.network.prepare(mode_list=self.pipeline.mode_list)
+
 
     def _prepare_estimator(self):
         if self.traces is None:
@@ -129,7 +129,15 @@ class Estimator:
         # representation in order to get the slightly better asymptotic runtime complexity
         sorted_traces = []
         available_outputs = {
-            "num_devices", "mode", "epoch", "train_step", "batch_idx", "batch_size", "batch", "elapsed_time"
+            "num_devices",
+            "mode",
+            "epoch",
+            "train_step",
+            "batch_idx",
+            "batch_size",
+            "batch",
+            "elapsed_time",
+            "local_batch_size"
         } | self.pipeline.all_output_keys | self.network.all_output_keys
         end_traces = deque()
         intermediate_traces = deque()
@@ -194,9 +202,10 @@ class Estimator:
                     self.total_train_steps += max_steps * elapse_epochs[idx]
                 batch = next(ds_iter)
                 state["batch_size"] = self.pipeline.get_global_batch_size(epoch)
+                state["local_batch_size"] = state["batch_size"] // self.num_devices
                 ops, model_list, epoch_losses = self.network.load_epoch(epoch, mode)
-                if self.distribute_strategy:
-                    self.distribute_strategy.experimental_run_v2(
+                if fe.distribute_strategy:
+                    fe.distribute_strategy.experimental_run_v2(
                         self.network.run_step, args=(
                             batch,
                             ops,
@@ -248,18 +257,31 @@ class Estimator:
                 "epoch": self.train_epoch,
                 "train_step": self.train_step,
                 "batch_idx": batch_idx,
-                "batch_size": global_batch_size
+                "batch_size": global_batch_size,
+                "local_batch_size": global_batch_size // self.num_devices
             })
-            if self.distribute_strategy:
+            if fe.distribute_strategy:
                 prediction, batch = self._forward_step_parallel(
-                    batch, ops, model_list, epoch_losses, {"mode": mode, "batch_size": global_batch_size})
+                    batch,
+                    ops,
+                    model_list,
+                    epoch_losses,
+                    {
+                        "mode": mode,
+                        "batch_size": global_batch_size,
+                        "local_batch_size": global_batch_size // self.num_devices
+                    })
             else:
-                prediction = self._forward_step(batch,
-                                                ops,
-                                                model_list,
-                                                epoch_losses, {
-                                                    "mode": mode, "batch_size": global_batch_size
-                                                })
+                prediction = self._forward_step(
+                    batch,
+                    ops,
+                    model_list,
+                    epoch_losses,
+                    {
+                        "mode": mode,
+                        "batch_size": global_batch_size,
+                        "local_batch_size": global_batch_size // self.num_devices
+                    })
             batch = ChainMap(prediction, batch)
             self._run_traces_on_batch_end({
                 "mode": mode,
@@ -267,6 +289,7 @@ class Estimator:
                 "train_step": self.train_step,
                 "batch_idx": batch_idx,
                 "batch_size": global_batch_size,
+                "local_batch_size": global_batch_size // self.num_devices,
                 "batch": batch,
             })
             if mode == "train":
@@ -337,7 +360,7 @@ class Estimator:
 
     @tf.function
     def _forward_step_parallel(self, batch, ops, model_list, epoch_losses, state):
-        prediction = self.distribute_strategy.experimental_run_v2(self.network.run_step,
+        prediction = fe.distribute_strategy.experimental_run_v2(self.network.run_step,
                                                                   args=(
                                                                       batch,
                                                                       ops,

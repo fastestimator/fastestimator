@@ -15,11 +15,13 @@
 from collections import ChainMap
 
 import tensorflow as tf
+from tensorflow.python.framework import ops as tfops
+
+import fastestimator as fe
 from fastestimator.op import get_inputs_by_op, get_op_from_mode, verify_ops, write_outputs_by_key
 from fastestimator.op.tensorop import ModelOp
 from fastestimator.schedule import Scheduler
-from fastestimator.util.util import NonContext, flatten_list, get_num_devices, to_list
-from tensorflow.python.framework import ops as tfops
+from fastestimator.util.util import NonContext, flatten_list, to_list
 
 
 class Network:
@@ -40,13 +42,10 @@ class Network:
         self.all_output_keys = set()
         self.stop_training = False
         self.num_devices = 1
-        self.distribute_strategy = 0
 
-    def prepare(self):
-        """This function constructs the model specified in model definition and create replica of model
-         for distributed training across multiple devices if there are multiple GPU available.
+    def prepare(self, mode_list):
+        """This function constructs the operations necessary for each epoch
         """
-        mode_list = ["train", "eval"]
         all_output_keys = []
         all_models = []
         for mode in mode_list:
@@ -83,8 +82,6 @@ class Network:
         for model in all_models:
             assert model.model_name not in self.model, "duplicated model name: {}".format(model.model_name)
             self.model[model.model_name] = model
-            if self.distribute_strategy == 0:
-                self.distribute_strategy = model.distribute_strategy
 
     def _get_signature_epoch(self, mode):
         signature_epoch = [0]
@@ -188,24 +185,20 @@ def build(model_def, model_name, optimizer, loss_name):
     Returns:
         model: model(s) compiled by FastEstimator
     """
-    if get_num_devices() > 1:
-        distribute_strategy = tf.distribute.MirroredStrategy()
-    else:
-        distribute_strategy = None
-    with distribute_strategy.scope() if distribute_strategy else NonContext():
+    with fe.distribute_strategy.scope() if fe.distribute_strategy else NonContext():
         model = to_list(model_def())
         model_name = to_list(model_name)
         optimizer = to_list(optimizer)
         loss_name = to_list(loss_name)
         assert len(model) == len(model_name) == len(optimizer) == len(loss_name)
         for idx, (m, m_n, o, l_n) in enumerate(zip(model, model_name, optimizer, loss_name)):
-            model[idx] = _fe_compile(m, m_n, o, l_n, distribute_strategy)
+            model[idx] = _fe_compile(m, m_n, o, l_n)
     if len(model) == 1:
         model = model[0]
     return model
 
 
-def _fe_compile(model, model_name, optimizer, loss_name, distribute_strategy):
+def _fe_compile(model, model_name, optimizer, loss_name):
     if isinstance(optimizer, str):
         optimizer_fn = {
             'adadelta': tf.optimizers.Adadelta,
@@ -225,6 +218,5 @@ def _fe_compile(model, model_name, optimizer, loss_name, distribute_strategy):
     model.model_name = model_name
     model.optimizer = optimizer
     model.loss_name = loss_name
-    model.distribute_strategy = distribute_strategy
     model.fe_compiled = True
     return model

@@ -21,6 +21,7 @@ import time
 import numpy as np
 import tensorflow as tf
 
+import fastestimator as fe
 from fastestimator.op import get_inputs_by_key, get_inputs_by_op, get_op_from_mode, verify_ops, write_outputs_by_key
 from fastestimator.op.tensorop import TensorFilter
 from fastestimator.schedule import Scheduler
@@ -100,11 +101,8 @@ class Pipeline:
         self.file_names = {"train": [], "eval": []}
         self.global_batch_multiplier = 1
 
-    def prepare(self, distribute_strategy=None):
+    def prepare(self):
         """Create the dataset used by the pipeline by running all the ops specified.
-
-        Args:
-            distribute_strategy: Type of strategy to be used for multi GPU setup.
         """
         if isinstance(self.data, dict):
             self._get_numpy_config()
@@ -122,10 +120,9 @@ class Pipeline:
         for mode in self.mode_list:
             self._get_feature_name(mode)
             self._extract_dataset(mode)
-            self._transform_dataset(mode, distribute_strategy)
+            self._transform_dataset(mode)
         self.all_output_keys = self.all_output_keys | set(flatten_list(flatten_list(list(
             self.feature_name.values())))) - {None}
-
         self._is_prepared = True
 
     def _get_numpy_config(self):
@@ -228,7 +225,7 @@ class Pipeline:
             dataset = ds_tuple[0]
         self.extracted_dataset[mode] = dataset
 
-    def _transform_dataset(self, mode, distribute_strategy):
+    def _transform_dataset(self, mode):
         all_output_keys = []
         signature_epoch, mode_ops = self._get_signature_epoch(mode)
         extracted_ds = self.extracted_dataset[mode]
@@ -272,8 +269,8 @@ class Pipeline:
             else:
                 dataset = dataset.batch(global_batch_size)
             dataset = dataset.prefetch(buffer_size=1)
-            if distribute_strategy:
-                dataset = distribute_strategy.experimental_distribute_dataset(dataset)
+            if fe.distribute_strategy:
+                dataset = fe.distribute_strategy.experimental_distribute_dataset(dataset)
             dataset_map[epoch] = iter(dataset)
         self.dataset_schedule[mode] = Scheduler(epoch_dict=dataset_map)
         self.all_output_keys = self.all_output_keys | set(flatten_list(all_output_keys))

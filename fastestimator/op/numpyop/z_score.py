@@ -17,12 +17,14 @@ import numpy as np
 
 from fastestimator.op import NumpyOp
 
-EPSILON = 1e-7
-
 
 class Zscore(NumpyOp):
     """Standardize data using zscore method
     """
+    def __init__(self, inputs=None, outputs=None, mode=None, epsilon=1e-7):
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.epsilon = epsilon
+
     def forward(self, data, state):
         """Standardizes the data
 
@@ -35,5 +37,5 @@ class Zscore(NumpyOp):
         """
         mean = np.mean(data)
         std = np.std(data)
-        data = (data - mean) / max(std, EPSILON)
+        data = (data - mean) / max(std, self.epsilon)
         return data
