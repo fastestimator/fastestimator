@@ -10,11 +10,6 @@ FILES=$(find ${path_apphub} -type f -name '*.py')
 cnt=0
 
 #Fst COCO
-echo -en '\n'
-echo 'Image Styletransfer'
-echo 'Fst COCO'
-echo -en '\n'
-
 filepath=${path_image_styletransfer}'fst_coco/'
 filename='fst_coco.py'
 

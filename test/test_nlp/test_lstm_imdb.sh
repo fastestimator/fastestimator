@@ -34,7 +34,7 @@ if ipython  ${path_temp}'/lstm_imdb_param.py'; then
 else
     exit 0
 fi
-rm -rf /tmp/tmp*
+rm -rf ${path_temp}/tmp*
 rm  ${path_temp}${nb_param_filename}
 rm  ${path_temp}'/lstm_imdb_param.py'
 exit 1
