@@ -16,12 +16,14 @@ import tensorflow as tf
 
 from fastestimator.op import TensorOp
 
-EPSILON = 1e-7
-
 
 class Minmax(TensorOp):
     """Normalize data using the minmax method.
     """
+    def __init__(self, inputs=None, outputs=None, mode=None, epsilon=1e-7):
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.epsilon = epsilon
+
     def forward(self, data, state):
         """Normalizes the data tensor.
 
@@ -34,5 +36,5 @@ class Minmax(TensorOp):
         """
         data = tf.cast(data, tf.float32)
         data = tf.math.divide(tf.subtract(data, tf.reduce_min(data)),
-                              tf.maximum(tf.subtract(tf.reduce_max(data), tf.reduce_min(data)), EPSILON))
+                              tf.maximum(tf.subtract(tf.reduce_max(data), tf.reduce_min(data)), self.epsilon))
         return data

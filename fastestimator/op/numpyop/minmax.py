@@ -17,12 +17,14 @@ import numpy as np
 
 from fastestimator.op import NumpyOp
 
-EPSILON = 1e-7
-
 
 class Minmax(NumpyOp):
     """Normalize data using the minmax method
     """
+    def __init__(self, inputs=None, outputs=None, mode=None, epsilon=1e-7):
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.epsilon = epsilon
+
     def forward(self, data, state):
         """Normalizes the data
 
@@ -35,5 +37,5 @@ class Minmax(NumpyOp):
         """
         data_max = np.max(data)
         data_min = np.min(data)
-        data = (data - data_min) / max((data_max - data_min), EPSILON)
+        data = (data - data_min) / max((data_max - data_min), self.epsilon)
         return data

@@ -12,8 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import tensorflow as tf
+
 from fastestimator.estimator import Estimator
 from fastestimator.network import Network, build
 from fastestimator.pipeline import Pipeline
+from fastestimator.util.util import get_num_devices
 
 __version__ = '1.0-beta0'
+
+if get_num_devices() > 1:
+    distribute_strategy = tf.distribute.MirroredStrategy()
+else:
+    distribute_strategy = None
