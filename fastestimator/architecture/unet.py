@@ -14,6 +14,7 @@
 # ==============================================================================
 """U-Net architecture."""
 
+import tensorflow as tf
 from tensorflow.python.keras.layers import Activation, BatchNormalization, Conv2D, Conv2DTranspose, Dropout, Input, \
     MaxPooling2D, UpSampling2D, concatenate
 from tensorflow.python.keras.models import Model
@@ -26,7 +27,8 @@ def UNet(input_size=(128, 128, 3),
          bn=None,
          activation='relu',
          upsampling='bilinear',
-         dilation_rates=(1, 1, 1, 1, 1)):
+         dilation_rates=(1, 1, 1, 1, 1),
+         residual=False):
     """Creates a U-Net model.
     This U-Net model is composed of len(nchannels) "contracting blocks" and len(nchannels) "expansive blocks".
 
@@ -44,6 +46,8 @@ def UNet(input_size=(128, 128, 3),
         upsampling: (bilinear, nearest, conv) Use bilinear, nearest (nearest neighbour) for predetermined upsampling \
                     Use conv for transposed convolution based upsampling (learnable)
         dilation_rates: Add dilation to the encoder block conv layers [len(dilation_rates) == len(nchannels)]
+        residual: False = no residual connections, enc = residual connections in encoder layers only
+                  dec = residual connections in decoder layers only, True = residual connections in every layer
 
     Returns:
         'Model' object: U-Net model.
@@ -56,6 +60,8 @@ def UNet(input_size=(128, 128, 3),
     assert len(nchannels) >= 2, "At least 2 channels necessary for UNet"
 
     assert len(nchannels) == len(dilation_rates), "len(nchannels) should be the same as len(dilation_rates)"
+
+    assert isinstance(residual, bool) or residual in ['enc', 'dec'], 'Wrong argument specified for residual'
 
     # Handle callable activations as well
     if isinstance(activation, str):
@@ -79,7 +85,7 @@ def UNet(input_size=(128, 128, 3),
             d = None
 
         C, C_pooled = conv_block(inputs, nc, 3, conv_config, pooling=2, dropout=d, bn=bn, activation=activation, \
-                                    dilation_rate=dilation_rates[idx])
+                                    dilation_rate=dilation_rates[idx], residual=(residual == 'enc' or residual is True))
         levels.append((C, C_pooled))
         inputs = C_pooled
 
@@ -102,7 +108,8 @@ def UNet(input_size=(128, 128, 3),
                       bn=bn,
                       activation=activation,
                       upsampling=upsampling,
-                      dilation=dilation)
+                      dilation=dilation,
+                      residual=(residual == 'dec' or residual is True))
         if idx != len(nchannels) - 2:
             inp1, inp2 = D, levels[-2 - idx][0]
 
@@ -131,13 +138,31 @@ def UNet(input_size=(128, 128, 3),
     return model
 
 
-def conv_block(inp, nchannels, window, config, pooling=None, dropout=None, bn=False, activation=None, dilation_rate=1):
+def conv_block(inp,
+               nchannels,
+               window,
+               config,
+               pooling=None,
+               dropout=None,
+               bn=False,
+               activation=None,
+               dilation_rate=1,
+               residual=False):
 
     if bn and bn == 'before':
         act = config['activation']
         config['activation'] = None
 
+    print(inp.get_shape().as_list()[3])
+
+    if residual:
+        inp = Conv2D(nchannels, 1, dilation_rate=dilation_rate, **config)(inp)
+
     conv1 = Conv2D(nchannels, window, dilation_rate=dilation_rate, **config)(inp)
+
+    if residual:
+        conv1 = Conv2D(nchannels, 1, dilation_rate=dilation_rate, **config)(conv1)
+        conv1 = inp + conv1
 
     if bn:
         conv1 = BatchNormalization()(conv1)
@@ -148,7 +173,14 @@ def conv_block(inp, nchannels, window, config, pooling=None, dropout=None, bn=Fa
             else:
                 conv1 = activation(conv1)
 
+    if residual:
+        conv1 = Conv2D(nchannels, 1, dilation_rate=dilation_rate, **config)(conv1)
+
     conv2 = Conv2D(nchannels, window, dilation_rate=dilation_rate, **config)(conv1)
+
+    if residual:
+        conv2 = Conv2D(nchannels, 1, dilation_rate=dilation_rate, **config)(conv2)
+        conv2 = conv1 + conv2
 
     if bn:
         conv2 = BatchNormalization()(conv2)
@@ -172,18 +204,25 @@ def conv_block(inp, nchannels, window, config, pooling=None, dropout=None, bn=Fa
     return conv2, pooled
 
 
-def upsample(inp, factor, nchannels, config, bn=None, activation=None, upsampling='bilinear'):
+def upsample(inp, factor, nchannels, config, bn=None, activation=None, upsampling='bilinear', residual=False):
 
-    if upsampling in ['bilinear', 'nearest']:
-        resized = UpSampling2D(size=(factor, factor), interpolation=upsampling)(inp)
+    print('nc', nchannels)
+
+    if residual:
+        r1 = UpSampling2D(size=(factor, factor), interpolation=upsampling)(inp)
+        r1 = Conv2D(nchannels, factor, **config)(r1)
+        r2 = Conv2DTranspose(nchannels, factor, strides=(factor, factor), padding='same')(inp)
+        up = r1 + r2
     else:
-        resized = Conv2DTranspose(nchannels, factor, strides=(factor, factor), padding='same')(inp)
+        if upsampling in ['bilinear', 'nearest']:
+            up = UpSampling2D(size=(factor, factor), interpolation=upsampling)(inp)
+            up = Conv2D(nchannels, factor, **config)(up)
+        else:
+            up = Conv2DTranspose(nchannels, factor, strides=(factor, factor), padding='same')(inp)
 
     if bn and bn == 'before':
         act = config['activation']
         config['activation'] = None
-
-    up = Conv2D(nchannels, factor, **config)(resized)
 
     if bn:
         up = BatchNormalization()(up)
@@ -209,13 +248,23 @@ def up_concat(conv_pooled,
               bn=None,
               activation=None,
               upsampling='bilinear',
-              dilation=1):
+              dilation=1,
+              residual=False):
 
     assert len(nchannels) == 2
 
     F, _ = conv_block(conv_pooled, nchannels[0], window, config, bn=bn, dropout=dropout, activation=activation, \
-                        dilation_rate=dilation if dilation else 1)
-    upsampled = upsample(F, factor, nchannels[1], config, bn=bn, activation=activation, upsampling=upsampling)
+                        dilation_rate=dilation if dilation else 1, residual=residual)
+
+    upsampled = upsample(F,
+                         factor,
+                         nchannels[1],
+                         config,
+                         bn=bn,
+                         activation=activation,
+                         upsampling=upsampling,
+                         residual=residual)
+
     feat = concatenate([conv, upsampled], axis=3)
 
     return feat
