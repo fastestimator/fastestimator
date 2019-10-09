@@ -14,7 +14,6 @@
 # ==============================================================================
 """U-Net architecture."""
 
-import tensorflow as tf
 from tensorflow.python.keras.layers import Activation, BatchNormalization, Conv2D, Conv2DTranspose, Dropout, Input, \
     MaxPooling2D, UpSampling2D, concatenate
 from tensorflow.python.keras.models import Model
@@ -152,8 +151,6 @@ def conv_block(inp,
     if bn and bn == 'before':
         act = config['activation']
         config['activation'] = None
-
-    print(inp.get_shape().as_list()[3])
 
     if residual:
         inp = Conv2D(nchannels, 1, dilation_rate=dilation_rate, **config)(inp)
