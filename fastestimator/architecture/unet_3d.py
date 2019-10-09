@@ -28,7 +28,8 @@ def UNet3D(input_size=(9, 512, 512, 1),
            bn=None,
            activation='relu',
            upsampling='copy',
-           dilation_rates=(1, 1, 1, 1)):
+           dilation_rates=(1, 1, 1, 1),
+           residual=False):
     """Creates a U-Net model.
     This 3D U-Net model is composed of len(nchannels) "contracting blocks" and len(nchannels) "expansive blocks".
 
@@ -92,7 +93,8 @@ def UNet3D(input_size=(9, 512, 512, 1),
                          bn="before",
                          prefix='3d_unet_conv_%d' % (idx),
                          activation=activation,
-                         dilation_rate=dilation_rates[idx])
+                         dilation_rate=dilation_rates[idx],
+                         residual=(residual is True or residual == 'enc'))
 
         if idx != len(nchannels) - 1:
             C_pooled = pooling_combo3D(C, window=(1, 2, 2), prefix='3d_unet_pooling_%d' % (idx))
@@ -122,12 +124,18 @@ def UNet3D(input_size=(9, 512, 512, 1),
                       activation=activation,
                       upsampling=upsampling,
                       dilation_rate=dilation,
-                      idx=idx)
+                      idx=idx,
+                      residual=(residual is True or residual == 'dec'))
 
         if idx != len(nchannels) - 2:
             inp1, inp2 = D, levels[-3 - idx][0]
 
-    C_end1 = conv3D_block(D, 64, (1, 3, 3), dropout=dropout, bn=bn, activation=activation)
+    C_end1 = conv3D_block(D,
+                          64, (1, 3, 3),
+                          dropout=dropout,
+                          bn=bn,
+                          activation=activation,
+                          residual=(residual is True or residual == 'dec'))
 
     C_end2 = Conv3D(2, (1, 3, 3), kernel_initializer='he_normal', padding='same')(C_end1)
 
@@ -153,7 +161,8 @@ def conv3D_block(x,
                  prefix='3d_unet_conv',
                  bias=False,
                  activation='relu',
-                 dilation_rate=1):
+                 dilation_rate=1,
+                 residual=False):
 
     if isinstance(activation, str):
         act = Activation(activation)
@@ -161,13 +170,20 @@ def conv3D_block(x,
         act = activation
 
     for i in range(nblocks):
+        if residual:
+            pad = 'same'
+        else:
+            pad = 'valid'
+
+        inp = x
         x = Conv3D(filters=nchannels,
                    kernel_size=window,
                    strides=strides,
                    name=prefix + "_conv3d_" + str(i),
                    kernel_initializer='he_normal',
                    use_bias=bias,
-                   dilation_rate=dilation_rate)(x)
+                   dilation_rate=dilation_rate,
+                   padding=pad)(x)
 
         if bn == 'before':
             x = BatchNormalization(axis=4, name=prefix + "_batchnorm_" + str(i))(x)
@@ -179,6 +195,9 @@ def conv3D_block(x,
 
         if dropout > 0:
             x = SpatialDropout3D(rate=dropout, data_format='channels_last')(x)
+
+        if inp.get_shape().as_list()[-1] == nchannels and residual:
+            x = inp + x
 
     return x
 
@@ -193,7 +212,8 @@ def deconv3D_block(x,
                    bias=False,
                    bn=None,
                    activation=Activation('relu'),
-                   dilation_rate=1):
+                   dilation_rate=1,
+                   residual=False):
 
     if isinstance(activation, str):
         act = Activation(activation)
@@ -201,13 +221,21 @@ def deconv3D_block(x,
         act = activation
 
     for i in range(nblocks):
+        if residual:
+            pad = 'same'
+        else:
+            pad = 'valid'
+
+        inp = x
         x = Conv3DTranspose(filters=nchannels,
                             kernel_size=window,
                             strides=strides,
                             name=prefix + "_deconv3d_" + str(i),
                             kernel_initializer='he_normal',
                             use_bias=bias,
-                            dilation_rate=dilation_rate)(x)
+                            dilation_rate=dilation_rate,
+                            padding=pad)(x)
+
         if bn == 'before':
             x = BatchNormalization(axis=4, name=prefix + "_batchnorm_" + str(i))(x)
 
@@ -218,6 +246,9 @@ def deconv3D_block(x,
 
         if dropout > 0:
             x = SpatialDropout3D(rate=dropout, data_format='channels_last')(x)
+
+        if inp.get_shape().as_list()[-1] == nchannels and residual:
+            x = inp + x
 
     return x
 
@@ -252,18 +283,30 @@ def upsample(inp,
              dilation_rate=1,
              prefix='unet_3d',
              idx=0,
-             upsampling='copy'):
+             upsampling='copy',
+             residual=False):
 
-    if upsampling == 'copy':
+    if residual:
         resized = UpSampling3D(size=(1, factor, factor))(inp)
         resized = Conv3D(nchannels, (1, 1, 1), strides=1, padding='same')(resized)
-    else:
-        resized = Conv3DTranspose(nchannels, (1, factor, factor),
+
+        resized2 = Conv3DTranspose(nchannels, (1, factor, factor),
                                   strides=(1, factor, factor),
                                   name=prefix + "_deconv3d_" + str(idx),
                                   kernel_initializer='he_normal',
                                   use_bias=bias,
                                   dilation_rate=dilation_rate)(inp)
+    else:
+        if upsampling == 'copy':
+            resized = UpSampling3D(size=(1, factor, factor))(inp)
+            resized = Conv3D(nchannels, (1, 1, 1), strides=1, padding='same')(resized)
+        else:
+            resized = Conv3DTranspose(nchannels, (1, factor, factor),
+                                    strides=(1, factor, factor),
+                                    name=prefix + "_deconv3d_" + str(idx),
+                                    kernel_initializer='he_normal',
+                                    use_bias=bias,
+                                    dilation_rate=dilation_rate)(inp)
 
     if bn == 'before':
         resized = BatchNormalization(axis=4, name=prefix + "_batchnorm_" + str(idx))(resized)
@@ -273,6 +316,9 @@ def upsample(inp,
     if bn == 'after':
         resized = BatchNormalization(axis=4, name=prefix + "_batchnorm_" + str(idx))(resized)
 
+    if inp.get_shape().as_list()[-1] == nchannels and residual:
+        x = inp + x
+        
     return resized
 
 
