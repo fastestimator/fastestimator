@@ -16,12 +16,14 @@ import tensorflow as tf
 
 from fastestimator.op import TensorOp
 
-EPSILON = 1e-7
-
 
 class Zscore(TensorOp):
     """Standardize data using zscore method.
     """
+    def __init__(self, inputs=None, outputs=None, mode=None, epsilon=1e-7):
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.epsilon = epsilon
+
     def forward(self, data, state):
         """Standardizes the data tensor.
 
@@ -35,7 +37,7 @@ class Zscore(TensorOp):
         data = tf.cast(data, tf.float32)
         mean = tf.reduce_mean(data)
         std = tf.keras.backend.std(data)
-        data = tf.math.divide(tf.subtract(data, mean), tf.maximum(std, EPSILON))
+        data = tf.math.divide(tf.subtract(data, mean), tf.maximum(std, self.epsilon))
         data = tf.cast(data, tf.float32)
 
         return data
