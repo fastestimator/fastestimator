@@ -1,13 +1,5 @@
 #!/bin/bash
 path_apphub='../apphub/'
-path_tutorial='../tutorial/'
-path_image_classification=${path_apphub}'image_classification/'
-path_image_detection=${path_apphub}'image_detection/'
-path_image_generation=${path_apphub}'image_generation/'
-path_image_segmentation=${path_apphub}'image_segmentation/'
-path_image_styletransfer=${path_apphub}'image_styletransfer/'
-path_nlp=${path_apphub}'NLP/'
-path_tabular=${path_apphub}'tabular/'
 tmpdir=$(dirname $(mktemp -u))
 
 # Image Classification examples test
