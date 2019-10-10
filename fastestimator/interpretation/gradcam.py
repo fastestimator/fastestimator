@@ -100,6 +100,21 @@ class FEGradCAM(GradCAM):
 
 def plot_gradcam(inputs, model, layer_id=None, target_class=None, decode_dictionary=None,
                  colormap=cv2.COLORMAP_INFERNO):
+    """Creates a GradCam interpretation of the given input
+
+    Args:
+        inputs (tf.tensor): Model input, with batch along the zero axis
+        model (tf.keras.model): tf.keras model to inspect
+        layer_id (int, str, None): Which layer to inspect. Should be a convolutional layer. If None, the last \
+                                    acceptable layer from the model will be selected
+        target_class (int, None): Which output class to try to explain. None will default to explaining the maximum \
+                                    likelihood prediction
+        decode_dictionary (dict): A dictionary of "class_idx" -> "class_name" associations
+        colormap (int): Which colormap to use when generating the heatmaps
+
+    Returns:
+        The matplotlib figure handle
+    """
     gradcam = FEGradCAM()
     if isinstance(layer_id, int):
         layer_id = model.layers[layer_id].name
@@ -157,6 +172,19 @@ def visualize_gradcam(inputs,
                       decode_dictionary=None,
                       colormap=cv2.COLORMAP_INFERNO,
                       save_path='.'):
+    """Displays or saves a GradCam interpretation of the given input
+
+    Args:
+        inputs (tf.tensor): Model input, with batch along the zero axis
+        model (tf.keras.model): tf.keras model to inspect
+        layer_id (int, str, None): Which layer to inspect. Should be a convolutional layer. If None, the last \
+                                    acceptable layer from the model will be selected
+        target_class (int, None): Which output class to try to explain. None will default to explaining the maximum \
+                                    likelihood prediction
+        decode_dictionary (dict): A dictionary of "class_idx" -> "class_name" associations
+        colormap (int): Which colormap to use when generating the heatmaps
+        save_path (str, None): Where to save the image. If None then the image will be displayed instead
+    """
     plot_gradcam(inputs=inputs,
                  model=model,
                  layer_id=layer_id,
@@ -170,6 +198,6 @@ def visualize_gradcam(inputs,
         if save_path == "":
             save_path = "."
         os.makedirs(save_path, exist_ok=True)
-        save_file = os.path.join(save_path, 'parse_logs.png')
+        save_file = os.path.join(save_path, 'gradCam.png')
         print("Saving to {}".format(save_file))
         plt.savefig(save_file, dpi=300, bbox_inches="tight")
