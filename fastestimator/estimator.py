@@ -16,9 +16,9 @@
 from collections import ChainMap, deque
 
 import numpy as np
+import tensorflow as tf
 
 import fastestimator as fe
-import tensorflow as tf
 from fastestimator.cli.cli_util import draw
 from fastestimator.summary import Summary
 from fastestimator.trace import Logger, ModelSaver, MonitorLoss, Trace, TrainInfo
@@ -138,7 +138,12 @@ class Estimator:
             "batch",
             "elapsed_time",
             "local_batch_size",
-            "num_examples"
+            "num_examples",
+            "log_steps",
+            "persist_summary",
+            "total_epochs",
+            "total_train_steps",
+            "summary"
         } | self.pipeline.all_output_keys | self.network.all_output_keys
         end_traces = deque()
         intermediate_traces = deque()
@@ -226,8 +231,7 @@ class Estimator:
             "log_steps": self.log_steps,
             "persist_summary": bool(self.summary),
             "total_epochs": self.epochs,
-            "total_train_steps": self.total_train_steps,
-            "num_examples": self.num_examples
+            "total_train_steps": self.total_train_steps
         })
         for self.train_epoch in range(self.epochs):
             self._run_epoch("train")
@@ -247,7 +251,12 @@ class Estimator:
         else:
             max_steps = self.num_examples[mode] // global_batch_size
         ops, model_list, epoch_losses = self.network.load_epoch(self.train_epoch, mode)
-        self._run_traces_on_epoch_begin({"mode": mode, "epoch": self.train_epoch, "train_step": self.train_step})
+        self._run_traces_on_epoch_begin({
+            "mode": mode,
+            "epoch": self.train_epoch,
+            "train_step": self.train_step,
+            "num_examples": self.num_examples[mode]
+        })
         for batch_idx in range(max_steps):
             batch = next(ds_iter)
             self._run_traces_on_batch_begin({

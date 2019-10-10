@@ -56,10 +56,11 @@ class Trace:
 
         Args:
             state (ChainMap): dictionary of run time that has the following key(s):
-            
+
                 * "mode" (str):  current run time mode, can be "train", "eval" or "test"
                 * "epoch" (int): current epoch index starting from 0
                 * "train_step" (int): current global training step starting from 0
+                * "num_examples" (int): total number of examples available for current mode
                 * any keys written by 'on_epoch_begin' of previous traces
         """
     def on_batch_begin(self, state):
@@ -73,6 +74,7 @@ class Trace:
                 * "train_step" (int): current global training step starting from 0
                 * "batch_idx" (int): current local step of the epoch starting from 0
                 * "batch_size" (int): current global batch size
+                * "local_batch_size" (int): current batch size for single device
                 * any keys written by 'on_batch_begin' of previous traces
         """
     def on_batch_end(self, state):
@@ -88,6 +90,7 @@ class Trace:
                 * "batch_idx" (int): current local step of the epoch starting from 0
                 * "batch_size" (int): current global batch size
                 * "batch" (dict): the batch data after the Network execution
+                * "local_batch_size" (int): current batch size for single device
                 * <loss_name> defined in model (float): loss of current batch (only available when mode is "train")
                 * any keys written by 'on_batch_end' of previous traces
         """
@@ -111,7 +114,6 @@ class Trace:
 
                 * "train_step" (int): current global training step starting from 0
                 * "epoch" (int): current epoch index starting from 0
-                * "num_devices" (int): number of devices (mainly gpu) that are being used. If cpu only, the number is 1
                 * "summary" (Experiment): will be returned from estimator.fit() if a summary input was specified
                 * any keys written by 'on_end' of previous traces
         """
