@@ -67,6 +67,7 @@ class Estimator:
         self.train_step = 0
         self.train_epoch = 0
         self.total_train_steps = 0
+        self.num_examples = {}
         self.do_eval = False
         self._is_initialized = False
 
@@ -99,7 +100,6 @@ class Estimator:
     def _prepare_network(self):
         self.network.num_devices = self.num_devices
         self.network.prepare(mode_list=self.pipeline.mode_list)
-
 
     def _prepare_estimator(self):
         if self.traces is None:
@@ -137,7 +137,13 @@ class Estimator:
             "batch_size",
             "batch",
             "elapsed_time",
-            "local_batch_size"
+            "local_batch_size",
+            "num_examples",
+            "log_steps",
+            "persist_summary",
+            "total_epochs",
+            "total_train_steps",
+            "summary"
         } | self.pipeline.all_output_keys | self.network.all_output_keys
         end_traces = deque()
         intermediate_traces = deque()
@@ -184,6 +190,7 @@ class Estimator:
         mode_list = self.pipeline.mode_list
         self.total_train_steps = 0
         for mode in mode_list:
+            self.num_examples[mode] = min(self.pipeline.num_examples[mode])
             epochs_pipeline = self.pipeline.dataset_schedule[mode].keys
             epochs_network = self.network.op_schedule[mode].keys
             signature_epochs = sorted(list(set(epochs_pipeline) | set(epochs_network)))
@@ -198,7 +205,7 @@ class Estimator:
                     if self.steps_per_epoch:
                         max_steps = self.steps_per_epoch
                     else:
-                        max_steps = min(self.pipeline.num_examples[mode]) // global_batch_size
+                        max_steps = self.num_examples[mode] // global_batch_size
                     self.total_train_steps += max_steps * elapse_epochs[idx]
                 batch = next(ds_iter)
                 state["batch_size"] = self.pipeline.get_global_batch_size(epoch)
@@ -231,12 +238,7 @@ class Estimator:
             if self.do_eval:
                 self._run_epoch("eval")
         summary = Summary(self.summary)
-        self._run_traces_on_end({
-            "train_step": self.train_step,
-            "epoch": self.train_epoch,
-            "num_devices": self.num_devices,
-            "summary": summary
-        })
+        self._run_traces_on_end({"train_step": self.train_step, "epoch": self.train_epoch, "summary": summary})
         return None if not self.summary else summary
 
     def _run_epoch(self, mode):
@@ -247,9 +249,14 @@ class Estimator:
         elif self.validation_steps and mode == "eval":
             max_steps = self.validation_steps
         else:
-            max_steps = min(self.pipeline.num_examples[mode]) // global_batch_size
+            max_steps = self.num_examples[mode] // global_batch_size
         ops, model_list, epoch_losses = self.network.load_epoch(self.train_epoch, mode)
-        self._run_traces_on_epoch_begin({"mode": mode, "epoch": self.train_epoch, "train_step": self.train_step})
+        self._run_traces_on_epoch_begin({
+            "mode": mode,
+            "epoch": self.train_epoch,
+            "train_step": self.train_step,
+            "num_examples": self.num_examples[mode]
+        })
         for batch_idx in range(max_steps):
             batch = next(ds_iter)
             self._run_traces_on_batch_begin({
@@ -361,12 +368,12 @@ class Estimator:
     @tf.function
     def _forward_step_parallel(self, batch, ops, model_list, epoch_losses, state):
         prediction = fe.distribute_strategy.experimental_run_v2(self.network.run_step,
-                                                                  args=(
-                                                                      batch,
-                                                                      ops,
-                                                                      model_list,
-                                                                      epoch_losses,
-                                                                      state, ))
+                                                                args=(
+                                                                    batch,
+                                                                    ops,
+                                                                    model_list,
+                                                                    epoch_losses,
+                                                                    state, ))
         prediction = self._per_replica_to_global(prediction)
         batch = self._per_replica_to_global(batch)
         return prediction, batch
