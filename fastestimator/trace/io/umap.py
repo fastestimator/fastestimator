@@ -32,6 +32,7 @@ class UMap(Trace):
         im_freq: Frequency (in epochs) during which visualizations should be generated
         **umap_parameters: Extra parameters to be passed to the umap algorithm, ex. n_neighbors, n_epochs, etc.
     """
+
     # TODO: let this take a model+layer instead of restricting it to just an existing key
     def __init__(self,
                  in_vector_key,
@@ -77,9 +78,22 @@ class UMap(Trace):
         # TODO - Figure out how to get this to work without it displaying the figure. maybe fig.canvas.draw
         plt.draw()
         plt.pause(0.000001)
-        state.maps[1][self.output_key] = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8,
-                                                       sep='').reshape((1, ) + fig.canvas.get_width_height()[::-1] +
-                                                                       (3, ))
+        flat_image = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+        flat_image_pixels = flat_image.shape[0] // 3
+        width, height = fig.canvas.get_width_height()
+        if flat_image_pixels % height != 0:
+            # Canvas returned incorrect width/height. This seems to happen sometimes in Jupyter. TODO: figure out why.
+            search = 1
+            guess = height + search
+            while flat_image_pixels % guess != 0:
+                if search < 0:
+                    search = -1 * search + 1
+                else:
+                    search = -1 * search
+                guess = height + search
+            height = guess
+            width = flat_image_pixels // height
+        state.maps[1][self.output_key] = flat_image.reshape((1, height, width, 3))
         plt.close(fig)
         self.data.clear()
         self.labels.clear()
