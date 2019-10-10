@@ -242,7 +242,7 @@ def load_and_umap(model_path,
             cache_dir = os.path.join(os.path.dirname(input_root_path),
                                      os.path.basename(input_root_path) + "__layer_outputs")
 
-    network = keras.models.load_model(model_path)
+    network = keras.models.load_model(model_path, compile=False)
     if print_layers:
         for idx, layer in enumerate(network.layers):
             print("{}: {} --- output shape: {}".format(idx, layer.name, layer.output_shape))

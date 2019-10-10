@@ -107,3 +107,6 @@ ENV/
 .project
 .pydevproject
 .vscode
+
+# tutorial output files
+/tutorial/outputs
