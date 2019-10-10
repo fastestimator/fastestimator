@@ -1,398 +1,131 @@
 #!/bin/bash
-path_apphub='../apphub/'
-path_image_classification=${path_apphub}'image_classification/'
-path_image_detection=${path_apphub}'image_detection/'
-path_image_generation=${path_apphub}'image_generation/'
-path_image_segmentation=${path_apphub}'image_segmentation/'
-path_image_styletransfer=${path_apphub}'image_styletransfer/'
-path_nlp=${path_apphub}'NLP/'
-path_tabular=${path_apphub}'tabular/'
-path_temp=/tmp/
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+path_apphub=${DIR}'/../apphub/'
+test_image_classification=${DIR}'/test_image_classification/'
+test_image_generation=${DIR}'/test_image_generation/'
+test_image_styletransfer=${DIR}'/test_image_styletransfer/'
+test_image_segmentation=${DIR}'/test_image_segmentation/'
+test_nlp=${DIR}'/test_nlp/'
+test_tabular=${DIR}'/test_tabular/'
+tmpdir=$(dirname $(mktemp -u))
 
-#training parameters to test the models
-train_info='--epochs 2 --batch_size 2 --steps_per_epoch 10 --validation_steps 5 --model_dir None'
-nb_train_info='-p epochs 2 -p batch_size 2 -p steps_per_epoch 10 -p validation_steps 5' #notebook parameters
-FILES=$(find ${path_apphub} -type f -name '*.py')
-cnt = 0
-echo 'Apphub files'
-for filename in $FILES; do
-    echo $filename
-done
+# Image Classification examples test
+bash ${test_image_classification}'test_densenet121.sh'
+densenet_code=$?
 
-#-------------------------- IMAGE CLASSIFICATION ----------------------------#
-# 1. LeNet (Adversarial)
-echo -en '\n'
-echo 'Image Classification'
-echo '1. LeNet Adversarial'
-echo -en '\n'
+bash ${test_image_classification}'test_lenet_adversarial.sh'
+lenet_adv_code=$?
 
-filepath=${path_image_classification}'lenet_cifar10_adversarial/'
-filename='lenet_cifar10_adversarial.py'
+bash ${test_image_classification}'test_lenet_mixup.sh'
+lenet_mixup_code=$?
 
-#run python file
-if fastestimator train ${filepath}${filename} ${train_info}; then
-    ((cnt=cnt+1))
+bash ${test_image_classification}'test_lenet_mnist.sh'
+lenet_mnist_code=$?
+
+# Image Generation examples test
+bash ${test_image_generation}'test_cvae_mnist.sh'
+cvae_code=$?
+
+bash ${test_image_generation}'test_cyclegan.sh'
+cyclegan_code=$?
+
+bash ${test_image_generation}'test_dcgan_mnist.sh'
+dcgan_code=$?
+
+# Image Segmentation examples test
+bash ${test_image_segmentation}'test_unet_cub200.sh'
+unet_cub_code=$?
+
+bash ${test_image_segmentation}'test_unet_montgomery.sh'
+unet_mont_code=$?
+
+#Image StyleTransfer examples test
+bash ${test_image_styletransfer}'test_fst_coco.sh'
+fst_code=$?
+
+# NLP examples test
+bash ${test_nlp}'test_lstm_imdb.sh'
+lstm_code=$?
+
+#Tabular examples test
+bash ${test_tabular}'test_dnn_housing.sh'
+dnn_code=$?
+
+#Tutorials examples test
+tutorial_res=$(bash ${DIR}/test_tutorials.sh)
+
+#echo all the test results
+echo -en '\n\n'
+if [ $densenet_code -eq 0 ] ; then
+    echo 'Densenet121 test failed'
 else
-    echo 'Testing failed for CIFAR 10 Image classification (LeNet)'
+    echo 'Densenet121 test passed'
 fi
 
-nb_filename='lenet_cifar10_adversarial.ipynb'
-nb_param_filename='lenet_cifar10_adversarial_param.ipynb'
-#inject a parameter cell and convert to python script
-papermill --prepare-only ${filepath}${nb_filename} ${path_temp}${nb_param_filename} ${nb_train_info} -p num_test_samples 10
-jupyter nbconvert --to script ${path_temp}${nb_param_filename} --output 'lenet_cifar10_adversarial_param'
-
-if ipython ${path_temp}'lenet_cifar10_adversarial_param.py'; then
-    ((cnt=cnt+1))
+if [ $lenet_adv_code -eq 0 ] ; then
+    echo 'LeNet Adversarial test failed'
 else
-    echo 'Testing failed for LeNet'
-fi
-rm -rf /tmp/tmp*
-rm ${path_temp}${nb_param_filename}
-rm ${path_temp}'lenet_cifar10_adversarial_param.py'
-
-# 2. DenseNet
-echo -en '\n'
-echo '2. DenseNet'
-echo -en '\n'
-
-filepath=${path_image_classification}'densenet121_cifar10/'
-filename='densenet121_cifar10.py'
-
-if fastestimator train ${filepath}${filename} ${train_info}; then
-    ((cnt=cnt+1))
-else
-    echo 'Testing failed on DenseNet Image classification'
+    echo 'LeNet Adversarial test passed'
 fi
 
-nb_filename='densenet121_cifar10.ipynb'
-nb_param_filename='densenet121_cifar10_param.ipynb'
-#inject a parameter cell
-papermill --prepare-only ${filepath}${nb_filename}  ${path_temp}${nb_param_filename} ${nb_train_info}
-jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'densenet121_cifar10_param'
-
-if ipython  ${path_temp}'densenet121_cifar10_param.py'; then
-    ((cnt=cnt+1))
+if [ $lenet_mixup_code -eq 0 ] ; then
+    echo 'LeNet Mixup test failed'
 else
-    echo 'Testing on DenseNet notebook failed'
-fi
-rm -rf /tmp/tmp*
-rm  ${path_temp}${nb_param_filename}
-rm  ${path_temp}'densenet121_cifar10_param.py'
-
-# 3. LeNet Mixup
-echo -en '\n'
-echo '3. LeNet CIFAR 10 Mixup'
-echo -en '\n'
-filepath=${path_image_classification}'lenet_cifar10_mixup/'
-filename='lenet_cifar10_mixup.py'
-if fastestimator train ${filepath}${filename} ${train_info}; then
-    ((cnt=cnt+1))
-else
-    echo 'Testing failed on LeNet mixup'
+    echo 'LeNet Mixup test passed'
 fi
 
-nb_filename='lenet_cifar10_mixup.ipynb'
-nb_param_filename='lenet_cifar10_mixup_param.ipynb'
-#inject a parameter cell
-papermill --prepare-only ${filepath}${nb_filename}  ${path_temp}${nb_param_filename} ${nb_train_info}
-jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'lenet_cifar10_mixup_param'
-
-if ipython  ${path_temp}'lenet_cifar10_mixup_param.py'; then
-    ((cnt=cnt+1))
+if [ $lenet_mnist_code -eq 0 ] ; then
+    echo 'LeNet MNIST test failed'
 else
-    echo 'Testing failed on LeNet Mixup notebook'
-fi
-rm -rf /tmp/tmp*
-rm  ${path_temp}${nb_param_filename}
-rm  ${path_temp}'lenet_cifar10_mixup_param.py'
-
-# 4. LeNet MNIST
-echo -en '\n'
-echo '4. LeNet MNIST'
-echo -en '\n'
-
-filepath=${path_image_classification}'lenet_mnist/'
-filename='lenet_mnist.py'
-
-if fastestimator train ${filepath}${filename} ${train_info}; then
-    ((cnt=cnt+1))
-else
-    echo 'Testing failed on LeNet MNIST'
+    echo 'LeNet MNIST test passed'
 fi
 
-nb_filename='lenet_mnist.ipynb'
-nb_param_filename='lenet_mnist_param.ipynb'
-#inject a parameter cell
-papermill --prepare-only ${filepath}${nb_filename}  ${path_temp}${nb_param_filename} ${nb_train_info}
-jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'lenet_mnist_param'
-
-if ipython  ${path_temp}'lenet_mnist_param.py'; then
-    ((cnt=cnt+1))
+if [ $cvae_code -eq 0 ] ; then
+    echo 'CVAE test failed'
 else
-    echo 'Testing failed on LeNet MNIST notebook'
-fi
-rm -rf /tmp/tmp*
-rm  ${path_temp}${nb_param_filename}
-rm  ${path_temp}'lenet_mnist_param.py'
-
-#-----------------------------IMAGE DETECTION--------------------------------#
-# 5. RetinaNet Svhn
-# echo -en '\n'
-# echo 'Image Detection'
-# echo '5. RetinaNet svhn'
-# echo -en '\n'
-
-# filepath=${path_image_detection}'retinanet_svhn/'
-# filename='retinanet_svhn.py'
-
-# if fastestimator train ${filepath}${filename} ${train_info}; then
-#     ((cnt=cnt+1))
-# else
-#     echo 'Testing failed on RetinaNet Svhn'
-# fi
-
-#-------------------------------IMAGE GENERATION----------------------------#
-# 6. CVAE MNIST
-echo -en '\n'
-echo 'Image Generation'
-echo '6. CVAE MNIST'
-echo -en '\n'
-
-filepath=${path_image_generation}'cvae_mnist/'
-filename='cvae_mnist.py'
-
-if fastestimator train ${filepath}${filename} ${train_info}; then
-    ((cnt=cnt+1))
-else
-    echo 'Testing failed on CVAE MNIST'
+    echo 'CVAE test passed'
 fi
 
-nb_filename='cvae_mnist.ipynb'
-nb_param_filename='cvae_mnist_param.ipynb'
-#inject a parameter cell
-papermill --prepare-only ${filepath}${nb_filename}  ${path_temp}${nb_param_filename} ${nb_train_info}
-jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'cvae_mnist_param'
-
-if ipython  ${path_temp}'cvae_mnist_param.py'; then
-    ((cnt=cnt+1))
+if [ $cyclegan_code -eq 0 ] ; then
+    echo 'CycleGAN test failed'
 else
-    echo 'Testing failed on CVAE MNIST notebook'
-fi
-rm -rf /tmp/tmp*
-rm  ${path_temp}${nb_param_filename}
-rm  ${path_temp}'cvae_mnist_param.py'
-
-# 7. CycleGAN Horse2Zebra
-echo -en '\n'
-echo 'Image Generation'
-echo '7. CycleGAN Horse2Zebra'
-echo -en '\n'
-
-filepath=${path_image_generation}'cyclegan_horse2zebra/'
-filename='cyclegan_horse2zebra.py'
-
-if fastestimator train ${filepath}${filename} --epochs 2 --steps_per_epoch 10; then
-    ((cnt=cnt+1))
-else
-    echo 'Testing failed on CycleGAN Horse2Zebra'
+    echo 'CycleGAN test passed'
 fi
 
-nb_filename='cyclegan.ipynb'
-nb_param_filename='cyclegan_param.ipynb'
-#inject a parameter cell
-papermill --prepare-only ${filepath}${nb_filename}  ${path_temp}${nb_param_filename} -p epochs 2 -p steps_per_epoch 10
-jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'cyclegan_param'
-
-if ipython  ${path_temp}'cyclegan_param.py'; then
-    ((cnt=cnt+1))
+if [ $dcgan_code -eq 0 ] ; then
+    echo 'DCGAN test failed'
 else
-    echo 'Testing failed on CycleGAN notebook'
-fi
-rm -rf /tmp/tmp*
-rm  ${path_temp}${nb_param_filename}
-rm  ${path_temp}'cyclegan_param.py'
-
-# 8. DCGAN MNIST
-echo -en '\n'
-echo 'Image Generation'
-echo '8. DcGAN MNIST'
-echo -en '\n'
-
-filepath=${path_image_generation}'dcgan_mnist/'
-filename='dcgan_mnist.py'
-
-if fastestimator train ${filepath}${filename} ${train_info}; then
-    ((cnt=cnt+1))
-else
-    echo 'Testing failed on DcGAN MNIST'
+    echo 'DCGAN test passed'
 fi
 
-nb_filename='dcgan_mnist.ipynb'
-nb_param_filename='dcgan_mnist_param.ipynb'
-#inject a parameter cell
-papermill --prepare-only ${filepath}${nb_filename}  ${path_temp}${nb_param_filename} ${nb_train_info} -p saved_model_path 'gen_epoch_0_step_10.h5'
-jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'dcgan_mnist_param'
-
-if ipython  ${path_temp}'dcgan_mnist_param.py'; then
-    ((cnt=cnt+1))
+if [ $unet_cub_code -eq 0 ] ; then
+    echo 'UNET Cub200 test failed'
 else
-    echo 'Testing failed on DCGAN notebook'
-fi
-rm -rf /tmp/tmp*
-rm ${filepath}${nb_param_filename}
-rm ${filepath}'dcgan_mnist_param.py'
-
-#-------------------------------IMAGE SEGMENTATION-------------------------#
-# 9. UNET Cub200
-echo -en '\n'
-echo 'Image Segmentation'
-echo '9. Unet Cub 200'
-echo -en '\n'
-
-filepath=${path_image_segmentation}'unet_cub200/'
-filename='unet_cub200.py'
-if fastestimator train ${filepath}${filename} ${train_info}; then
-    ((cnt=cnt+1))
-else
-    echo 'Testing failed on Unet cub 200'
+    echo 'UNET Cub200 test passed'
 fi
 
-nb_filename='unet_cub200.ipynb'
-nb_param_filename='unet_cub200_param.ipynb'
-#inject a parameter cell
-papermill --prepare-only ${filepath}${nb_filename}  ${path_temp}${nb_param_filename} ${nb_train_info}
-jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'unet_cub200_param'
-
-if ipython  ${path_temp}'unet_cub200_param.py'; then
-    ((cnt=cnt+1))
+if [ $unet_mont_code -eq 0 ] ; then
+    echo 'UNET Montgomery test failed'
 else
-    echo 'Testing failed on UNET Cub200 notebook'
-fi
-rm -rf /tmp/tmp*
-rm  ${path_temp}${nb_param_filename}
-rm  ${path_temp}'unet_cub200_param.py'
-
-# 10. UNET Montgomery
-echo -en '\n'
-echo 'Image Segmentation'
-echo '9. Unet Montgomery'
-echo -en '\n'
-
-filepath=${path_image_segmentation}'unet_montgomery/'
-filename='unet_montgomery.py'
-
-if fastestimator train ${filepath}${filename} ${train_info}; then
-    ((cnt=cnt+1))
-else
-    echo 'Testing failed on Unet mongomery'
+    echo 'UNET Montgomery test passed'
 fi
 
-nb_filename='unet_montgomery.ipynb'
-nb_param_filename='unet_montgomery_param.ipynb'
-#inject a parameter cell
-papermill --prepare-only ${filepath}${nb_filename}  ${path_temp}${nb_param_filename} ${nb_train_info}
-jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'unet_montgomery_param'
-
-if ipython  ${path_temp}'unet_montgomery_param.py'; then
-    ((cnt=cnt+1))
+if [ $fst_code -eq 0 ] ; then
+    echo 'FST COCO test failed'
 else
-    echo 'Testing failed on UNET Montgomery notebook'
-fi
-rm -rf /tmp/tmp*
-rm  ${path_temp}${nb_param_filename}
-rm  ${path_temp}'unet_montgomery_param.py'
-
-#----------------------------IMAGE STYLETRANSFER------------------------#
-#11. Fst COCO
-echo -en '\n'
-echo 'Image Styletransfer'
-echo '10. Fst COCO'
-echo -en '\n'
-
-filepath=${path_image_styletransfer}'fst_coco/'
-filename='fst_coco.py'
-
-if fastestimator train ${filepath}${filename} --steps_per_epoch 10; then
-    ((cnt=cnt+1))
-else
-    echo 'Testing failed on image styletransfer'
+    echo 'FST COCO test passed'
 fi
 
-nb_filename='fst_coco.ipynb'
-nb_param_filename='fst_coco_param.ipynb'
-#inject a parameter cell
-
-papermill --prepare-only ${filepath}${nb_filename}  ${path_temp}${nb_param_filename} -p steps_per_epoch 10 -p img_path ${filepath}'panda.jpeg' -p saved_model_path 'style_transfer_net_epoch_0_step_10.h5'
-jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'fst_coco_param'
-
-if ipython  ${path_temp}'fst_coco_param.py'; then
-    ((cnt=cnt+1))
+if [ $lstm_code -eq 0 ] ; then
+    echo 'LSTM IMDB test failed'
 else
-    echo 'Testing failed on Fst COCO notebook'
-fi
-rm -rf /tmp/tmp*
-rm  ${path_temp}${nb_param_filename}
-rm  ${path_temp}'fst_coco_param.py'
-
-#--------------------------------NLP----------------------------------#
-# 12. LSTM IMDB
-echo -en '\n'
-echo 'NLP'
-echo '12. LSTM IMDB'
-echo -en '\n'
-
-filepath=${path_nlp}'lstm_imdb/'
-filename='lstm_imdb.py'
-
-if fastestimator train ${filepath}${filename} ${train_info} --max_len 300; then
-    ((cnt=cnt+1))
-else
-    echo 'Testing failed on lstm imdb'
+    echo 'LSTM IMDB test passed'
 fi
 
-nb_filename='lstm_imdb.ipynb'
-nb_param_filename='lstm_imdb_param.ipynb'
-#inject a parameter cell
-papermill --prepare-only ${filepath}${nb_filename}  ${path_temp}${nb_param_filename} ${nb_train_info} -p MAX_LEN 300
-jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'lstm_imdb_param'
-
-if ipython  ${path_temp}'lstm_imdb_param.py'; then
-    ((cnt=cnt+1))
+if [ $dnn_code -eq 0 ] ; then
+    echo 'DNN Housing test failed'
 else
-    echo 'Testing failed on LSTM IMDB notebook'
-fi
-rm -rf /tmp/tmp*
-rm  ${path_temp}${nb_param_filename}
-rm  ${path_temp}'lstm_imdb_param.py'
-
-#-------------------------------Tabular-------------------------------#
-echo -en '\n'
-echo 'Tabular'
-echo '13. DNN Housing'
-echo -en '\n'
-
-filepath=${path_tabular}'dnn_housing/'
-filename='dnn_housing.py'
-
-if fastestimator train ${filepath}${filename} ${train_info}; then
-    ((cnt=cnt+1))
-else
-    echo 'Testing failed on DNN Housing'
+    echo 'DNN Housing test passed'
 fi
 
-nb_filename='dnn_housing.ipynb'
-nb_param_filename='dnn_housing_param.ipynb'
-#inject a parameter cell
-papermill --prepare-only ${filepath}${nb_filename}  ${path_temp}${nb_param_filename} ${nb_train_info}
-jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'dnn_housing_param'
-
-if ipython  ${path_temp}'dnn_housing_param.py'; then
-    ((cnt=cnt+1))
-else
-    echo 'Testing failed on DNN Housing notebook'
-fi
-rm -rf /tmp/tmp*
-rm  ${path_temp}${nb_param_filename}
-rm  ${path_temp}'dnn_housing_param.py'
-echo $cnt 'tests passed out of 24 tests'
+printf '%s\n' "$tutorial_res"
