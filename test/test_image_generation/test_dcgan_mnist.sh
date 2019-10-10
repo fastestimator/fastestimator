@@ -1,5 +1,6 @@
 #!/bin/bash
-path_apphub='../apphub/'
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+path_apphub=${DIR}'/../../apphub/'
 path_image_generation=${path_apphub}'image_generation/'
 path_temp=$(dirname $(mktemp -u))
 
@@ -13,7 +14,6 @@ filename='dcgan_mnist.py'
 if fastestimator train ${filepath}${filename} ${train_info}; then
     ((cnt=cnt+1))
 else
-    echo 'Testing failed on DcGAN MNIST'
     exit 0
 fi
 
@@ -26,7 +26,6 @@ jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'dcgan_
 if ipython  ${path_temp}'/dcgan_mnist_param.py'; then
     ((cnt=cnt+1))
 else
-    echo 'Testing failed on DCGAN notebook'
     exit 0
 fi
 rm -rf ${path_temp}/tmp*

@@ -1,5 +1,6 @@
 #!/bin/bash
-path_apphub='../apphub/'
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+path_apphub=${DIR}'/../../apphub/'
 path_tabular=${path_apphub}'tabular/'
 path_temp=$(dirname $(mktemp -u))
 
@@ -19,7 +20,6 @@ filename='dnn_housing.py'
 if fastestimator train ${filepath}${filename} ${train_info}; then
     ((cnt=cnt+1))
 else
-    echo 'Testing failed on DNN Housing'
     exit 0
 fi
 
@@ -32,7 +32,6 @@ jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'dnn_ho
 if ipython  ${path_temp}'/dnn_housing_param.py'; then
     ((cnt=cnt+1))
 else
-    echo 'Testing failed on DNN Housing notebook'
     exit 0
 fi
 rm -rf ${path_temp}/tmp*

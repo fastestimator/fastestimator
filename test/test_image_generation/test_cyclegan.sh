@@ -1,5 +1,6 @@
 #!/bin/bash
-path_apphub='../apphub/'
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+path_apphub=${DIR}'/../../apphub/'
 path_image_generation=${path_apphub}'image_generation/'
 path_temp=$(dirname $(mktemp -u))
 
@@ -13,7 +14,6 @@ filename='cyclegan_horse2zebra.py'
 if fastestimator train ${filepath}${filename} --epochs 2 --steps_per_epoch 10; then
     ((cnt=cnt+1))
 else
-    echo 'Testing failed on CycleGAN Horse2Zebra'
     exit 0
 fi
 
@@ -26,7 +26,6 @@ jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'cycleg
 if ipython  ${path_temp}'/cyclegan_param.py'; then
     ((cnt=cnt+1))
 else
-    echo 'Testing failed on CycleGAN notebook'
     exit 0
 fi
 rm -rf ${path_temp}/tmp*
