@@ -18,6 +18,17 @@ def _download_data(link, data_path, idx, total_idx):
 
 
 def load_data(path=None):
+    """Download the NIH dataset to local storage.
+
+    Args:
+        path (str, optional): The path to store the  data. When `path` is not provided, will save at
+            `fastestimator_data` under user's home directory.
+
+    Returns:
+        (tuple): tuple containing:
+            csv_path (str): Path to the summary csv file.
+            path (str): Data folder path.
+    """
     if path is None:
         path = os.path.join(str(Path.home()), 'fastestimator_data', 'NIH_Chestxray')
     else:
