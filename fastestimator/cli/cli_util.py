@@ -24,7 +24,7 @@ from tensorflow import keras
 from tensorflow.python import keras
 from tqdm import tqdm
 
-from fastestimator.interpretation import visualize_caricature, visualize_saliency
+from fastestimator.interpretation import visualize_caricature, visualize_saliency, visualize_gradcam
 from fastestimator.interpretation.umaps import UmapPlotter
 from fastestimator.interpretation.util.umap_util import Evaluator, FileCache
 from fastestimator.summary import Summary
@@ -214,6 +214,49 @@ def load_and_saliency(model_path,
                        decode_dictionary=dic,
                        smooth=smooth_factor,
                        save_path=save_dir)
+
+
+def load_and_gradcam(model_path,
+                     input_paths,
+                     layer_id=None,
+                     dictionary_path=None,
+                     strip_alpha=False,
+                     save=False,
+                     save_dir=None):
+    """A helper class to load input and invoke the gradcam api
+
+    Args:
+        model_path: The path the model file (str)
+        input_paths: The paths to model input files [(str),...] or to a folder of inputs [(str)]
+        layer_id: The layer id to be used. None defaults to the last conv layer in the model
+        dictionary_path: The path to a dictionary file encoding a 'class_idx'->'class_name' mapping
+        strip_alpha: Whether to collapse alpha channels when loading an input (bool)
+        save: Whether to save (True) or display (False) the resulting image
+        save_dir: Where to save the image if save=True
+    """
+    model_dir = os.path.dirname(model_path)
+    if save_dir is None:
+        save_dir = model_dir
+    if not save:
+        save_dir = None
+    network = keras.models.load_model(model_path, compile=False)
+    input_type = network.input.dtype
+    input_shape = network.input.shape
+    n_channels = 0 if len(input_shape) == 3 else input_shape[3]
+
+    dic = load_dict(dictionary_path)
+    if len(input_paths) == 1 and os.path.isdir(input_paths[0]):
+        loader = PathLoader(input_paths[0])
+        input_paths = [path[0] for path in loader.path_pairs]
+    inputs = [load_image(input_paths[i], strip_alpha=strip_alpha, channels=n_channels) for i in range(len(input_paths))]
+    max_shapes = np.maximum.reduce([inp.shape for inp in inputs], axis=0)
+    tf_image = tf.stack([
+        tf.image.resize_with_crop_or_pad(tf.convert_to_tensor(im, dtype=input_type), max_shapes[0], max_shapes[1])
+        for im in inputs
+    ],
+                        axis=0)
+
+    visualize_gradcam(inputs=tf_image, model=network, layer_id=layer_id, decode_dictionary=dic, save_path=save_dir)
 
 
 def load_and_umap(model_path,

@@ -19,3 +19,4 @@ from fastestimator.trace.io.model_saver import ModelSaver
 from fastestimator.trace.io.saliency import Saliency
 from fastestimator.trace.io.tensorboard import TensorBoard
 from fastestimator.trace.io.umap import UMap
+from fastestimator.trace.io.grad_cam import GradCam

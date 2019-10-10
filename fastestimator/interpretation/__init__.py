@@ -15,4 +15,5 @@
 from fastestimator.interpretation.caricature import visualize_caricature, plot_caricature
 from fastestimator.interpretation.saliency import visualize_saliency, plot_saliency
 from fastestimator.interpretation.umaps import UmapPlotter
+from fastestimator.interpretation.gradcam import visualize_gradcam, plot_gradcam
 from fastestimator.interpretation.util import show_image
