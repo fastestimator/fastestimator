@@ -45,7 +45,8 @@ setup(
         'umap-learn',
         'tqdm',
         'opencv-python',
-        'papermill'
+        'papermill',
+        'tf-explain'
     ],
     # Declare extra set for installation
     extras_require={},

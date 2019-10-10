@@ -16,7 +16,7 @@ import argparse
 import sys
 
 from fastestimator.cli.cli_util import load_and_caricature, load_and_saliency, load_and_umap, parse_log_dir, \
-    SaveAction, parse_cli_to_dictionary
+    SaveAction, parse_cli_to_dictionary, load_and_gradcam
 
 
 def logs(args, unknown):
@@ -359,6 +359,66 @@ def configure_caricature_parser(subparsers):
     parser.set_defaults(func=caricature)
 
 
+def gradcam(args, unknown):
+    if len(unknown) > 0:
+        print("error: unrecognized arguments: ", str.join(", ", unknown))
+        sys.exit(-1)
+    load_and_gradcam(args['model'],
+                     args['inputs'],
+                     layer_id=args['layer'],
+                     dictionary_path=args['dictionary'],
+                     strip_alpha=args['strip_alpha'],
+                     save=args['save'],
+                     save_dir=args['save_dir'])
+
+
+def configure_gradcam_parser(subparsers):
+    parser = subparsers.add_parser('gradcam',
+                                   description='Generates gradcam maps for a model on given input(s)',
+                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+                                   allow_abbrev=False)
+    parser.add_argument('model', metavar='<Model Path>', type=str, help="The path to a saved model file")
+    parser.add_argument(
+        'inputs',
+        metavar='Input',
+        type=str,
+        nargs='+',
+        help="The paths to one or more inputs to visualize (or the path to a folder which will be \
+                        recursively traversed to find image files)")
+    parser.add_argument(
+        '--layer',
+        metavar='IDX',
+        type=int,
+        nargs=1,
+        help='The index of (convolutional) layer you want to visualize. If not provided then the last conv layer will \
+                be used',
+        default=None)
+    parser.add_argument('--dictionary',
+                        metavar='<Dictionary Path>',
+                        type=str,
+                        help="The path to a {'class_id':'class_name'} json file",
+                        default=None)
+    parser.add_argument('--strip-alpha', action='store_true', help="True if you want to convert RGBA images to RGB")
+    save_group = parser.add_argument_group('output arguments')
+    save_x_group = save_group.add_mutually_exclusive_group(required=False)
+    save_x_group.add_argument(
+        '--save',
+        nargs='?',
+        metavar='<Save Dir>',
+        help="Save the output image. May be accompanied by a directory into which the \
+                              file is saved. If no output directory is specified, the model directory will be used",
+        dest='save',
+        action=SaveAction,
+        default=False)
+    save_x_group.add_argument('--display',
+                              dest='save',
+                              action='store_false',
+                              help="Render the image to the UI (rather than saving it)",
+                              default=True)
+    save_x_group.set_defaults(save_dir=None)
+    parser.set_defaults(func=gradcam)
+
+
 def configure_visualization_parser(subparsers):
     visualization_parser = subparsers.add_parser('visualize',
                                                  description='Generates various types of visualiztaions',
@@ -372,3 +432,4 @@ def configure_visualization_parser(subparsers):
     configure_saliency_parser(visualization_subparsers)
     configure_umap_parser(visualization_subparsers)
     configure_caricature_parser(visualization_subparsers)
+    configure_gradcam_parser(visualization_subparsers)
