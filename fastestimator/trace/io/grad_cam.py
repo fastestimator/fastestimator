@@ -22,6 +22,20 @@ from fastestimator.trace import Trace
 
 
 class GradCam(Trace):
+    """
+    Draw GradCam heatmaps for given inputs
+
+    Args:
+        model_name (str): The name of the model to be evaluated
+        input_key (str): The input key to be used to gather data for inspection
+        n_inputs (int): How many inputs to collect from the input_key for visualization
+        layer_id (int, str, None): Which layer to inspect. Should be a convolutional layer. If None, the last \
+                                    acceptable layer from the model will be selected
+        output_name (str): The key which the gradcam image will be saved into within the state dictionary
+        im_freq (int): Frequency (in epochs) during which visualizations should be generated
+        decode_dictionary (dict): A dictionary of "class_idx" -> "class_name" associations
+        color_map (int): Which colormap to use when generating the heatmaps
+    """
     def __init__(self,
                  model_name,
                  input_key,
