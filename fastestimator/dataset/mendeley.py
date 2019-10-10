@@ -26,8 +26,9 @@ from glob import glob
 from pathlib import Path
 
 import pandas as pd
-import requests
 from tqdm import tqdm
+
+import requests
 
 
 def _create_csv(img_path, parent_path, csv_path):

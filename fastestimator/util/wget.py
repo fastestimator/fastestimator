@@ -115,3 +115,5 @@ def callback_progress(blocks, block_size, total_size, bar_function):
     progress = bar_function(current_size, total_size, width)
     if progress:
         sys.stdout.write("\r{}".format(progress))
+        if current_size >= total_size:
+            sys.stdout.write("\n")
