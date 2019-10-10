@@ -1,5 +1,6 @@
 #!/bin/bash
-path_apphub='../apphub/'
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+path_apphub=${DIR}'/../../apphub/'
 path_image_classification=${path_apphub}'image_classification/'
 path_temp=$(dirname $(mktemp -u))
 
@@ -14,7 +15,6 @@ filename='densenet121_cifar10.py'
 if fastestimator train ${filepath}${filename} ${train_info}; then
     ((cnt=cnt+1))
 else
-    echo 'Testing failed on DenseNet Image classification'
     exit 0
 fi
 
@@ -27,7 +27,6 @@ jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'densen
 if ipython  ${path_temp}'/densenet121_cifar10_param.py'; then
     ((cnt=cnt+1))
 else
-    echo 'Testing on DenseNet notebook failed'
     exit 0
 fi
 rm -rf ${path_temp}/tmp*

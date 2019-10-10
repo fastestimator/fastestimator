@@ -1,5 +1,6 @@
 #!/bin/bash
-path_apphub='../apphub/'
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+path_apphub=${DIR}'/../../apphub/'
 path_image_segmentation=${path_apphub}'image_segmentation/'
 path_temp=$(dirname $(mktemp -u))
 
@@ -12,7 +13,6 @@ filename='unet_cub200.py'
 if fastestimator train ${filepath}${filename} ${train_info}; then
     ((cnt=cnt+1))
 else
-    echo 'Testing failed on Unet cub 200'
     exit 0
 fi
 
@@ -25,7 +25,6 @@ jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'unet_c
 if ipython  ${path_temp}'/unet_cub200_param.py'; then
     ((cnt=cnt+1))
 else
-    echo 'Testing failed on UNET Cub200 notebook'
     exit 0
 fi
 rm -rf ${path_temp}/tmp*

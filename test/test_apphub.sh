@@ -1,58 +1,58 @@
 #!/bin/bash
-path_apphub='../apphub/'
-test_image_classification='/test_image_classification/'
-test_image_generation='test_image_generation/'
-test_image_styletransfer='test_image_styletransfer/'
-test_image_segmentation='test_image_segmentation/'
-test_nlp='/test_nlp/'
-test_tabular='/test_tabular/'
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+path_apphub=${DIR}'/../apphub/'
+test_image_classification=${DIR}'/test_image_classification/'
+test_image_generation=${DIR}'/test_image_generation/'
+test_image_styletransfer=${DIR}'/test_image_styletransfer/'
+test_image_segmentation=${DIR}'/test_image_segmentation/'
+test_nlp=${DIR}'/test_nlp/'
+test_tabular=${DIR}'/test_tabular/'
 tmpdir=$(dirname $(mktemp -u))
 
 # Image Classification examples test
-./${test_image_classification}'test_densenet121.sh'
+bash ${test_image_classification}'test_densenet121.sh'
 densenet_code=$?
 
-./${test_image_classification}'test_lenet_adversarial.sh'
+bash ${test_image_classification}'test_lenet_adversarial.sh'
 lenet_adv_code=$?
 
-./${test_image_classification}'test_lenet_mixup.sh'
+bash ${test_image_classification}'test_lenet_mixup.sh'
 lenet_mixup_code=$?
 
-./${test_image_classification}'test_lenet_mnist.sh'
+bash ${test_image_classification}'test_lenet_mnist.sh'
 lenet_mnist_code=$?
 
 # Image Generation examples test
-./${test_image_generation}'test_cvae_mnist.sh'
+bash ${test_image_generation}'test_cvae_mnist.sh'
 cvae_code=$?
 
-./${test_image_generation}'test_cyclegan.sh'
+bash ${test_image_generation}'test_cyclegan.sh'
 cyclegan_code=$?
 
-./${test_image_generation}'test_dcgan_mnist.sh'
+bash ${test_image_generation}'test_dcgan_mnist.sh'
 dcgan_code=$?
 
 # Image Segmentation examples test
-./${test_image_segmentation}'test_unet_cub200.sh'
+bash ${test_image_segmentation}'test_unet_cub200.sh'
 unet_cub_code=$?
 
-./${test_image_segmentation}'test_unet_montgomery.sh'
+bash ${test_image_segmentation}'test_unet_montgomery.sh'
 unet_mont_code=$?
 
 #Image StyleTransfer examples test
-./${test_image_styletransfer}'test_fst_coco.sh'
+bash ${test_image_styletransfer}'test_fst_coco.sh'
 fst_code=$?
 
 # NLP examples test
-./${test_nlp}'test_lstm_imdb.sh'
+bash ${test_nlp}'test_lstm_imdb.sh'
 lstm_code=$?
 
 #Tabular examples test
-./${test_tabular}'test_dnn_housing.sh'
+bash ${test_tabular}'test_dnn_housing.sh'
 dnn_code=$?
 
-#Tabular examples test
-./test_tutorials.sh
-tutorial_code=$?
+#Tutorials examples test
+tutorial_res=$(bash ${DIR}/test_tutorials.sh)
 
 #echo all the test results
 echo -en '\n\n'
@@ -128,8 +128,4 @@ else
     echo 'DNN Housing test passed'
 fi
 
-if [ $tutorial_code -eq 0 ] ; then
-    echo 'Tutorials test failed'
-else
-    echo 'Tutorials test passed'
-fi
+printf '%s\n' "$tutorial_res"
