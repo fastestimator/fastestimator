@@ -44,6 +44,7 @@ class Resize(NumpyOp):
         self.keep_ratio = keep_ratio
 
     def forward(self, data, state):
+        data_dim = data.ndim
         if self.keep_ratio:
             original_ratio = data.shape[1] / data.shape[0]
             target_ratio = self.target_size[1] / self.target_size[0]
@@ -53,6 +54,8 @@ class Resize(NumpyOp):
             else:
                 pad = (data.shape[0] * target_ratio - data.shape[1]) / 2
                 pad_boarder = (0, 0, np.ceil(pad).astype(np.int), np.floor(pad).astype(np.int))
-            data = cv2.copyMakeBorder(data, *pad_boarder, cv2.BORDER_CONSTANT)
-        data = cv2.resize(data, (self.target_size[1], self.target_size[0]), self.resize_method)
+            data = self._cv2.copyMakeBorder(data, *pad_boarder, self._cv2.BORDER_CONSTANT)
+        data = self._cv2.resize(data, (self.target_size[1], self.target_size[0]), self.resize_method)
+        if data.ndim == data_dim - 1:
+            data = np.expand_dims(data, -1)
         return data
