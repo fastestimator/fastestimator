@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-
+import cv2
 import numpy as np
 
 from fastestimator.op import NumpyOp
@@ -31,9 +31,8 @@ class Resize(NumpyOp):
     """
     def __init__(self, target_size, resize_method='bilinear', keep_ratio=False, inputs=None, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        import cv2
-        self._cv2 = cv2
         self.target_size = target_size
+        self.resize_method = resize_method
         if resize_method == "bilinear":
             self.resize_method = cv2.INTER_LINEAR
         elif resize_method == "nearest":
@@ -54,6 +53,6 @@ class Resize(NumpyOp):
             else:
                 pad = (data.shape[0] * target_ratio - data.shape[1]) / 2
                 pad_boarder = (0, 0, np.ceil(pad).astype(np.int), np.floor(pad).astype(np.int))
-            data = self._cv2.copyMakeBorder(data, *pad_boarder, self._cv2.BORDER_CONSTANT)
-        data = self._cv2.resize(data, (self.target_size[1], self.target_size[0]), self.resize_method)
+            data = cv2.copyMakeBorder(data, *pad_boarder, cv2.BORDER_CONSTANT)
+        data = cv2.resize(data, (self.target_size[1], self.target_size[0]), self.resize_method)
         return data

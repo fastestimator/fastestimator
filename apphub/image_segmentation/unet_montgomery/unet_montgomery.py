@@ -43,9 +43,9 @@ def get_estimator(batch_size=4, epochs=25, steps_per_epoch=None, validation_step
         train_data=csv_path,
         validation_data=0.2,
         ops=[
-            ImageReader(grey_scale=True, inputs="image", parent_path=path, outputs="image"),
-            ImageReader(grey_scale=True, inputs="mask_left", parent_path=path, outputs="mask_left"),
-            ImageReader(grey_scale=True, inputs="mask_right", parent_path=path, outputs="mask_right"),
+            ImageReader(inputs="image", parent_path=path, outputs="image", grey_scale=True),
+            ImageReader(inputs="mask_left", parent_path=path, outputs="mask_left", grey_scale=True),
+            ImageReader(inputs="mask_right", parent_path=path, outputs="mask_right", grey_scale=True),
             CombineLeftRightMask(inputs=("mask_left", "mask_right")),
             Resize(target_size=(512, 512)),
             Reshape(shape=(512, 512, 1), outputs="mask"),
