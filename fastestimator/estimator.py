@@ -16,9 +16,9 @@
 from collections import ChainMap, deque
 
 import numpy as np
-import tensorflow as tf
 
 import fastestimator as fe
+import tensorflow as tf
 from fastestimator.cli.cli_util import draw
 from fastestimator.summary import Summary
 from fastestimator.trace import Logger, ModelSaver, MonitorLoss, Trace, TrainInfo
