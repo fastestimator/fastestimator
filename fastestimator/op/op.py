@@ -87,10 +87,10 @@ def verify_ops(ops, class_name):
         for idx, op in enumerate(ops):
             assert isinstance(op,
                               inheritage_class), "operation '{}' in class '{}' doesn't have correct inheritage".format(
-                                  type(op).__name__, class_name)
+                type(op).__name__, class_name)
             if idx + 1 < len(ops) and ops[idx + 1].inputs:
                 new_inputs = ops[idx + 1].inputs
                 if new_inputs and new_inputs != inputs:
                     assert op.outputs, \
-                        "must provide outputs for the operation '{}' in class '{}', otherwise the result will be lost"\
-                        .format(type(op).__name__, class_name)
+                        "must provide outputs for the operation '{}' in class '{}', otherwise the result will be lost" \
+                            .format(type(op).__name__, class_name)
