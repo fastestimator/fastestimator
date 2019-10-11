@@ -210,6 +210,7 @@ class Estimator:
                 batch = next(ds_iter)
                 state["batch_size"] = self.pipeline.get_global_batch_size(epoch)
                 state["local_batch_size"] = state["batch_size"] // self.num_devices
+                state["epoch"] = epoch
                 ops, model_list, epoch_losses = self.network.load_epoch(epoch, mode)
                 if fe.distribute_strategy:
                     fe.distribute_strategy.experimental_run_v2(
@@ -276,7 +277,8 @@ class Estimator:
                     {
                         "mode": mode,
                         "batch_size": global_batch_size,
-                        "local_batch_size": global_batch_size // self.num_devices
+                        "local_batch_size": global_batch_size // self.num_devices,
+                        "epoch": tf.convert_to_tensor(self.train_epoch)
                     })
             else:
                 prediction = self._forward_step(
@@ -287,7 +289,8 @@ class Estimator:
                     {
                         "mode": mode,
                         "batch_size": global_batch_size,
-                        "local_batch_size": global_batch_size // self.num_devices
+                        "local_batch_size": global_batch_size // self.num_devices,
+                        "epoch": tf.convert_to_tensor(self.train_epoch)
                     })
             batch = ChainMap(prediction, batch)
             self._run_traces_on_batch_end({
