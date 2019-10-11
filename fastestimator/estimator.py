@@ -143,7 +143,8 @@ class Estimator:
             "persist_summary",
             "total_epochs",
             "total_train_steps",
-            "summary"
+            "summary",
+            "warmup"
         } | self.pipeline.all_output_keys | self.network.all_output_keys
         end_traces = deque()
         intermediate_traces = deque()
@@ -211,18 +212,14 @@ class Estimator:
                 state["batch_size"] = self.pipeline.get_global_batch_size(epoch)
                 state["local_batch_size"] = state["batch_size"] // self.num_devices
                 state["epoch"] = epoch
+                state["num_examples"] = self.num_examples[mode]
+                state["warmup"] = True
                 ops, model_list, epoch_losses = self.network.load_epoch(epoch, mode)
                 if fe.distribute_strategy:
-                    fe.distribute_strategy.experimental_run_v2(
-                        self.network.run_step, args=(
-                            batch,
-                            ops,
-                            model_list,
-                            epoch_losses,
-                            state,
-                            True, ))
+                    fe.distribute_strategy.experimental_run_v2(self.network.run_step,
+                                                               args=(batch, ops, model_list, epoch_losses, state))
                 else:
-                    self.network.run_step(batch, ops, model_list, epoch_losses, state, warm_up=True)
+                    self.network.run_step(batch, ops, model_list, epoch_losses, state)
 
     def _start(self):
         self.train_step = 0
@@ -278,7 +275,9 @@ class Estimator:
                         "mode": mode,
                         "batch_size": global_batch_size,
                         "local_batch_size": global_batch_size // self.num_devices,
-                        "epoch": tf.convert_to_tensor(self.train_epoch)
+                        "epoch": tf.convert_to_tensor(self.train_epoch),
+                        "num_examples": self.num_examples[mode],
+                        "warmup": False
                     })
             else:
                 prediction = self._forward_step(
@@ -290,7 +289,9 @@ class Estimator:
                         "mode": mode,
                         "batch_size": global_batch_size,
                         "local_batch_size": global_batch_size // self.num_devices,
-                        "epoch": tf.convert_to_tensor(self.train_epoch)
+                        "epoch": tf.convert_to_tensor(self.train_epoch),
+                        "num_examples": self.num_examples[mode],
+                        "warmup": False
                     })
             batch = ChainMap(prediction, batch)
             self._run_traces_on_batch_end({
