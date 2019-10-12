@@ -15,16 +15,26 @@
 """Download The Street View House Numbers (SVHN) dataset."""
 import os
 import tarfile
+from concurrent.futures.process import ProcessPoolExecutor
 from operator import add
 from pathlib import Path
 
 import h5py
 import pandas as pd
-import wget
 
+import wget
 from fastestimator.util.wget import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress
+
+
+def _get_name_and_bbox(index, mat_path, num_examples):
+    if index % (num_examples // 10) == 0:
+        print("{}%".format(int(index / num_examples * 100)))
+    hdf5_data = h5py.File(mat_path, 'r')
+    name, bbox = _get_name(index, hdf5_data), _get_bbox(index, hdf5_data)
+    hdf5_data.close()
+    return name, bbox
 
 
 def _get_name(index, hdf5_data):
@@ -54,13 +64,7 @@ def _get_bbox(index, hdf5_data):
         (dict): Label and bounding box information including left, top, width, and height.
 
     """
-
-    meta_data = {}
-    meta_data['height'] = []
-    meta_data['label'] = []
-    meta_data['left'] = []
-    meta_data['top'] = []
-    meta_data['width'] = []
+    meta_data = {'height': [], 'label': [], 'left': [], 'top': [], 'width': []}
 
     def get_attrs(name, obj):
         vals = []
@@ -87,18 +91,21 @@ def _create_csv(data_folder, mode, csv_path):
         csv_path (str): Path to save the csv file containing the bounding boxes information.
 
     """
-    mat_data = h5py.File(os.path.join(data_folder, 'digitStruct.mat'), 'r')
+    mat_path = os.path.join(data_folder, 'digitStruct.mat')
+    mat_data = h5py.File(mat_path, 'r')
     num_examples = len(mat_data['/digitStruct/bbox'])
-    logging_interval = num_examples // 10
+    mat_data.close()
     print("Found {} examples for {}.".format(num_examples, mode))
 
     df = pd.DataFrame(columns=['image', 'label', 'x1', 'y1', 'x2', 'y2'])
     print("Retrieving bounding box for {} data. This will take several minutes ...".format(mode))
-    for idx in range(num_examples):
-        if idx % logging_interval == 0:
-            print("{}%".format(int(idx / num_examples * 100)))
-        img_name = _get_name(idx, mat_data)
-        bbox = _get_bbox(idx, mat_data)
+    futures = []
+    with ProcessPoolExecutor(max_workers=os.cpu_count() or 1) as executor:
+        for idx in range(num_examples):
+            futures.append(executor.submit(_get_name_and_bbox, idx, mat_path, num_examples))
+
+    for future in futures:
+        img_name, bbox = future.result()
         row_dict = {
             'image': os.path.join(mode, img_name),
             'label': bbox["label"],
