@@ -24,7 +24,8 @@ class ImageReader(NumpyOp):
     """Class for reading png or jpg images
 
     Args:
-        parent_path: Parent path that will be added on given path
+        parent_path (str): Parent path that will be added on given path
+        grey_scale (bool): Boolean to indicate whether or not to read image as grayscale
     """
     def __init__(self, inputs=None, outputs=None, mode=None, parent_path="", grey_scale=False):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
