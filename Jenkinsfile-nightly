@@ -1,0 +1,20 @@
+pipeline {
+  agent any
+
+  stages {
+    stage('Setup') {
+      steps {
+        sh './test/install_dependencies.sh'
+      }
+    }
+    stage('Test-nightly') {
+        steps {
+            sh '''
+                . /var/lib/jenkins/workspace/venv/bin/activate
+                ./test/test_apphub.sh
+            '''
+        }
+    }
+
+  }
+}
