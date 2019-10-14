@@ -46,8 +46,7 @@ setup(
         'tqdm',
         'opencv-python',
         'papermill',
-        'tf-explain',
-        'imageio'
+        'tf-explain'
     ],
     # Declare extra set for installation
     extras_require={},
