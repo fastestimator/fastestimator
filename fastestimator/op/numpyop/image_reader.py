@@ -14,9 +14,10 @@
 # ==============================================================================
 import os
 
-import imageio
+import cv2
 import numpy as np
 
+import imageio
 from fastestimator.op import NumpyOp
 
 
@@ -45,12 +46,14 @@ class ImageReader(NumpyOp):
         path = os.path.normpath(os.path.join(self.parent_path, path))
         data = imageio.imread(path)
         if not isinstance(data, np.ndarray):
-            raise ValueError('imageio did not read correctly for file "{}"'.format(path))
+            raise ValueError("imageio did not read correctly for file {}".format(path))
         if len(data.shape) == 2:  # Grey Scale Image
             data = np.expand_dims(data, -1)
             if not self.grey_scale:
                 data = np.concatenate([data] * 3, axis=2)
-        if data.shape[2] == 3 and self.grey_scale:
+        if data.shape[-1] == 4:  # Unwanted Alpha Channel
+            data = data[:, :, :3]
+        if data.shape[-1] == 3 and self.grey_scale:
             data = np.dot(data[..., :3], [0.2989, 0.5870, 0.1140])
             data = np.expand_dims(data, -1)
         return data
