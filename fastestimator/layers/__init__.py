@@ -14,3 +14,4 @@
 # ==============================================================================
 from fastestimator.layers.instance_norm import InstanceNormalization
 from fastestimator.layers.reflection_padding_2d import ReflectionPadding2D
+from fastestimator.layers.sub_pixel_conv_2d import SubPixelConv2D

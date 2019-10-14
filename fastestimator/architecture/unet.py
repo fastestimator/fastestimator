@@ -18,6 +18,8 @@ from tensorflow.python.keras.layers import Activation, BatchNormalization, Conv2
     MaxPooling2D, UpSampling2D, concatenate
 from tensorflow.python.keras.models import Model
 
+from fastestimator.layers.sub_pixel_conv_2d import SubPixelConv2D
+
 
 def UNet(input_size=(128, 128, 3),
          dropout=0.5,
@@ -42,8 +44,10 @@ def UNet(input_size=(128, 128, 3),
             after indicates adding BN after activation function is applied
             Check https://github.com/ducha-aiki/caffenet-benchmark/blob/master/batchnorm.md for related ablations!
         activation: Standard Keras activation functions
-        upsampling: (bilinear, nearest, conv) Use bilinear, nearest (nearest neighbour) for predetermined upsampling \
-                    Use conv for transposed convolution based upsampling (learnable)
+        upsampling: (bilinear, nearest, conv, subpixel)
+                Use bilinear, nearest (nearest neighbour) for predetermined upsampling
+                Use conv for transposed convolution based upsampling (learnable)
+                Use subpixel for SubPixel based upsampling (learnable)
         dilation_rates: Add dilation to the encoder block conv layers [len(dilation_rates) == len(nchannels)]
         residual: False = no residual connections, enc = residual connections in encoder layers only
                   dec = residual connections in decoder layers only, True = residual connections in every layer
@@ -210,8 +214,12 @@ def upsample(inp, factor, nchannels, config, bn=None, activation=None, upsamplin
         if upsampling in ['bilinear', 'nearest']:
             up = UpSampling2D(size=(factor, factor), interpolation=upsampling)(inp)
             up = Conv2D(nchannels, factor, **config)(up)
-        else:
+        elif upsampling == 'conv':
             up = Conv2DTranspose(nchannels, factor, strides=(factor, factor), padding='same')(inp)
+        elif upsampling == 'subpixel':
+            up = SubPixelConv2D(upsample_factor=factor, nchannels=nchannels)(inp)
+        else:
+            raise (NotImplementedError)
 
     if bn and bn == 'before':
         act = config['activation']
