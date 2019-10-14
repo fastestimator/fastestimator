@@ -110,7 +110,7 @@ class Network:
         self.epoch_losses = epoch_losses
         return ops, model_list, epoch_losses
 
-    def run_step(self, batch, ops, model_list, epoch_losses, state, warm_up=False):
+    def run_step(self, batch, ops, model_list, epoch_losses, state):
         """Function that calculates the loss and gradients for curent step in training. It also constructs the higher
         level computational graph between the models before the training.
 
@@ -120,7 +120,6 @@ class Network:
             model_list : List of the models
             epoch_losses : List of epoch losses.
             state : run time dictionary that contains following keys 'mode' and 'batch size'
-            warm_up (bool, optional): Specifies if it's in warm up phase or not. Defaults to False.
 
         Returns:
             dictionary containing the predictions of current epoch
@@ -129,19 +128,20 @@ class Network:
         batch = ChainMap(prediction, batch)
         mode = state["mode"]
         global_batch_size = state["batch_size"]
+        warmup = state["warmup"]
         num_model = len(model_list)
         # use gradient tape for train, otherwise use a dummy tape
         with tf.GradientTape(persistent=True) if mode == "train" else NonContext() as tape:
             state['tape'] = tape
             self._forward(batch, state, ops)
-            reduced_loss = self._reduce_loss(batch, global_batch_size, epoch_losses, warm_up)
+            reduced_loss = self._reduce_loss(batch, global_batch_size, epoch_losses, warmup)
         # update model only for train mode
         if mode == "train":
             for idx in range(num_model):
                 model = model_list[idx]
                 loss = reduced_loss[model.loss_name]
                 optimizer = model.optimizer
-                if warm_up:
+                if warmup:
                     with tfops.init_scope():  # pylint: disable=not-context-manager
                         _ = optimizer.iterations
                         optimizer._create_hypers()  # pylint: disable=protected-access
@@ -162,11 +162,11 @@ class Network:
             if op.outputs:
                 write_outputs_by_key(batch, data, op.outputs)
 
-    def _reduce_loss(self, batch, global_batch_size, epoch_losses, warm_up):
+    def _reduce_loss(self, batch, global_batch_size, epoch_losses, warmup):
         reduced_loss = {}
         for loss_name in epoch_losses:
             element_wise_loss = batch[loss_name]
-            if warm_up:
+            if warmup:
                 assert element_wise_loss.ndim != 0 and element_wise_loss.shape[0] == global_batch_size / \
                     self.num_devices, "please make sure loss is element-wise loss"
             reduced_loss[loss_name] = tf.reduce_sum(element_wise_loss) / global_batch_size
