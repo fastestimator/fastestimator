@@ -4,10 +4,10 @@ import tensorflow as tf
 from tensorflow.keras import Model, layers
 
 
-def nf(stage, fmap_base=8192, fmap_decay=1.0, fmap_max=512):
-    # fmap_base: Overall multiplier for the number of feature maps.
-    # fmap_decay: log2 feature map reduction when doubling the resolution.
-    # fmap_max: Maximum number of feature maps in any layer.
+tf.random.set_seed(1000)
+# np.random.set_seed(1000)
+
+def nf(stage):
     return min(int(fmap_base / (2.0**(stage * fmap_decay))), fmap_max)
 
 
@@ -91,9 +91,8 @@ class ApplyBias(layers.Layer):
     def call(self, x):
         return x + self.b
 
-
-def block_G(res, latent_dim=512, init_res=2):
-    if res == init_res:
+def block_G(res, latent_dim=512, initial_resolution=2):
+    if res == initial_resolution:
         x0 = layers.Input(shape=latent_dim)
         x = PixelNormalization()(x0)
 
@@ -125,10 +124,10 @@ def torgb(res, num_channels=3):  # res = 2..resolution_log2
     return Model(inputs=x0, outputs=x, name="to_rgb_%dx%d" % (2**res, 2**res))
 
 
-def build_G(fade_in_alpha, latent_dim=512, init_res=2, target_res=10, num_channels=3):
+def build_G(fade_in_alpha, latent_dim=512, initial_resolution=2, target_resolution=10, num_channels=3):
     x0 = layers.Input(shape=latent_dim)
-    curr_g_block = block_G(init_res, latent_dim, init_res)
-    curr_to_rgb_block = torgb(init_res, num_channels)
+    curr_g_block = block_G(initial_resolution, latent_dim, initial_resolution)
+    curr_to_rgb_block = torgb(initial_resolution, num_channels)
     images_out = curr_g_block(x0)
     images_out = curr_to_rgb_block(images_out)
     model_list = list()
@@ -139,8 +138,8 @@ def build_G(fade_in_alpha, latent_dim=512, init_res=2, target_res=10, num_channe
     gen_block_list.append(curr_g_block)
     prev_to_rgb_block = curr_to_rgb_block
 
-    for res in range(init_res, target_res + 1):
-        curr_g_block = block_G(res, latent_dim, init_res)
+    for res in range(initial_resolution + 1, target_resolution + 1):
+        curr_g_block = block_G(res, latent_dim, initial_resolution)
         curr_to_rgb_block = torgb(res, num_channels)
 
         prev_images = x0
@@ -178,9 +177,9 @@ def fromrgb(res, num_channels=3):
     return Model(inputs=x0, outputs=x, name="from_rgb_%dx%d" % (2**res, 2**res))
 
 
-def block_D(res, mbstd_group_size=4, init_res=2):
+def block_D(res, initial_resolution, mbstd_group_size=4):
     x0 = layers.Input(shape=(2**res, 2**res, nf(res - 1)))
-    if res >= init_res + 1:
+    if res > initial_resolution:
         x = x0
         for i in range(2):
             x = EqualizedLRConv2D(filters=nf(res - (i + 1)))(x)
@@ -203,13 +202,13 @@ def block_D(res, mbstd_group_size=4, init_res=2):
     return Model(inputs=x0, outputs=x, name="d_block_%dx%d" % (2**res, 2**res))
 
 
-def build_D(target_res, fade_in_alpha, init_res=2, num_channels=3, mbstd_group_size=4):
+def build_D(fade_in_alpha, mbstd_group_size=4, initial_resolution=2, target_resolution=10, num_channels=3):
     model_list = list()
     disc_block_list = list()
-    for res in range(2, target_resolution + 1):
-        x0 = layers.Input(shape=(2**res, 2**res, 3))
+    for res in range(initial_resolution, target_resolution + 1):
+        x0 = layers.Input(shape=(2**res, 2**res, num_channels))
         curr_from_rgb = fromrgb(res, num_channels)
-        curr_D_block = block_D(res, mbstd_group_size, init_res)
+        curr_D_block = block_D(res, initial_resolution, mbstd_group_size)
         x = curr_from_rgb(x0)
         x = curr_D_block(x)
         if res > 2:
