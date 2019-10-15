@@ -22,6 +22,6 @@ from fastestimator.op.tensorop.scale import Scale
 from fastestimator.op.tensorop.z_score import Zscore
 from fastestimator.op.tensorop.loss import Loss, BinaryCrossentropy, MeanSquaredError, MixUpLoss, \
     SparseCategoricalCrossentropy
-from fastestimator.op.tensorop.augmentation import Augmentation2D, AdversarialSample, MixUpBatch
+from fastestimator.op.tensorop.augmentation import Augmentation2D, AdversarialSample, MixUpBatch, CutMixBatch
 from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.op.tensorop.filter import TensorFilter, ScalarFilter
