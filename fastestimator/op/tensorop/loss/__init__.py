@@ -17,3 +17,4 @@ from fastestimator.op.tensorop.loss.binary_crossentropy import BinaryCrossentrop
 from fastestimator.op.tensorop.loss.mean_squared_error import MeanSquaredError
 from fastestimator.op.tensorop.loss.mixup_loss import MixUpLoss
 from fastestimator.op.tensorop.loss.sparse_categorical_crossentropy import SparseCategoricalCrossentropy
+from fastestimator.op.tensorop.loss.smooth_l1_loss import SmoothL1Loss
