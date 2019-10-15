@@ -6,7 +6,6 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import backend
 
-
 import fastestimator as fe
 from fastestimator.dataset.nih_chestxray import load_data
 from fastestimator.op import TensorOp
@@ -60,10 +59,7 @@ class Interpolate(TensorOp):
     def forward(self, data, state):
         fake, real = data
         batch_size = state["local_batch_size"]
-        coeff = tf.random.uniform(shape=[batch_size, 1, 1, 1],
-                                  minval=0.0,
-                                  maxval=1.0,
-                                  dtype=tf.float32)
+        coeff = tf.random.uniform(shape=[batch_size, 1, 1, 1], minval=0.0, maxval=1.0, dtype=tf.float32)
         return real + (fake - real) * coeff
 
 
@@ -115,9 +111,9 @@ class AlphaController(Trace):
             self.nimg_total = self.duration[self._idx] * state["num_examples"]
             self.change_alpha = True
             self.nimg_so_far = 0
-            print("FastEstimator-Alpha: Started fading in for size {}".format(2**(self._idx+3)))
+            print("FastEstimator-Alpha: Started fading in for size {}".format(2**(self._idx + 3)))
         elif state["epoch"] == fade_epoch + self.duration[self._idx]:
-            print("FastEstimator-Alpha: Finished fading in for size {}".format(2**(self._idx+3)))
+            print("FastEstimator-Alpha: Finished fading in for size {}".format(2**(self._idx + 3)))
             self.change_alpha = False
             self._idx += 1
             backend.set_value(self.alpha, 1.0)
@@ -138,8 +134,7 @@ class ImageSaving(Trace):
         self.latent_dim = latent_dim
         self.num_sample = num_sample
         self.num_channels = num_channels
-        self.random_vectors = tf.random.normal(
-            [self.num_sample, self.latent_dim])
+        self.random_vectors = tf.random.normal([self.num_sample, self.latent_dim])
 
     def on_epoch_end(self, state):
         if state["epoch"] in self.epoch_model:
@@ -151,42 +146,39 @@ class ImageSaving(Trace):
             for i in range(pred.shape[0]):
                 plt.subplot(4, 4, i + 1)
                 disp_img = pred[i].numpy()
+                disp_img = np.squeeze(disp_img)
+                disp_img -= disp_img.min()
+                disp_img /= (disp_img.max() + eps)
                 if self.num_channels == 1:
-                    disp_img = disp_img[..., 0]                
-                    disp_img -= disp_img.min()
-                    disp_img /= (disp_img.max() + eps)
-                    if self.num_channels == 1:                
-                        plt.imshow(disp_img, cmap='gray')
-                    else:
-                        plt.imshow(disp_img)
-                        plt.axis('off')
-                        plt.savefig(
-                            os.path.join(self.save_dir,
-                                         'image_at_{:08d}.png').format(state["epoch"]))
-                        print("on epoch {}, saving image to {}".format(
-                            state["epoch"], self.save_dir))
+                    plt.imshow(disp_img, cmap='gray')
+                else:
+                    plt.imshow(disp_img)
+                plt.axis('off')
+            plt.savefig(os.path.join(self.save_dir, 'image_at_{:08d}.png').format(state["epoch"]))
+            print("on epoch {}, saving image to {}".format(state["epoch"], self.save_dir))
 
 
 def get_estimator(data_dir=None, save_dir=None):
     train_csv, data_path = load_data(data_dir)
-    writer = RecordWriter(save_dir=os.path.join(data_path, "tfrecord"),
-                          train_data=train_csv,
-                          ops=[
-                              ImageReader(inputs="x", parent_path=data_path, grey_scale=True),
-                              ResizeRecord(target_size=(128, 128), outputs="x")
-                          ])
+    writer = RecordWriter(
+        save_dir=os.path.join(data_path, "tfrecord"),
+        train_data=train_csv,
+        ops=[
+            ImageReader(inputs="x", parent_path=data_path, grey_scale=True),
+            ResizeRecord(target_size=(128, 128), outputs="x")
+        ])
 
     # We create a scheduler for batch_size with the epochs at which it will change and corresponding values.
-    batchsize_scheduler = Scheduler({0: 128, 5: 64, 15: 32, 25: 16, 35: 8, 45:4})
+    batchsize_scheduler = Scheduler({0: 128, 5: 64, 15: 32, 25: 16, 35: 8, 45: 4})
 
     # We create a scheduler for the Resize ops.
     resize_scheduler = Scheduler({
         0: Resize(inputs="x", size=(4, 4), outputs="x"),
         5: Resize(inputs="x", size=(8, 8), outputs="x"),
-        15:Resize(inputs="x", size=(16, 16), outputs="x"),
-        25:Resize(inputs="x", size=(32, 32), outputs="x"),
-        35:Resize(inputs="x", size=(64, 64), outputs="x"),
-        45:None
+        15: Resize(inputs="x", size=(16, 16), outputs="x"),
+        25: Resize(inputs="x", size=(32, 32), outputs="x"),
+        35: Resize(inputs="x", size=(64, 64), outputs="x"),
+        45: None
     })
 
     # In Pipeline, we use the schedulers for batch_size and ops.
@@ -231,19 +223,19 @@ def get_estimator(data_dir=None, save_dir=None):
     fake_score_scheduler = Scheduler({
         0: ModelOp(inputs="x_fake", model=d2, outputs="fake_score"),
         5: ModelOp(inputs="x_fake", model=d3, outputs="fake_score"),
-        15:ModelOp(inputs="x_fake", model=d4, outputs="fake_score"),
-        25:ModelOp(inputs="x_fake", model=d5, outputs="fake_score"),
-        35:ModelOp(inputs="x_fake", model=d6, outputs="fake_score"),
-        45:ModelOp(inputs="x_fake", model=d7, outputs="fake_score")
+        15: ModelOp(inputs="x_fake", model=d4, outputs="fake_score"),
+        25: ModelOp(inputs="x_fake", model=d5, outputs="fake_score"),
+        35: ModelOp(inputs="x_fake", model=d6, outputs="fake_score"),
+        45: ModelOp(inputs="x_fake", model=d7, outputs="fake_score")
     })
 
     real_score_scheduler = Scheduler({
         0: ModelOp(model=d2, outputs="real_score"),
         5: ModelOp(model=d3, outputs="real_score"),
-        15:ModelOp(model=d4, outputs="real_score"),
-        25:ModelOp(model=d5, outputs="real_score"),
-        35:ModelOp(model=d6, outputs="real_score"),
-        45:ModelOp(model=d7, outputs="real_score")
+        15: ModelOp(model=d4, outputs="real_score"),
+        25: ModelOp(model=d5, outputs="real_score"),
+        35: ModelOp(model=d6, outputs="real_score"),
+        45: ModelOp(model=d7, outputs="real_score")
     })
 
     interp_score_scheduler = Scheduler({
