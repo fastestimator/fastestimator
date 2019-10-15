@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 """Estimator Class."""
+import pdb
 from collections import ChainMap, deque
 
 import numpy as np
@@ -20,6 +21,7 @@ import tensorflow as tf
 
 import fastestimator as fe
 from fastestimator.cli.cli_util import draw
+from fastestimator.schedule.epoch_scheduler import Scheduler
 from fastestimator.summary import Summary
 from fastestimator.trace import Logger, ModelSaver, MonitorLoss, Trace, TrainInfo
 from fastestimator.util.util import get_num_devices
@@ -70,6 +72,7 @@ class Estimator:
         self.num_examples = {}
         self.do_eval = False
         self._is_initialized = False
+        self.mode_list = ["train"]
 
     def fit(self, summary=None):
         """Function to perform training on the estimator.
@@ -92,14 +95,28 @@ class Estimator:
         return self._start()
 
     def _prepare_pipeline(self):
-        self.pipeline.global_batch_multiplier = get_num_devices()
-        self.pipeline.eval_shuffle = self.validation_steps is not None
-        self.pipeline.prepare()
-        self.do_eval = "eval" in self.pipeline.mode_list
+        if isinstance(self.pipeline, Scheduler):
+            do_eval = set()
+            for _, pipeline in self.pipeline.epoch_dict.items():
+                self._configure_single_pipeline(pipeline)
+                do_eval.add("eval" in pipeline.mode_list)
+            assert len(do_eval) == 1, "inconsistent validation option between pipelines"
+            self.do_eval = do_eval.pop()
+        else:
+            self._configure_single_pipeline(self.pipeline)
+            self.do_eval = "eval" in self.pipeline.mode_list
+            self.pipeline = Scheduler({0: self.pipeline})
+        if self.do_eval:
+            self.mode_list.append("eval")
+
+    def _configure_single_pipeline(self, pipeline):
+        pipeline.global_batch_multiplier = get_num_devices()
+        pipeline.eval_shuffle = self.validation_steps is not None
+        pipeline.prepare()
 
     def _prepare_network(self):
         self.network.num_devices = self.num_devices
-        self.network.prepare(mode_list=self.pipeline.mode_list)
+        self.network.prepare(mode_list=self.mode_list)
 
     def _prepare_estimator(self):
         if self.traces is None:
@@ -145,7 +162,9 @@ class Estimator:
             "total_train_steps",
             "summary",
             "warmup"
-        } | self.pipeline.all_output_keys | self.network.all_output_keys
+        } | self.network.all_output_keys
+        for _, pipeline in self.pipeline.epoch_dict.items():
+            available_outputs = available_outputs | pipeline.all_output_keys
         end_traces = deque()
         intermediate_traces = deque()
         intermediate_outputs = set()
@@ -188,11 +207,14 @@ class Estimator:
         self.traces = sorted_traces
 
     def _warmup(self):
-        mode_list = self.pipeline.mode_list
         self.total_train_steps = 0
-        for mode in mode_list:
-            self.num_examples[mode] = min(self.pipeline.num_examples[mode])
-            epochs_pipeline = self.pipeline.dataset_schedule[mode].keys
+        for mode in self.mode_list:
+            num_examples_mode = {}
+            epochs_pipeline = []
+            for epoch, pipeline in self.pipeline.epoch_dict.items():
+                num_examples_mode[epoch] = min(pipeline.num_examples[mode])
+                epochs_pipeline.extend(pipeline.dataset_schedule[mode].keys)
+            self.num_examples[mode] = Scheduler(num_examples_mode)
             epochs_network = self.network.op_schedule[mode].keys
             signature_epochs = sorted(list(set(epochs_pipeline) | set(epochs_network)))
             if mode == "train":
@@ -200,19 +222,20 @@ class Estimator:
                 assert np.all(elapse_epochs > 0), "signature epoch is not sorted correctly"
             state = {"mode": mode}
             for idx, epoch in enumerate(signature_epochs):
-                ds_iter = self.pipeline.dataset_schedule[mode].get_current_value(epoch)
+                pipeline = self.pipeline.get_current_value(epoch)
+                ds_iter = pipeline.dataset_schedule[mode].get_current_value(epoch)
                 if mode == "train":
-                    global_batch_size = self.pipeline.get_global_batch_size(epoch)
+                    global_batch_size = pipeline.get_global_batch_size(epoch)
                     if self.steps_per_epoch:
                         max_steps = self.steps_per_epoch
                     else:
-                        max_steps = self.num_examples[mode] // global_batch_size
+                        max_steps = self.num_examples[mode].get_current_value(epoch) // global_batch_size
                     self.total_train_steps += max_steps * elapse_epochs[idx]
                 batch = next(ds_iter)
-                state["batch_size"] = self.pipeline.get_global_batch_size(epoch)
+                state["batch_size"] = pipeline.get_global_batch_size(epoch)
                 state["local_batch_size"] = state["batch_size"] // self.num_devices
                 state["epoch"] = epoch
-                state["num_examples"] = self.num_examples[mode]
+                state["num_examples"] = self.num_examples[mode].get_current_value(epoch)
                 state["warmup"] = True
                 ops, model_list, epoch_losses = self.network.load_epoch(epoch, mode)
                 if fe.distribute_strategy:
@@ -240,20 +263,19 @@ class Estimator:
         return None if not self.summary else summary
 
     def _run_epoch(self, mode):
-        ds_iter = self.pipeline.dataset_schedule[mode].get_sequential_value(self.train_epoch)
-        global_batch_size = self.pipeline.get_global_batch_size(self.train_epoch)
+        pipeline = self.pipeline.get_current_value(self.train_epoch)
+        ds_iter = pipeline.dataset_schedule[mode].get_current_value(self.train_epoch)
+        global_batch_size = pipeline.get_global_batch_size(self.train_epoch)
+        num_examples = self.num_examples[mode].get_current_value(self.train_epoch)
         if self.steps_per_epoch and mode == "train":
             max_steps = self.steps_per_epoch
         elif self.validation_steps and mode == "eval":
             max_steps = self.validation_steps
         else:
-            max_steps = self.num_examples[mode] // global_batch_size
+            max_steps = num_examples // global_batch_size
         ops, model_list, epoch_losses = self.network.load_epoch(self.train_epoch, mode)
         self._run_traces_on_epoch_begin({
-            "mode": mode,
-            "epoch": self.train_epoch,
-            "train_step": self.train_step,
-            "num_examples": self.num_examples[mode]
+            "mode": mode, "epoch": self.train_epoch, "train_step": self.train_step, "num_examples": num_examples
         })
         for batch_idx in range(max_steps):
             batch = next(ds_iter)
@@ -276,7 +298,7 @@ class Estimator:
                         "batch_size": global_batch_size,
                         "local_batch_size": global_batch_size // self.num_devices,
                         "epoch": tf.convert_to_tensor(self.train_epoch),
-                        "num_examples": self.num_examples[mode],
+                        "num_examples": num_examples,
                         "warmup": False
                     })
             else:
@@ -290,7 +312,7 @@ class Estimator:
                         "batch_size": global_batch_size,
                         "local_batch_size": global_batch_size // self.num_devices,
                         "epoch": tf.convert_to_tensor(self.train_epoch),
-                        "num_examples": self.num_examples[mode],
+                        "num_examples": num_examples,
                         "warmup": False
                     })
             batch = ChainMap(prediction, batch)
