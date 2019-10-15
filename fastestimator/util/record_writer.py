@@ -399,7 +399,7 @@ class RecordWriter:
     def _prepare_savepath(self, save_dir):
         self.save_dir = save_dir
         if os.path.exists(self.save_dir):
-            assert len(os.listdir(self.save_dir)) == 0, "Cannot save to {} because the direcotry is not empty".format(
+            assert len(os.listdir(self.save_dir)) == 0, "Cannot save to {} because the directory is not empty".format(
                 self.save_dir)
         else:
             os.makedirs(self.save_dir)
