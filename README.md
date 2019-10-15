@@ -31,5 +31,20 @@ $ python ./apphub/image_classification/lenet_mnist/lenet_mnist.py
 ## Documentation
 For more info, check out [FastEstimator documentation](https://fastestimator.org)
 
+## Citation
+Please cite FastEstimator in your publications if it helps your research:
+```
+@misc{dong2019fastestimator,
+    title={FastEstimator: A Deep Learning Library for Fast Prototyping and Productization},
+    author={Xiaomeng Dong and Junpyo Hong and Hsi-Ming Chang and Michael Potter and Aritra Chowdhury and
+            Purujit Bahl and Vivek Soni and Yun-Chan Tsai and Rajesh Tamada and Gaurav Kumar and Caroline Favart and
+            V. Ratna Saripalli and Gopal Avinash},
+    year={2019},
+    eprint={1910.04875},
+    archivePrefix={arXiv},
+    primaryClass={cs.CV}
+}
+```
+
 ## License
 [Apache License 2.0](https://github.com/fastestimator/fastestimator/blob/master/LICENSE)
