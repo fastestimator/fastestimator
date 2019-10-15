@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 """Estimator Class."""
-import pdb
 from collections import ChainMap, deque
 
 import numpy as np
