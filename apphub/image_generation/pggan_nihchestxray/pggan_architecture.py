@@ -8,7 +8,7 @@ fmap_decay = 1.0  # log2 feature map reduction when doubling the resolution.
 fmap_max = 512  # Maximum number of feature maps in any layer.
 
 tf.random.set_seed(1000)
-# np.random.set_seed(1000)
+
 
 def nf(stage):
     return min(int(fmap_base / (2.0**(stage * fmap_decay))), fmap_max)
@@ -94,6 +94,7 @@ class ApplyBias(layers.Layer):
     def call(self, x):
         return x + self.b
 
+
 def block_G(res, latent_dim=512, initial_resolution=2):
     if res == initial_resolution:
         x0 = layers.Input(shape=latent_dim)
@@ -155,7 +156,8 @@ def build_G(fade_in_alpha, latent_dim=512, initial_resolution=2, target_resoluti
         prev_images = prev_to_rgb_block(prev_images)
         prev_images = layers.UpSampling2D(name="upsample_%dx%d" % (2**res, 2**res))(prev_images)
 
-        images_out = FadeIn(fade_in_alpha=fade_in_alpha, name="fade_in_%dx%d" % (2**res, 2**res))([prev_images, curr_images])
+        images_out = FadeIn(fade_in_alpha=fade_in_alpha,
+                            name="fade_in_%dx%d" % (2**res, 2**res))([prev_images, curr_images])
         mdl = Model(inputs=x0, outputs=images_out)
         model_list.append(mdl)
         gen_block_list.append(curr_g_block)
