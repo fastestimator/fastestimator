@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+"""Utilities for FastEstimator."""
 import json
 import re
 import string
@@ -38,20 +39,20 @@ def load_image(file_path, strip_alpha=False, channels=3):
         The image loaded into memory and scaled to a range of [-1, 1]
     """
     # noinspection PyUnresolvedReferences
-    im = PIL.Image.open(file_path)
-    if strip_alpha and im.mode == "RGBA":
+    img = PIL.Image.open(file_path)
+    if strip_alpha and img.mode == "RGBA":
         # noinspection PyUnresolvedReferences
-        background = PIL.Image.new("RGB", im.size, (0, 0, 0))
-        background.paste(im, mask=im.split()[3])
-        im = background
+        background = PIL.Image.new("RGB", img.size, (0, 0, 0))
+        background.paste(img, mask=img.split()[3])
+        img = background
     if channels == 0 or channels == 1:
-        im = im.convert("L")
+        img = img.convert("L")
     if channels == 3:
-        im = im.convert("RGB")
-    im = np.asarray(im) / 127.5 - 1.0
+        img = img.convert("RGB")
+    img = np.asarray(img) / 127.5 - 1.0
     if channels == 1:
-        im = np.reshape(im, (im.shape[0], im.shape[1], 1))
-    return im
+        img = np.reshape(img, (img.shape[0], img.shape[1], 1))
+    return img
 
 
 def load_dict(dict_path, array_key=False):
@@ -66,11 +67,11 @@ def load_dict(dict_path, array_key=False):
     """
     parsed = None
     if dict_path is not None:
-        with open(dict_path) as f:
-            parsed = json.load(f)
+        with open(dict_path) as open_file:
+            parsed = json.load(open_file)
             for key in list(parsed.keys()):
                 entry = parsed[key]
-                if type(entry) == list:
+                if isinstance(entry, list):
                     if array_key:
                         val = parsed.pop(key)
                         parsed[val[0]] = val[-1]
@@ -87,7 +88,7 @@ def parse_string_to_python(val):
     Returns:
         A python object version of the input string
     """
-    if val is None or len(val) == 0:
+    if val is None or not val:
         return ""
     try:
         return literal_eval(val)
@@ -99,8 +100,7 @@ def parse_string_to_python(val):
 
 
 def convert_tf_dtype(datatype):
-    """
-    Gets the tensorflow datatype from string
+    """Return the tensorflow datatype from string.
 
     Args:
         datatype: String of datatype
@@ -151,6 +151,7 @@ def prettify_metric_name(metric):
 
     Returns:
         The formatted version of 'metric'
+
     """
     return string.capwords(re.sub("([a-z])([A-Z])", r"\g<1> \g<2>", metric).replace("_", " "))
 
@@ -167,6 +168,7 @@ def remove_blacklist_keys(dic, blacklist):
 
     Side Effects:
         Entries in dic may be removed
+
     """
     if blacklist is None:
         return
@@ -174,12 +176,15 @@ def remove_blacklist_keys(dic, blacklist):
         dic.pop(elem, None)
 
 
-def is_number(s):
-    """
+def is_number(s):  # pylint: disable=invalid-name
+    """Check if a given string can be converted into a number.
+
     Args:
         s: A string
+
     Returns:
         True iff the string represents a number
+
     """
     try:
         float(s)
@@ -208,23 +213,26 @@ def decode_predictions(predictions, top=3, dictionary=None):
                 "{}: {:.4f}".format(dictionary.get(i, dictionary.get(str(i), "Class {}".format(i))), prediction[i])
                 for i in top_indices
             ]
-        max_width = len(max(result, key=lambda s: len(s)))
+        max_width = len(max(result, key=len))
         result = str.join("\n", [s.rjust(max_width) for s in result])
         results.append(result)
     return results
 
 
 class Suppressor(object):
-    """
-    A class which can be used to silence output of function calls. example: ::
+    """A class which can be used to silence output of function calls.
+
+    Example: ::
 
         with Suppressor():
             func(args)
 
     """
     def __enter__(self):
+        # pylint: disable=attribute-defined-outside-init
         self.stdout = sys.stdout
         self.stderr = sys.stderr
+        # pylint: enable=attribute-defined-outside-init
         sys.stdout = self
         sys.stderr = self
 
@@ -234,7 +242,7 @@ class Suppressor(object):
         if exc_type is not None:
             raise
 
-    def write(self, x):
+    def write(self, dummy):  # pylint: disable=missing-docstring
         pass
 
 
@@ -251,6 +259,9 @@ class Timer(ContextDecorator):
     """
     def __init__(self, name="Task"):
         self.name = name
+        self.start = None
+        self.end = None
+        self.interval = None
 
     def __enter__(self):
         self.start = time.perf_counter()
@@ -263,8 +274,7 @@ class Timer(ContextDecorator):
 
 
 class NonContext(object):
-    """
-    A class which is used for nothing
+    """A class which is used for nothing.
     """
     def __enter__(self):
         pass
@@ -274,12 +284,26 @@ class NonContext(object):
 
 
 def get_num_devices():
+    """Return number of devices.
+
+    Returns:
+        int: Number of GPUs available. Returns 1 if no GPU is found.
+    """
     local_device_protos = device_lib.list_local_devices()
     gpu_list = [x.name for x in local_device_protos if x.device_type == 'GPU']
     return max(1, len(gpu_list))
 
 
 def flatten_list(input_list):
+    """Return a flattened list.
+
+    Args:
+        input_list (list): A list that might be nested.
+
+    Returns:
+        list: A list that is not nested.
+
+    """
     for idx, ele in enumerate(input_list):
         input_list[idx] = to_list(ele)
     output_list = list(chain.from_iterable(input_list))
@@ -287,6 +311,15 @@ def flatten_list(input_list):
 
 
 def to_list(data):
+    """Convert data to a list.
+
+    Args:
+        data: Input data, with or without a python container.
+
+    Returns:
+        list: Replace python container with list or make input a list.
+
+    """
     if not isinstance(data, list):
         if isinstance(data, (tuple, set)):
             data = list(data)
@@ -296,9 +329,41 @@ def to_list(data):
 
 
 def to_set(data):
+    """Convert data to a set.
+
+    Args:
+        data: Input data, with or without a python container.
+
+    Returns:
+        list: Replace python container with set or make input a set.
+
+    """
     if not isinstance(data, set):
         if isinstance(data, (tuple, list)):
             data = set(data)
         else:
             data = {data}
     return data
+
+
+def per_replica_to_global(data):
+    """Combine data from "per-replica" values.
+
+    For multi-GPU training, data are distributed using `tf.distribute.Strategy.experimental_distribute_dataset`. This
+    method collects data from all replicas and combine them into one.
+
+    Args:
+        data: Distributed data.
+
+    Returns:
+        obj: Combined data from all replicas.
+    """
+
+    new_data = {}
+    for key, value in data.items():
+        if isinstance(value.values[0], tf.Tensor):
+            if value.values[0].shape.rank == 0:
+                new_data[key] = tf.stack(value.values)
+            else:
+                new_data[key] = tf.concat(value.values, axis=0)
+    return new_data

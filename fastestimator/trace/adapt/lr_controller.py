@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 import numpy as np
-
 from tensorflow.python.keras import backend
 
 from fastestimator.schedule import LRSchedule
@@ -115,6 +114,7 @@ class LRController(Trace):
                 if self.wait >= self.reduce_patience:
                     self.reduce_lr_ratio *= self.reduce_factor
                     self.change_lr = True
+                    self.wait = 0
                     print("FastEstimator-LRController: learning rate reduced by factor of {}".format(
                         self.reduce_factor))
 
