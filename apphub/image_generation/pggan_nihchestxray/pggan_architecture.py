@@ -5,7 +5,7 @@ from tensorflow.keras import Model, layers
 
 
 tf.random.set_seed(1000)
-# np.random.set_seed(1000)
+
 
 def nf(stage):
     return min(int(fmap_base / (2.0**(stage * fmap_decay))), fmap_max)
@@ -90,6 +90,7 @@ class ApplyBias(layers.Layer):
 
     def call(self, x):
         return x + self.b
+
 
 def block_G(res, latent_dim=512, initial_resolution=2):
     if res == initial_resolution:

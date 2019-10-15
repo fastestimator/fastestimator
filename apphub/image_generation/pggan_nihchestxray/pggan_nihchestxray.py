@@ -153,18 +153,18 @@ class ImageSaving(Trace):
                 disp_img = pred[i].numpy()
                 if self.num_channels == 1:
                     disp_img = disp_img[..., 0]                
-                disp_img -= disp_img.min()
-                disp_img /= (disp_img.max() + eps)
-                if self.num_channels == 1:                
-                    plt.imshow(disp_img, cmap='gray')
-                else:
-                    plt.imshow(disp_img)
-                plt.axis('off')
-            plt.savefig(
-                os.path.join(self.save_dir,
-                             'image_at_{:08d}.png').format(state["epoch"]))
-            print("on epoch {}, saving image to {}".format(
-                state["epoch"], self.save_dir))
+                    disp_img -= disp_img.min()
+                    disp_img /= (disp_img.max() + eps)
+                    if self.num_channels == 1:                
+                        plt.imshow(disp_img, cmap='gray')
+                    else:
+                        plt.imshow(disp_img)
+                        plt.axis('off')
+                        plt.savefig(
+                            os.path.join(self.save_dir,
+                                         'image_at_{:08d}.png').format(state["epoch"]))
+                        print("on epoch {}, saving image to {}".format(
+                            state["epoch"], self.save_dir))
 
 
 def get_estimator(data_dir=None, save_dir=None):
@@ -210,14 +210,14 @@ def get_estimator(data_dir=None, save_dir=None):
     fade_in_alpha = tf.Variable(initial_value=1.0, dtype='float32', trainable=False)
 
     d2, d3, d4, d5, d6, d7 = fe.build(model_def=lambda: build_D(fade_in_alpha=fade_in_alpha, target_resolution=7, num_channels=1),
-                                        model_name=["d2", "d3", "d4", "d5", "d6", "d7"],
-                                        optimizer=[opt2, opt3, opt4, opt5, opt6, opt7],
-                                        loss_name=["dloss", "dloss", "dloss", "dloss", "dloss", "dloss"])
+                                      model_name=["d2", "d3", "d4", "d5", "d6", "d7"],
+                                      optimizer=[opt2, opt3, opt4, opt5, opt6, opt7],
+                                      loss_name=["dloss", "dloss", "dloss", "dloss", "dloss", "dloss"])
 
     g2, g3, g4, g5, g6, g7, G = fe.build(model_def=lambda: build_G(fade_in_alpha=fade_in_alpha, target_resolution=7, num_channels=1),
-                                        model_name=["g2", "g3", "g4", "g5", "g6", "g7", "G"],
-                                        optimizer=[opt2, opt3, opt4, opt5, opt6, opt7, opt7],
-                                        loss_name=["gloss", "gloss", "gloss", "gloss", "gloss", "gloss", "gloss"])
+                                         model_name=["g2", "g3", "g4", "g5", "g6", "g7", "G"],
+                                         optimizer=[opt2, opt3, opt4, opt5, opt6, opt7, opt7],
+                                         loss_name=["gloss", "gloss", "gloss", "gloss", "gloss", "gloss", "gloss"])
 
     g_scheduler = Scheduler({
         0: ModelOp(model=g2, outputs="x_fake"),
@@ -270,8 +270,8 @@ def get_estimator(data_dir=None, save_dir=None):
 
     if save_dir is None:
         save_dir = os.path.join(str(Path.home()), 'fastestimator_results', 'NIH_CXR_PGGAN')
-	    os.makedirs(save_dir, exist_ok=True)
-    
+        os.makedirs(save_dir, exist_ok=True)
+
     estimator = fe.Estimator(
         network=network,
         pipeline=pipeline,
