@@ -212,7 +212,7 @@ def build_D(fade_in_alpha, mbstd_group_size=4, initial_resolution=2, target_reso
         curr_D_block = block_D(res, initial_resolution, mbstd_group_size)
         x = curr_from_rgb(x0)
         x = curr_D_block(x)
-        if res > 2:
+        if res > initial_resolution:
             x_ds = layers.AveragePooling2D(name="downsample_%dx%d" % (2**res, 2**res))(x0)
             x_ds = prev_from_rgb(x_ds)
             x = FadeIn(fade_in_alpha=fade_in_alpha, name="fade_in_%dx%d" % (2**res, 2**res))([x_ds, x])
