@@ -200,12 +200,12 @@ def get_estimator(data_dir=None, save_dir=None):
             Rescale(inputs="x_lowres", outputs="x_lowres")
         ])
 
-    opt2 = tf.keras.optimizers.Adam(learning_rate=0.0015, beta_1=0.0, beta_2=0.99, epsilon=1e-8)
-    opt3 = tf.keras.optimizers.Adam(learning_rate=0.0015, beta_1=0.0, beta_2=0.99, epsilon=1e-8)
-    opt4 = tf.keras.optimizers.Adam(learning_rate=0.0015, beta_1=0.0, beta_2=0.99, epsilon=1e-8)
-    opt5 = tf.keras.optimizers.Adam(learning_rate=0.0015, beta_1=0.0, beta_2=0.99, epsilon=1e-8)
-    opt6 = tf.keras.optimizers.Adam(learning_rate=0.0015, beta_1=0.0, beta_2=0.99, epsilon=1e-8)
-    opt7 = tf.keras.optimizers.Adam(learning_rate=0.0015, beta_1=0.0, beta_2=0.99, epsilon=1e-8)
+    opt2 = tf.keras.optimizers.Adam(learning_rate=0.001, beta_1=0.0, beta_2=0.99, epsilon=1e-8)
+    opt3 = tf.keras.optimizers.Adam(learning_rate=0.001, beta_1=0.0, beta_2=0.99, epsilon=1e-8)
+    opt4 = tf.keras.optimizers.Adam(learning_rate=0.001, beta_1=0.0, beta_2=0.99, epsilon=1e-8)
+    opt5 = tf.keras.optimizers.Adam(learning_rate=0.001, beta_1=0.0, beta_2=0.99, epsilon=1e-8)
+    opt6 = tf.keras.optimizers.Adam(learning_rate=0.001, beta_1=0.0, beta_2=0.99, epsilon=1e-8)
+    opt7 = tf.keras.optimizers.Adam(learning_rate=0.001, beta_1=0.0, beta_2=0.99, epsilon=1e-8)
 
     fade_in_alpha = tf.Variable(initial_value=1.0, dtype='float32', trainable=False)
 
