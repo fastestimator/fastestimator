@@ -6,5 +6,5 @@ if [ ! -d "$JENKINS_DIR/venv"  ]; then
 fi
 . $JENKINS_DIR/venv/bin/activate
 
-pip3 install pytest numpy nibabel pydicom tensorflow==2.0.0-beta1
+pip3 install pytest numpy nibabel pydicom tensorflow==2.0.0
 pip3 install -e .
