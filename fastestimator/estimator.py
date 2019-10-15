@@ -23,7 +23,7 @@ from fastestimator.cli.cli_util import draw
 from fastestimator.schedule.epoch_scheduler import Scheduler
 from fastestimator.summary import Summary
 from fastestimator.trace import Logger, ModelSaver, MonitorLoss, Trace, TrainInfo
-from fastestimator.util.util import get_num_devices
+from fastestimator.util.util import get_num_devices, per_replica_to_global
 
 
 class Estimator:
@@ -399,17 +399,6 @@ class Estimator:
                                                                     model_list,
                                                                     epoch_losses,
                                                                     state, ))
-        prediction = self._per_replica_to_global(prediction)
-        batch = self._per_replica_to_global(batch)
+        prediction = per_replica_to_global(prediction)
+        batch = per_replica_to_global(batch)
         return prediction, batch
-
-    @staticmethod
-    def _per_replica_to_global(data):
-        new_data = {}
-        for key, value in data.items():
-            if isinstance(value.values[0], tf.Tensor):
-                if value.values[0].shape.rank == 0:
-                    new_data[key] = tf.stack(value.values)
-                else:
-                    new_data[key] = tf.concat(value.values, axis=0)
-        return new_data

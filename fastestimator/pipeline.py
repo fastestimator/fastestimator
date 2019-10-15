@@ -27,7 +27,7 @@ from fastestimator.op.tensorop import TensorFilter
 from fastestimator.schedule import Scheduler
 from fastestimator.util import RecordWriter
 from fastestimator.util.tfrecord import get_features
-from fastestimator.util.util import convert_tf_dtype, flatten_list, get_num_devices
+from fastestimator.util.util import convert_tf_dtype, flatten_list, get_num_devices, per_replica_to_global
 
 
 class Pipeline:
@@ -65,8 +65,8 @@ class Pipeline:
         self.eval_shuffle = False
         self.num_core = mp.cpu_count()
         self._verify_input()
+        self.all_output_keys = None
         self._reset()
-        self.all_output_keys = set()
         self._is_prepared = False
 
     def _verify_input(self):
@@ -155,7 +155,7 @@ class Pipeline:
                 os.path.join(data_path, f) for f in os.listdir(data_path)
                 if f.endswith(".json") and f.startswith("%s_summary" % mode)
             ]
-            if len(self.summary_file[mode]) > 0:
+            if self.summary_file[mode]:
                 self.mode_list.append(mode)
                 self._get_tfrecord_config_mode(data_path, mode)
                 found_data = True
@@ -163,8 +163,8 @@ class Pipeline:
 
     def _get_tfrecord_config_mode(self, data_path, mode):
         for json_file in self.summary_file[mode]:
-            with open(json_file, 'r') as fp:
-                summary = json.load(fp)
+            with open(json_file, 'r') as output:
+                summary = json.load(output)
             file_names = [os.path.join(data_path, f) for f in summary["file_names"]]
             self.file_names[mode].append(file_names)
             num_examples = np.sum(summary["num_examples"])
@@ -371,9 +371,14 @@ class Pipeline:
         self.global_batch_multiplier = get_num_devices()
         if not self._is_prepared:
             self.prepare()
+
         ds_iter = self.dataset_schedule[mode].get_current_value(current_epoch)
         for _ in range(num_steps):
             data.append(next(ds_iter))
+
+        if self.global_batch_multiplier > 1:
+            data = [per_replica_to_global(item) for item in data]
+
         self._reset()
 
         return data
