@@ -44,10 +44,10 @@ def get_estimator(epochs=2, batch_size=32, steps_per_epoch=None, validation_step
         Accuracy(true_key="y", pred_key="y_pred", output_name='acc'),
         ModelSaver(model_name="lenet", save_dir=model_dir, save_best=True)
     ]
-    estimator = fe.Estimator(network=network, 
-                             pipeline=pipeline, 
-                             epochs=epochs, 
-                             traces=traces, 
+    estimator = fe.Estimator(network=network,
+                             pipeline=pipeline,
+                             epochs=epochs,
+                             traces=traces,
                              steps_per_epoch=steps_per_epoch,
                              validation_steps=validation_steps)
     return estimator
