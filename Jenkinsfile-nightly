@@ -1,5 +1,5 @@
 pipeline {
-  agent { label 'nightly-worker' }
+  agent { node { label 'nightly-worker' } }
 
   stages {
     stage('Setup') {
