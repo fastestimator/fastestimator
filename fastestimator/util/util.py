@@ -344,3 +344,26 @@ def to_set(data):
         else:
             data = {data}
     return data
+
+
+def per_replica_to_global(data):
+    """Combine data from "per-replica" values.
+
+    For multi-GPU training, data are distributed using `tf.distribute.Strategy.experimental_distribute_dataset`. This
+    method collects data from all replicas and combine them into one.
+
+    Args:
+        data: Distributed data.
+
+    Returns:
+        obj: Combined data from all replicas.
+    """
+
+    new_data = {}
+    for key, value in data.items():
+        if isinstance(value.values[0], tf.Tensor):
+            if value.values[0].shape.rank == 0:
+                new_data[key] = tf.stack(value.values)
+            else:
+                new_data[key] = tf.concat(value.values, axis=0)
+    return new_data
