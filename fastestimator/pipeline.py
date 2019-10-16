@@ -310,13 +310,15 @@ class Pipeline:
         return feature
 
     def _get_signature_epoch(self, mode):
-        signature_epoch = [0]
+        signature_epoch = []
         if isinstance(self.batch_size, Scheduler):
             signature_epoch.extend(self.batch_size.keys)
         mode_ops = get_op_from_mode(self.ops, mode)
         for op in mode_ops:
             if isinstance(op, Scheduler):
                 signature_epoch.extend(op.keys)
+        if len(signature_epoch) == 0:
+            signature_epoch.append(0)
         return list(set(signature_epoch)), mode_ops
 
     def _decode_records(self, dataset, mode, idx):

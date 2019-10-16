@@ -1,13 +1,10 @@
 import numpy as np
-
 import tensorflow as tf
 from tensorflow.keras import Model, layers
 
 fmap_base = 8192  # Overall multiplier for the number of feature maps.
 fmap_decay = 1.0  # log2 feature map reduction when doubling the resolution.
 fmap_max = 512  # Maximum number of feature maps in any layer.
-
-tf.random.set_seed(1000)
 
 
 def nf(stage):
@@ -47,7 +44,7 @@ class MiniBatchStd(layers.Layer):
         y = tf.reduce_mean(tf.square(y), axis=0)  #[MHWC]
         y = tf.sqrt(y + 1e-8)  # [MHWC]
         y = tf.reduce_mean(y, axis=[1, 2, 3], keepdims=True)  # [M111]
-        y = tf.tile(y, [self.group_size, s[1], s[2], 1])  # [NHW1]
+        y = tf.tile(y, [group_size, s[1], s[2], 1])  # [NHW1]
         return tf.concat([x, y], axis=-1)
 
 

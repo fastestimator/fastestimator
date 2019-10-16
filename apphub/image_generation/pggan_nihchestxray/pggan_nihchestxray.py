@@ -1,6 +1,7 @@
 import os
-
 from pathlib import Path
+
+import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
@@ -154,25 +155,40 @@ class ImageSaving(Trace):
                 else:
                     plt.imshow(disp_img)
                 plt.axis('off')
-            plt.savefig(os.path.join(self.save_dir, 'image_at_{:08d}.png').format(state["epoch"]))
+                disp_img = np.uint8(disp_img * 255)
+                cv2.imwrite(os.path.join(self.save_dir, 'image_at_{:08d}_{}.png').format(state["epoch"], i), disp_img)
+            plt.savefig(os.path.join(self.save_dir, 'image_grid_{:08d}.png').format(state["epoch"]))
             print("on epoch {}, saving image to {}".format(state["epoch"], self.save_dir))
+
+
+class ResetOptimizer(Trace):
+    def __init__(self, reset_epochs, optimizer):
+        super().__init__(inputs=None, outputs=None, mode="train")
+        self.reset_epochs = reset_epochs
+        self.optimizer = optimizer
+
+    def on_epoch_begin(self, state):
+        if state["epoch"] in self.reset_epochs:
+            for weight in self.optimizer.weights:
+                backend.set_value(weight, weight - weight)
+            print("Resetting optimizer on epoch {}".format(state["epoch"]))
 
 
 def get_estimator(data_dir=None, save_dir=None):
     train_csv, data_path = load_data(data_dir)
-    writer = RecordWriter(
-        save_dir=os.path.join(data_path, "tfrecord"),
-        train_data=train_csv,
-        ops=[
-            ImageReader(inputs="x", parent_path=data_path, grey_scale=True),
-            ResizeRecord(target_size=(128, 128), outputs="x")
-        ])
 
+    imreader = ImageReader(inputs="x", parent_path=data_path, grey_scale=True)
+    writer_128 = RecordWriter(save_dir=os.path.join(data_path, "tfrecord_128"),
+                              train_data=train_csv,
+                              ops=[imreader, ResizeRecord(target_size=(128, 128), outputs="x")])
+    writer_1024 = RecordWriter(save_dir=os.path.join(data_path, "tfrecord_1024"),
+                               train_data=train_csv,
+                               ops=[imreader, ResizeRecord(target_size=(1024, 1024), outputs="x")])
     # We create a scheduler for batch_size with the epochs at which it will change and corresponding values.
-    batchsize_scheduler = Scheduler({0: 128, 5: 64, 15: 32, 25: 16, 35: 8, 45: 4})
-
-    # We create a scheduler for the Resize ops.
-    resize_scheduler = Scheduler({
+    batchsize_scheduler_128 = Scheduler({0: 128, 5: 64, 15: 32, 25: 16, 35: 8, 45: 4})
+    batchsize_scheduler_1024 = Scheduler({55:4, 65:2, 75:1})
+    # pipeline ops
+    resize_scheduler_128 = Scheduler({
         0: Resize(inputs="x", size=(4, 4), outputs="x"),
         5: Resize(inputs="x", size=(8, 8), outputs="x"),
         15: Resize(inputs="x", size=(16, 16), outputs="x"),
@@ -180,36 +196,36 @@ def get_estimator(data_dir=None, save_dir=None):
         35: Resize(inputs="x", size=(64, 64), outputs="x"),
         45: None
     })
+    resize_scheduler_1024 = Scheduler({
+        55: Resize(inputs="x", size=(256, 256), outputs="x"),
+        65: Resize(inputs="x", size=(512, 512), outputs="x"),
+        75: None
+    })
+    lowres_op = CreateLowRes(inputs="x", outputs="x_lowres")
+    rescale_x = Rescale(inputs="x", outputs="x")
+    rescale_lowres = Rescale(inputs="x_lowres", outputs="x_lowres")
+    pipeline_128 = fe.Pipeline(batch_size=batchsize_scheduler_128,
+                               data=writer_128,
+                               ops=[resize_scheduler_128, lowres_op, rescale_x, rescale_lowres])
+    pipeline_1024 = fe.Pipeline(batch_size=batchsize_scheduler_1024,
+                                data=writer_1024,
+                                ops=[resize_scheduler_1024, lowres_op, rescale_x, rescale_lowres])
 
-    # In Pipeline, we use the schedulers for batch_size and ops.
-    pipeline = fe.Pipeline(
-        batch_size=batchsize_scheduler,
-        data=writer,
-        ops=[
-            resize_scheduler,
-            CreateLowRes(inputs="x", outputs="x_lowres"),
-            Rescale(inputs="x", outputs="x"),
-            Rescale(inputs="x_lowres", outputs="x_lowres")
-        ])
+    pipeline_scheduler = Scheduler({0: pipeline_128, 55: pipeline_1024})
 
-    opt2 = tf.keras.optimizers.Adam(learning_rate=0.001, beta_1=0.0, beta_2=0.99, epsilon=1e-8)
-    opt3 = tf.keras.optimizers.Adam(learning_rate=0.001, beta_1=0.0, beta_2=0.99, epsilon=1e-8)
-    opt4 = tf.keras.optimizers.Adam(learning_rate=0.001, beta_1=0.0, beta_2=0.99, epsilon=1e-8)
-    opt5 = tf.keras.optimizers.Adam(learning_rate=0.001, beta_1=0.0, beta_2=0.99, epsilon=1e-8)
-    opt6 = tf.keras.optimizers.Adam(learning_rate=0.001, beta_1=0.0, beta_2=0.99, epsilon=1e-8)
-    opt7 = tf.keras.optimizers.Adam(learning_rate=0.001, beta_1=0.0, beta_2=0.99, epsilon=1e-8)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=0.001, beta_1=0.0, beta_2=0.99, epsilon=1e-8)
 
     fade_in_alpha = tf.Variable(initial_value=1.0, dtype='float32', trainable=False)
 
-    d2, d3, d4, d5, d6, d7 = fe.build(model_def=lambda: build_D(fade_in_alpha=fade_in_alpha, target_resolution=7, num_channels=1),
-                                      model_name=["d2", "d3", "d4", "d5", "d6", "d7"],
-                                      optimizer=[opt2, opt3, opt4, opt5, opt6, opt7],
-                                      loss_name=["dloss", "dloss", "dloss", "dloss", "dloss", "dloss"])
+    d2, d3, d4, d5, d6, d7, d8, d9, d10 = fe.build(model_def=lambda: build_D(fade_in_alpha=fade_in_alpha, target_resolution=10, num_channels=1),
+                                      model_name=["d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10"],
+                                      optimizer=[optimizer]*9,
+                                      loss_name=["dloss"]*9)
 
-    g2, g3, g4, g5, g6, g7, G = fe.build(model_def=lambda: build_G(fade_in_alpha=fade_in_alpha, target_resolution=7, num_channels=1),
-                                         model_name=["g2", "g3", "g4", "g5", "g6", "g7", "G"],
-                                         optimizer=[opt2, opt3, opt4, opt5, opt6, opt7, opt7],
-                                         loss_name=["gloss", "gloss", "gloss", "gloss", "gloss", "gloss", "gloss"])
+    g2, g3, g4, g5, g6, g7, g8, g9, g10, G = fe.build(model_def=lambda: build_G(fade_in_alpha=fade_in_alpha, target_resolution=10, num_channels=1),
+                                         model_name=["g2", "g3", "g4", "g5", "g6", "g7", "g8", "g9", "g10", "G"],
+                                         optimizer=[optimizer]*10,
+                                         loss_name=["gloss"]*10)
 
     g_scheduler = Scheduler({
         0: ModelOp(model=g2, outputs="x_fake"),
@@ -218,6 +234,9 @@ def get_estimator(data_dir=None, save_dir=None):
         25: ModelOp(model=g5, outputs="x_fake"),
         35: ModelOp(model=g6, outputs="x_fake"),
         45: ModelOp(model=g7, outputs="x_fake"),
+        55: ModelOp(model=g8, outputs="x_fake"),
+        65: ModelOp(model=g9, outputs="x_fake"),
+        75: ModelOp(model=g10, outputs="x_fake")
     })
 
     fake_score_scheduler = Scheduler({
@@ -226,7 +245,10 @@ def get_estimator(data_dir=None, save_dir=None):
         15: ModelOp(inputs="x_fake", model=d4, outputs="fake_score"),
         25: ModelOp(inputs="x_fake", model=d5, outputs="fake_score"),
         35: ModelOp(inputs="x_fake", model=d6, outputs="fake_score"),
-        45: ModelOp(inputs="x_fake", model=d7, outputs="fake_score")
+        45: ModelOp(inputs="x_fake", model=d7, outputs="fake_score"),
+        55: ModelOp(inputs="x_fake", model=d8, outputs="fake_score"),
+        65: ModelOp(inputs="x_fake", model=d9, outputs="fake_score"),
+        75: ModelOp(inputs="x_fake", model=d10, outputs="fake_score")
     })
 
     real_score_scheduler = Scheduler({
@@ -235,7 +257,10 @@ def get_estimator(data_dir=None, save_dir=None):
         15: ModelOp(model=d4, outputs="real_score"),
         25: ModelOp(model=d5, outputs="real_score"),
         35: ModelOp(model=d6, outputs="real_score"),
-        45: ModelOp(model=d7, outputs="real_score")
+        45: ModelOp(model=d7, outputs="real_score"),
+        55: ModelOp(model=d8, outputs="real_score"),
+        65: ModelOp(model=d9, outputs="real_score"),
+        75: ModelOp(model=d10, outputs="real_score")
     })
 
     interp_score_scheduler = Scheduler({
@@ -244,7 +269,10 @@ def get_estimator(data_dir=None, save_dir=None):
         15: ModelOp(inputs="x_interp", model=d4, outputs="interp_score", track_input=True),
         25: ModelOp(inputs="x_interp", model=d5, outputs="interp_score", track_input=True),
         35: ModelOp(inputs="x_interp", model=d6, outputs="interp_score", track_input=True),
-        45: ModelOp(inputs="x_interp", model=d7, outputs="interp_score", track_input=True)
+        45: ModelOp(inputs="x_interp", model=d7, outputs="interp_score", track_input=True),
+        55: ModelOp(inputs="x_interp", model=d8, outputs="interp_score", track_input=True),
+        65: ModelOp(inputs="x_interp", model=d9, outputs="interp_score", track_input=True),
+        75: ModelOp(inputs="x_interp", model=d10, outputs="interp_score", track_input=True)
     })
 
     network = fe.Network(ops=[
@@ -266,9 +294,10 @@ def get_estimator(data_dir=None, save_dir=None):
 
     estimator = fe.Estimator(
         network=network,
-        pipeline=pipeline,
-        epochs=55,
-        traces=[AlphaController(alpha=fade_in_alpha, fade_start=[5, 15, 25, 35, 45, 55], duration=[5, 5, 5, 5, 5, 5]),
-                ImageSaving(epoch_model={4: "g2", 14: "g3", 24: "g4", 34: "g5", 44: "g6", 54: "g7"},
+        pipeline=pipeline_scheduler,
+        epochs=85,
+        traces=[AlphaController(alpha=fade_in_alpha, fade_start=[5, 15, 25, 35, 45, 55, 65, 75, 85], duration=[5, 5, 5, 5, 5, 5, 5, 5, 5]),
+                ResetOptimizer(reset_epochs=[5, 15, 25, 35, 45, 55, 65, 75], optimizer=optimizer),
+                ImageSaving(epoch_model={4: "g2", 14: "g3", 24: "g4", 34: "g5", 44: "g6", 54: "g7", 64: "g8", 74: "g9", 84: "g10"},
                             save_dir=save_dir, num_channels=1)])
     return estimator
