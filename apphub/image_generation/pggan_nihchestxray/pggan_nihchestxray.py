@@ -217,15 +217,17 @@ def get_estimator(data_dir=None, save_dir=None):
 
     fade_in_alpha = tf.Variable(initial_value=1.0, dtype='float32', trainable=False)
 
-    d2, d3, d4, d5, d6, d7, d8, d9, d10 = fe.build(model_def=lambda: build_D(fade_in_alpha=fade_in_alpha, target_resolution=10, num_channels=1),
-                                      model_name=["d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10"],
-                                      optimizer=[optimizer]*9,
-                                      loss_name=["dloss"]*9)
+    d2, d3, d4, d5, d6, d7, d8, d9, d10 = fe.build(
+        model_def=lambda: build_D(fade_in_alpha=fade_in_alpha, target_resolution=10, num_channels=1),
+        model_name=["d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10"],
+        optimizer=[optimizer]*9,
+        loss_name=["dloss"]*9)
 
-    g2, g3, g4, g5, g6, g7, g8, g9, g10, G = fe.build(model_def=lambda: build_G(fade_in_alpha=fade_in_alpha, target_resolution=10, num_channels=1),
-                                         model_name=["g2", "g3", "g4", "g5", "g6", "g7", "g8", "g9", "g10", "G"],
-                                         optimizer=[optimizer]*10,
-                                         loss_name=["gloss"]*10)
+    g2, g3, g4, g5, g6, g7, g8, g9, g10, G = fe.build(
+        model_def=lambda: build_G(fade_in_alpha=fade_in_alpha, target_resolution=10, num_channels=1),
+        model_name=["g2", "g3", "g4", "g5", "g6", "g7", "g8", "g9", "g10", "G"],
+        optimizer=[optimizer]*10,
+        loss_name=["gloss"]*10)
 
     g_scheduler = Scheduler({
         0: ModelOp(model=g2, outputs="x_fake"),
