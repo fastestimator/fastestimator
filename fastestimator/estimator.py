@@ -94,17 +94,14 @@ class Estimator:
         return self._start()
 
     def _prepare_pipeline(self):
-        if isinstance(self.pipeline, Scheduler):
-            do_eval = set()
-            for _, pipeline in self.pipeline.epoch_dict.items():
-                self._configure_single_pipeline(pipeline)
-                do_eval.add("eval" in pipeline.mode_list)
-            assert len(do_eval) == 1, "inconsistent validation option between pipelines"
-            self.do_eval = do_eval.pop()
-        else:
-            self._configure_single_pipeline(self.pipeline)
-            self.do_eval = "eval" in self.pipeline.mode_list
+        if not isinstance(self.pipeline, Scheduler):
             self.pipeline = Scheduler({0: self.pipeline})
+        do_eval = set()
+        for _, pipeline in self.pipeline.epoch_dict.items():
+            self._configure_single_pipeline(pipeline)
+            do_eval.add("eval" in pipeline.mode_list)
+        assert len(do_eval) == 1, "inconsistent validation option between pipelines"
+        self.do_eval = do_eval.pop()
         if self.do_eval:
             self.mode_list.append("eval")
 
