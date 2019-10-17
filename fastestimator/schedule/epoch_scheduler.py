@@ -20,6 +20,7 @@ class Scheduler:
         self.epoch_dict = epoch_dict
         self.value = None
         self._verify_inputs()
+        self.mode = None
 
     def _verify_inputs(self):
         assert isinstance(self.epoch_dict, dict), "must provide dictionary as epoch_dict"
