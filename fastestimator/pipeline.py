@@ -63,6 +63,7 @@ class Pipeline:
         self.padded_shape = None
         self.global_batch_multiplier = 1
         self.eval_shuffle = False
+        self.batch = True
         self.num_core = mp.cpu_count()
         self._verify_input()
         self.all_output_keys = None
@@ -100,6 +101,8 @@ class Pipeline:
         self.compression = {"train": [], "eval": []}
         self.file_names = {"train": [], "eval": []}
         self.global_batch_multiplier = 1
+        self.batch = True
+        self._is_prepared = False
 
     def prepare(self):
         """Create the dataset used by the pipeline by running all the ops specified.
@@ -263,11 +266,12 @@ class Pipeline:
             dataset = self._execute_ops(extracted_ds, forward_ops_epoch, filter_ops_epoch, state)
             if self.expand_dims:
                 dataset = dataset.flat_map(tf.data.Dataset.from_tensor_slices)
-            if self.padded_batch:
-                _ = dataset.map(self._get_padded_shape)
-                dataset = dataset.padded_batch(global_batch_size, padded_shapes=self.padded_shape)
-            else:
-                dataset = dataset.batch(global_batch_size)
+            if self.batch:
+                if self.padded_batch:
+                    _ = dataset.map(self._get_padded_shape)
+                    dataset = dataset.padded_batch(global_batch_size, padded_shapes=self.padded_shape)
+                else:
+                    dataset = dataset.batch(global_batch_size)
             dataset = dataset.prefetch(buffer_size=1)
             if fe.distribute_strategy:
                 dataset = fe.distribute_strategy.experimental_distribute_dataset(dataset)
@@ -371,16 +375,12 @@ class Pipeline:
         self.global_batch_multiplier = get_num_devices()
         if not self._is_prepared:
             self.prepare()
-
         ds_iter = self.dataset_schedule[mode].get_current_value(current_epoch)
         for _ in range(num_steps):
             data.append(next(ds_iter))
-
         if self.global_batch_multiplier > 1:
             data = [per_replica_to_global(item) for item in data]
-
         self._reset()
-
         return data
 
     def benchmark(self, mode="train", num_steps=1000, log_interval=100, current_epoch=0):
@@ -409,3 +409,25 @@ class Pipeline:
                           (idx, current_epoch, global_batch_size, example_per_sec))
                     start = time.perf_counter()
         self._reset()
+
+    def transform(self, data, mode):
+        self._reset()
+        self.data = {mode: data}
+        num_example = self._verify_dict(dictionary=data)
+        self.batch = False
+        result = self.show_results(mode=mode, num_steps=num_example)
+        return result
+
+    def _verify_dict(self, dictionary):
+        feature_name = dictionary.keys()
+        num_example_list = []
+        for key in feature_name:
+            feature_data = dictionary[key]
+            if isinstance(feature_data, list):
+                num_example_list.append(len(feature_data))
+            elif isinstance(feature_data, np.ndarray):
+                num_example_list.append(feature_data.shape[0])
+            else:
+                raise ValueError("the feature only supports list or numpy array")
+        assert len(set(num_example_list)) == 1, "features should have the same number of examples"
+        return set(num_example_list).pop()
