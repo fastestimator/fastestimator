@@ -135,30 +135,34 @@ class ImageSaving(Trace):
         self.latent_dim = latent_dim
         self.num_sample = num_sample
         self.num_channels = num_channels
-        self.random_vectors = tf.random.normal([self.num_sample, self.latent_dim])
+        self.eps = 1e-8
 
     def on_epoch_end(self, state):
         if state["epoch"] in self.epoch_model:
-            model_name = self.epoch_model[state["epoch"]]
-            model = self.network.model[model_name]
-            pred = model(self.random_vectors)
-            eps = 1e-8
-            fig = plt.figure(figsize=(4, 4))
-            for i in range(pred.shape[0]):
-                plt.subplot(4, 4, i + 1)
-                disp_img = pred[i].numpy()
+            model = self.epoch_model[state["epoch"]]
+            for i in range(self.num_sample):
+                random_vectors = tf.random.normal([1, self.latent_dim])
+                pred = model(random_vectors)
+                disp_img = pred.numpy()
                 disp_img = np.squeeze(disp_img)
                 disp_img -= disp_img.min()
-                disp_img /= (disp_img.max() + eps)
-                if self.num_channels == 1:
-                    plt.imshow(disp_img, cmap='gray')
-                else:
-                    plt.imshow(disp_img)
-                plt.axis('off')
+                disp_img /= (disp_img.max() + self.eps)
                 disp_img = np.uint8(disp_img * 255)
                 cv2.imwrite(os.path.join(self.save_dir, 'image_at_{:08d}_{}.png').format(state["epoch"], i), disp_img)
-            plt.savefig(os.path.join(self.save_dir, 'image_grid_{:08d}.png').format(state["epoch"]))
             print("on epoch {}, saving image to {}".format(state["epoch"], self.save_dir))
+
+class ModelSaving(Trace):
+    def __init__(self, epoch_model, save_dir):
+        super().__init__(inputs=None, outputs=None, mode="train")
+        self.epoch_model = epoch_model
+        self.save_dir = save_dir
+
+    def on_epoch_end(self, state):
+        if state["epoch"] in self.epoch_model:
+            model = self.epoch_model[state["epoch"]]
+            save_path = os.path.join(self.save_dir, model.model_name + ".h5")
+            model.save(save_path, include_optimizer=False)
+            print("FastEstimator-ModelSaver: Saving model to {}".format(save_path))
 
 
 class ResetOptimizer(Trace):
@@ -300,6 +304,6 @@ def get_estimator(data_dir=None, save_dir=None):
         epochs=85,
         traces=[AlphaController(alpha=fade_in_alpha, fade_start=[5, 15, 25, 35, 45, 55, 65, 75, 85], duration=[5, 5, 5, 5, 5, 5, 5, 5, 5]),
                 ResetOptimizer(reset_epochs=[5, 15, 25, 35, 45, 55, 65, 75], optimizer=optimizer),
-                ImageSaving(epoch_model={4: "g2", 14: "g3", 24: "g4", 34: "g5", 44: "g6", 54: "g7", 64: "g8", 74: "g9", 84: "g10"},
-                            save_dir=save_dir, num_channels=1)])
+                ImageSaving(epoch_model={4: g2, 14: g3, 24: g4, 34: g5, 44: g6, 54: g7, 64: g8, 74: g9, 84: G}, save_dir=save_dir, num_channels=1),
+                ModelSaving(epoch_model={84: G}, save_dir=save_dir)])
     return estimator
