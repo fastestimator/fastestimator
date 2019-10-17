@@ -32,7 +32,7 @@ do
 done
 echo $cnt 'tests passed out of' ${FILECNT} 'tutorial tests'
 
-if [ fail -eq 1 ] ; then
+if [ $fail -eq 1 ] ; then
     exit 1
 else
     exit 0

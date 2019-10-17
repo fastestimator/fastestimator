@@ -145,7 +145,7 @@ if [ $tutorial_res_code -eq 0 ] ; then
     fail=1
 fi
 
-if [ fail -eq 1 ] ; then
+if [ $fail -eq 1 ] ; then
     exit 1
 else
     exit 0
