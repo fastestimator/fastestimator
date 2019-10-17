@@ -8,6 +8,7 @@ FILECNT=$(find ${path_tutorial} -maxdepth 1 -name "*.ipynb" | wc -l)
 
 cnt=0
 i=0
+fail=0
 declare -a failedtest
 for filename in $FILES; do
     fname=$(basename -- "$filename")
@@ -19,6 +20,7 @@ for filename in $FILES; do
         ((cnt=cnt+1))
     else
         failedtest[$i]=${fname}
+        fail=1
     fi
     ((i=i+1))
 done
@@ -29,3 +31,9 @@ do
    echo "$idx test failed"
 done
 echo $cnt 'tests passed out of' ${FILECNT} 'tutorial tests'
+
+if [ fail -eq 1 ] ; then
+    exit 1
+else
+    exit 0
+fi
