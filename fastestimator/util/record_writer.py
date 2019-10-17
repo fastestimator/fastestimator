@@ -417,3 +417,20 @@ class RecordWriter:
         with open(os.path.join(self.save_dir, file_name), 'w') as fp:
             json.dump(summary, fp, indent=4)
         self.global_file_idx[mode] += len(files)
+
+    def transform(self, data, mode):
+        assert isinstance(data, dict), "please provide dictionary with different features as key"
+        assert len(self.ops) <= 1, "transform does not support unpaired dataset yet"
+        num_data = self._verify_dict(dictionary=data)
+        self.ops_local = self.ops[0]
+        self._check_ops(mode)
+        result = {}
+        for idx in range(num_data):
+            feature = self._transform_one_slice(data, idx, mode)
+            if idx == 0:
+                for key, value in feature.items():
+                    result[key] = [value]
+            else:
+                for key, value in feature.items():
+                    result[key].append(value)
+        return result
