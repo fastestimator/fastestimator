@@ -11,13 +11,13 @@ phases:
       
   pre_build:
     commands:
-      -echo "geez prebuild"
+      - echo "geez prebuild"
   
   build:
     commands:
-      -echo "geez build"
+      - echo "geez build"
   
   post_build:
     commands:
-      -echo "geez post_build"
+      - echo "geez post_build"
       
