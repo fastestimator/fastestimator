@@ -1,0 +1,19 @@
+version: 0.1
+
+phases:
+  install: 
+    commands:
+      - echo "geez install"
+      - apt-get update -y 
+      
+  pre_build:
+    commands:
+      -echo "geez prebuild"
+  
+  build:
+    commands:
+      -echo "geez build"
+  
+  post_build:
+    commands:
+      -echo "geez post_build"
