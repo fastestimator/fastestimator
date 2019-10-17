@@ -153,9 +153,6 @@ if [ $tutorial_res_code -eq 1 ] ; then
     fail=1
 fi
 
-cat $report_file
-rm $report_file
-
 if [ $fail -eq 1 ] ; then
     exit 1
 else
