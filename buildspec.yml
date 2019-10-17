@@ -2,6 +2,9 @@ version: 0.2
 
 phases:
   install: 
+    runtime-versions:
+      standard:2.0
+      
     commands:
       - echo "geez install"
       - apt-get update -y 
