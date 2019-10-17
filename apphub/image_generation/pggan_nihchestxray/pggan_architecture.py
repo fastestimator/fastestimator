@@ -16,6 +16,9 @@ class FadeIn(layers.Add):
         super().__init__(**kwargs)
         self.fade_in_alpha = fade_in_alpha
 
+    def get_config(self):
+        return {'fade_in_alpha': self.fade_in_alpha}
+
     def _merge_function(self, inputs):
         assert len(inputs) == 2, "FadeIn only supports two layers"
         output = ((1.0 - self.fade_in_alpha) * inputs[0]) + (self.fade_in_alpha * inputs[1])
@@ -27,6 +30,9 @@ class PixelNormalization(layers.Layer):
         super().__init__()
         self.eps = eps
 
+    def get_config(self):
+        return {'eps': self.eps}
+
     def call(self, inputs):
         return inputs * tf.math.rsqrt(tf.reduce_mean(tf.square(inputs), axis=-1, keepdims=True) + self.eps)
 
@@ -35,6 +41,9 @@ class MiniBatchStd(layers.Layer):
     def __init__(self, group_size=4):
         super().__init__()
         self.group_size = group_size
+
+    def get_config(self):
+        return {'group_size': self.group_size}
 
     def call(self, x):
         group_size = tf.minimum(self.group_size, tf.shape(x)[0])
@@ -53,6 +62,9 @@ class EqualizedLRDense(layers.Layer):
         super().__init__()
         self.units = units
         self.gain = gain
+
+    def get_config(self):
+        return {'units': self.units, 'gain': self.gain}
 
     def build(self, input_shape):
         self.w = self.add_weight(shape=[int(input_shape[-1]), self.units],
@@ -79,6 +91,9 @@ class EqualizedLRConv2D(layers.Conv2D):
         super().build(input_shape)
         fan_in = np.float32(np.prod(self.kernel.shape[:-1]))
         self.wscale = tf.constant(np.float32(self.gain / np.sqrt(fan_in)))
+
+    def get_config(self):
+        return {'filters': self.filters, 'gain': self.gain, "kernel_size": self.kernel_size}
 
     def call(self, x):
         return super().call(x) * self.wscale
