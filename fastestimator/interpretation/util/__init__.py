@@ -16,5 +16,5 @@ from fastestimator.interpretation.util.color_util import linear_decorelate_color
 from fastestimator.interpretation.util.umap_util import Evaluator, FileCache
 from fastestimator.interpretation.util.fft_util import gaussian_kernel, blur_image, blur_image_fft, rfft2d_freqs, \
     fft_vars_to_im, fft_vars_to_whitened_im
-from fastestimator.interpretation.util.vis_util import show_image, show_gray_image, show_text
+from fastestimator.interpretation.util.vis_util import show_image, show_gray_image, show_text, fig_to_img
 from fastestimator.interpretation.util.saliency_util import SaliencyMask, GradientSaliency, IntegratedGradients
