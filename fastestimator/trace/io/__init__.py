@@ -14,9 +14,10 @@
 # ==============================================================================
 from fastestimator.trace.io.caricature import Caricature
 from fastestimator.trace.io.csv_logger import CSVLogger
+from fastestimator.trace.io.grad_cam import GradCam
 from fastestimator.trace.io.logger import Logger, VisLogger
 from fastestimator.trace.io.model_saver import ModelSaver
 from fastestimator.trace.io.saliency import Saliency
+from fastestimator.trace.io.slackio import SlackNotification
 from fastestimator.trace.io.tensorboard import TensorBoard
 from fastestimator.trace.io.umap import UMap
-from fastestimator.trace.io.grad_cam import GradCam
