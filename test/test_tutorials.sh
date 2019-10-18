@@ -5,7 +5,7 @@ path_temp=$(dirname $(mktemp -u))
 
 FILES=$(find ${path_tutorial} -type f -name '*.ipynb')
 FILECNT=$(find ${path_tutorial} -maxdepth 1 -name "*.ipynb" | wc -l)
-
+report_file='report.txt'
 cnt=0
 i=0
 fail=0
@@ -28,11 +28,11 @@ done
 rm ${path_temp}/*.py
 for idx in "${failedtest[@]}"
 do
-   echo "$idx test failed"
+   echo "$idx test failed" >> $report_file
 done
-echo $cnt 'tests passed out of' ${FILECNT} 'tutorial tests'
+echo $cnt 'tests passed out of' ${FILECNT} 'tutorial tests' >> $report_file
 
-if [ fail -eq 1 ] ; then
+if [ $fail -eq 1 ] ; then
     exit 1
 else
     exit 0

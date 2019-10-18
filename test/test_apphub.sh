@@ -9,6 +9,7 @@ test_nlp=${DIR}'/test_nlp/'
 test_tabular=${DIR}'/test_tabular/'
 tmpdir=$(dirname $(mktemp -u))
 fail=0 # geez
+report_file="report.txt"
 # Image Classification examples test
 bash ${test_image_classification}'test_densenet121.sh'
 densenet_code=$?
@@ -54,87 +55,87 @@ dnn_code=$?
 #echo all the test results
 echo -en '\n\n'
 if [ $densenet_code -eq 0 ] ; then
-    echo 'Densenet121 test failed'
+    echo 'Densenet121 test failed' >> $report_file
     fail=1
 else
-    echo 'Densenet121 test passed'
+    echo 'Densenet121 test passed' >> $report_file
 fi
 
 if [ $lenet_adv_code -eq 0 ] ; then
-    echo 'LeNet Adversarial test failed'
+    echo 'LeNet Adversarial test failed' >> $report_file
     fail=1
 else
-    echo 'LeNet Adversarial test passed'
+    echo 'LeNet Adversarial test passed' >> $report_file
 fi
 
 if [ $lenet_mixup_code -eq 0 ] ; then
-    echo 'LeNet Mixup test failed'
+    echo 'LeNet Mixup test failed' >> $report_file
     fail=1
 else
-    echo 'LeNet Mixup test passed'
+    echo 'LeNet Mixup test passed' >> $report_file
 fi
 
 if [ $lenet_mnist_code -eq 0 ] ; then
-    echo 'LeNet MNIST test failed'
+    echo 'LeNet MNIST test failed' >> $report_file
     fail=1
 else
-    echo 'LeNet MNIST test passed'
+    echo 'LeNet MNIST test passed' >> $report_file
 fi
 
 if [ $cvae_code -eq 0 ] ; then
-    echo 'CVAE test failed'
+    echo 'CVAE test failed' >> $report_file
     fail=1
 else
-    echo 'CVAE test passed'
+    echo 'CVAE test passed' >> $report_file
 fi
 
 if [ $cyclegan_code -eq 0 ] ; then
-    echo 'CycleGAN test failed'
+    echo 'CycleGAN test failed' >> $report_file
     fail=1
 else
-    echo 'CycleGAN test passed'
+    echo 'CycleGAN test passed' >> $report_file
 fi
 
 if [ $dcgan_code -eq 0 ] ; then
-    echo 'DCGAN test failed'
+    echo 'DCGAN test failed' >> $report_file
     fail=1
 else
-    echo 'DCGAN test passed'
+    echo 'DCGAN test passed' >> $report_file
 fi
 
 if [ $unet_cub_code -eq 0 ] ; then
-    echo 'UNET Cub200 test failed'
+    echo 'UNET Cub200 test failed' >> $report_file
     fail=1
 else
-    echo 'UNET Cub200 test passed'
+    echo 'UNET Cub200 test passed' >> $report_file
 fi
 
 if [ $unet_mont_code -eq 0 ] ; then
-    echo 'UNET Montgomery test failed'
+    echo 'UNET Montgomery test failed' >> $report_file
     fail=1
 else
-    echo 'UNET Montgomery test passed'
+    echo 'UNET Montgomery test passed' >> $report_file
 fi
 
 if [ $fst_code -eq 0 ] ; then
-    echo 'FST COCO test failed'
+    echo 'FST COCO test failed' >> $report_file
     fail=1
 else
-    echo 'FST COCO test passed'
+    echo 'FST COCO test passed' >> $report_file
 fi
 
 if [ $lstm_code -eq 0 ] ; then
-    echo 'LSTM IMDB test failed'
+    echo 'LSTM IMDB test failed' >> $report_file
     fail=1
 else
-    echo 'LSTM IMDB test passed'
+    echo 'LSTM IMDB test passed' >> $report_file
 fi
 
 if [ $dnn_code -eq 0 ] ; then
-    echo 'DNN Housing test failed'
+    echo 'DNN Housing test failed' >> $report_file
     fail=1
 else
-    echo 'DNN Housing test passed'
+    echo 'DNN Housing test passed' >> $report_file
 fi
 
 #Tutorials examples test
@@ -145,7 +146,10 @@ if [ $tutorial_res_code -eq 0 ] ; then
     fail=1
 fi
 
-if [ fail -eq 1 ] ; then
+cat $report_file
+rm $report_file
+
+if [ $fail -eq 1 ] ; then
     exit 1
 else
     exit 0
