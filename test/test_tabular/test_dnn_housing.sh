@@ -20,7 +20,7 @@ filename='dnn_housing.py'
 if fastestimator train ${filepath}${filename} ${train_info}; then
     ((cnt=cnt+1))
 else
-    exit 0
+    exit 1
 fi
 
 nb_filename='dnn_housing.ipynb'
@@ -32,9 +32,9 @@ jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'dnn_ho
 if ipython  ${path_temp}'/dnn_housing_param.py'; then
     ((cnt=cnt+1))
 else
-    exit 0
+    exit 1
 fi
 rm -rf ${path_temp}/tmp*
 rm  ${path_temp}${nb_param_filename}
 rm  ${path_temp}'/dnn_housing_param.py'
-exit 1
+exit 0

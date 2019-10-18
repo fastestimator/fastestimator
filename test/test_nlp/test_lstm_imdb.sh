@@ -21,7 +21,7 @@ filename='lstm_imdb.py'
 if fastestimator train ${filepath}${filename} ${train_info} --max_len 300; then
     ((cnt=cnt+1))
 else
-    exit 0
+    exit 1
 fi
 
 nb_filename='lstm_imdb.ipynb'
@@ -33,9 +33,9 @@ jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'lstm_i
 if ipython  ${path_temp}'/lstm_imdb_param.py'; then
     ((cnt=cnt+1))
 else
-    exit 0
+    exit 1
 fi
 rm -rf ${path_temp}/tmp*
 rm  ${path_temp}${nb_param_filename}
 rm  ${path_temp}'/lstm_imdb_param.py'
-exit 1
+exit 0
