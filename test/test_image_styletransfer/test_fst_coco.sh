@@ -17,7 +17,7 @@ filename='fst_coco.py'
 if fastestimator train ${filepath}${filename} --steps_per_epoch 10; then
     ((cnt=cnt+1))
 else
-    exit 0
+    exit 1
 fi
 
 nb_filename='fst_coco.ipynb'
@@ -30,9 +30,9 @@ jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'fst_co
 if ipython  ${path_temp}'/fst_coco_param.py'; then
     ((cnt=cnt+1))
 else
-    exit 0
+    exit 1
 fi
 rm -rf /tmp/tmp*
 rm  ${path_temp}${nb_param_filename}
 rm  ${path_temp}'/fst_coco_param.py'
-exit 1
+exit 0

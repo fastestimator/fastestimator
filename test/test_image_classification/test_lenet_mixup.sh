@@ -13,7 +13,7 @@ filename='lenet_cifar10_mixup.py'
 if fastestimator train ${filepath}${filename} ${train_info}; then
     ((cnt=cnt+1))
 else
-    exit 0
+    exit 1
 fi
 
 nb_filename='lenet_cifar10_mixup.ipynb'
@@ -25,9 +25,9 @@ jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'lenet_
 if ipython  ${path_temp}'/lenet_cifar10_mixup_param.py'; then
     ((cnt=cnt+1))
 else
-    exit 0
+    exit 1
 fi
 rm -rf ${path_temp}/tmp*
 rm  ${path_temp}${nb_param_filename}
 rm  ${path_temp}'/lenet_cifar10_mixup_param.py'
-exit 1
+exit 0

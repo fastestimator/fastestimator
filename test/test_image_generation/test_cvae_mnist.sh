@@ -14,7 +14,7 @@ filename='cvae_mnist.py'
 if fastestimator train ${filepath}${filename} ${train_info}; then
     ((cnt=cnt+1))
 else
-    exit 0
+    exit 1
 fi
 
 nb_filename='cvae_mnist.ipynb'
@@ -26,9 +26,9 @@ jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'cvae_m
 if ipython  ${path_temp}'/cvae_mnist_param.py'; then
     ((cnt=cnt+1))
 else
-    exit 0
+    exit 1
 fi
 rm -rf ${path_temp}/tmp*
 rm  ${path_temp}${nb_param_filename}
 rm  ${path_temp}'/cvae_mnist_param.py'
-exit 1
+exit 0
