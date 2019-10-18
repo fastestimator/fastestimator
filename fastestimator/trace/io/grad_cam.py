@@ -13,11 +13,10 @@
 # limitations under the License.
 # ==============================================================================
 import cv2
-import matplotlib.pyplot as plt
-import numpy as np
+import matplotlib
 import tensorflow as tf
 
-from fastestimator.interpretation import plot_gradcam
+from fastestimator.interpretation import plot_gradcam, fig_to_img
 from fastestimator.trace import Trace
 
 
@@ -84,28 +83,13 @@ class GradCam(Trace):
             self.input_data = tf.concat(self.input_data, axis=0)
             self.input_data = self.input_data[:self.n_inputs]
 
+        old_backend = matplotlib.get_backend()
+        matplotlib.use("Agg")
         fig = plot_gradcam(self.input_data,
                            self.model,
                            self.layer_id,
                            decode_dictionary=self.decode_dictionary,
                            colormap=self.color_map)
-        # TODO - Figure out how to get this to work without it displaying the figure. maybe fig.canvas.draw
-        plt.draw()
-        plt.pause(0.000001)
-        flat_image = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
-        flat_image_pixels = flat_image.shape[0] // 3
-        width, height = fig.canvas.get_width_height()
-        if flat_image_pixels % height != 0:
-            # Canvas returned incorrect width/height. This seems to happen sometimes in Jupyter. TODO: figure out why.
-            search = 1
-            guess = height + search
-            while flat_image_pixels % guess != 0:
-                if search < 0:
-                    search = -1 * search + 1
-                else:
-                    search = -1 * search
-                guess = height + search
-            height = guess
-            width = flat_image_pixels // height
-        state.maps[1][self.output_key] = flat_image.reshape((1, height, width, 3))
-        plt.close(fig)
+        fig.canvas.draw()
+        state.maps[1][self.output_key] = fig_to_img(fig)
+        matplotlib.use(old_backend)

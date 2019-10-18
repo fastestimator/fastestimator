@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import matplotlib.pyplot as plt
-import numpy as np
+import matplotlib
 import tensorflow as tf
 
-from fastestimator.interpretation import UmapPlotter
+from fastestimator.interpretation import UmapPlotter, fig_to_img
 from fastestimator.trace import Trace
 
 
@@ -71,29 +70,15 @@ class UMap(Trace):
     def on_epoch_end(self, state):
         if not self.recording:
             return
+
+        old_backend = matplotlib.get_backend()
+        matplotlib.use("Agg")
         fig = self.umap.plot_umap(tf.concat(self.data, axis=0),
                                   tf.concat(self.labels, axis=0),
                                   legend_loc=self.legend_loc,
                                   title=self.in_key)
-        # TODO - Figure out how to get this to work without it displaying the figure. maybe fig.canvas.draw
-        plt.draw()
-        plt.pause(0.000001)
-        flat_image = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
-        flat_image_pixels = flat_image.shape[0] // 3
-        width, height = fig.canvas.get_width_height()
-        if flat_image_pixels % height != 0:
-            # Canvas returned incorrect width/height. This seems to happen sometimes in Jupyter. TODO: figure out why.
-            search = 1
-            guess = height + search
-            while flat_image_pixels % guess != 0:
-                if search < 0:
-                    search = -1 * search + 1
-                else:
-                    search = -1 * search
-                guess = height + search
-            height = guess
-            width = flat_image_pixels // height
-        state.maps[1][self.output_key] = flat_image.reshape((1, height, width, 3))
-        plt.close(fig)
+        fig.canvas.draw()
+        state.maps[1][self.output_key] = fig_to_img(fig)
+        matplotlib.use(old_backend)
         self.data.clear()
         self.labels.clear()
