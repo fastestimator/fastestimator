@@ -14,7 +14,7 @@ filename='cyclegan_horse2zebra.py'
 if fastestimator train ${filepath}${filename} --epochs 2 --steps_per_epoch 10; then
     ((cnt=cnt+1))
 else
-    exit 0
+    exit 1
 fi
 
 nb_filename='cyclegan.ipynb'
@@ -26,9 +26,9 @@ jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'cycleg
 if ipython  ${path_temp}'/cyclegan_param.py'; then
     ((cnt=cnt+1))
 else
-    exit 0
+    exit 1
 fi
 rm -rf ${path_temp}/tmp*
 rm  ${path_temp}${nb_param_filename}
 rm  ${path_temp}'/cyclegan_param.py'
-exit 1
+exit 0

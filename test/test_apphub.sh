@@ -8,7 +8,8 @@ test_image_segmentation=${DIR}'/test_image_segmentation/'
 test_nlp=${DIR}'/test_nlp/'
 test_tabular=${DIR}'/test_tabular/'
 tmpdir=$(dirname $(mktemp -u))
-
+fail=0 
+report_file="report.txt"
 # Image Classification examples test
 bash ${test_image_classification}'test_densenet121.sh'
 densenet_code=$?
@@ -51,81 +52,112 @@ lstm_code=$?
 bash ${test_tabular}'test_dnn_housing.sh'
 dnn_code=$?
 
-#Tutorials examples test
-tutorial_res=$(bash ${DIR}/test_tutorials.sh)
-
-#echo all the test results
+echo all the test results
+# image classification
 echo -en '\n\n'
-if [ $densenet_code -eq 0 ] ; then
-    echo 'Densenet121 test failed'
+if [ $densenet_code -eq 1 ] ; then
+    echo 'Densenet121 test failed' >> $report_file
+    fail=1
 else
-    echo 'Densenet121 test passed'
+    echo 'Densenet121 test passed' >> $report_file
 fi
 
-if [ $lenet_adv_code -eq 0 ] ; then
-    echo 'LeNet Adversarial test failed'
+if [ $lenet_adv_code -eq 1 ] ; then
+    echo 'LeNet Adversarial test failed' >> $report_file
+    fail=1
 else
-    echo 'LeNet Adversarial test passed'
+    echo 'LeNet Adversarial test passed' >> $report_file
 fi
 
-if [ $lenet_mixup_code -eq 0 ] ; then
-    echo 'LeNet Mixup test failed'
+if [ $lenet_mixup_code -eq 1 ] ; then
+    echo 'LeNet Mixup test failed' >> $report_file
+    fail=1
 else
-    echo 'LeNet Mixup test passed'
+    echo 'LeNet Mixup test passed' >> $report_file
 fi
 
-if [ $lenet_mnist_code -eq 0 ] ; then
-    echo 'LeNet MNIST test failed'
+if [ $lenet_mnist_code -eq 1 ] ; then
+    echo 'LeNet MNIST test failed' >> $report_file
+    fail=1
 else
-    echo 'LeNet MNIST test passed'
+    echo 'LeNet MNIST test passed' >> $report_file
 fi
 
-if [ $cvae_code -eq 0 ] ; then
-    echo 'CVAE test failed'
+# image generation
+if [ $cvae_code -eq 1 ] ; then
+    echo 'CVAE test failed' >> $report_file
+    fail=1
 else
-    echo 'CVAE test passed'
+    echo 'CVAE test passed' >> $report_file
 fi
 
-if [ $cyclegan_code -eq 0 ] ; then
-    echo 'CycleGAN test failed'
+if [ $cyclegan_code -eq 1 ] ; then
+    echo 'CycleGAN test failed' >> $report_file
+    fail=1
 else
-    echo 'CycleGAN test passed'
+    echo 'CycleGAN test passed' >> $report_file
 fi
 
-if [ $dcgan_code -eq 0 ] ; then
-    echo 'DCGAN test failed'
+if [ $dcgan_code -eq 1 ] ; then
+    echo 'DCGAN test failed' >> $report_file
+    fail=1
 else
-    echo 'DCGAN test passed'
+    echo 'DCGAN test passed' >> $report_file
 fi
 
-if [ $unet_cub_code -eq 0 ] ; then
-    echo 'UNET Cub200 test failed'
+# image segmentation
+if [ $unet_cub_code -eq 1 ] ; then
+    echo 'UNET Cub200 test failed' >> $report_file
+    fail=1
 else
-    echo 'UNET Cub200 test passed'
+    echo 'UNET Cub200 test passed' >> $report_file
 fi
 
-if [ $unet_mont_code -eq 0 ] ; then
-    echo 'UNET Montgomery test failed'
+if [ $unet_mont_code -eq 1 ] ; then
+    echo 'UNET Montgomery test failed' >> $report_file
+    fail=1
 else
-    echo 'UNET Montgomery test passed'
+    echo 'UNET Montgomery test passed' >> $report_file
 fi
 
-if [ $fst_code -eq 0 ] ; then
-    echo 'FST COCO test failed'
+#Image StyleTransfer
+if [ $fst_code -eq 1 ] ; then
+    echo 'FST COCO test failed' >> $report_file
+    fail=1
 else
-    echo 'FST COCO test passed'
+    echo 'FST COCO test passed' >> $report_file
 fi
 
-if [ $lstm_code -eq 0 ] ; then
-    echo 'LSTM IMDB test failed'
+Image NLP
+if [ $lstm_code -eq 1 ] ; then
+    echo 'LSTM IMDB test failed' >> $report_file
+    fail=1
 else
-    echo 'LSTM IMDB test passed'
+    echo 'LSTM IMDB test passed' >> $report_file
 fi
 
-if [ $dnn_code -eq 0 ] ; then
-    echo 'DNN Housing test failed'
+Image Tabular
+if [ $dnn_code -eq 1 ] ; then
+    echo 'DNN Housing test failed' >> $report_file
+    fail=1
 else
-    echo 'DNN Housing test passed'
+    echo 'DNN Housing test passed' >> $report_file
 fi
 
-printf '%s\n' "$tutorial_res"
+
+#Tutorials examples test
+bash ${DIR}'/test_tutorials.sh'
+tutorial_res_code=$?
+
+if [ $tutorial_res_code -eq 1 ] ; then
+    fail=1
+fi
+
+cat $report_file
+rm $report_file
+
+if [ $fail -eq 1 ] ; then
+    exit 1
+else
+    exit 0
+fi

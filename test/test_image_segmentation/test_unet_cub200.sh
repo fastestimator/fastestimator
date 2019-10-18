@@ -13,7 +13,7 @@ filename='unet_cub200.py'
 if fastestimator train ${filepath}${filename} ${train_info}; then
     ((cnt=cnt+1))
 else
-    exit 0
+    exit 1
 fi
 
 nb_filename='unet_cub200.ipynb'
@@ -25,9 +25,9 @@ jupyter nbconvert --to script  ${path_temp}${nb_param_filename} --output 'unet_c
 if ipython  ${path_temp}'/unet_cub200_param.py'; then
     ((cnt=cnt+1))
 else
-    exit 0
+    exit 1
 fi
 rm -rf ${path_temp}/tmp*
 rm  ${path_temp}${nb_param_filename}
 rm  ${path_temp}'/unet_cub200_param.py'
-exit 1
+exit 0
