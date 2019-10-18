@@ -165,6 +165,7 @@ class ImageSaving(Trace):
                 cv2.imwrite(os.path.join(self.save_dir, 'image_at_{:08d}_{}.png').format(state["epoch"], i), disp_img)
             print("on epoch {}, saving image to {}".format(state["epoch"], self.save_dir))
 
+
 class ModelSaving(Trace):
     def __init__(self, epoch_model, save_dir):
         super().__init__(inputs=None, outputs=None, mode="train")
@@ -204,7 +205,7 @@ def get_estimator(data_dir=None, save_dir=None):
                                ops=[imreader, ResizeRecord(target_size=(1024, 1024), outputs="x")])
     # We create a scheduler for batch_size with the epochs at which it will change and corresponding values.
     batchsize_scheduler_128 = Scheduler({0: 128, 5: 64, 15: 32, 25: 16, 35: 8, 45: 4})
-    batchsize_scheduler_1024 = Scheduler({55:4, 65:2, 75:1})
+    batchsize_scheduler_1024 = Scheduler({55: 4, 65: 2, 75: 1})
     # pipeline ops
     resize_scheduler_128 = Scheduler({
         0: Resize(inputs="x", size=(4, 4), outputs="x"),
@@ -284,15 +285,24 @@ def get_estimator(data_dir=None, save_dir=None):
     })
 
     interp_score_scheduler = Scheduler({
-        0: ModelOp(inputs="x_interp", model=d2, outputs="interp_score", track_input=True),
-        5: ModelOp(inputs="x_interp", model=d3, outputs="interp_score", track_input=True),
-        15: ModelOp(inputs="x_interp", model=d4, outputs="interp_score", track_input=True),
-        25: ModelOp(inputs="x_interp", model=d5, outputs="interp_score", track_input=True),
-        35: ModelOp(inputs="x_interp", model=d6, outputs="interp_score", track_input=True),
-        45: ModelOp(inputs="x_interp", model=d7, outputs="interp_score", track_input=True),
-        55: ModelOp(inputs="x_interp", model=d8, outputs="interp_score", track_input=True),
-        65: ModelOp(inputs="x_interp", model=d9, outputs="interp_score", track_input=True),
-        75: ModelOp(inputs="x_interp", model=d10, outputs="interp_score", track_input=True)
+        0:
+        ModelOp(inputs="x_interp", model=d2, outputs="interp_score", track_input=True),
+        5:
+        ModelOp(inputs="x_interp", model=d3, outputs="interp_score", track_input=True),
+        15:
+        ModelOp(inputs="x_interp", model=d4, outputs="interp_score", track_input=True),
+        25:
+        ModelOp(inputs="x_interp", model=d5, outputs="interp_score", track_input=True),
+        35:
+        ModelOp(inputs="x_interp", model=d6, outputs="interp_score", track_input=True),
+        45:
+        ModelOp(inputs="x_interp", model=d7, outputs="interp_score", track_input=True),
+        55:
+        ModelOp(inputs="x_interp", model=d8, outputs="interp_score", track_input=True),
+        65:
+        ModelOp(inputs="x_interp", model=d9, outputs="interp_score", track_input=True),
+        75:
+        ModelOp(inputs="x_interp", model=d10, outputs="interp_score", track_input=True)
     })
 
     network = fe.Network(ops=[
@@ -316,8 +326,16 @@ def get_estimator(data_dir=None, save_dir=None):
         network=network,
         pipeline=pipeline_scheduler,
         epochs=85,
-        traces=[AlphaController(alpha=fade_in_alpha, fade_start=[5, 15, 25, 35, 45, 55, 65, 75, 85], duration=[5, 5, 5, 5, 5, 5, 5, 5, 5]),
-                ResetOptimizer(reset_epochs=[5, 15, 25, 35, 45, 55, 65, 75], optimizer=optimizer),
-                ImageSaving(epoch_model={4: g2, 14: g3, 24: g4, 34: g5, 44: g6, 54: g7, 64: g8, 74: g9, 84: G}, save_dir=save_dir, num_channels=1),
-                ModelSaving(epoch_model={84: G}, save_dir=save_dir)])
+        traces=[
+            AlphaController(alpha=fade_in_alpha,
+                            fade_start=[5, 15, 25, 35, 45, 55, 65, 75, 85],
+                            duration=[5, 5, 5, 5, 5, 5, 5, 5, 5]),
+            ResetOptimizer(reset_epochs=[5, 15, 25, 35, 45, 55, 65, 75], optimizer=optimizer),
+            ImageSaving(epoch_model={
+                4: g2, 14: g3, 24: g4, 34: g5, 44: g6, 54: g7, 64: g8, 74: g9, 84: G
+            },
+                        save_dir=save_dir,
+                        num_channels=1),
+            ModelSaving(epoch_model={84: G}, save_dir=save_dir)
+        ])
     return estimator

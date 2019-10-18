@@ -21,6 +21,7 @@ fmap_base = 8192  # Overall multiplier for the number of feature maps.
 fmap_decay = 1.0  # log2 feature map reduction when doubling the resolution.
 fmap_max = 512  # Maximum number of feature maps in any layer.
 
+
 def nf(stage):
     return min(int(fmap_base / (2.0**(stage * fmap_decay))), fmap_max)
 

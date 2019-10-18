@@ -18,6 +18,7 @@ from tensorflow.keras import Model, layers
 
 from fastestimator.layers.pggan_layers import nf, PixelNormalization, MiniBatchStd, EqualizedLRDense, EqualizedLRConv2D, ApplyBias, FadeIn
 
+
 def block_G(res, latent_dim=512, initial_resolution=2):
     if res == initial_resolution:
         x0 = layers.Input(shape=latent_dim)
@@ -44,7 +45,7 @@ def block_G(res, latent_dim=512, initial_resolution=2):
     return Model(inputs=x0, outputs=x, name="g_block_%dx%d" % (2**res, 2**res))
 
 
-def torgb(res, num_channels=3):  # res = 2..resolution_log2
+def torgb(res, num_channels=3):
     x0 = layers.Input(shape=(2**res, 2**res, nf(res - 1)))
     x = EqualizedLRConv2D(filters=num_channels, kernel_size=1, gain=1.0)(x0)
     x = ApplyBias()(x)
@@ -126,6 +127,7 @@ def block_D(res, initial_resolution, mbstd_group_size=4):
             x = layers.LeakyReLU(alpha=0.2)(x)
             x = EqualizedLRDense(units=1, gain=1.0)(x)
             x = ApplyBias()(x)
+
     return Model(inputs=x0, outputs=x, name="d_block_%dx%d" % (2**res, 2**res))
 
 
@@ -148,4 +150,5 @@ def build_D(fade_in_alpha, mbstd_group_size=4, initial_resolution=2, target_reso
         prev_from_rgb = curr_from_rgb
         mdl = Model(inputs=x0, outputs=x)
         model_list.append(mdl)
+
     return model_list
