@@ -12,11 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.layers.instance_norm import InstanceNormalization
-from fastestimator.layers.reflection_padding_2d import ReflectionPadding2D
-from fastestimator.layers.sub_pixel_conv_2d import SubPixelConv2D
-from fastestimator.layers.equalized_lr_conv_2d import EqualizedLRConv2D
-from fastestimator.layers.equalized_lr_dense import EqualizedLRDense
-from fastestimator.layers.fade_in import FadeIn
-from fastestimator.layers.minibatch_std import MiniBatchStd
-from fastestimator.layers.pixel_norm import PixelNormalization
+import tensorflow as tf
+import numpy as np
+
+from tensorflow.keras import layers
+
+
+class ApplyBias(layers.Layer):
+    """Class to be used along with EqualizedLRDense and EqualizedLRConv2D for PGGAN
+
+    """
+    def build(self, input_shape):
+        self.b = self.add_weight(shape=input_shape[-1], initializer='zeros', trainable=True)
+
+    def call(self, x):
+        return x + self.b

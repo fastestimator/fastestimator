@@ -339,3 +339,7 @@ def get_estimator(data_dir=None, save_dir=None):
             ModelSaving(epoch_model={84: G}, save_dir=save_dir)
         ])
     return estimator
+
+if __name__ == "__main__":
+    est = get_estimator()
+    est.fit()

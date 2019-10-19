@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import tensorflow as tf
-from tensorflow.python.keras import Model, layers
+from tensorflow.python.keras import layers
 
 
 # Code borrowed from https://github.com/tensorflow/examples/blob/master/tensorflow_examples/models/pix2pix/pix2pix.py
