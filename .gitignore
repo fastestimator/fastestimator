@@ -107,3 +107,6 @@ ENV/
 .project
 .pydevproject
 .vscode
+
+# add docs
+/docs
