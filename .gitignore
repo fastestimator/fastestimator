@@ -110,3 +110,6 @@ ENV/
 
 # tutorial output files
 /tutorial/outputs
+
+# for sphinx website develop
+/docs
