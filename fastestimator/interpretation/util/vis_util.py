@@ -79,3 +79,23 @@ def show_gray_image(im, axis=None, title=None, color_map="inferno"):
     axis.imshow(im, cmap=plt.get_cmap(name=color_map), vmin=0, vmax=1)
     if title is not None:
         axis.set_title(title)
+
+
+def fig_to_img(fig, batch=True):
+    flat_image = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+    flat_image_pixels = flat_image.shape[0] // 3
+    width, height = fig.canvas.get_width_height()
+    if flat_image_pixels % height != 0:
+        # Canvas returned incorrect width/height. This seems to happen sometimes in Jupyter. TODO: figure out why.
+        search = 1
+        guess = height + search
+        while flat_image_pixels % guess != 0:
+            if search < 0:
+                search = -1 * search + 1
+            else:
+                search = -1 * search
+            guess = height + search
+        height = guess
+        width = flat_image_pixels // height
+    shape = (1, height, width, 3) if batch else (height, width, 3)
+    return flat_image.reshape(shape)

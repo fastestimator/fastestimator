@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 import tensorflow as tf
 
 from fastestimator.trace import Trace
-from fastestimator.interpretation import plot_caricature
+from fastestimator.interpretation import plot_caricature, fig_to_img
 from fastestimator.util.util import to_list, Suppressor
 
 
@@ -94,6 +94,8 @@ class Caricature(Trace):
             self.data = tf.concat(self.data, axis=0)
             self.data = self.data[:self.n_inputs]
 
+        old_backend = matplotlib.get_backend()
+        matplotlib.use("Agg")
         with Suppressor():
             fig = plot_caricature(self.model,
                                   self.data,
@@ -107,23 +109,6 @@ class Caricature(Trace):
                                   fft=self.fft,
                                   decorrelate=self.decorrelate,
                                   sigmoid=self.sigmoid)
-        # TODO - Figure out how to get this to work without it displaying the figure. maybe fig.canvas.draw
-        plt.draw()
-        plt.pause(0.000001)
-        flat_image = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
-        flat_image_pixels = flat_image.shape[0] // 3
-        width, height = fig.canvas.get_width_height()
-        if flat_image_pixels % height != 0:
-            # Canvas returned incorrect width/height. This seems to happen sometimes in Jupyter. TODO: figure out why.
-            search = 1
-            guess = height + search
-            while flat_image_pixels % guess != 0:
-                if search < 0:
-                    search = -1 * search + 1
-                else:
-                    search = -1 * search
-                guess = height + search
-            height = guess
-            width = flat_image_pixels // height
-        state.maps[1][self.output_key] = flat_image.reshape((1, height, width, 3))
-        plt.close(fig)
+        fig.canvas.draw()
+        state.maps[1][self.output_key] = fig_to_img(fig)
+        matplotlib.use(old_backend)
