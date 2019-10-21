@@ -6,5 +6,5 @@ if [ ! -d "$JENKINS_DIR/venv"  ]; then
 fi
 . $JENKINS_DIR/venv/bin/activate
 
-pip3 install pytest numpy nibabel pydicom nest_asyncio tensorflow==2.0.0
+pip3 install pytest numpy nibabel pydicom nest_asyncio slack tensorflow==2.0.0
 pip3 install -e .
