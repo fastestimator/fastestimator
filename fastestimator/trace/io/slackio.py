@@ -40,9 +40,17 @@ class SlackNotification(Trace):
         token (str, optional): A string. This token can be generated from Slack API. Defaults to None. When the value is
             None, this argument will read from the environment variable `SLACK_TOKEN`.
 
+    Raises:
+        TypeError: If `begin_msg` or `end_msg` is not (str, function).
+
     """
     def __init__(self, channel, end_msg, begin_msg=None, token=None, verbose=0):
         super().__init__()
+
+        if begin_msg:
+            self._check_str_or_function(begin_msg)
+        self._check_str_or_function(end_msg)
+
         if token is None:
             token = os.environ['SLACK_TOKEN']
 
@@ -54,6 +62,11 @@ class SlackNotification(Trace):
         self.end_msg = end_msg
         self.verbose = verbose
 
+    @staticmethod
+    def _check_str_or_function(obj):
+        if not isinstance(obj, (str, types.FunctionType)):
+            raise TypeError("begin_msg and end_msg must be string or function.")
+
     def _send_message(self, msg):
         try:
             self.client.chat_postMessage(channel=self.channel, text=msg)
@@ -63,13 +76,13 @@ class SlackNotification(Trace):
             print("Slack API error. Continue training without sending Slack notification.")
 
     def on_begin(self, state):
-        if self.begin_msg:
+        if isinstance(self.begin_msg, str):
             self._send_message(self.begin_msg)
+        else:
+            self._send_message(self.begin_msg(state))
 
     def on_end(self, state):
         if isinstance(self.end_msg, str):
             self._send_message(self.end_msg)
-        elif isinstance(self.end_msg, types.FunctionType):
-            self._send_message(self.end_msg(state))
         else:
-            raise TypeError("end_msg must be string or function.")
+            self._send_message(self.end_msg(state))
