@@ -15,69 +15,66 @@
 import matplotlib
 import tensorflow as tf
 
-from fastestimator.trace import Trace
-from fastestimator.interpretation import plot_saliency, fig_to_img
+from fastestimator.trace.io.xai import XAiTrace
+from fastestimator.xai import plot_saliency, fig_to_img
 
 
-class Saliency(Trace):
+class Saliency(XAiTrace):
     """
     Args:
         model_name (str): The model to be inspected by the Saliency visualization
-        input_key (str): A string key corresponding to the tensor to be passed to the model
+        model_input (str, tf.Tensor): The input to the model, either a string key or the actual input tensor
+        n_inputs (int): How many samples should be drawn from the input_key tensor for visualization
+        resample_inputs (bool): Whether to re-sample inputs every im_freq iterations or use the same throughout training
+                                Can only be True if model_input is a string
+        output_key (str): The name of the output to be written into the batch dictionary
+        im_freq (int): Frequency (in epochs) during which visualizations should be generated
+        mode (str): The mode ('train', 'eval') on which to run the trace
+        label_dictionary (dict): A dictionary of "class_idx" -> "class_name" associations
         baseline_constant (float): What constant value would a blank tensor have
-        decode_dictionary (dict): A dictionary of "class_idx" -> "class_name" associations
         color_map (str): The color map to use to visualize the saliency maps.
                          Consider "Greys_r", "plasma", or "magma" as alternatives
         smooth (int): The number of samples to use when generating a smoothed image
     """
     def __init__(self,
                  model_name,
-                 input_key,
+                 model_input,
                  n_inputs=1,
-                 output_name=None,
+                 resample_inputs=False,
+                 output_key=None,
                  im_freq=1,
+                 mode='eval',
+                 label_dictionary=None,
                  baseline_constant=0,
-                 decode_dictionary=None,
                  color_map="inferno",
                  smooth=7):
 
-        self.data = []
-        self.in_key = input_key
-        if output_name is None:
-            output_name = "{}_saliency".format(model_name)
-        super().__init__(inputs=self.in_key, outputs=output_name, mode='eval')
-        self.n_inputs = n_inputs
-        self.output_key = output_name
-        self.model_name = model_name
-        self.model = None
-        self.im_freq = im_freq
+        super().__init__(model_name=model_name,
+                         model_input=model_input,
+                         n_inputs=n_inputs,
+                         resample_inputs=resample_inputs,
+                         output_key=output_key,
+                         im_freq=im_freq,
+                         mode=mode)
+
         self.baseline_constant = baseline_constant
         self.baseline = None
-        self.decode_dictionary = decode_dictionary
+        self.label_dictionary = label_dictionary
         self.color_map = color_map
         self.smooth = smooth
 
-    def on_begin(self, state):
-        self.model = self.network.model[self.model_name]
-
-    def on_batch_end(self, state):
-        if state['epoch'] == 0 and len(self.data) <= self.n_inputs:
-            self.data.append(state.get(self.in_key) or state['batch'][self.in_key])
-
     def on_epoch_end(self, state):
+        super().on_epoch_end(state)
+        if self._data_epoch(state['epoch']):
+            self.baseline = tf.zeros_like(self.data, dtype=self.data.dtype) + self.baseline_constant
         if state['epoch'] % self.im_freq != 0:
             return
-        if state['epoch'] == 0:
-            self.data = tf.concat(self.data, axis=0)
-            self.data = self.data[:self.n_inputs]
-            self.baseline = tf.zeros_like(self.data, dtype=self.data.dtype) + self.baseline_constant
-
         old_backend = matplotlib.get_backend()
         matplotlib.use("Agg")
         fig = plot_saliency(self.model,
-                            self.data,
+                            self.data[state['mode']],
                             baseline_input=self.baseline,
-                            decode_dictionary=self.decode_dictionary,
+                            decode_dictionary=self.label_dictionary,
                             color_map=self.color_map,
                             smooth=self.smooth)
         fig.canvas.draw()

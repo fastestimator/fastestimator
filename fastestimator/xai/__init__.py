@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.interpretation.caricature import visualize_caricature, plot_caricature
-from fastestimator.interpretation.saliency import visualize_saliency, plot_saliency
-from fastestimator.interpretation.umaps import UmapPlotter
-from fastestimator.interpretation.gradcam import visualize_gradcam, plot_gradcam
-from fastestimator.interpretation.util import show_image, fig_to_img
+from fastestimator.xai.caricature import visualize_caricature, plot_caricature
+from fastestimator.xai.saliency import visualize_saliency, plot_saliency
+from fastestimator.xai.umaps import UmapPlotter
+from fastestimator.xai.gradcam import visualize_gradcam, plot_gradcam
+from fastestimator.xai.util import show_image, fig_to_img

@@ -14,54 +14,55 @@
 # ==============================================================================
 import cv2
 import matplotlib
-import tensorflow as tf
 
-from fastestimator.interpretation import plot_gradcam, fig_to_img
-from fastestimator.trace import Trace
+from fastestimator.xai import plot_gradcam, fig_to_img
+from fastestimator.trace.io.xai import XAiTrace
 
 
-class GradCam(Trace):
+class GradCam(XAiTrace):
     """
     Draw GradCam heatmaps for given inputs
 
     Args:
-        model_name (str): The name of the model to be evaluated
-        input_key (str): The input key to be used to gather data for inspection
-        n_inputs (int): How many inputs to collect from the input_key for visualization
+        model_name (str): The model to be inspected by the visualization
+        model_input (str, tf.Tensor): The input to the model, either a string key or the actual input tensor
+        n_inputs (int): How many inputs to be collected and passed to the model (if model_input is a string)
+        resample_inputs (bool): Whether to re-sample inputs every im_freq iterations or use the same throughout training
+                                Can only be True if model_input is a string
+        output_key (str): The name of the output to be written into the batch dictionary
+        im_freq (int): Frequency (in epochs) during which visualizations should be generated
+        mode (str): The mode ('train', 'eval') on which to run the trace
         layer_id (int, str, None): Which layer to inspect. Should be a convolutional layer. If None, the last \
                                     acceptable layer from the model will be selected
-        output_name (str): The key which the gradcam image will be saved into within the state dictionary
-        im_freq (int): Frequency (in epochs) during which visualizations should be generated
-        decode_dictionary (dict): A dictionary of "class_idx" -> "class_name" associations
+        label_dictionary (dict): A dictionary of "class_idx" -> "class_name" associations
         color_map (int): Which colormap to use when generating the heatmaps
     """
     def __init__(self,
                  model_name,
-                 input_key,
+                 model_input,
                  n_inputs=1,
+                 resample_inputs=False,
                  layer_id=None,
-                 output_name=None,
+                 output_key=None,
                  im_freq=1,
-                 decode_dictionary=None,
+                 mode="eval",
+                 label_dictionary=None,
                  color_map=cv2.COLORMAP_INFERNO):
 
-        self.input_data = []
-        self.label_data = []
-        self.in_key = input_key
-        if output_name is None:
-            output_name = "{}_gradCam".format(model_name)
-        super().__init__(inputs=self.in_key, outputs=output_name, mode='eval')
-        self.n_inputs = n_inputs
-        self.output_key = output_name
-        self.model_name = model_name
-        self.model = None
-        self.im_freq = im_freq
+        super().__init__(model_name=model_name,
+                         model_input=model_input,
+                         n_inputs=n_inputs,
+                         resample_inputs=resample_inputs,
+                         output_key=output_key,
+                         im_freq=im_freq,
+                         mode=mode)
+
         self.color_map = color_map
         self.layer_id = layer_id
-        self.decode_dictionary = decode_dictionary
+        self.label_dictionary = label_dictionary
 
     def on_begin(self, state):
-        self.model = self.network.model[self.model_name]
+        super().on_begin(state)
         if isinstance(self.layer_id, int):
             self.layer_id = self.model.layers[self.layer_id].name
         if self.layer_id is None:
@@ -72,23 +73,16 @@ class GradCam(Trace):
         assert self.model.get_layer(self.layer_id).output.shape.ndims == 4, \
             "GradCam must run on a layer with outputs of the form [batch, height, width, filters] (a convolution layer)"
 
-    def on_batch_end(self, state):
-        if state['epoch'] == 0 and len(self.input_data) <= self.n_inputs:
-            self.input_data.append(state.get(self.in_key) or state['batch'][self.in_key])
-
     def on_epoch_end(self, state):
+        super().on_epoch_end(state)
         if state['epoch'] % self.im_freq != 0:
             return
-        if state['epoch'] == 0:
-            self.input_data = tf.concat(self.input_data, axis=0)
-            self.input_data = self.input_data[:self.n_inputs]
-
         old_backend = matplotlib.get_backend()
         matplotlib.use("Agg")
-        fig = plot_gradcam(self.input_data,
+        fig = plot_gradcam(self.data[state['mode']],
                            self.model,
                            self.layer_id,
-                           decode_dictionary=self.decode_dictionary,
+                           decode_dictionary=self.label_dictionary,
                            colormap=self.color_map)
         fig.canvas.draw()
         state.maps[1][self.output_key] = fig_to_img(fig)

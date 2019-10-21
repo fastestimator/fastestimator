@@ -19,7 +19,7 @@ import numpy as np
 # noinspection PyPackageRequirements
 import tensorflow as tf
 
-from fastestimator.interpretation.util import show_image, show_text, show_gray_image, GradientSaliency, \
+from fastestimator.xai.util import show_image, show_text, show_gray_image, GradientSaliency, \
     IntegratedGradients
 from fastestimator.util.util import decode_predictions
 
