@@ -12,12 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.layers.instance_norm import InstanceNormalization
-from fastestimator.layers.reflection_padding_2d import ReflectionPadding2D
-from fastestimator.layers.sub_pixel_conv_2d import SubPixelConv2D
-from fastestimator.layers.equalized_lr_conv_2d import EqualizedLRConv2D
-from fastestimator.layers.equalized_lr_dense import EqualizedLRDense
-from fastestimator.layers.apply_bias import ApplyBias
-from fastestimator.layers.fade_in import FadeIn
-from fastestimator.layers.minibatch_std import MiniBatchStd
-from fastestimator.layers.pixel_norm import PixelNormalization
+import tensorflow as tf
+from tensorflow.keras import layers
+
+
+class PixelNormalization(layers.Layer):
+    """ This layer normalizes each pixel by its L2-norm along the channel axis divided by the number of channels.
+
+    Args:
+        eps (float, optional): epsilon parameter which defaults to 1e-8
+    """
+    def __init__(self, eps=1e-8):
+        super().__init__()
+        self.eps = eps
+
+    def get_config(self):
+        return {'eps': self.eps}
+
+    def call(self, inputs):
+        return inputs * tf.math.rsqrt(tf.reduce_mean(tf.square(inputs), axis=-1, keepdims=True) + self.eps)
