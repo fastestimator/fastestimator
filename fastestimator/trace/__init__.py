@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.trace.trace import Trace, TrainInfo, MonitorLoss
-from fastestimator.trace.adapt import EarlyStopping, TerminateOnNaN, LRController
-from fastestimator.trace.io import Caricature, CSVLogger, Logger, ModelSaver, Saliency, TensorBoard, UMap, GradCam, \
-    VisLogger
+from fastestimator.trace.trace import Trace, TrainInfo, MonitorLoss  # isort:skip
+from fastestimator.trace.adapt import EarlyStopping, LRController, TerminateOnNaN
+from fastestimator.trace.io import Caricature, CSVLogger, GradCam, Logger, ModelSaver, Saliency, SlackNotification, \
+    TensorBoard, UMap, VisLogger
 from fastestimator.trace.metric import Accuracy, ConfusionMatrix, Dice, F1Score, Precision, Recall
