@@ -17,7 +17,7 @@ import tensorflow as tf
 from fastestimator.trace.trace import Trace
 
 
-class InterpTrace(Trace):
+class XAiTrace(Trace):
     """
     Args:
         model_name (str): The model to be inspected by the visualization

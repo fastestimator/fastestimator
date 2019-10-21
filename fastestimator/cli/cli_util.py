@@ -24,9 +24,9 @@ from tensorflow import keras
 from tensorflow.python import keras
 from tqdm import tqdm
 
-from fastestimator.interpretation import visualize_caricature, visualize_saliency, visualize_gradcam
-from fastestimator.interpretation.umaps import UmapPlotter
-from fastestimator.interpretation.util.umap_util import Evaluator, FileCache
+from fastestimator.xai import visualize_caricature, visualize_saliency, visualize_gradcam
+from fastestimator.xai.umaps import UmapPlotter
+from fastestimator.xai.util.umap_util import Evaluator, FileCache
 from fastestimator.summary import Summary
 from fastestimator.summary.logs import visualize_logs
 from fastestimator.util.loader import ImageLoader, PathLoader

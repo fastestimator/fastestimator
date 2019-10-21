@@ -15,11 +15,11 @@
 import cv2
 import matplotlib
 
-from fastestimator.interpretation import plot_gradcam, fig_to_img
-from fastestimator.trace.io.interp import InterpTrace
+from fastestimator.xai import plot_gradcam, fig_to_img
+from fastestimator.trace.io.xai import XAiTrace
 
 
-class GradCam(InterpTrace):
+class GradCam(XAiTrace):
     """
     Draw GradCam heatmaps for given inputs
 

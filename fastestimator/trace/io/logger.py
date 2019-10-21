@@ -16,11 +16,11 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-from fastestimator.interpretation import fig_to_img, show_image
 from fastestimator.summary import Summary
 from fastestimator.summary.logs import plot_logs
 from fastestimator.trace import Trace
 from fastestimator.util.util import to_list
+from fastestimator.xai import fig_to_img, show_image
 
 
 class Logger(Trace):

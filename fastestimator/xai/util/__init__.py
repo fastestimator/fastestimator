@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.interpretation.util.color_util import linear_decorelate_color, to_valid_rgb
-from fastestimator.interpretation.util.umap_util import Evaluator, FileCache
-from fastestimator.interpretation.util.fft_util import gaussian_kernel, blur_image, blur_image_fft, rfft2d_freqs, \
+from fastestimator.xai.util.color_util import linear_decorelate_color, to_valid_rgb
+from fastestimator.xai.util.umap_util import Evaluator, FileCache
+from fastestimator.xai.util.fft_util import gaussian_kernel, blur_image, blur_image_fft, rfft2d_freqs, \
     fft_vars_to_im, fft_vars_to_whitened_im
-from fastestimator.interpretation.util.vis_util import show_image, show_gray_image, show_text, fig_to_img
-from fastestimator.interpretation.util.saliency_util import SaliencyMask, GradientSaliency, IntegratedGradients
+from fastestimator.xai.util.vis_util import show_image, show_gray_image, show_text, fig_to_img
+from fastestimator.xai.util.saliency_util import SaliencyMask, GradientSaliency, IntegratedGradients

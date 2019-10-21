@@ -15,11 +15,11 @@
 import matplotlib
 import tensorflow as tf
 
-from fastestimator.interpretation import UmapPlotter, fig_to_img
-from fastestimator.trace.io.interp import InterpTrace
+from fastestimator.trace.io.xai import XAiTrace
+from fastestimator.xai import UmapPlotter, fig_to_img
 
 
-class UMap(InterpTrace):
+class UMap(XAiTrace):
     """
     Args:
         model_name (str): The model to be inspected by the visualization

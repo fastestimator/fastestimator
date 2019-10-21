@@ -14,12 +14,12 @@
 # ==============================================================================
 import matplotlib
 
-from fastestimator.interpretation import plot_caricature, fig_to_img
-from fastestimator.trace.io.interp import InterpTrace
+from fastestimator.trace.io.xai import XAiTrace
 from fastestimator.util.util import to_list, Suppressor
+from fastestimator.xai import plot_caricature, fig_to_img
 
 
-class Caricature(InterpTrace):
+class Caricature(XAiTrace):
     """
     Args:
         model_name (str): The model to be inspected by the Caricature visualization
@@ -60,7 +60,6 @@ class Caricature(InterpTrace):
                  fft=True,
                  decorrelate=True,
                  sigmoid=True):
-
         super().__init__(model_name=model_name,
                          model_input=model_input,
                          n_inputs=n_inputs,

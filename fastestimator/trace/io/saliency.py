@@ -15,11 +15,11 @@
 import matplotlib
 import tensorflow as tf
 
-from fastestimator.interpretation import plot_saliency, fig_to_img
-from fastestimator.trace.io.interp import InterpTrace
+from fastestimator.trace.io.xai import XAiTrace
+from fastestimator.xai import plot_saliency, fig_to_img
 
 
-class Saliency(InterpTrace):
+class Saliency(XAiTrace):
     """
     Args:
         model_name (str): The model to be inspected by the Saliency visualization

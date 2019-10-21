@@ -22,7 +22,7 @@ import tensorflow as tf
 from tf_explain.core.grad_cam import GradCAM
 from tf_explain.utils.display import heatmap_display
 
-from fastestimator.interpretation.util import show_image, show_text
+from fastestimator.xai.util import show_image, show_text
 from fastestimator.util.util import decode_predictions
 
 
