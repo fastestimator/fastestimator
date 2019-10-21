@@ -34,11 +34,11 @@ class SlackNotification(Trace):
 
     Args:
         channel (str): A string. Can be either channel name or user id.
-        end_msg (Union[str, function]): The message to send to the Slack channel when traninig starts, can be either a
+        end_msg (Union[str, function]): The message to send to the Slack channel when training starts, can be either a
             string or a function. If this is a function, it can take the state dict as input.
-        begin_msg (str, optional): The message to send to the Slack channel when traninig starts. Defaults to None.
-        token (str, optional): A string. This token can be generated from Slack API. Defaults to None. When the value is
-            None, this argument will read from the environment variable `SLACK_TOKEN`.
+        begin_msg (str, optional): The message to send to the Slack channel when training starts. Defaults to None.
+        token (str, optional): This token can be generated from Slack API. Defaults to None. When the value is None,
+            this argument will read from the environment variable `SLACK_TOKEN`.
 
     Raises:
         TypeError: If `begin_msg` or `end_msg` is not (str, function).
