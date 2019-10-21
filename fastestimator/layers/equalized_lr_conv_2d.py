@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import layers
 

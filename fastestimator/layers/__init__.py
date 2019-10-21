@@ -17,6 +17,7 @@ from fastestimator.layers.reflection_padding_2d import ReflectionPadding2D
 from fastestimator.layers.sub_pixel_conv_2d import SubPixelConv2D
 from fastestimator.layers.equalized_lr_conv_2d import EqualizedLRConv2D
 from fastestimator.layers.equalized_lr_dense import EqualizedLRDense
+from fastestimator.layers.apply_bias import ApplyBias
 from fastestimator.layers.fade_in import FadeIn
 from fastestimator.layers.minibatch_std import MiniBatchStd
 from fastestimator.layers.pixel_norm import PixelNormalization
