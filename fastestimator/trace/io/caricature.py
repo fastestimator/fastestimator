@@ -13,24 +13,25 @@
 # limitations under the License.
 # ==============================================================================
 import matplotlib
-import numpy as np
-import tensorflow as tf
 
-from fastestimator.trace import Trace
 from fastestimator.interpretation import plot_caricature, fig_to_img
+from fastestimator.trace.io.interp import InterpTrace
 from fastestimator.util.util import to_list, Suppressor
 
 
-class Caricature(Trace):
+class Caricature(InterpTrace):
     """
     Args:
         model_name (str): The model to be inspected by the Caricature visualization
         layer_ids (int, list): The layer(s) of the model to be inspected by the Caricature visualization
-        input_key (str): A string key corresponding to the tensor to be passed to the model
+        model_input (str, tf.Tensor): The input to the model, either a string key or the actual input tensor
         n_inputs (int): How many samples should be drawn from the input_key tensor for visualization
-        decode_dictionary (dict): A dictionary mapping model outputs to class names
-        output_name (str): The key which the caricature image will be saved into within the state dictionary
+        resample_inputs (bool): Whether to re-sample inputs every im_freq iterations or use the same throughout training
+                                Can only be True if model_input is a string
+        output_key (str): The name of the output to be written into the batch dictionary
         im_freq (int): Frequency (in epochs) during which visualizations should be generated
+        mode (str): The mode ('train', 'eval') on which to run the trace
+        decode_dictionary (dict): A dictionary mapping model outputs to class names
         n_steps (int): How many steps of optimization to run when computing caricatures (quality vs time trade)
         learning_rate (float): The learning rate of the caricature optimizer. Should be higher than usual
         blur (float): How much blur to add to images during caricature generation
@@ -44,11 +45,13 @@ class Caricature(Trace):
     def __init__(self,
                  model_name,
                  layer_ids,
-                 input_key,
+                 model_input,
                  n_inputs=1,
-                 decode_dictionary=None,
-                 output_name=None,
+                 resample_inputs=False,
+                 output_key=None,
                  im_freq=1,
+                 mode="eval",
+                 decode_dictionary=None,
                  n_steps=128,
                  learning_rate=0.05,
                  blur=1,
@@ -58,47 +61,34 @@ class Caricature(Trace):
                  decorrelate=True,
                  sigmoid=True):
 
-        self.data = []
-        self.in_key = input_key
-        if output_name is None:
-            output_name = "{}_caricature".format(model_name)
-        super().__init__(inputs=self.in_key, outputs=output_name, mode='eval')
-        self.n_inputs = n_inputs
-        self.output_key = output_name
-        self.im_freq = im_freq
-        self.recording = False
-        self.model_name = model_name
-        self.model = None
+        super().__init__(model_name=model_name,
+                         model_input=model_input,
+                         n_inputs=n_inputs,
+                         resample_inputs=resample_inputs,
+                         output_key=output_key,
+                         im_freq=im_freq,
+                         mode=mode)
+
         self.layer_ids = to_list(layer_ids)
         self.decode_dictionary = decode_dictionary
         self.n_steps = n_steps
         self.learning_rate = learning_rate
         self.blur = blur
-        self.cossim_pow = cossim_pow,
+        self.cossim_pow = cossim_pow
         self.sd = sd
         self.fft = fft
         self.decorrelate = decorrelate
         self.sigmoid = sigmoid
 
-    def on_begin(self, state):
-        self.model = self.network.model[self.model_name]
-
-    def on_batch_end(self, state):
-        if state['epoch'] == 0 and len(self.data) <= self.n_inputs:
-            self.data.append(state.get(self.in_key) or state['batch'][self.in_key])
-
     def on_epoch_end(self, state):
+        super().on_epoch_end(state)
         if state['epoch'] % self.im_freq != 0:
             return
-        if state['epoch'] == 0:
-            self.data = tf.concat(self.data, axis=0)
-            self.data = self.data[:self.n_inputs]
-
         old_backend = matplotlib.get_backend()
         matplotlib.use("Agg")
         with Suppressor():
             fig = plot_caricature(self.model,
-                                  self.data,
+                                  self.data[state['mode']],
                                   self.layer_ids,
                                   decode_dictionary=self.decode_dictionary,
                                   n_steps=self.n_steps,

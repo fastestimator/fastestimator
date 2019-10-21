@@ -19,6 +19,7 @@ import string
 import sys
 import time
 from ast import literal_eval
+from collections import defaultdict
 from contextlib import ContextDecorator
 from itertools import chain
 
@@ -367,3 +368,12 @@ def per_replica_to_global(data):
             else:
                 new_data[key] = tf.concat(value.values, axis=0)
     return new_data
+
+
+class KeyDefaultDict(defaultdict):
+    def __missing__(self, key):
+        if self.default_factory is None:
+            raise KeyError(key)
+        else:
+            ret = self[key] = self.default_factory(key)
+            return ret
