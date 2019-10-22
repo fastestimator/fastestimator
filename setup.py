@@ -46,7 +46,9 @@ setup(
         'tqdm',
         'opencv-python',
         'papermill',
-        'tf-explain'
+        'tf-explain',
+        'slackclient',
+        'nest_asyncio'
     ],
     # Declare extra set for installation
     extras_require={},
