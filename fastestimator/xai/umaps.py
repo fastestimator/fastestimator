@@ -64,7 +64,7 @@ class UmapPlotter:
             points = self.fit.fit_transform(data)
 
         if not fig_ax:
-            fig = plt.figure()
+            fig = plt.figure(dpi=96)
             ax = fig.add_subplot(111)
         else:
             fig, ax = fig_ax
