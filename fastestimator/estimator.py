@@ -235,10 +235,9 @@ class Estimator:
                 state["warmup"] = True
                 ops, model_list, epoch_losses = self.network.load_epoch(epoch, mode)
                 if fe.distribute_strategy:
-                    fe.distribute_strategy.experimental_run_v2(self.network.run_step,
-                                                               args=(batch, ops, model_list, epoch_losses, state))
+                    fe.distribute_strategy.experimental_run_v2(self.network.run_step, args=(batch, ops, state))
                 else:
-                    self.network.run_step(batch, ops, model_list, epoch_losses, state)
+                    self.network.run_step(batch, ops, state)
 
     def _start(self):
         self.train_step = 0
@@ -287,8 +286,6 @@ class Estimator:
                 prediction, batch = self._forward_step_parallel(
                     batch,
                     ops,
-                    model_list,
-                    epoch_losses,
                     {
                         "mode": mode,
                         "batch_size": global_batch_size,
@@ -301,8 +298,6 @@ class Estimator:
                 prediction = self._forward_step(
                     batch,
                     ops,
-                    model_list,
-                    epoch_losses,
                     {
                         "mode": mode,
                         "batch_size": global_batch_size,
@@ -379,23 +374,20 @@ class Estimator:
             exit(0)
 
     @tf.function
-    def _forward_step(self, batch, ops, model_list, epoch_losses, state):
-        prediction = self.network.run_step(batch, ops, model_list, epoch_losses, state)
-        #expand dimension on scalar value for consistency with distributed training
+    def _forward_step(self, batch, ops, state):
+        prediction = self.network.run_step(batch, ops, state)
+        # expand dimension on scalar value for consistency with distributed training
         for key, value in prediction.items():
             if isinstance(value, tf.Tensor) and value.shape.rank == 0:
                 prediction[key] = tf.expand_dims(value, axis=0)
         return prediction
 
     @tf.function
-    def _forward_step_parallel(self, batch, ops, model_list, epoch_losses, state):
-        prediction = fe.distribute_strategy.experimental_run_v2(self.network.run_step,
-                                                                args=(
-                                                                    batch,
-                                                                    ops,
-                                                                    model_list,
-                                                                    epoch_losses,
-                                                                    state, ))
+    def _forward_step_parallel(self, batch, ops, state):
+        prediction = fe.distribute_strategy.experimental_run_v2(self.network.run_step, args=(
+            batch,
+            ops,
+            state, ))
         prediction = per_replica_to_global(prediction)
         batch = per_replica_to_global(batch)
         return prediction, batch
