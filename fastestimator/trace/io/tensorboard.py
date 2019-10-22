@@ -64,6 +64,7 @@ class TensorBoard(Trace):
         current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         self.train_log_dir = os.path.join(os.path.join(log_dir, current_time), 'train')
         eval_log_dir = os.path.join(os.path.join(log_dir, current_time), 'eval')
+        self.profile_log_dir = os.path.join(os.path.join(log_dir, current_time), 'profile')
         self.summary_writers = {
             'train': tf.summary.create_file_writer(self.train_log_dir),
             'eval': tf.summary.create_file_writer(eval_log_dir)
@@ -140,7 +141,7 @@ class TensorBoard(Trace):
         with self.summary_writers['train'].as_default(), summary_ops_v2.always_record_summaries():
             summary_ops_v2.trace_export(name='batch_{}'.format(global_batch_idx),
                                         step=global_batch_idx,
-                                        profiler_outdir=self.train_log_dir)
+                                        profiler_outdir=self.profile_log_dir)
         self.is_tracing = False
 
     def _log_embeddings(self, state):
