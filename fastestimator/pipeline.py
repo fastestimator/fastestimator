@@ -362,7 +362,7 @@ class Pipeline:
         global_batch_size = batch_per_device * self.global_batch_multiplier
         return global_batch_size
 
-    def show_results(self, mode="train", num_steps=1, current_epoch=0):
+    def show_results(self, mode="train", num_steps=1, current_epoch=0, reuse=False):
         """Processes the pipeline ops on the given input data.
 
         Args:
@@ -380,7 +380,9 @@ class Pipeline:
             data.append(next(ds_iter))
         if self.global_batch_multiplier > 1:
             data = [per_replica_to_global(item) for item in data]
-        self._reset()
+            
+        if not reuse:
+            self._reset()
         return data
 
     def benchmark(self, mode="train", num_steps=1000, log_interval=100, current_epoch=0):
