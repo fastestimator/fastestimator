@@ -1,35 +1,38 @@
 #!/bin/bash
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 path_tutorial=${DIR}'/../tutorial/'
-path_temp=$(dirname $(mktemp -u))
+path_temp=$(dirname $(mktemp -u))/
 
 FILES=$(find ${path_tutorial} -type f -name '*.ipynb')
 FILECNT=$(find ${path_tutorial} -maxdepth 1 -name "*.ipynb" | wc -l)
 report_file='report.txt'
 cnt=0
-i=0
 fail=0
 declare -a failedtest
 for filename in $FILES; do
     fname=$(basename -- "$filename")
     extension="${fname##*.}"
     fname="${fname%.*}"
+    if [ $fname = "t11_interpretation" ]; then
+        continue
+    fi
+
+    if [ $fname = "t10_unpaired_dataset" ]; then
+        continue
+    fi
     echo ${path_temp}${fname}
     jupyter nbconvert --to script ${filename} --output ${path_temp}${fname}
     if ipython ${path_temp}${fname}'.py'; then
+        echo "$fname test passed" >> $report_file
         ((cnt=cnt+1))
     else
-        failedtest[$i]=${fname}
+        echo "$fname test failed" >> $report_file
         fail=1
     fi
-    ((i=i+1))
 done
 
 rm ${path_temp}/*.py
-for idx in "${failedtest[@]}"
-do
-   echo "$idx test failed" >> $report_file
-done
+
 echo $cnt 'tests passed out of' ${FILECNT} 'tutorial tests' >> $report_file
 
 if [ $fail -eq 1 ] ; then
