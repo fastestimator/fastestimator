@@ -55,7 +55,6 @@ def load_data(path=None):
     #extract data
     image_extracted_path = os.path.join(path, 'images')
     if not os.path.exists(image_extracted_path):
-        print(" ")
         for idx, data_path in enumerate(data_paths):
             print("Extracting {}, file {} / {}".format(data_path, idx + 1, len(links)))
             with tarfile.open(data_path) as img_tar:

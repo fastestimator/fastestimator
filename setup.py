@@ -48,7 +48,9 @@ setup(
         'papermill',
         'tf-explain',
         'slackclient',
-        'nest_asyncio'
+        'nest_asyncio',
+        'Cython',
+        'pycocotools'
     ],
     # Declare extra set for installation
     extras_require={},
