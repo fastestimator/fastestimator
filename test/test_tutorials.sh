@@ -17,9 +17,6 @@ for filename in $FILES; do
         continue
     fi
 
-    if [ $fname = "t10_unpaired_dataset" ]; then
-        continue
-    fi
     echo ${path_temp}${fname}
     jupyter nbconvert --to script ${filename} --output ${path_temp}${fname}
     if ipython ${path_temp}${fname}'.py'; then
