@@ -189,7 +189,7 @@ def load_data(path=None, load_object=True, load_caption=False):
     if path is None:
         path = os.path.join(str(Path.home()), 'fastestimator_data', 'MSCOCO2017')
     else:
-        path = os.path.abspath(path)
+        path = os.path.join(os.path.abspath(path), 'MSCOCO2017')
     os.makedirs(path, exist_ok=True)
     #download the zip data
     zip_files = [("train2017.zip", 'http://images.cocodataset.org/zips/train2017.zip'),

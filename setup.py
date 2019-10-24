@@ -49,8 +49,7 @@ setup(
         'tf-explain',
         'slackclient',
         'nest_asyncio',
-        'Cython',
-        'pycocotools'
+        'pycocotools-fix'
     ],
     # Declare extra set for installation
     extras_require={},
