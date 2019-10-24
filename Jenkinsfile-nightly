@@ -1,20 +1,50 @@
-pipeline {
-  agent { label 'nightlyworker' }
+pipeline{
+    agent any
+    stages {
+        stage('Build') {
+            steps {
+                sh '''
+                    chmod 775 -R .
+                '''
+                sh './test/install_dependencies.sh'
+            }
+        }
+        
+        stage('Test'){
+            steps{
+                sh '''
+                    . /var/lib/jenkins/workspace/venv/bin/activate
+                    ./test/test_apphub.sh
+                '''
+            }
+        }
 
-  stages {
-    stage('Setup') {
-      steps {
-        sh './test/install_dependencies.sh'
-      }
-    }
-    stage('Test-nightly') {
-        steps {
-            sh '''
-                . /var/lib/jenkins/workspace/venv/bin/activate
-                ./test/test_apphub.sh
-            '''
+        stage('Deploy-pypi'){
+            steps{
+                sh ''' 
+                    . /var/lib/jenkins/workspace/venv/bin/activate
+                    rm -rf dist/*
+                    FASTESTIMATOR_IS_NIGHTLY=1 python setup.py sdist bdist_wheel 
+                    twine upload --config-file /home/jenkins/.pypirc --repository pypi dist/*
+                '''
+            }
+        }
+
+        stage('Deploy-docker'){
+            steps{
+                sh '''
+                    rm -rf ./fastestimator-misc
+                    git clone https://github.com/fastestimator-util/fastestimator-misc.git fastestimator-misc
+                '''
+                withDockerRegistry(credentialsId: 'docker_hub_fe', url:'') {
+                    sh ''' 
+                        docker build -t fastestimator/fastestimator:nightly-cpu - < fastestimator-misc/docker/nightly/Dockerfile.cpu
+                        docker push fastestimator/fastestimator:nightly-cpu
+                        docker build -t fastestimator/fastestimator:nightly-gpu - < fastestimator-misc/docker/nightly/Dockerfile.gpu
+                        docker push fastestimator/fastestimator:nightly-gpu
+                    '''
+                }
+            }
         }
     }
-
-  }
 }
