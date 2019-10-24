@@ -21,8 +21,8 @@ from pathlib import Path
 
 import h5py
 import pandas as pd
-
 import wget
+
 from fastestimator.util.wget import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress
@@ -140,7 +140,7 @@ def load_data(path=None):
     if path is None:
         path = os.path.join(home, 'fastestimator_data', 'SVHN')
     else:
-        path = os.path.abspath(path)
+        path = os.path.join(os.path.abspath(path), 'SVHN')
     os.makedirs(path, exist_ok=True)
 
     train_csv = os.path.join(path, 'train.csv')

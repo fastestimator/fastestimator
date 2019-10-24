@@ -32,7 +32,7 @@ def load_data(path=None):
     if path is None:
         path = os.path.join(str(Path.home()), 'fastestimator_data', 'NIH_Chestxray')
     else:
-        path = os.path.abspath(path)
+        path = os.path.join(os.path.abspath(path), 'NIH_Chestxray')
     os.makedirs(path, exist_ok=True)
     #download data
     links = [
@@ -55,7 +55,6 @@ def load_data(path=None):
     #extract data
     image_extracted_path = os.path.join(path, 'images')
     if not os.path.exists(image_extracted_path):
-        print(" ")
         for idx, data_path in enumerate(data_paths):
             print("Extracting {}, file {} / {}".format(data_path, idx + 1, len(links)))
             with tarfile.open(data_path) as img_tar:

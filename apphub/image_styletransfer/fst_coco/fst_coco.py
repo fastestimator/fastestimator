@@ -99,7 +99,7 @@ def get_estimator(style_img_path=None,
                   steps_per_epoch=None,
                   validation_steps=None,
                   model_dir=tempfile.mkdtemp()):
-    train_csv, path = load_data(data_path)
+    train_csv, _, path = load_data(data_path, load_object=False)
     if style_img_path is None:
         style_img_path = tf.keras.utils.get_file(
             'kandinsky.jpg',

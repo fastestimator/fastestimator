@@ -76,6 +76,8 @@ def load_data(path=None):
 
     if path is None:
         path = os.path.join(home, 'fastestimator_data', 'MNIST')
+    else:
+        path = os.path.join(os.path.abspath(path), 'MNIST')
     os.makedirs(path, exist_ok=True)
 
     image_path = os.path.join(path, 'image')
