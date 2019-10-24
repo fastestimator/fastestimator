@@ -1,19 +1,36 @@
 import os
+import sys
 import re
-
+import datetime 
 from setuptools import find_packages, setup
 
+is_nightly = os.environ.get( 'FASTESTIMATOR_IS_NIGHTLY', None )
+
+if is_nightly is not None:
+    sys.stderr.write( "Using '%s=%s' environment variable!\n" % (
+            'FASTESTIMATOR_IS_NIGHTLY', is_nightly ) )
 
 def get_version():
     path = os.path.dirname(__file__)
     version_re = re.compile(r'''__version__ = ['"](.+)['"]''')
     with open(os.path.join(path, 'fastestimator', '__init__.py')) as f:
         init = f.read()
-    return version_re.search(init).group(1)
+    
+    now = datetime.datetime.now()
+    version = version_re.search(init).group(1)
+    if is_nightly:
+        return "{}-{}{}{}".format(version, now.year, now.month, now.day)
+    else:
+        return version
 
+def get_name():
+    if is_nightly:
+        return "fastestimator-nightly"
+    else:
+        return "fastestimator"
 
 setup(
-    name="fastestimator",
+    name=get_name(),
     version=get_version(),
     description="Deep learning Application framework",
     packages=find_packages(),
