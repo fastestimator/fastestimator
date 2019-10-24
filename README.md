@@ -1,7 +1,7 @@
 # FastEstimator
 
 [![Build Status](http://54.187.56.209:8080/buildStatus/icon?job=fe_git%2Ffastestimator%2Fmaster)](http://54.187.56.209:8080/job/fe_git/job/fastestimator/job/master/)
-[![Build Status](http://54.187.56.209:8080/buildStatus/icon?subject=build-nightly&job=fastestimator-nightly)](http://54.187.56.209:8080/job/fastestimator-nightly/)
+[![Build Status](http://34.219.194.73:8080/buildStatus/icon?job=nightly-real)](http://34.219.194.73:8080/job/nightly-real/)
 
 FastEstimator is a high-level deep learning API. With the help of FastEstimator, you can easily build a high-performance deep learning model and run it anywhere. :wink:
 
