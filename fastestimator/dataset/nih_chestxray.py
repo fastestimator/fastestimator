@@ -32,7 +32,7 @@ def load_data(path=None):
     if path is None:
         path = os.path.join(str(Path.home()), 'fastestimator_data', 'NIH_Chestxray')
     else:
-        path = os.path.abspath(path)
+        path = os.path.join(os.path.abspath(path), 'NIH_Chestxray')
     os.makedirs(path, exist_ok=True)
     #download data
     links = [

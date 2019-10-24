@@ -58,7 +58,7 @@ def load_data(path=None):
     if path is None:
         path = os.path.join(home, 'fastestimator_data', 'horse2zebra')
     else:
-        path = os.path.abspath(path)
+        path = os.path.join(os.path.abspath(path), 'horse2zebra')
     os.makedirs(path, exist_ok=True)
 
     data_compressed_path = os.path.join(path, 'horse2zebra.zip')

@@ -45,7 +45,7 @@ def load_data(path=None):
     if path is None:
         path = os.path.join(home, 'fastestimator_data', 'Montgomery')
     else:
-        path = os.path.abspath(path)
+        path = os.path.join(os.path.abspath(path), 'Montgomery')
     os.makedirs(path, exist_ok=True)
 
     csv_path = os.path.join(path, "montgomery.csv")
