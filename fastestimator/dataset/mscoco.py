@@ -164,8 +164,8 @@ def _get_csv_name(base_name, load_object, load_caption, path):
 
 
 def load_data(path=None, load_object=True, load_caption=False):
-    """Download the COCO dataset to local storage, if not already downloaded. This will generate a
-    coco_train.csv file, which contains all the path information.
+    """Download the COCO dataset to local storage, if not already downloaded. This will generate train and val 
+    csv files.
 
     Args:
         path (str, optional): The path to store the COCO data. When `path` is not provided, will save at
