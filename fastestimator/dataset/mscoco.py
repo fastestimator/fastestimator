@@ -50,7 +50,7 @@ def _generate_object_data(path, image_name, image_id, data_temp, coco_gt_instanc
         keep_data = False
     else:
         keep_data = True
-        mask_file = os.path.join(mask_folder, image_name)
+        mask_file = os.path.join(mask_folder, image_name.replace("jpg", "png"))
         write_mask = not os.path.exists(mask_file)
         data_temp["x1"], data_temp["y1"], data_temp["x2"], data_temp["y2"], data_temp["obj_label"] = [], [], [], [], []
         data_temp["num_obj"] = num_obj
