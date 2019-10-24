@@ -50,21 +50,23 @@ def _generate_object_data(path, image_name, image_id, data_temp, coco_gt_instanc
         keep_data = False
     else:
         keep_data = True
+        mask_file = os.path.join(mask_folder, image_name)
+        write_mask = not os.path.exists(mask_file)
         data_temp["x1"], data_temp["y1"], data_temp["x2"], data_temp["y2"], data_temp["obj_label"] = [], [], [], [], []
         data_temp["num_obj"] = num_obj
         anns = coco_gt_instance.loadAnns(anns_ids)
         for idx, ann in enumerate(anns):
-            if idx == 0:
-                mask = coco_gt_instance.annToMask(ann=ann)
-            else:
-                mask = np.clip(mask + (idx + 1) * coco_gt_instance.annToMask(ann=ann), None, idx + 1)
+            if write_mask:
+                if idx == 0:
+                    mask = coco_gt_instance.annToMask(ann=ann)
+                else:
+                    mask = np.clip(mask + (idx + 1) * coco_gt_instance.annToMask(ann=ann), None, idx + 1)
             data_temp["x1"].append(ann['bbox'][0])
             data_temp["y1"].append(ann['bbox'][1])
             data_temp["x2"].append(ann['bbox'][0] + ann['bbox'][2])
             data_temp["y2"].append(ann['bbox'][1] + ann['bbox'][3])
             data_temp["obj_label"].append(ann['category_id'])
-        mask_file = os.path.join(mask_folder, image_name)
-        if not os.path.exists(mask_file):
+        if write_mask:
             cv2.imwrite(mask_file, mask)
         data_temp["obj_mask"] = os.path.relpath(mask_file, path)
     return keep_data
