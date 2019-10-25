@@ -166,7 +166,7 @@ def plot_caricature(model,
     if layer_ids is None or len(layer_ids) == 0:
         layer_ids = [i for i in range(len(model.layers))]
 
-    predictions = np.asarray(model(model_input))
+    predictions = np.asarray(model.predict(model_input))
     decoded = decode_predictions(predictions, top=3, dictionary=decode_dictionary)
 
     caricatures = [
