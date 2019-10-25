@@ -17,16 +17,16 @@ import tempfile
 
 import cv2
 import numpy as np
+import tensorflow as tf
 
 import fastestimator as fe
-import tensorflow as tf
+from fastestimator import RecordWriter
 from fastestimator.architecture.stnet import lossNet, styleTransferNet
 from fastestimator.dataset.mscoco import load_data
 from fastestimator.op import TensorOp
 from fastestimator.op.numpyop import ImageReader, Resize
 from fastestimator.op.tensorop import Loss, ModelOp
 from fastestimator.trace import ModelSaver
-from fastestimator.util import RecordWriter
 
 
 class Rescale(TensorOp):

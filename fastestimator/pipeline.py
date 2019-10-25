@@ -22,10 +22,10 @@ import numpy as np
 import tensorflow as tf
 
 import fastestimator as fe
+from fastestimator import RecordWriter
 from fastestimator.op import get_inputs_by_key, get_inputs_by_op, get_op_from_mode, verify_ops, write_outputs_by_key
 from fastestimator.op.tensorop import TensorFilter
 from fastestimator.schedule import Scheduler
-from fastestimator.util import RecordWriter
 from fastestimator.util.tfrecord import get_features
 from fastestimator.util.util import convert_tf_dtype, flatten_list, get_num_devices, per_replica_to_global
 

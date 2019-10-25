@@ -13,3 +13,4 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.op.tensorop.model.model import ModelOp
+from fastestimator.op.tensorop.model.update import UpdateOp

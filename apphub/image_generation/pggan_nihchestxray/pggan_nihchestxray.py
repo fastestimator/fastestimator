@@ -16,21 +16,19 @@ import os
 from pathlib import Path
 
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import backend
 
 import fastestimator as fe
+from fastestimator import RecordWriter
+from fastestimator.architecture.pggan import build_G, build_D
 from fastestimator.dataset.nih_chestxray import load_data
 from fastestimator.op import TensorOp
-from fastestimator.op.numpyop import ImageReader
-from fastestimator.op.numpyop import Resize as ResizeRecord
-from fastestimator.op.tensorop import Loss, ModelOp, Reshape, Resize
+from fastestimator.op.numpyop import ImageReader, Resize as ResizeRecord
+from fastestimator.op.tensorop import Loss, ModelOp, Resize
 from fastestimator.schedule import Scheduler
 from fastestimator.trace import Trace
-from fastestimator.util.record_writer import RecordWriter
-from fastestimator.architecture.pggan import build_G, build_D
 
 
 class Rescale(TensorOp):
@@ -239,14 +237,14 @@ def get_estimator(data_dir=None, save_dir=None):
     d2, d3, d4, d5, d6, d7, d8, d9, d10 = fe.build(
         model_def=lambda: build_D(fade_in_alpha=fade_in_alpha, target_resolution=10, num_channels=1),
         model_name=["d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10"],
-        optimizer=[optimizer]*9,
-        loss_name=["dloss"]*9)
+        optimizer=[optimizer] * 9,
+        loss_name=["dloss"] * 9)
 
     g2, g3, g4, g5, g6, g7, g8, g9, g10, G = fe.build(
         model_def=lambda: build_G(fade_in_alpha=fade_in_alpha, target_resolution=10, num_channels=1),
         model_name=["g2", "g3", "g4", "g5", "g6", "g7", "g8", "g9", "g10", "G"],
-        optimizer=[optimizer]*10,
-        loss_name=["gloss"]*10)
+        optimizer=[optimizer] * 10,
+        loss_name=["gloss"] * 10)
 
     g_scheduler = Scheduler({
         0: ModelOp(model=g2, outputs="x_fake"),
@@ -339,6 +337,7 @@ def get_estimator(data_dir=None, save_dir=None):
             ModelSaving(epoch_model={84: G}, save_dir=save_dir)
         ])
     return estimator
+
 
 if __name__ == "__main__":
     est = get_estimator()
