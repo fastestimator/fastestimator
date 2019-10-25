@@ -16,8 +16,8 @@ FastEstimator is a high-level deep learning API. With the help of FastEstimator,
 ## Installation
 `pip install fastestimator==1.0b0`
 
-## [Docker Hub](https://hub.docker.com/r/fastestimator/fastestimator/tags)
-Docker container creates isolated virtual environment that shares resources with host machine. Docker provides an easy way to set up FastEstimator environment, users can pull image from Docker Hub.
+## Docker Hub
+Docker container creates isolated virtual environment that shares resources with host machine. Docker provides an easy way to set up FastEstimator environment, users can pull image from [Docker Hub](https://hub.docker.com/r/fastestimator/fastestimator/tags).
 
 * GPU: `docker pull fastestimator/fastestimator:1.0b0-gpu`
 * CPU: `docker pull fastestimator/fastestimator:1.0b0-cpu`
@@ -28,8 +28,16 @@ Docker container creates isolated virtual environment that shares resources with
 $ python ./apphub/image_classification/lenet_mnist/lenet_mnist.py
 ```
 
+## Tutorial
+
+We have [tutorial series](https://github.com/vbvg2008/fastestimator/tree/master/tutorial) that walk through everything you need to know about FastEstimator.
+
+## Example
+
+Check out [Application Hub](https://github.com/vbvg2008/fastestimator/tree/master/apphub) for end-to-end deep learning examples in FastEstimator.
+
 ## Documentation
-For more info, check out [FastEstimator documentation](https://fastestimator.org)
+For more info, check out our [FastEstimator documentation](https://fastestimator.org).
 
 ## Citation
 Please cite FastEstimator in your publications if it helps your research:
