@@ -4,7 +4,7 @@ pipeline{
         stage('Build') {
             steps {
                 sh '''
-                    cp -r /tutorial/* ./
+                    cp -r ./tutorial/* ./
                     chmod 775 -R .
                 '''
                 sh './test/install_dependencies.sh'
