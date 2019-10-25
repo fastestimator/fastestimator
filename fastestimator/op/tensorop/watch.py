@@ -12,20 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import tensorflow as tf
+from fastestimator.op import TensorOp
 from fastestimator.util.util import to_list
 
-from fastestimator.op import TensorOp
 
+class Watch(TensorOp):
+    def __init__(self, inputs=None):
+        super().__init__(inputs=inputs, outputs=inputs, mode="train")
 
-class Sum(TensorOp):
     def forward(self, data, state):
-        """ This class is to be used to compute the sum of input data.
+        """ This class is used to watch variables on the gradient tape
 
         Args:
-            data: input data to be summed
-            state:  Information about the current execution context.
+            data: input data to watch
+            state: Information about the current execution context.
         Returns:
-            Summed input data
+            the input data
         """
-        return tf.reduce_sum(to_list(data), axis=0)
+        tape = state['tape']
+        for elem in to_list(data):
+            tape.watch(elem)
+        return data

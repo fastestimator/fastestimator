@@ -14,6 +14,7 @@
 # ==============================================================================
 from fastestimator.op.tensorop.average import Average
 from fastestimator.op.tensorop.binarize import Binarize
+from fastestimator.op.tensorop.constant import Constant
 from fastestimator.op.tensorop.minmax import Minmax
 from fastestimator.op.tensorop.onehot import Onehot
 from fastestimator.op.tensorop.reshape import Reshape
@@ -26,3 +27,5 @@ from fastestimator.op.tensorop.loss import Loss, BinaryCrossentropy, MeanSquared
 from fastestimator.op.tensorop.augmentation import Augmentation2D, AdversarialSample, MixUpBatch, CutMixBatch
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.op.tensorop.filter import TensorFilter, ScalarFilter
+from fastestimator.op.tensorop.gradients import Gradients
+from fastestimator.op.tensorop.watch import Watch
