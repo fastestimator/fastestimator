@@ -18,7 +18,7 @@ To summarize, We spent the extra time learning from official implementation so y
 
 ## What's included in each example
 
-Each example in contains two files:
+Each example contains two files:
 
 1. python file (.py): The FastEstimator source code needed to run the example.
 2. jupyter notebook (.ipynb): notebook that provides step-by-step instructions and explanations about the implementation.
