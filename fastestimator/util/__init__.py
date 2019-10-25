@@ -13,4 +13,3 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.util import util
-from fastestimator.util.record_writer import RecordWriter

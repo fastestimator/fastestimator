@@ -18,13 +18,13 @@ import tempfile
 import tensorflow as tf
 
 import fastestimator as fe
+from fastestimator import RecordWriter
 from fastestimator.architecture.unet import UNet
 from fastestimator.dataset import cub200
 from fastestimator.op import NumpyOp
 from fastestimator.op.numpyop import ImageReader, MatReader, Reshape, Resize
 from fastestimator.op.tensorop import BinaryCrossentropy, Minmax, ModelOp
 from fastestimator.trace import Dice, ModelSaver
-from fastestimator.util import RecordWriter
 
 
 class SelectDictKey(NumpyOp):

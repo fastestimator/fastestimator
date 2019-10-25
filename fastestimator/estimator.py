@@ -233,7 +233,7 @@ class Estimator:
                 state["epoch"] = epoch
                 state["num_examples"] = self.num_examples[mode].get_current_value(epoch)
                 state["warmup"] = True
-                ops, model_list, epoch_losses = self.network.load_epoch(epoch, mode)
+                ops = self.network.load_epoch(epoch, mode)
                 if fe.distribute_strategy:
                     fe.distribute_strategy.experimental_run_v2(self.network.run_step, args=(batch, ops, state))
                 else:
@@ -268,7 +268,7 @@ class Estimator:
             max_steps = self.validation_steps
         else:
             max_steps = num_examples // global_batch_size
-        ops, model_list, epoch_losses = self.network.load_epoch(self.train_epoch, mode)
+        ops = self.network.load_epoch(self.train_epoch, mode)
         self._run_traces_on_epoch_begin({
             "mode": mode, "epoch": self.train_epoch, "train_step": self.train_step, "num_examples": num_examples
         })

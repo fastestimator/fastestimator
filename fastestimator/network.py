@@ -115,7 +115,7 @@ class Network:
             if model.loss_name not in epoch_losses:
                 epoch_losses.append(model.loss_name)
         self.epoch_losses = epoch_losses
-        return ops, model_list, epoch_losses
+        return ops
 
     def run_step(self, batch, ops, state):
         """Function that calculates the loss and gradients for curent step in training. It also constructs the higher

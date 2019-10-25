@@ -14,6 +14,7 @@
 # ==============================================================================
 import tensorflow as tf
 
+from fastestimator.record_writer import RecordWriter
 from fastestimator.estimator import Estimator
 from fastestimator.network import Network, build
 from fastestimator.pipeline import Pipeline

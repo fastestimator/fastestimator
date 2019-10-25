@@ -12,7 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.op import NumpyOp, TensorOp, get_inputs_by_op, get_inputs_by_key, get_op_from_mode,\
-    write_outputs_by_key
-from fastestimator.op.util import verify_ops
-from fastestimator.op import numpyop, tensorop
+import tensorflow as tf
+
+from fastestimator.op import TensorOp
+
+
+class Sum(TensorOp):
+    def forward(self, data, state):
+        """ This class is to be used to compute the sum of input data.
+
+        Args:
+            data: input data to be summed
+            state:  Information about the current execution context.
+        Returns:
+            Summed input data
+        """
+        iterdata = data if isinstance(data, list) else list(data) if isinstance(data, tuple) else [data]
+        return tf.reduce_sum(iterdata, axis=0)
