@@ -16,18 +16,19 @@ FastEstimator is a high-level deep learning API. With the help of FastEstimator,
 ## Installation
 Please choose one:
 * I have no idea what FastEstimator is about:
-
-    `pip install fastestimator==1.0b0`
-
+```
+pip install fastestimator==1.0b0
+```
 * I want to keep up to date with the latest:
-
-    `pip install fastestimator-nightly`
-
+```
+pip install fastestimator-nightly
+```
 * I'm here to play hardcore mode:
 
-    `git clone https://github.com/fastestimator/fastestimator.git`
-
-    `pip install -e fastestimator`
+```
+git clone https://github.com/fastestimator/fastestimator.git
+pip install -e fastestimator
+```
 
 
 ## Docker Hub
