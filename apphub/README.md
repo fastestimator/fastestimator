@@ -14,7 +14,7 @@ If you ever spent time reading AI research papers, you will often find yourself 
 
 Similarly, people may use 5000+ lines of code or 500+ lines of code to implement the same idea using different AI frameworks. In FastEstimator, we strive to make things simpler and more intuitive while preserving the flexibility. As a result, many state-of-the-art AI implementations can be simplified greatly such that the code directly reflects the ideas. As an example, the [official implementation](https://github.com/tkarras/progressive_growing_of_gans) of [PGGAN](https://arxiv.org/abs/1710.10196) include 5000+ lines of code whereas [our implementation](https://github.com/fastestimator/fastestimator/tree/master/apphub/image_generation/pggan_nihchestxray) only uses 500+ lines.
 
-To summarize, We spent the extra time learning from official implementation so you can save time by learning from us!
+To summarize, we spent time learning from the official implementation, so you can save time by learning from us!
 
 ## What's included in each example
 
