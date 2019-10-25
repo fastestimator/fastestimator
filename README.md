@@ -45,11 +45,11 @@ $ python ./apphub/image_classification/lenet_mnist/lenet_mnist.py
 
 ## Tutorial
 
-We have [tutorial series](https://github.com/vbvg2008/fastestimator/tree/master/tutorial) that walk through everything you need to know about FastEstimator.
+We have [tutorial series](https://github.com/fastestimator/fastestimator/tree/master/tutorial) that walk through everything you need to know about FastEstimator.
 
 ## Example
 
-Check out [Application Hub](https://github.com/vbvg2008/fastestimator/tree/master/apphub) for end-to-end deep learning examples in FastEstimator.
+Check out [Application Hub](https://github.com/fastestimator/fastestimator/tree/master/apphub) for end-to-end deep learning examples in FastEstimator.
 
 ## Documentation
 For more info, check out our [FastEstimator documentation](https://fastestimator.org).
