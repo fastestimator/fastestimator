@@ -55,7 +55,7 @@ $ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 ### Image Classification
 * **DenseNet:** Image classifier with DenseNet121 on Cifar10 dataset. [[paper](https://arxiv.org/abs/1608.06993)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/densenet121_cifar10/densenet121_cifar10.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/densenet121_cifar10/densenet121_cifar10.ipynb)]
 
-* **Adversarial Attack:** Image classifier training to prevent resist adversarial attaks on Cifar10 dataset. [[paper](https://arxiv.org/abs/1412.6572)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/lenet_cifar10_adversarial/lenet_cifar10_adversarial.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/lenet_cifar10_adversarial/lenet_cifar10_adversarial.ipynb)]
+* **Adversarial Attack:** Image classifier training to resist adversarial attaks on Cifar10 dataset. [[paper](https://arxiv.org/abs/1412.6572)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/lenet_cifar10_adversarial/lenet_cifar10_adversarial.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/lenet_cifar10_adversarial/lenet_cifar10_adversarial.ipynb)]
 
 * **Mixup:** Image classifier training that uses mix up as data augmentation strategy to enhance robustness on Cifar10 dataset. [[paper](https://arxiv.org/abs/1710.09412)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/lenet_cifar10_mixup/lenet_cifar10_mixup.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/lenet_cifar10_mixup/lenet_cifar10_mixup.ipynb)]
 
@@ -70,7 +70,7 @@ $ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 
 * **PGGAN:** High-resolution image generation with progressive growing of GANs on NIH chest X-ray dataset. [[paper](https://arxiv.org/abs/1710.10196)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/pggan_nihchestxray/pggan_nihchestxray.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/pggan_nihchestxray/pggan_nihchestxray.ipynb)]
 
-### Image Segmentation
+### Semantic Segmentation
 * **UNet:** Lung segmentation with UNet using chest X-ray dataset. [[paper](https://arxiv.org/abs/1505.04597)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_segmentation/unet_montgomery/unet_montgomery.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_segmentation/unet_montgomery/unet_montgomery.ipynb)]
 
 * **UNet:** Image segmentation with UNET using CUB200 bird dataset. [[paper](https://arxiv.org/abs/1505.04597)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_segmentation/unet_cub200/unet_cub200.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_segmentation/unet_cub200/unet_cub200.ipynb)]
@@ -82,4 +82,4 @@ $ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 * **DNN:** Predicting house price with deep neural network. [[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/tabular/dnn_housing/dnn_housing.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/tabular/dnn_housing/dnn_housing.ipynb)]
 
 ## Contributions
-If you are looking for implementations that we haven't done yet and want to join our efforts of making state-of-the-art AI easier, please consider contribute to us. We would really appreciate it! :smiley:
+If you have implementations that we haven't done yet and want to join our efforts of making state-of-the-art AI easier, please consider contribute to us. We would really appreciate it! :smiley:
