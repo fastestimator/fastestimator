@@ -16,7 +16,6 @@
 import os
 import tarfile
 from concurrent.futures.process import ProcessPoolExecutor
-from operator import add
 from pathlib import Path
 
 import h5py
@@ -97,7 +96,7 @@ def _create_csv(data_folder, mode, csv_path):
     mat_data.close()
     print("Found {} examples for {}.".format(num_examples, mode))
 
-    df = pd.DataFrame(columns=['image', 'label', 'x1', 'y1', 'x2', 'y2'])
+    df = pd.DataFrame(columns=['image', 'label', 'x1', 'y1', 'width', 'height'])
     print("Retrieving bounding box for {} data. This will take several minutes ...".format(mode))
     futures = []
     with ProcessPoolExecutor(max_workers=os.cpu_count() or 1) as executor:
@@ -111,8 +110,8 @@ def _create_csv(data_folder, mode, csv_path):
             'label': bbox["label"],
             'x1': bbox["left"],
             'y1': bbox["top"],
-            'x2': list(map(add, bbox['left'], bbox['width'])),
-            'y2': list(map(add, bbox['top'], bbox['height']))
+            'width': bbox['width'],
+            'height': bbox['height']
         }
         df = df.append(row_dict, ignore_index=True)
 
