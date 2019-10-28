@@ -19,7 +19,7 @@ def get_version():
     now = datetime.datetime.now()
     version = version_re.search(init).group(1)
     if is_nightly:
-        return "{}-{}{}{}{}{}".format(version, now.year, now.month, now.day, now.hour, now.minute)
+        return "{}.dev{:04}{:02}{:02}{:02}{:02}".format(version, now.year, now.month, now.day, now.hour, now.minute)
     else:
         return version
 
