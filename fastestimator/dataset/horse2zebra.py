@@ -45,16 +45,25 @@ def load_data(path=None):
             `fastestimator_data` under user's home directory.
 
     Returns:
-        (tuple): tuple containing:
-            train_a_csv (str): Path to trainA csv file, containing the following column:
-                * imgA: image directory relative to the returned path.
-            train_b_csv (str): Path to trainB csv file, containing the following column:
-                * imgB: image directory relative to the returned path.
-            test_a_csv (str): Path to testA csv file, containing the following column:
-                * imgA: image directory relative to the returned path.
-            test_b_csv (str): Path to testB csv file, containing the following column:
-                * imgB: image directory relative to the returned path.
-            path (str): Path to data directory.
+        tuple: (train_a_csv, train_b_csv, test_a_csv, test_b_csv, path) tuple, where
+        
+        * **train_a_csv** (str) -- Path to trainA csv file, containing the following column:
+        
+            * imgA: Image directory relative to the returned path.
+            
+        * **train_b_csv** (str) -- Path to trainB csv file, containing the following column:
+        
+            * imgB: Image directory relative to the returned path.
+            
+        * **test_a_csv** (str) -- Path to testA csv file, containing the following column:
+        
+            * imgA: Image directory relative to the returned path.
+            
+        * **test_b_csv** (str) -- Path to testB csv file, containing the following column:
+        
+            * imgB: Image directory relative to the returned path.
+            
+        * **path** (str) -- Path to data directory.
 
     """
     home = str(Path.home())
