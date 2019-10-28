@@ -35,9 +35,10 @@ def load_data(path=None):
             `fastestimator_data` under user's home directory.
 
     Returns:
-        (tuple): tuple containing:
-            csv_path (str): Path to the summary csv file.
-            path (str): Path to data root directory.
+        csv_path (str): Path to the summary csv file, containing the following columns:
+            * image (str): image directory relative to the returned path
+            * annotation (str): mask directory relative to the returned path
+        path (str): Path to data root directory.
 
     """
     home = str(Path.home())

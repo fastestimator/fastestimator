@@ -25,9 +25,9 @@ def load_data(path=None):
             `fastestimator_data` under user's home directory.
 
     Returns:
-        (tuple): tuple containing:
-            csv_path (str): Path to the summary csv file.
-            path (str): Data folder path.
+        csv_path (str): Path to the summary csv file containing the following column:
+            * x (str): image directory relative to the returned path
+        path (str): Data folder path.
     """
     if path is None:
         path = os.path.join(str(Path.home()), 'fastestimator_data', 'NIH_Chestxray')

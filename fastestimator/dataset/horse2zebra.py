@@ -46,11 +46,15 @@ def load_data(path=None):
 
     Returns:
         (tuple): tuple containing:
-            train_a_csv (str): Path to trainA csv file.
-            train_b_csv (str): Path to trainB csv file.
-            test_a_csv (str): Path to testA csv file.
-            test_b_csv (str): Path to testB csv file.
-            path (str): Path to data root directory.
+            train_a_csv (str): Path to trainA csv file, containing the following column:
+                * imgA: image directory relative to the returned path.
+            train_b_csv (str): Path to trainB csv file, containing the following column:
+                * imgB: image directory relative to the returned path.
+            test_a_csv (str): Path to testA csv file, containing the following column:
+                * imgA: image directory relative to the returned path.
+            test_b_csv (str): Path to testB csv file, containing the following column:
+                * imgB: image directory relative to the returned path.
+            path (str): Path to data directory.
 
     """
     home = str(Path.home())

@@ -128,10 +128,15 @@ def load_data(path=None):
             `fastestimator_data` under user's home directory.
 
     Returns:
-        (tuple): tuple containing:
-            train_csv (str): Path to train csv file.
-            test_csv (str): Path to test csv file.
-            path (str): Path to data root directory.
+        train_csv (str): Path to train csv file, containing the following columns:
+            * image (str): image directory relative to the returned path
+            * label (list): categorical labels of each objects
+            * x1 (list): the top left x coordinate of object bounding boxes
+            * y1 (list): the top left y coordinate of object bounding boxes
+            * width (list): the width of the bounding boxes
+            * height (list): the height of the bounding boxes
+        test_csv (str): Path to test csv file, containing the same columns as train_csv.
+        path (str): Path to data directory.
 
     """
     home = str(Path.home())

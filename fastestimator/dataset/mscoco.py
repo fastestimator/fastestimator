@@ -52,7 +52,7 @@ def _generate_object_data(path, image_name, image_id, data_temp, coco_gt_instanc
         keep_data = True
         mask_file = os.path.join(mask_folder, image_name.replace("jpg", "png"))
         write_mask = not os.path.exists(mask_file)
-        data_temp["x1"], data_temp["y1"], data_temp["x2"], data_temp["y2"], data_temp["obj_label"] = [], [], [], [], []
+        data_temp["x1"], data_temp["y1"], data_temp["width"], data_temp["height"], data_temp["obj_label"] = [], [], [], [], []
         data_temp["num_obj"] = num_obj
         anns = coco_gt_instance.loadAnns(anns_ids)
         for idx, ann in enumerate(anns):
@@ -63,8 +63,8 @@ def _generate_object_data(path, image_name, image_id, data_temp, coco_gt_instanc
                     mask = np.clip(mask + (idx + 1) * coco_gt_instance.annToMask(ann=ann), None, idx + 1)
             data_temp["x1"].append(ann['bbox'][0])
             data_temp["y1"].append(ann['bbox'][1])
-            data_temp["x2"].append(ann['bbox'][0] + ann['bbox'][2])
-            data_temp["y2"].append(ann['bbox'][1] + ann['bbox'][3])
+            data_temp["width"].append(ann['bbox'][2])
+            data_temp["height"].append(ann['bbox'][3])
             data_temp["obj_label"].append(ann['category_id'])
         if write_mask:
             cv2.imwrite(mask_file, mask)
@@ -122,8 +122,8 @@ def _generate_csv(path, load_object, load_caption, csv_file, image_folder, mask_
             data["num_obj"], queue["num_obj"] = [], mp.Queue()
             data["x1"], queue["x1"] = [], mp.Queue()
             data["y1"], queue["y1"] = [], mp.Queue()
-            data["x2"], queue["x2"] = [], mp.Queue()
-            data["y2"], queue["y2"] = [], mp.Queue()
+            data["width"], queue["width"] = [], mp.Queue()
+            data["height"], queue["height"] = [], mp.Queue()
             data["obj_label"], queue["obj_label"] = [], mp.Queue()
             data["obj_mask"], queue["obj_mask"] = [], mp.Queue()
         if load_caption:
@@ -164,7 +164,7 @@ def _get_csv_name(base_name, load_object, load_caption, path):
 
 
 def load_data(path=None, load_object=True, load_caption=False):
-    """Download the COCO dataset to local storage, if not already downloaded. This will generate train and val 
+    """Download the COCO dataset to local storage, if not already downloaded. This will generate train and val
     csv files.
 
     Args:
@@ -179,8 +179,8 @@ def load_data(path=None, load_object=True, load_caption=False):
             * num_obj (int): number of objects within the image (available when object = True)
             * x1 (list): the top left x coordinate of object bounding boxes (available when object = True)
             * y1 (list): the top left y coordinate of object bounding boxes (available when object = True)
-            * x2 (list): the bottom right x coordinate of object bounding boxes (available when object = True)
-            * y2 (list): the bottom right y coordinate of object bounding boxes (available when object = True)
+            * width (list): the width of object bounding boxes (available when object = True)
+            * height (list): the height of object bounding boxes (available when object = True)
             * obj_label (list): categorical labels of each objects (available when object = True)
             * obj_mask (str): mask directory relative to the returned path, with pixel value being the object order
                              (available when object = True)

@@ -13,18 +13,19 @@
 # limitations under the License.
 # ==============================================================================
 """Download USPS Dataset."""
+import gzip
 import multiprocessing as mp
 import os
 from pathlib import Path
-import gzip
-import wget
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import tensorflow as tf
+import wget
 from PIL import Image
 
 from fastestimator.util.wget import bar_custom, callback_progress
+
 wget.callback_progress = callback_progress
 
 
@@ -87,10 +88,11 @@ def load_data(path=None):
             `fastestimator_data` under user's home directory.
 
     Returns:
-        (tuple): tuple containing:
-            train_csv (str): Path to train csv file.
-            eval_csv (str): Path to test csv file.
-            path (str): Path to data root directory.
+        train_csv (str): Path to train csv file, containing the following columns:
+            * x (str): image directory relative to the returned path
+            * y (int): label which indicates the number shown in image
+        eval_csv (str): Path to test csv file, containing the same columns as train_csv.
+        path (str): Path to data directory.
 
     """
     home = str(Path.home())
