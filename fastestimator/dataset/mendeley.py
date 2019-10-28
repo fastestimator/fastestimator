@@ -26,9 +26,9 @@ from glob import glob
 from pathlib import Path
 
 import pandas as pd
-from tqdm import tqdm
 
 import requests
+from tqdm import tqdm
 
 
 def _create_csv(img_path, parent_path, csv_path):
@@ -50,10 +50,16 @@ def load_data(path=None):
             `fastestimator_data` under user's home directory.
 
     Returns:
-        (tuple): tuple containing:
-            train_csv (str): Path to train csv file.
-            test_csv (str): Path to test csv file.
-            path (str): Path to data root directory.
+        tuple: (train_csv, test_csv, path) tuple, where
+        
+        * **train_csv** (str) -- Path to train csv file, containing the following columns:
+        
+            * image (str): Image directory relative to the returned path.
+            * label (int): Label which indicates the presence of pneumonia (1 for positive, 0 for negative).
+            
+        * **test_csv** (str) -- Path to test csv file, containing same columns as train_csv.
+        
+        * **path** (str) -- Path to data directory.
 
     """
     url = 'https://data.mendeley.com/datasets/rscbjbr9sj/2/files/41d542e7-7f91-47f6-9ff2-dd8e5a5a7861/' \
