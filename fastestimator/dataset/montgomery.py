@@ -35,11 +35,15 @@ def load_data(path=None):
             `fastestimator_data` under user's home directory.
 
     Returns:
-        csv_path (str): Path to the summary csv file, containing the following columns:
-            * image (str): image directory relative to the returned path.
-            * mask_left (str): left lung mask directory relative to the returned path.
-            * mask_right (str): right lung mask directory relative to the returned path.
-        path (str): Path to data directory.
+        tuple: (csv_path, path) tuple, where
+        
+        * **csv_path** (str) -- Path to the summary csv file, containing the following columns:
+        
+            * image (str): Image directory relative to the returned path.
+            * mask_left (str): Left lung mask directory relative to the returned path.
+            * mask_right (str): Right lung mask directory relative to the returned path.
+            
+        * **path** (str) -- Path to data directory.
 
     """
     home = str(Path.home())
