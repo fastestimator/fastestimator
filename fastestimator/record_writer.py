@@ -14,9 +14,9 @@
 # ==============================================================================
 """Utility for writing TFRecords."""
 import json
+import multiprocessing as mp
 import os
 import time
-from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 import pandas as pd
@@ -200,34 +200,42 @@ class RecordWriter:
     def _write_tfrecord_parallel(self, dictionary, mode):
         num_example_list = []
         feature_shape_list = []
+        processes = []
+        queue_example = mp.Queue()
+        queue_shape = mp.Queue()
         num_files_process = int(
             np.ceil(self.num_example_csv[mode] * self.mb_per_csv_example[mode] / self.max_record_size_mb /
                     self.num_process))
         num_example_process_remain = self.num_example_csv[mode] % self.num_process
-        futures = []
-        with ProcessPoolExecutor(max_workers=self.num_process) as executor:
-            serial_start = 0
-            file_idx_start = 0
-            for i in range(self.num_process):
-                if i < num_example_process_remain:
-                    num_example_process = self.num_example_csv[mode] // self.num_process + 1
-                else:
-                    num_example_process = self.num_example_csv[mode] // self.num_process
-                serial_end = serial_start + num_example_process
-                futures.append(
-                    executor.submit(self._write_tfrecord_serial,
-                                    dictionary,
-                                    serial_start,
-                                    serial_end,
-                                    num_files_process,
-                                    file_idx_start,
-                                    mode))
-                serial_start += num_example_process
-                file_idx_start += num_files_process
-        for future in futures:
-            result = future.result()
-            num_example_list.extend(result[0])
-            feature_shape_list.append(result[1])
+        serial_start = 0
+        file_idx_start = 0
+
+        for i in range(self.num_process):
+            if i < num_example_process_remain:
+                num_example_process = self.num_example_csv[mode] // self.num_process + 1
+            else:
+                num_example_process = self.num_example_csv[mode] // self.num_process
+            serial_end = serial_start + num_example_process
+            processes.append(
+                mp.Process(
+                    target=self._write_tfrecord_serial,
+                    args=(dictionary,
+                          serial_start,
+                          serial_end,
+                          num_files_process,
+                          file_idx_start,
+                          mode,
+                          queue_example,
+                          queue_shape)))
+            serial_start += num_example_process
+            file_idx_start += num_files_process
+        for p in processes:
+            p.start()
+        for _ in range(self.num_process):
+            num_example_list.extend(queue_example.get(block=True))
+            feature_shape_list.append(queue_shape.get(block=True))
+        for p in processes:
+            p.join()
         self._reconfirm_shape(feature_shape_list, mode)
         return num_example_list
 
@@ -239,7 +247,15 @@ class RecordWriter:
                     feature_shape[key] = [-1]
         self.feature_shape[mode] = feature_shape
 
-    def _write_tfrecord_serial(self, dictionary, serial_start, serial_end, num_files_process, file_idx_start, mode):
+    def _write_tfrecord_serial(self,
+                               dictionary,
+                               serial_start,
+                               serial_end,
+                               num_files_process,
+                               file_idx_start,
+                               mode,
+                               queue_example,
+                               queue_shape):
         num_example_list = []
         num_csv_example_per_file = (serial_end - serial_start) // num_files_process
         show_progress = serial_start == 0
@@ -261,7 +277,8 @@ class RecordWriter:
                                         mode))
             file_start += num_csv_example_per_file
             file_end += num_csv_example_per_file
-        return num_example_list, self.feature_shape[mode]
+        queue_example.put(num_example_list)
+        queue_shape.put(self.feature_shape[mode])
 
     def _write_single_file(self,
                            dictionary,
