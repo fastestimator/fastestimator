@@ -27,7 +27,6 @@ class UpdateOp(TensorOp):
         self.gradients = gradients
         super().__init__(inputs=self.gradients or model.loss_name, outputs=None, mode="train")
         self.model = model
-        self.warmed = False
 
     def forward(self, data, state):
         tape = state['tape']
@@ -40,8 +39,7 @@ class UpdateOp(TensorOp):
             with tape.stop_recording():
                 gradients = tape.gradient(loss, self.model.trainable_variables)
 
-        if state["warmup"] and not self.warmed:
-            self.warmed = True
+        if state["warmup"]:
             with tfops.init_scope():  # pylint: disable=not-context-manager
                 _ = self.model.optimizer.iterations
                 self.model.optimizer._create_hypers()  # pylint: disable=protected-access
