@@ -25,14 +25,15 @@ class ModelOp(TensorOp):
         mode : 'train' or 'eval'. Defaults to None.
         track_input : If 'true' it tracks the gradients with respect to inputs. Defaults to False.
     """
-    def __init__(self, model, inputs=None, outputs=None, mode=None, track_input=False):
+    def __init__(self, model, inputs=None, outputs=None, mode=None, trainable=True, track_input=False):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         assert hasattr(model, "fe_compiled"), "must use fe.build to compile the model before use"
         self.model = model
+        self.trainable = trainable
         self.track_input = track_input
 
     def forward(self, data, state):
-        training = state['mode'] == "train"
+        training = state['mode'] == "train" and self.trainable
         if self.track_input and training:
             tape = state['tape']
             tape.watch(data)
