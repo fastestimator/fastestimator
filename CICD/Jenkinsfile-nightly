@@ -39,9 +39,9 @@ pipeline{
                 '''
                 withDockerRegistry(credentialsId: 'docker_hub_fe', url:'') {
                     sh ''' 
-                        docker build -t fastestimator/fastestimator:nightly-cpu - < fastestimator-misc/docker/nightly/Dockerfile.cpu
+                        docker build -t fastestimator/fastestimator:nightly-cpu --no-cache - < fastestimator-misc/docker/nightly/Dockerfile.cpu
                         docker push fastestimator/fastestimator:nightly-cpu
-                        docker build -t fastestimator/fastestimator:nightly-gpu - < fastestimator-misc/docker/nightly/Dockerfile.gpu
+                        docker build -t fastestimator/fastestimator:nightly-gpu --no-cache - < fastestimator-misc/docker/nightly/Dockerfile.gpu
                         docker push fastestimator/fastestimator:nightly-gpu
                     '''
                 }
