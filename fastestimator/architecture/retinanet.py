@@ -12,13 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import pdb
-
 import numpy as np
-import tensorflow as tf
-from tensorflow.python.keras import layers, models
 
+import tensorflow as tf
 from fastestimator.util.util import Timer
+from tensorflow.python.keras import layers, models
 
 
 def classification_sub_net(num_classes, num_anchor=9):
@@ -233,29 +231,26 @@ def get_target(anchorbox, label, x1, y1, width, height):
         array: classification groundtruths for each anchor box.
         array: localization groundtruths for each anchor box.
     """
-    num_anchor = anchorbox.shape[0]
-    # target_cls = np.zeros(shape=(num_anchor), dtype=np.int64)
-    target_loc = np.zeros(shape=(num_anchor, 4), dtype=np.float32)
-    object_boxes = np.float32(np.array([x1, y1, width, height]).T)
-    pdb.set_trace()
+    object_boxes = np.array([x1, y1, width, height]).T  # num_obj x 4
     ious = get_iou(object_boxes, anchorbox)  # num_obj x num_anchor
-    target_cls = np.argmax(ious, axis=0)
-    
-
-    # for _label, _x1, _y1, _width, _height in zip(label, x1, y1, width, height):
-    #     with Timer('looping anchor'):
-    #         ious = get_iou((_x1, _y1, _width, _height), anchorbox)
-    #         if iou > best_iou:
-    #             best_iou = iou
-    #             best_anchor_idx = anchor_idx
-    #         if iou > 0.5:
-    #             target_cls[anchor_idx] = _label
-    #             target_loc[anchor_idx] = get_loc_offset((_x1, _y1, _width, _height), anchorbox[anchor_idx])
-    #         elif iou > 0.4:
-    #             target_cls[anchor_idx] = -2  # ignore this example
-    #         else:
-    #             target_cls[anchor_idx] = -1  # background class
-    return target_cls, target_loc
+    #now for each object in image, assign the anchor box with highest iou to them
+    anchorbox_best_iou_idx = np.argmax(ious, axis=1)
+    num_obj = ious.shape[0]
+    for row in range(num_obj):
+        ious[row, anchorbox_best_iou_idx[row]] = 0.99
+    #next, begin the anchor box assignment based on iou
+    anchor_to_obj_idx = np.argmax(ious, axis=0)  # num_anchor x 1
+    anchor_best_iou = np.max(ious, axis=0)  # num_anchor x 1
+    cls_gt = np.int32(label[anchor_to_obj_idx])  # num_anchor x 1
+    cls_gt[np.where(anchor_best_iou <= 0.4)] = -1  #background class
+    cls_gt[np.where(np.logical_and(anchor_best_iou > 0.4, anchor_best_iou <= 0.5))] = -2  # ignore these examples
+    #finally, get the selected localization coordinates
+    anchor_has_object = np.where(cls_gt >= 0)
+    box_anchor_obj = anchorbox[anchor_has_object]
+    gt_object_idx = anchor_to_obj_idx[anchor_has_object]
+    box_gt_obj = object_boxes[gt_object_idx]
+    x1_gt, y1_gt, w_gt, h_gt = get_loc_offset(box_gt_obj, box_anchor_obj)
+    return cls_gt, x1_gt, y1_gt, w_gt, h_gt
 
 
 def get_loc_offset(box_gt, box_anchor):
@@ -271,12 +266,12 @@ def get_loc_offset(box_gt, box_anchor):
         float: offset between width of the two boxes.
         float: offset between height of the two boxes.
     """
-    gt_x1, gt_y1, gt_width, gt_height = box_gt
-    ac_x1, ac_y1, ac_width, ac_height = box_anchor
+    gt_x1, gt_y1, gt_width, gt_height = np.split(box_gt, 4, axis=1)
+    ac_x1, ac_y1, ac_width, ac_height = np.split(box_anchor, 4, axis=1)
     dx1 = (gt_x1 - ac_x1) / ac_width
     dy1 = (gt_y1 - ac_y1) / ac_height
-    dwidth = np.log(gt_width / ac_width)
-    dheight = np.log(gt_height / ac_height)
+    dwidth = np.log((gt_width + 1e-6) / (ac_width + 1e-6))
+    dheight = np.log((gt_height + 1e-6) / (ac_height + 1e-6))
     return dx1, dy1, dwidth, dheight
 
 
