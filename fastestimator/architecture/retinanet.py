@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import numpy as np
+import pdb
 
+import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import layers, models
+
+from fastestimator.util.util import Timer
 
 
 def classification_sub_net(num_classes, num_anchor=9):
@@ -231,25 +234,27 @@ def get_target(anchorbox, label, x1, y1, width, height):
         array: localization groundtruths for each anchor box.
     """
     num_anchor = anchorbox.shape[0]
-    target_cls = np.zeros(shape=(num_anchor), dtype=np.int64)
+    # target_cls = np.zeros(shape=(num_anchor), dtype=np.int64)
     target_loc = np.zeros(shape=(num_anchor, 4), dtype=np.float32)
-    for _label, _x1, _y1, _width, _height in zip(label, x1, y1, width, height):
-        best_iou = 0.0
-        for anchor_idx in range(num_anchor):
-            iou = get_iou((_x1, _y1, _width, _height), anchorbox[anchor_idx])
-            if iou > best_iou:
-                best_iou = iou
-                best_anchor_idx = anchor_idx
-            if iou > 0.5:
-                target_cls[anchor_idx] = _label
-                target_loc[anchor_idx] = get_loc_offset((_x1, _y1, _width, _height), anchorbox[anchor_idx])
-            elif iou > 0.4:
-                target_cls[anchor_idx] = -2  # ignore this example
-            else:
-                target_cls[anchor_idx] = -1  # background class
-        if best_iou > 0 and best_iou < 0.5:  # if gt has no >0.5 iou with any anchor
-            target_cls[best_anchor_idx] = _label
-            target_loc[best_anchor_idx] = get_loc_offset((_x1, _y1, _width, _height), anchorbox[best_anchor_idx])
+    object_boxes = np.float32(np.array([x1, y1, width, height]).T)
+    pdb.set_trace()
+    ious = get_iou(object_boxes, anchorbox)  # num_obj x num_anchor
+    target_cls = np.argmax(ious, axis=0)
+    
+
+    # for _label, _x1, _y1, _width, _height in zip(label, x1, y1, width, height):
+    #     with Timer('looping anchor'):
+    #         ious = get_iou((_x1, _y1, _width, _height), anchorbox)
+    #         if iou > best_iou:
+    #             best_iou = iou
+    #             best_anchor_idx = anchor_idx
+    #         if iou > 0.5:
+    #             target_cls[anchor_idx] = _label
+    #             target_loc[anchor_idx] = get_loc_offset((_x1, _y1, _width, _height), anchorbox[anchor_idx])
+    #         elif iou > 0.4:
+    #             target_cls[anchor_idx] = -2  # ignore this example
+    #         else:
+    #             target_cls[anchor_idx] = -1  # background class
     return target_cls, target_loc
 
 
@@ -266,8 +271,8 @@ def get_loc_offset(box_gt, box_anchor):
         float: offset between width of the two boxes.
         float: offset between height of the two boxes.
     """
-    gt_x1, gt_y1, gt_width, gt_height = tuple(box_gt)
-    ac_x1, ac_y1, ac_width, ac_height = tuple(box_anchor)
+    gt_x1, gt_y1, gt_width, gt_height = box_gt
+    ac_x1, ac_y1, ac_width, ac_height = box_anchor
     dx1 = (gt_x1 - ac_x1) / ac_width
     dy1 = (gt_y1 - ac_y1) / ac_height
     dwidth = np.log(gt_width / ac_width)
@@ -275,31 +280,28 @@ def get_loc_offset(box_gt, box_anchor):
     return dx1, dy1, dwidth, dheight
 
 
-def get_iou(box1, box2):
-    """Computes the value of intersection over union (IoU) of two boxes.
+def get_iou(boxes1, boxes2):
+    """Computes the value of intersection over union (IoU) of two array of boxes.
 
     Args:
-        box1 (array): first box
-        box2 (array): second box
+        box1 (array): first boxes in N x 4
+        box2 (array): second box in M x 4
 
     Returns:
-        float: IoU value
+        float: IoU value in N x M
     """
-    b1_x1, b1_y1, b1_width, b1_height = tuple(box1)
-    b2_x1, b2_y1, b2_width, b2_height = tuple(box2)
-    b1_x2 = b1_x1 + b1_width
-    b1_y2 = b1_y1 + b1_height
-    b2_x2 = b2_x1 + b2_width
-    b2_y2 = b2_y1 + b2_height
-    xA = max(b1_x1, b2_x1)
-    yA = max(b1_y1, b2_y1)
-    xB = min(b1_x2, b2_x2)
-    yB = min(b1_y2, b2_y2)
-    interArea = max(0, xB - xA) * max(0, yB - yA)
-    if interArea == 0:
-        iou = 0
-    else:
-        box1Area = b1_width * b1_height
-        box2Area = b2_width * b2_height
-        iou = interArea / (box1Area + box2Area - interArea)
+    x11, y11, w1, h1 = np.split(boxes1, 4, axis=1)
+    x21, y21, w2, h2 = np.split(boxes2, 4, axis=1)
+    x12 = x11 + w1
+    y12 = y11 + h1
+    x22 = x21 + w2
+    y22 = y21 + h2
+    xmin = np.maximum(x11, np.transpose(x21))
+    ymin = np.maximum(y11, np.transpose(y21))
+    xmax = np.minimum(x12, np.transpose(x22))
+    ymax = np.minimum(y12, np.transpose(y22))
+    inter_area = np.maximum((xmax - xmin + 1), 0) * np.maximum((ymax - ymin + 1), 0)
+    area1 = (w1 + 1) * (h1 + 1)
+    area2 = (w2 + 1) * (h2 + 1)
+    iou = inter_area / (area1 + area2.T - inter_area)
     return iou
