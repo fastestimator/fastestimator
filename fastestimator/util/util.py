@@ -23,11 +23,12 @@ from collections import defaultdict
 from contextlib import ContextDecorator
 from itertools import chain
 
-import numpy as np
 import PIL
+import numpy as np
 # noinspection PyPackageRequirements
 import tensorflow as tf
 from tensorflow.python.client import device_lib
+from tensorflow.python.distribute.values import DistributedValues
 
 
 def load_image(file_path, strip_alpha=False, channels=3):
@@ -359,15 +360,22 @@ def per_replica_to_global(data):
     Returns:
         obj: Combined data from all replicas.
     """
-
-    new_data = {}
-    for key, value in data.items():
-        if isinstance(value.values[0], tf.Tensor):
-            if value.values[0].shape.rank == 0:
-                new_data[key] = tf.stack(value.values)
-            else:
-                new_data[key] = tf.concat(value.values, axis=0)
-    return new_data
+    if isinstance(data, DistributedValues):
+        if data.values[0].shape.rank == 0:
+            return tf.stack(data.values)
+        else:
+            return tf.concat(data.values, axis=0)
+    if isinstance(data, dict):
+        result = {}
+        for key, val in data.items():
+            result[key] = per_replica_to_global(val)
+        return result
+    if isinstance(data, list):
+        return [per_replica_to_global(val) for val in data]
+    if isinstance(data, tuple):
+        return tuple([per_replica_to_global(val) for val in data])
+    if isinstance(data, set):
+        return set([per_replica_to_global(val) for val in data])
 
 
 class KeyDefaultDict(defaultdict):
