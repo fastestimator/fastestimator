@@ -1,5 +1,5 @@
 pipeline{
-    agent any
+    agent { label 'jenkinsnightly'  }
     stages {
         stage('Build') {
             steps {
