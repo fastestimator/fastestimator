@@ -19,4 +19,5 @@ from fastestimator.op.numpyop.reshape import Reshape
 from fastestimator.op.numpyop.resize import Resize
 from fastestimator.op.numpyop.resize_image_bbox import ResizeImageAndBbox
 from fastestimator.op.numpyop.scale import Scale
-from fastestimator.op.numpyop.z_score import Zscore
+from fastestimator.op.numpyop.type_converter import TypeConverter
+from fastestimator.op.numpyop.zscore import ZScore
