@@ -12,7 +12,7 @@ pipeline{
                     }
                 }
                 stage('Build-GPU'){
-                    agents {label 'jenkinsnightly_gpu'}
+                    agent {label 'jenkinsnightly_gpu'}
                     steps{
                         sh '''
                         echo "hello i am GPU"
