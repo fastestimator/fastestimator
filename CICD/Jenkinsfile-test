@@ -9,19 +9,30 @@ pipeline{
                         stage('Build-CPU'){
                             steps{
                                 sh '''
-                                echo "building CPU"
+                                    cp -r ./tutorial/* ./
+                                    chmod 775 -R .
+                                    JENKINS_DIR=$WORKSPACE/..
+                                    PATH=$JENKINS_DIR/venv/bin:/usr/local/bin:$PATH
+                                    echo $WORKSPACE
+                                    if [ ! -d "$JENKINS_DIR/venv"  ]; then
+                                        virtualenv -p python3.6 $JENKINS_DIR/venv
+                                    fi
+                                    . $JENKINS_DIR/venv/bin/activate
+
+                                    pip3 install pytest numpy nibabel pydicom tensorflow-cpu==2.0.0 ipython ipykernel
+                                    pip3 install -e .
                                 '''
                             }
                         }
                         stage('Test-CPU'){
                             steps{
-                                sh '''
-                                echo "testing CPU"
+                               sh '''
+                                    . /var/lib/jenkins/workspace/venv/bin/activate
+                                    ./test/test_apphub.sh
                                 '''
                             }                           
                         }
                     }
-
                 }
 
                 stage('GPU'){
@@ -30,15 +41,26 @@ pipeline{
                         stage('Build-GPU'){
                             steps{
                                 sh '''
-                                echo "building GPU"
+                                    cp -r ./tutorial/* ./
+                                    chmod 775 -R .
+                                    JENKINS_DIR=$WORKSPACE/..
+                                    PATH=$JENKINS_DIR/venv/bin:/usr/local/bin:$PATH
+                                    echo $WORKSPACE
+                                    if [ ! -d "$JENKINS_DIR/venv"  ]; then
+                                        virtualenv -p python3.6 $JENKINS_DIR/venv
+                                    fi
+                                    . $JENKINS_DIR/venv/bin/activate
+
+                                    pip3 install pytest numpy nibabel pydicom tensorflow-gpu==2.0.0 ipython ipykernel
+                                    pip3 install -e .
                                 '''
                             }
                         }
                         stage('Test-GPU'){
                             steps{
                                 sh '''
-                                echo "testing GPU"
-                                exit 1
+                                    . /var/lib/jenkins/workspace/venv/bin/activate
+                                    ./test/test_apphub.sh
                                 '''
                             }                           
                         }
@@ -48,12 +70,14 @@ pipeline{
         }
 
         stage('Deply-pypi'){
+            agent {label 'jenkinsnightly_gpu'}
             steps{
                 echo "Deploy-pypi"
             }
         }
 
         stage('Deploy-docker'){
+            agent {label 'jenkinsnightly_gpu'}
             steps{
                 echo "Deploy-docker"
             }
