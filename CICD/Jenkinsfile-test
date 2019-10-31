@@ -1,0 +1,25 @@
+pipeline{
+    agent any
+    stages {
+        stage('Build'){
+            parallel{
+                stage('Build-CPU'){
+                    agent { label 'jenkinsnightly_cpu'}
+                    steps{
+                        sh '''
+                        echo "hello i am CPU"
+                        '''
+                    }
+                }
+                stage('Build-GPU'){
+                    agents {label 'jenkinsnightly_gpu'}
+                    steps{
+                        sh '''
+                        echo "hello i am GPU"
+                        '''
+                    }
+                }
+            }
+        }
+    }
+}
