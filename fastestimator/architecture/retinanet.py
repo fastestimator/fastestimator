@@ -13,9 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import numpy as np
-
 import tensorflow as tf
-from fastestimator.util.util import Timer
 from tensorflow.python.keras import layers, models
 
 
@@ -270,8 +268,8 @@ def get_loc_offset(box_gt, box_anchor):
     ac_x1, ac_y1, ac_width, ac_height = np.split(box_anchor, 4, axis=1)
     dx1 = (gt_x1 - ac_x1) / ac_width
     dy1 = (gt_y1 - ac_y1) / ac_height
-    dwidth = np.log((gt_width + 1e-6) / (ac_width + 1e-6))
-    dheight = np.log((gt_height + 1e-6) / (ac_height + 1e-6))
+    dwidth = np.log(gt_width / ac_width)
+    dheight = np.log(gt_height / ac_height)
     return dx1, dy1, dwidth, dheight
 
 
