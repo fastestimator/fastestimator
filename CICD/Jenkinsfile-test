@@ -38,11 +38,24 @@ pipeline{
                             steps{
                                 sh '''
                                 echo "testing GPU"
+                                exit 1
                                 '''
                             }                           
                         }
                     }
                 }
+            }
+        }
+
+        stage('Deply-pypi'){
+            steps{
+                echo "Deploy-pypi"
+            }
+        }
+
+        stage('Deploy-docker'){
+            steps{
+                echo "Deploy-docker"
             }
         }
     }
