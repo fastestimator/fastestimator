@@ -28,7 +28,7 @@ import PIL
 # noinspection PyPackageRequirements
 import tensorflow as tf
 from tensorflow.python.client import device_lib
-from tensorflow.python.distribute.values import PerReplica
+from tensorflow.python.distribute.values import DistributedValues
 
 
 def load_image(file_path, strip_alpha=False, channels=3):
@@ -360,7 +360,7 @@ def per_replica_to_global(data):
     Returns:
         obj: Combined data from all replicas.
     """
-    if isinstance(data, PerReplica):
+    if isinstance(data, DistributedValues):
         if data.values[0].shape.rank == 0:
             return tf.stack(data.values)
         else:
