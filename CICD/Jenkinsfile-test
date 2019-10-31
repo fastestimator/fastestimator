@@ -1,22 +1,46 @@
 pipeline{
     agent any
     stages {
-        stage('Build'){
+        stage('Build-and-Test'){
             parallel{
-                stage('Build-CPU'){
-                    agent { label 'jenkinsnightly_cpu'}
-                    steps{
-                        sh '''
-                        echo "hello i am CPU"
-                        '''
+                stage('CPU'){
+                    agent {label 'jenkinsnightly_cpu'}
+                    stages{
+                        stage('Build-CPU'){
+                            steps{
+                                sh '''
+                                echo "building CPU"
+                                '''
+                            }
+                        }
+                        stage('Test-CPU'){
+                            steps{
+                                sh '''
+                                echo "testing CPU"
+                                '''
+                            }                           
+                        }
                     }
+
                 }
-                stage('Build-GPU'){
+
+                stage('GPU'){
                     agent {label 'jenkinsnightly_gpu'}
-                    steps{
-                        sh '''    
-                        echo "hello i am GPU"
-                        '''
+                    stages{
+                        stage('Build-GPU'){
+                            steps{
+                                sh '''
+                                echo "building GPU"
+                                '''
+                            }
+                        }
+                        stage('Test-GPU'){
+                            steps{
+                                sh '''
+                                echo "testing GPU"
+                                '''
+                            }                           
+                        }
                     }
                 }
             }
