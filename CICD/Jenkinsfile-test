@@ -3,18 +3,10 @@ pipeline{
     stages {
         stage('Build'){
             parallel{
-                stage('Build-CPU'){
-                    agent { label 'jenkinsnightly_cpu'}
-                    steps{
-                        sh '''
-                        echo "hello i am CPU"
-                        '''
-                    }
-                }
                 stage('Build-GPU'){
                     agent {label 'jenkinsnightly_gpu'}
                     steps{
-                        sh '''
+                        sh ''' 
                         echo "hello i am GPU"
                         '''
                     }
