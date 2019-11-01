@@ -1,0 +1,19 @@
+pipeline{
+    agent any
+    stage('Deply-pypi'){
+        steps{
+            withCredentials([string(credentialsId: 'pypi_password', variable: 'PYPI_PWD')]) {
+                sh '''
+                    echo hello
+                    echo ${PYPI_PWD}
+                    // . $WORKSPACE/../venv/bin/activate
+                    // rm -rf dist/*
+                    // FASTESTIMATOR_IS_NIGHTLY=1 python setup.py sdist bdist_wheel 
+                    // twine upload dist/* -u fastestimatordev -p PYPI_PWD
+                    
+                '''                   
+            }
+        }
+    }
+}        
+    
