@@ -17,7 +17,7 @@ import numpy as np
 from fastestimator.op import NumpyOp
 
 
-class ZScore(NumpyOp):
+class Zscore(NumpyOp):
     """Standardize data using zscore method
     """
     def __init__(self, inputs=None, outputs=None, mode=None, epsilon=1e-7):
