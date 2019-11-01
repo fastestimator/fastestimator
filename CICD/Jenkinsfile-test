@@ -52,7 +52,7 @@ pipeline{
                                     fi
                                     . $JENKINS_DIR/venv/bin/activate
 
-                                    pip3 install pytest numpy nibabel pydicom tensorflow-gpu==2.0.0 ipython ipykernel
+                                    pip3 install pytest numpy nibabel pydicom tensorflow-gpu==2.0.0 ipython ipykernel twine
                                     pip3 install -e .
                                 '''
                             }
