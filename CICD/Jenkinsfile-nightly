@@ -62,7 +62,7 @@ pipeline{
                                 sh '''
                                     echo $WORKSPACE
                                     . $WORKSPACE/../venv/bin/activate
-                                    ./test/test_apphub.sh
+                                    ./test/test_apphub.sh 
                                 '''
                             }                           
                         }
@@ -74,7 +74,7 @@ pipeline{
         stage('Deply-pypi'){
             agent {label 'jenkinsnightly_gpu'}
             steps{
-                withCredentials([string(credentialsId: 'pypi_password', variable: 'PYPI_PWD')]) {
+                withCredentials([string(credentialsId: 'pypi_password_yunchan', variable: 'PYPI_PWD')]) {
                     
                     sh '''
                        echo hello
@@ -82,7 +82,7 @@ pipeline{
                         . $WORKSPACE/../venv/bin/activate
                         rm -rf dist/*
                         FASTESTIMATOR_IS_NIGHTLY=1 python setup.py sdist bdist_wheel 
-                        twine upload dist/* -u fastestimatordev -p ${PYPI_PWD}
+                        twine upload dist/* -u geez0219 -p ${PYPI_PWD}  --repository-url https://test.pypi.org/legacy/
                        
                     '''                   
                 }
@@ -96,12 +96,12 @@ pipeline{
                     rm -rf ./fastestimator-misc
                     git clone https://github.com/fastestimator-util/fastestimator-misc.git fastestimator-misc
                 '''
-                withDockerRegistry(credentialsId: 'docker-hub-credentials', url:'') {
+                withDockerRegistry(credentialsId: 'docker_hub_yunchan', url:'') {
                     sh ''' 
-                        docker build -t fastestimator/fastestimator:nightly-cpu --no-cache - < fastestimator-misc/docker/nightly/Dockerfile.cpu
-                        docker push fastestimator/fastestimator:nightly-cpu
-                        docker build -t fastestimator/fastestimator:nightly-gpu --no-cache - < fastestimator-misc/docker/nightly/Dockerfile.gpu
-                        docker push fastestimator/fastestimator:nightly-gpu
+                        docker build -t geez0219/fastestimator:nightly-cpu --no-cache - < fastestimator-misc/docker/nightly/Dockerfile.cpu
+                        docker push geez0219/fastestimator:nightly-cpu
+                        docker build -t geez0219/fastestimator:nightly-gpu --no-cache - < fastestimator-misc/docker/nightly/Dockerfile.gpu
+                        docker push geez0219/fastestimator:nightly-gpu
                     '''
                 }
             }
