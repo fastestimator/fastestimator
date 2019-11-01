@@ -74,7 +74,14 @@ pipeline{
         stage('Deply-pypi'){
             agent {label 'jenkinsnightly_gpu'}
             steps{
-                echo "Deploy-pypi"
+                withCredentials([string(credentialsId: 'pypi_password', variable: 'PYPI_PWD')]) {
+                    sh '''
+                    . $WORKSPACE/../venv/bin/activate
+                    rm -rf dist/*
+                    FASTESTIMATOR_IS_NIGHTLY=1 python setup.py sdist bdist_wheel 
+                    twine upload dist/* -u fastestimatordev -p PYPI_PWD
+                    '''                   
+                }
             }
         }
 
@@ -85,7 +92,7 @@ pipeline{
                     rm -rf ./fastestimator-misc
                     git clone https://github.com/fastestimator-util/fastestimator-misc.git fastestimator-misc
                 '''
-                withDockerRegistry(credentialsId: 'docker_hub_fe', url:'') {
+                withDockerRegistry(credentialsId: 'docker-hub-credentials', url:'') {
                     sh ''' 
                         docker build -t fastestimator/fastestimator:nightly-cpu --no-cache - < fastestimator-misc/docker/nightly/Dockerfile.cpu
                         docker push fastestimator/fastestimator:nightly-cpu
