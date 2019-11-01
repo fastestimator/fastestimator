@@ -72,7 +72,6 @@ pipeline{
         // }
 
         stage('Deply-pypi'){
-            agent {label 'jenkinsnightly_gpu'}
             steps{
                 withCredentials([string(credentialsId: 'pypi_password', variable: 'PYPI_PWD')]) {
                     sh '''
