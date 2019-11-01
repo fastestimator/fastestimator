@@ -127,6 +127,33 @@ def convert_tf_dtype(datatype):
     return datatype_map[datatype]
 
 
+def convert_np_dtype(datatype):
+    """Return the numpy datatype from string.
+
+    Args:
+        datatype: String of datatype
+
+    Returns:
+        numpy data type
+    """
+    datatype_map = {
+        "bool": np.bool,
+        "int8": np.int8,
+        "int16": np.int16,
+        "int32": np.int32,
+        "int64": np.int64,
+        "uint8": np.uint8,
+        "uint16": np.uint16,
+        "uint32": np.uint32,
+        "uint64": np.uint64,
+        "float16": np.float16,
+        "float32": np.float32,
+        "float64": np.float64,
+        "string": np.str
+    }
+    return datatype_map[datatype]
+
+
 def strip_suffix(target, suffix):
     """Remove the given suffix from the target if it is present there
 

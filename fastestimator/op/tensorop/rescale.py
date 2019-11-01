@@ -12,24 +12,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import numpy as np
+import tensorflow as tf
 
-from fastestimator.op import NumpyOp
-from fastestimator.util.util import convert_np_dtype, to_list
+from fastestimator.op import TensorOp
 
 
-class TypeConverter(NumpyOp):
-    """convert features to different data types
+class Rescale(TensorOp):
+    """Rescaling data according to
 
     Args:
-        target_type (str): the target data type, the following types are available:
+        inputs: Name of the key in the dataset that is to be filtered.
+        outputs: Name of the key to be created/used in the dataset to store the results.
+        mode: mode that the filter acts on.
     """
-    def __init__(self, target_type, inputs=None, outputs=None, mode=None):
+    def __init__(self, inputs=None, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        self.convert_fn = convert_np_dtype(target_type)
 
     def forward(self, data, state):
-        data = to_list(data)
-        for idx, elem in enumerate(data):
-            data[idx] = self.convert_fn(elem)
+        """Scales the data tensor.
+
+        Args:
+            data: Data to be scaled.
+            state: Information about the current execution context.
+
+        Returns:
+            Scaled data tensor
+        """
+        data = tf.cast(data, tf.float32)
+        data /= 127.5
+        data -= 1
         return data

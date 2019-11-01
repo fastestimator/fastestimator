@@ -380,7 +380,6 @@ class Pipeline:
             data.append(next(ds_iter))
         if self.global_batch_multiplier > 1:
             data = [per_replica_to_global(item) for item in data]
-            
         if not reuse:
             self._reset()
         return data

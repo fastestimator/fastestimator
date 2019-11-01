@@ -1,7 +1,7 @@
 #!/bin/bash
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 path_apphub=${DIR}'/../../apphub/'
-path_image_styletransfer=${path_apphub}'image_styletransfer/'
+path_style_transfer=${path_apphub}'style_transfer/'
 path_temp=$(dirname $(mktemp -u))
 
 #training parameters to test the models
@@ -11,7 +11,7 @@ FILES=$(find ${path_apphub} -type f -name '*.py')
 cnt=0
 
 #Fst COCO
-filepath=${path_image_styletransfer}'fst_coco/'
+filepath=${path_style_transfer}'fst_coco/'
 filename='fst_coco.py'
 
 if fastestimator train ${filepath}${filename} --steps_per_epoch 10; then

@@ -14,7 +14,7 @@
 # ==============================================================================
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.keras import layers, models
+from tensorflow.python.keras import layers, models, regularizers
 
 
 def classification_sub_net(num_classes, num_anchor=9):
@@ -34,6 +34,7 @@ def classification_sub_net(num_classes, num_anchor=9):
                       strides=1,
                       padding='same',
                       activation='relu',
+                      kernel_regularizer=regularizers.l2(0.0001),
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(
         layers.Conv2D(256,
@@ -41,6 +42,7 @@ def classification_sub_net(num_classes, num_anchor=9):
                       strides=1,
                       padding='same',
                       activation='relu',
+                      kernel_regularizer=regularizers.l2(0.0001),
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(
         layers.Conv2D(256,
@@ -48,6 +50,7 @@ def classification_sub_net(num_classes, num_anchor=9):
                       strides=1,
                       padding='same',
                       activation='relu',
+                      kernel_regularizer=regularizers.l2(0.0001),
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(
         layers.Conv2D(256,
@@ -55,6 +58,7 @@ def classification_sub_net(num_classes, num_anchor=9):
                       strides=1,
                       padding='same',
                       activation='relu',
+                      kernel_regularizer=regularizers.l2(0.0001),
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(
         layers.Conv2D(num_classes * num_anchor,
@@ -62,6 +66,7 @@ def classification_sub_net(num_classes, num_anchor=9):
                       strides=1,
                       padding='same',
                       activation='sigmoid',
+                      kernel_regularizer=regularizers.l2(0.0001),
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01),
                       bias_initializer=tf.initializers.constant(np.log(1 / 99))))
     model.add(layers.Reshape((-1, num_classes)))  # the output dimension is [batch, #anchor, #classes]
@@ -84,6 +89,7 @@ def regression_sub_net(num_anchor=9):
                       strides=1,
                       padding='same',
                       activation='relu',
+                      kernel_regularizer=regularizers.l2(0.0001),
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(
         layers.Conv2D(256,
@@ -91,6 +97,7 @@ def regression_sub_net(num_anchor=9):
                       strides=1,
                       padding='same',
                       activation='relu',
+                      kernel_regularizer=regularizers.l2(0.0001),
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(
         layers.Conv2D(256,
@@ -98,6 +105,7 @@ def regression_sub_net(num_anchor=9):
                       strides=1,
                       padding='same',
                       activation='relu',
+                      kernel_regularizer=regularizers.l2(0.0001),
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(
         layers.Conv2D(256,
@@ -105,12 +113,14 @@ def regression_sub_net(num_anchor=9):
                       strides=1,
                       padding='same',
                       activation='relu',
+                      kernel_regularizer=regularizers.l2(0.0001),
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(
         layers.Conv2D(4 * num_anchor,
                       kernel_size=3,
                       strides=1,
                       padding='same',
+                      kernel_regularizer=regularizers.l2(0.0001),
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(layers.Reshape((-1, 4)))  # the output dimension is [batch, #anchor, 4]
     return model
@@ -137,19 +147,44 @@ def RetinaNet(input_shape, num_classes, num_anchor=9):
     C4 = resnet50.layers[142].output
     assert resnet50.layers[-1].name == "conv5_block3_out"
     C5 = resnet50.layers[-1].output
-    P5 = layers.Conv2D(256, kernel_size=1, strides=1, padding='same')(C5)
+    P5 = layers.Conv2D(256, kernel_size=1, strides=1, padding='same', kernel_regularizer=regularizers.l2(0.0001))(C5)
     P5_upsampling = layers.UpSampling2D()(P5)
-    P4 = layers.Conv2D(256, kernel_size=1, strides=1, padding='same')(C4)
+    P4 = layers.Conv2D(256, kernel_size=1, strides=1, padding='same', kernel_regularizer=regularizers.l2(0.0001))(C4)
     P4 = layers.Add()([P5_upsampling, P4])
     P4_upsampling = layers.UpSampling2D()(P4)
-    P3 = layers.Conv2D(256, kernel_size=1, strides=1, padding='same')(C3)
+    P3 = layers.Conv2D(256, kernel_size=1, strides=1, padding='same', kernel_regularizer=regularizers.l2(0.0001))(C3)
     P3 = layers.Add()([P4_upsampling, P3])
-    P6 = layers.Conv2D(256, kernel_size=3, strides=2, padding='same', name="P6")(C5)
+    P6 = layers.Conv2D(256,
+                       kernel_size=3,
+                       strides=2,
+                       padding='same',
+                       name="P6",
+                       kernel_regularizer=regularizers.l2(0.0001))(C5)
     P7 = layers.Activation('relu')(P6)
-    P7 = layers.Conv2D(256, kernel_size=3, strides=2, padding='same', name="P7")(P7)
-    P5 = layers.Conv2D(256, kernel_size=3, strides=1, padding='same', name="P5")(P5)
-    P4 = layers.Conv2D(256, kernel_size=3, strides=1, padding='same', name="P4")(P4)
-    P3 = layers.Conv2D(256, kernel_size=3, strides=1, padding='same', name="P3")(P3)
+    P7 = layers.Conv2D(256,
+                       kernel_size=3,
+                       strides=2,
+                       padding='same',
+                       name="P7",
+                       kernel_regularizer=regularizers.l2(0.0001))(P7)
+    P5 = layers.Conv2D(256,
+                       kernel_size=3,
+                       strides=1,
+                       padding='same',
+                       name="P5",
+                       kernel_regularizer=regularizers.l2(0.0001))(P5)
+    P4 = layers.Conv2D(256,
+                       kernel_size=3,
+                       strides=1,
+                       padding='same',
+                       name="P4",
+                       kernel_regularizer=regularizers.l2(0.0001))(P4)
+    P3 = layers.Conv2D(256,
+                       kernel_size=3,
+                       strides=1,
+                       padding='same',
+                       name="P3",
+                       kernel_regularizer=regularizers.l2(0.0001))(P3)
     # classification subnet
     cls_subnet = classification_sub_net(num_classes=num_classes, num_anchor=num_anchor)
     P3_cls = cls_subnet(P3)
