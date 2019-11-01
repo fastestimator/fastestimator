@@ -5,7 +5,7 @@ pipeline{
             steps{
                 withCredentials([string(credentialsId: 'pypi_password', variable: 'PYPI_PWD')]) {
                     sh '''
-                    //  echo hello
+                        echo hello
                         echo ${PYPI_PWD}
                     '''                   
                 }
