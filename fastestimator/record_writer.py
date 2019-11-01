@@ -52,7 +52,6 @@ class RecordWriter:
         max_record_size_mb (int, optional): Maximum size of single TFRecord file. Defaults to 300 MB.
         compression (str, optional): Compression type can be `"GZIP"`, `"ZLIB"`, or `""` (no compression). Defaults to
             None.
-
     """
     def __init__(self,
                  train_data,

@@ -1,14 +1,14 @@
 #!/bin/bash
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 path_apphub=${DIR}'/../../apphub/'
-path_image_segmentation=${path_apphub}'image_segmentation/'
+path_semantic_segmentation=${path_apphub}'semantic_segmentation/'
 path_temp=$(dirname $(mktemp -u))
 
 #training parameters to test the models
 train_info='--epochs 2 --batch_size 2 --steps_per_epoch 10 --validation_steps 5 --model_dir None'
 nb_train_info='-p epochs 2 -p batch_size 2 -p steps_per_epoch 10 -p validation_steps 5' #notebook parameters
 
-filepath=${path_image_segmentation}'unet_cub200/'
+filepath=${path_semantic_segmentation}'unet_cub200/'
 filename='unet_cub200.py'
 if fastestimator train ${filepath}${filename} ${train_info}; then
     ((cnt=cnt+1))
