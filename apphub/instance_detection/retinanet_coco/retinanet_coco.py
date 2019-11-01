@@ -1,4 +1,5 @@
 import os
+from ast import literal_eval
 
 import numpy as np
 import tensorflow as tf
@@ -14,8 +15,7 @@ from fastestimator.op.tensorop import Loss, ModelOp, Rescale
 class String2List(NumpyOp):
     # this thing converts '[1, 2, 3]' into np.array([1, 2, 3])
     def forward(self, data, state):
-        for idx, elem in enumerate(data):
-            data[idx] = np.array([float(x) for x in elem[1:-1].split(',')])
+        data = map(literal_eval, data)
         return data
 
 
