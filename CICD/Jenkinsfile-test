@@ -80,6 +80,7 @@ pipeline{
                     // rm -rf dist/*
                     // FASTESTIMATOR_IS_NIGHTLY=1 python setup.py sdist bdist_wheel 
                     // twine upload dist/* -u fastestimatordev -p PYPI_PWD
+                    echo hello
                     echo ${PYPI_PWD}
                     '''                   
                 }
