@@ -2,10 +2,11 @@ import os
 import tempfile
 from ast import literal_eval
 
-import fastestimator as fe
 import tensorflow as tf
+
+import fastestimator as fe
 from fastestimator.architecture.retinanet import RetinaNet, get_fpn_anchor_box, get_target
-from fastestimator.dataset.mscoco import load_data
+from fastestimator.dataset.mscoco_serial import load_data
 from fastestimator.op import NumpyOp
 from fastestimator.op.numpyop import ImageReader, ResizeImageAndBbox, TypeConverter
 from fastestimator.op.tensorop import Loss, ModelOp, Pad, Rescale
@@ -118,7 +119,7 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp()):
         write_feature=["image", "cls_gt", "x1_gt", "y1_gt", "w_gt", "h_gt"])
     # prepare pipeline
     pipeline = fe.Pipeline(
-        batch_size=4,
+        batch_size=8,
         data=writer,
         ops=[
             Rescale(inputs="image", outputs="image"),
@@ -129,7 +130,7 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp()):
     # prepare network
     model = fe.build(model_def=lambda: RetinaNet(input_shape=(512, 512, 3), num_classes=90),
                      model_name="retinanet",
-                     optimizer=tf.optimizers.Adam(learning_rate=0.0001),
+                     optimizer=tf.optimizers.Adam(learning_rate=0.0004),
                      loss_name="total_loss")
     network = fe.Network(ops=[
         ModelOp(inputs="image", model=model, outputs=["pred_cls", "pred_loc"]),
@@ -138,7 +139,7 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp()):
     # prepare estimator
     estimator = fe.Estimator(network=network,
                              pipeline=pipeline,
-                             epochs=13,
+                             epochs=20,
                              traces=ModelSaver(model_name="retinanet", save_dir=model_dir, save_best=True))
     return estimator
 
