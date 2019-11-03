@@ -19,9 +19,9 @@ import os
 import time
 
 import numpy as np
-import tensorflow as tf
 
 import fastestimator as fe
+import tensorflow as tf
 from fastestimator import RecordWriter
 from fastestimator.op import get_inputs_by_key, get_inputs_by_op, get_op_from_mode, verify_ops, write_outputs_by_key
 from fastestimator.op.tensorop import TensorFilter

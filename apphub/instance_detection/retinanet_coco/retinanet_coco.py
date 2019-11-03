@@ -1,15 +1,15 @@
 import os
+import tempfile
 from ast import literal_eval
 
-import numpy as np
-import tensorflow as tf
-
 import fastestimator as fe
+import tensorflow as tf
 from fastestimator.architecture.retinanet import RetinaNet, get_fpn_anchor_box, get_target
 from fastestimator.dataset.mscoco import load_data
 from fastestimator.op import NumpyOp
 from fastestimator.op.numpyop import ImageReader, ResizeImageAndBbox, TypeConverter
-from fastestimator.op.tensorop import Loss, ModelOp, Rescale
+from fastestimator.op.tensorop import Loss, ModelOp, Pad, Rescale
+from fastestimator.trace import ModelSaver
 
 
 class String2List(NumpyOp):
@@ -68,6 +68,8 @@ class RetinaLoss(Loss):
     def forward(self, data, state):
         cls_gt, x1_gt, y1_gt, w_gt, h_gt, pred_cls, pred_loc = data
         local_batch_size = state["local_batch_size"]
+        focal_loss = []
+        l1_loss = []
         total_loss = []
         for idx in range(local_batch_size):
             cls_gt_example = cls_gt[idx]
@@ -78,16 +80,19 @@ class RetinaLoss(Loss):
             loc_gt_example = tf.transpose(tf.stack([x1_gt_example, y1_gt_example, w_gt_example, h_gt_example]))
             cls_pred_example = pred_cls[idx]
             loc_pred_example = pred_loc[idx]
-            focal_loss, anchor_obj_idx = self.focal_loss(cls_gt_example, cls_pred_example)
-            smooth_l1_loss = self.smooth_l1(loc_gt_example, loc_pred_example, anchor_obj_idx)
-            total_loss.append(focal_loss + smooth_l1_loss)
-        total_loss = tf.stack(total_loss)
+            focal_loss_example, anchor_obj_idx = self.focal_loss(cls_gt_example, cls_pred_example)
+            smooth_l1_loss_example = self.smooth_l1(loc_gt_example, loc_pred_example, anchor_obj_idx)
+            focal_loss.append(focal_loss_example)
+            l1_loss.append(smooth_l1_loss_example)
+        focal_loss = tf.stack(focal_loss)
+        l1_loss = tf.stack(l1_loss)
+        total_loss = focal_loss + l1_loss
         return total_loss
 
 
-def get_estimator():
-    train_csv, val_csv, path = load_data()
-
+def get_estimator(data_path=None, model_dir=tempfile.mkdtemp()):
+    #prepare dataset
+    train_csv, val_csv, path = load_data(path=data_path)
     writer = fe.RecordWriter(
         save_dir=os.path.join(path, "retinanet_coco"),
         train_data=train_csv,
@@ -111,24 +116,30 @@ def get_estimator():
         ],
         compression="GZIP",
         write_feature=["image", "cls_gt", "x1_gt", "y1_gt", "w_gt", "h_gt"])
-
     # prepare pipeline
-    pipeline = fe.Pipeline(batch_size=4,
-                           data=writer,
-                           ops=Rescale(inputs="image", outputs="image"),
-                           read_feature=["image", "cls_gt", "x1_gt", "y1_gt", "w_gt", "h_gt"],
-                           padded_batch=True)
+    pipeline = fe.Pipeline(
+        batch_size=4,
+        data=writer,
+        ops=[
+            Rescale(inputs="image", outputs="image"),
+            Pad(padded_shape=[252],
+                inputs=["x1_gt", "y1_gt", "w_gt", "h_gt"],
+                outputs=["x1_gt", "y1_gt", "w_gt", "h_gt"])
+        ])
     # prepare network
     model = fe.build(model_def=lambda: RetinaNet(input_shape=(512, 512, 3), num_classes=90),
                      model_name="retinanet",
-                     optimizer=tf.optimizers.SGD(learning_rate=0.01, momentum=0.9),
+                     optimizer=tf.optimizers.Adam(learning_rate=0.0001),
                      loss_name="total_loss")
     network = fe.Network(ops=[
         ModelOp(inputs="image", model=model, outputs=["pred_cls", "pred_loc"]),
         RetinaLoss(inputs=("cls_gt", "x1_gt", "y1_gt", "w_gt", "h_gt", "pred_cls", "pred_loc"), outputs="total_loss")
     ])
     # prepare estimator
-    estimator = fe.Estimator(network=network, pipeline=pipeline, epochs=2)
+    estimator = fe.Estimator(network=network,
+                             pipeline=pipeline,
+                             epochs=13,
+                             traces=ModelSaver(model_name="retinanet", save_dir=model_dir, save_best=True))
     return estimator
 
 

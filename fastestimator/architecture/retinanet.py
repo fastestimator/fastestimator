@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import numpy as np
+
 import tensorflow as tf
 from tensorflow.python.keras import layers, models, regularizers
 
@@ -274,7 +275,7 @@ def get_target(anchorbox, label, x1, y1, width, height):
     #next, begin the anchor box assignment based on iou
     anchor_to_obj_idx = np.argmax(ious, axis=0)  # num_anchor x 1
     anchor_best_iou = np.max(ious, axis=0)  # num_anchor x 1
-    cls_gt = np.int32(label[anchor_to_obj_idx])  # num_anchor x 1
+    cls_gt = np.int32([label[idx] for idx in anchor_to_obj_idx])  # num_anchor x 1
     cls_gt[np.where(anchor_best_iou <= 0.4)] = -1  #background class
     cls_gt[np.where(np.logical_and(anchor_best_iou > 0.4, anchor_best_iou <= 0.5))] = -2  # ignore these examples
     #finally, get the selected localization coordinates
