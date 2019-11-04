@@ -20,8 +20,8 @@ import time
 
 import numpy as np
 import pandas as pd
-
 import tensorflow as tf
+
 from fastestimator.op import get_inputs_by_op, get_op_from_mode, verify_ops, write_outputs_by_key
 
 
