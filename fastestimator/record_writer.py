@@ -27,12 +27,12 @@ from fastestimator.op import get_inputs_by_op, get_op_from_mode, verify_ops, wri
 
 class RecordWriter:
     """Write data into TFRecords.
-
+    
     This class can handle unpaired features. For example, in cycle-gan the hourse and zebra images are unpaired, which
     means during training you do not have one-to-one correspondance between hourse image and zebra image. When the
     `RecordWriter` instance is sent to `Pipeline` create random pairs between hourse and zebra images. See the cycle-gan
     example in apphub directory.
-
+    
     Args:
         train_data (Union[dict, str]): A `dict` that contains train data or a CSV file path. For the CSV file, the
             column header will be used as feature name. Under each column in the CSV file the paths to train data should
@@ -52,7 +52,6 @@ class RecordWriter:
         max_record_size_mb (int, optional): Maximum size of single TFRecord file. Defaults to 300 MB.
         compression (str, optional): Compression type can be `"GZIP"`, `"ZLIB"`, or `""` (no compression). Defaults to
             None.
-
     """
     def __init__(self,
                  train_data,

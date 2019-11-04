@@ -3,12 +3,12 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 path_apphub=${DIR}'/../apphub/'
 test_image_classification=${DIR}'/test_image_classification/'
 test_image_generation=${DIR}'/test_image_generation/'
-test_image_styletransfer=${DIR}'/test_image_styletransfer/'
-test_image_segmentation=${DIR}'/test_image_segmentation/'
+test_style_transfer=${DIR}'/test_style_transfer/'
+test_semantic_segmentation=${DIR}'/test_semantic_segmentation/'
 test_nlp=${DIR}'/test_nlp/'
 test_tabular=${DIR}'/test_tabular/'
 tmpdir=$(dirname $(mktemp -u))
-fail=0 
+fail=0
 report_file="report.txt"
 # Image Classification examples test
 bash ${test_image_classification}'test_densenet121.sh'
@@ -34,14 +34,14 @@ bash ${test_image_generation}'test_dcgan_mnist.sh'
 dcgan_code=$?
 
 # Image Segmentation examples test
-bash ${test_image_segmentation}'test_unet_cub200.sh'
+bash ${test_semantic_segmentation}'test_unet_cub200.sh'
 unet_cub_code=$?
 
-bash ${test_image_segmentation}'test_unet_montgomery.sh'
+bash ${test_semantic_segmentation}'test_unet_montgomery.sh'
 unet_mont_code=$?
 
 #Image StyleTransfer examples test
-bash ${test_image_styletransfer}'test_fst_coco.sh'
+bash ${test_style_transfer}'test_fst_coco.sh'
 fst_code=$?
 
 # NLP examples test

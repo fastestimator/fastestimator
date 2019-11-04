@@ -12,20 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from fastestimator.op.tensorop.augmentation import AdversarialSample, Augmentation2D, CutMixBatch, MixUpBatch
 from fastestimator.op.tensorop.average import Average
 from fastestimator.op.tensorop.binarize import Binarize
 from fastestimator.op.tensorop.constant import Constant
+from fastestimator.op.tensorop.filter import ScalarFilter, TensorFilter
+from fastestimator.op.tensorop.gradients import Gradients
+from fastestimator.op.tensorop.loss import BinaryCrossentropy, Loss, MeanSquaredError, MixUpLoss, \
+    SparseCategoricalCrossentropy
 from fastestimator.op.tensorop.minmax import Minmax
+from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.op.tensorop.onehot import Onehot
+from fastestimator.op.tensorop.pad import Pad
+from fastestimator.op.tensorop.rescale import Rescale
 from fastestimator.op.tensorop.reshape import Reshape
 from fastestimator.op.tensorop.resize import Resize
 from fastestimator.op.tensorop.scale import Scale
 from fastestimator.op.tensorop.sum import Sum
-from fastestimator.op.tensorop.z_score import Zscore
-from fastestimator.op.tensorop.loss import Loss, BinaryCrossentropy, MeanSquaredError, MixUpLoss, \
-    SparseCategoricalCrossentropy
-from fastestimator.op.tensorop.augmentation import Augmentation2D, AdversarialSample, MixUpBatch, CutMixBatch
-from fastestimator.op.tensorop.model import ModelOp, UpdateOp
-from fastestimator.op.tensorop.filter import TensorFilter, ScalarFilter
-from fastestimator.op.tensorop.gradients import Gradients
 from fastestimator.op.tensorop.watch import Watch
+from fastestimator.op.tensorop.zscore import Zscore

@@ -68,9 +68,9 @@ class ResizeImageAndBbox(Resize):
         y1 = (np.array(y1) * self.target_size[0] / img.shape[0]).astype(np.int)
         width = (np.array(width) * self.target_size[1] / img.shape[1]).astype(np.int)
         height = (np.array(height) * self.target_size[0] / img.shape[0]).astype(np.int)
-
+        width = np.clip(width, 1, None)
+        height = np.clip(height, 1, None)
         # Restore image dimension
         if img_resized.ndim == original_dim - 1:
             img_resized = np.expand_dims(img_resized, -1)
-
         return img_resized, x1, y1, width, height

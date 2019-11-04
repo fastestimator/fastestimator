@@ -23,8 +23,8 @@ from collections import defaultdict
 from contextlib import ContextDecorator
 from itertools import chain
 
-import PIL
 import numpy as np
+import PIL
 # noinspection PyPackageRequirements
 import tensorflow as tf
 from tensorflow.python.client import device_lib
@@ -123,6 +123,33 @@ def convert_tf_dtype(datatype):
         "float16": tf.float16,
         "float32": tf.float32,
         "float64": tf.float64
+    }
+    return datatype_map[datatype]
+
+
+def convert_np_dtype(datatype):
+    """Return the numpy datatype from string.
+
+    Args:
+        datatype: String of datatype
+
+    Returns:
+        numpy data type
+    """
+    datatype_map = {
+        "bool": np.bool,
+        "int8": np.int8,
+        "int16": np.int16,
+        "int32": np.int32,
+        "int64": np.int64,
+        "uint8": np.uint8,
+        "uint16": np.uint16,
+        "uint32": np.uint32,
+        "uint64": np.uint64,
+        "float16": np.float16,
+        "float32": np.float32,
+        "float64": np.float64,
+        "string": np.str
     }
     return datatype_map[datatype]
 

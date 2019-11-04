@@ -12,12 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.numpyop.image_reader import ImageReader
-from fastestimator.op.numpyop.mat_reader import MatReader
-from fastestimator.op.numpyop.minmax import Minmax
-from fastestimator.op.numpyop.reshape import Reshape
-from fastestimator.op.numpyop.resize import Resize
-from fastestimator.op.numpyop.resize_image_bbox import ResizeImageAndBbox
-from fastestimator.op.numpyop.scale import Scale
-from fastestimator.op.numpyop.type_converter import TypeConverter
-from fastestimator.op.numpyop.zscore import Zscore
+import numpy as np
+
+from fastestimator.op import NumpyOp
+from fastestimator.util.util import convert_np_dtype, to_list
+
+
+class TypeConverter(NumpyOp):
+    """convert features to different data types
+
+    Args:
+        target_type (str): the target data type, the following types are available:
+    """
+    def __init__(self, target_type, inputs=None, outputs=None, mode=None):
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.convert_fn = convert_np_dtype(target_type)
+
+    def forward(self, data, state):
+        data = to_list(data)
+        for idx, elem in enumerate(data):
+            data[idx] = self.convert_fn(elem)
+        return data

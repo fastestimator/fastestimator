@@ -13,9 +13,8 @@
 # limitations under the License.
 # ==============================================================================
 import numpy as np
-
 import tensorflow as tf
-from tensorflow.python.keras import layers, models
+from tensorflow.python.keras import layers, models, regularizers
 
 
 def classification_sub_net(num_classes, num_anchor=9):
@@ -35,6 +34,7 @@ def classification_sub_net(num_classes, num_anchor=9):
                       strides=1,
                       padding='same',
                       activation='relu',
+                      kernel_regularizer=regularizers.l2(0.0001),
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(
         layers.Conv2D(256,
@@ -42,6 +42,7 @@ def classification_sub_net(num_classes, num_anchor=9):
                       strides=1,
                       padding='same',
                       activation='relu',
+                      kernel_regularizer=regularizers.l2(0.0001),
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(
         layers.Conv2D(256,
@@ -49,6 +50,7 @@ def classification_sub_net(num_classes, num_anchor=9):
                       strides=1,
                       padding='same',
                       activation='relu',
+                      kernel_regularizer=regularizers.l2(0.0001),
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(
         layers.Conv2D(256,
@@ -56,6 +58,7 @@ def classification_sub_net(num_classes, num_anchor=9):
                       strides=1,
                       padding='same',
                       activation='relu',
+                      kernel_regularizer=regularizers.l2(0.0001),
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(
         layers.Conv2D(num_classes * num_anchor,
@@ -63,6 +66,7 @@ def classification_sub_net(num_classes, num_anchor=9):
                       strides=1,
                       padding='same',
                       activation='sigmoid',
+                      kernel_regularizer=regularizers.l2(0.0001),
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01),
                       bias_initializer=tf.initializers.constant(np.log(1 / 99))))
     model.add(layers.Reshape((-1, num_classes)))  # the output dimension is [batch, #anchor, #classes]
@@ -85,6 +89,7 @@ def regression_sub_net(num_anchor=9):
                       strides=1,
                       padding='same',
                       activation='relu',
+                      kernel_regularizer=regularizers.l2(0.0001),
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(
         layers.Conv2D(256,
@@ -92,6 +97,7 @@ def regression_sub_net(num_anchor=9):
                       strides=1,
                       padding='same',
                       activation='relu',
+                      kernel_regularizer=regularizers.l2(0.0001),
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(
         layers.Conv2D(256,
@@ -99,6 +105,7 @@ def regression_sub_net(num_anchor=9):
                       strides=1,
                       padding='same',
                       activation='relu',
+                      kernel_regularizer=regularizers.l2(0.0001),
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(
         layers.Conv2D(256,
@@ -106,12 +113,14 @@ def regression_sub_net(num_anchor=9):
                       strides=1,
                       padding='same',
                       activation='relu',
+                      kernel_regularizer=regularizers.l2(0.0001),
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(
         layers.Conv2D(4 * num_anchor,
                       kernel_size=3,
                       strides=1,
                       padding='same',
+                      kernel_regularizer=regularizers.l2(0.0001),
                       kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
     model.add(layers.Reshape((-1, 4)))  # the output dimension is [batch, #anchor, 4]
     return model
@@ -138,19 +147,44 @@ def RetinaNet(input_shape, num_classes, num_anchor=9):
     C4 = resnet50.layers[142].output
     assert resnet50.layers[-1].name == "conv5_block3_out"
     C5 = resnet50.layers[-1].output
-    P5 = layers.Conv2D(256, kernel_size=1, strides=1, padding='same')(C5)
+    P5 = layers.Conv2D(256, kernel_size=1, strides=1, padding='same', kernel_regularizer=regularizers.l2(0.0001))(C5)
     P5_upsampling = layers.UpSampling2D()(P5)
-    P4 = layers.Conv2D(256, kernel_size=1, strides=1, padding='same')(C4)
+    P4 = layers.Conv2D(256, kernel_size=1, strides=1, padding='same', kernel_regularizer=regularizers.l2(0.0001))(C4)
     P4 = layers.Add()([P5_upsampling, P4])
     P4_upsampling = layers.UpSampling2D()(P4)
-    P3 = layers.Conv2D(256, kernel_size=1, strides=1, padding='same')(C3)
+    P3 = layers.Conv2D(256, kernel_size=1, strides=1, padding='same', kernel_regularizer=regularizers.l2(0.0001))(C3)
     P3 = layers.Add()([P4_upsampling, P3])
-    P6 = layers.Conv2D(256, kernel_size=3, strides=2, padding='same', name="P6")(C5)
+    P6 = layers.Conv2D(256,
+                       kernel_size=3,
+                       strides=2,
+                       padding='same',
+                       name="P6",
+                       kernel_regularizer=regularizers.l2(0.0001))(C5)
     P7 = layers.Activation('relu')(P6)
-    P7 = layers.Conv2D(256, kernel_size=3, strides=2, padding='same', name="P7")(P7)
-    P5 = layers.Conv2D(256, kernel_size=3, strides=1, padding='same', name="P5")(P5)
-    P4 = layers.Conv2D(256, kernel_size=3, strides=1, padding='same', name="P4")(P4)
-    P3 = layers.Conv2D(256, kernel_size=3, strides=1, padding='same', name="P3")(P3)
+    P7 = layers.Conv2D(256,
+                       kernel_size=3,
+                       strides=2,
+                       padding='same',
+                       name="P7",
+                       kernel_regularizer=regularizers.l2(0.0001))(P7)
+    P5 = layers.Conv2D(256,
+                       kernel_size=3,
+                       strides=1,
+                       padding='same',
+                       name="P5",
+                       kernel_regularizer=regularizers.l2(0.0001))(P5)
+    P4 = layers.Conv2D(256,
+                       kernel_size=3,
+                       strides=1,
+                       padding='same',
+                       name="P4",
+                       kernel_regularizer=regularizers.l2(0.0001))(P4)
+    P3 = layers.Conv2D(256,
+                       kernel_size=3,
+                       strides=1,
+                       padding='same',
+                       name="P3",
+                       kernel_regularizer=regularizers.l2(0.0001))(P3)
     # classification subnet
     cls_subnet = classification_sub_net(num_classes=num_classes, num_anchor=num_anchor)
     P3_cls = cls_subnet(P3)
@@ -230,27 +264,26 @@ def get_target(anchorbox, label, x1, y1, width, height):
         array: classification groundtruths for each anchor box.
         array: localization groundtruths for each anchor box.
     """
-    num_anchor = anchorbox.shape[0]
-    target_cls = np.zeros(shape=(num_anchor), dtype=np.int64)
-    target_loc = np.zeros(shape=(num_anchor, 4), dtype=np.float32)
-    for _label, _x1, _y1, _width, _height in zip(label, x1, y1, width, height):
-        best_iou = 0.0
-        for anchor_idx in range(num_anchor):
-            iou = get_iou((_x1, _y1, _width, _height), anchorbox[anchor_idx])
-            if iou > best_iou:
-                best_iou = iou
-                best_anchor_idx = anchor_idx
-            if iou > 0.5:
-                target_cls[anchor_idx] = _label
-                target_loc[anchor_idx] = get_loc_offset((_x1, _y1, _width, _height), anchorbox[anchor_idx])
-            elif iou > 0.4:
-                target_cls[anchor_idx] = -2  # ignore this example
-            else:
-                target_cls[anchor_idx] = -1  # background class
-        if best_iou > 0 and best_iou < 0.5:  # if gt has no >0.5 iou with any anchor
-            target_cls[best_anchor_idx] = _label
-            target_loc[best_anchor_idx] = get_loc_offset((_x1, _y1, _width, _height), anchorbox[best_anchor_idx])
-    return target_cls, target_loc
+    object_boxes = np.array([x1, y1, width, height]).T  # num_obj x 4
+    ious = get_iou(object_boxes, anchorbox)  # num_obj x num_anchor
+    #now for each object in image, assign the anchor box with highest iou to them
+    anchorbox_best_iou_idx = np.argmax(ious, axis=1)
+    num_obj = ious.shape[0]
+    for row in range(num_obj):
+        ious[row, anchorbox_best_iou_idx[row]] = 0.99
+    #next, begin the anchor box assignment based on iou
+    anchor_to_obj_idx = np.argmax(ious, axis=0)  # num_anchor x 1
+    anchor_best_iou = np.max(ious, axis=0)  # num_anchor x 1
+    cls_gt = np.int32([label[idx] for idx in anchor_to_obj_idx])  # num_anchor x 1
+    cls_gt[np.where(anchor_best_iou <= 0.4)] = -1  #background class
+    cls_gt[np.where(np.logical_and(anchor_best_iou > 0.4, anchor_best_iou <= 0.5))] = -2  # ignore these examples
+    #finally, get the selected localization coordinates
+    anchor_has_object = np.where(cls_gt >= 0)
+    box_anchor_obj = anchorbox[anchor_has_object]
+    gt_object_idx = anchor_to_obj_idx[anchor_has_object]
+    box_gt_obj = object_boxes[gt_object_idx]
+    x1_gt, y1_gt, w_gt, h_gt = get_loc_offset(box_gt_obj, box_anchor_obj)
+    return cls_gt, x1_gt, y1_gt, w_gt, h_gt
 
 
 def get_loc_offset(box_gt, box_anchor):
@@ -266,8 +299,8 @@ def get_loc_offset(box_gt, box_anchor):
         float: offset between width of the two boxes.
         float: offset between height of the two boxes.
     """
-    gt_x1, gt_y1, gt_width, gt_height = tuple(box_gt)
-    ac_x1, ac_y1, ac_width, ac_height = tuple(box_anchor)
+    gt_x1, gt_y1, gt_width, gt_height = np.split(box_gt, 4, axis=1)
+    ac_x1, ac_y1, ac_width, ac_height = np.split(box_anchor, 4, axis=1)
     dx1 = (gt_x1 - ac_x1) / ac_width
     dy1 = (gt_y1 - ac_y1) / ac_height
     dwidth = np.log(gt_width / ac_width)
@@ -275,31 +308,28 @@ def get_loc_offset(box_gt, box_anchor):
     return dx1, dy1, dwidth, dheight
 
 
-def get_iou(box1, box2):
-    """Computes the value of intersection over union (IoU) of two boxes.
+def get_iou(boxes1, boxes2):
+    """Computes the value of intersection over union (IoU) of two array of boxes.
 
     Args:
-        box1 (array): first box
-        box2 (array): second box
+        box1 (array): first boxes in N x 4
+        box2 (array): second box in M x 4
 
     Returns:
-        float: IoU value
+        float: IoU value in N x M
     """
-    b1_x1, b1_y1, b1_width, b1_height = tuple(box1)
-    b2_x1, b2_y1, b2_width, b2_height = tuple(box2)
-    b1_x2 = b1_x1 + b1_width
-    b1_y2 = b1_y1 + b1_height
-    b2_x2 = b2_x1 + b2_width
-    b2_y2 = b2_y1 + b2_height
-    xA = max(b1_x1, b2_x1)
-    yA = max(b1_y1, b2_y1)
-    xB = min(b1_x2, b2_x2)
-    yB = min(b1_y2, b2_y2)
-    interArea = max(0, xB - xA) * max(0, yB - yA)
-    if interArea == 0:
-        iou = 0
-    else:
-        box1Area = b1_width * b1_height
-        box2Area = b2_width * b2_height
-        iou = interArea / (box1Area + box2Area - interArea)
+    x11, y11, w1, h1 = np.split(boxes1, 4, axis=1)
+    x21, y21, w2, h2 = np.split(boxes2, 4, axis=1)
+    x12 = x11 + w1
+    y12 = y11 + h1
+    x22 = x21 + w2
+    y22 = y21 + h2
+    xmin = np.maximum(x11, np.transpose(x21))
+    ymin = np.maximum(y11, np.transpose(y21))
+    xmax = np.minimum(x12, np.transpose(x22))
+    ymax = np.minimum(y12, np.transpose(y22))
+    inter_area = np.maximum((xmax - xmin + 1), 0) * np.maximum((ymax - ymin + 1), 0)
+    area1 = (w1 + 1) * (h1 + 1)
+    area2 = (w2 + 1) * (h2 + 1)
+    iou = inter_area / (area1 + area2.T - inter_area)
     return iou
