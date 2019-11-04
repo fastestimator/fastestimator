@@ -2,11 +2,10 @@ import os
 import tempfile
 from ast import literal_eval
 
-import tensorflow as tf
-
 import fastestimator as fe
+import tensorflow as tf
 from fastestimator.architecture.retinanet import RetinaNet, get_fpn_anchor_box, get_target
-from fastestimator.dataset.mscoco_serial import load_data
+from fastestimator.dataset.mscoco import load_data
 from fastestimator.op import NumpyOp
 from fastestimator.op.numpyop import ImageReader, ResizeImageAndBbox, TypeConverter
 from fastestimator.op.tensorop import Loss, ModelOp, Pad, Rescale
@@ -37,11 +36,11 @@ class RetinaLoss(Loss):
         num_classes = cls_pred_example.shape[-1]
         # gather the objects and background, discard the rest
         anchor_obj_idx = tf.where(tf.greater_equal(cls_gt_example, 0))
-        obj_bg_idx = tf.where(tf.greater_equal(cls_gt_example, -1))
+        anchor_obj_bg_idx = tf.where(tf.greater_equal(cls_gt_example, -1))
         anchor_obj_count = tf.cast(tf.shape(anchor_obj_idx)[0], tf.float32)
         cls_gt_example = tf.one_hot(cls_gt_example, num_classes)
-        cls_gt_example = tf.gather_nd(cls_gt_example, obj_bg_idx)
-        cls_pred_example = tf.gather_nd(cls_pred_example, obj_bg_idx)
+        cls_gt_example = tf.gather_nd(cls_gt_example, anchor_obj_bg_idx)
+        cls_pred_example = tf.gather_nd(cls_pred_example, anchor_obj_bg_idx)
         cls_gt_example = tf.reshape(cls_gt_example, (-1, 1))
         cls_pred_example = tf.reshape(cls_pred_example, (-1, 1))
         # compute the focal weight on each selected anchor box
@@ -67,7 +66,7 @@ class RetinaLoss(Loss):
         return smooth_l1_loss
 
     def forward(self, data, state):
-        cls_gt, x1_gt, y1_gt, w_gt, h_gt, pred_cls, pred_loc = data
+        cls_gt, x1_gt, y1_gt, w_gt, h_gt, cls_pred, loc_pred = data
         local_batch_size = state["local_batch_size"]
         focal_loss = []
         l1_loss = []
@@ -79,8 +78,8 @@ class RetinaLoss(Loss):
             w_gt_example = w_gt[idx]
             h_gt_example = h_gt[idx]
             loc_gt_example = tf.transpose(tf.stack([x1_gt_example, y1_gt_example, w_gt_example, h_gt_example]))
-            cls_pred_example = pred_cls[idx]
-            loc_pred_example = pred_loc[idx]
+            cls_pred_example = cls_pred[idx]
+            loc_pred_example = loc_pred[idx]
             focal_loss_example, anchor_obj_idx = self.focal_loss(cls_gt_example, cls_pred_example)
             smooth_l1_loss_example = self.smooth_l1(loc_gt_example, loc_pred_example, anchor_obj_idx)
             focal_loss.append(focal_loss_example)
@@ -108,15 +107,13 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp()):
                                outputs=["image", "x1", "y1", "width", "height"]),
             GenerateTarget(inputs=("obj_label", "x1", "y1", "width", "height"),
                            outputs=("cls_gt", "x1_gt", "y1_gt", "w_gt", "h_gt")),
-            TypeConverter(target_type='int32',
-                          inputs=["num_obj", "x1", "y1", "width", "height", "obj_label", "cls_gt"],
-                          outputs=["num_obj", "x1", "y1", "width", "height", "obj_label", "cls_gt"]),
+            TypeConverter(target_type='int32', inputs=["id", "cls_gt"], outputs=["id", "cls_gt"]),
             TypeConverter(target_type='float32',
                           inputs=["x1_gt", "y1_gt", "w_gt", "h_gt"],
                           outputs=["x1_gt", "y1_gt", "w_gt", "h_gt"])
         ],
         compression="GZIP",
-        write_feature=["image", "cls_gt", "x1_gt", "y1_gt", "w_gt", "h_gt"])
+        write_feature=["image", "id", "cls_gt", "x1_gt", "y1_gt", "w_gt", "h_gt"])
     # prepare pipeline
     pipeline = fe.Pipeline(
         batch_size=8,
@@ -130,16 +127,16 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp()):
     # prepare network
     model = fe.build(model_def=lambda: RetinaNet(input_shape=(512, 512, 3), num_classes=90),
                      model_name="retinanet",
-                     optimizer=tf.optimizers.Adam(learning_rate=0.0004),
+                     optimizer="adam",
                      loss_name="total_loss")
     network = fe.Network(ops=[
-        ModelOp(inputs="image", model=model, outputs=["pred_cls", "pred_loc"]),
-        RetinaLoss(inputs=("cls_gt", "x1_gt", "y1_gt", "w_gt", "h_gt", "pred_cls", "pred_loc"), outputs="total_loss")
+        ModelOp(inputs="image", model=model, outputs=["cls_pred", "loc_pred"]),
+        RetinaLoss(inputs=("cls_gt", "x1_gt", "y1_gt", "w_gt", "h_gt", "cls_pred", "loc_pred"), outputs="total_loss")
     ])
     # prepare estimator
     estimator = fe.Estimator(network=network,
                              pipeline=pipeline,
-                             epochs=20,
+                             epochs=13,
                              traces=ModelSaver(model_name="retinanet", save_dir=model_dir, save_best=True))
     return estimator
 

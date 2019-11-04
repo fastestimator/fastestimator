@@ -13,10 +13,8 @@
 # limitations under the License.
 # ==============================================================================
 """Download MS COCO 2017 dataset."""
-import multiprocessing as mp
 import os
 import zipfile
-from glob import glob
 from pathlib import Path
 
 import cv2
@@ -85,17 +83,14 @@ def _generate_caption_data(image_id, data_temp, coco_gt_caption):
     return keep_data
 
 
-def _generate_data(path, image_folder, mask_folder, image_names_process, groundtruth, queue, show_progress):
-    data = {}
-    for key in queue:
-        data[key] = []
-    logging_interval = len(image_names_process) // 20
-    for idx, image_name in enumerate(image_names_process):
-        if idx % logging_interval == 0 and show_progress:
-            print("Generating data from {}, progress: {:.1%}".format(image_folder, idx / len(image_names_process)))
+def _generate_data(data, path, image_folder, mask_folder, image_names, groundtruth):
+    logging_interval = len(image_names) // 20
+    for idx, image_name in enumerate(image_names):
+        if idx % logging_interval == 0:
+            print("Generating data from {}, progress: {:.1%}".format(image_folder, idx / len(image_names)))
         image_id = int(os.path.splitext(image_name)[0])
         keep_data = True
-        data_temp = {"image": os.path.relpath(os.path.join(image_folder, image_name), path)}
+        data_temp = {"image": os.path.relpath(os.path.join(image_folder, image_name), path), "id": image_id}
         if "object" in groundtruth:
             keep_data = _generate_object_data(path, image_name, image_id, data_temp, groundtruth["object"], mask_folder)
         if "caption" in groundtruth and keep_data:
@@ -103,52 +98,27 @@ def _generate_data(path, image_folder, mask_folder, image_names_process, groundt
         if keep_data:
             for key, value in data_temp.items():
                 data[key].append(value)
-    for key, value in data.items():
-        queue[key].put(value)
 
 
 def _generate_csv(path, load_object, load_caption, csv_file, image_folder, mask_folder, instance_gt, caption_gt):
     if not os.path.exists(csv_file):
         groundtruth = {}
-        data = {'image': []}
-        queue = {'image': mp.Queue()}
-        processes = []
-        num_processes = mp.cpu_count()
+        data = {'image': [], 'id': []}
         image_names = os.listdir(image_folder)
-        num_images = len(image_names)
         if load_object:
             os.makedirs(mask_folder, exist_ok=True)
             groundtruth["object"] = COCO(instance_gt)
-            data["num_obj"], queue["num_obj"] = [], mp.Queue()
-            data["x1"], queue["x1"] = [], mp.Queue()
-            data["y1"], queue["y1"] = [], mp.Queue()
-            data["width"], queue["width"] = [], mp.Queue()
-            data["height"], queue["height"] = [], mp.Queue()
-            data["obj_label"], queue["obj_label"] = [], mp.Queue()
-            data["obj_mask"], queue["obj_mask"] = [], mp.Queue()
+            data["num_obj"] = []
+            data["x1"] = []
+            data["y1"] = []
+            data["width"] = []
+            data["height"] = []
+            data["obj_label"] = []
+            data["obj_mask"] = []
         if load_caption:
             groundtruth["caption"] = COCO(caption_gt)
-            data["caption"], queue["caption"] = [], mp.Queue()
-        idx_start = 0
-        for i in range(num_processes):
-            if i == num_processes - 1:
-                idx_end = num_images
-            else:
-                idx_end = idx_start + num_images // num_processes
-            show_progress = idx_start == 0
-            image_names_process = image_names[idx_start:idx_end]
-            processes.append(
-                mp.Process(
-                    target=_generate_data,
-                    args=(path, image_folder, mask_folder, image_names_process, groundtruth, queue, show_progress)))
-            idx_start += num_images // num_processes
-        for p in processes:
-            p.start()
-        for _ in range(num_processes):
-            for key in data:
-                data[key].extend(queue[key].get(block=True))
-        for p in processes:
-            p.join()
+            data["caption"] = []
+        _generate_data(data, path, image_folder, mask_folder, image_names, groundtruth)
         df = pd.DataFrame(data=data)
         df.to_csv(csv_file, index=False)
 
