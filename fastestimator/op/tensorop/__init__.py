@@ -23,6 +23,7 @@ from fastestimator.op.tensorop.loss import BinaryCrossentropy, Loss, MeanSquared
 from fastestimator.op.tensorop.minmax import Minmax
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.op.tensorop.onehot import Onehot
+from fastestimator.op.tensorop.pad import Pad
 from fastestimator.op.tensorop.rescale import Rescale
 from fastestimator.op.tensorop.reshape import Reshape
 from fastestimator.op.tensorop.resize import Resize
