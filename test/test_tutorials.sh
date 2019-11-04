@@ -13,7 +13,7 @@ for filename in $FILES; do
     fname=$(basename -- "$filename")
     extension="${fname##*.}"
     fname="${fname%.*}"
-    if [ $fname = "t11_interpretation.ipynb" ]; then
+    if [ $fname = "t11_interpretation" ]; then
             continue
         fi
     echo ${path_temp}${fname}
