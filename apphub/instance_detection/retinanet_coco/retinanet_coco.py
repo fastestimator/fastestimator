@@ -55,7 +55,7 @@ class RetinaLoss(Loss):
                                                                  sample_weight=focal_weight)
         return cls_loss, anchor_obj_idx
 
-    def smooth_l1(self, loc_gt_example, loc_pred_example, anchor_obj_idx):
+    def smooth_l1(self, loc_gt_example, loc_pred_example, anchor_obj_idx, beta=0.1):
         # loc_gt is padded x 4, loc_pred is #num_anchor x 4
         loc_pred = tf.gather_nd(loc_pred_example, anchor_obj_idx)  #anchor_obj_count x 4
         anchor_obj_count = tf.shape(loc_pred)[0]
@@ -63,8 +63,10 @@ class RetinaLoss(Loss):
         loc_gt = tf.reshape(loc_gt, (-1, 1))
         loc_pred = tf.reshape(loc_pred, (-1, 1))
         loc_diff = tf.abs(loc_gt - loc_pred)
-        smooth_l1_loss = tf.where(tf.less(loc_diff, 1), 0.5 * loc_diff**2, loc_diff - 0.5)
+        cond = tf.less(loc_diff, beta)
+        smooth_l1_loss = tf.where(cond, 0.5 * loc_diff**2 / beta, loc_diff - 0.5 * beta)
         smooth_l1_loss = tf.reduce_sum(smooth_l1_loss) / tf.cast(anchor_obj_count, tf.float32)
+
         return smooth_l1_loss
 
     def forward(self, data, state):
