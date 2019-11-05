@@ -65,7 +65,6 @@ class RetinaLoss(Loss):
         cond = tf.less(loc_diff, beta)
         smooth_l1_loss = tf.where(cond, 0.5 * loc_diff**2 / beta, loc_diff - 0.5 * beta)
         smooth_l1_loss = tf.reduce_sum(smooth_l1_loss) / tf.cast(anchor_obj_count, tf.float32)
-
         return smooth_l1_loss
 
     def forward(self, data, state):
@@ -123,24 +122,26 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp()):
         data=writer,
         ops=[
             Rescale(inputs="image", outputs="image"),
-            Pad(padded_shape=[252],
+            Pad(padded_shape=[197],
                 inputs=["x1_gt", "y1_gt", "w_gt", "h_gt"],
                 outputs=["x1_gt", "y1_gt", "w_gt", "h_gt"])
         ])
     # prepare network
     model = fe.build(model_def=lambda: RetinaNet(input_shape=(512, 512, 3), num_classes=90),
                      model_name="retinanet",
-                     optimizer="adam",
+                     optimizer=tf.optimizers.Adam(learning_rate=0.0002),
                      loss_name="total_loss")
     network = fe.Network(ops=[
         ModelOp(inputs="image", model=model, outputs=["cls_pred", "loc_pred"]),
         RetinaLoss(inputs=("cls_gt", "x1_gt", "y1_gt", "w_gt", "h_gt", "cls_pred", "loc_pred"), outputs="total_loss")
     ])
     # prepare estimator
-    estimator = fe.Estimator(network=network,
-                             pipeline=pipeline,
-                             epochs=13,
-                             traces=ModelSaver(model_name="retinanet", save_dir=model_dir, save_best=True))
+    estimator = fe.Estimator(
+        network=network,
+        pipeline=pipeline,
+        epochs=13,
+        traces=ModelSaver(model_name="retinanet", save_dir=model_dir, save_best=True),
+    )
     return estimator
 
 
