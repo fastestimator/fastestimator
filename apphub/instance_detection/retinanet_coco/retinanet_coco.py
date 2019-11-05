@@ -10,8 +10,7 @@ from fastestimator.dataset.mscoco import load_data
 from fastestimator.op import NumpyOp
 from fastestimator.op.numpyop import ImageReader, ResizeImageAndBbox, TypeConverter
 from fastestimator.op.tensorop import Loss, ModelOp, Pad, Rescale
-from fastestimator.schedule import CyclicLRSchedule
-from fastestimator.trace import LRController, ModelSaver
+from fastestimator.trace import ModelSaver
 
 
 class String2List(NumpyOp):
@@ -141,10 +140,8 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp()):
         network=network,
         pipeline=pipeline,
         epochs=13,
-        traces=[
-            ModelSaver(model_name="retinanet", save_dir=model_dir, save_best=True),
-            LRController(model_name="retinanet", lr_schedule=CyclicLRSchedule(num_cycle=1, decrease_method="cosine"))
-        ])
+        traces=ModelSaver(model_name="retinanet", save_dir=model_dir, save_best=True),
+    )
     return estimator
 
 
