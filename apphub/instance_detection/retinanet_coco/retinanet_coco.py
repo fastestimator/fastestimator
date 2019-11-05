@@ -23,7 +23,7 @@ class String2List(NumpyOp):
 class GenerateTarget(NumpyOp):
     def __init__(self, inputs=None, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        self.anchorbox = get_fpn_anchor_box(input_shape=(512, 512, 3))
+        self.anchorbox, _ = get_fpn_anchor_box(input_shape=(512, 512, 3))
 
     def forward(self, data, state):
         obj_label, x1, y1, width, height = data
@@ -122,7 +122,7 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp()):
         data=writer,
         ops=[
             Rescale(inputs="image", outputs="image"),
-            Pad(padded_shape=[197],
+            Pad(padded_shape=[190],
                 inputs=["x1_gt", "y1_gt", "w_gt", "h_gt"],
                 outputs=["x1_gt", "y1_gt", "w_gt", "h_gt"])
         ])

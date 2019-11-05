@@ -217,11 +217,12 @@ def get_fpn_anchor_box(input_shape):
     h, w, _ = input_shape
     assert h % 32 == 0 and w % 32 == 0
     shapes = [(int(h / 8), int(w / 8))]  # P3
-    num_pixel = np.prod(shapes)
+    num_pixel = [np.prod(shapes)]
     for _ in range(4):  # P4 through P7
         shapes.append((int(np.ceil(shapes[-1][0] / 2)), int(np.ceil(shapes[-1][1] / 2))))
-        num_pixel += np.prod(shapes[-1])
-    anchorbox = np.zeros((9 * num_pixel, 4))
+        num_pixel.append(np.prod(shapes[-1]))
+    total_num_pixels = np.sum(num_pixel)
+    anchorbox = np.zeros((9 * total_num_pixels, 4))
     base_multipliers = [2**(0.0), 2**(1 / 3), 2**(2 / 3)]
     aspect_ratios = [1.0, 2.0, 0.5]  #x:y
     anchor_idx = 0
@@ -236,10 +237,10 @@ def get_fpn_anchor_box(input_shape):
                 for base_multiplier in base_multipliers:
                     area = base_x * base_multiplier * base_y * base_multiplier
                     for aspect_ratio in aspect_ratios:
-                        x1 = max(center_x - np.sqrt(area * aspect_ratio) / 2, 0.0)  # x1
-                        y1 = max(center_y - np.sqrt(area / aspect_ratio) / 2, 0.0)  # y1
-                        x2 = min(center_x + np.sqrt(area * aspect_ratio) / 2, float(w))  # x2
-                        y2 = min(center_y + np.sqrt(area / aspect_ratio) / 2, float(h))  # y2
+                        x1 = center_x - np.sqrt(area * aspect_ratio) / 2
+                        y1 = center_y - np.sqrt(area / aspect_ratio) / 2
+                        x2 = center_x + np.sqrt(area * aspect_ratio) / 2
+                        y2 = center_y + np.sqrt(area / aspect_ratio) / 2
                         anchorbox[anchor_idx, 0] = x1
                         anchorbox[anchor_idx, 1] = y1
                         anchorbox[anchor_idx, 2] = x2 - x1
@@ -247,7 +248,7 @@ def get_fpn_anchor_box(input_shape):
                         anchor_idx += 1
         if p_h == 1 and p_w == 1:  # the next level of 1x1 feature map is still 1x1, therefore ignore
             break
-    return np.float32(anchorbox)
+    return np.float32(anchorbox), np.int32(num_pixel) * 9
 
 
 def get_target(anchorbox, label, x1, y1, width, height):
