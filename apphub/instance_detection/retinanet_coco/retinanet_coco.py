@@ -66,7 +66,6 @@ class RetinaLoss(Loss):
         cond = tf.less(loc_diff, beta)
         smooth_l1_loss = tf.where(cond, 0.5 * loc_diff**2 / beta, loc_diff - 0.5 * beta)
         smooth_l1_loss = tf.reduce_sum(smooth_l1_loss) / tf.cast(anchor_obj_count, tf.float32)
-
         return smooth_l1_loss
 
     def forward(self, data, state):
