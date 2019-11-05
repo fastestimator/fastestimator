@@ -2,14 +2,16 @@ import os
 import tempfile
 from ast import literal_eval
 
-import fastestimator as fe
 import tensorflow as tf
+
+import fastestimator as fe
 from fastestimator.architecture.retinanet import RetinaNet, get_fpn_anchor_box, get_target
 from fastestimator.dataset.mscoco import load_data
 from fastestimator.op import NumpyOp
 from fastestimator.op.numpyop import ImageReader, ResizeImageAndBbox, TypeConverter
 from fastestimator.op.tensorop import Loss, ModelOp, Pad, Rescale
-from fastestimator.trace import ModelSaver
+from fastestimator.schedule import CyclicLRSchedule
+from fastestimator.trace import LRController, ModelSaver
 
 
 class String2List(NumpyOp):
@@ -120,24 +122,28 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp()):
         data=writer,
         ops=[
             Rescale(inputs="image", outputs="image"),
-            Pad(padded_shape=[252],
+            Pad(padded_shape=[197],
                 inputs=["x1_gt", "y1_gt", "w_gt", "h_gt"],
                 outputs=["x1_gt", "y1_gt", "w_gt", "h_gt"])
         ])
     # prepare network
     model = fe.build(model_def=lambda: RetinaNet(input_shape=(512, 512, 3), num_classes=90),
                      model_name="retinanet",
-                     optimizer="adam",
+                     optimizer=tf.optimizers.Adam(learning_rate=0.0002),
                      loss_name="total_loss")
     network = fe.Network(ops=[
         ModelOp(inputs="image", model=model, outputs=["cls_pred", "loc_pred"]),
         RetinaLoss(inputs=("cls_gt", "x1_gt", "y1_gt", "w_gt", "h_gt", "cls_pred", "loc_pred"), outputs="total_loss")
     ])
     # prepare estimator
-    estimator = fe.Estimator(network=network,
-                             pipeline=pipeline,
-                             epochs=13,
-                             traces=ModelSaver(model_name="retinanet", save_dir=model_dir, save_best=True))
+    estimator = fe.Estimator(
+        network=network,
+        pipeline=pipeline,
+        epochs=13,
+        traces=[
+            ModelSaver(model_name="retinanet", save_dir=model_dir, save_best=True),
+            LRController(model_name="retinanet", lr_schedule=CyclicLRSchedule(num_cycle=1, decrease_method="cosine"))
+        ])
     return estimator
 
 
