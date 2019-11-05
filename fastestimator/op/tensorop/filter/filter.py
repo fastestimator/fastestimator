@@ -15,6 +15,8 @@
 import tensorflow as tf
 
 from fastestimator.op import TensorOp
+from fastestimator.util.util import to_list
+
 
 
 class TensorFilter(TensorOp):
@@ -48,18 +50,9 @@ class ScalarFilter(TensorFilter):
 
     def _verify_inputs(self):
         assert isinstance(self.inputs, str), "ScalarFilter only accepts single string input"
-        self.filter_value = ScalarFilter._convert_to_list(self.filter_value)
-        self.keep_prob = ScalarFilter._convert_to_list(self.keep_prob)
+        self.filter_value = to_list(self.filter_value)
+        self.keep_prob = to_list(self.keep_prob)
         assert len(self.filter_value) == len(self.keep_prob), "filter_value and keep_prob must be same length"
-
-    @staticmethod
-    def _convert_to_list(data):
-        if not isinstance(data, list):
-            if isinstance(data, tuple):
-                data = list(data)
-            else:
-                data = [data]
-        return data
 
     def forward(self, data, state):
         """Filters the data based on the scalar filter_value.
