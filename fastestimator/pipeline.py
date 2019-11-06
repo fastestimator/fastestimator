@@ -149,8 +149,8 @@ class Pipeline:
             value = np.asarray(value)
             feature_dtype[key] = convert_tf_dtype(str(value.dtype))
         self.feature_dtype[mode].append(feature_dtype)
-        self.num_examples[mode].append(None)
-        self.shuffle_buffer[mode].append(None)
+        self.num_examples[mode].append(0)
+        self.shuffle_buffer[mode].append(0)
 
     def _get_numpy_config_mode(self, mode):
         data = self.data[mode]

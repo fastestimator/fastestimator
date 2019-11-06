@@ -266,8 +266,10 @@ class Estimator:
             max_steps = self.steps_per_epoch
         elif self.validation_steps and mode == "eval":
             max_steps = self.validation_steps
-        else:
+        elif num_examples > 0:
             max_steps = num_examples // global_batch_size
+        else:
+            raise ValueError("must specify steps_per_epoch or validations_steps when using generator")
         ops = self.network.load_epoch(self.train_epoch, mode)
         self._run_traces_on_epoch_begin({
             "mode": mode, "epoch": self.train_epoch, "train_step": self.train_step, "num_examples": num_examples
