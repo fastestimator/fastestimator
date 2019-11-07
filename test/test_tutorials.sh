@@ -13,9 +13,6 @@ for filename in $FILES; do
     fname=$(basename -- "$filename")
     extension="${fname##*.}"
     fname="${fname%.*}"
-    if [ $fname = "t11_interpretation" ]; then
-            continue
-        fi
     echo ${path_temp}${fname}
     jupyter nbconvert --to script ${filename} --output ${path_temp}${fname}
     if ipython ${path_temp}${fname}'.py'; then
