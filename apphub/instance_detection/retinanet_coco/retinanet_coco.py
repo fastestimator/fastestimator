@@ -143,7 +143,7 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp()):
         epochs=15,
         traces=[
             ModelSaver(model_name="retinanet", save_dir=model_dir, save_best=True),
-            LRController(model_name="lenet", lr_schedule=CyclicLRSchedule(num_cycle=1, decrease_method="cosine"))
+            LRController(model_name="retinanet", lr_schedule=CyclicLRSchedule(num_cycle=1, decrease_method="cosine"))
         ])
     return estimator
 
