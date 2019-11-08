@@ -2,8 +2,9 @@ import os
 import tempfile
 from ast import literal_eval
 
-import fastestimator as fe
 import tensorflow as tf
+
+import fastestimator as fe
 from fastestimator.architecture.retinanet import RetinaNet, get_fpn_anchor_box, get_target
 from fastestimator.dataset.mscoco import load_data
 from fastestimator.op import NumpyOp
@@ -140,10 +141,10 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp()):
         network=network,
         pipeline=pipeline,
         epochs=15,
-        traces=[ModelSaver(model_name="retinanet", save_dir=model_dir, save_best=True),
-               LRController(model_name="lenet",
-                            lr_schedule=CyclicLRSchedule(num_cycle=1, decrease_method="cosine"))]
-    )
+        traces=[
+            ModelSaver(model_name="retinanet", save_dir=model_dir, save_best=True),
+            LRController(model_name="lenet", lr_schedule=CyclicLRSchedule(num_cycle=1, decrease_method="cosine"))
+        ])
     return estimator
 
 
