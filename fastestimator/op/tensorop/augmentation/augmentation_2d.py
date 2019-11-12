@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 import math
-import pdb
 
 import tensorflow as tf
 
