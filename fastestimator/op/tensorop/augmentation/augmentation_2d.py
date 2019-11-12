@@ -314,8 +314,8 @@ class Augmentation2D(TensorOp):
                 data = list(data)
             else:
                 data = [data]
-        self.width = tf.cast(data[0].shape[-3], tf.float32)
-        self.height = tf.cast(data[0].shape[-2], tf.float32)
+        self.width = tf.cast(tf.shape(data[0])[-3], tf.float32)
+        self.height = tf.cast(tf.shape(data[0])[-2], tf.float32)
         self.setup()
         for idx, single_data in enumerate(data):
             augment_data = self._transform(single_data)
@@ -338,7 +338,7 @@ class Augmentation2D(TensorOp):
 
         x_shape = self.width
         y_shape = self.height
-        z_shape = tf.cast(data.shape[-1], tf.float32)
+        z_shape = tf.cast(tf.shape(data)[-1], tf.float32)
 
         x_range = tf.range(x_shape)
         y_range = tf.range(y_shape)
@@ -360,9 +360,8 @@ class Augmentation2D(TensorOp):
         y_ = tf.cast(tf.clip_by_value(tf.round(y_), 0, y_shape - 1), tf.int32)
         z_ = tf.cast(z_, tf.int32)
         final_coords = tf.stack([x_, y_, z_], axis=-1)
-        gather_and_reshape = lambda ex: tf.reshape(tf.gather_nd(ex, final_coords), ex.shape)
-
-        if len(data.shape) > 3:
+        gather_and_reshape = lambda ex: tf.reshape(tf.gather_nd(ex, final_coords), tf.shape(ex))
+        if data.shape and len(data.shape) > 3:
             result = tf.map_fn(fn=gather_and_reshape, elems=data, dtype=dtype)
         else:
             result = gather_and_reshape(data)

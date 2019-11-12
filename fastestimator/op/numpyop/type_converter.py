@@ -32,4 +32,6 @@ class TypeConverter(NumpyOp):
         data = to_list(data)
         for idx, elem in enumerate(data):
             data[idx] = self.convert_fn(elem)
+        if len(data) == 1:
+            data = data[0]
         return data
