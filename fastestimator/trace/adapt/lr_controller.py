@@ -87,9 +87,10 @@ class LRController(Trace):
             self.lr_schedule.initial_lr = self.current_lr
 
     def on_epoch_begin(self, state):
-        if self.lr_schedule and self.lr_schedule.schedule_mode == "epoch":
-            self.base_lr = self.lr_schedule.schedule_fn(state["epoch"], self.base_lr)
-            self.change_lr = True
+        if state["mode"] == "train":
+            if self.lr_schedule and self.lr_schedule.schedule_mode == "epoch":
+                self.base_lr = self.lr_schedule.schedule_fn(state["epoch"], self.base_lr)
+                self.change_lr = True
 
     def on_batch_begin(self, state):
         if state["mode"] == "train":
