@@ -17,7 +17,7 @@ import math
 import tensorflow as tf
 
 from fastestimator.op import TensorOp
-
+from fastestimator.util.util import to_list
 
 class Augmentation2D(TensorOp):
     """ This class supports commonly used 2D random affine transformations for data augmentation.
@@ -26,9 +26,9 @@ class Augmentation2D(TensorOp):
     Args:
         rotation_range: Scalar (x) that represents the range of random rotation (in degrees) from -x to x /
             Tuple ([x1, x2]) that represents  the range of random rotation between x1 and x2.
-        width_shift_range: Float (x) that represents the range of random width shift (in pixels) from -x to x /
+        width_shift_range: Float (x) that represents the range of random width shift (in percentage) from -x to x /
             Tuple ([x1, x2]) that represents  the range of random width shift between x1 and x2.
-        height_shift_range: Float (x) that represents the range of random height shift (in pixels) from -x to x /
+        height_shift_range: Float (x) that represents the range of random height shift (in percentage) from -x to x /
             Tuple ([x1, x2]) that represents  the range of random height shift between x1 and x2.
         shear_range: Scalar (x) that represents the range of random shear (in degrees) from -x to x /
             Tuple ([x1, x2]) that represents  the range of random shear between x1 and x2.
@@ -54,6 +54,8 @@ class Augmentation2D(TensorOp):
         self.width_shift_range = width_shift_range
         self.height_shift_range = height_shift_range
         self.shear_range = shear_range
+        zoom_range_list = to_list(zoom_range)
+        assert all([z > 0 for z in zoom_range_list]), "zoom range should be positive"
         self.zoom_range = zoom_range
         self.flip_left_right_boolean = flip_left_right
         self.flip_up_down_boolean = flip_up_down
@@ -160,8 +162,8 @@ class Augmentation2D(TensorOp):
         """
         zoom_range = [0., 0.]
         if type(self.zoom_range) is not tuple and type(self.zoom_range) is not list:
-            zoom_range[0] = 1 - self.zoom_range
-            zoom_range[1] = 1 + self.zoom_range
+            zoom_range[0] = min(self.zoom_range, 1.0)
+            zoom_range[1] = max(self.zoom_range, 1.0)
         else:
             zoom_range = self.zoom_range
         self.zoom_range = zoom_range
