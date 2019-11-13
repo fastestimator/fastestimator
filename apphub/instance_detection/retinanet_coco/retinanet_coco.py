@@ -5,7 +5,7 @@ from ast import literal_eval
 import tensorflow as tf
 
 import fastestimator as fe
-from fastestimator.architecture.retinanet import RetinaNet, get_fpn_anchor_box, get_target
+from fastestimator.architecture.retinanet import PredictBox, RetinaNet, get_fpn_anchor_box, get_target
 from fastestimator.dataset.mscoco import load_data
 from fastestimator.op import NumpyOp
 from fastestimator.op.numpyop import ImageReader, ResizeImageAndBbox, TypeConverter
@@ -116,7 +116,9 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp()):
                           outputs=["x1_gt", "y1_gt", "w_gt", "h_gt"])
         ],
         compression="GZIP",
-        write_feature=["image", "id", "cls_gt", "x1_gt", "y1_gt", "w_gt", "h_gt"])
+        write_feature=[
+            "image", "id", "cls_gt", "x1_gt", "y1_gt", "w_gt", "h_gt", "obj_label", "x1", "y1", "width", "height"
+        ])
     # prepare pipeline
     pipeline = fe.Pipeline(
         batch_size=8,
@@ -124,8 +126,8 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp()):
         ops=[
             Rescale(inputs="image", outputs="image"),
             Pad(padded_shape=[190],
-                inputs=["x1_gt", "y1_gt", "w_gt", "h_gt"],
-                outputs=["x1_gt", "y1_gt", "w_gt", "h_gt"])
+                inputs=["x1_gt", "y1_gt", "w_gt", "h_gt", "obj_label", "x1", "y1", "width", "height"],
+                outputs=["x1_gt", "y1_gt", "w_gt", "h_gt", "obj_label", "x1", "y1", "width", "height"])
         ])
     # prepare network
     model = fe.build(model_def=lambda: RetinaNet(input_shape=(512, 512, 3), num_classes=90),
@@ -134,6 +136,9 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp()):
                      loss_name="total_loss")
     network = fe.Network(ops=[
         ModelOp(inputs="image", model=model, outputs=["cls_pred", "loc_pred"]),
+        PredictBox(inputs=["cls_pred", "loc_pred", "obj_label", "x1", "y1", "width", "height"],
+                   outputs=("pred", "gt"),
+                   mode="eval"),
         RetinaLoss(inputs=("cls_gt", "x1_gt", "y1_gt", "w_gt", "h_gt", "cls_pred", "loc_pred"), outputs="total_loss")
     ])
     # prepare estimator
