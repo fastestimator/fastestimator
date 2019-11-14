@@ -18,9 +18,9 @@ import tensorflow as tf
 
 import fastestimator as fe
 from fastestimator.op import get_inputs_by_op, get_op_from_mode, verify_ops, write_outputs_by_key
-from fastestimator.op.tensorop import ModelOp, UpdateOp
+from fastestimator.op.tensorop import ModelOp, UpdateOp, Loss
 from fastestimator.schedule import Scheduler
-from fastestimator.util.util import NonContext, flatten_list, to_list
+from fastestimator.util.util import NonContext, flatten_list, to_list, to_set
 
 
 class Network:
@@ -109,12 +109,11 @@ class Network:
              list of the models, epoch losses
         """
         ops = self.op_schedule[mode].get_current_value(epoch)
-        model_list = self.model_schedule[mode].get_current_value(epoch)
-        epoch_losses = []
-        for model in model_list:
-            if model.loss_name not in epoch_losses:
-                epoch_losses.append(model.loss_name)
-        self.epoch_losses = epoch_losses
+        epoch_losses = set()
+        for op in ops:
+            if isinstance(op, Loss):
+                epoch_losses |= to_set(op.outputs)
+        self.epoch_losses = to_list(epoch_losses)
         return ops
 
     def run_step(self, batch, ops, state):
