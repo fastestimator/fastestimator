@@ -15,20 +15,20 @@
 from collections import defaultdict
 
 import numpy as np
+from pycocotools import mask as maskUtils
 
 from fastestimator.architecture.retinanet import get_fpn_anchor_box
 from fastestimator.trace import Trace
-from pycocotools import mask as maskUtils
 
 
 class MeanAvgPrecision(Trace):
     """Calculates mean avg precision for various ios. Based out of cocoapi
     """
-    def __init__(self, num_classes, input_shape, pred_key, gt_key, mode="eval",
-                 output_name="map"):
+    def __init__(self, num_classes, input_shape, pred_key, gt_key, mode="eval", output_name="mAP"):
         super().__init__(outputs=output_name, mode=mode)
         self.pred_key = pred_key
         self.gt_key = gt_key
+        self.output_name = output_name
 
         self.iou_thres = np.linspace(.5, 0.95, np.round((0.95 - .5) / .05) + 1, endpoint=True)
         self.rec_thres = np.linspace(.0, 1.00, np.round((1.00 - .0) / .01) + 1, endpoint=True)
@@ -99,7 +99,8 @@ class MeanAvgPrecision(Trace):
 
     def on_epoch_end(self, state):
         self.accumulate()
-        self.summarize()
+        mean_ap = self.summarize()
+        state[self.output_name] = mean_ap
 
     def accumulate(self):
         key_list = self.evalimgs
@@ -111,7 +112,7 @@ class MeanAvgPrecision(Trace):
         T = len(self.iou_thres)
         R = len(self.rec_thres)
         K = len(self.categories)
-        cat_list_zeroidx = [n for n,cat in enumerate(self.categories)]
+        cat_list_zeroidx = [n for n, cat in enumerate(self.categories)]
 
         I = len(self.image_ids)
         maxdets = self.maxdets
@@ -184,7 +185,7 @@ class MeanAvgPrecision(Trace):
             mean_s = -1
         else:
             mean_s = np.mean(s[s > -1])
-        print("Mean average precision@0.5 IOU :", "{:.3f}".format(mean_s))
+        return mean_s
 
     def evaluate_img(self, cat_id, img_id):
         dt = self.dt[img_id, cat_id]
