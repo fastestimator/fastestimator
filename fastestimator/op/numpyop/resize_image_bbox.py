@@ -64,10 +64,10 @@ class ResizeImageAndBbox(Resize):
 
         # Resize padded image and associated bounding boxes
         img_resized = cv2.resize(img, (self.target_size[1], self.target_size[0]), self.resize_method)
-        x1 = (np.array(x1) * self.target_size[1] / img.shape[1]).astype(np.int)
-        y1 = (np.array(y1) * self.target_size[0] / img.shape[0]).astype(np.int)
-        width = (np.array(width) * self.target_size[1] / img.shape[1]).astype(np.int)
-        height = (np.array(height) * self.target_size[0] / img.shape[0]).astype(np.int)
+        x1 = (np.array(x1) * self.target_size[1] / img.shape[1]).astype(np.float32)
+        y1 = (np.array(y1) * self.target_size[0] / img.shape[0]).astype(np.float32)
+        width = (np.array(width) * self.target_size[1] / img.shape[1]).astype(np.float32)
+        height = (np.array(height) * self.target_size[0] / img.shape[0]).astype(np.float32)
         width = np.clip(width, 1, None)
         height = np.clip(height, 1, None)
         # Restore image dimension
