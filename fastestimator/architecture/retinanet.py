@@ -349,21 +349,17 @@ class PredictBox(TensorOp):
                  mode=None,
                  input_shape=(512, 512, 3),
                  select_top_k=1000,
-                 nms_max_outputs=100):
+                 nms_max_outputs=100,
+                 score_threshold=0.05):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.input_shape = input_shape
-        self.select_top_k = tf.cast(select_top_k, dtype=tf.int32)
+        self.select_top_k = select_top_k
         self.nms_max_outputs = nms_max_outputs
+        self.score_threshold = score_threshold
 
         all_anchors, num_anchors_per_level = get_fpn_anchor_box(input_shape=input_shape)
         self.all_anchors = tf.convert_to_tensor(all_anchors)
-        self.num_anchors_per_level = tf.convert_to_tensor(num_anchors_per_level, dtype=tf.int32)
-
-    def _index_to_bool(self, indices, length):
-        updates = tf.ones_like(indices, dtype=tf.bool)
-        shape = tf.expand_dims(length, 0)
-        is_selected = tf.scatter_nd(tf.cast(tf.expand_dims(indices, axis=-1), dtype=tf.int32), updates, shape)
-        return is_selected
+        self.num_anchors_per_level = num_anchors_per_level
 
     def forward(self, data, state):
         pred = []
@@ -376,16 +372,24 @@ class PredictBox(TensorOp):
 
         # iterate over image
         for i in range(state['local_batch_size']):
+            # GT for image
+            image_gt_padded = tf.stack([
+                tf.cast(i * tf.ones_like(label_gt[i]), dtype=tf.float32),
+                x1_gt[i],
+                y1_gt[i],
+                w_gt[i],
+                h_gt[i],
+                tf.cast(label_gt[i], dtype=tf.float32)
+            ],
+                                       axis=1)
+            keep_gt = label_gt[i] > 0
+            image_gt = image_gt_padded[keep_gt]
+            gt.append(image_gt)
+
+            # split batch into images
             labels_per_image = labels[i]
             scores_per_image = scores[i]
             deltas_per_image = deltas[i]
-
-            keep_gt = label_gt[i] > 0  # class label starts from 1, similar to MSCOCO
-            label_gt_per_image = label_gt[i][keep_gt]
-            x1_gt_per_image = x1_gt[i][keep_gt]
-            y1_gt_per_image = y1_gt[i][keep_gt]
-            w_gt_per_image = w_gt[i][keep_gt]
-            h_gt_per_image = h_gt[i][keep_gt]
 
             selected_deltas_per_image = tf.constant([], shape=(0, 4))
             selected_labels_per_image = tf.constant([], dtype=tf.int32)
@@ -405,48 +409,41 @@ class PredictBox(TensorOp):
 
                 # select top k
                 if self.num_anchors_per_level[j] >= self.select_top_k:
-                    # won't work without the tf.minimum
-                    top_k = tf.math.top_k(level_scores, tf.minimum(self.num_anchors_per_level[j], self.select_top_k))
-                    top_k_scores = top_k.values
-                    top_k_indices = tf.add(top_k.indices, [start_index])
+                    top_k = tf.math.top_k(level_scores, self.select_top_k)
+                    top_k_indices = top_k.indices
                 else:
-                    top_k_scores = level_scores
-                    top_k_indices = anchor_indices
-
-                # filter out low score
-                is_high_score = tf.greater(top_k_scores, 0.05)
-                selected_indices = tf.boolean_mask(top_k_indices, is_high_score)
-                is_selected = self._index_to_bool(tf.subtract(selected_indices, [start_index]),
-                                                  self.num_anchors_per_level[j])
+                    top_k_indices = tf.subtract(anchor_indices, [start_index])
 
                 # combine all pyramid levels
                 selected_deltas_per_image = tf.concat(
-                    [selected_deltas_per_image, tf.boolean_mask(level_deltas, is_selected)], axis=0)
+                    [selected_deltas_per_image, tf.gather(level_deltas, top_k_indices)], axis=0)
                 selected_scores_per_image = tf.concat(
-                    [selected_scores_per_image, tf.boolean_mask(level_scores, is_selected)], axis=0)
+                    [selected_scores_per_image, tf.gather(level_scores, top_k_indices)], axis=0)
                 selected_labels_per_image = tf.concat(
-                    [selected_labels_per_image, tf.boolean_mask(level_labels, is_selected)], axis=0)
+                    [selected_labels_per_image, tf.gather(level_labels, top_k_indices)], axis=0)
                 selected_anchor_indices_per_image = tf.concat(
-                    [selected_anchor_indices_per_image, tf.boolean_mask(anchor_indices, is_selected)], axis=0)
+                    [selected_anchor_indices_per_image, tf.gather(anchor_indices, top_k_indices)], axis=0)
 
             # delta -> (x1, y1, w, h)
-            anchor_mask = self._index_to_bool(selected_anchor_indices_per_image, self.all_anchors.shape[0])
-            x1 = (selected_deltas_per_image[:, 0] * tf.boolean_mask(
-                self.all_anchors, anchor_mask)[:, 2]) + tf.boolean_mask(self.all_anchors, anchor_mask)[:, 0]
-            y1 = (selected_deltas_per_image[:, 1] * tf.boolean_mask(
-                self.all_anchors, anchor_mask)[:, 3]) + tf.boolean_mask(self.all_anchors, anchor_mask)[:, 1]
-            w = tf.math.exp(selected_deltas_per_image[:, 2]) * tf.boolean_mask(self.all_anchors, anchor_mask)[:, 2]
-            h = tf.math.exp(selected_deltas_per_image[:, 3]) * tf.boolean_mask(self.all_anchors, anchor_mask)[:, 3]
+            selected_anchors_per_image = tf.gather(self.all_anchors, selected_anchor_indices_per_image)
+            x1 = (selected_deltas_per_image[:, 0] * selected_anchors_per_image[:, 2]) + selected_anchors_per_image[:, 0]
+            y1 = (selected_deltas_per_image[:, 1] * selected_anchors_per_image[:, 3]) + selected_anchors_per_image[:, 1]
+            w = tf.math.exp(selected_deltas_per_image[:, 2]) * selected_anchors_per_image[:, 2]
+            h = tf.math.exp(selected_deltas_per_image[:, 3]) * selected_anchors_per_image[:, 3]
             x2 = x1 + w
             y2 = y1 + h
 
             # nms
+            # filter out low score, and perform nms
             boxes_per_image = tf.stack([y1, x1, y2, x2], axis=1)
-            nms_indices = tf.image.non_max_suppression(boxes_per_image, selected_scores_per_image, self.nms_max_outputs)
+            nms_indices = tf.image.non_max_suppression(boxes_per_image,
+                                                       selected_scores_per_image,
+                                                       self.nms_max_outputs,
+                                                       score_threshold=self.score_threshold)
 
             nms_boxes = tf.gather(boxes_per_image, nms_indices)
             final_scores = tf.gather(selected_scores_per_image, nms_indices)
-            final_labels = tf.gather(selected_labels_per_image, nms_indices)
+            final_labels = tf.cast(tf.gather(selected_labels_per_image, nms_indices), dtype=tf.float32)
 
             # clip bounding boxes to image size
             x1 = tf.clip_by_value(nms_boxes[:, 1], clip_value_min=0, clip_value_max=self.input_shape[1])
@@ -454,27 +451,7 @@ class PredictBox(TensorOp):
             w = tf.clip_by_value(nms_boxes[:, 3], clip_value_min=0, clip_value_max=self.input_shape[1]) - x1
             h = tf.clip_by_value(nms_boxes[:, 2], clip_value_min=0, clip_value_max=self.input_shape[0]) - y1
 
-            final_boxes = tf.stack([x1, y1, w, h], axis=1)
-
-            # combine image results into batch
-            image_results = tf.concat([
-                tf.pad(final_boxes, [[0, 0], [1, 0]], constant_values=i),
-                tf.cast(tf.expand_dims(final_labels, axis=1), dtype=tf.float32),
-                tf.expand_dims(final_scores, axis=1)
-            ],
-                                      axis=1)
-
-            image_gt = tf.transpose(
-                tf.concat([
-                    tf.stack([i * tf.ones_like(x1_gt_per_image), x1_gt_per_image]),
-                    tf.expand_dims(y1_gt_per_image, axis=0),
-                    tf.expand_dims(w_gt_per_image, axis=0),
-                    tf.expand_dims(h_gt_per_image, axis=0),
-                    tf.expand_dims(tf.cast(label_gt_per_image, dtype=tf.float32), axis=0)
-                ],
-                          axis=0))
-
+            image_results = tf.stack([i * tf.ones_like(final_labels), x1, y1, w, h, final_labels, final_scores], axis=1)
             pred.append(image_results)
-            gt.append(image_gt)
 
         return tf.concat(pred, axis=0), tf.concat(gt, axis=0)
