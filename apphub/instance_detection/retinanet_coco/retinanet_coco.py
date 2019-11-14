@@ -24,8 +24,7 @@ from fastestimator.dataset.mscoco import load_data
 from fastestimator.op import NumpyOp
 from fastestimator.op.numpyop import ImageReader, ResizeImageAndBbox, TypeConverter
 from fastestimator.op.tensorop import Loss, ModelOp, Pad, Rescale
-from fastestimator.schedule import CyclicLRSchedule
-from fastestimator.trace import LRController, ModelSaver
+from fastestimator.trace import MeanAvgPrecision, ModelSaver
 
 
 class String2List(NumpyOp):
@@ -104,7 +103,7 @@ class RetinaLoss(Loss):
         focal_loss = tf.stack(focal_loss)
         l1_loss = tf.stack(l1_loss)
         total_loss = focal_loss + l1_loss
-        return total_loss
+        return total_loss, focal_loss, l1_loss
 
 
 def get_estimator(data_path=None, model_dir=tempfile.mkdtemp()):
@@ -153,7 +152,8 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp()):
         PredictBox(inputs=["cls_pred", "loc_pred", "obj_label", "x1", "y1", "width", "height"],
                    outputs=("pred", "gt"),
                    mode="eval"),
-        RetinaLoss(inputs=("cls_gt", "x1_gt", "y1_gt", "w_gt", "h_gt", "cls_pred", "loc_pred"), outputs="total_loss")
+        RetinaLoss(inputs=("cls_gt", "x1_gt", "y1_gt", "w_gt", "h_gt", "cls_pred", "loc_pred"),
+                   outputs=("total_loss", "focal_loss", "l1_loss"))
     ])
     # prepare estimator
     estimator = fe.Estimator(
@@ -161,8 +161,8 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp()):
         pipeline=pipeline,
         epochs=15,
         traces=[
-            ModelSaver(model_name="retinanet", save_dir=model_dir, save_best=True),
-            LRController(model_name="retinanet", lr_schedule=CyclicLRSchedule(num_cycle=1, decrease_method="cosine"))
+            MeanAvgPrecision(90, (512, 512, 3), 'pred', 'gt', output_name='mAP'),
+            ModelSaver(model_name="retinanet", save_dir=model_dir, save_best='mAP'),
         ])
     return estimator
 
