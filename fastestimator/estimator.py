@@ -240,19 +240,22 @@ class Estimator:
                     self.network.run_step(batch, ops, state)
 
     def _start(self):
-        self.train_step = 0
-        self._run_traces_on_begin({
-            "train_step": self.train_step,
-            "num_devices": self.num_devices,
-            "log_steps": self.log_steps,
-            "persist_summary": bool(self.summary),
-            "total_epochs": self.epochs,
-            "total_train_steps": self.total_train_steps
-        })
-        for self.train_epoch in range(self.epochs):
-            self._run_epoch("train")
-            if self.do_eval:
-                self._run_epoch("eval")
+        try:
+            self.train_step = 0
+            self._run_traces_on_begin({
+                "train_step": self.train_step,
+                "num_devices": self.num_devices,
+                "log_steps": self.log_steps,
+                "persist_summary": bool(self.summary),
+                "total_epochs": self.epochs,
+                "total_train_steps": self.total_train_steps
+            })
+            for self.train_epoch in range(self.epochs):
+                self._run_epoch("train")
+                if self.do_eval:
+                    self._run_epoch("eval")
+        except EarlyStop:
+            pass  # On early stopping we still want to run the final traces and then return results
         summary = Summary(self.summary)
         self._run_traces_on_end({"train_step": self.train_step, "epoch": self.train_epoch, "summary": summary})
         return None if not self.summary else summary
@@ -369,11 +372,7 @@ class Estimator:
 
     def _check_early_exit(self):
         if self.network.stop_training:
-            self._run_traces_on_end({
-                "train_step": self.train_step,
-                "train_epoch": self.train_epoch,
-                "num_devices": self.num_devices, })
-            exit(0)
+            raise EarlyStop
 
     @tf.function
     def _forward_step(self, batch, ops, state):
@@ -393,3 +392,7 @@ class Estimator:
         prediction = per_replica_to_global(prediction)
         batch = per_replica_to_global(batch)
         return prediction, batch
+
+
+class EarlyStop(Exception):
+    pass

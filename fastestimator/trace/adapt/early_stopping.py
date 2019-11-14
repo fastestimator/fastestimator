@@ -77,7 +77,7 @@ class EarlyStopping(Trace):
             self.best = np.Inf if self.monitor_op == np.less else -np.Inf
 
     def on_epoch_end(self, state):
-        current = state.get(self.monitored_key, None) or state['batch'].get(self.monitored_key, None)
+        current = state.get(self.monitored_key, None)
         if current is None:
             return
         if self.monitor_op(current - self.min_delta, self.best):
