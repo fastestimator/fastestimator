@@ -106,7 +106,7 @@ class RetinaLoss(Loss):
         return total_loss, focal_loss, l1_loss
 
 
-def get_estimator(data_path=None, model_dir=tempfile.mkdtemp()):
+def get_estimator(data_path=None, model_dir=tempfile.mkdtemp(), batch_size=8):
     #prepare dataset
     train_csv, val_csv, path = load_data(path=data_path)
     writer = fe.RecordWriter(
@@ -134,7 +134,7 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp()):
         ])
     # prepare pipeline
     pipeline = fe.Pipeline(
-        batch_size=8,
+        batch_size=batch_size,
         data=writer,
         ops=[
             Rescale(inputs="image", outputs="image"),
