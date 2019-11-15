@@ -42,7 +42,7 @@ def _extract_data(zip_path, data_path, idx, total_idx):
 
 
 def _generate_object_data(path, image_name, image_id, data_temp, coco_gt_instance, mask_folder):
-    anns_ids = coco_gt_instance.getAnnIds(imgIds=image_id)
+    anns_ids = coco_gt_instance.getAnnIds(imgIds=image_id, iscrowd=False)
     num_obj = len(anns_ids)
     if num_obj == 0:
         keep_data = False
