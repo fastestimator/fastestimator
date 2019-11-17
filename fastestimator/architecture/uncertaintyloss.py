@@ -12,13 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.layers.apply_bias import ApplyBias
-from fastestimator.layers.equalized_lr_conv_2d import EqualizedLRConv2D
-from fastestimator.layers.equalized_lr_dense import EqualizedLRDense
-from fastestimator.layers.fade_in import FadeIn
-from fastestimator.layers.instance_norm import InstanceNormalization
-from fastestimator.layers.minibatch_std import MiniBatchStd
-from fastestimator.layers.pixel_norm import PixelNormalization
-from fastestimator.layers.reflection_padding_2d import ReflectionPadding2D
-from fastestimator.layers.sub_pixel_conv_2d import SubPixelConv2D
+from tensorflow.python.keras import layers
+from tensorflow.python.keras.models import Model
+
 from fastestimator.layers.uncertainty_weighted_loss import UncertaintyWeightedLoss
+
+
+def UncertaintyLoss(num_losses):
+    """Creates Uncertainty weighted loss model https://arxiv.org/abs/1705.07115
+
+    Args:
+        num_losses: the number of losses
+
+    Returns:
+        'Model' object: Model that produce the uncertainty weighted loss
+    """
+    assert num_losses > 1, "number of losses must be greater than 1 for uncertainty weighted loss"
+    input_layers = []
+    for _ in range(num_losses):
+        input_layers.append(layers.Input(shape=[]))
+    loss = UncertaintyWeightedLoss(num_losses=num_losses)(input_layers)
+    model = Model(inputs=input_layers, outputs=loss)
+    return model
