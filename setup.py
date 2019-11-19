@@ -43,6 +43,7 @@ setup(
     url='https://github.com/fastestimator/fastestimator',
     license="Apache License 2.0",
     keywords="fastestimator tensorflow",
+    python_requires='>=3.6',
     classifiers=[
         "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python :: 3", ],
@@ -68,7 +69,8 @@ setup(
         'tf-explain',
         'slackclient',
         'nest_asyncio',
-        'pycocotools-fix'
+        'pycocotools-fix',
+        'torch'
     ],
     # Declare extra set for installation
     extras_require={},
