@@ -12,11 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op import TensorOp
+from typing import Dict, TypeVar, Generic
+
+from fastestimator.op import TensorOp, NumpyOp
+
+T = TypeVar('T')
 
 
-class Scheduler:
-    def __init__(self, epoch_dict):
+class Scheduler(Generic[T]):
+    def __init__(self, epoch_dict: Dict[int, T]):
         self.epoch_dict = epoch_dict
         self.value = None
         self._verify_inputs()
@@ -28,15 +32,15 @@ class Scheduler:
         for key in self.keys:
             assert isinstance(key, int), "found non-integer key: {}".format(key)
             assert key >= 0, "found negative key: {}".format(key)
-            if isinstance(sample_content, TensorOp) and self.epoch_dict[key]:
+            if isinstance(sample_content, (TensorOp, NumpyOp)) and self.epoch_dict[key]:
                 assert self.mode == self.epoch_dict[key].mode, "schedule contents must have same mode"
 
-    def get_sequential_value(self, epoch):
+    def get_sequential_value(self, epoch: int) -> T:
         if epoch in self.keys:
             self.value = self.epoch_dict[epoch]
         return self.value
 
-    def get_current_value(self, epoch):
+    def get_current_value(self, epoch: int) -> T:
         if epoch in self.keys:
             value = self.epoch_dict[epoch]
         else:
@@ -47,7 +51,7 @@ class Scheduler:
                 value = self.epoch_dict[last_key]
         return value
 
-    def _get_last_key(self, epoch):
+    def _get_last_key(self, epoch: int) -> int:
         last_key = None
         for key in self.keys:
             if key > epoch:
@@ -55,13 +59,13 @@ class Scheduler:
             last_key = key
         return last_key
 
-    def _get_sample_content(self):
+    def _get_sample_content(self) -> T:
         sample_content = None
         for value in self.epoch_dict.values():
             if value is not None:
                 sample_content = value
                 break
-        if isinstance(sample_content, TensorOp):
+        if isinstance(sample_content, (TensorOp, NumpyOp)):
             self.mode = sample_content.mode
         assert sample_content is not None, "At least one value in a scheduler dict must be non-None"
         return sample_content
