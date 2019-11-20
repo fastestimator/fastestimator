@@ -138,14 +138,14 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp(), batch_size=8):
         data=writer,
         ops=[
             Rescale(inputs="image", outputs="image"),
-            Pad(padded_shape=[190],
+            Pad(padded_shape=[1262],
                 inputs=["x1_gt", "y1_gt", "w_gt", "h_gt", "obj_label", "x1", "y1", "width", "height"],
                 outputs=["x1_gt", "y1_gt", "w_gt", "h_gt", "obj_label", "x1", "y1", "width", "height"])
         ])
     # prepare network
     model = fe.build(model_def=lambda: RetinaNet(input_shape=(512, 512, 3), num_classes=90),
                      model_name="retinanet",
-                     optimizer=tf.optimizers.Adam(learning_rate=0.0002),
+                     optimizer=tf.optimizers.Adam(learning_rate=0.0001),
                      loss_name="total_loss")
     network = fe.Network(ops=[
         ModelOp(inputs="image", model=model, outputs=["cls_pred", "loc_pred"]),

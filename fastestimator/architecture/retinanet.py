@@ -221,24 +221,25 @@ def get_fpn_anchor_box(input_shape):
     assert h % 32 == 0 and w % 32 == 0
     shapes = [(int(h / 8), int(w / 8))]  # P3
     num_pixel = [np.prod(shapes)]
+    anchor_lengths = [32, 64, 128, 256, 512]
     for _ in range(4):  # P4 through P7
         shapes.append((int(np.ceil(shapes[-1][0] / 2)), int(np.ceil(shapes[-1][1] / 2))))
         num_pixel.append(np.prod(shapes[-1]))
     total_num_pixels = np.sum(num_pixel)
     anchorbox = np.zeros((9 * total_num_pixels, 4))
-    base_multipliers = [2**(0.0), 2**(1 / 3), 2**(2 / 3)]
+    anchor_length_multipliers = [2**(0.0), 2**(1 / 3), 2**(2 / 3)]
     aspect_ratios = [1.0, 2.0, 0.5]  #x:y
     anchor_idx = 0
-    for shape in shapes:
+    for shape, anchor_length in zip(shapes, anchor_lengths):
         p_h, p_w = shape
-        base_y = h / p_h
-        base_x = w / p_w
+        base_y = 2 ** np.ceil(np.log2(h / p_h))
+        base_x = 2 ** np.ceil(np.log2(w / p_w))
         for i in range(p_h):
             center_y = (i + 1 / 2) * base_y
             for j in range(p_w):
                 center_x = (j + 1 / 2) * base_x
-                for base_multiplier in base_multipliers:
-                    area = base_x * base_multiplier * base_y * base_multiplier
+                for anchor_length_multiplier in anchor_length_multipliers:
+                    area = (anchor_length * anchor_length_multiplier)**2
                     for aspect_ratio in aspect_ratios:
                         x1 = center_x - np.sqrt(area * aspect_ratio) / 2
                         y1 = center_y - np.sqrt(area / aspect_ratio) / 2
