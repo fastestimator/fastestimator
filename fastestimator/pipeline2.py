@@ -13,9 +13,10 @@
 # limitations under the License.
 # ==============================================================================
 import os
+import sys
 import time
 from typing import Optional, Union, Iterable, Iterator, Any, List, TypeVar, Dict, Set
-import sys
+
 import numpy as np
 import tensorflow as tf
 import torch
