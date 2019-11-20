@@ -18,7 +18,7 @@ import tensorflow as tf
 
 import fastestimator as fe
 from fastestimator.op import get_inputs_by_op, get_op_from_mode, verify_ops, write_outputs_by_key
-from fastestimator.op.tensorop import ModelOp, UpdateOp, Loss
+from fastestimator.op.tensorop import Loss, ModelOp, UpdateOp
 from fastestimator.schedule import Scheduler
 from fastestimator.util.util import NonContext, flatten_list, to_list, to_set
 
@@ -149,20 +149,25 @@ class Network:
                 write_outputs_by_key(batch, data, op.outputs)
 
 
-def build(model_def, model_name, optimizer, loss_name):
+def build(model_def, model_name, optimizer, loss_name, custom_objects=None):
     """build keras model instance in FastEstimator
 
     Args:
-        model_def (function): function definition of tf.keras model
+        model_def (function): function definition of tf.keras model or path of model file(h5)
         model_name (str, list, tuple): model name(s)
         optimizer (str, optimizer, list, tuple): optimizer(s)
         loss_name (str, list, tuple): loss name(s)
+        custom_objects (dict): dictionary that maps custom
 
     Returns:
         model: model(s) compiled by FastEstimator
     """
     with fe.distribute_strategy.scope() if fe.distribute_strategy else NonContext():
-        model = to_list(model_def())
+        if isinstance(model_def, str):
+            model = tf.keras.models.load_model(model_def, custom_objects=custom_objects)
+        else:
+            model = model_def()
+        model = to_list(model)
         model_name = to_list(model_name)
         optimizer = to_list(optimizer)
         loss_name = to_list(loss_name)
