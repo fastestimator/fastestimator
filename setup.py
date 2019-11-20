@@ -1,7 +1,8 @@
-import os
-import sys
-import re
 import datetime
+import os
+import re
+import sys
+
 from setuptools import find_packages, setup
 
 is_nightly = os.environ.get('FASTESTIMATOR_IS_NIGHTLY', None)
@@ -70,7 +71,8 @@ setup(
         'slackclient',
         'nest_asyncio',
         'pycocotools-fix',
-        'torch'
+        'torch',
+        'torchvision'
     ],
     # Declare extra set for installation
     extras_require={},
