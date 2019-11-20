@@ -232,8 +232,8 @@ def get_fpn_anchor_box(input_shape):
     anchor_idx = 0
     for shape, anchor_length in zip(shapes, anchor_lengths):
         p_h, p_w = shape
-        base_y = h / p_h
-        base_x = w / p_w
+        base_y = 2 ** np.ceil(np.log2(h / p_h))
+        base_x = 2 ** np.ceil(np.log2(w / p_w))
         for i in range(p_h):
             center_y = (i + 1 / 2) * base_y
             for j in range(p_w):
