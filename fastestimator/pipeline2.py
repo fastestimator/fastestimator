@@ -115,6 +115,8 @@ def get_per_epoch(ops: Iterable[Union[T, Scheduler[T]]], epoch: int) -> List[T]:
 
 
 class Pipeline:
+    # TODO support filter ops
+    # TODO support cache op
     dataloaders: Dict[str, Scheduler[DataLoader]]
     batch_size: Scheduler[int]
     """ A class representing the data pipeline for FastEstimator
