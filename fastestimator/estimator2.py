@@ -20,14 +20,14 @@ import tensorflow as tf
 from torch.utils.data import DataLoader
 
 import fastestimator as fe
+from fastestimator import Network
 from fastestimator.cli.cli_util import draw
+from fastestimator.op import TensorOp
 from fastestimator.pipeline2 import torch_to_tf, BasePipeline, TorchPipeline, TensorFlowPipeline
 from fastestimator.schedule.epoch_scheduler import Scheduler
 from fastestimator.summary import Summary
 from fastestimator.trace import Logger, ModelSaver, MonitorLoss, Trace, TrainInfo
-from fastestimator.util.util import get_num_devices, per_replica_to_global, to_list, flatten_list
-from fastestimator import Network
-from fastestimator.op import TensorOp
+from fastestimator.util.util import get_num_devices, per_replica_to_global, to_list
 
 
 class Estimator:
