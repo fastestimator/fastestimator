@@ -37,4 +37,4 @@ class Minmax(NumpyOp):
         data_max = np.max(data)
         data_min = np.min(data)
         data = (data - data_min) / max((data_max - data_min), self.epsilon)
-        return data
+        return data.astype(np.float32)
