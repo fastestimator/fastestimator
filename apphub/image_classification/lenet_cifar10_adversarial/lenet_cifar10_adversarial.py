@@ -18,9 +18,11 @@ import tensorflow as tf
 
 from fastestimator import Estimator, Network, Pipeline, build
 from fastestimator.architecture import LeNet
-from fastestimator.op.tensorop import AdversarialSample, Average, Minmax, ModelOp, SparseCategoricalCrossentropy
+from fastestimator.op.tensorop import AdversarialSample, Average, ModelOp, SparseCategoricalCrossentropy
 from fastestimator.schedule import Scheduler
 from fastestimator.trace import Accuracy, ConfusionMatrix, ModelSaver
+from fastestimator.pipeline2 import Pipeline, NumpyDataset
+from fastestimator.op.numpyop import Minmax
 
 
 def get_estimator(epochs=10,
@@ -31,10 +33,17 @@ def get_estimator(epochs=10,
                   validation_steps=None,
                   model_dir=tempfile.mkdtemp()):
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.cifar10.load_data()
-    data = {"train": {"x": x_train, "y": y_train}, "eval": {"x": x_eval, "y": y_eval}}
+    # data = {"train": {"x": x_train, "y": y_train}, "eval": {"x": x_eval, "y": y_eval}}
     num_classes = 10
 
-    pipeline = Pipeline(batch_size=batch_size, data=data, ops=Minmax(inputs="x", outputs="x"))
+    # pipeline = Pipeline(batch_size=batch_size, data=data, ops=Minmax(inputs="x", outputs="x"))
+
+    train_data = NumpyDataset({"x": x_train, "y": y_train})
+    eval_data = NumpyDataset({"x": x_eval, "y": y_eval})
+    pipeline = Pipeline(batch_size=batch_size,
+                        train_data=train_data,
+                        eval_data=eval_data,
+                        ops=Minmax(inputs="x", outputs="x"))
 
     model = build(model_def=lambda: LeNet(input_shape=x_train.shape[1:], classes=num_classes),
                   model_name="LeNet",

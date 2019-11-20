@@ -19,17 +19,23 @@ import tensorflow as tf
 
 import fastestimator as fe
 from fastestimator.architecture import LeNet
-from fastestimator.op.tensorop import Minmax, ModelOp, SparseCategoricalCrossentropy
+from fastestimator.op.tensorop import ModelOp, SparseCategoricalCrossentropy
 from fastestimator.trace import Accuracy, ModelSaver
+from fastestimator.pipeline2 import Pipeline, NumpyDataset
+from fastestimator.op.numpyop import Minmax
 
 
 def get_estimator(epochs=2, batch_size=32, steps_per_epoch=None, validation_steps=None, model_dir=tempfile.mkdtemp()):
     # step 1. prepare data
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.mnist.load_data()
-    train_data = {"x": np.expand_dims(x_train, -1), "y": y_train}
-    eval_data = {"x": np.expand_dims(x_eval, -1), "y": y_eval}
-    data = {"train": train_data, "eval": eval_data}
-    pipeline = fe.Pipeline(batch_size=batch_size, data=data, ops=Minmax(inputs="x", outputs="x"))
+    train_data = NumpyDataset({"x": np.expand_dims(x_train, -1), "y": y_train})
+    eval_data = NumpyDataset({"x": np.expand_dims(x_eval, -1), "y": y_eval})
+    # data = {"train": train_data, "eval": eval_data}
+    # pipeline = fe.Pipeline(batch_size=batch_size, data=data, ops=Minmax(inputs="x", outputs="x"))
+    pipeline = Pipeline(batch_size=batch_size,
+                        train_data=train_data,
+                        eval_data=eval_data,
+                        ops=Minmax(inputs="x", outputs="x"))
 
     # step 2. prepare model
     model = fe.build(model_def=LeNet, model_name="lenet", optimizer="adam", loss_name="loss")
