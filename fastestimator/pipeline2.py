@@ -13,9 +13,12 @@
 # limitations under the License.
 # ==============================================================================
 import os
-from typing import Optional, Union, Iterable, Iterator, Any, List, TypeVar, Dict
 import time
+from typing import Optional, Union, Iterable, Iterator, Any, List, TypeVar, Dict
+
 import numpy as np
+import tensorflow as tf
+import torch
 from torch.utils.data import DataLoader, Dataset
 
 from fastestimator.op import get_inputs_by_op, write_outputs_by_key, NumpyOp
@@ -113,6 +116,7 @@ def get_per_epoch(ops: Iterable[Union[T, Scheduler[T]]], epoch: int) -> List[T]:
 
 class Pipeline:
     dataloaders: Dict[str, Scheduler[DataLoader]]
+    batch_size: Scheduler[int]
     """ A class representing the data pipeline for FastEstimator
 
     Args:
@@ -143,6 +147,8 @@ class Pipeline:
         if isinstance(batch_size, Scheduler):
             assert 0 in batch_size.epoch_dict.keys(), "Batch size must be specified for epoch 0"
             assert all(map(lambda x: x is not None, batch_size.epoch_dict.values())), "Batch size must never be None"
+        else:
+            batch_size = Scheduler({0: batch_size})
         self.batch_size = batch_size
         self.drop_last = drop_last
         self.num_process = os.cpu_count() or 1 if num_process is None else num_process
@@ -167,23 +173,14 @@ class Pipeline:
     def _build_loader(self, dataset: Optional[OpDataset], shuffle: bool = True) -> Optional[Scheduler[OpDataLoader]]:
         if dataset is None:
             return None
-        if isinstance(self.batch_size, Scheduler):
-            return Scheduler({
-                epoch: OpDataLoader(dataset,
-                                    batch_size=size,
-                                    shuffle=shuffle,
-                                    num_workers=self.num_process,
-                                    drop_last=self.drop_last)
-                for epoch,
-                size in self.batch_size.epoch_dict.items()
-            })
         return Scheduler({
-            0:
-            OpDataLoader(dataset,
-                         batch_size=self.batch_size,
-                         shuffle=shuffle,
-                         num_workers=self.num_process,
-                         drop_last=self.drop_last)
+            epoch: OpDataLoader(dataset,
+                                batch_size=size,
+                                shuffle=shuffle,
+                                num_workers=self.num_process,
+                                drop_last=self.drop_last)
+            for epoch,
+            size in self.batch_size.epoch_dict.items()
         })
 
     def add_dataset(self, dataset: Dataset, mode: str, shuffle: bool = True):
@@ -192,10 +189,13 @@ class Pipeline:
 
     def get_global_batch_size(self, epoch: int) -> int:
         # TODO figure out global vs local. I'm pretty sure this loader will always be global batch
-        if isinstance(self.batch_size, Scheduler):
-            return self.batch_size.get_current_value(epoch)
-        else:
-            return self.batch_size
+        return self.batch_size.get_current_value(epoch)
+
+    def get_num_examples(self, mode: str, epoch: int) -> int:
+        return len(self.dataloaders[mode].get_current_value(epoch).dataset)
+
+    def get_signature_epochs(self, mode: str) -> List[int]:
+        return sorted(self.batch_size.epoch_dict.keys() | self.datasets[mode].op_schedule.epoch_dict.keys())
 
     def transform(self, mode: str, epoch: int = 0, dataset: Optional[Dataset] = None) -> Iterator:
         if dataset is None:
@@ -229,3 +229,19 @@ class Pipeline:
         for _ in range(num_steps):
             data.append(next(itr))
         return data
+
+
+def torch_to_tf(data):
+    if isinstance(data, torch.Tensor):
+        return tf.constant(data.numpy(), dtype=tf.float32)
+    if isinstance(data, dict):
+        result = {}
+        for key, val in data.items():
+            result[key] = torch_to_tf(val)
+        return result
+    if isinstance(data, list):
+        return [torch_to_tf(val) for val in data]
+    if isinstance(data, tuple):
+        return tuple([torch_to_tf(val) for val in data])
+    if isinstance(data, set):
+        return set([torch_to_tf(val) for val in data])
