@@ -146,7 +146,7 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp(), batch_size=2):
     # prepare network
     model = fe.build(model_def=lambda: RetinaNet(input_shape=(1024, 1024, 3), num_classes=90),
                      model_name="retinanet",
-                     optimizer=tf.optimizers.Adam(learning_rate=0.0004),
+                     optimizer=tf.optimizers.Adam(learning_rate=0.0002),
                      loss_name="total_loss")
     network = fe.Network(ops=[
         ModelOp(inputs="image", model=model, outputs=["cls_pred", "loc_pred"]),
