@@ -14,7 +14,7 @@
 # ==============================================================================
 import os
 import time
-from typing import Optional, Union, Iterable, Iterator, Any, List, TypeVar, Dict
+from typing import Optional, Union, Iterable, Iterator, Any, List, TypeVar, Dict, Set
 
 import numpy as np
 import tensorflow as tf
@@ -114,7 +114,46 @@ def get_per_epoch(ops: Iterable[Union[T, Scheduler[T]]], epoch: int) -> List[T]:
     return per_epoch
 
 
-class Pipeline:
+class BasePipeline:
+    def get_global_batch_size(self, mode: str, epoch: int) -> int:
+        raise NotImplementedError()
+
+    def get_num_examples(self, mode: str, epoch: int) -> int:
+        raise NotImplementedError()
+
+    def get_signature_epochs(self, mode: str) -> List[int]:
+        raise NotImplementedError()
+
+    def get_all_output_keys(self) -> Set[str]:
+        raise NotImplementedError()
+
+    def supports_eval(self) -> bool:
+        raise NotImplementedError()
+
+    def transform(self, mode: str, epoch: int = 0, dataset: Optional[Dataset] = None) -> Iterator:
+        raise NotImplementedError()
+
+    def benchmark(self, mode: str = "train", num_steps: int = 1000, log_interval: int = 100, epoch: int = 0):
+        itr = self.transform(mode=mode, epoch=epoch)
+        start = time.perf_counter()
+        for idx in range(num_steps + 1):
+            _ = next(itr)
+            if idx % log_interval == 0 and idx > 0:
+                duration = time.perf_counter() - start
+                examples_per_sec = log_interval * self.get_global_batch_size(mode=mode, epoch=epoch) / duration
+                print("FastEstimator: Step: {}, Epoch: {}, Batch Size: {}, Examples/sec: {}".format(
+                    idx, epoch, self.get_global_batch_size(mode=mode, epoch=epoch), examples_per_sec))
+                start = time.perf_counter()
+
+    def show_results(self, mode: str = "train", num_steps: int = 1, epoch: int = 0):
+        data = []
+        itr = self.transform(mode=mode, epoch=epoch)
+        for _ in range(num_steps):
+            data.append(next(itr))
+        return data
+
+
+class Pipeline(BasePipeline):
     # TODO support filter ops
     # TODO support cache op
     dataloaders: Dict[str, Scheduler[DataLoader]]
@@ -189,8 +228,9 @@ class Pipeline:
         self.datasets[mode] = self._build_dataset(dataset, mode)
         self.dataloaders[mode] = self._build_loader(self.datasets[mode], shuffle=shuffle)
 
-    def get_global_batch_size(self, epoch: int) -> int:
+    def get_global_batch_size(self, mode: str, epoch: int) -> int:
         # TODO figure out global vs local. I'm pretty sure this loader will always be global batch
+        # TODO support per-mode batch size
         return self.batch_size.get_current_value(epoch)
 
     def get_num_examples(self, mode: str, epoch: int) -> int:
@@ -198,6 +238,12 @@ class Pipeline:
 
     def get_signature_epochs(self, mode: str) -> List[int]:
         return sorted(self.batch_size.epoch_dict.keys() | self.datasets[mode].op_schedule.epoch_dict.keys())
+
+    def get_all_output_keys(self) -> Set[str]:
+        return self.all_output_keys
+
+    def supports_eval(self) -> bool:
+        return self.dataloaders.get("eval", None) is not None
 
     def transform(self, mode: str, epoch: int = 0, dataset: Optional[Dataset] = None) -> Iterator:
         if dataset is None:
@@ -213,24 +259,58 @@ class Pipeline:
         loader.set_epoch(epoch)
         return iter(loader)
 
-    def benchmark(self, mode: str = "train", num_steps: int = 1000, log_interval: int = 100, epoch: int = 0):
-        itr = self.transform(mode=mode, epoch=epoch)
-        start = time.perf_counter()
-        for idx in range(num_steps + 1):
-            _ = next(itr)
-            if idx % log_interval == 0 and idx > 0:
-                duration = time.perf_counter() - start
-                examples_per_sec = log_interval * self.get_global_batch_size(epoch) / duration
-                print("FastEstimator: Step: {}, Epoch: {}, Batch Size: {}, Examples/sec: {}".format(
-                    idx, epoch, self.get_global_batch_size(epoch), examples_per_sec))
-                start = time.perf_counter()
 
-    def show_results(self, mode: str = "train", num_steps: int = 1, epoch: int = 0):
-        data = []
-        itr = self.transform(mode=mode, epoch=epoch)
-        for _ in range(num_steps):
-            data.append(next(itr))
-        return data
+class TorchPipeline(BasePipeline):
+    def __init__(self, dataloaders: Dict[str, DataLoader]):
+        self.dataloaders = dataloaders
+        self.num_examples = {mode: len(loader.dataset) for mode, loader in dataloaders.items()}
+        self.batch_sizes = {mode: loader.batch_size for mode, loader in dataloaders.items()}
+        self.output_keys = set()
+        for mode, loader in self.dataloaders.items():
+            batch = next(iter(loader))
+            assert isinstance(batch, dict), "DataLoader must return a dictionary of values"
+            for key, value in batch.items():
+                self.output_keys.add(key)
+                # If the user had a custom batch sampler then the loader's batch size will be None. Need to infer it
+                if self.batch_sizes[mode] is None:
+                    self.batch_sizes[mode] = self._infer_batch_size(value)
+
+    @staticmethod
+    def _infer_batch_size(data) -> int:
+        if isinstance(data, torch.Tensor):
+            return data.shape[0]
+        if isinstance(data, (list, tuple)):
+            return TorchPipeline._infer_batch_size(data[0])
+        if isinstance(data, set):
+            return TorchPipeline._infer_batch_size(data.pop())
+        if isinstance(data, dict):
+            return TorchPipeline._infer_batch_size(data.popitem()[1])
+        raise ValueError("Could not infer batch size from data loader")
+
+    def get_num_examples(self, mode: str, epoch: int) -> int:
+        return self.num_examples[mode]
+
+    def get_signature_epochs(self, mode: str) -> List[int]:
+        return [0]
+
+    def get_global_batch_size(self, mode: str, epoch: int) -> int:
+        return self.batch_sizes[mode]
+
+    def get_all_output_keys(self) -> Set[str]:
+        return self.output_keys
+
+    def supports_eval(self) -> bool:
+        return self.dataloaders.get("eval", None) is not None
+
+    def transform(self, mode: str, epoch: int = 0, dataset: Optional[Dataset] = None) -> Iterator:
+        if dataset is not None:
+            loader = DataLoader(dataset=dataset,
+                                batch_size=self.batch_sizes.get(mode, 1),
+                                num_workers=os.cpu_count(),
+                                drop_last=False)
+        else:
+            loader = self.dataloaders[mode]
+        return iter(loader)
 
 
 def torch_to_tf(data):
