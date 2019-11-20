@@ -15,7 +15,7 @@
 import os
 import time
 from typing import Optional, Union, Iterable, Iterator, Any, List, TypeVar, Dict, Set
-
+import sys
 import numpy as np
 import tensorflow as tf
 import torch
@@ -115,10 +115,10 @@ def get_per_epoch(ops: Iterable[Union[T, Scheduler[T]]], epoch: int) -> List[T]:
 
 
 class BasePipeline:
-    def get_global_batch_size(self, mode: str, epoch: int) -> int:
+    def get_modes(self) -> Set[str]:
         raise NotImplementedError()
 
-    def get_num_examples(self, mode: str, epoch: int) -> int:
+    def get_global_batch_size(self, mode: str, epoch: int) -> int:
         raise NotImplementedError()
 
     def get_signature_epochs(self, mode: str) -> List[int]:
@@ -127,7 +127,7 @@ class BasePipeline:
     def get_all_output_keys(self) -> Set[str]:
         raise NotImplementedError()
 
-    def supports_eval(self) -> bool:
+    def get_num_examples(self, mode: str, epoch: int) -> int:
         raise NotImplementedError()
 
     def transform(self, mode: str, epoch: int = 0, dataset: Optional[Dataset] = None) -> Iterator:
@@ -224,6 +224,9 @@ class Pipeline(BasePipeline):
             size in self.batch_size.epoch_dict.items()
         })
 
+    def get_modes(self) -> Set[str]:
+        return set(self.dataloaders.keys())
+
     def add_dataset(self, dataset: Dataset, mode: str, shuffle: bool = True):
         self.datasets[mode] = self._build_dataset(dataset, mode)
         self.dataloaders[mode] = self._build_loader(self.datasets[mode], shuffle=shuffle)
@@ -241,9 +244,6 @@ class Pipeline(BasePipeline):
 
     def get_all_output_keys(self) -> Set[str]:
         return self.all_output_keys
-
-    def supports_eval(self) -> bool:
-        return self.dataloaders.get("eval", None) is not None
 
     def transform(self, mode: str, epoch: int = 0, dataset: Optional[Dataset] = None) -> Iterator:
         if dataset is None:
@@ -273,19 +273,10 @@ class TorchPipeline(BasePipeline):
                 self.output_keys.add(key)
                 # If the user had a custom batch sampler then the loader's batch size will be None. Need to infer it
                 if self.batch_sizes[mode] is None:
-                    self.batch_sizes[mode] = self._infer_batch_size(value)
+                    self.batch_sizes[mode] = _infer_batch_size(value)
 
-    @staticmethod
-    def _infer_batch_size(data) -> int:
-        if isinstance(data, torch.Tensor):
-            return data.shape[0]
-        if isinstance(data, (list, tuple)):
-            return TorchPipeline._infer_batch_size(data[0])
-        if isinstance(data, set):
-            return TorchPipeline._infer_batch_size(data.pop())
-        if isinstance(data, dict):
-            return TorchPipeline._infer_batch_size(data.popitem()[1])
-        raise ValueError("Could not infer batch size from data loader")
+    def get_modes(self) -> Set[str]:
+        return set(self.dataloaders.keys())
 
     def get_num_examples(self, mode: str, epoch: int) -> int:
         return self.num_examples[mode]
@@ -299,9 +290,6 @@ class TorchPipeline(BasePipeline):
     def get_all_output_keys(self) -> Set[str]:
         return self.output_keys
 
-    def supports_eval(self) -> bool:
-        return self.dataloaders.get("eval", None) is not None
-
     def transform(self, mode: str, epoch: int = 0, dataset: Optional[Dataset] = None) -> Iterator:
         if dataset is not None:
             loader = DataLoader(dataset=dataset,
@@ -309,11 +297,56 @@ class TorchPipeline(BasePipeline):
                                 num_workers=os.cpu_count(),
                                 drop_last=False)
         else:
-            loader = self.dataloaders[mode]
+            loader = self.dataloaders.get(mode, ())
         return iter(loader)
 
 
+class TensorFlowPipeline(BasePipeline):
+    def __init__(self, dataloaders: Dict[str, tf.data.Dataset]):
+        self.dataloaders = dataloaders
+        self.batch_sizes = {mode: None for mode in dataloaders.keys()}
+        self.num_examples = {mode: tf.data.experimental.cardinality(dataset) for mode, dataset in dataloaders.items()}
+        self.output_keys = set()
+        for mode, loader in self.dataloaders.items():
+            batch = next(iter(loader))
+            assert isinstance(batch, dict), "Dataset must return a dictionary of values"
+            for key, value in batch.items():
+                self.output_keys.add(key)
+                # If the user had a custom batch sampler then the loader's batch size will be None. Need to infer it
+                if self.batch_sizes[mode] is None:
+                    self.batch_sizes[mode] = _infer_batch_size(value)
+        for mode, size in self.num_examples.items():
+            if size == tf.data.experimental.INFINITE_CARDINALITY:
+                self.num_examples[mode] = sys.maxsize  # TODO - handle infinity in a clever way somehow
+            if size == tf.data.experimental.UNKNOWN_CARDINALITY:
+                self.num_examples[mode] = self.dataloaders[mode].reduce(0, lambda x, _: x + 1)
+            else:
+                # Cardinality is based on batch size, but we want total number of examples
+                self.num_examples[mode] = int(self.num_examples[mode]) * self.batch_sizes[mode]
+
+    def get_modes(self) -> Set[str]:
+        return set(self.dataloaders.keys())
+
+    def get_global_batch_size(self, mode: str, epoch: int) -> int:
+        return self.batch_sizes[mode]
+
+    def get_signature_epochs(self, mode: str) -> List[int]:
+        return [0]
+
+    def get_all_output_keys(self) -> Set[str]:
+        return self.output_keys
+
+    def get_num_examples(self, mode: str, epoch: int) -> int:
+        return self.num_examples[mode]
+
+    def transform(self, mode: str, epoch: int = 0, dataset: Optional[Dataset] = None) -> Iterator:
+        # TODO support dataset arg
+        return iter(self.dataloaders.get(mode, ()))
+
+
 def torch_to_tf(data):
+    if isinstance(data, tf.Tensor):
+        return data
     if isinstance(data, torch.Tensor):
         return tf.constant(data.numpy(), dtype=tf.float32)
     if isinstance(data, dict):
@@ -327,3 +360,15 @@ def torch_to_tf(data):
         return tuple([torch_to_tf(val) for val in data])
     if isinstance(data, set):
         return set([torch_to_tf(val) for val in data])
+
+
+def _infer_batch_size(data) -> int:
+    if isinstance(data, (torch.Tensor, tf.Tensor)):
+        return data.shape[0]
+    if isinstance(data, (list, tuple)):
+        return _infer_batch_size(data[0])
+    if isinstance(data, set):
+        return _infer_batch_size(data.pop())
+    if isinstance(data, dict):
+        return _infer_batch_size(data.popitem()[1])
+    raise ValueError("Could not infer batch size from data loader")

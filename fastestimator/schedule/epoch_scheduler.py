@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Dict, TypeVar, Generic
+from typing import Dict, TypeVar, Generic, Optional
 
 from fastestimator.op import TensorOp, NumpyOp
 
@@ -20,6 +20,9 @@ T = TypeVar('T')
 
 
 class Scheduler(Generic[T]):
+    epoch_dict: Dict[int, T]
+    value: Optional[T]
+
     def __init__(self, epoch_dict: Dict[int, T]):
         self.epoch_dict = epoch_dict
         self.value = None
