@@ -115,6 +115,7 @@ class Estimator:
                     "batch_size": batch_size,
                     "local_batch_size": batch_size // self.num_devices,
                     "epoch": tf.convert_to_tensor(self.epoch),
+                    "num_examples": pipeline.get_num_examples(mode=mode, epoch=epoch),
                     "warmup": True
                 }
                 ops = self.network.load_epoch(epoch, mode)
@@ -161,6 +162,7 @@ class Estimator:
             "batch",
             "elapsed_time",
             "local_batch_size",
+            "num_examples"
             "log_steps",
             "persist_summary",
             "total_epochs",
@@ -238,9 +240,12 @@ class Estimator:
     def _run_epoch(self, mode):
         pipeline = self.pipeline.get_current_value(self.epoch)
         batch_size = pipeline.get_global_batch_size(mode=mode, epoch=self.epoch)
+        num_examples = pipeline.get_num_examples(mode=mode, epoch=self.epoch)
         ops = self.network.load_epoch(epoch=self.epoch, mode=mode)
         batch_idx = 0
-        self._run_traces_on_epoch_begin({"mode": mode, "epoch": self.epoch, "train_step": self.train_step})
+        self._run_traces_on_epoch_begin({
+            "mode": mode, "epoch": self.epoch, "train_step": self.train_step, "num_examples": num_examples
+        })
         for batch in pipeline.transform(mode=mode, epoch=self.epoch):
             batch = torch_to_tf(batch)
             self._run_traces_on_batch_begin({
@@ -261,6 +266,7 @@ class Estimator:
                         "batch_size": batch_size,
                         "local_batch_size": batch_size // self.num_devices,
                         "epoch": tf.convert_to_tensor(self.epoch),
+                        "num_examples": num_examples,
                         "warmup": False
                     })
             else:
@@ -272,6 +278,7 @@ class Estimator:
                         "batch_size": batch_size,
                         "local_batch_size": batch_size // self.num_devices,
                         "epoch": tf.convert_to_tensor(self.epoch),
+                        "num_examples": num_examples,
                         "warmup": False
                     })
 
