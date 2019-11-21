@@ -211,7 +211,10 @@ class Pipeline(BasePipeline):
             "eval": self._build_loader(self.datasets["eval"], shuffle=shuffle_eval)
         }
         # All output keys from the dataset, plus any outputs from the ops
-        self.all_output_keys = {key for dataset in self.datasets.values() for key in dataset[0].keys()}
+        self.all_output_keys = {
+            key
+            for dataset in self.datasets.values() if dataset is not None for key in dataset[0].keys()
+        }
         for op in self.ops:
             if isinstance(op, Scheduler):
                 self.all_output_keys.update(map(lambda x: to_list(x.outputs), op.epoch_dict.values()))
