@@ -195,9 +195,6 @@ class Pipeline(BasePipeline):
                  shuffle_train: bool = True,
                  shuffle_eval: bool = False):
         self.ops = [] if ops is None else to_list(ops)
-        self.datasets = {
-            "train": self._build_dataset(train_data, "train"), "eval": self._build_dataset(eval_data, "eval")
-        }
         if isinstance(batch_size, Scheduler):
             assert 0 in batch_size.epoch_dict.keys(), "Batch size must be specified for epoch 0"
             assert all(map(lambda x: x is not None, batch_size.epoch_dict.values())), "Batch size must never be None"
@@ -206,15 +203,16 @@ class Pipeline(BasePipeline):
         self.batch_size = batch_size
         self.drop_last = drop_last
         self.num_process = os.cpu_count() or 1 if num_process is None else num_process
-        self.dataloaders = {
-            "train": self._build_loader(self.datasets["train"], shuffle=shuffle_train),
-            "eval": self._build_loader(self.datasets["eval"], shuffle=shuffle_eval)
-        }
+        self.datasets = {}
+        self.dataloaders = {}
+        if train_data is not None:
+            self.datasets["train"] = self._build_dataset(train_data, "train")
+            self.dataloaders["train"] = self._build_loader(self.datasets["train"], shuffle=shuffle_train)
+        if eval_data is not None:
+            self.datasets["eval"] = self._build_dataset(eval_data, "eval")
+            self.dataloaders["eval"] = self._build_loader(self.datasets["eval"], shuffle=shuffle_eval)
         # All output keys from the dataset, plus any outputs from the ops
-        self.all_output_keys = {
-            key
-            for dataset in self.datasets.values() if dataset is not None for key in dataset[0].keys()
-        }
+        self.all_output_keys = {key for dataset in self.datasets.values() for key in dataset[0].keys()}
         for op in self.ops:
             if isinstance(op, Scheduler):
                 self.all_output_keys.update(map(lambda x: to_list(x.outputs), op.epoch_dict.values()))
@@ -222,14 +220,10 @@ class Pipeline(BasePipeline):
                 self.all_output_keys.update(to_list(op.outputs))
         self.all_output_keys -= {None}
 
-    def _build_dataset(self, dataset: Dataset, mode: str) -> Optional[OpDataset]:
-        if dataset is None:
-            return None
+    def _build_dataset(self, dataset: Dataset, mode: str) -> OpDataset:
         return OpDataset(dataset, list(filter(lambda op: op.mode in (None, mode), self.ops)))
 
-    def _build_loader(self, dataset: Optional[OpDataset], shuffle: bool = True) -> Optional[Scheduler[OpDataLoader]]:
-        if dataset is None:
-            return None
+    def _build_loader(self, dataset: OpDataset, shuffle: bool = True) -> Scheduler[OpDataLoader]:
         return Scheduler({
             epoch: OpDataLoader(dataset,
                                 batch_size=size,
@@ -253,10 +247,13 @@ class Pipeline(BasePipeline):
         return self.batch_size.get_current_value(epoch)
 
     def get_num_examples(self, mode: str, epoch: int) -> int:
+        if self.dataloaders.get(mode) is None:
+            return 0
         return len(self.dataloaders[mode].get_current_value(epoch).dataset)
 
     def get_signature_epochs(self, mode: str) -> List[int]:
-        return sorted(self.batch_size.epoch_dict.keys() | self.datasets[mode].op_schedule.epoch_dict.keys())
+        sig_op_epochs = {} if self.datasets.get(mode) is None else self.datasets[mode].op_schedule.epoch_dict.keys()
+        return sorted(self.batch_size.epoch_dict.keys() | sig_op_epochs)
 
     def get_all_output_keys(self) -> Set[str]:
         return self.all_output_keys
@@ -295,13 +292,13 @@ class TorchPipeline(BasePipeline):
         return set(self.dataloaders.keys())
 
     def get_num_examples(self, mode: str, epoch: int) -> int:
-        return self.num_examples[mode]
+        return self.num_examples.get(mode, 0)
 
     def get_signature_epochs(self, mode: str) -> List[int]:
         return [0]
 
     def get_global_batch_size(self, mode: str, epoch: int) -> int:
-        return self.batch_sizes[mode]
+        return self.batch_sizes.get(mode, 0)
 
     def get_all_output_keys(self) -> Set[str]:
         return self.output_keys
@@ -344,7 +341,7 @@ class TensorFlowPipeline(BasePipeline):
         return set(self.dataloaders.keys())
 
     def get_global_batch_size(self, mode: str, epoch: int) -> int:
-        return self.batch_sizes[mode]
+        return self.batch_sizes.get(mode, 0)
 
     def get_signature_epochs(self, mode: str) -> List[int]:
         return [0]
@@ -353,7 +350,7 @@ class TensorFlowPipeline(BasePipeline):
         return self.output_keys
 
     def get_num_examples(self, mode: str, epoch: int) -> int:
-        return self.num_examples[mode]
+        return self.num_examples.get(mode, 0)
 
     def transform(self, mode: str, epoch: int = 0, dataset: Optional[Dataset] = None) -> Iterator:
         # TODO support dataset arg
