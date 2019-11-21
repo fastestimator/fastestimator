@@ -16,15 +16,28 @@ import os
 import tempfile
 from ast import literal_eval
 
-import tensorflow as tf
-
 import fastestimator as fe
+import tensorflow as tf
 from fastestimator.architecture.retinanet import PredictBox, RetinaNet, get_fpn_anchor_box, get_target
 from fastestimator.dataset.mscoco import load_data
 from fastestimator.op import NumpyOp
 from fastestimator.op.numpyop import ImageReader, ResizeImageAndBbox, TypeConverter
 from fastestimator.op.tensorop import Loss, ModelOp, Pad, Rescale
-from fastestimator.trace import MeanAvgPrecision, ModelSaver
+from fastestimator.schedule import LRSchedule
+from fastestimator.trace import LRController, MeanAvgPrecision, ModelSaver, 
+
+
+class MyLRSchedule(LRSchedule):
+    def schedule_fn(self, current_step_or_epoch, lr):
+        if current_step_or_epoch < 2000:
+            lr = (0.01 - 0.0002) / 2000 * current_step_or_epoch + 0.0002
+        elif current_step_or_epoch < 120000:
+            lr = 0.01
+        elif current_step_or_epoch < 160000:
+            lr = 0.001
+        else:
+            lr = 0.0001
+        return lr / 2
 
 
 class String2List(NumpyOp):
@@ -145,7 +158,7 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp(), batch_size=8):
     # prepare network
     model = fe.build(model_def=lambda: RetinaNet(input_shape=(512, 512, 3), num_classes=90),
                      model_name="retinanet",
-                     optimizer=tf.optimizers.Adam(learning_rate=0.0001),
+                     optimizer=tf.optimizers.SGD(momentum=0.9),
                      loss_name="total_loss")
     network = fe.Network(ops=[
         ModelOp(inputs="image", model=model, outputs=["cls_pred", "loc_pred"]),
@@ -159,10 +172,11 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp(), batch_size=8):
     estimator = fe.Estimator(
         network=network,
         pipeline=pipeline,
-        epochs=15,
+        epochs=13,
         traces=[
             MeanAvgPrecision(90, (512, 512, 3), 'pred', 'gt', output_name='mAP'),
-            ModelSaver(model_name="retinanet", save_dir=model_dir, save_best='mAP'),
+            ModelSaver(model_name="retinanet", save_dir=model_dir, save_best='mAP', save_best_mode='max'),
+            LRController(model_name="retinanet", lr_schedule=MyLRSchedule(schedule_mode="step"))
         ])
     return estimator
 
