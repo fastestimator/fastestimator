@@ -15,7 +15,7 @@
 import os
 import sys
 import time
-from typing import Optional, Union, Iterable, Iterator, Any, List, TypeVar, Dict, Set
+from typing import Optional, Union, Iterable, Iterator, Any, List, TypeVar, Dict, Set, Generator
 
 import numpy as np
 import tensorflow as tf
@@ -27,6 +27,18 @@ from fastestimator.schedule import Scheduler
 from fastestimator.util.util import to_list
 
 T = TypeVar('T')
+
+
+class GeneratorDataset(Dataset):
+    def __init__(self, generator: Generator[Dict[str, Any], None, None], samples_per_epoch: int):
+        self.generator = generator
+        self.samples_per_epoch = samples_per_epoch
+
+    def __len__(self):
+        return self.samples_per_epoch
+
+    def __getitem__(self, index):
+        return next(self.generator)
 
 
 class NumpyDataset(Dataset):
