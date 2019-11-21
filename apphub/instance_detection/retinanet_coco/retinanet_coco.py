@@ -24,7 +24,7 @@ from fastestimator.op import NumpyOp
 from fastestimator.op.numpyop import ImageReader, ResizeImageAndBbox, TypeConverter
 from fastestimator.op.tensorop import Loss, ModelOp, Pad, Rescale
 from fastestimator.schedule import LRSchedule
-from fastestimator.trace import LRController, MeanAvgPrecision, ModelSaver, 
+from fastestimator.trace import LRController, MeanAvgPrecision, ModelSaver
 
 
 class MyLRSchedule(LRSchedule):
