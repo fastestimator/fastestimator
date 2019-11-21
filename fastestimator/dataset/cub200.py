@@ -14,8 +14,8 @@
 # ==============================================================================
 """Download Caltech-UCSD Birds 200 dataset from http://www.vision.caltech.edu/visipedia/CUB-200.html."""
 import os
+import random
 import tarfile
-from glob import glob
 from pathlib import Path
 
 import pandas as pd
@@ -40,7 +40,8 @@ def load_data(path=None):
         * **csv_path** (str) -- Path to the summary csv file, containing the following columns:
 
             * image (str): Image directory relative to the returned path.
-            * annotation (str): Mask directory relative to the returned path.
+            * label (int): Image category
+            * annotation (str): annotation file directory relative to the returned path.
 
         * **path** (str) -- Path to dataset root directory.
 
@@ -75,12 +76,28 @@ def load_data(path=None):
 
     # glob and generate csv
     if not os.path.exists(csv_path):
-        img_list = glob(os.path.join(path, 'images', '**', '*.jpg'))
-        df = pd.DataFrame(data={'image': img_list})
+        image_folder = os.path.join(path, "images")
+        class_names = os.listdir(image_folder)
+        label_map = {}
+        images = []
+        labels = []
+        idx = 0
+        for class_name in class_names:
+            if not class_name.startswith("._"):
+                image_folder_class = os.path.join(image_folder, class_name)
+                label_map[class_name] = idx
+                idx += 1
+                image_names = os.listdir(image_folder_class)
+                for image_name in image_names:
+                    if not image_name.startswith("._"):
+                        images.append(os.path.join(image_folder_class, image_name))
+                        labels.append(label_map[class_name])
+        zipped_list = list(zip(images, labels))
+        random.shuffle(zipped_list)
+        df = pd.DataFrame(zipped_list, columns=["image", "label"])
         df['image'] = df['image'].apply(lambda x: os.path.relpath(x, path))
         df['image'] = df['image'].apply(os.path.normpath)
         df['annotation'] = df['image'].str.replace('images', 'annotations-mat').str.replace('jpg', 'mat')
         df.to_csv(csv_path, index=False)
         print("Data summary is saved at {}".format(csv_path))
-
     return csv_path, path
