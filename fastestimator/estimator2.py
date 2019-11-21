@@ -108,21 +108,22 @@ class Estimator:
                 if mode == "train":
                     self.total_train_steps += (num_examples[epoch] * elapsed_epochs[idx]) // batch_size
                 itr = pipeline.transform(mode=mode, epoch=epoch)
-                batch = next(itr)
-                batch = torch_to_tf(batch)
-                state = {
-                    "mode": mode,
-                    "batch_size": batch_size,
-                    "local_batch_size": batch_size // self.num_devices,
-                    "epoch": tf.convert_to_tensor(self.epoch),
-                    "num_examples": pipeline.get_num_examples(mode=mode, epoch=epoch),
-                    "warmup": True
-                }
-                ops = self.network.load_epoch(epoch, mode)
-                if fe.distribute_strategy:
-                    fe.distribute_strategy.experimental_run_v2(self.network.run_step, args=(batch, ops, state))
-                else:
-                    self.network.run_step(batch, ops, state)
+                if num_examples[epoch] > 0:
+                    batch = next(itr)
+                    batch = torch_to_tf(batch)
+                    state = {
+                        "mode": mode,
+                        "batch_size": batch_size,
+                        "local_batch_size": batch_size // self.num_devices,
+                        "epoch": tf.convert_to_tensor(self.epoch),
+                        "num_examples": pipeline.get_num_examples(mode=mode, epoch=epoch),
+                        "warmup": True
+                    }
+                    ops = self.network.load_epoch(epoch, mode)
+                    if fe.distribute_strategy:
+                        fe.distribute_strategy.experimental_run_v2(self.network.run_step, args=(batch, ops, state))
+                    else:
+                        self.network.run_step(batch, ops, state)
 
     def _prepare_network(self):
         modes = list(*[x.get_modes() for x in self.pipeline.epoch_dict.values()])
@@ -239,6 +240,8 @@ class Estimator:
 
     def _run_epoch(self, mode):
         pipeline = self.pipeline.get_current_value(self.epoch)
+        if mode not in pipeline.get_modes():
+            return
         batch_size = pipeline.get_global_batch_size(mode=mode, epoch=self.epoch)
         num_examples = pipeline.get_num_examples(mode=mode, epoch=self.epoch)
         ops = self.network.load_epoch(epoch=self.epoch, mode=mode)
