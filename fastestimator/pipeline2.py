@@ -30,15 +30,16 @@ T = TypeVar('T')
 
 
 class GeneratorDataset(Dataset):
-    def __init__(self, generator: Generator[Dict[str, Any], None, None], samples_per_epoch: int):
+    def __init__(self, generator: Generator[Dict[str, Any], int, None], samples_per_epoch: int):
         self.generator = generator
         self.samples_per_epoch = samples_per_epoch
+        next(self.generator)  # Can't send non-none values to a new generator, so need to run a 'warm-up' first
 
     def __len__(self):
         return self.samples_per_epoch
 
-    def __getitem__(self, index):
-        return next(self.generator)
+    def __getitem__(self, index: int):
+        return self.generator.send(index)
 
 
 class NumpyDataset(Dataset):
