@@ -64,10 +64,10 @@ class NumpyDataset(Dataset):
 class OpDataset(Dataset):
     def __init__(self, dataset: Dataset, ops: List[Union[NumpyOp, Scheduler[NumpyOp]]]):
         self.dataset = dataset
-        signature_epochs = get_signature_epochs(ops)
+        self.signature_epochs = get_signature_epochs(ops)
         self.op_schedule = None if len(ops) == 0 else Scheduler(
             {epoch: get_per_epoch(ops, epoch)
-             for epoch in signature_epochs})
+             for epoch in self.signature_epochs})
         # The following variables could technically by computed on the fly, but don't want to waste clock cycles
         self.epoch, self.epoch_ops, self.state_dict = 0, [], []
         self.set_epoch(0)
@@ -90,6 +90,9 @@ class OpDataset(Dataset):
         if self.op_schedule is not None:
             self.epoch_ops = self.op_schedule.get_current_value(epoch=epoch)
         self.state_dict = {"epoch": epoch}
+
+    def get_signature_epochs(self) -> List[int]:
+        return self.signature_epochs
 
 
 class OpDataLoader(DataLoader):
@@ -252,7 +255,7 @@ class Pipeline(BasePipeline):
         return len(self.dataloaders[mode].get_current_value(epoch).dataset)
 
     def get_signature_epochs(self, mode: str) -> List[int]:
-        sig_op_epochs = {} if self.datasets.get(mode) is None else self.datasets[mode].op_schedule.epoch_dict.keys()
+        sig_op_epochs = {} if self.datasets.get(mode) is None else set(self.datasets[mode].get_signature_epochs())
         return sorted(self.batch_size.epoch_dict.keys() | sig_op_epochs)
 
     def get_all_output_keys(self) -> Set[str]:
