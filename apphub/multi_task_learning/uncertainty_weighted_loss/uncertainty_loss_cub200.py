@@ -16,19 +16,19 @@ import os
 import tempfile
 
 import numpy as np
+import tensorflow as tf
+from tensorflow.keras import layers, models
 
 import fastestimator as fe
-import tensorflow as tf
 from fastestimator import RecordWriter
 from fastestimator.architecture.uncertaintyloss import UncertaintyLoss
 from fastestimator.architecture.unet import UNet
 from fastestimator.dataset import cub200
 from fastestimator.op import NumpyOp
 from fastestimator.op.numpyop import ImageReader, MatReader, Reshape, Resize
-from fastestimator.op.tensorop import Augmentation2D, BinaryCrossentropy, Loss, ModelOp, Rescale, \
+from fastestimator.op.tensorop import Augmentation2D, BinaryCrossentropy, Loss, Minmax, ModelOp, Rescale, \
     SparseCategoricalCrossentropy
 from fastestimator.trace import Accuracy, Dice, ModelSaver
-from tensorflow.keras import layers, models
 
 
 def ResUnet50(input_shape=(512, 512, 3), num_classes=200):
@@ -78,9 +78,14 @@ class SelectDictKey(NumpyOp):
         return data
 
 
-def get_estimator(batch_size=8, epochs=25, steps_per_epoch=None, validation_steps=None, model_dir=tempfile.mkdtemp()):
+def get_estimator(batch_size=8,
+                  epochs=25,
+                  steps_per_epoch=None,
+                  validation_steps=None,
+                  model_dir=tempfile.mkdtemp(),
+                  data_path=None):
     # load CUB200 dataset.
-    csv_path, path = cub200.load_data("/data/data")
+    csv_path, path = cub200.load_data(data_path)
     writer = RecordWriter(
         save_dir=os.path.join(path, "tfrecords"),
         train_data=csv_path,
@@ -104,14 +109,13 @@ def get_estimator(batch_size=8, epochs=25, steps_per_epoch=None, validation_step
                            rotation_range=15.0,
                            zoom_range=[0.8, 1.2],
                            flip_left_right=True),
-            Rescale(inputs='image', outputs='image')
+            Rescale(inputs='image', outputs='image'),
+            Minmax(inputs="annotation", outputs="annotation")
         ])
-
     # Network
     opt = tf.optimizers.Adam(learning_rate=0.0001)
     resunet50 = fe.build(model_def=ResUnet50, model_name="resunet50", optimizer=opt, loss_name="total_loss")
     uncertainty = fe.build(model_def=UncertaintyLoss, model_name="uncertainty", optimizer=opt, loss_name="total_loss")
-
     network = fe.Network(ops=[
         ModelOp(inputs='image', model=resunet50, outputs=["label_pred", "mask_pred"]),
         SparseCategoricalCrossentropy(inputs=["label", "label_pred"], outputs="cls_loss"),
@@ -119,7 +123,6 @@ def get_estimator(batch_size=8, epochs=25, steps_per_epoch=None, validation_step
         ModelOp(inputs=("cls_loss", "seg_loss"), model=uncertainty, outputs="total_loss"),
         Loss(inputs="total_loss", outputs="total_loss")
     ])
-
     # estimator
     traces = [
         Dice(true_key="annotation", pred_key='mask_pred'),
