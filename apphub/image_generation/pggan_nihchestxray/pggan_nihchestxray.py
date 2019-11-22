@@ -15,11 +15,12 @@
 import os
 from pathlib import Path
 
-import numpy as np
-
 import cv2
-import fastestimator as fe
+import numpy as np
 import tensorflow as tf
+from tensorflow.python.keras import backend
+
+import fastestimator as fe
 from fastestimator import RecordWriter
 from fastestimator.architecture.pggan import build_D, build_G
 from fastestimator.dataset.nih_chestxray import load_data
@@ -29,7 +30,6 @@ from fastestimator.op.numpyop import Resize as ResizeRecord
 from fastestimator.op.tensorop import Loss, ModelOp, Resize
 from fastestimator.schedule import Scheduler
 from fastestimator.trace import Trace
-from tensorflow.python.keras import backend
 
 
 class Rescale(TensorOp):
