@@ -16,10 +16,9 @@ import os
 import tempfile
 
 import numpy as np
-import tensorflow as tf
-from tensorflow.keras import layers, models
 
 import fastestimator as fe
+import tensorflow as tf
 from fastestimator import RecordWriter
 from fastestimator.architecture.uncertaintyloss import UncertaintyLoss
 from fastestimator.architecture.unet import UNet
@@ -28,7 +27,9 @@ from fastestimator.op import NumpyOp
 from fastestimator.op.numpyop import ImageReader, MatReader, Reshape, Resize
 from fastestimator.op.tensorop import Augmentation2D, BinaryCrossentropy, Loss, Minmax, ModelOp, Rescale, \
     SparseCategoricalCrossentropy
-from fastestimator.trace import Accuracy, Dice, ModelSaver
+from fastestimator.schedule.lr_scheduler import CyclicLRSchedule
+from fastestimator.trace import Accuracy, Dice, LRController, ModelSaver
+from tensorflow.keras import layers, models
 
 
 def ResUnet50(input_shape=(512, 512, 3), num_classes=200):
@@ -127,7 +128,8 @@ def get_estimator(batch_size=8,
     traces = [
         Dice(true_key="annotation", pred_key='mask_pred'),
         Accuracy(true_key="label", pred_key="label_pred"),
-        ModelSaver(model_name="resunet50", save_dir=model_dir, save_best=True)
+        ModelSaver(model_name="resunet50", save_dir=model_dir, save_best=True),
+        LRController(model_name="resunet50", lr_schedule=CyclicLRSchedule())
     ]
     estimator = fe.Estimator(network=network,
                              pipeline=pipeline,
