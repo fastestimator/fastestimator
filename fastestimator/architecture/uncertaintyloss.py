@@ -12,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from fastestimator.layers.uncertainty_weighted_loss import UncertaintyWeightedLoss
 from tensorflow.python.keras import layers
 from tensorflow.python.keras.models import Model
 
-from fastestimator.layers.uncertainty_weighted_loss import UncertaintyWeightedLoss
 
-
-def UncertaintyLoss(num_losses):
+def UncertaintyLoss(num_losses=2):
     """Creates Uncertainty weighted loss model https://arxiv.org/abs/1705.07115
 
     Args:

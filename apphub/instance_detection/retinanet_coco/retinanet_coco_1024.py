@@ -24,8 +24,22 @@ from fastestimator.dataset.mscoco import load_data
 from fastestimator.op import NumpyOp
 from fastestimator.op.numpyop import ImageReader, ResizeImageAndBbox, TypeConverter
 from fastestimator.op.tensorop import Loss, ModelOp, Pad, Rescale
+from fastestimator.schedule import LRSchedule
 from fastestimator.schedule.lr_scheduler import CyclicLRSchedule
-from fastestimator.trace import LRController, MeanAvgPrecision, ModelSaver
+from fastestimator.trace import LRController, MeanAvgPrecision, ModelSaver, TerminateOnNaN
+
+
+class MyLRSchedule(LRSchedule):
+    def schedule_fn(self, current_step_or_epoch, lr):
+        if current_step_or_epoch < 1000:
+            lr = (0.01 - 0.0002) / 1000 * current_step_or_epoch + 0.0002
+        elif current_step_or_epoch < 60000:
+            lr = 0.01
+        elif current_step_or_epoch < 80000:
+            lr = 0.001
+        else:
+            lr = 0.0001
+        return lr / 2  #gpu divided by half
 
 
 class String2List(NumpyOp):
@@ -146,8 +160,9 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp(), batch_size=2):
     # prepare network
     model = fe.build(model_def=lambda: RetinaNet(input_shape=(1024, 1024, 3), num_classes=90),
                      model_name="retinanet",
-                     optimizer=tf.optimizers.Adam(learning_rate=0.0004),
+                     optimizer=tf.optimizers.SGD(momentum=0.9),
                      loss_name="total_loss")
+
     network = fe.Network(ops=[
         ModelOp(inputs="image", model=model, outputs=["cls_pred", "loc_pred"]),
         RetinaLoss(inputs=("cls_gt", "x1_gt", "y1_gt", "w_gt", "h_gt", "cls_pred", "loc_pred"),
@@ -160,11 +175,12 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp(), batch_size=2):
     estimator = fe.Estimator(
         network=network,
         pipeline=pipeline,
-        epochs=13,
+        epochs=7,
         traces=[
             MeanAvgPrecision(90, (1024, 1024, 3), 'pred', 'gt', output_name='mAP'),
-            ModelSaver(model_name="retinanet", save_dir=model_dir, save_best='mAP'),
-            LRController(model_name="retinanet", lr_schedule=CyclicLRSchedule())
+            ModelSaver(model_name="retinanet", save_dir=model_dir, save_best=True),
+            LRController(model_name="retinanet", lr_schedule=MyLRSchedule(schedule_mode="step")),
+            TerminateOnNaN()
         ])
     return estimator
 
