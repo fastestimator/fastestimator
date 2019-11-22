@@ -16,4 +16,4 @@ from fastestimator.trace.trace import Trace, TrainInfo, MonitorLoss  # isort:ski
 from fastestimator.trace.adapt import EarlyStopping, LRController, TerminateOnNaN
 from fastestimator.trace.io import Caricature, CSVLogger, GradCam, Logger, ModelSaver, Saliency, SlackNotification, \
     TensorBoard, UMap, VisLogger
-from fastestimator.trace.metric import Accuracy, ConfusionMatrix, Dice, F1Score, Precision, Recall, MeanAvgPrecision
+from fastestimator.trace.metric import Accuracy, ConfusionMatrix, Dice, F1Score, MeanAvgPrecision, Precision, Recall
