@@ -15,7 +15,6 @@
 import math
 
 import tensorflow as tf
-
 from fastestimator.op import TensorOp
 from fastestimator.util.util import to_list
 
@@ -24,16 +23,21 @@ class Augmentation2D(TensorOp):
     Either a scalar ``x`` or a tuple ``[x1, x2]`` can be specified for rotation, shearing, shifting, and zoom.
 
     Args:
-        rotation_range: Scalar (x) that represents the range of random rotation (in degrees) from -x to x /
-            Tuple ([x1, x2]) that represents  the range of random rotation between x1 and x2.
-        width_shift_range: Float (x) that represents the range of random width shift (in percentage) from -x to x /
-            Tuple ([x1, x2]) that represents  the range of random width shift between x1 and x2.
-        height_shift_range: Float (x) that represents the range of random height shift (in percentage) from -x to x /
-            Tuple ([x1, x2]) that represents  the range of random height shift between x1 and x2.
-        shear_range: Scalar (x) that represents the range of random shear (in degrees) from -x to x /
-            Tuple ([x1, x2]) that represents  the range of random shear between x1 and x2.
-        zoom_range: Float (x) that represents the range of random zoom (in percentage) from -x to x /
-            Tuple ([x1, x2]) that represents  the range of random zoom between x1 and x2.
+        rotation_range: can be one of the following, valid value in [0.0, 360.0)
+            * Float (x) that represents the range of random rotation (in degrees) from -x to x.
+            * Tuple of floats ([x1, x2]) that represents  the range of random rotation(in degrees) between x1 and x2.
+        width_shift_range: can be one of the following, with the value in [0.0, 1.0)
+            * Float (x) that represents the range of random width shift (in ratio) between -x and x
+            * Tuple of floats ([x1, x2]) that represents  the range of random width shift (in ratio) between x1 and x2.
+        height_shift_range: can be one of the following, with the value in [0.0, 1.0)
+            * Float (x) that represents the range of random height shift (in ratio) between -x and x
+            * Tuple of floats ([x1, x2]) that represents  the range of random height shift (in ratio) between x1 and x2.
+        shear_range: can be one of the following, with the value in [0.0, 180)
+            * Float (x) that represents the range of random shear (in degrees) from -x to x
+            * Tuple of floats ([x1, x2]) that represents  the range of random shear between x1 and x2.
+        zoom_range: can be one of the following, valid value should be non-negative, shrink if < 1.0, zoom if > 1.0.
+            * Float (x) that represents the range of random zoom/shrink from [min(1.0, x) , max(1.0, x))
+            * Tuple of floats ([x1, x2]) that represents  the range of random zoom between x1 and x2.
         flip_left_right: Boolean representing whether to flip the image horizontally with a probability of 0.5.
         flip_up_down: Boolean representing whether to flip the image vertically with a probability of 0.5.
         mode: Augmentation on 'training' data or 'evaluation' data.

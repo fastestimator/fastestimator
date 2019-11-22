@@ -13,27 +13,22 @@
 # limitations under the License.
 # ==============================================================================
 import os
-import pdb
 import tempfile
 
-import tensorflow as tf
-from tensorflow.keras import layers, models
+import numpy as np
 
 import fastestimator as fe
+import tensorflow as tf
 from fastestimator import RecordWriter
+from fastestimator.architecture.uncertaintyloss import UncertaintyLoss
 from fastestimator.architecture.unet import UNet
 from fastestimator.dataset import cub200
 from fastestimator.op import NumpyOp
 from fastestimator.op.numpyop import ImageReader, MatReader, Reshape, Resize
-from fastestimator.op.tensorop import BinaryCrossentropy, Loss, Minmax, ModelOp, SparseCategoricalCrossentropy
+from fastestimator.op.tensorop import Augmentation2D, BinaryCrossentropy, Loss, ModelOp, Rescale, \
+    SparseCategoricalCrossentropy
 from fastestimator.trace import Accuracy, Dice, ModelSaver
-
-
-class TotalLoss(Loss):
-    def forward(self, data, state):
-        cls_loss, seg_loss, label_pred, mask_pred, label, annotation = data
-        pdb.set_trace()
-        return cls_loss + seg_loss
+from tensorflow.keras import layers, models
 
 
 def ResUnet50(input_shape=(512, 512, 3), num_classes=200):
@@ -99,22 +94,38 @@ def get_estimator(batch_size=8, epochs=25, steps_per_epoch=None, validation_step
             Reshape(shape=(512, 512, 1), outputs="annotation")
         ])
     # data pipeline
-    pipeline = fe.Pipeline(batch_size=batch_size, data=writer, ops=Minmax(inputs='image', outputs='image'))
+    pipeline = fe.Pipeline(
+        batch_size=batch_size,
+        data=writer,
+        ops=[
+            Augmentation2D(inputs=("image", "annotation"),
+                           outputs=("image", "annotation"),
+                           mode="train",
+                           rotation_range=15.0,
+                           zoom_range=[0.8, 1.2],
+                           flip_left_right=True),
+            Rescale(inputs='image', outputs='image')
+        ])
 
     # Network
-
-    resunet50 = fe.build(model_def=ResUnet50, model_name="resunet50", optimizer="adam", loss_name="total_loss")
+    opt = tf.optimizers.Adam(learning_rate=0.0001)
+    resunet50 = fe.build(model_def=ResUnet50, model_name="resunet50", optimizer=opt, loss_name="total_loss")
+    uncertainty = fe.build(model_def=UncertaintyLoss, model_name="uncertainty", optimizer=opt, loss_name="total_loss")
 
     network = fe.Network(ops=[
         ModelOp(inputs='image', model=resunet50, outputs=["label_pred", "mask_pred"]),
         SparseCategoricalCrossentropy(inputs=["label", "label_pred"], outputs="cls_loss"),
         BinaryCrossentropy(inputs=["annotation", "mask_pred"], outputs="seg_loss"),
-        TotalLoss(inputs=("cls_loss", "seg_loss", "label_pred", "mask_pred", "label", "annotation"),
-                  outputs="total_loss")
+        ModelOp(inputs=("cls_loss", "seg_loss"), model=uncertainty, outputs="total_loss"),
+        Loss(inputs="total_loss", outputs="total_loss")
     ])
 
     # estimator
-    traces = [Dice(true_key="annotation", pred_key='mask_pred'), Accuracy(true_key="label", pred_key="label_pred")]
+    traces = [
+        Dice(true_key="annotation", pred_key='mask_pred'),
+        Accuracy(true_key="label", pred_key="label_pred"),
+        ModelSaver(model_name="resunet50", save_dir=model_dir, save_best=True)
+    ]
     estimator = fe.Estimator(network=network,
                              pipeline=pipeline,
                              traces=traces,
