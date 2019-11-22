@@ -26,7 +26,7 @@ from fastestimator.architecture.unet import UNet
 from fastestimator.dataset import cub200
 from fastestimator.op import NumpyOp
 from fastestimator.op.numpyop import ImageReader, MatReader, Reshape, Resize
-from fastestimator.op.tensorop import Augmentation2D, BinaryCrossentropy, Loss, Minmax, ModelOp, Rescale, \
+from fastestimator.op.tensorop import Augmentation2D, BinaryCrossentropy, Loss, ModelOp, Rescale, \
     SparseCategoricalCrossentropy
 from fastestimator.schedule.lr_scheduler import CyclicLRSchedule
 from fastestimator.trace import Accuracy, Dice, LRController, ModelSaver
@@ -105,8 +105,7 @@ def get_estimator(batch_size=8, epochs=25, steps_per_epoch=None, validation_step
                            rotation_range=15.0,
                            zoom_range=[0.8, 1.2],
                            flip_left_right=True),
-            Rescale(inputs='image', outputs='image'),
-            Minmax(inputs="annotation", outputs="annotation")
+            Rescale(inputs='image', outputs='image')
         ])
     #step 2, network
     opt = tf.optimizers.Adam(learning_rate=0.0001)
