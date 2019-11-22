@@ -22,10 +22,11 @@ from tensorflow.python.keras import backend
 
 import fastestimator as fe
 from fastestimator import RecordWriter
-from fastestimator.architecture.pggan import build_G, build_D
+from fastestimator.architecture.pggan import build_D, build_G
 from fastestimator.dataset.nih_chestxray import load_data
 from fastestimator.op import TensorOp
-from fastestimator.op.numpyop import ImageReader, Resize as ResizeRecord
+from fastestimator.op.numpyop import ImageReader
+from fastestimator.op.numpyop import Resize as ResizeRecord
 from fastestimator.op.tensorop import Loss, ModelOp, Resize
 from fastestimator.schedule import Scheduler
 from fastestimator.trace import Trace
