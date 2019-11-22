@@ -342,3 +342,4 @@ def get_estimator(data_dir=None, save_dir=None):
 
 if __name__ == "__main__":
     est = get_estimator()
+    est.fit()
