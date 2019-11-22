@@ -16,9 +16,10 @@ import os
 import tempfile
 
 import numpy as np
+import tensorflow as tf
+from tensorflow.keras import layers, models
 
 import fastestimator as fe
-import tensorflow as tf
 from fastestimator import RecordWriter
 from fastestimator.architecture.uncertaintyloss import UncertaintyLoss
 from fastestimator.architecture.unet import UNet
@@ -29,7 +30,6 @@ from fastestimator.op.tensorop import Augmentation2D, BinaryCrossentropy, Loss, 
     SparseCategoricalCrossentropy
 from fastestimator.schedule.lr_scheduler import CyclicLRSchedule
 from fastestimator.trace import Accuracy, Dice, LRController, ModelSaver
-from tensorflow.keras import layers, models
 
 
 def ResUnet50(input_shape=(512, 512, 3), num_classes=200):
@@ -79,14 +79,9 @@ class SelectDictKey(NumpyOp):
         return data
 
 
-def get_estimator(batch_size=8,
-                  epochs=25,
-                  steps_per_epoch=None,
-                  validation_steps=None,
-                  model_dir=tempfile.mkdtemp(),
-                  data_path=None):
+def get_estimator(batch_size=8, epochs=25, steps_per_epoch=None, validation_steps=None, model_dir=tempfile.mkdtemp()):
     # load CUB200 dataset.
-    csv_path, path = cub200.load_data(data_path)
+    csv_path, path = cub200.load_data()
     writer = RecordWriter(
         save_dir=os.path.join(path, "tfrecords"),
         train_data=csv_path,
@@ -99,7 +94,7 @@ def get_estimator(batch_size=8,
             Resize((512, 512), keep_ratio=True),
             Reshape(shape=(512, 512, 1), outputs="annotation")
         ])
-    # data pipeline
+    #step 1, pipeline
     pipeline = fe.Pipeline(
         batch_size=batch_size,
         data=writer,
@@ -113,7 +108,7 @@ def get_estimator(batch_size=8,
             Rescale(inputs='image', outputs='image'),
             Minmax(inputs="annotation", outputs="annotation")
         ])
-    # Network
+    #step 2, network
     opt = tf.optimizers.Adam(learning_rate=0.0001)
     resunet50 = fe.build(model_def=ResUnet50, model_name="resunet50", optimizer=opt, loss_name="total_loss")
     uncertainty = fe.build(model_def=UncertaintyLoss, model_name="uncertainty", optimizer=opt, loss_name="total_loss")
@@ -124,7 +119,7 @@ def get_estimator(batch_size=8,
         ModelOp(inputs=("cls_loss", "seg_loss"), model=uncertainty, outputs="total_loss"),
         Loss(inputs="total_loss", outputs="total_loss")
     ])
-    # estimator
+    #step 3, estimator
     traces = [
         Dice(true_key="annotation", pred_key='mask_pred'),
         Accuracy(true_key="label", pred_key="label_pred"),
