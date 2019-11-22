@@ -46,7 +46,6 @@ $ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 
 ## Table of Contents:
 ### Natural Language Processing (NLP)
-
 * **LSTM:** Sentimental classification based on IMDB movie review. [[paper](https://www.bioinf.jku.at/publications/older/2604.pdf)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/NLP/lstm_imdb/lstm_imdb.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/NLP/lstm_imdb/lstm_imdb.ipynb)]
 
 ### Domain Adaptation
@@ -73,9 +72,7 @@ $ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 ### Semantic Segmentation
 * **UNet:** Lung segmentation with UNet using chest X-ray dataset. [[paper](https://arxiv.org/abs/1505.04597)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/semantic_segmentation/unet_montgomery/unet_montgomery.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/semantic_segmentation/unet_montgomery/unet_montgomery.ipynb)]
 
-
 ### Object Detection
-
 * **RetinaNet:** object detection with RetinaNet on COCO2017 dataset. [[paper](https://arxiv.org/abs/1708.02002)][[code](https://github.com/vbvg2008/fastestimator/blob/master/apphub/instance_detection/retinanet_coco/retinanet_coco.py)]
 
 ### Image Style Transfer
@@ -83,7 +80,6 @@ $ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 
 ### Tabular Data
 * **DNN:** Predicting house price with deep neural network. [[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/tabular/dnn_housing/dnn_housing.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/tabular/dnn_housing/dnn_housing.ipynb)]
-
 
 ### One-shot Learning
 * **Siamese Network:** Alphabet character recognition using Siamese network. [[paper](https://www.cs.cmu.edu/~rsalakhu/papers/oneshot1.pdf)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/one_shot_learning/siamese_network.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/one_shot_learning/siamese_network.ipynb)]
