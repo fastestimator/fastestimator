@@ -16,13 +16,14 @@ import os
 import tempfile
 from ast import literal_eval
 
-import fastestimator as fe
 import tensorflow as tf
+
+import fastestimator as fe
 from fastestimator.architecture.retinanet import PredictBox, RetinaNet, get_fpn_anchor_box, get_target
 from fastestimator.dataset.mscoco import load_data
 from fastestimator.op import NumpyOp
 from fastestimator.op.numpyop import ImageReader, ResizeImageAndBbox, TypeConverter
-from fastestimator.op.tensorop import Loss, ModelOp, Pad, Rescale
+from fastestimator.op.tensorop import FlipImageAndBbox, Loss, ModelOp, Pad, Rescale
 from fastestimator.schedule import LRSchedule
 from fastestimator.trace import LRController, MeanAvgPrecision, ModelSaver
 
@@ -153,7 +154,10 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp(), batch_size=8):
             Rescale(inputs="image", outputs="image"),
             Pad(padded_shape=[1262],
                 inputs=["x1_gt", "y1_gt", "w_gt", "h_gt", "obj_label", "x1", "y1", "width", "height"],
-                outputs=["x1_gt", "y1_gt", "w_gt", "h_gt", "obj_label", "x1", "y1", "width", "height"])
+                outputs=["x1_gt", "y1_gt", "w_gt", "h_gt", "obj_label", "x1", "y1", "width", "height"]),
+            FlipImageAndBbox(inputs=["image", "x1", "y1", "width", "height"],
+                             outputs=["image", "x1", "y1", "width", "height"],
+                             flip_left_right=True)
         ])
     # prepare network
     model = fe.build(model_def=lambda: RetinaNet(input_shape=(512, 512, 3), num_classes=90),
