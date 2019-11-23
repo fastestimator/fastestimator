@@ -45,17 +45,15 @@ class FlipImageAndBbox(TensorOp):
             Flipped data.
         """
         img, x1, y1, w, h = data
-        center_x = tf.cast(img.shape[1], dtype=tf.float32) / 2
-        center_y = tf.cast(img.shape[0], dtype=tf.float32) / 2
 
         # left-right
         if tf.logical_and(self.flip_left_right, tf.greater(tf.random.uniform([], minval=0, maxval=1), 0.5)):
             img = tf.image.flip_left_right(img)
-            x1 = 2 * center_x - x1 - w
+            x1 = tf.cast(img.shape[1], dtype=tf.float32) - x1 - w
 
         # up-down
         if tf.logical_and(self.flip_up_down, tf.greater(tf.random.uniform([], minval=0, maxval=1), 0.5)):
             img = tf.image.flip_up_down(img)
-            y1 = 2 * center_y - y1 - h
+            y1 = tf.cast(img.shape[0], dtype=tf.float32) - y1 - h
 
         return img, x1, y1, w, h
