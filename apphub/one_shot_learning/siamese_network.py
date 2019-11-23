@@ -13,20 +13,20 @@
 # limitations under the License.
 # ==============================================================================
 import tempfile
+
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.keras import Model, layers, Sequential
+from tensorflow.keras.optimizers import Adam
+from tensorflow.python.keras import Model, Sequential, layers
 from tensorflow.python.keras.initializers import RandomNormal
 from tensorflow.python.keras.regularizers import l2
-from tensorflow.keras.optimizers import Adam
 
 import fastestimator as fe
+from fastestimator.dataset.omniglot import get_batch, load_data, load_eval_data, one_shot_trial
 from fastestimator.op import TensorOp
-from fastestimator.trace import Trace, LRController, Accuracy, ModelSaver, EarlyStopping
+from fastestimator.op.tensorop import Augmentation2D, BinaryCrossentropy, Minmax, ModelOp
 from fastestimator.schedule import LRSchedule
-from fastestimator.op.tensorop import ModelOp, BinaryCrossentropy, Minmax, Augmentation2D
-
-from fastestimator.dataset.omniglot import load_data, load_eval_data, get_batch, one_shot_trial
+from fastestimator.trace import Accuracy, EarlyStopping, LRController, ModelSaver, Trace
 
 
 class ConditionalAugmentation(TensorOp):
