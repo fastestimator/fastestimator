@@ -184,8 +184,8 @@ class Pipeline(BasePipeline):
         ops (list, fe.op): A list of operations to be applied within the data pipeline
         drop_last (bool): Whether to drop the last batch in an epoch if there aren't enough remaining elements for a
                         complete batch
-        num_process (int): How many CPUs to use in the pipeline. None will auto-select all CPUs. You might need to set
-                            this to zero if you want to use debuggers
+        num_process (int): How many CPUs to use in the pipeline. None will auto-select based on performance tests. 
+                            You might need to set this to zero if you want to use debuggers
         shuffle_train (bool): Whether to shuffle the training data
         shuffle_eval (bool): Whether to shuffle the eval data
     """
@@ -195,7 +195,7 @@ class Pipeline(BasePipeline):
                  batch_size: Union[int, Scheduler] = 1,
                  ops: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp, Scheduler[NumpyOp]]]] = None,
                  drop_last: bool = False,
-                 num_process: Optional[int] = None,
+                 num_process: Optional[Union[int, Scheduler[int]]] = None,
                  shuffle_train: bool = True,
                  shuffle_eval: bool = False):
         self.ops = [] if ops is None else to_list(ops)
@@ -227,23 +227,94 @@ class Pipeline(BasePipeline):
     def _build_dataset(self, dataset: Dataset, mode: str) -> OpDataset:
         return OpDataset(dataset, list(filter(lambda op: op.mode in (None, mode), self.ops)))
 
-    def _build_loader(self, dataset: OpDataset, shuffle: bool = True) -> Scheduler[OpDataLoader]:
-        return Scheduler({
-            epoch: OpDataLoader(dataset,
-                                batch_size=size,
-                                shuffle=shuffle,
-                                num_workers=self.num_process,
-                                drop_last=self.drop_last)
-            for epoch,
-            size in self.batch_size.epoch_dict.items()
-        })
+    def _build_loader(self,
+                      dataset: OpDataset,
+                      shuffle: bool = True,
+                      num_process: Optional[Union[int, Scheduler[int]]] = None) -> Scheduler[OpDataLoader]:
+        # TODO - technically the signature epochs here shouldn't be based only on batch size, but also any keys within
+        #  num_process as well as the signature epochs of the ops
+        if num_process is not None:
+            if isinstance(num_process, int):
+                num_process = Scheduler({0: num_process})
+            return Scheduler({
+                epoch: OpDataLoader(dataset,
+                                    batch_size=size,
+                                    shuffle=shuffle,
+                                    num_workers=num_process.get_current_value(epoch),
+                                    drop_last=self.drop_last)
+                for epoch,
+                size in self.batch_size.epoch_dict.items()
+            })
+        # We're going to test whether single process or multi-process is faster for this problem. Multi-processing has
+        # been observed to be dramatically worse than single process for problems with inexpensive pipelines and low
+        # batch sizes
+        epoch_dict = {}
+        for epoch, size in self.batch_size.epoch_dict.items():
+            n_samples = 5
+            if len(dataset) < n_samples + 1:
+                # If there aren't enough samples to perform a comparison then just use single processing since there's
+                # not enough work for multiple cores anyways
+                epoch_dict[epoch] = OpDataLoader(dataset,
+                                                 batch_size=size,
+                                                 shuffle=shuffle,
+                                                 num_workers=0,
+                                                 drop_last=self.drop_last)
+                continue
+            # Run some tests
+            times = [
+                self._test_loader(dataset=dataset,
+                                  batch_size=size,
+                                  shuffle=shuffle,
+                                  num_workers=i,
+                                  num_samples=n_samples) for i in [0, max(os.cpu_count() // 2, 1), os.cpu_count()]
+            ]
+            best = times.index(min(times))
+            if best == 0:
+                epoch_dict[epoch] = OpDataLoader(dataset,
+                                                 batch_size=size,
+                                                 shuffle=shuffle,
+                                                 num_workers=0,
+                                                 drop_last=self.drop_last)
+            elif best == 1:
+                epoch_dict[epoch] = OpDataLoader(dataset,
+                                                 batch_size=size,
+                                                 shuffle=shuffle,
+                                                 num_workers=max(os.cpu_count() // 2, 1),
+                                                 drop_last=self.drop_last)
+            elif best == 2:
+                epoch_dict[epoch] = OpDataLoader(dataset,
+                                                 batch_size=size,
+                                                 shuffle=shuffle,
+                                                 num_workers=os.cpu_count(),
+                                                 drop_last=self.drop_last)
+        return Scheduler(epoch_dict=epoch_dict)
+
+    def _test_loader(self, dataset: OpDataset, batch_size: int, shuffle: bool, num_workers: int,
+                     num_samples: int) -> float:
+        loader = OpDataLoader(dataset,
+                              batch_size=batch_size,
+                              shuffle=shuffle,
+                              num_workers=num_workers,
+                              drop_last=self.drop_last)
+        itr = iter(loader)
+        # warmup
+        _ = next(itr)
+        # time a few iterations to find out which method is best
+        start = time.perf_counter()
+        for i in range(num_samples):
+            _ = next(itr)
+        return time.perf_counter() - start
 
     def get_modes(self) -> Set[str]:
         return set(self.dataloaders.keys())
 
-    def add_dataset(self, dataset: Dataset, mode: str, shuffle: bool = True):
+    def add_dataset(self,
+                    dataset: Dataset,
+                    mode: str,
+                    shuffle: bool = True,
+                    num_process: Optional[Union[int, Scheduler[int]]] = None):
         self.datasets[mode] = self._build_dataset(dataset, mode)
-        self.dataloaders[mode] = self._build_loader(self.datasets[mode], shuffle=shuffle)
+        self.dataloaders[mode] = self._build_loader(self.datasets[mode], shuffle=shuffle, num_process=num_process)
 
     def get_global_batch_size(self, mode: str, epoch: int) -> int:
         # TODO figure out global vs local. I'm pretty sure this loader will always be global batch
