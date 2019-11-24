@@ -13,49 +13,20 @@
 # limitations under the License.
 # ==============================================================================
 import tempfile
+
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.keras import Model, layers, Sequential
+from tensorflow.keras.optimizers import Adam
+from tensorflow.python.keras import Model, Sequential, layers
 from tensorflow.python.keras.initializers import RandomNormal
 from tensorflow.python.keras.regularizers import l2
-from tensorflow.keras.optimizers import Adam
 
 import fastestimator as fe
+from fastestimator.dataset.omniglot import get_batch, load_data, load_eval_data, one_shot_trial
 from fastestimator.op import TensorOp
-from fastestimator.trace import Trace, LRController, Accuracy, ModelSaver, EarlyStopping
+from fastestimator.op.tensorop import Augmentation2D, BinaryCrossentropy, Minmax, ModelOp, Probability
 from fastestimator.schedule import LRSchedule
-from fastestimator.op.tensorop import ModelOp, BinaryCrossentropy, Minmax, Augmentation2D
-
-from fastestimator.dataset.omniglot import load_data, load_eval_data, get_batch, one_shot_trial
-
-
-class ConditionalAugmentation(TensorOp):
-    def __init__(self,
-                 inputs=None,
-                 outputs=None,
-                 mode=None,
-                 rotation_range=0.,
-                 width_shift_range=0.,
-                 height_shift_range=0.,
-                 shear_range=0.,
-                 zoom_range=1.,
-                 augment_prob=0.5):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        self.augment_prob = augment_prob
-        self.aug2d = Augmentation2D(inputs=inputs,
-                                    outputs=outputs,
-                                    mode=mode,
-                                    rotation_range=rotation_range,
-                                    shear_range=shear_range,
-                                    zoom_range=zoom_range,
-                                    width_shift_range=width_shift_range,
-                                    height_shift_range=height_shift_range)
-
-    def forward(self, data, state):
-        random_number = tf.random.uniform([])
-        if random_number < self.augment_prob:
-            data = self.aug2d.forward(data, state)
-        return data
+from fastestimator.trace import Accuracy, EarlyStopping, LRController, ModelSaver, Trace
 
 
 class LRDecaySchedule(LRSchedule):
@@ -183,24 +154,26 @@ def get_estimator(epochs=200, batch_size=128, steps_per_epoch=500, validation_st
         data=data,
         batch_size=batch_size,
         ops=[
-            ConditionalAugmentation(inputs="x_a",
-                                    outputs="x_a",
-                                    mode="train",
-                                    rotation_range=[-10, 10],
-                                    shear_range=[-0.3 * 180 / np.pi, 0.3 * 180 / np.pi],
-                                    zoom_range=[0.8, 1.2],
-                                    width_shift_range=0.05,
-                                    height_shift_range=0.05,
-                                    augment_prob=0.89),
-            ConditionalAugmentation(inputs="x_b",
-                                    outputs="x_b",
-                                    mode="train",
-                                    rotation_range=[-10, 10],
-                                    shear_range=[-0.3 * 180 / np.pi, 0.3 * 180 / np.pi],
-                                    zoom_range=[0.8, 1.2],
-                                    width_shift_range=0.05,
-                                    height_shift_range=0.05,
-                                    augment_prob=0.89),
+            Probability(
+                tensor_op=Augmentation2D(inputs="x_a",
+                                         outputs="x_a",
+                                         mode="train",
+                                         rotation_range=10.0,
+                                         shear_range=-0.3 * 180 / np.pi,
+                                         zoom_range=[0.8, 1.2],
+                                         width_shift_range=0.05,
+                                         height_shift_range=0.05),
+                prob=0.89),
+            Probability(
+                tensor_op=Augmentation2D(inputs="x_b",
+                                         outputs="x_b",
+                                         mode="train",
+                                         rotation_range=10.0,
+                                         shear_range=-0.3 * 180 / np.pi,
+                                         zoom_range=[0.8, 1.2],
+                                         width_shift_range=0.05,
+                                         height_shift_range=0.05),
+                prob=0.89),
             Minmax(inputs="x_a", outputs="x_a"),
             Minmax(inputs="x_b", outputs="x_b")
         ])
