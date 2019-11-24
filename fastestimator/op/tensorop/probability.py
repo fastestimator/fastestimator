@@ -24,7 +24,7 @@ class Probability(TensorOp):
         tensor_op: TensorOp instance
         prob: float number which indicates the probability of execution
     """
-    def __init__(self, tensor_op, prob):
+    def __init__(self, tensor_op, prob=0.5):
         super().__init__(inputs=tensor_op.inputs, outputs=tensor_op.outputs, mode=tensor_op.mode)
         self.tensor_op = tensor_op
         self.prob = prob
