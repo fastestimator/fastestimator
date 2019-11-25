@@ -40,7 +40,7 @@ class MyLRSchedule(LRSchedule):
             lr = 0.001
         else:
             lr = 0.0001
-        return lr / 2
+        return lr / 2  # original batch_size 16, for 512 we have batch_size 8
 
 
 class String2List(NumpyOp):
