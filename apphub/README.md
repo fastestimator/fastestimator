@@ -87,6 +87,8 @@ $ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 ### Multi-task Learning
 * **Uncertainty Weighted Loss:** Train Uncertainty Network that learns to dynamically adjust the task-related weighted loss from uncertainty. [[paper](https://arxiv.org/abs/1705.07115)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/multi_task_learning/uncertainty_weighted_loss/uncertainty_loss_cub200.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/multi_task_learning/uncertainty_weighted_loss/uncertainty_loss_cub200.ipynb)]
 
+### Meta-Learning
+* **Model-Agnostic Meta-Learning:** Train a meta model for a 10-shot sinusoid regression. [[paper](https://arxiv.org/abs/1703.03400)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/meta_learning/MAML/maml.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/meta_learning/MAML/maml.ipynb)]
 
 ## Contributions
 If you have implementations that we haven't done yet and want to join our efforts of making state-of-the-art AI easier, please consider contribute to us. We would really appreciate it! :smiley:
