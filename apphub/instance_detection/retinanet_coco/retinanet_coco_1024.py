@@ -40,7 +40,7 @@ class MyLRSchedule(LRSchedule):
             lr = 0.001
         else:
             lr = 0.0001
-        return lr / 2
+        return lr / 2  # 8 gpu -> 4 gpu scaling
 
 
 class String2List(NumpyOp):
