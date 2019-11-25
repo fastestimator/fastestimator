@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.tensorop.augmentation import AdversarialSample, Augmentation2D, CutMixBatch, MixUpBatch
+from fastestimator.op.tensorop.augmentation import AdversarialSample, Augmentation2D, CutMixBatch, FlipImageAndBbox, \
+    MixUpBatch
 from fastestimator.op.tensorop.average import Average
 from fastestimator.op.tensorop.binarize import Binarize
 from fastestimator.op.tensorop.constant import Constant

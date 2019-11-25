@@ -14,5 +14,6 @@
 # ==============================================================================
 from fastestimator.op.tensorop.augmentation.adversarial_sample import AdversarialSample
 from fastestimator.op.tensorop.augmentation.augmentation_2d import Augmentation2D
-from fastestimator.op.tensorop.augmentation.mixup_batch import MixUpBatch
 from fastestimator.op.tensorop.augmentation.cutmix_batch import CutMixBatch
+from fastestimator.op.tensorop.augmentation.flip_image_and_bbox import FlipImageAndBbox
+from fastestimator.op.tensorop.augmentation.mixup_batch import MixUpBatch
