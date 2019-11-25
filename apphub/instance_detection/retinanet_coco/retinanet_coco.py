@@ -16,14 +16,15 @@ import os
 import tempfile
 from ast import literal_eval
 
+import numpy as np
 import tensorflow as tf
 
 import fastestimator as fe
 from fastestimator.architecture.retinanet import PredictBox, RetinaNet, get_fpn_anchor_box, get_target
 from fastestimator.dataset.mscoco import load_data
 from fastestimator.op import NumpyOp
-from fastestimator.op.numpyop import ImageReader, ResizeImageAndBbox, TypeConverter
-from fastestimator.op.tensorop import FlipImageAndBbox, Loss, ModelOp, Pad, Rescale
+from fastestimator.op.numpyop import FlipImageAndBbox, ImageReader, ResizeImageAndBbox, TypeConverter
+from fastestimator.op.tensorop import Loss, ModelOp, Pad, Rescale
 from fastestimator.schedule import LRSchedule
 from fastestimator.trace import LRController, MeanAvgPrecision, ModelSaver
 
@@ -55,8 +56,24 @@ class GenerateTarget(NumpyOp):
 
     def forward(self, data, state):
         obj_label, x1, y1, width, height = data
-        cls_gt, x1_gt, y1_gt, w_gt, h_gt = get_target(self.anchorbox, obj_label, x1, y1, width, height)
-        return cls_gt, x1_gt, y1_gt, w_gt, h_gt
+
+        cls_gt = []
+        x1_gt = []
+        y1_gt = []
+        w_gt = []
+        h_gt = []
+
+        for i in range(len(x1)):
+            c, x, y, w, h = get_target(self.anchorbox, obj_label[i], x1[i], y1[i], width[i], height[i])
+            cls_gt.append(c)
+            x1_gt.append(x)
+            y1_gt.append(y)
+            w_gt.append(w)
+            h_gt.append(h)
+
+        target = [np.array(cls_gt), np.array(x1_gt), np.array(y1_gt), np.array(w_gt), np.array(h_gt)]
+
+        return target
 
 
 class RetinaLoss(Loss):
@@ -135,6 +152,8 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp(), batch_size=8):
                                keep_ratio=True,
                                inputs=["image", "x1", "y1", "width", "height"],
                                outputs=["image", "x1", "y1", "width", "height"]),
+            FlipImageAndBbox(inputs=["image", "x1", "y1", "width", "height", "obj_label", "id"],
+                             outputs=["image", "x1", "y1", "width", "height", "obj_label", "id"]),
             GenerateTarget(inputs=("obj_label", "x1", "y1", "width", "height"),
                            outputs=("cls_gt", "x1_gt", "y1_gt", "w_gt", "h_gt")),
             TypeConverter(target_type='int32', inputs=["id", "cls_gt"], outputs=["id", "cls_gt"]),
@@ -142,6 +161,7 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp(), batch_size=8):
                           inputs=["x1_gt", "y1_gt", "w_gt", "h_gt"],
                           outputs=["x1_gt", "y1_gt", "w_gt", "h_gt"])
         ],
+        expand_dims=True,
         compression="GZIP",
         write_feature=[
             "image", "id", "cls_gt", "x1_gt", "y1_gt", "w_gt", "h_gt", "obj_label", "x1", "y1", "width", "height"
@@ -154,10 +174,7 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp(), batch_size=8):
             Rescale(inputs="image", outputs="image"),
             Pad(padded_shape=[1262],
                 inputs=["x1_gt", "y1_gt", "w_gt", "h_gt", "obj_label", "x1", "y1", "width", "height"],
-                outputs=["x1_gt", "y1_gt", "w_gt", "h_gt", "obj_label", "x1", "y1", "width", "height"]),
-            FlipImageAndBbox(inputs=["image", "x1", "y1", "width", "height"],
-                             outputs=["image", "x1", "y1", "width", "height"],
-                             flip_left_right=True)
+                outputs=["x1_gt", "y1_gt", "w_gt", "h_gt", "obj_label", "x1", "y1", "width", "height"])
         ])
     # prepare network
     model = fe.build(model_def=lambda: RetinaNet(input_shape=(512, 512, 3), num_classes=90),

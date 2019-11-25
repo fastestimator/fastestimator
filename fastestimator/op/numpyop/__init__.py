@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from fastestimator.op.numpyop.flip_image_and_bbox import FlipImageAndBbox
 from fastestimator.op.numpyop.image_reader import ImageReader
 from fastestimator.op.numpyop.mat_reader import MatReader
 from fastestimator.op.numpyop.minmax import Minmax
