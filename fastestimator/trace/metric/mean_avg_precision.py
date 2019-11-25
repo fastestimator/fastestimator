@@ -15,20 +15,21 @@
 from collections import defaultdict
 
 import numpy as np
-from pycocotools import mask as maskUtils
 
 from fastestimator.architecture.retinanet import get_fpn_anchor_box
 from fastestimator.trace import Trace
+from pycocotools import mask as maskUtils
 
 
 class MeanAvgPrecision(Trace):
     """Calculates mean avg precision for various ios. Based out of cocoapi
     """
-    def __init__(self, num_classes, input_shape, pred_key, gt_key, mode="eval", output_name="mAP"):
+    def __init__(self, num_classes, input_shape, pred_key, gt_key, mode="eval", output_name=("mAP", "AP50", "AP75")):
         super().__init__(outputs=output_name, mode=mode)
         self.pred_key = pred_key
         self.gt_key = gt_key
         self.output_name = output_name
+        assert len(self.output_name) == 3, 'MeanAvgPrecision  trace adds  3  fields mAP AP50 AP75 to state '
 
         self.iou_thres = np.linspace(.5, 0.95, np.round((0.95 - .5) / .05) + 1, endpoint=True)
         self.rec_thres = np.linspace(.0, 1.00, np.round((1.00 - .0) / .01) + 1, endpoint=True)
@@ -100,7 +101,11 @@ class MeanAvgPrecision(Trace):
     def on_epoch_end(self, state):
         self.accumulate()
         mean_ap = self.summarize()
-        state[self.output_name] = mean_ap
+        ap50 = self.summarize(iou=0.5)
+        ap75 = self.summarize(iou=0.75)
+        state[self.output_name[0]] = mean_ap
+        state[self.output_name[1]] = ap50
+        state[self.output_name[2]] = ap75
 
     def accumulate(self):
         key_list = self.evalimgs
@@ -176,11 +181,12 @@ class MeanAvgPrecision(Trace):
             'recall': recall,
             'scores': scores, }
 
-    def summarize(self, iou=0.5):
+    def summarize(self, iou=None):
         s = self.eval['precision']
         if iou is not None:
             t = np.where(iou == self.iou_thres)[0]
             s = s[t]
+        s = s[:, :, :]
         if len(s[s > -1]) == 0:
             mean_s = -1
         else:
