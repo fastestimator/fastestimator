@@ -16,30 +16,31 @@ import os
 import tempfile
 from ast import literal_eval
 
+import cv2
+import numpy as np
 import tensorflow as tf
 
 import fastestimator as fe
 from fastestimator.architecture.retinanet import PredictBox, RetinaNet, get_fpn_anchor_box, get_target
 from fastestimator.dataset.mscoco import load_data
 from fastestimator.op import NumpyOp
-from fastestimator.op.numpyop import ImageReader, ResizeImageAndBbox, TypeConverter
+from fastestimator.op.numpyop import ImageReader, ResizeImageAndBbox
 from fastestimator.op.tensorop import Loss, ModelOp, Pad, Rescale
 from fastestimator.schedule import LRSchedule
-from fastestimator.schedule.lr_scheduler import CyclicLRSchedule
-from fastestimator.trace import LRController, MeanAvgPrecision, ModelSaver, TerminateOnNaN
+from fastestimator.trace import LRController, MeanAvgPrecision, ModelSaver
 
 
 class MyLRSchedule(LRSchedule):
     def schedule_fn(self, current_step_or_epoch, lr):
-        if current_step_or_epoch < 1000:
-            lr = (0.01 - 0.0002) / 1000 * current_step_or_epoch + 0.0002
-        elif current_step_or_epoch < 60000:
+        if current_step_or_epoch < 2000:
+            lr = (0.01 - 0.0002) / 2000 * current_step_or_epoch + 0.0002
+        elif current_step_or_epoch < 120000:
             lr = 0.01
-        elif current_step_or_epoch < 80000:
+        elif current_step_or_epoch < 160000:
             lr = 0.001
         else:
             lr = 0.0001
-        return lr / 2  #gpu divided by half
+        return lr / 2
 
 
 class String2List(NumpyOp):
@@ -49,6 +50,34 @@ class String2List(NumpyOp):
         return data
 
 
+class FlipImageAndBbox(NumpyOp):
+    def forward(self, data, state):
+        img, x1, y1, w, h, obj_label, ids = data
+        if state["mode"] == "train":
+            img_flipped = cv2.flip(img, 1)
+            x1_flipped = img.shape[1] - x1 - w
+            augmented_data = [
+                np.array([img, img_flipped]),
+                np.array([x1, x1_flipped]),
+                np.array([y1, y1]),
+                np.array([w, w]),
+                np.array([h, h]),
+                np.array([obj_label, obj_label]),
+                np.array([ids, ids])
+            ]
+        else:
+            augmented_data = [
+                np.array([img]),
+                np.array([x1]),
+                np.array([y1]),
+                np.array([w]),
+                np.array([h]),
+                np.array([obj_label]),
+                np.array([ids])
+            ]
+        return augmented_data
+
+
 class GenerateTarget(NumpyOp):
     def __init__(self, inputs=None, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
@@ -56,8 +85,21 @@ class GenerateTarget(NumpyOp):
 
     def forward(self, data, state):
         obj_label, x1, y1, width, height = data
-        cls_gt, x1_gt, y1_gt, w_gt, h_gt = get_target(self.anchorbox, obj_label, x1, y1, width, height)
-        return cls_gt, x1_gt, y1_gt, w_gt, h_gt
+        num_example = obj_label.shape[0]
+        cls_gt = []
+        x1_gt = []
+        y1_gt = []
+        w_gt = []
+        h_gt = []
+        for idx in range(num_example):
+            c, x, y, w, h = get_target(self.anchorbox, obj_label[idx], x1[idx], y1[idx], width[idx], height[idx])
+            cls_gt.append(c)
+            x1_gt.append(x)
+            y1_gt.append(y)
+            w_gt.append(w)
+            h_gt.append(h)
+        target = [np.array(cls_gt), np.array(x1_gt), np.array(y1_gt), np.array(w_gt), np.array(h_gt)]
+        return target
 
 
 class RetinaLoss(Loss):
@@ -125,7 +167,7 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp(), batch_size=2):
     #prepare dataset
     train_csv, val_csv, path = load_data(path=data_path)
     writer = fe.RecordWriter(
-        save_dir=os.path.join(path, "retinanet_coco"),
+        save_dir=os.path.join(path, "retinanet_coco_1024"),
         train_data=train_csv,
         validation_data=val_csv,
         ops=[
@@ -136,13 +178,12 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp(), batch_size=2):
                                keep_ratio=True,
                                inputs=["image", "x1", "y1", "width", "height"],
                                outputs=["image", "x1", "y1", "width", "height"]),
+            FlipImageAndBbox(inputs=["image", "x1", "y1", "width", "height", "obj_label", "id"],
+                             outputs=["image", "x1", "y1", "width", "height", "obj_label", "id"]),
             GenerateTarget(inputs=("obj_label", "x1", "y1", "width", "height"),
-                           outputs=("cls_gt", "x1_gt", "y1_gt", "w_gt", "h_gt")),
-            TypeConverter(target_type='int32', inputs=["id", "cls_gt"], outputs=["id", "cls_gt"]),
-            TypeConverter(target_type='float32',
-                          inputs=["x1_gt", "y1_gt", "w_gt", "h_gt"],
-                          outputs=["x1_gt", "y1_gt", "w_gt", "h_gt"])
+                           outputs=("cls_gt", "x1_gt", "y1_gt", "w_gt", "h_gt"))
         ],
+        expand_dims=True,
         compression="GZIP",
         write_feature=[
             "image", "id", "cls_gt", "x1_gt", "y1_gt", "w_gt", "h_gt", "obj_label", "x1", "y1", "width", "height"
@@ -162,14 +203,14 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp(), batch_size=2):
                      model_name="retinanet",
                      optimizer=tf.optimizers.SGD(momentum=0.9),
                      loss_name="total_loss")
-
     network = fe.Network(ops=[
         ModelOp(inputs="image", model=model, outputs=["cls_pred", "loc_pred"]),
         RetinaLoss(inputs=("cls_gt", "x1_gt", "y1_gt", "w_gt", "h_gt", "cls_pred", "loc_pred"),
                    outputs=("total_loss", "focal_loss", "l1_loss")),
         PredictBox(inputs=["cls_pred", "loc_pred", "obj_label", "x1", "y1", "width", "height"],
                    outputs=("pred", "gt"),
-                   mode="eval")
+                   mode="eval",
+                   input_shape=(1024, 1024, 3))
     ])
     # prepare estimator
     estimator = fe.Estimator(
@@ -177,10 +218,9 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp(), batch_size=2):
         pipeline=pipeline,
         epochs=7,
         traces=[
-            MeanAvgPrecision(90, (1024, 1024, 3), 'pred', 'gt', output_name='mAP'),
-            ModelSaver(model_name="retinanet", save_dir=model_dir, save_best=True),
-            LRController(model_name="retinanet", lr_schedule=MyLRSchedule(schedule_mode="step")),
-            TerminateOnNaN()
+            MeanAvgPrecision(90, (1024, 1024, 3), 'pred', 'gt', output_name=("mAP", "AP50", "AP75")),
+            ModelSaver(model_name="retinanet", save_dir=model_dir, save_best='mAP', save_best_mode='max'),
+            LRController(model_name="retinanet", lr_schedule=MyLRSchedule(schedule_mode="step"))
         ])
     return estimator
 

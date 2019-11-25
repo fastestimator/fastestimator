@@ -27,12 +27,12 @@ from fastestimator.op import get_inputs_by_op, get_op_from_mode, verify_ops, wri
 
 class RecordWriter:
     """Write data into TFRecords.
-    
+
     This class can handle unpaired features. For example, in cycle-gan the hourse and zebra images are unpaired, which
     means during training you do not have one-to-one correspondance between hourse image and zebra image. When the
     `RecordWriter` instance is sent to `Pipeline` create random pairs between hourse and zebra images. See the cycle-gan
     example in apphub directory.
-    
+
     Args:
         train_data (Union[dict, str]): A `dict` that contains train data or a CSV file path. For the CSV file, the
             column header will be used as feature name. Under each column in the CSV file the paths to train data should
@@ -291,7 +291,7 @@ class RecordWriter:
                 if self.expand_dims:
                     num_patches = self._verify_dict(feature, mode)
                     for j in range(num_patches):
-                        feature_patch = self._get_dict_slice(feature, j)
+                        feature_patch = self._get_dict_slice(feature, j, keys=self.feature_name[mode])
                         self._write_single_example(feature_patch, writer, mode)
                         num_example += 1
                 else:
@@ -327,9 +327,10 @@ class RecordWriter:
         writer.write(example.SerializeToString())
 
     @staticmethod
-    def _get_dict_slice(dictionary, index):
+    def _get_dict_slice(dictionary, index, keys=None):
         feature_slice = dict()
-        keys = dictionary.keys()
+        if keys is None:
+            keys = dictionary.keys()
         for key in keys:
             feature_slice[key] = dictionary[key][index]
         return feature_slice
@@ -356,7 +357,7 @@ class RecordWriter:
             elif isinstance(feature_data, np.ndarray):
                 num_example_list.append(feature_data.shape[0])
             else:
-                raise ValueError("the feature only supports list or numpy array")
+                raise ValueError("the feature only supports list or numpy array, unsupported key {}".format(key))
         assert len(set(num_example_list)) == 1, "features should have the same number of examples"
         return set(num_example_list).pop()
 
