@@ -1,6 +1,7 @@
 # Learn about FastEstimator
 
-Welcome to FastEstimator Tutorials!   
+**Welcome to FastEstimator Tutorials!**
+
 In this section, we will guide you through different functionnalities of FastEstimator to help you get started, but also leverage advanced features such as Scheduler or Interpretation. 
 But before jumping to the first tutorial, we want to highlight what differentiates FastEstimator from other frameworks.
 There are three main concepts behind FastEstimator: the structure of model development around 3 APIs, the concept of Operator and the concept of Trace.
@@ -8,13 +9,13 @@ There are three main concepts behind FastEstimator: the structure of model devel
 ## Three  main APIs to build a model
 All deep learning training workﬂows involve three essential components: data pipeline, network, and optimization strategy. Data pipeline extracts data from disk to RAM, performs transformations, and then loads the data onto the device. Network stores trainable and differentiable graphs. Optimization strategy combines data pipeline and network in an iterative process. Each of these components represents a critical API in FastEstimator: Pipeline, Network, and Estimator. Users will interact with these three APIs for any deep learning task. 
 
-* Pipeline:   
+* *Pipeline*:   
 Pipeline can be summarized as an Extraction-Transformation-Load (ETL) process. The extractor can take data either from disk or RAM, with features being either paired or unpaired (e.g., domain adaptation). The transformer builds graphs for preprocessing. The data utility provides support for scenarios like imbalanced training, feature padding, distributed training, and progressive training.
 
-* Network:  
+* *Network*:  
 Network manages trainable models. First,the constructor builds model graphs and creates timestamps on these graphs in the case of progressive training. The transformer then connects different pieces of model graphs and non-trainable graphs together. The updater tracks and applies gradients to each trainable model.
 
-* Estimator:  
+* *Estimator*:  
 Estimator is responsible for the training loop. Before training starts, a smoke test is performed on all graphs to detect potential run-time errors as well as to warm up the graph for faster execution. It then proceeds with training, generating any user-speciﬁed output along the way. 
 
 <img width="800" alt="Capture" src="https://user-images.githubusercontent.com/46055963/69750487-bf479380-1101-11ea-9b33-fd7937c1ba75.PNG">
