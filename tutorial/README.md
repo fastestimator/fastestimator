@@ -2,7 +2,7 @@
 
 **Welcome to FastEstimator Tutorials!**
 
-In this section, we will guide you through different functionnalities of FastEstimator to help you get started, but also leverage advanced features such as Scheduler or Interpretation. 
+In this section, we will guide you through different functionnalities of FastEstimator to help you get started, as well as leverage advanced features such as Scheduler or Interpretation. 
 But before jumping to the first tutorial, we want to highlight what differentiates FastEstimator from other frameworks.
 There are three main concepts behind FastEstimator: the structure of model development around 3 APIs, the concept of Operator and the concept of Trace.
 
