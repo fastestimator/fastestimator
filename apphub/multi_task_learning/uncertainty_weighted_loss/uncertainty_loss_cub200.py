@@ -21,7 +21,7 @@ from tensorflow.keras import layers, models
 
 import fastestimator as fe
 from fastestimator import RecordWriter
-from fastestimator.architecture.uncertaintyloss import UncertaintyLoss
+from fastestimator.architecture.uncertaintyloss import UncertaintyLossNet
 from fastestimator.architecture.unet import UNet
 from fastestimator.dataset import cub200
 from fastestimator.op import NumpyOp
@@ -110,7 +110,7 @@ def get_estimator(batch_size=8, epochs=25, steps_per_epoch=None, validation_step
     #step 2, network
     opt = tf.optimizers.Adam(learning_rate=0.0001)
     resunet50 = fe.build(model_def=ResUnet50, model_name="resunet50", optimizer=opt, loss_name="total_loss")
-    uncertainty = fe.build(model_def=UncertaintyLoss, model_name="uncertainty", optimizer=opt, loss_name="total_loss")
+    uncertainty = fe.build(model_def=UncertaintyLossNet, model_name="uncertainty", optimizer=opt, loss_name="total_loss")
     network = fe.Network(ops=[
         ModelOp(inputs='image', model=resunet50, outputs=["label_pred", "mask_pred"]),
         SparseCategoricalCrossentropy(inputs=["label", "label_pred"], outputs="cls_loss"),

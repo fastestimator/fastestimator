@@ -87,7 +87,7 @@ def UNet(input_size=(128, 128, 3),
         else:
             d = None
 
-        C, C_pooled = conv_block(inputs, nc, 3, conv_config, pooling=2, dropout=d, bn=bn, activation=activation, \
+        C, C_pooled = _conv_block(inputs, nc, 3, conv_config, pooling=2, dropout=d, bn=bn, activation=activation, \
                                     dilation_rate=dilation_rates[idx], residual=(residual == 'enc' or residual is True))
         levels.append((C, C_pooled))
         inputs = C_pooled
@@ -102,21 +102,21 @@ def UNet(input_size=(128, 128, 3),
             d = None
             dilation = None
 
-        D = up_concat(inp1,
-                      inp2,
-                      2, (nchannels[-1 - idx], nchannels[-2 - idx]),
-                      3,
-                      conv_config,
-                      d,
-                      bn=bn,
-                      activation=activation,
-                      upsampling=upsampling,
-                      dilation=dilation,
-                      residual=(residual == 'dec' or residual is True))
+        D = _up_concat(inp1,
+                       inp2,
+                       2, (nchannels[-1 - idx], nchannels[-2 - idx]),
+                       3,
+                       conv_config,
+                       d,
+                       bn=bn,
+                       activation=activation,
+                       upsampling=upsampling,
+                       dilation=dilation,
+                       residual=(residual == 'dec' or residual is True))
         if idx != len(nchannels) - 2:
             inp1, inp2 = D, levels[-2 - idx][0]
 
-    C_end1, _ = conv_block(D, 64, 3, conv_config, bn=bn, activation=activation)
+    C_end1, _ = _conv_block(D, 64, 3, conv_config, bn=bn, activation=activation)
 
     if bn:
         if bn == 'before':
@@ -141,16 +141,16 @@ def UNet(input_size=(128, 128, 3),
     return model
 
 
-def conv_block(inp,
-               nchannels,
-               window,
-               config,
-               pooling=None,
-               dropout=None,
-               bn=False,
-               activation=None,
-               dilation_rate=1,
-               residual=False):
+def _conv_block(inp,
+                nchannels,
+                window,
+                config,
+                pooling=None,
+                dropout=None,
+                bn=False,
+                activation=None,
+                dilation_rate=1,
+                residual=False):
 
     if bn and bn == 'before':
         act = config['activation']
@@ -203,7 +203,7 @@ def conv_block(inp,
     return conv2, pooled
 
 
-def upsample(inp, factor, nchannels, config, bn=None, activation=None, upsampling='bilinear', residual=False):
+def _upsample(inp, factor, nchannels, config, bn=None, activation=None, upsampling='bilinear', residual=False):
 
     if residual:
         r1 = UpSampling2D(size=(factor, factor), interpolation=upsampling)(inp)
@@ -242,32 +242,32 @@ def upsample(inp, factor, nchannels, config, bn=None, activation=None, upsamplin
     return up
 
 
-def up_concat(conv_pooled,
-              conv,
-              factor,
-              nchannels,
-              window,
-              config,
-              dropout=None,
-              bn=None,
-              activation=None,
-              upsampling='bilinear',
-              dilation=1,
-              residual=False):
+def _up_concat(conv_pooled,
+               conv,
+               factor,
+               nchannels,
+               window,
+               config,
+               dropout=None,
+               bn=None,
+               activation=None,
+               upsampling='bilinear',
+               dilation=1,
+               residual=False):
 
     assert len(nchannels) == 2
 
-    F, _ = conv_block(conv_pooled, nchannels[0], window, config, bn=bn, dropout=dropout, activation=activation, \
+    F, _ = _conv_block(conv_pooled, nchannels[0], window, config, bn=bn, dropout=dropout, activation=activation, \
                         dilation_rate=dilation if dilation else 1, residual=residual)
 
-    upsampled = upsample(F,
-                         factor,
-                         nchannels[1],
-                         config,
-                         bn=bn,
-                         activation=activation,
-                         upsampling=upsampling,
-                         residual=residual)
+    upsampled = _upsample(F,
+                          factor,
+                          nchannels[1],
+                          config,
+                          bn=bn,
+                          activation=activation,
+                          upsampling=upsampling,
+                          residual=residual)
 
     feat = concatenate([conv, upsampled], axis=3)
 

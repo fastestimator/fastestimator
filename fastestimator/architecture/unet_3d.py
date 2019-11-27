@@ -78,7 +78,7 @@ def UNet3D(input_size=(9, 512, 512, 1),
     inp = inputs
 
     if clip:
-        inputs = clamp(inputs, clip[0], clip[1], min_max_scaling=True)
+        inputs = _clamp(inputs, clip[0], clip[1], min_max_scaling=True)
 
     levels = []
 
@@ -90,19 +90,19 @@ def UNet3D(input_size=(9, 512, 512, 1),
         else:
             W = (1, 3, 3)
 
-        C = conv3D_block(inputs,
-                         nc,
-                         W,
-                         nblocks=4,
-                         dropout=dropout if dropout else 0,
-                         bn="before",
-                         prefix='3d_unet_conv_%d' % (idx),
-                         activation=act,
-                         dilation_rate=dilation_rates[idx],
-                         residual=residual)
+        C = _conv3D_block(inputs,
+                          nc,
+                          W,
+                          nblocks=4,
+                          dropout=dropout if dropout else 0,
+                          bn="before",
+                          prefix='3d_unet_conv_%d' % (idx),
+                          activation=act,
+                          dilation_rate=dilation_rates[idx],
+                          residual=residual)
 
         if idx != len(nchannels) - 1:
-            C_pooled = pooling_combo3D(C, window=(1, 2, 2), prefix='3d_unet_pooling_%d' % (idx))
+            C_pooled = _pooling_combo3D(C, window=(1, 2, 2), prefix='3d_unet_pooling_%d' % (idx))
         else:
             C_pooled = None
 
@@ -120,22 +120,22 @@ def UNet3D(input_size=(9, 512, 512, 1),
         else:
             d = 0
             dilation = 1
-        D = up_concat(inp1,
-                      inp2,
-                      2, (nchannels[-1 - idx], nchannels[-2 - idx]),
-                      3,
-                      dropout=d,
-                      bn=bn,
-                      activation=act,
-                      upsampling=upsampling,
-                      dilation_rate=dilation,
-                      idx=idx,
-                      residual=residual)
+        D = _up_concat(inp1,
+                       inp2,
+                       2, (nchannels[-1 - idx], nchannels[-2 - idx]),
+                       3,
+                       dropout=d,
+                       bn=bn,
+                       activation=act,
+                       upsampling=upsampling,
+                       dilation_rate=dilation,
+                       idx=idx,
+                       residual=residual)
 
         if idx != len(nchannels) - 2:
             inp1, inp2 = D, levels[-3 - idx][0]
 
-    C_end1 = conv3D_block(D, 64, (1, 3, 3), dropout=dropout, bn=bn, activation=act, residual=residual)
+    C_end1 = _conv3D_block(D, 64, (1, 3, 3), dropout=dropout, bn=bn, activation=act, residual=residual)
 
     C_end2 = Conv3D(2, (1, 3, 3), kernel_initializer='he_normal', padding='same')(C_end1)
 
@@ -151,18 +151,18 @@ def UNet3D(input_size=(9, 512, 512, 1),
     return model
 
 
-def conv3D_block(x,
-                 nchannels,
-                 window,
-                 strides=(1, 1, 1),
-                 nblocks=1,
-                 dropout=0,
-                 bn=None,
-                 prefix='3d_unet_conv',
-                 bias=False,
-                 activation='relu',
-                 dilation_rate=1,
-                 residual=False):
+def _conv3D_block(x,
+                  nchannels,
+                  window,
+                  strides=(1, 1, 1),
+                  nblocks=1,
+                  dropout=0,
+                  bn=None,
+                  prefix='3d_unet_conv',
+                  bias=False,
+                  activation='relu',
+                  dilation_rate=1,
+                  residual=False):
 
     if isinstance(activation, str):
         act = Activation(activation)
@@ -202,18 +202,18 @@ def conv3D_block(x,
     return x
 
 
-def deconv3D_block(x,
-                   nchannels,
-                   window,
-                   strides=(1, 1, 1),
-                   nblocks=1,
-                   dropout=0,
-                   prefix='unet_3d_deconv',
-                   bias=False,
-                   bn=None,
-                   activation=Activation('relu'),
-                   dilation_rate=1,
-                   residual=False):
+def _deconv3D_block(x,
+                    nchannels,
+                    window,
+                    strides=(1, 1, 1),
+                    nblocks=1,
+                    dropout=0,
+                    prefix='unet_3d_deconv',
+                    bias=False,
+                    bn=None,
+                    activation=Activation('relu'),
+                    dilation_rate=1,
+                    residual=False):
 
     if isinstance(activation, str):
         act = Activation(activation)
@@ -253,7 +253,7 @@ def deconv3D_block(x,
     return x
 
 
-def pooling_combo3D(x, window=(2, 2, 2), prefix='3d_unet_pooling'):
+def _pooling_combo3D(x, window=(2, 2, 2), prefix='3d_unet_pooling'):
     x = concatenate([
         MaxPooling3D(pool_size=window, data_format='channels_last', name=prefix + "_max")(x),
         AveragePooling3D(pool_size=window, data_format='channels_last', name=prefix + "_avg")(x)
@@ -264,7 +264,7 @@ def pooling_combo3D(x, window=(2, 2, 2), prefix='3d_unet_pooling'):
     return x
 
 
-def clamp(x, min_value, max_value, min_max_scaling=True):
+def _clamp(x, min_value, max_value, min_max_scaling=True):
 
     x = tensorflow.clip_by_value(x, clip_value_min=min_value, clip_value_max=max_value)
 
@@ -274,17 +274,17 @@ def clamp(x, min_value, max_value, min_max_scaling=True):
     return x
 
 
-def upsample(inp,
-             factor,
-             nchannels,
-             bn=None,
-             activation=None,
-             bias=False,
-             dilation_rate=1,
-             prefix='unet_3d',
-             idx=0,
-             upsampling='copy',
-             residual=False):
+def _upsample(inp,
+              factor,
+              nchannels,
+              bn=None,
+              activation=None,
+              bias=False,
+              dilation_rate=1,
+              prefix='unet_3d',
+              idx=0,
+              upsampling='copy',
+              residual=False):
 
     if residual:
         resized = UpSampling3D(size=(1, factor, factor))(inp)
@@ -322,45 +322,45 @@ def upsample(inp,
     return resized
 
 
-def up_concat(conv_pooled,
-              conv,
-              factor,
-              nchannels,
-              window,
-              strides=(1, 1, 1),
-              dropout=None,
-              bn=None,
-              activation=None,
-              idx=0,
-              bias=False,
-              dilation_rate=1,
-              upsampling='copy',
-              residual=False):
+def _up_concat(conv_pooled,
+               conv,
+               factor,
+               nchannels,
+               window,
+               strides=(1, 1, 1),
+               dropout=None,
+               bn=None,
+               activation=None,
+               idx=0,
+               bias=False,
+               dilation_rate=1,
+               upsampling='copy',
+               residual=False):
 
     assert len(nchannels) == 2
 
-    F = deconv3D_block(conv_pooled,
-                       nchannels[0], (1, window, window),
-                       strides=strides,
-                       nblocks=4,
-                       dropout=dropout,
-                       prefix='unet_3d_deconv_%d' % (idx),
-                       bias=bias,
-                       bn=bn,
-                       activation=activation,
-                       residual=residual)
+    F = _deconv3D_block(conv_pooled,
+                        nchannels[0], (1, window, window),
+                        strides=strides,
+                        nblocks=4,
+                        dropout=dropout,
+                        prefix='unet_3d_deconv_%d' % (idx),
+                        bias=bias,
+                        bn=bn,
+                        activation=activation,
+                        residual=residual)
 
-    upsampled = upsample(F,
-                         factor,
-                         nchannels[1],
-                         bn=bn,
-                         activation=activation,
-                         upsampling=upsampling,
-                         bias=bias,
-                         dilation_rate=dilation_rate,
-                         prefix='unet_3d',
-                         idx=idx,
-                         residual=residual)
+    upsampled = _upsample(F,
+                          factor,
+                          nchannels[1],
+                          bn=bn,
+                          activation=activation,
+                          upsampling=upsampling,
+                          bias=bias,
+                          dilation_rate=dilation_rate,
+                          prefix='unet_3d',
+                          idx=idx,
+                          residual=residual)
 
     feat = concatenate([conv, upsampled], axis=-1)
 

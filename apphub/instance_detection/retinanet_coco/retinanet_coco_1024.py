@@ -21,7 +21,7 @@ import numpy as np
 import tensorflow as tf
 
 import fastestimator as fe
-from fastestimator.architecture.retinanet import PredictBox, RetinaNet, get_fpn_anchor_box, get_target
+from fastestimator.architecture.retinanet import PredictBox, RetinaNet, _get_fpn_anchor_box, _get_target
 from fastestimator.dataset.mscoco import load_data
 from fastestimator.op import NumpyOp
 from fastestimator.op.numpyop import ImageReader, ResizeImageAndBbox
@@ -81,7 +81,7 @@ class FlipImageAndBbox(NumpyOp):
 class GenerateTarget(NumpyOp):
     def __init__(self, inputs=None, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        self.anchorbox, _ = get_fpn_anchor_box(input_shape=(1024, 1024, 3))
+        self.anchorbox, _ = _get_fpn_anchor_box(input_shape=(1024, 1024, 3))
 
     def forward(self, data, state):
         obj_label, x1, y1, width, height = data
@@ -92,7 +92,7 @@ class GenerateTarget(NumpyOp):
         w_gt = []
         h_gt = []
         for idx in range(num_example):
-            c, x, y, w, h = get_target(self.anchorbox, obj_label[idx], x1[idx], y1[idx], width[idx], height[idx])
+            c, x, y, w, h = _get_target(self.anchorbox, obj_label[idx], x1[idx], y1[idx], width[idx], height[idx])
             cls_gt.append(c)
             x1_gt.append(x)
             y1_gt.append(y)

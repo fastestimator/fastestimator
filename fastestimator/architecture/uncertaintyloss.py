@@ -17,7 +17,7 @@ from tensorflow.python.keras import layers
 from tensorflow.python.keras.models import Model
 
 
-def UncertaintyLoss(num_losses=2):
+def UncertaintyLossNet(num_losses=2):
     """Creates Uncertainty weighted loss model https://arxiv.org/abs/1705.07115
 
     Args:
