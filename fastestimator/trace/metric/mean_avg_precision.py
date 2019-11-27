@@ -16,7 +16,7 @@ from collections import defaultdict
 
 import numpy as np
 
-from fastestimator.architecture.retinanet import get_fpn_anchor_box
+from fastestimator.architecture.retinanet import _get_fpn_anchor_box
 from fastestimator.trace import Trace
 from pycocotools import mask as maskUtils
 
@@ -36,7 +36,7 @@ class MeanAvgPrecision(Trace):
         self.categories = [n + 1 for n in range(num_classes)]  # MSCOCO style class label starts from 1
         self.maxdets = 100
         self.image_ids = []
-        self.anch_box = get_fpn_anchor_box(input_shape=input_shape)[0]
+        self.anch_box = _get_fpn_anchor_box(input_shape=input_shape)[0]
 
     def get_ids_in_epoch(self, idx_in_batch):
         unique_cnt_pr = len(np.unique(self.ids_unique))

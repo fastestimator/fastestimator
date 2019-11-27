@@ -20,7 +20,7 @@ from tensorflow.python.keras import layers, models, regularizers
 from fastestimator.op import TensorOp
 
 
-def classification_sub_net(num_classes, num_anchor=9):
+def _classification_sub_net(num_classes, num_anchor=9):
     """Creates an object classification sub-network for the RetinaNet.
 
     Args:
@@ -76,7 +76,7 @@ def classification_sub_net(num_classes, num_anchor=9):
     return model
 
 
-def regression_sub_net(num_anchor=9):
+def _regression_sub_net(num_anchor=9):
     """Creates a regression sub-network for the RetinaNet.
 
     Args:
@@ -189,7 +189,7 @@ def RetinaNet(input_shape, num_classes, num_anchor=9):
                        name="P3",
                        kernel_regularizer=regularizers.l2(0.0001))(P3)
     # classification subnet
-    cls_subnet = classification_sub_net(num_classes=num_classes, num_anchor=num_anchor)
+    cls_subnet = _classification_sub_net(num_classes=num_classes, num_anchor=num_anchor)
     P3_cls = cls_subnet(P3)
     P4_cls = cls_subnet(P4)
     P5_cls = cls_subnet(P5)
@@ -197,7 +197,7 @@ def RetinaNet(input_shape, num_classes, num_anchor=9):
     P7_cls = cls_subnet(P7)
     cls_output = layers.Concatenate(axis=-2)([P3_cls, P4_cls, P5_cls, P6_cls, P7_cls])
     # localization subnet
-    loc_subnet = regression_sub_net(num_anchor=num_anchor)
+    loc_subnet = _regression_sub_net(num_anchor=num_anchor)
     P3_loc = loc_subnet(P3)
     P4_loc = loc_subnet(P4)
     P5_loc = loc_subnet(P5)
@@ -207,7 +207,7 @@ def RetinaNet(input_shape, num_classes, num_anchor=9):
     return tf.keras.Model(inputs=inputs, outputs=[cls_output, loc_output])
 
 
-def get_fpn_anchor_box(input_shape):
+def _get_fpn_anchor_box(input_shape):
     """Returns the anchor boxes of the Feature Pyramid Net.
 
     Args:
@@ -232,8 +232,8 @@ def get_fpn_anchor_box(input_shape):
     anchor_idx = 0
     for shape, anchor_length in zip(shapes, anchor_lengths):
         p_h, p_w = shape
-        base_y = 2 ** np.ceil(np.log2(h / p_h))
-        base_x = 2 ** np.ceil(np.log2(w / p_w))
+        base_y = 2**np.ceil(np.log2(h / p_h))
+        base_x = 2**np.ceil(np.log2(w / p_w))
         for i in range(p_h):
             center_y = (i + 1 / 2) * base_y
             for j in range(p_w):
@@ -255,7 +255,7 @@ def get_fpn_anchor_box(input_shape):
     return np.float32(anchorbox), np.int32(num_pixel) * 9
 
 
-def get_target(anchorbox, label, x1, y1, width, height):
+def _get_target(anchorbox, label, x1, y1, width, height):
     """Generates classification and localization ground-truths.
 
     Args:
@@ -271,7 +271,7 @@ def get_target(anchorbox, label, x1, y1, width, height):
         array: localization groundtruths for each anchor box.
     """
     object_boxes = np.array([x1, y1, width, height]).T  # num_obj x 4
-    ious = get_iou(object_boxes, anchorbox)  # num_obj x num_anchor
+    ious = _get_iou(object_boxes, anchorbox)  # num_obj x num_anchor
     #now for each object in image, assign the anchor box with highest iou to them
     anchorbox_best_iou_idx = np.argmax(ious, axis=1)
     num_obj = ious.shape[0]
@@ -288,11 +288,11 @@ def get_target(anchorbox, label, x1, y1, width, height):
     box_anchor_obj = anchorbox[anchor_has_object]
     gt_object_idx = anchor_to_obj_idx[anchor_has_object]
     box_gt_obj = object_boxes[gt_object_idx]
-    x1_gt, y1_gt, w_gt, h_gt = get_loc_offset(box_gt_obj, box_anchor_obj)
+    x1_gt, y1_gt, w_gt, h_gt = _get_loc_offset(box_gt_obj, box_anchor_obj)
     return cls_gt, x1_gt, y1_gt, w_gt, h_gt
 
 
-def get_loc_offset(box_gt, box_anchor):
+def _get_loc_offset(box_gt, box_anchor):
     """Computes the offset of a groundtruth box and an anchor box.
 
     Args:
@@ -314,7 +314,7 @@ def get_loc_offset(box_gt, box_anchor):
     return dx1, dy1, dwidth, dheight
 
 
-def get_iou(boxes1, boxes2):
+def _get_iou(boxes1, boxes2):
     """Computes the value of intersection over union (IoU) of two array of boxes.
 
     Args:
@@ -358,7 +358,7 @@ class PredictBox(TensorOp):
         self.nms_max_outputs = nms_max_outputs
         self.score_threshold = score_threshold
 
-        all_anchors, num_anchors_per_level = get_fpn_anchor_box(input_shape=input_shape)
+        all_anchors, num_anchors_per_level = _get_fpn_anchor_box(input_shape=input_shape)
         self.all_anchors = tf.convert_to_tensor(all_anchors)
         self.num_anchors_per_level = num_anchors_per_level
 

@@ -15,5 +15,5 @@
 from fastestimator.architecture import cyclegan
 from fastestimator.architecture.lenet import LeNet
 from fastestimator.architecture.retinanet import RetinaNet
-from fastestimator.architecture.uncertaintyloss import UncertaintyLoss
+from fastestimator.architecture.uncertaintyloss import UncertaintyLossNet
 from fastestimator.architecture.unet import UNet
