@@ -3,6 +3,7 @@
 **Welcome to FastEstimator Tutorials!**
 
 In this section, we will guide you through different functionnalities of FastEstimator to help you get started, as well as leverage advanced features such as Scheduler or Interpretation. 
+   
 But before jumping to the first tutorial, we want to highlight what differentiates FastEstimator from other frameworks.
 There are three main concepts behind FastEstimator: the structure of model development around 3 APIs, the concept of Operator and the concept of Trace.
 
@@ -26,6 +27,7 @@ The central component of both Pipeline and Network is a sequence of Operators. S
 
 The common goal of all high-level deep learning APIs is to enable complex graph building with less code. For that, most frameworks introduce the concept of layers (aka blocks and modules) to simplify network deﬁnition. However, as model complexity increases, even layer representations may become undesirably verbose.
 Therefore, we propose the concept of Operator, a higher level abstraction for layers, to achieve code reduction without losing ﬂexibility. An Operator represents a task-level computation module for data (in the form of key:value pairs), which can be either trainable or non-trainable. Every Operator has three components: input key(s), transformation function, and output key(s).    
+   
 The execution ﬂow of a single Operator involves: 
 1) Take the value of the input key(s) from the batch data   
 2) Apply transformation functions to the input value   
@@ -51,4 +53,4 @@ These improvements brought by Trace have enabled many new functionalities. For e
 ![trace](https://user-images.githubusercontent.com/46055963/69750660-249b8480-1102-11ea-84b5-8f1523136cc3.png)
  
  ##
- Already comfortable with FastEstimator? Check our state-of-the-art implementations!
+ **Already comfortable with FastEstimator? Check our state-of-the-art implementations!**
