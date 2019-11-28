@@ -44,13 +44,18 @@ class MyLRSchedule(LRSchedule):
 
 
 class String2List(NumpyOp):
-    # this thing converts '[1, 2, 3]' into np.array([1, 2, 3])
+    """Convert string into numpy array.
+
+    For example, '[1, 2, 3]' will become np.array([1, 2, 3]).
+    """
     def forward(self, data, state):
         data = map(literal_eval, data)
         return data
 
 
 class FlipImageAndBbox(NumpyOp):
+    """Augment image and its associated bounding boxes with horizontally flipped ones.
+    """
     def forward(self, data, state):
         img, x1, y1, w, h, obj_label, ids = data
         if state["mode"] == "train":
@@ -79,6 +84,8 @@ class FlipImageAndBbox(NumpyOp):
 
 
 class GenerateTarget(NumpyOp):
+    """Generate classification and regression targets.
+    """
     def __init__(self, inputs=None, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.anchorbox, _ = _get_fpn_anchor_box(input_shape=(512, 512, 3))
@@ -226,5 +233,4 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp(), batch_size=8):
 
 
 if __name__ == "__main__":
-    est = get_estimator()
-    est.fit()
+    get_estimator().fit()
