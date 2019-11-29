@@ -20,7 +20,7 @@ from fastestimator.pipeline import Pipeline
 from fastestimator.record_writer import RecordWriter
 from fastestimator.util.util import get_num_devices
 
-__version__ = '1.0-beta1'
+__version__ = '1.0-beta2'
 
 if get_num_devices() > 1:
     distribute_strategy = tf.distribute.MirroredStrategy()
