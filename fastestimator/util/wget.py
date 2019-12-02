@@ -101,10 +101,11 @@ def callback_progress(blocks, block_size, total_size, bar_function):
     Use sys.stdout.write() instead of "print,", because it allows one more
     symbol at the line end without linefeed on Windows
 
-    :param blocks: number of blocks transferred so far
-    :param block_size: in bytes
-    :param total_size: in bytes, can be -1 if server doesn't return it
-    :param bar_function: another callback function to visualize progress
+    Args:
+        blocks: number of blocks transferred so far
+        block_size: in bytes
+        total_size: in bytes, can be -1 if server doesn't return it
+        bar_function: another callback function to visualize progress
     """
     width = min(100, wget.get_console_width())
     if width == 0:  # sys.stdout.fileno() in get_console_width() is not supported in jupyter notebook
