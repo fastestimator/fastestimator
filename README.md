@@ -54,7 +54,7 @@ We have [tutorial series](https://github.com/fastestimator/fastestimator/tree/ma
 Check out [Application Hub](https://github.com/fastestimator/fastestimator/tree/master/apphub) for end-to-end deep learning examples in FastEstimator.
 
 ## Documentation
-For more info, check out our [FastEstimator documentation](https://fastestimator.org).
+For more info, check out our [FastEstimator documentation](https://www.fastestimator.org).
 
 ## Citation
 Please cite FastEstimator in your publications if it helps your research:
