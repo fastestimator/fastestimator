@@ -4,12 +4,12 @@ import json
 import os
 import pydoc
 import sys
+import tempfile
 
 titles = ['Args', 'Raises', 'Returns']
 
 
 def extractmarkdown(module, save_path):
-    print(module)
     output = list()
     mod = pydoc.safeimport(inspect.getmodulename(module))
     output.append('## ' + str(module))
@@ -33,15 +33,12 @@ def formatDocstring(docstr):
     if docstr != None:
         docstr = docstr.split('\n')
         new_docstr = docstr.copy()
-        print(new_docstr)
         for i in range(len(docstr)):
-            if (docstr[i].strip() != "") and (docstr[i].strip().replace(
-                    " ", "").split(':')[0] not in titles):
+            if (docstr[i].strip() != "") and (docstr[i].strip().replace(" ", "").split(':')[0] not in titles):
                 res.append(docstr[i])
                 new_docstr.pop(0)
             else:
                 break
-
         if len(new_docstr) != 0:
             for idx in range(len(new_docstr)):
                 if ':' in new_docstr[idx]:
@@ -68,10 +65,6 @@ def formatDocstring(docstr):
 
 
 def getclasses(item, save_path, mod=None):
-
-    print(item)
-    #if mod != None:
-    #    item = mod
     classes = inspect.getmembers(item, inspect.isclass)
     for cl in classes:
         if inspect.getmodule(cl[1]) == item and not cl[0].startswith("_"):
@@ -103,11 +96,9 @@ def getfunctions(item, save_path):
 
     """
     funcs = inspect.getmembers(item, inspect.isfunction)
-    print(funcs)
     for f in funcs:
         if inspect.getmodule(f[1]) == inspect.getmodule(item):
             if not f[0].startswith("_"):
-                print(f[0])
                 output = list()
                 output.append('\n\n')
                 output.append('### ' + f[0])
@@ -120,16 +111,6 @@ def getfunctions(item, save_path):
                 output.append(formatDocstring(inspect.getdoc(f[1])))
                 with open(os.path.join(save_path, f[0]) + '.md', 'w') as f:
                     f.write("".join(output))
-
-
-def isExtendedFunc(obj, item):
-    print('\n\n**********')
-    print(item)
-    print(obj)
-    print(inspect.getmodule(obj))
-    print(inspect.getmodule(item))
-    print(obj.__doc__)
-    print('\n')
 
 
 def isDoc(obj):
@@ -146,15 +127,10 @@ def getClassFunctions(item):
         [list]: It returns the markdown string with object signature appended in the list
     """
     output = list()
-    print(item)
     funcs = inspect.getmembers(item, inspect.isfunction)
-    print(funcs)
     for f in funcs:
         if inspect.getmodule(f[1]) == inspect.getmodule(item):
-            print(f[0])
-            print('\n')
             if not f[0].startswith("_") and not isDoc(f[1]):
-                isExtendedFunc(f[1], item)
                 output.append('\n\n')
                 output.append('### ' + f[0])
                 output.append("\n```python\n")
@@ -168,7 +144,7 @@ def getClassFunctions(item):
     return output
 
 
-def generatedocs(fe_path):
+def generatedocs():
     """This function loop through files and sub-directories in project directory in top down approach and get python code
     files to extract markdowns. It also prepares path to save markdown file for corresponding python file.
 
@@ -178,13 +154,11 @@ def generatedocs(fe_path):
     Returns:
         [str]: Returns absolute path to the generated markdown directory
     """
-
-    rootdir = '/home/ubuntu/vivek'
-    fe_path = rootdir + '/fastestimator/fastestimator'
+    fe_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../fastestimator')
+    save_dir = os.path.join(tempfile.gettempdir(), 'fe')
     #insert project path to system path to later detect the modules in project
     sys.path.insert(0, fe_path)
     #parent directory where all the markdown files will be stored
-    save_dir = os.path.join(os.getcwd(), 'fe')
 
     for subdirs, dirs, files in os.walk(fe_path, topdown=True):
         for f in files:
@@ -195,16 +169,13 @@ def generatedocs(fe_path):
                 mod_dir = os.path.relpath(f_path, fe_path)
                 mod = mod_dir.replace('/', '.')
                 if subdirs == fe_path:
-                    save_path = os.path.join(*[rootdir, save_dir, 'fe'])
+                    save_path = os.path.join(*[save_dir, 'fe'])
                 else:
-                    save_path = os.path.join(*[
-                        rootdir, save_dir,
-                        os.path.relpath(subdirs, fe_path)
-                    ])
+                    save_path = os.path.join(*[save_dir, os.path.relpath(subdirs, fe_path)])
                 if not os.path.exists(save_path):
                     os.makedirs(save_path)
                 mdtexts = extractmarkdown(mod, save_path)
-    return os.path.join(rootdir, save_dir)
+    return save_dir
 
 
 def generate_json(path):
@@ -224,16 +195,13 @@ def generate_json(path):
         name = os.path.relpath(path, doc_path)
         displayname = os.path.basename(name).split('.')[0]
         json_dict = {'name': name.strip('.,')}
-
+        prefix = 'fe.'
         if os.path.isdir(path):
             name = name.replace('/', '.')
             json_dict['displayName'] = 'fe'
             if displayname != '' and name != 'fe':
-                json_dict['displayName'] = 'fe.' + name
-            children = [
-                createlist(os.path.join(path, x))
-                for x in sorted(os.listdir(path))
-            ]
+                json_dict['displayName'] = prefix + name
+            children = [createlist(os.path.join(path, x)) for x in sorted(os.listdir(path))]
 
             subfield, field = [], []
             for x in children:
@@ -249,16 +217,13 @@ def generate_json(path):
         return json_dict
 
     if os.path.isdir(path):
-        json_list = [
-            createlist(os.path.join(path, x)) for x in os.listdir(path)
-        ]
+        json_list = [createlist(os.path.join(path, x)) for x in os.listdir(path)]
         json_list = sorted(json_list, key=lambda x: x['displayName'])
         return json_list
 
 
-FE_PATH = sys.argv[0]
-DOC_PATH = sys.argv[1]
-docs_path = generatedocs(FE_PATH)
-with open('structure.json', 'w') as f:
-    DOC_FILES = json.dumps(generate_json(docs_path))
-    f.write(DOC_FILES)
+docs_path = generatedocs()
+struct_json = os.path.join(tempfile.gettempdir(), 'structure.json')
+with open(struct_json, 'w') as f:
+    fe_json = json.dumps(generate_json(docs_path))
+    f.write(fe_json)
