@@ -39,7 +39,7 @@ class SubPixelConv2D(layers.Layer):
         Returns:
             [dict]: params defining subpixel convolution layer
         """
-        return {'upsampling_factor': self.factor, 'nchannels': self.nchannels}
+        return {'upsample_factor': self.factor, 'nchannels': self.nchannels}
 
     def compute_output_shape(self, s):
         """ If you are using "channels_last" configuration"""
