@@ -25,13 +25,12 @@ class Gradients(TensorOp):
             keys (str, list): A list of keys corresponding to variables to compute gradients against
             outputs (str, list): A list of output names (model gradients first, then key gradients)
         """
-    def __init__(self, loss, models=None, keys=None, outputs=None):
+    def __init__(self, loss, models=None, keys=None, outputs=None, mode="train"):
         self.models = to_list(models) if models else []
         inputs = to_list(keys) if keys else []
         outputs = to_list(outputs) if outputs else []
-
         assert len(outputs) == len(inputs) + len(self.models)
-        super().__init__(inputs=[loss] + inputs, outputs=outputs, mode="train")
+        super().__init__(inputs=[loss] + inputs, outputs=outputs, mode=mode)
 
     def forward(self, data, state):
         loss, *elems = data
