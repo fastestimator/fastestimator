@@ -24,9 +24,9 @@ class UpdateOp(TensorOp):
     Args:
         model (keras.model): keras model compiled by fe.build
     """
-    def __init__(self, model, gradients=None):
+    def __init__(self, model, gradients=None, mode="train"):
         self.gradients = gradients
-        super().__init__(inputs=self.gradients or model.loss_name, outputs=None, mode="train")
+        super().__init__(inputs=self.gradients or model.loss_name, outputs=None, mode=mode)
         self.model = model
 
     def forward(self, data, state):
