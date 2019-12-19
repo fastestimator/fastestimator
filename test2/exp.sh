@@ -8,9 +8,8 @@ FILES=$(ls $DIR'/test_apphub_scripts')
 #     echo ","
 # done
 
-a=0
-if [ $a -eq  0 ]; then
-    echo "yes"
-else
-    echo "no"
+
+
+if bash exp3.sh; then 
+    echo "success"
 fi
