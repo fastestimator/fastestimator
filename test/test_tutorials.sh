@@ -28,8 +28,8 @@ rm ${path_temp}/*.py
 
 echo $cnt 'tests passed out of' ${FILECNT} 'tutorial tests' >> $report_file
 
-if [ $fail -eq 1 ] ; then
-    exit 1
-else
+if [ $fail -eq 0 ] ; then
     exit 0
+else
+    exit 1
 fi
