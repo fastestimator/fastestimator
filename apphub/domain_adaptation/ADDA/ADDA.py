@@ -21,7 +21,7 @@ import pandas as pd
 import fastestimator as fe
 from fastestimator.dataset import mnist, usps
 from fastestimator.op.numpyop import ImageReader
-from fastestimator.util import RecordWriter
+from fastestimator import RecordWriter
 from fastestimator.op.tensorop import Resize, Minmax
 from tensorflow.keras import layers, Model, Sequential
 from fastestimator.op import TensorOp
@@ -124,7 +124,7 @@ def build_discriminator(feature_dim=512):
     return model
 
 
-def get_estimator(pretrained_fe_path, classifier_path, data_path=None):
+def get_estimator(pretrained_fe_path, classifier_path, data_path=None, epochs=100):
 
     assert os.path.exists(pretrained_fe_path), "Pretrained feature extractor is missing"
     assert os.path.exists(classifier_path), "Pretrained classifier is missing"
@@ -193,7 +193,7 @@ def get_estimator(pretrained_fe_path, classifier_path, data_path=None):
         EvaluateTargetClassifier(model_name="fe", model_path=classifier_path)
     ]
 
-    estimator = fe.Estimator(pipeline=pipeline, network=network, traces=traces, epochs=100)
+    estimator = fe.Estimator(pipeline=pipeline, network=network, traces=traces, epochs=epochs)
 
     return estimator
 
