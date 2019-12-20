@@ -20,7 +20,7 @@ if [ -f $report_file ]; then
 fi
 
 # Image Classification examples test
-file="test_ADDA.sh"
+file="test_pggan_nihchestxray.sh"
 echo "start running testing script "$file
 bash $path_test_scripts'/'$file
 if [ $? -eq 0 ] ; then
