@@ -317,8 +317,8 @@ class Pipeline(BasePipeline):
         self.dataloaders[mode] = self._build_loader(self.datasets[mode], shuffle=shuffle, num_process=num_process)
 
     def get_global_batch_size(self, mode: str, epoch: int) -> int:
-        # TODO figure out global vs local. I'm pretty sure this loader will always be global batch
-        # TODO support per-mode batch size
+        # TODO - figure out global vs local. I'm pretty sure this loader will always be global batch
+        # TODO - support per-mode batch size
         return self.batch_size.get_current_value(epoch)
 
     def get_num_examples(self, mode: str, epoch: int) -> int:
@@ -428,11 +428,19 @@ class TensorFlowPipeline(BasePipeline):
         return self.num_examples.get(mode, 0)
 
     def transform(self, mode: str, epoch: int = 0, dataset: Optional[Dataset] = None) -> Iterator:
-        # TODO support dataset arg
-        return iter(self.dataloaders.get(mode, ()))
+        if dataset is not None:
+            loader = DataLoader(dataset=dataset,
+                                batch_size=self.batch_sizes.get(mode, 1),
+                                num_workers=os.cpu_count(),
+                                drop_last=False)
+        else:
+            loader = self.dataloaders.get(mode, ())
+        return iter(loader)
 
 
 def torch_to_tf(data):
+    # TODO - it might be desirable to replace the collate function of the data loader rather than casting
+    #  after-the-fact, but surprisingly tests so far have shown that this doesn't add a noticeable performance penalty
     if isinstance(data, tf.Tensor):
         return data
     if isinstance(data, torch.Tensor):

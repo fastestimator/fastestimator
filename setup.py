@@ -72,7 +72,8 @@ setup(
         'nest_asyncio',
         'pycocotools-fix',
         'torch',
-        'torchvision'
+        'torchvision',
+        'albumentations'
     ],
     # Declare extra set for installation
     extras_require={},
