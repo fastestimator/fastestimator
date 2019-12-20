@@ -192,7 +192,7 @@ class ResetOptimizer(Trace):
             print("Resetting optimizer on epoch {}".format(state["epoch"]))
 
 
-def get_estimator(data_dir=None, save_dir=None, steps_per_epoch=None, validation_steps=None):
+def get_estimator(data_dir=None, save_dir=None, steps_per_epoch=None, validation_steps=None, epochs=55):
     train_csv, data_path = load_data(data_dir)
 
     imreader = ImageReader(inputs="x", parent_path=data_path, grey_scale=True)
@@ -295,7 +295,7 @@ def get_estimator(data_dir=None, save_dir=None, steps_per_epoch=None, validation
     estimator = fe.Estimator(
         network=network,
         pipeline=pipeline_128,
-        epochs=55,
+        epochs=epochs,
         traces=[
             AlphaController(alpha=fade_in_alpha,
                             fade_start=[5, 15, 25, 35, 45, 55],
