@@ -16,7 +16,7 @@ from fastestimator.op import NumpyOp
 import numpy as np
 
 
-class Probability(NumpyOp):
+class Sometimes(NumpyOp):
     """Perform a NumpyOp with a given probability
 
         Args:
