@@ -23,3 +23,4 @@ from fastestimator.op.numpyop.type_converter import TypeConverter
 from fastestimator.op.numpyop.zscore import Zscore
 from fastestimator.op.numpyop.image_augmentation import ImageAugmentation
 from fastestimator.op.numpyop.normalize import Normalize
+from fastestimator.op.numpyop.random_rotate_90 import RandomRotate90

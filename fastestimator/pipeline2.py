@@ -71,7 +71,7 @@ class OpDataset(Dataset):
              for epoch in self.signature_epochs})
         # The following variables could technically by computed on the fly, but don't want to waste clock cycles
         self.epoch, self.epoch_ops, self.state_dict = 0, [], []
-        self.set_epoch(0)
+        self.set_epoch_and_mode(0, "train")
 
     def __getitem__(self, index):
         item = self.dataset.__getitem__(index)
@@ -86,11 +86,13 @@ class OpDataset(Dataset):
     def __len__(self):
         return len(self.dataset)
 
-    def set_epoch(self, epoch: int):
+    def set_epoch_and_mode(self, epoch: int, mode: str):
         self.epoch = epoch
         if self.op_schedule is not None:
             self.epoch_ops = self.op_schedule.get_current_value(epoch=epoch)
-        self.state_dict = {"epoch": epoch}
+            # TODO - rather than filtering every epoch the ops should probably be separated up-front
+            self.epoch_ops = list(filter(lambda op: op.mode is None or op.mode == mode, self.epoch_ops))
+        self.state_dict = {"epoch": epoch, "mode": mode}
 
     def get_signature_epochs(self) -> List[int]:
         return self.signature_epochs
@@ -104,10 +106,10 @@ class OpDataLoader(DataLoader):
         # default one has some memory management tricks that are difficult to replicate, and since we also support raw
         # data loaders in the estimator we need to put the type conversion at that level anyways.
         super().__init__(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, drop_last=drop_last)
-        self.set_epoch(epoch=0)
+        self.set_epoch_and_mode(epoch=0, mode="train")
 
-    def set_epoch(self, epoch: int):
-        self.dataset.set_epoch(epoch)
+    def set_epoch_and_mode(self, epoch: int, mode: str):
+        self.dataset.set_epoch_and_mode(epoch, mode)
 
 
 def get_signature_epochs(val: Union[Scheduler, Iterable[Any]]) -> List[int]:
@@ -344,7 +346,7 @@ class Pipeline(BasePipeline):
             loader = self._build_loader(dataset, shuffle=False).get_current_value(epoch)
         if loader is None:
             return iter(())
-        loader.set_epoch(epoch)
+        loader.set_epoch_and_mode(epoch, mode)
         return iter(loader)
 
 

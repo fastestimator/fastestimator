@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Optional, List, Tuple, Union
+from collections import OrderedDict
 from copy import deepcopy
+from typing import Optional, List, Tuple, Union
 
-from albumentations import ImageOnlyTransform, ReplayCompose, Compose
+from albumentations import ImageOnlyTransform, ReplayCompose, Compose, DualTransform, BboxParams, KeypointParams
 
 from fastestimator.op import NumpyOp
 
@@ -40,3 +41,49 @@ class ImageOnlyAlbumentation(NumpyOp):
             return [result["image"] for result in results]
         else:
             return self.func(image=data)["image"]
+
+
+class MultiVariateAlbumentation(NumpyOp):
+    """
+    A base class for the DualTransform albumentation functions. Unfortunately these ops can't use the un-named
+    input/output syntax since this would likely lead to problems when trying to match up outputs from one transform to
+    the inputs from another (suppose the first works on image+mask and the second on image+bbox, or if no inputs were
+    specified then how does the system differentiate a single image from a single mask, etc.)
+    """
+    def __init__(self,
+                 func: DualTransform,
+                 mode: Optional[str] = None,
+                 image_in: Optional[str] = None,
+                 mask_in: Optional[str] = None,
+                 masks_in: Optional[str] = None,
+                 bbox_in: Optional[str] = None,
+                 keypoints_in: Optional[str] = None,
+                 image_out: Optional[str] = None,
+                 mask_out: Optional[str] = None,
+                 masks_out: Optional[str] = None,
+                 bbox_out: Optional[str] = None,
+                 keypoints_out: Optional[str] = None,
+                 bbox_params: Union[BboxParams, str, None] = None,
+                 keypoint_params: Union[KeypointParams, str, None] = None):
+        assert any((image_in, mask_in, masks_in, bbox_in, keypoints_in)), "At least one input must be non-None"
+        image_out = image_out or image_in
+        mask_out = mask_out or mask_in
+        masks_out = masks_out or masks_in
+        bbox_out = bbox_out or bbox_in
+        keypoints_out = keypoints_out or keypoints_in
+        keys = OrderedDict([("image", image_in), ("mask", mask_in), ("masks", masks_in), ("bboxes", bbox_in),
+                            ("keypoints", keypoints_in)])
+        self.keys_in = OrderedDict([(k, v) for k, v in keys.items() if v is not None])
+        keys = OrderedDict([("image", image_out), ("mask", mask_out), ("masks", masks_out), ("bboxes", bbox_out),
+                            ("keypoints", keypoints_out)])
+        self.keys_out = OrderedDict([(k, v) for k, v in keys.items() if v is not None])
+        super().__init__(inputs=list(self.keys_in.values()), outputs=list(self.keys_out.values()), mode=mode)
+        if isinstance(bbox_params, str):
+            bbox_params = BboxParams(bbox_params)
+        if isinstance(keypoint_params, str):
+            keypoint_params = KeypointParams(keypoint_params)
+        self.func = Compose(transforms=[func], bbox_params=bbox_params, keypoint_params=keypoint_params)
+
+    def forward(self, data, state):
+        result = self.func(**{k: v for k, v in zip(self.keys_in.keys(), data)})
+        return [result[k] for k in self.keys_out.keys()]
