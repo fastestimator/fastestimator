@@ -24,3 +24,5 @@ from fastestimator.op.numpyop.zscore import Zscore
 from fastestimator.op.numpyop.image_augmentation import ImageAugmentation
 from fastestimator.op.numpyop.normalize import Normalize
 from fastestimator.op.numpyop.random_rotate_90 import RandomRotate90
+from fastestimator.op.numpyop.horizontal_flip import HorizontalFlip
+from fastestimator.op.numpyop.probability import Probability

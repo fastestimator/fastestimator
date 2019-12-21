@@ -105,7 +105,12 @@ class OpDataLoader(DataLoader):
         # It may be tempting to overwrite the collate function so that it works directly with Tensorflow, but their
         # default one has some memory management tricks that are difficult to replicate, and since we also support raw
         # data loaders in the estimator we need to put the type conversion at that level anyways.
-        super().__init__(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, drop_last=drop_last)
+        super().__init__(dataset,
+                         batch_size=batch_size,
+                         shuffle=shuffle,
+                         num_workers=num_workers,
+                         drop_last=drop_last,
+                         worker_init_fn=lambda _: np.random.seed())
         self.set_epoch_and_mode(epoch=0, mode="train")
 
     def set_epoch_and_mode(self, epoch: int, mode: str):
