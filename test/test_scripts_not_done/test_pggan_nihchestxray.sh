@@ -12,8 +12,8 @@ path_stderr_dir='stderr/'${fname}'/'
 mkdir $path_stderr_dir
 
 #training parameters to test the models
-train_info="--epochs 2"
-nb_train_info="-p epochs 2 -p batch_size 2"
+train_info=" "
+nb_train_info=" "
 
 # # copy the model file to working directory
 # cp "${filepath}/classifier.h5" "${filepath}/feature_extractor.h5" "./"
@@ -23,16 +23,16 @@ if ! fastestimator train ${filepath}${fname}'.py' ${train_info} 2>> ${path_stder
     exit 1
 fi
 
-# #inject a parameter cell
-# papermill --prepare-only ${filepath}${fname}'.ipynb'  ${path_temp}${fname_para}'.ipynb' ${nb_train_info} 2>> ${path_stderr_dir}'run_papermill.txt'
-# jupyter nbconvert --to script  ${path_temp}${fname_para}'.ipynb' --output ${fname_para} 2>> ${path_stderr_dir}'run_convert.txt'
+#inject a parameter cell
+papermill --prepare-only ${filepath}${fname}'.ipynb'  ${path_temp}${fname_para}'.ipynb' ${nb_train_info} 2>> ${path_stderr_dir}'run_papermill.txt'
+jupyter nbconvert --to script  ${path_temp}${fname_para}'.ipynb' --output ${fname_para} 2>> ${path_stderr_dir}'run_convert.txt'
 
-# if ! ipython  ${path_temp}${fname_para}'.py' 2>> ${path_stderr_dir}'run_ipy.txt'; then
-#     exit 1
-# fi
+if ! ipython  ${path_temp}${fname_para}'.py' 2>> ${path_stderr_dir}'run_ipy.txt'; then
+    exit 1
+fi
 
-# rm -rf ${path_temp}/tmp*
-# rm  ${path_temp}${fname_para}'.ipynb'
-# rm  ${path_temp}${fname_para}'.py'
+rm -rf ${path_temp}/tmp*
+rm  ${path_temp}${fname_para}'.ipynb'
+rm  ${path_temp}${fname_para}'.py'
 
-# exit 0
+exit 0
