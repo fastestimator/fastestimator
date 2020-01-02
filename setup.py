@@ -68,7 +68,11 @@ setup(
         'tf-explain',
         'slackclient',
         'nest_asyncio',
-        'pycocotools-fix'
+        'pycocotools-fix',
+        'nibabel== 2.5.1',
+        'nilearn',
+        'SimpleITK',
+        'tensorflow-addons'
     ],
     # Declare extra set for installation
     extras_require={},
