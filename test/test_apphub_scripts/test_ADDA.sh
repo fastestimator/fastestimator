@@ -34,5 +34,6 @@ fi
 rm -rf ${path_temp}/tmp*
 rm  ${path_temp}${fname_para}'.ipynb'
 rm  ${path_temp}${fname_para}'.py'
+rm -rf /home/ubuntu/fastestimator_data/MNIST # remove the dataset path because it change the dataset setting and will potentially break other test
 
 exit 0
