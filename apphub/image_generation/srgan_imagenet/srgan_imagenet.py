@@ -246,8 +246,8 @@ def get_estimator(batch_size=4,
     estimator = fe.Estimator(
         network=network,
         pipeline=pipeline,
-        steps_per_epoch=epochs,
-        epochs=steps_per_epoch,
+        steps_per_epoch=steps_per_epoch,
+        epochs=epochs,
         traces=[
             ModelSaver(model_name="srgan_gen", save_dir=model_dir, save_best=True),
             ModelSaver(model_name="srgan_desc", save_dir=model_dir, save_best=True),

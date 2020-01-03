@@ -170,7 +170,7 @@ class RetinaLoss(Loss):
         return total_loss, focal_loss, l1_loss
 
 
-def get_estimator(data_path=None, model_dir=tempfile.mkdtemp(), batch_size=8):
+def get_estimator(data_path=None, model_dir=tempfile.mkdtemp(), batch_size=8, epochs=7, steps_per_epoch=None, validation_steps=None):
     #prepare dataset
     train_csv, val_csv, path = load_data(path=data_path)
     writer = fe.RecordWriter(
@@ -223,12 +223,15 @@ def get_estimator(data_path=None, model_dir=tempfile.mkdtemp(), batch_size=8):
     estimator = fe.Estimator(
         network=network,
         pipeline=pipeline,
-        epochs=7,
+        epochs=epochs,
         traces=[
             MeanAvgPrecision(90, (512, 512, 3), 'pred', 'gt', output_name=("mAP", "AP50", "AP75")),
             ModelSaver(model_name="retinanet", save_dir=model_dir, save_best='mAP', save_best_mode='max'),
             LRController(model_name="retinanet", lr_schedule=MyLRSchedule(schedule_mode="step"))
-        ])
+        ],
+        steps_per_epoch=steps_per_epoch,
+        validation_steps=validation_steps)
+
     return estimator
 
 
