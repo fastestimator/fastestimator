@@ -20,7 +20,7 @@ if [ -f $report_file ]; then
 fi
 
 # Image Classification examples test
-file="test_pggan_nihchestxray.sh"
+file="test_ADDA.sh"
 echo "start running testing script "$file
 bash $path_test_scripts'/'$file
 if [ $? -eq 0 ] ; then
@@ -33,10 +33,11 @@ fi
 echo "finish running testing script "$file
 
 echo "show tensorflow error"
-grep -r "E tensorflow" stderr/
+grep -r "E tensorflow" stderr
 
 cat $report_file
 rm $report_file
+
 
 # #Tutorials examples test
 # bash ${DIR}'/test_tutorials.sh'
