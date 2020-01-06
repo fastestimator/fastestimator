@@ -17,7 +17,35 @@ import json
 import os
 import sys
 
-from fastestimator.cli.cli_util import parse_cli_to_dictionary
+from fastestimator.util.util import parse_string_to_python
+
+
+def parse_cli_to_dictionary(input_list):
+    """
+    Args:
+        input_list: A list of input strings from a cli
+
+    Returns:
+        A dictionary constructed from the input list, with values converted to python objects where applicable
+    """
+    result = {}
+    if input_list is None:
+        return result
+    key = ""
+    val = ""
+    idx = 0
+    while idx < len(input_list):
+        if input_list[idx].startswith("--"):
+            if len(key) > 0:
+                result[key] = parse_string_to_python(val)
+            val = ""
+            key = input_list[idx].strip('--')
+        else:
+            val += input_list[idx]
+        idx += 1
+    if len(key) > 0:
+        result[key] = parse_string_to_python(val)
+    return result
 
 
 def train(args, unknown):
