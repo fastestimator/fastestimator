@@ -12,210 +12,171 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Trace contains metrics and other information users want to track."""
+import pdb
 import time
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.keras import backend
+import torch
+
+from fastestimator.backend.to_number import to_number
+from fastestimator.util.util import to_list
 
 
 class Trace:
-    """Trace base class. User can use `Trace` to customize their own operations during training, validation and testing.
-    The `Network` instance can be accessible by `self.network`. Trace execution order will attempt to be inferred
-    whenever possible based on the provided inputs and outputs variables.
-
+    """Trace controls the training loop. User can use `Trace` to customize their own operations.
     Args:
         inputs (str, list, set): A set of keys that this trace intends to read from the state dictionary as inputs
         outputs (str, list, set): A set of keys that this trace intends to write into the state dictionary
-        mode (string): Restrict the trace to run only on given modes ('train', 'eval', 'test'). None will always
+        mode (string): Restrict the trace to run only on given modes ('train', 'eval'). None will always
                         execute
     """
-    def __init__(self, inputs=None, outputs=None, mode=None):
-        self.network = None
+    def __init__(self, inputs=None, mode=None, log_names=None):
         self.mode = mode
-        self.inputs = set(filter(None, inputs or {})) if not isinstance(inputs, str) else {inputs}
-        self.outputs = set(filter(None, outputs or {})) if not isinstance(outputs, str) else {outputs}
+        self.inputs = inputs
+        self.log_names = log_names
+        self.system = None
 
-    def on_begin(self, state):
+    def on_begin(self):
         """Runs once at the beginning of training
-
-        Args:
-            state (ChainMap): dictionary of run time that has the following key(s):
-
-                * "train_step" (int): current global training step starting from 0
-                * "num_devices" (int): number of devices(mainly gpu) that are being used, if cpu only, the number is 1
-                * "log_steps" (int): how many training steps between logging intervals
-                * "persist_summary" (bool): whether to persist the experiment history/summary
-                * "total_epochs" (int): how many epochs the training is scheduled to run for
-                * "total_train_steps" (int): how many training steps the training is scheduled to run for
-                * any keys written by 'on_begin' of previous traces
         """
-    def on_epoch_begin(self, state):
-        """Runs at the beginning of each epoch of the mode.
-
-        Args:
-            state (ChainMap): dictionary of run time that has the following key(s):
-
-                * "mode" (str):  current run time mode, can be "train", "eval" or "test"
-                * "epoch" (int): current epoch index starting from 0
-                * "train_step" (int): current global training step starting from 0
-                * "num_examples" (int): total number of examples available for current mode
-                * any keys written by 'on_epoch_begin' of previous traces
+    def on_epoch_begin(self):
+        """Runs at the beginning of each epoch
         """
-    def on_batch_begin(self, state):
-        """Runs at the beginning of every batch of the mode.
-
-        Args:
-            state (ChainMap): dictionary of run time that has the following key(s):
-
-                * "mode" (str): current run time mode, can be "train", "eval" or "test"
-                * "epoch" (int): current epoch index starting from 0
-                * "train_step" (int): current global training step starting from 0
-                * "batch_idx" (int): current local step of the epoch starting from 0
-                * "batch_size" (int): current global batch size
-                * "local_batch_size" (int): current batch size for single device
-                * any keys written by 'on_batch_begin' of previous traces
+    def on_batch_begin(self):
+        """Runs at the beginning of each batch
         """
-    def on_batch_end(self, state):
-        """Runs at the end of every batch of the mode. Anything written to the top level of the state dictionary will be
-        printed in the logs. Things written only to the batch sub-dictionary will not be logged
+    def on_batch_end(self, data):
+        """Runs at the end of each batch
 
         Args:
-            state (ChainMap): dictionary of run time that has the following key(s):
-
-                * "mode" (str):  current run time mode, can be "train", "eval" or "test"
-                * "epoch" (int): current epoch index starting from 0
-                * "train_step" (int): current global training step starting from 0
-                * "batch_idx" (int): current local step of the epoch starting from 0
-                * "batch_size" (int): current global batch size
-                * "batch" (dict): the batch data after the Network execution
-                * "local_batch_size" (int): current batch size for single device
-                * <loss_name> defined in model (float): loss of current batch (only available when mode is "train")
-                * any keys written by 'on_batch_end' of previous traces
+            data: value fetched by the inputs
         """
-    def on_epoch_end(self, state):
-        """Runs at the end of every epoch of the mode. Anything written into the state dictionary will be logged
-
-        Args:
-            state (ChainMap): dictionary of run time that has the following key(s):
-
-                * "mode" (str):  current run time mode, can be "train", "eval" or "test"
-                * "epoch" (int): current epoch index starting from 0
-                * "train_step" (int): current global training step starting from 0
-                * <loss_name> defined in model (float): average loss of the epoch (only available when mode is "eval")
-                * any keys written by 'on_epoch_end' of previous traces
+    def on_epoch_end(self):
+        """Runs at the end of each epoch
         """
-    def on_end(self, state):
-        """Runs once at the end training. Anything written into the state dictionary will be logged
-
-        Args:
-            state (ChainMap): dictionary of run time that has the following key(s):
-
-                * "train_step" (int): current global training step starting from 0
-                * "epoch" (int): current epoch index starting from 0
-                * "summary" (Experiment): will be returned from estimator.fit() if a summary input was specified
-                * any keys written by 'on_end' of previous traces
+    def on_end(self):
+        """Runs once at the end training.
         """
 
 
-class MonitorLoss(Trace):
-    """Records loss value. Please don't add this trace into an estimator manually. An estimator will add it
-    automatically.
-
-    """
-    def __init__(self):
-        super().__init__()
-        self.epochs_since_best = 0
-        self.best_loss = None
-        self.epoch_losses = []
-        self.eval_results = None
-
-    def on_epoch_begin(self, state):
-        self.epoch_losses = self.network.epoch_losses
-        if state["mode"] == "eval":
-            self.eval_results = None
-
-    def on_batch_end(self, state):
-        if state["mode"] == "train":
-            for key in self.epoch_losses:
-                state[key] = self._reduce_loss(state["batch"][key], state["batch_size"])
-        elif state["mode"] == "eval":
-            if self.eval_results is None:
-                self.eval_results = dict(
-                    (key, [self._reduce_loss(state["batch"][key], state["batch_size"])]) for key in self.epoch_losses)
-            else:
-                for key in self.eval_results.keys():
-                    self.eval_results[key].append(self._reduce_loss(state["batch"][key], state["batch_size"]))
-
-    def on_epoch_end(self, state):
-        if state["mode"] == "eval":
-            for key in self.eval_results.keys():
-                state[key] = np.mean(np.array(self.eval_results[key]), axis=0)
-            if len(self.eval_results) == 1:
-                key = list(self.eval_results.keys())[0]
-                if self.best_loss is None or state[key] < self.best_loss:
-                    self.best_loss = state[key]
-                    self.epochs_since_best = 0
-                else:
-                    self.epochs_since_best += 1
-                state["min_" + key] = self.best_loss
-                state["since_best_loss"] = self.epochs_since_best
-
-    @staticmethod
-    @tf.function
-    def _reduce_loss(element_wise_loss, global_batch_size):
-        return tf.reduce_sum(element_wise_loss) / global_batch_size
-
-
-class TrainInfo(Trace):
+class TrainEssential(Trace):
     """Essential training information for logging during training. Please don't add this trace into an estimator
     manually. An estimator will add it automatically.
-
-    Args:
-        log_steps (int): Interval steps of logging
     """
-    def __init__(self):
-        super().__init__(mode="train")
-        self.log_steps = 0
+    def __init__(self, monitor_names):
+        self.monitor_names = to_list(monitor_names)
+        log_names = to_list(monitor_names.union(set(["examples/sec", "progress", "total_time", "total_steps"])))
+        super().__init__(mode="train", inputs=self.monitor_names, log_names=log_names)
         self.elapse_times = []
         self.num_example = 0
         self.time_start = None
         self.train_start = None
-        self.total_train_steps = None
+        self.system = None
 
-    def on_begin(self, state):
+    def on_begin(self):
+        self.system.add_buffer("total_steps", self.system.total_steps)
         self.train_start = time.perf_counter()
-        self.total_train_steps = state["total_train_steps"]
-        self.log_steps = state['log_steps']
-        state["total_train_steps"] = self.total_train_steps
-        self._get_lr(state)
 
-    def on_epoch_begin(self, state):
+    def on_epoch_begin(self):
         self.time_start = time.perf_counter()
 
-    def on_batch_end(self, state):
-        self.num_example += state["batch_size"]
-        if state["train_step"] % self.log_steps == 0:
-            if state["train_step"] > 0:
-                self.elapse_times.append(time.perf_counter() - self.time_start)
-                state["examples/sec"] = round(self.num_example / np.sum(self.elapse_times), 1)
-                state["progress"] = "{:.1%}".format(state["train_step"] / self.total_train_steps)
+    def on_batch_end(self, data):
+        self.num_example += self.system.batch_size
+        if self.system.global_step % self.system.log_steps == 0:
+            for idx, key in enumerate(self.monitor_names):
+                self.system.add_buffer(key, data[idx])
+            self.elapse_times.append(time.perf_counter() - self.time_start)
+            self.system.add_buffer("examples/sec", round(self.num_example / np.sum(self.elapse_times), 1))
+            self.system.add_buffer("progress", "{:.1%}".format(self.system.global_step / self.system.total_steps))
             self.elapse_times = []
             self.num_example = 0
             self.time_start = time.perf_counter()
 
-    def on_epoch_end(self, state):
+    def on_epoch_end(self):
         self.elapse_times.append(time.perf_counter() - self.time_start)
 
-    def on_end(self, state):
-        state['total_time'] = "{} sec".format(round(time.perf_counter() - self.train_start, 2))
-        self._get_lr(state)
+    def on_end(self):
+        self.system.add_buffer("total_time", "{} sec".format(round(time.perf_counter() - self.train_start, 2)))
 
-    def _get_lr(self, state):
-        for model_name, model in self.network.model.items():
-            if hasattr(model.optimizer, "lr"):
-                lr = backend.get_value(model.optimizer.lr)
+
+class EvalEssential(Trace):
+    def __init__(self, loss_keys):
+        self.loss_keys = to_list(loss_keys)
+        self._configure_lognames()
+        super().__init__(mode="eval", inputs=self.loss_keys, log_names=self.log_names)
+        self.eval_results = None
+        self.best_loss = None
+        self.since_best = 0
+
+    def _configure_lognames(self):
+        self.log_names = [elem for elem in self.loss_keys]
+        if len(self.loss_keys) == 1:
+            self.log_names.append("min_" + self.loss_keys[0])
+            self.log_names.append("since_best")
+
+    def on_epoch_begin(self):
+        self.eval_results = None
+
+    def on_batch_end(self, data):
+        if self.eval_results is None:
+            self.eval_results = dict((key, [data[idx]]) for idx, key in enumerate(self.loss_keys))
+        else:
+            for idx, key in enumerate(self.loss_keys):
+                self.eval_results[key].append(data[idx])
+
+    def on_epoch_end(self):
+        for key, value_list in self.eval_results.items():
+            self.system.add_buffer(key, np.mean(np.array(value_list), axis=0))
+        if len(self.loss_keys) == 1:
+            loss_name = self.loss_keys[0]
+            current_loss = self.system.read_buffer(loss_name)
+            if self.best_loss is None or current_loss < self.best_loss:
+                self.best_loss = current_loss
+                self.since_best = 0
             else:
-                lr = backend.get_value(model.optimizer._optimizer.lr)
-            state[model_name + "_lr"] = round(lr, 6)
+                self.since_best += 1
+            self.system.add_buffer("min_" + loss_name, self.best_loss)
+            self.system.add_buffer("since_best", self.since_best)
+
+
+class Logger(Trace):
+    """Trace that prints log, please don't add this trace into an estimator manually.
+
+    Args:
+        log_names (set): set of keys to print from system buffer
+    """
+    def __init__(self, log_names, loss_names):
+        super().__init__()
+        self.log_names = log_names
+        self.loss_names = loss_names
+        self.system = None
+
+    def on_begin(self):
+        self._print_message("FastEstimator-Start: step: {}; ".format(self.system.global_step))
+
+    def on_batch_end(self, data):
+        if self.system.mode == "train" and self.system.global_step % self.system.log_steps == 0:
+            self._print_message("FastEstimator-Train: step: {}; ".format(self.system.global_step))
+
+    def on_epoch_end(self):
+        if self.system.mode == "eval":
+            self._print_message("FastEstimator-Eval: step: {}; ".format(self.system.global_step), True)
+
+    def on_end(self):
+        self._print_message("FastEstimator-Finish: step: {}; ".format(self.system.global_step))
+
+    def _print_message(self, header, log_epoch=False):
+        log_message = header
+        if log_epoch:
+            log_message += "epoch: {}; ".format(self.system.epoch_idx)
+        for key, val in self.system.buffer.items():
+            if key in self.log_names:
+                val = to_number(val)
+                if key in self.loss_names:
+                    val = np.round(val, decimals=7)
+                if isinstance(val, np.ndarray):
+                    log_message += "\n{}:\n{};".format(key, np.array2string(val, separator=','))
+                else:
+                    log_message += "{}: {}; ".format(key, str(val))
+        print(log_message)

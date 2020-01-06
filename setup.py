@@ -1,7 +1,8 @@
-import os
-import sys
-import re
 import datetime
+import os
+import re
+import sys
+
 from setuptools import find_packages, setup
 
 is_nightly = os.environ.get('FASTESTIMATOR_IS_NIGHTLY', None)
@@ -48,28 +49,7 @@ setup(
         "Programming Language :: Python :: 3", ],
 
     # Declare minimal set for installation
-    install_requires=[
-        'numpy',
-        'pyfiglet',
-        'pandas',
-        'pillow',
-        'sklearn',
-        'wget',
-        'matplotlib',
-        'seaborn>= 0.9.0',
-        'scipy',
-        'pytest',
-        'pytest-cov',
-        'tensorflow-probability',
-        'umap-learn',
-        'tqdm',
-        'opencv-python',
-        'papermill',
-        'tf-explain',
-        'slackclient',
-        'nest_asyncio',
-        'pycocotools-fix'
-    ],
+    install_requires=['numpy'],
     # Declare extra set for installation
     extras_require={},
     scripts=['bin/fastestimator'])
