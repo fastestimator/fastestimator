@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op import TensorOp
-
+from fastestimator.op.op import TensorOp
+from fastestimator.backend.feed_forward import feed_forward
 
 class ModelOp(TensorOp):
     """This class represents the Model operator that defines String keys for storing batch data and predictions
@@ -25,17 +25,13 @@ class ModelOp(TensorOp):
         mode : 'train' or 'eval'. Defaults to None.
         track_input : If 'true' it tracks the gradients with respect to inputs. Defaults to False.
     """
-    def __init__(self, model, inputs=None, outputs=None, mode=None, trainable=True, track_input=False):
+    def __init__(self, model, inputs=None, outputs=None, mode=None, trainable=True):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         assert hasattr(model, "fe_compiled"), "must use fe.build to compile the model before use"
         self.model = model
         self.trainable = trainable
-        self.track_input = track_input
 
     def forward(self, data, state):
         training = state['mode'] == "train" and self.trainable
-        if self.track_input and training:
-            tape = state['tape']
-            tape.watch(data)
-        data = self.model(data, training=training)
+        data = feed_forward(self.model, data, training=training)
         return data
