@@ -13,7 +13,7 @@ mkdir $path_stderr_dir
 
 #training parameters to test the models
 train_info="--epochs 2 --pretrained_fe_path ${filepath}feature_extractor.h5 --classifier_path ${filepath}classifier.h5"
-nb_train_info="-p epochs 2 -p batch_size 2"
+nb_train_info="-p epochs 2 -p batch_size 4"
 
 # copy the model file to working directory
 cp "${filepath}/classifier.h5" "${filepath}/feature_extractor.h5" "./"
