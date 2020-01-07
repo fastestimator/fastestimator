@@ -20,6 +20,7 @@ cp "${filepath}/classifier.h5" "${filepath}/feature_extractor.h5" "./"
 
 
 if ! fastestimator train ${filepath}${fname}'.py' ${train_info} 2>> ${path_stderr_dir}'run_py.txt'; then
+    rm -rf /home/ubuntu/fastestimator_data/MNIST
     exit 1
 fi
 
@@ -28,6 +29,7 @@ papermill --prepare-only ${filepath}${fname}'.ipynb'  ${path_temp}${fname_para}'
 jupyter nbconvert --to script  ${path_temp}${fname_para}'.ipynb' --output ${fname_para} 2>> ${path_stderr_dir}'run_convert.txt'
 
 if ! ipython  ${path_temp}${fname_para}'.py' 2>> ${path_stderr_dir}'run_ipy.txt'; then
+    rm -rf /home/ubuntu/fastestimator_data/MNIST
     exit 1
 fi
 
