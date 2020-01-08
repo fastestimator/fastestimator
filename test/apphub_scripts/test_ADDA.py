@@ -5,7 +5,6 @@ apphub_path = os.path.abspath(os.path.join(__file__, "..", "..", "..", "apphub")
 
 example_name = "ADDA"
 source_dir = os.path.join(apphub_path, "domain_adaptation", "ADDA")
-print(source_dir)
 test_dir = os.path.abspath(os.path.join(__file__, "..", ".."))
 stderr_dir = os.path.join(test_dir, "stderr", example_name)
 stderr_file = os.path.join(stderr_dir, "run_python.txt")
