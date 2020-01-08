@@ -79,7 +79,7 @@ $ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 * **Fast Style Transfer:** Altering the source image style to a target art style using MSCOCO 2017 dataset. [[paper](https://cs.stanford.edu/people/jcjohns/papers/eccv16/JohnsonECCV16.pdf)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/style_transfer/fst_coco/fst_coco.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/style_transfer/fst_coco/fst_coco.ipynb)]
 
 ### Tabular Data
-* **DNN:** Predicting house price with deep neural network. [[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/tabular/dnn_housing/dnn_housing.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/tabular/dnn_housing/dnn_housing.ipynb)]
+* **DNN:** Classifying breast tumors as benign or malignant with a deep neural network. [[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/tabular/dnn_breast_cancer/dnn_breast_cancer.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/tabular/dnn_breast_cancer/dnn_breast_cancer.ipynb)]
 
 ### One-shot Learning
 * **Siamese Network:** Alphabet character recognition using Siamese network. [[paper](https://www.cs.cmu.edu/~rsalakhu/papers/oneshot1.pdf)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/one_shot_learning/siamese_network.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/one_shot_learning/siamese_network.ipynb)]

@@ -4,8 +4,8 @@ path_apphub=${DIR}'/../../apphub/'
 path_temp=$(dirname $(mktemp -u))'/'
 
 # example specific section
-filepath=${path_apphub}'/tabular/dnn_housing/' 
-fname='dnn_housing' 
+filepath=${path_apphub}'/tabular/dnn_breast_cancer/'
+fname='dnn_breast_cancer'
 fname_para=$fname'_param'
 
 path_stderr_dir='stderr/'${fname}'/'
