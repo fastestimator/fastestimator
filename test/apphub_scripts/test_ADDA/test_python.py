@@ -17,6 +17,7 @@ if __name__ == "__main__":
     train_info = "--epochs 2 --pretrained_fe_path {} --classifier_path {}".format(pretrained_fe_path, classifier_path)
     result = os.system("fastestimator train {} {} 2>> {}".format(py_file, train_info, stderr_file))
 
-    shutil.rmtree(os.path.join(os.path.expanduser("~"), "fastestimator_data", "MNIST") # remove the dataset since it will affect other testing
+    shutil.rmtree(os.path.join(os.path.expanduser("~"), "fastestimator_data", "MNIST")) # remove the dataset since it will affect other testing
+    
     if result:
         raise ValueError("{} fail".format(py_file))

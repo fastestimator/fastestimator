@@ -16,9 +16,9 @@ if __name__ == "__main__":
     classifier_path = os.path.join(source_dir, "classifier.h5")
 
     train_info = "-p epochs 2 -p batch_size 4 -p model_path {} -p classifier_path {} ".format(pretrained_fe_path, classifier_path)
-    result = os.system("papermill {} {} {} 2>> {}".format(nb_in_file, nb_out_file, train_info, stderr_file))
+    result = os.system("papermill {} {} {} -k nightly-build 2>> {}".format(nb_in_file, nb_out_file, train_info, stderr_file))
 
-    shutil.rmtree(os.path.join(os.path.expanduser("~"), "fastestimator_data", "MNIST") # remove the dataset since it will affect other testing
+    shutil.rmtree(os.path.join(os.path.expanduser("~"), "fastestimator_data", "MNIST")) # remove the dataset since it will affect other testing
 
     if result:
         raise ValueError("{} fail".format(nb_in_file))

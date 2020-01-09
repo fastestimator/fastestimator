@@ -13,7 +13,7 @@ if __name__ == "__main__":
     nb_out_file = os.path.abspath(os.path.join(__file__, "..", example_name + "_out.ipynb"))
 
     train_info = "-p epochs 2 -p batch_size 2 -p steps_per_epoch 10 -p validation_steps 5 -p MAX_LEN 300"
-    result = os.system("papermill {} {} {} 2>> {}".format(nb_in_file, nb_out_file, train_info, stderr_file))
+    result = os.system("papermill {} {} {} -k nightly-build 2>> {}".format(nb_in_file, nb_out_file, train_info, stderr_file))
 
     if result:
         raise ValueError("{} fail".format(nb_in_file))
