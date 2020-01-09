@@ -33,10 +33,9 @@ class UpdateOp(TensorOp):
         tape = state['tape']
         gradients = data
         if not self.gradients:
-            loss = self._reduce_loss(element_wise_loss=data,
-                                     global_batch_size=state["batch_size"],
-                                     local_batch_size=state['local_batch_size'],
-                                     warmup=state["warmup"])
+            if state["warmup"]:
+                self._validate_loss(element_wise_loss=data, local_batch_size=state["local_batch_size"])
+            loss = tf.reduce_sum(data) / state["batch_size"]
             with tape.stop_recording():
                 gradients = tape.gradient(loss, self.model.trainable_variables)
 
@@ -50,8 +49,6 @@ class UpdateOp(TensorOp):
                 self.model.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
 
     @staticmethod
-    def _reduce_loss(element_wise_loss, global_batch_size, local_batch_size, warmup):
-        if warmup:
-            assert element_wise_loss.ndim != 0 and element_wise_loss.shape[0] == local_batch_size, \
-                "please make sure loss is element-wise loss"
-        return tf.reduce_sum(element_wise_loss) / global_batch_size
+    def _validate_loss(element_wise_loss, local_batch_size):
+        assert element_wise_loss.ndim != 0 and element_wise_loss.shape[0] == local_batch_size, \
+            "please make sure loss is element-wise loss"
