@@ -30,7 +30,7 @@ pipeline{
                                sh '''
                                     echo $WORKSPACE
                                     . $WORKSPACE/../venv/bin/activate
-                                    python3 test/test_apphub_tutorial.py
+                                    python3 test/run_nightly_build.py
                                 '''
                             }                           
                         }
@@ -63,7 +63,7 @@ pipeline{
                             steps{
                                 sh '''
                                     . $WORKSPACE/../venv/bin/activate
-                                    python3 test/test_apphub_tutorial.py
+                                    python3 test/run_nightly_build.py
                                 '''
                             }                           
                         }
