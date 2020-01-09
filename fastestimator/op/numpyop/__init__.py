@@ -15,6 +15,7 @@
 from fastestimator.op.numpyop.image_reader import ImageReader
 from fastestimator.op.numpyop.mat_reader import MatReader
 from fastestimator.op.numpyop.minmax import Minmax
+from fastestimator.op.numpyop.nib_image_reader import NIBImageReader
 from fastestimator.op.numpyop.reshape import Reshape
 from fastestimator.op.numpyop.resize import Resize
 from fastestimator.op.numpyop.resize_image_bbox import ResizeImageAndBbox

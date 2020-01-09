@@ -12,9 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import itertools
-import pdb
-
 import tensorflow as tf
 
 from fastestimator.op import TensorOp
@@ -114,7 +111,6 @@ class Augmentation3D(TensorOp):
         data, mask = data
         key = tf.random.uniform(shape=(), minval=0, maxval=48, dtype=tf.dtypes.int32)
         augment_key = tf.gather_nd(self.isometric_options, [key])
-        rotate_y = tf.cast(tf.random.uniform(shape=(1, ), minval=0, maxval=2, dtype=tf.dtypes.int32), tf.bool)
         rotate_y = tf.cast(augment_key[0], tf.bool)
         rotate_z = tf.cast(augment_key[1], tf.bool)
         flip_x = tf.cast(augment_key[2], tf.bool)
@@ -122,42 +118,48 @@ class Augmentation3D(TensorOp):
         flip_z = tf.cast(augment_key[4], tf.bool)
         transpose = tf.cast(augment_key[5], tf.bool)
 
-        data = tf.cond(rotate_y,
-                       lambda: tf.map_fn(self._rotate_y, data, dtype=tf.dtypes.float32, back_prop=False),
-                       lambda: tf.map_fn(self._no_rotate, data, dtype=tf.dtypes.float32, back_prop=False))
-        data = tf.cond(rotate_z,
-                       lambda: tf.map_fn(self._rotate_z, data, dtype=tf.dtypes.float32, back_prop=False),
-                       lambda: tf.map_fn(self._no_rotate, data, dtype=tf.dtypes.float32, back_prop=False))
-        data = tf.cond(flip_x,
-                       lambda: tf.map_fn(self._flip_x, data, dtype=tf.dtypes.float32, back_prop=False),
-                       lambda: tf.map_fn(self._no_flip, data, dtype=tf.dtypes.float32, back_prop=False))
-        data = tf.cond(flip_y,
-                       lambda: tf.map_fn(self._flip_y, data, dtype=tf.dtypes.float32, back_prop=False),
-                       lambda: tf.map_fn(self._no_flip, data, dtype=tf.dtypes.float32, back_prop=False))
-        data = tf.cond(flip_z,
-                       lambda: tf.map_fn(self._flip_z, data, dtype=tf.dtypes.float32, back_prop=False),
-                       lambda: tf.map_fn(self._no_flip, data, dtype=tf.dtypes.float32, back_prop=False))
-        data = tf.cond(transpose,
-                       lambda: tf.map_fn(self._transpose, data, dtype=tf.dtypes.float32, back_prop=False),
-                       lambda: tf.map_fn(self._no_transpose, data, dtype=tf.dtypes.float32, back_prop=False))
+        if rotate_y:
+            data = tf.map_fn(self._rotate_y, data, dtype=tf.dtypes.float32, back_prop=False)
+            mask = tf.map_fn(self._rotate_y, mask, dtype=tf.dtypes.int32, back_prop=False)
+        else:
+            data = tf.map_fn(self._no_rotate, data, dtype=tf.dtypes.float32, back_prop=False)
+            mask = tf.map_fn(self._no_rotate, mask, dtype=tf.dtypes.int32, back_prop=False)
 
-        mask = tf.cond(rotate_y,
-                       lambda: tf.map_fn(self._rotate_y, mask, dtype=tf.dtypes.int32, back_prop=False),
-                       lambda: tf.map_fn(self._no_rotate, mask, dtype=tf.dtypes.int32, back_prop=False))
-        mask = tf.cond(rotate_z,
-                       lambda: tf.map_fn(self._rotate_z, mask, dtype=tf.dtypes.int32, back_prop=False),
-                       lambda: tf.map_fn(self._no_rotate, mask, dtype=tf.dtypes.int32, back_prop=False))
-        mask = tf.cond(flip_x,
-                       lambda: tf.map_fn(self._flip_x, mask, dtype=tf.dtypes.int32, back_prop=False),
-                       lambda: tf.map_fn(self._no_flip, mask, dtype=tf.dtypes.int32, back_prop=False))
-        mask = tf.cond(flip_y,
-                       lambda: tf.map_fn(self._flip_y, mask, dtype=tf.dtypes.int32, back_prop=False),
-                       lambda: tf.map_fn(self._no_flip, mask, dtype=tf.dtypes.int32, back_prop=False))
-        mask = tf.cond(flip_z,
-                       lambda: tf.map_fn(self._flip_z, mask, dtype=tf.dtypes.int32, back_prop=False),
-                       lambda: tf.map_fn(self._no_flip, mask, dtype=tf.dtypes.int32, back_prop=False))
-        mask = tf.cond(transpose,
-                       lambda: tf.map_fn(self._transpose, mask, dtype=tf.dtypes.int32, back_prop=False),
-                       lambda: tf.map_fn(self._no_transpose, mask, dtype=tf.dtypes.int32, back_prop=False))
+        if rotate_z:
+            data = tf.map_fn(self._rotate_z, data, dtype=tf.dtypes.float32, back_prop=False)
+            mask = tf.map_fn(self._rotate_z, mask, dtype=tf.dtypes.int32, back_prop=False)
+        else:
+            data = tf.map_fn(self._no_rotate, data, dtype=tf.dtypes.float32, back_prop=False)
+            mask = tf.map_fn(self._no_rotate, mask, dtype=tf.dtypes.int32, back_prop=False)
+
+        if flip_x:
+            data = tf.map_fn(self._flip_x, data, dtype=tf.dtypes.float32, back_prop=False)
+            mask = tf.map_fn(self._flip_x, mask, dtype=tf.dtypes.int32, back_prop=False)
+        else:
+            data = tf.map_fn(self._no_flip, data, dtype=tf.dtypes.float32, back_prop=False)
+            mask = tf.map_fn(self._no_flip, mask, dtype=tf.dtypes.int32, back_prop=False)
+
+        if flip_y:
+            data = tf.map_fn(self._flip_y, data, dtype=tf.dtypes.float32, back_prop=False)
+            mask = tf.map_fn(self._flip_y, mask, dtype=tf.dtypes.int32, back_prop=False)
+        else:
+            data = tf.map_fn(self._no_flip, data, dtype=tf.dtypes.float32, back_prop=False)
+            mask = tf.map_fn(self._no_flip, mask, dtype=tf.dtypes.int32, back_prop=False)
+
+        if flip_z:
+            data = tf.map_fn(self._flip_z, data, dtype=tf.dtypes.float32, back_prop=False)
+            mask = tf.map_fn(self._flip_z, mask, dtype=tf.dtypes.int32, back_prop=False)
+        else:
+            data = tf.map_fn(self._no_flip, data, dtype=tf.dtypes.float32, back_prop=False)
+            mask = tf.map_fn(self._no_flip, mask, dtype=tf.dtypes.int32, back_prop=False)
+
+        if transpose:
+            data = tf.map_fn(self._transpose, data, dtype=tf.dtypes.float32, back_prop=False)
+            mask = tf.map_fn(self._transpose, mask, dtype=tf.dtypes.int32, back_prop=False)
+        else:
+            data = tf.map_fn(self._no_transpose, data, dtype=tf.dtypes.float32, back_prop=False)
+            mask = tf.map_fn(self._no_transpose, mask, dtype=tf.dtypes.int32, back_prop=False)
+
+
 
         return data, mask

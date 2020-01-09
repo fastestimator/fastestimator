@@ -23,31 +23,11 @@ import fastestimator as fe
 from fastestimator.architecture import UNet3D_Isensee
 from fastestimator.dataset import brats
 from fastestimator.op import NumpyOp, TensorOp
+from fastestimator.op.numpyop import ImageReader, NIBImageReader
 from fastestimator.op.tensorop import Loss, ModelOp
 from fastestimator.op.tensorop.augmentation import Augmentation3D
+from fastestimator.op.tensorop.loss import WeightedDiceLoss
 from fastestimator.trace import LRController, ModelSaver
-
-
-class NIBImageReader(NumpyOp):
-    """Class for reading Nifti images
-    Args:
-        parent_path (str): Parent path that will be added on given path
-    """
-    def __init__(self, inputs=None, outputs=None, mode=None, parent_path=""):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        self.parent_path = parent_path
-
-    def forward(self, data, state):
-        """Reads numpy array from image path
-        Args:
-            path: path of the image
-            state: A dictionary containing background information such as 'mode'
-        Returns:
-           Image as numpy array
-        """
-        data = os.path.normpath(os.path.join(self.parent_path, data))
-        data = nib.load(data)
-        return data.get_data()
 
 
 class RandomImagePatches(TensorOp):
@@ -150,17 +130,6 @@ class SplitMaskLabelwise(TensorOp):
         segmask_multi_label = tf.stack([cls_1, cls_2, cls_4])
         return segmask_multi_label
 
-
-class WeightedDiceLoss(Loss):
-    def forward(self, data, state):
-        y_true, y_pred = data
-        smooth = 0.00001
-        y_true = tf.cast(y_true, dtype=tf.dtypes.float32)
-        intersection = tf.reduce_sum(y_true * y_pred, axis=[-3, -2, -1])
-        union = tf.reduce_sum(y_true, axis=[-3, -2, -1]) + tf.reduce_sum(y_pred, axis=[-3, -2, -1])
-        loss = -2. * (intersection + smooth / 2) / (union + smooth)
-        loss = tf.reduce_mean(loss, axis=1)
-        return loss
 
 
 def get_estimator(batch_size=1, epochs=500, steps_per_epoch=128, model_dir=tempfile.mkdtemp(), path_brats=None):

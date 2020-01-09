@@ -69,7 +69,7 @@ setup(
         'slackclient',
         'nest_asyncio',
         'pycocotools-fix',
-        'nibabel== 2.5.1',
+        'nibabel>= 2.5.1',
         'nilearn',
         'SimpleITK',
         'tensorflow-addons'

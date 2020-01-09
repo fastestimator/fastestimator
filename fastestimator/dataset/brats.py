@@ -235,7 +235,7 @@ def _generate_samples(path_brats, val_split=0.8, resized_img_shape=(144, 144, 14
                      zip(path_brats_preprocessed, samples, mean_samples, std_samples, resized_img_shape_list))
 
     train_val_indices = np.arange(len(samples))
-    # shuffle(train_val_indices)
+    shuffle(train_val_indices)
     n_training = int(len(samples) * val_split)
     train_indices = train_val_indices[:n_training]
     val_indices = train_val_indices[n_training:]
@@ -275,6 +275,6 @@ def _crop_to_non_zero_content(modality_filenames):
 
 
 def load_data(path_brats=None,  resized_img_shape=(144, 144, 144), bias_correction=False):
-    assert path_brats is not None, "path_imgnet should have valid directory 'data' where braTs 2018 dataset has been downloaded  having 'LGG' and 'HGG' subdirs"
+    assert path_brats is not None, "path_brats should have valid directory 'data' where braTs 2018 dataset has been downloaded  having 'LGG' and 'HGG' subdirs"
     train_csv, val_csv = _generate_samples(path_brats, resized_img_shape=resized_img_shape, bias_correction= bias_correction)
     return train_csv, val_csv, path_brats
