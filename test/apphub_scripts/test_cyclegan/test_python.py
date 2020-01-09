@@ -6,7 +6,7 @@ if __name__ == "__main__":
     example_name = "cyclegan_horse2zebra"
     source_dir = os.path.join(apphub_path, "image_generation", "cyclegan_horse2zebra")
     stderr_file = os.path.abspath(os.path.join(__file__, "..", "run_python.txt"))
-    if os.path.exist(stderr_file):
+    if os.path.exists(stderr_file):
         os.remove(stderr_file)
         
     py_file = os.path.join(source_dir, example_name + ".py")
