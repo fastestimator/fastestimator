@@ -21,7 +21,7 @@ from pathlib import Path
 import pandas as pd
 import wget
 
-from fastestimator.util.wget import bar_custom, callback_progress
+from fastestimator.util.wget_util import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress
 

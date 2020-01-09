@@ -17,6 +17,8 @@ import tempfile
 
 import numpy as np
 from sklearn.preprocessing import StandardScaler
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
 
 import fastestimator as fe
 import tensorflow as tf
@@ -28,7 +30,7 @@ from tensorflow.keras import layers
 def create_dnn():
     model = tf.keras.Sequential()
 
-    model.add(layers.Dense(23, activation="relu", input_shape=(13, )))
+    model.add(layers.Dense(32, activation="relu", input_shape=(30, )))
     model.add(layers.Dropout(0.5))
     model.add(layers.Dense(16, activation="relu"))
     model.add(layers.Dropout(0.5))
@@ -40,7 +42,8 @@ def create_dnn():
 
 
 def get_estimator(epochs=50, batch_size=32, steps_per_epoch=None, validation_steps=None, model_dir=tempfile.mkdtemp()):
-    (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.boston_housing.load_data()
+    (X, y) = load_breast_cancer(True)
+    x_train, x_eval, y_train, y_eval = train_test_split(X, y, test_size=0.2)
 
     # step 1. prepare data
     scaler = StandardScaler()

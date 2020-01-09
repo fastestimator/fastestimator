@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import tensorflow as tf
+
 from fastestimator.op import TensorOp
 from fastestimator.util.util import to_list
 
@@ -35,6 +37,10 @@ class Gradients(TensorOp):
     def forward(self, data, state):
         loss, *elems = data
         tape = state['tape']
+        if loss.shape and loss.shape[0] == state["local_batch_size"]:
+            # Need to reduce element-wise loss, otherwise the gradients are summed together which essentially multiplies
+            # your learning rate by the batch size
+            loss = tf.reduce_sum(data) / state["batch_size"]
         with tape.stop_recording():
             gradients = tape.gradient(loss, [model.trainable_variables for model in self.models] + elems)
         return gradients

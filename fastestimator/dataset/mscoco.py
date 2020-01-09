@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 import wget
 
-from fastestimator.util.wget import bar_custom, callback_progress
+from fastestimator.util.wget_util import bar_custom, callback_progress
 from pycocotools.coco import COCO
 
 wget.callback_progress = callback_progress
