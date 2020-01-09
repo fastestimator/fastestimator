@@ -11,7 +11,7 @@ if __name__ == "__main__":
     nb_out_file = os.path.abspath(os.path.join(__file__, "..", tutorial_name + "_out.ipynb"))
 
     run_info = "" # running parameter 
-    result = os.system("papermill {} {} {} 2>> {}".format(nb_in_file, nb_out_file, run_info, stderr_file))
+    result = os.system("papermill {} {} {} -k nightly-build 2>> {}".format(nb_in_file, nb_out_file, run_info, stderr_file))
 
     if result:
         raise ValueError("{} fail".format(nb_in_file))
