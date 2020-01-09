@@ -21,6 +21,7 @@ pipeline{
 
                                     pip3 install pytest numpy nibabel pydicom tensorflow==2.0.0 ipython ipykernel scikit-image notebook
                                     pip3 install -e .
+                                    ipython kernel install --user --name=nightly-build
                                 '''
                             }
                         }
@@ -29,7 +30,7 @@ pipeline{
                                sh '''
                                     echo $WORKSPACE
                                     . $WORKSPACE/../venv/bin/activate
-                                    ./test/test_apphub.sh
+                                    python3 test/test_apphub_tutorial.py
                                 '''
                             }                           
                         }
@@ -53,16 +54,16 @@ pipeline{
                                     . $JENKINS_DIR/venv/bin/activate
 
                                     pip3 install pytest numpy nibabel pydicom tensorflow-gpu==2.0.0 ipython ipykernel twine scikit-image notebook
-                                    pip3 install -e .
+                                    pip3 install -e .                                    
+                                    ipython kernel install --user --name=nightly-build
                                 '''
                             }
                         }
                         stage('Test-GPU'){
                             steps{
                                 sh '''
-                                    echo $WORKSPACE
                                     . $WORKSPACE/../venv/bin/activate
-                                    ./test/test_apphub.sh 
+                                    python3 test/test_apphub_tutorial.py
                                 '''
                             }                           
                         }
