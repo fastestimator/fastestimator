@@ -17,12 +17,13 @@ from collections import ChainMap
 from typing import Union, Dict, Optional, Iterable, List
 
 import tensorflow as tf
-from fastestimator.pipeline import BasePipeline, TorchPipeline, TensorFlowPipeline
 from torch.utils.data import DataLoader
 
 from fastestimator import Network
+from fastestimator.backend import torch_to_tf
 from fastestimator.op.op import get_inputs_by_key
 from fastestimator.op.tensorop.model import UpdateOp
+from fastestimator.pipeline import BasePipeline, TorchPipeline, TensorFlowPipeline
 from fastestimator.schedule.epoch_scheduler import Scheduler
 from fastestimator.trace import EvalEssential, Logger, TrainEssential, Trace
 from fastestimator.util.util import draw
@@ -166,6 +167,8 @@ class Estimator:
         ds_iter = self.pipeline.get_current_value(self.system.epoch_idx).transform(mode=self.system.mode,
                                                                                    epoch=self.system.epoch_idx)
         for self.system.batch_idx, batch in enumerate(ds_iter):
+            if self.network.framework == "tensorflow":
+                batch = torch_to_tf(batch)  # TODO - this should maybe be handled somewhere else...
             if self.system.batch_idx == self.steps_per_epoch and self.system.mode == "train":
                 break
             self._run_traces_on_batch_begin()

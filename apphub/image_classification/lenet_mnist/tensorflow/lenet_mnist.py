@@ -19,8 +19,10 @@ import tensorflow as tf
 from tensorflow.python.keras import Sequential, layers
 
 import fastestimator as fe
+from fastestimator.op.numpyop import Minmax, ExpandDims
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
+from fastestimator.pipeline import Pipeline, NumpyDataset
 from fastestimator.trace.metric import Accuracy
 
 
@@ -56,23 +58,31 @@ def LeNet(input_shape=(28, 28, 1), classes=10):
     return model
 
 
-def get_estimator():
-    #step 1
+def get_estimator(batch_size=32):
+    # step 1
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.mnist.load_data()
+    train_data = NumpyDataset({"x": x_train, "y": y_train})
+    eval_data = NumpyDataset({"x": x_eval, "y": y_eval})
+    pipeline = Pipeline(train_data=train_data,
+                        eval_data=eval_data,
+                        batch_size=batch_size,
+                        ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")],
+                        num_process=0)
 
-    #step 2
+    # step 2
     model = fe.build(model=LeNet(), optimizer="adam")
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="x", outputs="y_pred"),
         CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),
         UpdateOp(model=model, loss_name="ce")
     ])
-    #step 3
+    # step 3
     estimator = fe.Estimator(
-        pipeline={
-            "train": get_tensorflow_dataset(x=np.expand_dims(x_train, -1), y=y_train),
-            "eval": get_tensorflow_dataset(x=np.expand_dims(x_eval, -1), y=y_eval, shuffle=False)
-        },
+        # pipeline={
+        #     "train": get_tensorflow_dataset(x=np.expand_dims(x_train, -1), y=y_train),
+        #     "eval": get_tensorflow_dataset(x=np.expand_dims(x_eval, -1), y=y_eval, shuffle=False)
+        # },
+        pipeline=pipeline,
         network=network,
         epochs=2,
         steps_per_epoch=1875,
