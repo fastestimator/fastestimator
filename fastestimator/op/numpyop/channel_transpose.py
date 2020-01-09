@@ -19,7 +19,7 @@ import numpy as np
 from fastestimator.op import NumpyOp
 
 
-class Transpose(NumpyOp):
+class ChannelTranspose(NumpyOp):
     """Transpose the data (for example to make it channel-width-height instead of width-height-channel)
 
     Args:
