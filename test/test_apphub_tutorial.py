@@ -6,7 +6,7 @@ import time
 if __name__ == "__main__":
     test_apphub_script_dir = os.path.abspath(os.path.join(__file__, "..", "apphub_scripts"))
     test_tutorial_script_dir = os.path.abspath(os.path.join(__file__, "..", "tutorial_scripts"))
-    
+
     report={}
     fail_list=[]
     for dirpath, _, filenames in os.walk(test_apphub_script_dir):
@@ -45,5 +45,6 @@ if __name__ == "__main__":
 
     print("the report is: {}".format(report))
     print("the fail list is: {}".format(fail_list))
+    os.system("rm -rf /tmp/tmp*")
 
 
