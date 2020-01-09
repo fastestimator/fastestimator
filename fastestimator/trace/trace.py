@@ -12,12 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import pdb
 import time
 
 import numpy as np
-import tensorflow as tf
-import torch
 
 from fastestimator.backend.to_number import to_number
 from fastestimator.util.util import to_list
@@ -40,21 +37,26 @@ class Trace:
     def on_begin(self):
         """Runs once at the beginning of training
         """
+
     def on_epoch_begin(self):
         """Runs at the beginning of each epoch
         """
+
     def on_batch_begin(self):
         """Runs at the beginning of each batch
         """
+
     def on_batch_end(self, data):
         """Runs at the end of each batch
 
         Args:
             data: value fetched by the inputs
         """
+
     def on_epoch_end(self):
         """Runs at the end of each epoch
         """
+
     def on_end(self):
         """Runs once at the end training.
         """

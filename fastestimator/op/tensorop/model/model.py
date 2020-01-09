@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.op import TensorOp
 from fastestimator.backend.feed_forward import feed_forward
+from fastestimator.op.op import TensorOp
+
 
 class ModelOp(TensorOp):
     """This class represents the Model operator that defines String keys for storing batch data and predictions

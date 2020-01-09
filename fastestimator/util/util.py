@@ -14,6 +14,7 @@
 # ==============================================================================
 """Utilities for FastEstimator."""
 import json
+import subprocess
 from ast import literal_eval
 
 from pyfiglet import Figlet

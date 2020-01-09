@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import pdb
 from collections import ChainMap
 
 import tensorflow as tf
@@ -76,7 +75,7 @@ class Network:
         return prediction
 
     def _get_network_inputs(self, batch):
-        #In order to prevent sending unwanted data to gpu, this function extracts pipeline data required by network
+        # In order to prevent sending unwanted data to gpu, this function extracts pipeline data required by network
         new_batch = {}
         extracted_keys = set(batch.keys()).intersection(self.op_inputs)
         for key in extracted_keys:
@@ -156,7 +155,7 @@ def build(model, optimizer):
 
 
 def _fe_compile(model, optimizer):
-    #model instance check
+    # model instance check
     if isinstance(model, tf.keras.Model):
         framework = "tensorflow"
     elif isinstance(model, torch.nn.Module):
@@ -164,30 +163,30 @@ def _fe_compile(model, optimizer):
     else:
         raise ValueError("unrecognized model format: {}".format(type(model)))
 
-    #optimizer auto complete
+    # optimizer auto complete
     if isinstance(optimizer, str):
         tf_optimizer_fn = {
-                'adadelta': tf.optimizers.Adadelta,
-                'adagrad': tf.optimizers.Adagrad,
-                'adam': tf.optimizers.Adam,
-                'adamax': tf.optimizers.Adamax,
-                'rmsprop': tf.optimizers.RMSprop,
-                'sgd': tf.optimizers.SGD
-            }
+            'adadelta': tf.optimizers.Adadelta,
+            'adagrad': tf.optimizers.Adagrad,
+            'adam': tf.optimizers.Adam,
+            'adamax': tf.optimizers.Adamax,
+            'rmsprop': tf.optimizers.RMSprop,
+            'sgd': tf.optimizers.SGD
+        }
         pytorch_optimizer_fn = {
-                'adadelta': torch.optim.Adadelta,
-                'adagrad': torch.optim.Adagrad,
-                'adam': torch.optim.Adam,
-                'adamax': torch.optim.Adamax,
-                'rmsprop': torch.optim.RMSprop,
-                'sgd': torch.optim.SGD
-            }
+            'adadelta': torch.optim.Adadelta,
+            'adagrad': torch.optim.Adagrad,
+            'adam': torch.optim.Adam,
+            'adamax': torch.optim.Adamax,
+            'rmsprop': torch.optim.RMSprop,
+            'sgd': torch.optim.SGD
+        }
         if framework == "tensorflow":
             optimizer = tf_optimizer_fn[optimizer]()
         else:
             optimizer = pytorch_optimizer_fn[optimizer](params=model.parameters())
-    
-    #optimizer instance check
+
+    # optimizer instance check
     if framework == "tensorflow":
         assert isinstance(optimizer, tf.optimizers.Optimizer)
     else:
