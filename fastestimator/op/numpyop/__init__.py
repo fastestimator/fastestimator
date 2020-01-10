@@ -21,5 +21,6 @@ from fastestimator.op.numpyop.image_compression import ImageCompression
 from fastestimator.op.numpyop.minmax import Minmax
 from fastestimator.op.numpyop.normalize import Normalize
 from fastestimator.op.numpyop.random_rotate_90 import RandomRotate90
+from fastestimator.op.numpyop.random_snow import RandomSnow
 from fastestimator.op.numpyop.sometimes import Sometimes
 from fastestimator.op.numpyop.to_float import ToFloat
