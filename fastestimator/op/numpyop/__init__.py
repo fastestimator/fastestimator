@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.op.numpyop.channel_transpose import ChannelTranspose
+from fastestimator.op.numpyop.coarse_dropout import CoarseDropout
 from fastestimator.op.numpyop.expand_dims import ExpandDims
 from fastestimator.op.numpyop.horizontal_flip import HorizontalFlip
 from fastestimator.op.numpyop.minmax import Minmax
