@@ -21,7 +21,7 @@ if __name__ == "__main__":
             test_name = os.path.join(dirpath.split("/")[-1], f)
             start_time = time.time()
             result = os.system("python3 " + os.path.abspath(os.path.join(dirpath, f)))
-            exec_time = (time.time() - start_time) / 60 
+            exec_time = int((time.time() - start_time) / 60) 
             report[test_name] = {"fail": result, "time":exec_time}
             if result:
                 fail_list.append(test_name)
@@ -38,7 +38,7 @@ if __name__ == "__main__":
             test_name = os.path.join(dirpath.split("/")[-1], f)
             start_time = time.time()
             result = os.system("python3 " + os.path.abspath(os.path.join(dirpath, f)))
-            exec_time = (time.time() - start_time) / 60 
+            exec_time = int((time.time() - start_time) / 60) 
             report[test_name] = {"fail": result, "time":exec_time}
             if result:
                 fail_list.append(test_name)
