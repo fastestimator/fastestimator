@@ -29,13 +29,13 @@ class CoarseDropout(ImageOnlyAlbumentation):
             max_holes: Maximum number of regions to zero out.
             max_height: Maximum height of the hole.
             max_width: Maximum width of the hole.
-            min_holes (int): Minimum number of regions to zero out. If `None`,
+            min_holes: Minimum number of regions to zero out. If `None`,
                 `min_holes` is be set to `max_holes`. Default: `None`.
-            min_height (int): Minimum height of the hole. Default: None. If `None`,
+            min_height: Minimum height of the hole. Default: None. If `None`,
                 `min_height` is set to `max_height`. Default: `None`.
-            min_width (int): Minimum width of the hole. If `None`, `min_height` is
+            min_width: Minimum width of the hole. If `None`, `min_height` is
                 set to `max_width`. Default: `None`.
-            fill_value (int, float, lisf of int, list of float): value for dropped pixels.
+            fill_value: value for dropped pixels.
         Image types:
             uint8, float32
     """
