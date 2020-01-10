@@ -17,6 +17,7 @@ import os
 import shutil
 from glob import glob
 from multiprocessing import Pool
+from pathlib import Path
 from random import shuffle
 
 import nibabel as nib
@@ -56,13 +57,13 @@ def _resize_nifti_images(data_nifti, resized_img_shape=(144, 144, 144), interpol
     if interpolation == 'nearest':
         resample_filter.SetInterpolator(sitk.sitkNearestNeighbor)  # nearest is used for modalities t1,t2,flair,t1ce
     else:
-        resample_filter.SetInterpolator(sitk.sitkLinear)   # linear intrepolation for segmentation mask
+        resample_filter.SetInterpolator(sitk.sitkLinear)  # linear intrepolation for segmentation mask
     resample_filter.SetTransform(transform)
     resample_filter.SetDefaultPixelValue(0.)
     resample_filter.SetReferenceImage(ref_image)
     resampled_image = resample_filter.Execute(image_sitk)
     data = sitk.GetArrayFromImage(resampled_image)
-    data = np.rot90(data, -1, axes=(0, 2)) # converting to height * width * channel
+    data = np.rot90(data, -1, axes=(0, 2))  # converting to height * width * channel
 
     return data, new_spacing
 
@@ -99,7 +100,6 @@ def _generate_preprocessed_samples_core(path_brats_preprocessed,
 
     mod_filename = os.path.basename(sample) + '_mod.nii.gz'
     nib.save(mod_data_resized_nifti, os.path.join(path_brats_preprocessed, mod_filename))
-
 
     seg = '*' + 'seg' + '.nii.gz'
     seg_file = glob(os.path.join(sample, seg))
@@ -193,11 +193,11 @@ def _generate_samples(path_brats, val_split=0.8, resized_img_shape=(144, 144, 14
             print("End: Bias Correction step")
 
     if bias_correction is True:
-        samples = glob(os.path.join(path_brats_bias_corrected,'LGG','*')) + \
-                    glob(os.path.join(path_brats_bias_corrected,'HGG','*'))
+        samples = glob(os.path.join(path_brats_bias_corrected, 'LGG', '*')) + \
+                    glob(os.path.join(path_brats_bias_corrected, 'HGG', '*'))
     else:
-        samples = glob(os.path.join(path_brats_data,'LGG','*')) + \
-                    glob(os.path.join(path_brats_data,'HGG','*'))
+        samples = glob(os.path.join(path_brats_data, 'LGG', '*')) + \
+                    glob(os.path.join(path_brats_data, 'HGG', '*'))
 
     if not os.path.exists(path_brats_preprocessed):
         os.mkdir(path_brats_preprocessed)
@@ -216,15 +216,6 @@ def _generate_samples(path_brats, val_split=0.8, resized_img_shape=(144, 144, 14
         std_samples = np.mean(std_sample_wise, axis=0, dtype=np.float32)
         mean_samples = np.mean(mean_sample_wise, axis=0, dtype=np.float32)
 
-        # mean_samples =  np.array([258.48553, 290.10736, 189.7929,  285.58127])
-        # std_samples = np.array([305.6509, 341.7837, 228.9157, 354.8723])
-
-        # mean_samples = np.array([478.8323,  446.01984, 189.7929,  280.32004]) #bias corrected
-        # std_samples = np.array([555.5497,  515.7092,  228.9157,  342.75388])  #bias corrected
-
-        print('mean of  samples', mean_samples)
-        print('std of samples', std_samples)
-
         path_brats_preprocessed = [path_brats_preprocessed] * len(samples)
         mean_samples = [mean_samples] * len(samples)
         std_samples = [std_samples] * len(samples)
@@ -239,7 +230,6 @@ def _generate_samples(path_brats, val_split=0.8, resized_img_shape=(144, 144, 14
     n_training = int(len(samples) * val_split)
     train_indices = train_val_indices[:n_training]
     val_indices = train_val_indices[n_training:]
-
 
     hgg_samples = glob(os.path.join(path_brats, 'data', 'HGG', '*'))
     lgg_samples = glob(os.path.join(path_brats, 'data', 'LGG', '*'))
@@ -267,14 +257,18 @@ def _crop_to_non_zero_content(modality_filenames):
         data_valid[data_valid_idx] = 1
     coords = np.array(np.where(data_valid))
     start = coords.min(axis=1)
-    end = coords.max(axis=1)+1
+    end = coords.max(axis=1) + 1
     start = np.maximum(start - 1, 0)
     end = np.minimum(end + 1, data_valid.shape)
     slices = [slice(s, e) for s, e in zip(start, end)]
     return slices
 
 
-def load_data(path_brats=None,  resized_img_shape=(144, 144, 144), bias_correction=False):
+def load_data(path_brats=None, resized_img_shape=(144, 144, 144), bias_correction=False):
     assert path_brats is not None, "path_brats should have valid directory 'data' where braTs 2018 dataset has been downloaded  having 'LGG' and 'HGG' subdirs"
-    train_csv, val_csv = _generate_samples(path_brats, resized_img_shape=resized_img_shape, bias_correction= bias_correction)
+    home = str(Path.home())
+    fe_data = os.path.join(home, 'fastestimator_data')
+    assert fe_data == os.path.dirname(path_brats), "Brats data is expected to be sub directory in ~/fastestimator_data"
+
+    train_csv, val_csv = _generate_samples(path_brats, resized_img_shape=resized_img_shape, bias_correction=bias_correction)
     return train_csv, val_csv, path_brats

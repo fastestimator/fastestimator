@@ -160,6 +160,4 @@ class Augmentation3D(TensorOp):
             data = tf.map_fn(self._no_transpose, data, dtype=tf.dtypes.float32, back_prop=False)
             mask = tf.map_fn(self._no_transpose, mask, dtype=tf.dtypes.int32, back_prop=False)
 
-
-
         return data, mask
