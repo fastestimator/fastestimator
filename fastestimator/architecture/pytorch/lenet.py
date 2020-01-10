@@ -20,13 +20,13 @@ import numpy as np
 
 
 class LeNet(torch.nn.Module):
-    def __init__(self, n_channels: int = 1):
+    def __init__(self, n_channels: int = 1, classes: int = 10):
         super().__init__()
         self.conv1 = nn.Conv2d(n_channels, 32, 3)
         self.conv2 = nn.Conv2d(32, 64, 3)
         self.conv3 = nn.Conv2d(64, 64, 3)
         self.fc1 = nn.Linear(3 * 3 * 64, 64)
-        self.fc2 = nn.Linear(64, 10)
+        self.fc2 = nn.Linear(64, classes)
 
     def forward(self, x):
         x = self.conv1(x)
