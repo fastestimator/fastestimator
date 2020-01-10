@@ -14,7 +14,7 @@
 # ==============================================================================
 
 from collections import ChainMap
-from typing import Union, Dict, Optional, Iterable, List
+from typing import Union, Dict, Optional, Iterable, List, Set, Any
 
 import tensorflow as tf
 from torch.utils.data import DataLoader
@@ -104,7 +104,9 @@ class Estimator:
     def _prepare_pipeline(self):
         # TODO - This needs to work with scheduling
         if self.steps_per_epoch is None:
-            self.steps_per_epoch = self.pipeline.get_current_value(epoch=0).get_num_examples(mode="train", epoch=0)
+            pipeline = self.pipeline.get_current_value(epoch=0)
+            self.steps_per_epoch = pipeline.get_num_examples(mode="train", epoch=0) // pipeline.get_global_batch_size(
+                mode="train", epoch=0)
         self.system.total_steps = self.epochs * self.steps_per_epoch
 
     def _prepare_network(self):
@@ -142,7 +144,7 @@ class Estimator:
             self.monitor_names = self.monitor_names.union(set(filter(None, to_list(trace.log_names))))
         self.traces.append(Logger(log_names=self.monitor_names, loss_names=loss_keys))
 
-    def _initialize_loss_keys(self):
+    def _initialize_loss_keys(self) -> Set[str]:
         loss_keys = set()
         for op in self.network.ops:
             if isinstance(op, UpdateOp):
@@ -220,15 +222,15 @@ class Estimator:
 
 class System:
     def __init__(self,
-                 mode,
-                 global_step,
-                 batch_size,
-                 num_devices,
-                 log_steps,
-                 total_epochs,
-                 total_steps,
-                 epoch_idx,
-                 batch_idx):
+                 mode: str,
+                 global_step: int,
+                 batch_size: int,
+                 num_devices: int,
+                 log_steps: int,
+                 total_epochs: int,
+                 total_steps: int,
+                 epoch_idx: int,
+                 batch_idx: int):
         self.mode = mode
         self.global_step = global_step
         self.batch_size = batch_size
@@ -240,14 +242,14 @@ class System:
         self.batch_idx = batch_idx
         self.buffer = {}
 
-    def add_buffer(self, key, value):
+    def add_buffer(self, key: str, value: Any):
         self.buffer[key] = value
 
     def clear_buffer(self):
         del self.buffer
         self.buffer = {}
 
-    def read_buffer(self, key):
+    def read_buffer(self, key: str) -> Any:
         return self.buffer[key]
 
     def update_epoch_idx(self):

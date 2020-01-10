@@ -12,64 +12,80 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from typing import Union, List, TypeVar, Dict, Any, Iterable, Callable, Optional, Mapping
+
+import numpy as np
+import tensorflow as tf
+import torch
+
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
-class TensorOp:
-    def __init__(self, inputs=None, outputs=None, mode=None):
-        self.inputs = inputs
-        self.outputs = outputs
-        self.mode = mode
+class Op:
+    def __init__(self,
+                 inputs: Union[None, str, Iterable[str], Callable] = None,
+                 outputs: Union[None, str, Iterable[str]] = None,
+                 mode: Union[None, str, Iterable[str]] = None):
+        if isinstance(inputs, Iterable) and not isinstance(inputs, str):
+            self.inputs = list(inputs)
+        else:
+            self.inputs = inputs
+        if isinstance(outputs, Iterable) and not isinstance(outputs, str):
+            self.outputs = list(outputs)
+        else:
+            self.outputs = outputs
+        if isinstance(mode, Iterable) and not isinstance(mode, str):
+            self.mode = set(mode)
+        else:
+            self.mode = mode
 
-    def forward(self, data, state):
+
+class TensorOp(Op):
+    def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
         return data
 
 
-class NumpyOp:
-    def __init__(self, inputs=None, outputs=None, mode=None):
-        self.inputs = inputs
-        self.outputs = outputs
-        self.mode = mode
-
-    def forward(self, data, state):
+class NumpyOp(Op):
+    def forward(self, data: Union[np.ndarray, List[np.ndarray]],
+                state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
         return data
 
 
-def get_op_from_mode(ops, current_mode):
+OpType = TypeVar('OpType', Op, NumpyOp, TensorOp)
+
+
+def get_ops_by_mode(ops: Iterable[OpType], mode: str) -> List[OpType]:
     selected_ops = []
     for op in ops:
-        assert hasattr(op, "mode"), "Operation: {} has no mode attribute".format(op)
         op_mode = op.mode
         if not isinstance(op_mode, list):
             op_mode = [op_mode]
-        if None in op_mode or current_mode in op_mode:
+        if None in op_mode or mode in op_mode:
             selected_ops.append(op)
     return selected_ops
 
 
-def get_inputs_by_op(op, store, default=None):
+def get_inputs_by_op(op: Op, store: Mapping[str, Any], default: Optional[Any] = None) -> Any:
     data = default
     if op.inputs:
-        if hasattr(op.inputs, "__call__"):
+        if isinstance(op.inputs, Callable):
             data = op.inputs()
         else:
             data = get_inputs_by_key(store, op.inputs)
     return data
 
 
-def get_inputs_by_key(store, inputs_key):
+def get_inputs_by_key(store: Mapping[str, Any], inputs_key: str) -> Any:
     if isinstance(inputs_key, list):
         data = [store[key] for key in inputs_key]
-    elif isinstance(inputs_key, tuple):
-        data = tuple([store[key] for key in inputs_key])
     else:
         data = store[inputs_key]
     return data
 
 
-def write_outputs_by_key(store, output, outputs_key):
+def write_outputs_by_key(store: Mapping[str, Any], output: Any, outputs_key: str):
     if isinstance(outputs_key, str):
         store[outputs_key] = output
     else:
         for key, data in zip(outputs_key, output):
             store[key] = data
-    return store

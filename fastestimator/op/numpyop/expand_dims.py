@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, List, Optional
+from typing import Union, Iterable, Callable, List, Dict, Any
 
 import numpy as np
 
@@ -23,18 +23,22 @@ class ExpandDims(NumpyOp):
     """Transpose the data (for example to make it channel-width-height instead of width-height-channel)
 
     Args:
-            inputs (List[str], str, None): Key(s) of images to be normalized
-            outputs (List[str], str, None): Key(s) of images to be normalized
-            mode (str, None): What execution mode (train, eval, None) to apply this operation
-            axis (int): The axis to expand
+            inputs: Key(s) of array to be expanded
+            outputs: Key(s) of array to be expanded
+            mode: What execution mode (train, eval, None) to apply this operation
+            axis: The axis to expand
     """
     def __init__(self,
-                 inputs: Union[List[str], str, None] = None,
-                 outputs: Union[List[str], str, None] = None,
-                 mode: Optional[str] = None,
+                 inputs: Union[None, str, Iterable[str], Callable] = None,
+                 outputs: Union[None, str, Iterable[str]] = None,
+                 mode: Union[None, str, Iterable[str]] = None,
                  axis: int = -1):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.axis = axis
 
-    def forward(self, data, state):
-        return np.expand_dims(data, self.axis)
+    def forward(self, data: Union[np.ndarray, List[np.ndarray]],
+                state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
+        if isinstance(data, list):
+            return [np.expand_dims(elem, self.axis) for elem in data]
+        else:
+            return np.expand_dims(data, self.axis)

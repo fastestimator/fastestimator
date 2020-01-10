@@ -13,10 +13,16 @@
 # limitations under the License.
 # ==============================================================================
 
-from fastestimator.trace.trace import Trace
-from fastestimator.backend.to_number import to_number
+from typing import List, TypeVar
+
 import numpy as np
-import pdb
+import tensorflow as tf
+import torch
+
+from fastestimator.backend.to_number import to_number
+from fastestimator.trace.trace import Trace
+
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 class Accuracy(Trace):
@@ -29,7 +35,7 @@ class Accuracy(Trace):
         self.total = 0
         self.correct = 0
 
-    def on_batch_end(self, data):
+    def on_batch_end(self, data: List[Tensor]):
         y_true, y_pred = to_number(data[0]), to_number(data[1])
         if y_pred.shape[-1] == 1:
             label_pred = np.round(y_pred)

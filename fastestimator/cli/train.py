@@ -16,11 +16,12 @@ import argparse
 import json
 import os
 import sys
+from typing import Optional, List, Dict, Any
 
 from fastestimator.util.util import parse_string_to_python
 
 
-def parse_cli_to_dictionary(input_list):
+def parse_cli_to_dictionary(input_list: Optional[List[str]]) -> Dict[str, Any]:
     """
     Args:
         input_list: A list of input strings from a cli
@@ -48,7 +49,7 @@ def parse_cli_to_dictionary(input_list):
     return result
 
 
-def train(args, unknown):
+def train(args: Dict[str, Any], unknown: Optional[List[str]]):
     entry_point = args['entry_point']
     hyperparameters = {}
     if args['hyperparameters_json']:
@@ -63,7 +64,7 @@ def train(args, unknown):
     estimator.fit()
 
 
-def configure_train_parser(subparsers):
+def configure_train_parser(subparsers: argparse.PARSER):
     parser = subparsers.add_parser('train',
                                    description='Train a FastEstimator model',
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter,

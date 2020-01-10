@@ -50,7 +50,9 @@ setup(
     ],
 
     # Declare minimal set for installation
-    install_requires=['numpy', 'torch', 'tensorflow', 'albumentations'],
+    install_requires=[
+        'numpy', 'tensorflow', 'torch @ https://download.pytorch.org/whl/torch_stable.html', 'albumentations'
+    ],
     # Declare extra set for installation
     extras_require={},
     scripts=['bin/fastestimator'])

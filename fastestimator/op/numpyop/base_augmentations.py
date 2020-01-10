@@ -14,8 +14,9 @@
 # ==============================================================================
 from collections import OrderedDict
 from copy import deepcopy
-from typing import Optional, List, Tuple, Union
+from typing import Optional, List, Union, Dict, Any
 
+import numpy as np
 from albumentations import ImageOnlyTransform, ReplayCompose, Compose, DualTransform, BboxParams, KeypointParams
 
 from fastestimator.op import NumpyOp
@@ -33,8 +34,9 @@ class ImageOnlyAlbumentation(NumpyOp):
         self.func = Compose(transforms=[func])
         self.replay_func = ReplayCompose(transforms=[deepcopy(func)])
 
-    def forward(self, data, state):
-        if isinstance(data, (List, Tuple)):
+    def forward(self, data: Union[np.ndarray, List[np.ndarray]],
+                state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
+        if isinstance(data, List):
             results = [self.replay_func(image=data[0])]
             for i in range(1, len(data)):
                 results.append(self.replay_func.replay(results[0]['replay'], image=data[i]))
@@ -84,6 +86,6 @@ class MultiVariateAlbumentation(NumpyOp):
             keypoint_params = KeypointParams(keypoint_params)
         self.func = Compose(transforms=[func], bbox_params=bbox_params, keypoint_params=keypoint_params)
 
-    def forward(self, data, state):
+    def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
         result = self.func(**{k: v for k, v in zip(self.keys_in.keys(), data)})
         return [result[k] for k in self.keys_out.keys()]

@@ -16,9 +16,12 @@ import tensorflow as tf
 import torch
 
 from fastestimator.backend.reduce_loss import reduce_loss
+from typing import Union, Optional
 
 
-def update_model(model, loss, tape=None):
+def update_model(model: Union[tf.keras.Model, torch.nn.Module],
+                 loss: Union[tf.Tensor, torch.Tensor],
+                 tape: Optional[tf.GradientTape] = None):
     loss = reduce_loss(loss)
     if isinstance(model, tf.keras.Model):
         with tape.stop_recording():

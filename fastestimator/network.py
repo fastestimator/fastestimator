@@ -13,13 +13,13 @@
 # limitations under the License.
 # ==============================================================================
 from collections import ChainMap
+from typing import Union, List, Dict, Any, Set, Mapping
 
 import tensorflow as tf
 import torch
 
-from fastestimator.op.op import get_inputs_by_op, get_op_from_mode, write_outputs_by_key
-from fastestimator.op.tensorop.model.model import ModelOp
-from fastestimator.op.tensorop.model.update import UpdateOp
+from fastestimator.op import get_inputs_by_op, get_ops_by_mode, write_outputs_by_key, TensorOp
+from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.util.util import NonContext, to_list
 
 
@@ -28,7 +28,7 @@ class Network:
     Args:
         ops : Specifies the series of operations for training model
     """
-    def __init__(self, ops):
+    def __init__(self, ops: Union[TensorOp, List[TensorOp]]):
         self.ops = to_list(ops)
         self.framework = None
         self.device = None
@@ -58,7 +58,7 @@ class Network:
     def prepare(self):
         pass
 
-    def run_step(self, batch, state):
+    def run_step(self, batch: Dict[str, Any], state: Dict[str, Any]) -> Dict[str, Any]:
         """Execute the ops in Network
         Args:
             batch : dictionary that contains batch data after the pipeline
@@ -66,7 +66,7 @@ class Network:
         Returns:
             dictionary containing the predictions of current epoch
         """
-        ops = get_op_from_mode(self.ops, state["mode"])
+        ops = get_ops_by_mode(self.ops, state["mode"])
         batch = self._get_network_inputs(batch)
         if self.framework == "tensorflow":
             prediction = self._forward_tensorflow(batch, state, ops, to_list(self.exported_keys))
@@ -74,7 +74,7 @@ class Network:
             prediction = self._forward_pytorch(batch, state, ops, self.exported_keys)
         return prediction
 
-    def _get_network_inputs(self, batch):
+    def _get_network_inputs(self, batch: Dict[str, Any]) -> Dict[str, Any]:
         # In order to prevent sending unwanted data to gpu, this function extracts pipeline data required by network
         new_batch = {}
         extracted_keys = set(batch.keys()).intersection(self.op_inputs)
@@ -82,7 +82,11 @@ class Network:
             new_batch[key] = batch[key]
         return new_batch
 
-    def _forward_pytorch(self, batch, state, ops, exported_keys):
+    def _forward_pytorch(self,
+                         batch: Dict[str, Any],
+                         state: Dict[str, Any],
+                         ops: List[TensorOp],
+                         exported_keys: Set[str]) -> Dict[str, Any]:
         prediction = {}
         mode = state["mode"]
         state['tape'] = None
@@ -99,7 +103,11 @@ class Network:
         return prediction
 
     @tf.function
-    def _forward_tensorflow(self, batch, state, ops, exported_keys):
+    def _forward_tensorflow(self,
+                            batch: Dict[str, Any],
+                            state: Dict[str, Any],
+                            ops: List[TensorOp],
+                            exported_keys: List[str]) -> Dict[str, Any]:
         batch = ChainMap({}, batch)
         prediction = {}
         mode = state["mode"]
@@ -127,7 +135,7 @@ class Network:
         self.framework = frameworks.pop()
 
     @staticmethod
-    def _forward(batch, state, ops):
+    def _forward(batch: Mapping[str, Any], state: Dict[str, Any], ops: List[TensorOp]):
         data = None
         for op in ops:
             data = get_inputs_by_op(op, batch, data)
@@ -136,11 +144,19 @@ class Network:
                 write_outputs_by_key(batch, data, op.outputs)
 
 
-def build(model, optimizer):
+def build(
+    model: Union[tf.keras.Model, torch.nn.Module, List[tf.keras.Model], List[torch.nn.Module]],
+    optimizer: Union[str,
+                     List[str],
+                     tf.optimizers.Optimizer,
+                     List[tf.optimizers.Optimizer],
+                     torch.optim.Optimizer,
+                     List[torch.optim.Optimizer]]
+) -> Union[tf.keras.Model, torch.nn.Module, List[tf.keras.Model], List[torch.nn.Module]]:
     """Associate model instance(s) with optimizer(s)
     Args:
-        model (obj, list): model instances or list of model instances
-        optimizer (obj, list, str): optimizer instance/string or list of optimizer instance/string
+        model: model instances or list of model instances
+        optimizer: optimizer instance/string or list of optimizer instance/string
     Returns:
         models: model(s) compiled by FastEstimator
     """
@@ -154,7 +170,10 @@ def build(model, optimizer):
     return models
 
 
-def _fe_compile(model, optimizer):
+def _fe_compile(
+    model: Union[tf.keras.Model, torch.nn.Module],
+    optimizer: Union[str, tf.optimizers.Optimizer, torch.optim.Optimizer]
+) -> Union[tf.keras.Model, torch.nn.Module]:
     # model instance check
     if isinstance(model, tf.keras.Model):
         framework = "tensorflow"

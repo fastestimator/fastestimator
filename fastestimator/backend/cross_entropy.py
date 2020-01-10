@@ -12,20 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from typing import TypeVar
+
 import tensorflow as tf
 import torch
 
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
-def cross_entropy(y_pred, y_true, apply_softmax=False):
+
+def cross_entropy(y_pred: Tensor, y_true: Tensor, apply_softmax: bool = False) -> Tensor:
     """calculate cross entropy for tensor inputs
 
     Args:
-        y_pred (tf.Tensor or torch.Tensor): prediction score for each class, in [Batch, C]
-        y_true (tf.Tensor or torch.Tensor): ground truth class label index, in [Batch]
-        apply_softmax (bool, optional): whether to apply softmax to y_pred. Defaults to False.
+        y_pred: prediction score for each class, in [Batch, C]
+        y_true: ground truth class label index, in [Batch]
+        apply_softmax: whether to apply softmax to y_pred. Defaults to False.
 
     Returns:
-        [tf.Tensor or torch.Tensor]: categorical cross entropy
+        categorical cross entropy
     """
     assert type(y_pred) == type(y_true), "y_pred and y_true must be same tensor type"
     assert isinstance(y_pred, (tf.Tensor, torch.Tensor)), "only support tf.Tensor or torch.Tensor as y_pred"

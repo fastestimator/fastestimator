@@ -13,11 +13,13 @@
 # limitations under the License.
 # ==============================================================================
 
+from typing import Any
+
 import tensorflow as tf
 import torch
 
 
-def torch_to_tf(data):
+def torch_to_tf(data: Any) -> Any:
     # TODO - it might be desirable to replace the collate function of the data loader rather than casting
     #  after-the-fact, but surprisingly tests so far have shown that this doesn't add a noticeable performance penalty
     if isinstance(data, tf.Tensor):
@@ -35,3 +37,4 @@ def torch_to_tf(data):
         return tuple([torch_to_tf(val) for val in data])
     if isinstance(data, set):
         return set([torch_to_tf(val) for val in data])
+    return data

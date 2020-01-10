@@ -12,11 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from typing import TypeVar, Union
+
 import tensorflow as tf
 import torch
 
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
-def feed_forward(model, x, training=True):
+
+def feed_forward(model: Union[tf.keras.Model, torch.nn.Module], x: Tensor, training: bool = True) -> Tensor:
     if isinstance(model, tf.keras.Model):
         x = model(x, training=training)
     elif isinstance(model, torch.nn.Module):

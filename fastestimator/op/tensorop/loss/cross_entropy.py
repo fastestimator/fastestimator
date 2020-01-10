@@ -12,9 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from typing import Union, Iterable, Callable, List, TypeVar, Dict, Any
+
+import tensorflow as tf
+import torch
+
 from fastestimator.backend.cross_entropy import cross_entropy
 from fastestimator.backend.reduce_loss import reduce_loss
 from fastestimator.op.op import TensorOp
+
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 class CrossEntropy(TensorOp):
@@ -27,12 +34,17 @@ class CrossEntropy(TensorOp):
         apply_softmax: whether to apply softmax to y_pred. Defaults to False.
         average_loss: whether to average the element-wise loss after the Loss Op
     """
-    def __init__(self, inputs=None, outputs=None, mode=None, apply_softmax=False, average_loss=True):
+    def __init__(self,
+                 inputs: Union[None, str, Iterable[str], Callable] = None,
+                 outputs: Union[None, str, Iterable[str]] = None,
+                 mode: Union[None, str, Iterable[str]] = None,
+                 apply_softmax: bool = False,
+                 average_loss: bool = True):
         self.apply_softmax = apply_softmax
         self.average_loss = average_loss
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
 
-    def forward(self, data, state):
+    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
         y_pred, y_true = data
         loss = cross_entropy(y_pred, y_true, apply_softmax=self.apply_softmax)
         if self.average_loss:

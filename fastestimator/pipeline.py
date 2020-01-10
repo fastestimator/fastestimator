@@ -449,26 +449,6 @@ class TensorFlowPipeline(BasePipeline):
         return iter(loader)
 
 
-def torch_to_tf(data):
-    # TODO - it might be desirable to replace the collate function of the data loader rather than casting
-    #  after-the-fact, but surprisingly tests so far have shown that this doesn't add a noticeable performance penalty
-    if isinstance(data, tf.Tensor):
-        return data
-    if isinstance(data, torch.Tensor):
-        return tf.constant(data.numpy(), dtype=tf.float32)
-    if isinstance(data, dict):
-        result = {}
-        for key, val in data.items():
-            result[key] = torch_to_tf(val)
-        return result
-    if isinstance(data, list):
-        return [torch_to_tf(val) for val in data]
-    if isinstance(data, tuple):
-        return tuple([torch_to_tf(val) for val in data])
-    if isinstance(data, set):
-        return set([torch_to_tf(val) for val in data])
-
-
 def _infer_batch_size(data) -> int:
     if isinstance(data, (torch.Tensor, tf.Tensor)):
         return data.shape[0]
