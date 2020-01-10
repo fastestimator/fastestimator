@@ -12,12 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import pdb
 import time
+from typing import Iterable, Union, Callable, List, Any
 
 import numpy as np
-import tensorflow as tf
-import torch
 
 from fastestimator.backend.to_number import to_number
 from fastestimator.util.util import to_list
@@ -26,35 +24,49 @@ from fastestimator.util.util import to_list
 class Trace:
     """Trace controls the training loop. User can use `Trace` to customize their own operations.
     Args:
-        inputs (str, list, set): A set of keys that this trace intends to read from the state dictionary as inputs
-        outputs (str, list, set): A set of keys that this trace intends to write into the state dictionary
-        mode (string): Restrict the trace to run only on given modes ('train', 'eval'). None will always
+        inputs: A set of keys that this trace intends to read from the state dictionary as inputs
+        outputs: A set of keys that this trace intends to write into the state dictionary
+        mode: Restrict the trace to run only on given modes ('train', 'eval'). None will always
                         execute
     """
-    def __init__(self, inputs=None, mode=None, log_names=None):
-        self.mode = mode
-        self.inputs = inputs
+    def __init__(self,
+                 inputs: Union[None, str, Iterable[str], Callable] = None,
+                 mode: Union[None, str, Iterable[str]] = None,
+                 log_names=None):
+        if isinstance(inputs, Iterable) and not isinstance(inputs, str):
+            self.inputs = list(inputs)
+        else:
+            self.inputs = inputs
+        if isinstance(mode, Iterable) and not isinstance(mode, str):
+            self.mode = set(mode)
+        else:
+            self.mode = mode
         self.log_names = log_names
         self.system = None
 
     def on_begin(self):
         """Runs once at the beginning of training
         """
+
     def on_epoch_begin(self):
         """Runs at the beginning of each epoch
         """
+
     def on_batch_begin(self):
         """Runs at the beginning of each batch
         """
-    def on_batch_end(self, data):
+
+    def on_batch_end(self, data: List[Any]):
         """Runs at the end of each batch
 
         Args:
             data: value fetched by the inputs
         """
+
     def on_epoch_end(self):
         """Runs at the end of each epoch
         """
+
     def on_end(self):
         """Runs once at the end training.
         """
@@ -66,7 +78,7 @@ class TrainEssential(Trace):
     """
     def __init__(self, monitor_names):
         self.monitor_names = to_list(monitor_names)
-        log_names = to_list(monitor_names.union(set(["examples/sec", "progress", "total_time", "total_steps"])))
+        log_names = to_list(monitor_names.union({"examples/sec", "progress", "total_time", "total_steps"}))
         super().__init__(mode="train", inputs=self.monitor_names, log_names=log_names)
         self.elapse_times = []
         self.num_example = 0

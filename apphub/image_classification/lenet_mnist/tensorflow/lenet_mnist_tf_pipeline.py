@@ -14,6 +14,7 @@
 # ==============================================================================
 """This example showcase FastEstimator usage for tensorflow users. In this file, we use tf.dataset as data input.
 """
+import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import Sequential, layers
 
@@ -23,6 +24,25 @@ from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.pipeline import Pipeline, NumpyDataset
 from fastestimator.trace.metric import Accuracy
+
+
+def Scale(dataset):
+    dataset["x"] = tf.cast(dataset["x"], tf.float32)
+    dataset["y"] = tf.cast(dataset["y"], tf.int32)
+    dataset["x"] = dataset["x"] / 255.0
+    return dataset
+
+
+def get_tensorflow_dataset(x, y, shuffle=True):
+    data = {"x": x, "y": y}
+    ds = tf.data.Dataset.from_tensor_slices(data)
+    if shuffle:
+        data_length = x.shape[0]
+        ds = ds.shuffle(data_length)
+    ds = ds.map(Scale, num_parallel_calls=4)
+    ds = ds.batch(32)
+    ds = ds.prefetch(1)
+    return ds
 
 
 def LeNet(input_shape=(28, 28, 1), classes=10):
@@ -38,16 +58,9 @@ def LeNet(input_shape=(28, 28, 1), classes=10):
     return model
 
 
-def get_estimator(batch_size=32):
+def get_estimator():
     # step 1
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.mnist.load_data()
-    train_data = NumpyDataset({"x": x_train, "y": y_train})
-    eval_data = NumpyDataset({"x": x_eval, "y": y_eval})
-    pipeline = Pipeline(train_data=train_data,
-                        eval_data=eval_data,
-                        batch_size=batch_size,
-                        ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")],
-                        num_process=0)
 
     # step 2
     model = fe.build(model=LeNet(), optimizer="adam")
@@ -57,10 +70,14 @@ def get_estimator(batch_size=32):
         UpdateOp(model=model, loss_name="ce")
     ])
     # step 3
-    estimator = fe.Estimator(pipeline=pipeline,
-                             network=network,
-                             epochs=2,
-                             traces=Accuracy(true_key="y", pred_key="y_pred"))
+    estimator = fe.Estimator(
+        pipeline={
+            "train": get_tensorflow_dataset(x=np.expand_dims(x_train, -1), y=y_train),
+            "eval": get_tensorflow_dataset(x=np.expand_dims(x_eval, -1), y=y_eval, shuffle=False)
+        },
+        network=network,
+        epochs=2,
+        traces=Accuracy(true_key="y", pred_key="y_pred"))
     return estimator
 
 

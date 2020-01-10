@@ -12,4 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.trace.trace import Trace, TrainEssential, EvalEssential, Logger
+from fastestimator.op.numpyop.channel_transpose import ChannelTranspose
+from fastestimator.op.numpyop.expand_dims import ExpandDims
+from fastestimator.op.numpyop.minmax import Minmax
+from fastestimator.op.numpyop.normalize import Normalize

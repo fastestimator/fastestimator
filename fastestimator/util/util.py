@@ -14,12 +14,14 @@
 # ==============================================================================
 """Utilities for FastEstimator."""
 import json
+import subprocess
 from ast import literal_eval
+from typing import List, Any
 
 from pyfiglet import Figlet
 
 
-def parse_string_to_python(val):
+def parse_string_to_python(val: str) -> Any:
     """
     Args:
         val: An input string
@@ -37,7 +39,7 @@ def parse_string_to_python(val):
             return val
 
 
-def to_list(data):
+def to_list(data: Any) -> List:
     """Convert data to a list.
     Args:
         data: Input data, with or without a python container.
@@ -66,7 +68,7 @@ def draw():
     print(Figlet(font="slant").renderText("FastEstimator"))
 
 
-def get_num_devices():
+def get_num_devices() -> int:
     try:
         result = subprocess.run(['nvidia-smi', '-q'], stdout=subprocess.PIPE).stdout.decode('utf-8')
         lines = [line.split() for line in result.splitlines() if line.startswith("Attached GPUs")]

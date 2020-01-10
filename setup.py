@@ -46,10 +46,17 @@ setup(
     keywords="fastestimator tensorflow",
     classifiers=[
         "License :: OSI Approved :: Apache Software License",
-        "Programming Language :: Python :: 3", ],
+        "Programming Language :: Python :: 3",
+    ],
 
     # Declare minimal set for installation
-    install_requires=['numpy'],
+    install_requires=[
+        'numpy',
+        'tensorflow>=2.1',
+        'torch @ https://download.pytorch.org/whl/torch_stable.html',
+        'albumentations',
+        'torch'  # List a second time to make the IDE happy
+    ],
     # Declare extra set for installation
     extras_require={},
     scripts=['bin/fastestimator'])

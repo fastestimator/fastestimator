@@ -20,13 +20,37 @@ import tensorflow as tf
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.data import DataLoader, Dataset
 
 import fastestimator as fe
-from fastestimator.pipeline import Pipeline, NumpyDataset
-from fastestimator.op.numpyop import Minmax, ExpandDims
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.metric import Accuracy
+
+
+class MnistDataset(Dataset):
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def __len__(self):
+        return self.x.shape[0]
+
+    def __getitem__(self, idx):
+        data = {"x": self.x[idx], "y": self.y[idx]}
+        return self.transform_data(data)
+
+    def transform_data(self, data):
+        data["x"] = np.expand_dims(data["x"], 0)
+        data["x"] = np.float32(data["x"] / 255.0)
+        data["y"] = np.int64(data["y"])
+        return data
+
+
+def get_dataloader(x, y, shuffle=True):
+    dataset = MnistDataset(x=x, y=y)
+    loader = DataLoader(dataset=dataset, batch_size=32, shuffle=shuffle, num_workers=8)
+    return loader
 
 
 class Net(torch.nn.Module):
@@ -57,16 +81,10 @@ class Net(torch.nn.Module):
         return np.prod(x.size()[1:])
 
 
-def get_estimator(batch_size=32):
+def get_estimator():
     # step 1
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.mnist.load_data()
-    train_data = NumpyDataset({"x": x_train, "y": y_train})
-    eval_data = NumpyDataset({"x": x_eval, "y": y_eval})
-    pipeline = Pipeline(train_data=train_data,
-                        eval_data=eval_data,
-                        batch_size=batch_size,
-                        ops=[ExpandDims(inputs="x", outputs="x", axis=0), Minmax(inputs="x", outputs="x")],
-                        num_process=0)
+
     # step 2
     model = fe.build(model=Net(), optimizer="adam")
     network = fe.Network(ops=[
@@ -75,10 +93,13 @@ def get_estimator(batch_size=32):
         UpdateOp(model=model, loss_name="ce")
     ])
     # step 3
-    estimator = fe.Estimator(pipeline=pipeline,
-                             network=network,
-                             epochs=2,
-                             traces=Accuracy(true_key="y", pred_key="y_pred"))
+    estimator = fe.Estimator(
+        pipeline={
+            "train": get_dataloader(x=x_train, y=y_train), "eval": get_dataloader(x=x_eval, y=y_eval, shuffle=False)
+        },
+        network=network,
+        epochs=2,
+        traces=Accuracy(true_key="y", pred_key="y_pred"))
     return estimator
 
 
