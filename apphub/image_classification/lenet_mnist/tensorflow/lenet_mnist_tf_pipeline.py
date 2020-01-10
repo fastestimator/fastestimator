@@ -16,13 +16,11 @@
 """
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.keras import Sequential, layers
 
 import fastestimator as fe
-from fastestimator.op.numpyop import Minmax, ExpandDims
+from fastestimator.architecture.tensorflow import LeNet
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
-from fastestimator.pipeline import Pipeline, NumpyDataset
 from fastestimator.trace.metric import Accuracy
 
 
@@ -43,19 +41,6 @@ def get_tensorflow_dataset(x, y, shuffle=True):
     ds = ds.batch(32)
     ds = ds.prefetch(1)
     return ds
-
-
-def LeNet(input_shape=(28, 28, 1), classes=10):
-    model = Sequential()
-    model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=input_shape))
-    model.add(layers.MaxPooling2D((2, 2)))
-    model.add(layers.Conv2D(64, (3, 3), activation='relu'))
-    model.add(layers.MaxPooling2D((2, 2)))
-    model.add(layers.Conv2D(64, (3, 3), activation='relu'))
-    model.add(layers.Flatten())
-    model.add(layers.Dense(64, activation='relu'))
-    model.add(layers.Dense(classes, activation='softmax'))
-    return model
 
 
 def get_estimator():
