@@ -51,7 +51,11 @@ setup(
 
     # Declare minimal set for installation
     install_requires=[
-        'numpy', 'tensorflow', 'torch @ https://download.pytorch.org/whl/torch_stable.html', 'albumentations'
+        'numpy',
+        'tensorflow>=2.1',
+        'torch @ https://download.pytorch.org/whl/torch_stable.html',
+        'albumentations',
+        'torch'  # List a second time to make the IDE happy
     ],
     # Declare extra set for installation
     extras_require={},
