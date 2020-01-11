@@ -15,27 +15,14 @@
 """This example showcase FastEstimator usage for tensorflow users. In this file, we use tf.dataset as data input.
 """
 import tensorflow as tf
-from tensorflow.python.keras import Sequential, layers
 
 import fastestimator as fe
+from fastestimator.architecture.tensorflow import LeNet
 from fastestimator.op.numpyop import Minmax, ExpandDims
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.pipeline import Pipeline, NumpyDataset
 from fastestimator.trace.metric import Accuracy
-
-
-def LeNet(input_shape=(28, 28, 1), classes=10):
-    model = Sequential()
-    model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=input_shape))
-    model.add(layers.MaxPooling2D((2, 2)))
-    model.add(layers.Conv2D(64, (3, 3), activation='relu'))
-    model.add(layers.MaxPooling2D((2, 2)))
-    model.add(layers.Conv2D(64, (3, 3), activation='relu'))
-    model.add(layers.Flatten())
-    model.add(layers.Dense(64, activation='relu'))
-    model.add(layers.Dense(classes, activation='softmax'))
-    return model
 
 
 def get_estimator(batch_size=32):
@@ -46,8 +33,7 @@ def get_estimator(batch_size=32):
     pipeline = Pipeline(train_data=train_data,
                         eval_data=eval_data,
                         batch_size=batch_size,
-                        ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")],
-                        num_process=0)
+                        ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")])
 
     # step 2
     model = fe.build(model=LeNet(), optimizer="adam")
