@@ -23,6 +23,7 @@ from fastestimator.op.numpyop.normalize import Normalize
 from fastestimator.op.numpyop.random_fog import RandomFog
 from fastestimator.op.numpyop.random_rain import RandomRain
 from fastestimator.op.numpyop.random_rotate_90 import RandomRotate90
+from fastestimator.op.numpyop.random_shadow import RandomShadow
 from fastestimator.op.numpyop.random_snow import RandomSnow
 from fastestimator.op.numpyop.random_sun_flare import RandomSunFlare
 from fastestimator.op.numpyop.sometimes import Sometimes
