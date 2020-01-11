@@ -27,5 +27,6 @@ from fastestimator.op.numpyop.random_rotate_90 import RandomRotate90
 from fastestimator.op.numpyop.random_shadow import RandomShadow
 from fastestimator.op.numpyop.random_snow import RandomSnow
 from fastestimator.op.numpyop.random_sun_flare import RandomSunFlare
+from fastestimator.op.numpyop.solarize import Solarize
 from fastestimator.op.numpyop.sometimes import Sometimes
 from fastestimator.op.numpyop.to_float import ToFloat
