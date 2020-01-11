@@ -35,7 +35,7 @@ def get_name():
 setup(
     name=get_name(),
     version=get_version(),
-    description="Deep learning Application framework",
+    description="Deep learning framework",
     packages=find_packages(),
     package_dir={'': '.'},
     long_description="FastEstimator is a high-level deep learning API. With the help of FastEstimator, you can easily \
@@ -49,9 +49,7 @@ setup(
         "Programming Language :: Python :: 3", ],
 
     # Declare minimal set for installation
-    install_requires=[
-        'numpy', 'tensorflow>=2.1', 'torch @ https://download.pytorch.org/whl/torch_stable.html', 'albumentations'
-    ],
+    install_requires=['numpy', 'albumentations', 'pyfiglet'],
     # Declare extra set for installation
     extras_require={},
     scripts=['bin/fastestimator'])
