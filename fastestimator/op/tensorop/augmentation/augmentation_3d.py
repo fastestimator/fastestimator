@@ -66,9 +66,6 @@ class Augmentation3D(TensorOp):
         data = tf.transpose(data, perm=[2, 1, 0])
         return data
 
-    def _no_rotate(self, data):
-        return data
-
     #equivalent of  np.rot90(data, rotate_z, axes=(0, 1))
     def _rotate_z(self, data):
         data = tf.reverse(data, axis=[1])
@@ -87,15 +84,10 @@ class Augmentation3D(TensorOp):
         data = tf.reverse(data, axis=[2])
         return data
 
-    def _no_flip(self, data):
-        return data
-
     def _transpose(self, data):
         data = tf.transpose(data)
         return data
 
-    def _no_transpose(self, data):
-        return data
 
     def forward(self, data, state):
         """Transforms the data with the augmentation transformation
@@ -121,43 +113,25 @@ class Augmentation3D(TensorOp):
         if rotate_y:
             data = tf.map_fn(self._rotate_y, data, dtype=tf.dtypes.float32, back_prop=False)
             mask = tf.map_fn(self._rotate_y, mask, dtype=tf.dtypes.int32, back_prop=False)
-        else:
-            data = tf.map_fn(self._no_rotate, data, dtype=tf.dtypes.float32, back_prop=False)
-            mask = tf.map_fn(self._no_rotate, mask, dtype=tf.dtypes.int32, back_prop=False)
 
         if rotate_z:
             data = tf.map_fn(self._rotate_z, data, dtype=tf.dtypes.float32, back_prop=False)
             mask = tf.map_fn(self._rotate_z, mask, dtype=tf.dtypes.int32, back_prop=False)
-        else:
-            data = tf.map_fn(self._no_rotate, data, dtype=tf.dtypes.float32, back_prop=False)
-            mask = tf.map_fn(self._no_rotate, mask, dtype=tf.dtypes.int32, back_prop=False)
 
         if flip_x:
             data = tf.map_fn(self._flip_x, data, dtype=tf.dtypes.float32, back_prop=False)
             mask = tf.map_fn(self._flip_x, mask, dtype=tf.dtypes.int32, back_prop=False)
-        else:
-            data = tf.map_fn(self._no_flip, data, dtype=tf.dtypes.float32, back_prop=False)
-            mask = tf.map_fn(self._no_flip, mask, dtype=tf.dtypes.int32, back_prop=False)
 
         if flip_y:
             data = tf.map_fn(self._flip_y, data, dtype=tf.dtypes.float32, back_prop=False)
             mask = tf.map_fn(self._flip_y, mask, dtype=tf.dtypes.int32, back_prop=False)
-        else:
-            data = tf.map_fn(self._no_flip, data, dtype=tf.dtypes.float32, back_prop=False)
-            mask = tf.map_fn(self._no_flip, mask, dtype=tf.dtypes.int32, back_prop=False)
 
         if flip_z:
             data = tf.map_fn(self._flip_z, data, dtype=tf.dtypes.float32, back_prop=False)
             mask = tf.map_fn(self._flip_z, mask, dtype=tf.dtypes.int32, back_prop=False)
-        else:
-            data = tf.map_fn(self._no_flip, data, dtype=tf.dtypes.float32, back_prop=False)
-            mask = tf.map_fn(self._no_flip, mask, dtype=tf.dtypes.int32, back_prop=False)
 
         if transpose:
             data = tf.map_fn(self._transpose, data, dtype=tf.dtypes.float32, back_prop=False)
             mask = tf.map_fn(self._transpose, mask, dtype=tf.dtypes.int32, back_prop=False)
-        else:
-            data = tf.map_fn(self._no_transpose, data, dtype=tf.dtypes.float32, back_prop=False)
-            mask = tf.map_fn(self._no_transpose, mask, dtype=tf.dtypes.int32, back_prop=False)
 
         return data, mask

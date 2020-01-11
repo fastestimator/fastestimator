@@ -131,19 +131,22 @@ class SplitMaskLabelwise(TensorOp):
         return segmask_multi_label
 
 
-
-def get_estimator(batch_size=1, epochs=500, steps_per_epoch=128, model_dir=tempfile.mkdtemp(), path_brats=None):
+def get_estimator(batch_size=1,
+                  epochs=500,
+                  steps_per_epoch=128,
+                  model_dir=tempfile.mkdtemp(),
+                  path_brats=os.path.join(os.getenv('HOME'), 'fastestimator_data', 'BraTs')):
     """Args:
         path_brats: folder path of BraTs 2018 dataset, containing data subdir inturn having LGG and HGG data.
-        Expected folder structure is
-        /home/ubuntu/Brats
-        /home/ubuntu/Brats/data
-        /home/ubuntu/Brats/data/LGG
-        /home/ubuntu/Brats/data/HGG
+        Expected folder structure path_brats
+        path_brats/
+        |----------data/
+                   |----LGG/
+                   |----HGG/
     """
     assert path_brats is not None, 'Pass valid folder path of BraTs 2018 dataset'
     # Ensure Brats 2018 dataset is downloaded. Pass the folder contianing train and val subdirectories.
-    # currently the script doesn't download the ImageNet data.
+    # currently the script doesn't download the BraTs data.
     train_csv, val_csv, path_brats = brats.load_data(path_brats=path_brats,
                                                resized_img_shape=(128,128,128), bias_correction=False)
     writer = fe.RecordWriter(

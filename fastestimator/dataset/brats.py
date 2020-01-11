@@ -265,10 +265,7 @@ def _crop_to_non_zero_content(modality_filenames):
 
 
 def load_data(path_brats=None, resized_img_shape=(144, 144, 144), bias_correction=False):
-    assert path_brats is not None, "path_brats should have valid directory 'data' where braTs 2018 dataset has been downloaded  having 'LGG' and 'HGG' subdirs"
-    home = str(Path.home())
-    fe_data = os.path.join(home, 'fastestimator_data')
-    assert fe_data == os.path.dirname(path_brats), "Brats data is expected to be sub directory in ~/fastestimator_data"
-
+    if path_brats is None:
+        path_brats = os.path.join(str(Path.home()),'fastestimator_data','BraTs')
     train_csv, val_csv = _generate_samples(path_brats, resized_img_shape=resized_img_shape, bias_correction=bias_correction)
     return train_csv, val_csv, path_brats
