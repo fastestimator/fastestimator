@@ -16,13 +16,10 @@
 """
 import numpy as np
 import tensorflow as tf
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 
 import fastestimator as fe
+from fastestimator.architecture.pytorch import LeNet
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.metric import Accuracy
@@ -53,40 +50,12 @@ def get_dataloader(x, y, shuffle=True):
     return loader
 
 
-class Net(torch.nn.Module):
-    def __init__(self):
-        super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, 3)
-        self.conv2 = nn.Conv2d(32, 64, 3)
-        self.conv3 = nn.Conv2d(64, 64, 3)
-        self.fc1 = nn.Linear(3 * 3 * 64, 64)
-        self.fc2 = nn.Linear(64, 10)
-
-    def forward(self, x):
-        x = self.conv1(x)
-        x = F.relu(x)
-        x = F.max_pool2d(x, 2)
-        x = self.conv2(x)
-        x = F.relu(x)
-        x = F.max_pool2d(x, 2)
-        x = self.conv3(x)
-        x = x.view(-1, self.num_flat_features(x))
-        x = self.fc1(x)
-        x = F.relu(x)
-        x = self.fc2(x)
-        x = F.softmax(x, dim=-1)
-        return x
-
-    def num_flat_features(self, x):
-        return np.prod(x.size()[1:])
-
-
 def get_estimator():
     # step 1
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.mnist.load_data()
 
     # step 2
-    model = fe.build(model=Net(), optimizer="adam")
+    model = fe.build(model=LeNet(), optimizer="adam")
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="x", outputs="y_pred"),
         CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),

@@ -218,14 +218,15 @@ class Pipeline(BasePipeline):
         self.dataloaders = {}
         if train_data is not None:
             self.datasets["train"] = self._build_dataset(train_data, "train")
+            # Intentionally not using self.num_process in the build_loader call since want to trigger perf test
             self.dataloaders["train"] = self._build_loader(self.datasets["train"],
                                                            shuffle=shuffle_train,
-                                                           num_process=self.num_process)
+                                                           num_process=num_process)
         if eval_data is not None:
             self.datasets["eval"] = self._build_dataset(eval_data, "eval")
             self.dataloaders["eval"] = self._build_loader(self.datasets["eval"],
                                                           shuffle=shuffle_eval,
-                                                          num_process=self.num_process)
+                                                          num_process=num_process)
         # All output keys from the dataset, plus any outputs from the ops
         self.all_output_keys = {key for dataset in self.datasets.values() for key in dataset[0].keys()}
         for op in self.ops:

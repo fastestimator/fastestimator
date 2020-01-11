@@ -13,6 +13,21 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.op.numpyop.channel_transpose import ChannelTranspose
+from fastestimator.op.numpyop.coarse_dropout import CoarseDropout
 from fastestimator.op.numpyop.expand_dims import ExpandDims
+from fastestimator.op.numpyop.from_float import FromFloat
+from fastestimator.op.numpyop.horizontal_flip import HorizontalFlip
+from fastestimator.op.numpyop.hue_saturation_value import HueSaturationValue
+from fastestimator.op.numpyop.image_compression import ImageCompression
 from fastestimator.op.numpyop.minmax import Minmax
 from fastestimator.op.numpyop.normalize import Normalize
+from fastestimator.op.numpyop.posterize import Posterize
+from fastestimator.op.numpyop.random_fog import RandomFog
+from fastestimator.op.numpyop.random_rain import RandomRain
+from fastestimator.op.numpyop.random_rotate_90 import RandomRotate90
+from fastestimator.op.numpyop.random_shadow import RandomShadow
+from fastestimator.op.numpyop.random_snow import RandomSnow
+from fastestimator.op.numpyop.random_sun_flare import RandomSunFlare
+from fastestimator.op.numpyop.solarize import Solarize
+from fastestimator.op.numpyop.sometimes import Sometimes
+from fastestimator.op.numpyop.to_float import ToFloat
