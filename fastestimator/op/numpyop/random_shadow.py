@@ -47,6 +47,7 @@ class RandomShadow(ImageOnlyAlbumentation):
         print("\033[93m {}\033[00m".format(
             "Warning! RandomShadow does not work with multi-threaded Pipelines. Either do not use this Op or else " +
             "set your Pipeline num_process=0"))
+        # TODO - Have pipeline look for bad ops and auto-magically set num_process correctly
         super().__init__(
             RandomShadowAlb(shadow_roi=shadow_roi,
                             num_shadows_lower=num_shadows_lower,
