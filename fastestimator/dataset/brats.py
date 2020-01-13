@@ -190,6 +190,8 @@ def _generate_samples(path_brats, val_split=0.8, resized_img_shape=(144, 144, 14
             num_cpu = mp.cpu_count()
             pool = Pool(processes=num_cpu)
             pool.map(_generate_bias_corrected, samples)
+            pool.close()
+            pool.join()
             print("End: Bias Correction step")
 
     if bias_correction is True:
@@ -206,6 +208,8 @@ def _generate_samples(path_brats, val_split=0.8, resized_img_shape=(144, 144, 14
         pool = Pool(processes=num_cpu)
         resized_img_shape_list = [resized_img_shape] * len(samples)
         results = pool.starmap(_generate_mean_std_from_sample, zip(samples, resized_img_shape_list))
+        pool.close()
+        pool.join()
         mean_sample_wise = []
         std_sample_wise = []
         for mean_item, std_item in results:
@@ -224,9 +228,11 @@ def _generate_samples(path_brats, val_split=0.8, resized_img_shape=(144, 144, 14
         pool = Pool(processes=num_cpu)
         pool.starmap(_generate_preprocessed_samples_core,
                      zip(path_brats_preprocessed, samples, mean_samples, std_samples, resized_img_shape_list))
+        pool.close()
+        pool.join()
 
     train_val_indices = np.arange(len(samples))
-    shuffle(train_val_indices)
+    # shuffle(train_val_indices)
     n_training = int(len(samples) * val_split)
     train_indices = train_val_indices[:n_training]
     val_indices = train_val_indices[n_training:]
