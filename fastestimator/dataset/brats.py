@@ -184,14 +184,13 @@ def _generate_samples(path_brats, val_split=0.8, resized_img_shape=(144, 144, 14
     path_brats_bias_corrected = os.path.join(path_brats, 'bias_corrected')
     path_brats_preprocessed = os.path.join(path_brats, 'preprocessed')
 
+    num_cpu = mp.cpu_count()
+    pool = Pool(processes=num_cpu)
+
     if bias_correction is True:
         if not os.path.exists(path_brats_bias_corrected):
             print('Start: Bias Correction Step')
-            num_cpu = mp.cpu_count()
-            pool = Pool(processes=num_cpu)
             pool.map(_generate_bias_corrected, samples)
-            pool.close()
-            pool.join()
             print("End: Bias Correction step")
 
     if bias_correction is True:
@@ -204,12 +203,8 @@ def _generate_samples(path_brats, val_split=0.8, resized_img_shape=(144, 144, 14
     if not os.path.exists(path_brats_preprocessed):
         os.mkdir(path_brats_preprocessed)
 
-        num_cpu = mp.cpu_count()
-        pool = Pool(processes=num_cpu)
         resized_img_shape_list = [resized_img_shape] * len(samples)
         results = pool.starmap(_generate_mean_std_from_sample, zip(samples, resized_img_shape_list))
-        pool.close()
-        pool.join()
         mean_sample_wise = []
         std_sample_wise = []
         for mean_item, std_item in results:
@@ -224,15 +219,14 @@ def _generate_samples(path_brats, val_split=0.8, resized_img_shape=(144, 144, 14
         mean_samples = [mean_samples] * len(samples)
         std_samples = [std_samples] * len(samples)
         resized_img_shape_list = [resized_img_shape] * len(samples)
-        num_cpu = mp.cpu_count()
-        pool = Pool(processes=num_cpu)
         pool.starmap(_generate_preprocessed_samples_core,
                      zip(path_brats_preprocessed, samples, mean_samples, std_samples, resized_img_shape_list))
-        pool.close()
-        pool.join()
+
+    pool.close()
+    pool.join()
 
     train_val_indices = np.arange(len(samples))
-    # shuffle(train_val_indices)
+    shuffle(train_val_indices)
     n_training = int(len(samples) * val_split)
     train_indices = train_val_indices[:n_training]
     val_indices = train_val_indices[n_training:]
@@ -272,6 +266,6 @@ def _crop_to_non_zero_content(modality_filenames):
 
 def load_data(path_brats=None, resized_img_shape=(144, 144, 144), bias_correction=False):
     if path_brats is None:
-        path_brats = os.path.join(str(Path.home()),'fastestimator_data','BraTs')
+        path_brats = os.path.join(str(Path.home()), 'fastestimator_data', 'BraTs')
     train_csv, val_csv = _generate_samples(path_brats, resized_img_shape=resized_img_shape, bias_correction=bias_correction)
     return train_csv, val_csv, path_brats

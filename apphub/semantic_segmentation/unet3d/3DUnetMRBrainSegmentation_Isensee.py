@@ -16,21 +16,24 @@
 import os
 import tempfile
 
-import nibabel as nib
 import tensorflow as tf
 
 import fastestimator as fe
 from fastestimator.architecture import UNet3D_Isensee
 from fastestimator.dataset import brats
-from fastestimator.op import NumpyOp, TensorOp
-from fastestimator.op.numpyop import ImageReader, NIBImageReader
-from fastestimator.op.tensorop import Loss, ModelOp
+from fastestimator.op import TensorOp
+from fastestimator.op.numpyop import NIBImageReader
+from fastestimator.op.tensorop import ModelOp
 from fastestimator.op.tensorop.augmentation import Augmentation3D
 from fastestimator.op.tensorop.loss import WeightedDiceLoss
 from fastestimator.trace import LRController, ModelSaver
 
 
 class RandomImagePatches(TensorOp):
+    """ RandomImagePatches generates 3D patches from the Image and Mask. The patch size is defined by patch_shape.
+    The 'mask' samples are of dimension nxnxn , 'mask' are translated into 3xnxnxn , one for each label i.e.
+    for whole_tumor, tumor_core and enhanced_tumor.
+    """
     def __init__(self,
                  inputs=None,
                  outputs=None,
@@ -45,6 +48,7 @@ class RandomImagePatches(TensorOp):
         self.patch_start_offset = tf.constant(patch_start_offset, dtype=tf.dtypes.int32)
         self.patch_shape = tf.constant(patch_shape, dtype=tf.dtypes.int32)
         self.modality_images, self.seg_mask = None, None
+        self.segmask_multi_class = None
 
     def handle_padding_case(self, patch):
         pad_before = tf.where(patch < 0, tf.abs(patch), 0)
@@ -84,8 +88,8 @@ class RandomImagePatches(TensorOp):
         cond1 = tf.reduce_any(patch < 0)
         cond2 = tf.reduce_any(patch + self.patch_shape > self.image_shape)
         cond = tf.logical_or(cond1, cond2)
-        data_patch, truth_patch = tf.cond(cond,lambda: self.handle_padding_case(patch),
-                                          lambda:self.handle_nopaddding_case(patch))
+        data_patch, truth_patch = tf.cond(cond, lambda: self.handle_padding_case(patch),
+                                          lambda: self.handle_nopaddding_case(patch))
         return data_patch, truth_patch
 
     def forward(self, data, state):
@@ -148,7 +152,7 @@ def get_estimator(batch_size=1,
     # Ensure Brats 2018 dataset is downloaded. Pass the folder contianing train and val subdirectories.
     # currently the script doesn't download the BraTs data.
     train_csv, val_csv, path_brats = brats.load_data(path_brats=path_brats,
-                                               resized_img_shape=(128,128,128), bias_correction=False)
+                                                     resized_img_shape=(128,128,128), bias_correction=False)
     writer = fe.RecordWriter(
         save_dir=os.path.join(path_brats, "tfrecords"),
         train_data=train_csv,
