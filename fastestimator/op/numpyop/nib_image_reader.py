@@ -38,4 +38,5 @@ class NIBImageReader(NumpyOp):
         """
         path = os.path.normpath(os.path.join(self.parent_path, path))
         img_nifti = nib.load(path)
-        return img_nifti.get_data()
+        affine = img_nifti.affine
+        return img_nifti.get_data(), affine

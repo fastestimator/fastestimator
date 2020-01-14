@@ -87,15 +87,15 @@ def _generate_preprocessed_samples_core(path_brats_preprocessed,
     for mod_fn in modality_filenames:
         data = nib.load(mod_fn)
         data = _crop_img_to(data, slices, copy=True)
-        data, new_spacing = _resize_nifti_images(data, interpolation='linear', resized_img_shape=resized_img_shape)
+        data, new_spacing_mi = _resize_nifti_images(data, interpolation='linear', resized_img_shape=resized_img_shape)
         modality_images.append(data)
     modality_images = np.asarray(modality_images, dtype=np.float32)
     modality_images -= mean_samples[:, np.newaxis, np.newaxis, np.newaxis]
     modality_images /= std_smaples[:, np.newaxis, np.newaxis, np.newaxis]
 
     affine = np.eye(4)
-    new_spacing = np.append(new_spacing, 1)
-    np.fill_diagonal(a=affine, val=new_spacing)
+    new_spacing_mi = np.append(new_spacing_mi, 1)
+    np.fill_diagonal(a=affine, val=new_spacing_mi)
     mod_data_resized_nifti = nib.Nifti1Image(modality_images, affine=affine)
 
     mod_filename = os.path.basename(sample) + '_mod.nii.gz'
@@ -106,11 +106,11 @@ def _generate_preprocessed_samples_core(path_brats_preprocessed,
     assert len(seg_file) == 1, 'Minimum one segmeantion image expected'
     seg_data = nib.load(seg_file[0])
     seg_data = _crop_img_to(seg_data, slices, copy=True)
-    seg_data, new_spacing = _resize_nifti_images(seg_data, interpolation='nearest', resized_img_shape=resized_img_shape)
+    seg_data, new_spacing_seg = _resize_nifti_images(seg_data, interpolation='nearest', resized_img_shape=resized_img_shape)
     seg_data = seg_data[np.newaxis]
     affine = np.eye(4)
-    new_spacing = np.append(new_spacing, 1)
-    np.fill_diagonal(a=affine, val=new_spacing)
+    new_spacing_seg = np.append(new_spacing_seg, 1)
+    np.fill_diagonal(a=affine, val=new_spacing_seg)
 
     seg_data_resized_nifti = nib.Nifti1Image(seg_data, affine=affine)
     seg_filename = os.path.basename(sample) + '_seg.nii.gz'
