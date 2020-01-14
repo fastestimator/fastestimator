@@ -17,3 +17,4 @@ from fastestimator.architecture.lenet import LeNet
 from fastestimator.architecture.retinanet import RetinaNet
 from fastestimator.architecture.uncertaintyloss import UncertaintyLossNet
 from fastestimator.architecture.unet import UNet
+from fastestimator.architecture.unet3d_isensee import UNet3D_Isensee
