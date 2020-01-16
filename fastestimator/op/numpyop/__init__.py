@@ -19,6 +19,7 @@ from fastestimator.op.numpyop.equalize import Equalize
 from fastestimator.op.numpyop.expand_dims import ExpandDims
 from fastestimator.op.numpyop.from_float import FromFloat
 from fastestimator.op.numpyop.gaussian_blur import GaussianBlur
+from fastestimator.op.numpyop.gaussian_noise import GaussianNoise
 from fastestimator.op.numpyop.horizontal_flip import HorizontalFlip
 from fastestimator.op.numpyop.hue_saturation_value import HueSaturationValue
 from fastestimator.op.numpyop.image_compression import ImageCompression
