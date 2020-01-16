@@ -23,6 +23,7 @@ from fastestimator.op.numpyop.image_compression import ImageCompression
 from fastestimator.op.numpyop.minmax import Minmax
 from fastestimator.op.numpyop.normalize import Normalize
 from fastestimator.op.numpyop.posterize import Posterize
+from fastestimator.op.numpyop.random_brightness_contrast import RandomBrightnessContrast
 from fastestimator.op.numpyop.random_fog import RandomFog
 from fastestimator.op.numpyop.random_rain import RandomRain
 from fastestimator.op.numpyop.random_rotate_90 import RandomRotate90
