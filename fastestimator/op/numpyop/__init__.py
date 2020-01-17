@@ -18,6 +18,7 @@ from fastestimator.op.numpyop.channel_shuffle import ChannelShuffle
 from fastestimator.op.numpyop.channel_transpose import ChannelTranspose
 from fastestimator.op.numpyop.clahe import CLAHE
 from fastestimator.op.numpyop.coarse_dropout import CoarseDropout
+from fastestimator.op.numpyop.downscale import Downscale
 from fastestimator.op.numpyop.equalize import Equalize
 from fastestimator.op.numpyop.expand_dims import ExpandDims
 from fastestimator.op.numpyop.from_float import FromFloat
