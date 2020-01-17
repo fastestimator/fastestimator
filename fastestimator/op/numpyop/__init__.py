@@ -25,6 +25,7 @@ from fastestimator.op.numpyop.downscale import Downscale
 from fastestimator.op.numpyop.elastic_transform import ElasticTransform
 from fastestimator.op.numpyop.equalize import Equalize
 from fastestimator.op.numpyop.expand_dims import ExpandDims
+from fastestimator.op.numpyop.flip import Flip
 from fastestimator.op.numpyop.from_float import FromFloat
 from fastestimator.op.numpyop.gaussian_blur import GaussianBlur
 from fastestimator.op.numpyop.gaussian_noise import GaussianNoise
