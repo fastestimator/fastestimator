@@ -15,13 +15,13 @@
 from typing import Union, Optional
 
 from albumentations import BboxParams, KeypointParams
-from albumentations.augmentations.transforms import RandomRotate90 as RotateAlb
+from albumentations.augmentations.transforms import CenterCrop as CenterCropAlb
 
 from fastestimator.op.numpyop.base_augmentations import MultiVariateAlbumentation
 
 
-class RandomRotate90(MultiVariateAlbumentation):
-    """Rotate a given input randomly by 90 degrees
+class CenterCrop(MultiVariateAlbumentation):
+    """Crop the center of the input
 
         Args:
             mode: What execution mode (train, eval, None) to apply this operation
@@ -35,12 +35,16 @@ class RandomRotate90(MultiVariateAlbumentation):
             masks_out: The key to write the modified masks (defaults to masks_in)
             bbox_out: The key to write the modified bounding box(es) (defaults to bbox_in)
             keypoints_out: The key to write the modified keypoints (defaults to keypoints_in)
-            bbox_params: Parameters defining the type of bounding box ('coco', 'pascal_voc', 'albumentations' or 'yolo') 
-            keypoint_params: Parameters defining the type of keypoints ('xy', 'yx', 'xya', 'xys', 'xyas', 'xysa') 
+            bbox_params: Parameters defining the type of bounding box ('coco', 'pascal_voc', 'albumentations' or 'yolo')
+            keypoint_params: Parameters defining the type of keypoints ('xy', 'yx', 'xya', 'xys', 'xyas', 'xysa')
+            height: height of the crop.
+            width: width of the crop.
         Image types:
-            uint8, float32
+            uint8, float32 (but uint8 is more efficient)
     """
     def __init__(self,
+                 height: int,
+                 width: int,
                  mode: Optional[str] = None,
                  image_in: Optional[str] = None,
                  mask_in: Optional[str] = None,
@@ -54,7 +58,7 @@ class RandomRotate90(MultiVariateAlbumentation):
                  keypoints_out: Optional[str] = None,
                  bbox_params: Union[BboxParams, str, None] = None,
                  keypoint_params: Union[KeypointParams, str, None] = None):
-        super().__init__(RotateAlb(always_apply=True),
+        super().__init__(CenterCropAlb(height=height, width=width, always_apply=True),
                          image_in=image_in,
                          mask_in=mask_in,
                          masks_in=masks_in,
