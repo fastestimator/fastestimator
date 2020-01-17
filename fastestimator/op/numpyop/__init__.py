@@ -53,3 +53,4 @@ from fastestimator.op.numpyop.sometimes import Sometimes
 from fastestimator.op.numpyop.to_float import ToFloat
 from fastestimator.op.numpyop.to_gray import ToGray
 from fastestimator.op.numpyop.to_sepia import ToSepia
+from fastestimator.op.numpyop.vertical_flip import VerticalFlip
