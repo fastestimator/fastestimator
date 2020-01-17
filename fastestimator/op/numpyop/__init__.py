@@ -20,6 +20,7 @@ from fastestimator.op.numpyop.channel_transpose import ChannelTranspose
 from fastestimator.op.numpyop.clahe import CLAHE
 from fastestimator.op.numpyop.coarse_dropout import CoarseDropout
 from fastestimator.op.numpyop.crop import Crop
+from fastestimator.op.numpyop.crop_non_empty_mask_if_exists import CropNonEmptyMaskIfExists
 from fastestimator.op.numpyop.downscale import Downscale
 from fastestimator.op.numpyop.equalize import Equalize
 from fastestimator.op.numpyop.expand_dims import ExpandDims
