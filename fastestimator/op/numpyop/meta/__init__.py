@@ -12,4 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from op.numpyop.meta.sometimes import Sometimes
+from fastestimator.op.numpyop.meta.sometimes import Sometimes

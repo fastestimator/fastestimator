@@ -12,4 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.op import NumpyOp, TensorOp, get_inputs_by_op, get_inputs_by_key, get_ops_by_mode, write_outputs_by_key
+from fastestimator.op.op import NumpyOp, TensorOp, get_inputs_by_op, get_inputs_by_key, get_ops_by_mode, \
+    write_outputs_by_key
