@@ -35,6 +35,7 @@ from fastestimator.op.numpyop.normalize import Normalize
 from fastestimator.op.numpyop.posterize import Posterize
 from fastestimator.op.numpyop.random_brightness_contrast import RandomBrightnessContrast
 from fastestimator.op.numpyop.random_fog import RandomFog
+from fastestimator.op.numpyop.random_gamma import RandomGamma
 from fastestimator.op.numpyop.random_rain import RandomRain
 from fastestimator.op.numpyop.random_rotate_90 import RandomRotate90
 from fastestimator.op.numpyop.random_shadow import RandomShadow
