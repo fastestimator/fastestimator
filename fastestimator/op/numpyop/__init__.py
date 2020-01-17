@@ -45,3 +45,4 @@ from fastestimator.op.numpyop.rgb_shift import RGBShift
 from fastestimator.op.numpyop.solarize import Solarize
 from fastestimator.op.numpyop.sometimes import Sometimes
 from fastestimator.op.numpyop.to_float import ToFloat
+from fastestimator.op.numpyop.to_gray import ToGray
