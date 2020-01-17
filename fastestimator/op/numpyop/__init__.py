@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.op.numpyop.blur import Blur
+from fastestimator.op.numpyop.center_crop import CenterCrop
 from fastestimator.op.numpyop.channel_dropout import ChannelDropout
 from fastestimator.op.numpyop.channel_shuffle import ChannelShuffle
 from fastestimator.op.numpyop.channel_transpose import ChannelTranspose

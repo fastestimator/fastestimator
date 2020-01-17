@@ -24,22 +24,19 @@ class HorizontalFlip(MultiVariateAlbumentation):
     """Flip an image horizontally
 
         Args:
-            mode (str, None): What execution mode (train, eval, None) to apply this operation
-            image_in (str, None): The key of an image to be modified
-            mask_in (str, None): The key of a mask to be modified (with the same random factors as the image)
-            masks_in (str, None): The key of masks to be modified (with the same random factors as the image)
-            bbox_in (str, None): The key of a bounding box(es) to be modified (with the same random factors as the 
-            image)
-            keypoints_in (str, None): The key of keypoints to be modified (with the same random factors as the image)
-            image_out (str, None): The key to write the modified image (defaults to image_in)
-            mask_out (str, None): The key to write the modified mask (defaults to mask_in)
-            masks_out (str, None): The key to write the modified masks (defaults to masks_in)
-            bbox_out (str, None): The key to write the modified bounding box(es) (defaults to bbox_in)
-            keypoints_out (str, None): The key to write the modified keypoints (defaults to keypoints_in)
-            bbox_params (BboxParams, str, None): Parameters defining the type of bounding box ('coco', 'pascal_voc', 
-                                                'albumentations' or 'yolo') 
-            keypoint_params (KeypointParams, str, None): Parameters defining the type of keypoints ('xy', 'yx', 'xya', 
-                                                'xys', 'xyas', 'xysa') 
+            mode: What execution mode (train, eval, None) to apply this operation
+            image_in: The key of an image to be modified
+            mask_in: The key of a mask to be modified (with the same random factors as the image)
+            masks_in: The key of masks to be modified (with the same random factors as the image)
+            bbox_in: The key of a bounding box(es) to be modified (with the same random factors as the image)
+            keypoints_in: The key of keypoints to be modified (with the same random factors as the image)
+            image_out: The key to write the modified image (defaults to image_in)
+            mask_out: The key to write the modified mask (defaults to mask_in)
+            masks_out: The key to write the modified masks (defaults to masks_in)
+            bbox_out: The key to write the modified bounding box(es) (defaults to bbox_in)
+            keypoints_out: The key to write the modified keypoints (defaults to keypoints_in)
+            bbox_params: Parameters defining the type of bounding box ('coco', 'pascal_voc', 'albumentations' or 'yolo') 
+            keypoint_params: Parameters defining the type of keypoints ('xy', 'yx', 'xya', 'xys', 'xyas', 'xysa') 
         Image types:
             uint8, float32
     """

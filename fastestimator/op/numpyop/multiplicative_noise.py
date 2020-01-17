@@ -31,7 +31,7 @@ class MultiplicativeNoise(ImageOnlyAlbumentation):
             per_channel: If `False`, same values for all channels will be used.
                 If `True` use sample values for each channels. Default False.
             elementwise: If `False` multiply multiply all pixels in an image with a random value sampled once.
-                If `True` Multiply image pixels with values that are pixelwise randomly sampled. Defaule: False.
+                If `True` Multiply image pixels with values that are pixelwise randomly sampled. Default: False.
         Image types:
             uint8, float32
     """
