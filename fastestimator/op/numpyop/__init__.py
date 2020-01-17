@@ -14,6 +14,7 @@
 # ==============================================================================
 from fastestimator.op.numpyop.blur import Blur
 from fastestimator.op.numpyop.channel_dropout import ChannelDropout
+from fastestimator.op.numpyop.channel_shuffle import ChannelShuffle
 from fastestimator.op.numpyop.channel_transpose import ChannelTranspose
 from fastestimator.op.numpyop.clahe import CLAHE
 from fastestimator.op.numpyop.coarse_dropout import CoarseDropout
