@@ -43,6 +43,7 @@ from fastestimator.op.numpyop.motion_blur import MotionBlur
 from fastestimator.op.numpyop.multiplicative_noise import MultiplicativeNoise
 from fastestimator.op.numpyop.normalize import Normalize
 from fastestimator.op.numpyop.optical_distortion import OpticalDistortion
+from fastestimator.op.numpyop.pad_if_needed import PadIfNeeded
 from fastestimator.op.numpyop.posterize import Posterize
 from fastestimator.op.numpyop.random_brightness_contrast import RandomBrightnessContrast
 from fastestimator.op.numpyop.random_fog import RandomFog
