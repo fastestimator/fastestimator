@@ -35,6 +35,7 @@ from fastestimator.op.numpyop.hue_saturation_value import HueSaturationValue
 from fastestimator.op.numpyop.image_compression import ImageCompression
 from fastestimator.op.numpyop.invert_img import InvertImg
 from fastestimator.op.numpyop.iso_noise import ISONoise
+from fastestimator.op.numpyop.longest_max_size import LongestMaxSize
 from fastestimator.op.numpyop.median_blur import MedianBlur
 from fastestimator.op.numpyop.minmax import Minmax
 from fastestimator.op.numpyop.motion_blur import MotionBlur
