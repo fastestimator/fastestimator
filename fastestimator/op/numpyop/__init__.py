@@ -46,6 +46,7 @@ from fastestimator.op.numpyop.optical_distortion import OpticalDistortion
 from fastestimator.op.numpyop.pad_if_needed import PadIfNeeded
 from fastestimator.op.numpyop.posterize import Posterize
 from fastestimator.op.numpyop.random_brightness_contrast import RandomBrightnessContrast
+from fastestimator.op.numpyop.random_crop import RandomCrop
 from fastestimator.op.numpyop.random_fog import RandomFog
 from fastestimator.op.numpyop.random_gamma import RandomGamma
 from fastestimator.op.numpyop.random_rain import RandomRain
