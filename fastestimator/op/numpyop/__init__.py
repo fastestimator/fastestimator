@@ -32,6 +32,7 @@ from fastestimator.op.numpyop.iso_noise import ISONoise
 from fastestimator.op.numpyop.median_blur import MedianBlur
 from fastestimator.op.numpyop.minmax import Minmax
 from fastestimator.op.numpyop.motion_blur import MotionBlur
+from fastestimator.op.numpyop.multiplicative_noise import MultiplicativeNoise
 from fastestimator.op.numpyop.normalize import Normalize
 from fastestimator.op.numpyop.posterize import Posterize
 from fastestimator.op.numpyop.random_brightness_contrast import RandomBrightnessContrast
