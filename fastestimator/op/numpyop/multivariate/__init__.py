@@ -28,4 +28,5 @@ from fastestimator.op.numpyop.multivariate.random_crop_near_bbox import RandomCr
 from fastestimator.op.numpyop.multivariate.random_grid_shuffle import RandomGridShuffle
 from fastestimator.op.numpyop.multivariate.random_resized_crop import RandomResizedCrop
 from fastestimator.op.numpyop.multivariate.random_rotate_90 import RandomRotate90
+from fastestimator.op.numpyop.multivariate.random_scale import RandomScale
 from fastestimator.op.numpyop.multivariate.vertical_flip import VerticalFlip
