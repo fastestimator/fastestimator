@@ -15,7 +15,8 @@
 from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import CenterCrop, Crop, CropNonEmptyMaskIfExists, ElasticTransform, Flip, \
     GridDistortion, HorizontalFlip, LongestMaxSize, MaskDropout, OpticalDistortion, PadIfNeeded, RandomCrop, \
-    RandomCropNearBBox, RandomGridShuffle, RandomResizedCrop, RandomRotate90, RandomScale, VerticalFlip
+    RandomCropNearBBox, RandomGridShuffle, RandomResizedCrop, RandomRotate90, RandomScale, RandomSizedBBoxSafeCrop, \
+    VerticalFlip
 from fastestimator.op.numpyop.univariate import Blur, ChannelDropout, ChannelShuffle, ChannelTranspose, CLAHE, \
     CoarseDropout, Downscale, Equalize, ExpandDims, FromFloat, GaussianBlur, GaussianNoise, HueSaturationValue, \
     ImageCompression, InvertImg, ISONoise, MedianBlur, Minmax, MotionBlur, MultiplicativeNoise, Normalize, Posterize, \
