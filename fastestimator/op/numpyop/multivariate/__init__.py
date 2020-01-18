@@ -35,4 +35,5 @@ from fastestimator.op.numpyop.multivariate.resize import Resize
 from fastestimator.op.numpyop.multivariate.rotate import Rotate
 from fastestimator.op.numpyop.multivariate.shift_scale_rotate import ShiftScaleRotate
 from fastestimator.op.numpyop.multivariate.smallest_max_size import SmallestMaxSize
+from fastestimator.op.numpyop.multivariate.transpose import Transpose
 from fastestimator.op.numpyop.multivariate.vertical_flip import VerticalFlip
