@@ -60,7 +60,7 @@ setup(
         'scipy',
         'pytest',
         'pytest-cov',
-        'tensorflow-probability',
+        'tensorflow-probability==0.8.0',
         'umap-learn',
         'tqdm',
         'opencv-python',
@@ -72,7 +72,7 @@ setup(
         'nibabel>= 2.5.1',
         'nilearn',
         'SimpleITK',
-        'tensorflow-addons'
+        'tensorflow-addons==0.6.0'
     ],
     # Declare extra set for installation
     extras_require={},
