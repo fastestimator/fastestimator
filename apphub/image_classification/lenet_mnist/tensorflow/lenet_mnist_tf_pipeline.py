@@ -47,6 +47,9 @@ def get_estimator():
     # step 1
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.mnist.load_data()
 
+    pipeline = fe.Pipeline(train_data=get_tensorflow_dataset(x=np.expand_dims(x_train, -1), y=y_train),
+                           eval_data=get_tensorflow_dataset(x=np.expand_dims(x_eval, -1), y=y_eval, shuffle=False),
+                           batch_size=32)
     # step 2
     model = fe.build(model=LeNet(), optimizer="adam")
     network = fe.Network(ops=[
@@ -55,14 +58,10 @@ def get_estimator():
         UpdateOp(model=model, loss_name="ce")
     ])
     # step 3
-    estimator = fe.Estimator(
-        pipeline={
-            "train": get_tensorflow_dataset(x=np.expand_dims(x_train, -1), y=y_train),
-            "eval": get_tensorflow_dataset(x=np.expand_dims(x_eval, -1), y=y_eval, shuffle=False)
-        },
-        network=network,
-        epochs=2,
-        traces=Accuracy(true_key="y", pred_key="y_pred"))
+    estimator = fe.Estimator(pipeline=pipeline,
+                             network=network,
+                             epochs=2,
+                             traces=Accuracy(true_key="y", pred_key="y_pred"))
     return estimator
 
 
