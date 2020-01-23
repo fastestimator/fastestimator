@@ -12,4 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from fastestimator.op.numpyop.meta.one_of import OneOf
 from fastestimator.op.numpyop.meta.sometimes import Sometimes

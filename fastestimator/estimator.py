@@ -14,17 +14,13 @@
 # ==============================================================================
 
 from collections import ChainMap
-from typing import Any, Dict, Iterable, List, Optional, Set, Union
-
-import tensorflow as tf
-from torch.utils.data import DataLoader
+from typing import Any, Iterable, List, Optional, Set, Union
 
 from fastestimator.backend import torch_to_tf
 from fastestimator.network import Network
 from fastestimator.op.op import get_inputs_by_key
 from fastestimator.op.tensorop.model import UpdateOp
-from fastestimator.pipeline import FEPipeline, TensorFlowPipeline, TorchPipeline
-from fastestimator.schedule.epoch_scheduler import Scheduler
+from fastestimator.pipeline import BasePipeline
 from fastestimator.trace import EvalEssential, Logger, Trace, TrainEssential
 from fastestimator.util.util import draw, get_num_devices, to_list
 
@@ -45,14 +41,14 @@ class Estimator:
         log_steps (int, optional): Interval steps of logging. Defaults to 100.
         monitor_names (str, list): Additional keys to print in logger
     """
-    pipeline: Union[FEPipeline, TensorFlowPipeline, TorchPipeline]
+    pipeline: BasePipeline
     epochs: int
     steps_per_epoch: Optional[int]
     traces: List[Trace]
     log_steps: int
 
     def __init__(self,
-                 pipeline: Union[FEPipeline, TensorFlowPipeline, TorchPipeline],
+                 pipeline: BasePipeline,
                  network: Network,
                  epochs: int,
                  steps_per_epoch: Optional[int] = None,
@@ -87,7 +83,7 @@ class Estimator:
         self.network.exported_keys = self.network.op_outputs.intersection(self.trace_inputs)
 
     def _prepare_estimator(self):
-        self.do_eval = self.pipeline.eval_data is not None
+        self.do_eval = "eval" in self.pipeline.get_modes()  # TODO - Scheduling
         self._prepare_traces()
         self._prepare_system()
 

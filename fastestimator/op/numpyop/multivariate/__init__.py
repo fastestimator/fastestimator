@@ -25,5 +25,15 @@ from fastestimator.op.numpyop.multivariate.optical_distortion import OpticalDist
 from fastestimator.op.numpyop.multivariate.pad_if_needed import PadIfNeeded
 from fastestimator.op.numpyop.multivariate.random_crop import RandomCrop
 from fastestimator.op.numpyop.multivariate.random_crop_near_bbox import RandomCropNearBBox
+from fastestimator.op.numpyop.multivariate.random_grid_shuffle import RandomGridShuffle
+from fastestimator.op.numpyop.multivariate.random_resized_crop import RandomResizedCrop
 from fastestimator.op.numpyop.multivariate.random_rotate_90 import RandomRotate90
+from fastestimator.op.numpyop.multivariate.random_scale import RandomScale
+from fastestimator.op.numpyop.multivariate.random_sized_bbox_safe_crop import RandomSizedBBoxSafeCrop
+from fastestimator.op.numpyop.multivariate.random_sized_crop import RandomSizedCrop
+from fastestimator.op.numpyop.multivariate.resize import Resize
+from fastestimator.op.numpyop.multivariate.rotate import Rotate
+from fastestimator.op.numpyop.multivariate.shift_scale_rotate import ShiftScaleRotate
+from fastestimator.op.numpyop.multivariate.smallest_max_size import SmallestMaxSize
+from fastestimator.op.numpyop.multivariate.transpose import Transpose
 from fastestimator.op.numpyop.multivariate.vertical_flip import VerticalFlip
