@@ -14,20 +14,15 @@
 # ==============================================================================
 
 from collections import ChainMap
-from typing import Union, Dict, Optional, Iterable, List, Set, Any
-
-import tensorflow as tf
-from torch.utils.data import DataLoader
+from typing import Union, Optional, Iterable, List, Set, Any
 
 from fastestimator import Network
 from fastestimator.backend import torch_to_tf
 from fastestimator.op.op import get_inputs_by_key
 from fastestimator.op.tensorop.model import UpdateOp
-from fastestimator.pipeline import BasePipeline, TorchPipeline, TensorFlowPipeline
-from fastestimator.schedule.epoch_scheduler import Scheduler
+from fastestimator.pipeline import BasePipeline
 from fastestimator.trace import EvalEssential, Logger, TrainEssential, Trace
-from fastestimator.util.util import draw
-from fastestimator.util.util import get_num_devices, to_list
+from fastestimator.util.util import draw, get_num_devices, to_list
 
 
 class Estimator:
@@ -46,14 +41,14 @@ class Estimator:
         log_steps (int, optional): Interval steps of logging. Defaults to 100.
         monitor_names (str, list): Additional keys to print in logger
     """
-    pipeline: Scheduler[BasePipeline]
+    pipeline: BasePipeline
     epochs: int
     steps_per_epoch: Optional[int]
     traces: List[Trace]
     log_steps: int
 
     def __init__(self,
-                 pipeline: Union[BasePipeline, Dict[str, Union[DataLoader, tf.data.Dataset]], Scheduler[BasePipeline]],
+                 pipeline: BasePipeline,
                  network: Network,
                  epochs: int,
                  steps_per_epoch: Optional[int] = None,
@@ -61,28 +56,7 @@ class Estimator:
                  log_steps: int = 100,
                  monitor_names: Optional[str] = None):
 
-        if isinstance(pipeline, BasePipeline):
-            self.pipeline = Scheduler({0: pipeline})
-        elif isinstance(pipeline, dict):
-            sample = None
-            for val in pipeline.values():
-                if sample is None:
-                    sample = val
-                    assert isinstance(val, (DataLoader, tf.data.Dataset)), \
-                        "All pipeline values must be of type DataLoader or tf.data.Dataset"
-                assert isinstance(val, type(sample)), "All pipelines must be of the same type"
-            if isinstance(sample, DataLoader):
-                self.pipeline = Scheduler({0: TorchPipeline(dataloaders=pipeline)})
-            else:
-                self.pipeline = Scheduler({0: TensorFlowPipeline(dataloaders=pipeline)})
-        elif isinstance(pipeline, Scheduler):
-            # TODO support scheduling of vanilla pytorch data loaders
-            for pipe in pipeline.epoch_dict.values():
-                assert isinstance(pipe, BasePipeline), "All scheduled values must extend BasePipeline"
-            self.pipeline = pipeline
-        else:
-            raise ValueError("Unsupported pipeline value")
-
+        self.pipeline = pipeline
         self.network = network
         self.epochs = epochs
         self.steps_per_epoch = steps_per_epoch
@@ -104,16 +78,14 @@ class Estimator:
     def _prepare_pipeline(self):
         # TODO - This needs to work with scheduling
         if self.steps_per_epoch is None:
-            pipeline = self.pipeline.get_current_value(epoch=0)
-            self.steps_per_epoch = pipeline.get_num_examples(mode="train", epoch=0) // pipeline.get_global_batch_size(
-                mode="train", epoch=0)
+            self.steps_per_epoch = self.pipeline.get_num_steps(mode="train", epoch=0)
         self.system.total_steps = self.epochs * self.steps_per_epoch
 
     def _prepare_network(self):
         self.network.exported_keys = self.network.op_outputs.intersection(self.trace_inputs)
 
     def _prepare_estimator(self):
-        self.do_eval = "eval" in self.pipeline.get_current_value(0).get_modes()  # TODO - Scheduling
+        self.do_eval = "eval" in self.pipeline.get_modes()  # TODO - Scheduling
         self._prepare_traces()
         self._prepare_system()
 
@@ -164,10 +136,8 @@ class Estimator:
 
     def _run_epoch(self):
         self._run_traces_on_epoch_begin()
-        self.system.batch_size = self.pipeline.get_current_value(self.system.epoch_idx).get_global_batch_size(
-            mode=self.system.mode, epoch=self.system.epoch_idx)
-        ds_iter = self.pipeline.get_current_value(self.system.epoch_idx).transform(mode=self.system.mode,
-                                                                                   epoch=self.system.epoch_idx)
+        self.system.batch_size = self.pipeline.get_batch_size(mode=self.system.mode, epoch=self.system.epoch_idx)
+        ds_iter = self.pipeline.get_iterator(mode=self.system.mode, epoch=self.system.epoch_idx)
         for self.system.batch_idx, batch in enumerate(ds_iter):
             if self.network.framework == "tensorflow":
                 batch = torch_to_tf(batch)  # TODO - this should maybe be handled somewhere else...
