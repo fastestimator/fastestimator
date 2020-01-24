@@ -29,8 +29,8 @@ class ImageOnlyAlbumentation(NumpyOp):
                  outputs: Union[List[str], str, None] = None,
                  mode: Optional[str] = None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        if isinstance(inputs, List) and isinstance(outputs, List):
-            assert len(inputs) == len(outputs), "Input and Output lengths must match"
+        if isinstance(self.inputs, List) and isinstance(self.outputs, List):
+            assert len(self.inputs) == len(self.outputs), "Input and Output lengths must match"
         self.func = Compose(transforms=[func])
         self.replay_func = ReplayCompose(transforms=[deepcopy(func)])
 

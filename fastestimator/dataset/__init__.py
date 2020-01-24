@@ -13,4 +13,5 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.dataset.generator_dataset import GeneratorDataset
+from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset, LabeledDirDatasets
 from fastestimator.dataset.numpy_dataset import NumpyDataset

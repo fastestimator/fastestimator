@@ -39,7 +39,7 @@ setup(
     packages=find_packages(),
     package_dir={'': '.'},
     long_description="FastEstimator is a high-level deep learning API. With the help of FastEstimator, you can easily \
-                    build a high-performance deep learning model and run it anywhere."                                                                                      ,
+                    build a high-performance deep learning model and run it anywhere."                                                                                                                                                                                                                                                                  ,
     author="FastEstimator Dev",
     url='https://github.com/fastestimator/fastestimator',
     license="Apache License 2.0",
@@ -55,7 +55,8 @@ setup(
         'torch @ https://download.pytorch.org/whl/torch_stable.html',
         'albumentations',
         'torch',  # List a second time to make the IDE happy
-        'opencv-python'
+        'opencv-python',
+        'scipy'
     ],
     # Declare extra set for installation
     extras_require={},
