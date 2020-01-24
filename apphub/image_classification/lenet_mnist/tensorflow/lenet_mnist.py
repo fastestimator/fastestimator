@@ -18,10 +18,11 @@ import tensorflow as tf
 
 import fastestimator as fe
 from fastestimator.architecture.tensorflow import LeNet
+from fastestimator.dataset import NumpyDataset
 from fastestimator.op.numpyop import Minmax, ExpandDims
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
-from fastestimator.pipeline import Pipeline, NumpyDataset
+from fastestimator.pipeline import Pipeline
 from fastestimator.trace.metric import Accuracy
 
 

@@ -46,7 +46,7 @@ class TensorOp(Op):
 
 
 class NumpyOp(Op):
-    def forward(self, data: Union[np.ndarray, List[np.ndarray]],
+    def forward(self, data: Union[np.ndarray, List[np.ndarray], str, List[str]],
                 state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
         return data
 

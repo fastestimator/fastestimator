@@ -36,5 +36,6 @@ from fastestimator.op.numpyop.univariate.normalize import Normalize
 from fastestimator.op.numpyop.univariate.posterize import Posterize
 from fastestimator.op.numpyop.univariate.random_brightness_contrast import RandomBrightnessContrast
 from fastestimator.op.numpyop.univariate.random_rain import RandomRain
+from fastestimator.op.numpyop.univariate.read_image import ReadImage
 from fastestimator.op.numpyop.univariate.rgb_shift import RGBShift
 from fastestimator.op.numpyop.univariate.to_float import ToFloat
