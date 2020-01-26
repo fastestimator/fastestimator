@@ -139,26 +139,17 @@ def get_per_epoch(ops: Iterable[Union[T, Scheduler[T]]], epoch: int) -> List[T]:
 
 
 class BasePipeline:
+    def __init__(self, datasets: dict):
+        self.datasets = datasets
+
     def get_modes(self) -> Set[str]:
-        raise NotImplementedError()
-
-    def get_batch_size(self, mode: str, epoch: int) -> int:
-        raise NotImplementedError()
-
-    def get_signature_epochs(self, mode: str) -> List[int]:
-        raise NotImplementedError()
-
-    def get_all_output_keys(self) -> Set[str]:
-        raise NotImplementedError()
-
-    def get_num_examples(self, mode: str, epoch: int) -> int:
-        raise NotImplementedError()
+        return set(self.datasets.keys())
 
     def get_num_steps(self, mode: str, epoch: int) -> int:
-        return self.get_num_examples(mode=mode, epoch=epoch) // self.get_batch_size(mode=mode, epoch=0)
-
-    def get_iterator(self, mode: str, epoch: int = 0, dataset: Optional[Dataset] = None) -> Iterator:
         raise NotImplementedError()
+
+    def get_iterator(self, mode: str, epoch: int = 0) -> Iterator:
+        return self.datasets[mode]
 
     def benchmark(self, mode: str = "train", num_steps: int = 1000, log_interval: int = 100, epoch: int = 0):
         itr = self.get_iterator(mode=mode, epoch=epoch)
@@ -182,8 +173,6 @@ class BasePipeline:
 
 
 class FEPipeline(BasePipeline):
-    # TODO support filter ops
-    # TODO support cache op
     dataloaders: Dict[str, Scheduler[DataLoader]]
     batch_size: Scheduler[int]
     """ A class representing the data pipeline for FastEstimator
@@ -204,10 +193,7 @@ class FEPipeline(BasePipeline):
                  eval_data: Optional[Dataset] = None,
                  batch_size: Union[int, Scheduler] = 1,
                  ops: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp, Scheduler[NumpyOp]]]] = None,
-                 drop_last: bool = False,
-                 num_process: Optional[Union[int, Scheduler[int]]] = None,
-                 shuffle_train: bool = True,
-                 shuffle_eval: bool = False):
+                 num_process: Optional[Union[int, Scheduler[int]]] = None):
         self.ops = [] if ops is None else to_list(ops)
         if isinstance(batch_size, Scheduler):
             assert 0 in batch_size.epoch_dict.keys(), "Batch size must be specified for epoch 0"
@@ -215,21 +201,18 @@ class FEPipeline(BasePipeline):
         else:
             batch_size = Scheduler({0: batch_size})
         self.batch_size = batch_size
-        self.drop_last = drop_last
-        self.num_process = os.cpu_count() or 1 if num_process is None else num_process
+        self.num_process = os.cpu_count() if num_process is None else num_process
         self.datasets = {}
         self.dataloaders = {}
         if train_data is not None:
             self.datasets["train"] = self._build_dataset(train_data, "train")
             # Intentionally not using self.num_process in the build_loader call since want to trigger perf test
             self.dataloaders["train"] = self._build_loader(self.datasets["train"],
-                                                           shuffle=shuffle_train,
+                                                           shuffle=True,
                                                            num_process=num_process)
         if eval_data is not None:
             self.datasets["eval"] = self._build_dataset(eval_data, "eval")
-            self.dataloaders["eval"] = self._build_loader(self.datasets["eval"],
-                                                          shuffle=shuffle_eval,
-                                                          num_process=num_process)
+            self.dataloaders["eval"] = self._build_loader(self.datasets["eval"], shuffle=False, num_process=num_process)
         # All output keys from the dataset, plus any outputs from the ops
         self.all_output_keys = {key for dataset in self.datasets.values() for key in dataset[0].keys()}
         for op in self.ops:
@@ -354,105 +337,18 @@ class FEPipeline(BasePipeline):
 
 
 class TorchPipeline(BasePipeline):
-    def __init__(self, dataloaders: Dict[str, DataLoader]):
-        self.dataloaders = dataloaders
-        self.num_examples = {mode: len(loader.dataset) for mode, loader in dataloaders.items()}
-        self.batch_sizes = {mode: loader.batch_size for mode, loader in dataloaders.items()}
-        self.output_keys = set()
-        for mode, loader in self.dataloaders.items():
-            batch = next(iter(loader))
-            assert isinstance(batch, dict), "DataLoader must return a dictionary of values"
-            for key, value in batch.items():
-                self.output_keys.add(key)
-                # If the user had a custom batch sampler then the loader's batch size will be None. Need to infer it
-                if self.batch_sizes[mode] is None:
-                    self.batch_sizes[mode] = _infer_batch_size(value)
-
-    def get_modes(self) -> Set[str]:
-        return set(self.dataloaders.keys())
-
-    def get_num_examples(self, mode: str, epoch: int) -> int:
-        return self.num_examples.get(mode, 0)
-
-    def get_signature_epochs(self, mode: str) -> List[int]:
-        return [0]
-
-    def get_batch_size(self, mode: str, epoch: int) -> int:
-        return self.batch_sizes.get(mode, 0)
-
-    def get_all_output_keys(self) -> Set[str]:
-        return self.output_keys
-
-    def get_iterator(self, mode: str, epoch: int = 0, dataset: Optional[Dataset] = None) -> Iterator:
-        if dataset is not None:
-            loader = DataLoader(dataset=dataset,
-                                batch_size=self.batch_sizes.get(mode, 1),
-                                num_workers=os.cpu_count(),
-                                drop_last=False)
-        else:
-            loader = self.dataloaders.get(mode, ())
-        return iter(loader)
+    def get_num_steps(self, mode: str, epoch: int) -> int:
+        dataloader = self.get_iterator(mode=mode, epoch=epoch)
+        return len(dataloader)
 
 
 class TensorFlowPipeline(BasePipeline):
-    def __init__(self, dataloaders: Dict[str, tf.data.Dataset]):
-        self.dataloaders = dataloaders
-        self.batch_sizes = {mode: None for mode in dataloaders.keys()}
-        self.num_examples = {mode: tf.data.experimental.cardinality(dataset) for mode, dataset in dataloaders.items()}
-        self.output_keys = set()
-        for mode, loader in self.dataloaders.items():
-            batch = next(iter(loader))
-            assert isinstance(batch, dict), "Dataset must return a dictionary of values"
-            for key, value in batch.items():
-                self.output_keys.add(key)
-                # If the user had a custom batch sampler then the loader's batch size will be None. Need to infer it
-                if self.batch_sizes[mode] is None:
-                    self.batch_sizes[mode] = _infer_batch_size(value)
-        for mode, size in self.num_examples.items():
-            if size == tf.data.experimental.INFINITE_CARDINALITY:
-                self.num_examples[mode] = sys.maxsize  # TODO - handle infinity in a clever way somehow
-            if size == tf.data.experimental.UNKNOWN_CARDINALITY:
-                self.num_examples[mode] = self.dataloaders[mode].reduce(0, lambda x, _: x + 1)
-            else:
-                # Cardinality is based on batch size, but we want total number of examples
-                self.num_examples[mode] = int(self.num_examples[mode]) * self.batch_sizes[mode]
-
-    def get_modes(self) -> Set[str]:
-        return set(self.dataloaders.keys())
-
-    def get_batch_size(self, mode: str, epoch: int) -> int:
-        return self.batch_sizes.get(mode, 0)
-
-    def get_signature_epochs(self, mode: str) -> List[int]:
-        return [0]
-
-    def get_all_output_keys(self) -> Set[str]:
-        return self.output_keys
-
-    def get_num_examples(self, mode: str, epoch: int) -> int:
-        return self.num_examples.get(mode, 0)
-
-    def get_iterator(self, mode: str, epoch: int = 0, dataset: Optional[Dataset] = None) -> Iterator:
-        if dataset is not None:
-            loader = DataLoader(dataset=dataset,
-                                batch_size=self.batch_sizes.get(mode, 1),
-                                num_workers=os.cpu_count(),
-                                drop_last=False)
-        else:
-            loader = self.dataloaders.get(mode, ())
-        return iter(loader)
-
-
-def _infer_batch_size(data) -> int:
-    if isinstance(data, (torch.Tensor, tf.Tensor)):
-        return data.shape[0]
-    if isinstance(data, (list, tuple)):
-        return _infer_batch_size(data[0])
-    if isinstance(data, set):
-        return _infer_batch_size(data.pop())
-    if isinstance(data, dict):
-        return _infer_batch_size(data.popitem()[1])
-    raise ValueError("Could not infer batch size from data loader")
+    def get_num_steps(self, mode: str, epoch: int) -> int:
+        dataset = self.get_iterator(mode=mode, epoch=epoch)
+        num_steps = tf.data.experimental.cardinality(dataset)
+        if num_steps in [tf.data.experimental.INFINITE_CARDINALITY, tf.data.experimental.UNKNOWN_CARDINALITY]:
+            raise ValueError("Cannot infer total steps, please provide 'steps_per_epoch' in Estimator")
+        return int(num_steps)
 
 
 # noinspection PyPep8Naming
@@ -460,10 +356,7 @@ def Pipeline(train_data: Union[Dataset, DataLoader, Scheduler, tf.data.Dataset, 
              eval_data: Union[Dataset, DataLoader, Scheduler, tf.data.Dataset, None] = None,
              batch_size: Union[int, Scheduler] = 1,
              ops: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp, Scheduler[NumpyOp]]]] = None,
-             drop_last: bool = False,
-             num_process: Union[int, None] = None,
-             shuffle_train: bool = True,
-             shuffle_eval: bool = False) -> BasePipeline:
+             num_process: Union[int, None] = None) -> BasePipeline:
     data = train_data if train_data is not None else eval_data
     assert data is not None, "At least one of train_data or eval_data must be provided"
     if train_data is not None and eval_data is not None:
@@ -475,12 +368,5 @@ def Pipeline(train_data: Union[Dataset, DataLoader, Scheduler, tf.data.Dataset, 
     elif isinstance(data, DataLoader):
         pipeline = TorchPipeline({"train": train_data, "eval": eval_data})
     else:
-        pipeline = FEPipeline(train_data,
-                              eval_data,
-                              batch_size,
-                              ops=ops,
-                              drop_last=drop_last,
-                              num_process=num_process,
-                              shuffle_train=shuffle_train,
-                              shuffle_eval=shuffle_eval)
+        pipeline = FEPipeline(train_data, eval_data, batch_size, ops=ops, num_process=num_process)
     return pipeline
