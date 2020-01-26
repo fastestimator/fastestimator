@@ -15,7 +15,7 @@
 import os
 import sys
 import time
-from typing import Any, Dict, Generator, Iterable, Iterator, List, Optional, Set, TypeVar, Union
+from typing import Any, Dict, Iterable, Iterator, List, Optional, Set, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
@@ -27,39 +27,6 @@ from fastestimator.schedule import Scheduler
 from fastestimator.util.util import to_list
 
 T = TypeVar('T')
-
-
-class GeneratorDataset(Dataset):
-    def __init__(self, generator: Generator[Dict[str, Any], int, None], samples_per_epoch: int):
-        self.generator = generator
-        self.samples_per_epoch = samples_per_epoch
-        next(self.generator)  # Can't send non-none values to a new generator, so need to run a 'warm-up' first
-
-    def __len__(self):
-        return self.samples_per_epoch
-
-    def __getitem__(self, index: int):
-        return self.generator.send(index)
-
-
-class NumpyDataset(Dataset):
-    def __init__(self, data: dict):
-        self.data = data
-        self.size = None
-        for key, val in data.items():
-            if isinstance(val, np.ndarray):
-                if self.size is not None:
-                    assert val.shape[0] == self.size, "All data arrays must have the same number of elements"
-                else:
-                    self.size = val.shape[0]
-        assert isinstance(self.size, int), \
-            "Could not infer size of data. Please ensure you are passing numpy arrays in the data dictionary."
-
-    def __len__(self):
-        return self.size
-
-    def __getitem__(self, index):
-        return {key: val[index] for key, val in self.data.items()}
 
 
 class OpDataset(Dataset):

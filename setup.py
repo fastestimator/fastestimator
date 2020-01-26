@@ -50,7 +50,7 @@ setup(
     ],
 
     # Declare minimal set for installation
-    install_requires=['numpy', 'albumentations', 'pyfiglet', 'opencv-python'],
+    install_requires=['numpy', 'albumentations', 'pyfiglet', 'opencv-python', 'scipy'],
     # Declare extra set for installation
     extras_require={},
     scripts=['bin/fastestimator'])

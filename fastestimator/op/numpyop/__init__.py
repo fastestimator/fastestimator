@@ -20,4 +20,4 @@ from fastestimator.op.numpyop.multivariate import CenterCrop, Crop, CropNonEmpty
 from fastestimator.op.numpyop.univariate import Blur, ChannelDropout, ChannelShuffle, ChannelTranspose, CLAHE, \
     CoarseDropout, Downscale, Equalize, ExpandDims, FromFloat, GaussianBlur, GaussianNoise, HueSaturationValue, \
     ImageCompression, InvertImg, ISONoise, MedianBlur, Minmax, MotionBlur, MultiplicativeNoise, Normalize, Posterize, \
-    RandomBrightnessContrast, RandomRain, RGBShift, ToFloat
+    RandomBrightnessContrast, RandomRain, ReadImage, RGBShift, ToFloat
