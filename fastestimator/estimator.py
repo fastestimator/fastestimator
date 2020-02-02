@@ -90,7 +90,6 @@ class Estimator:
     def _prepare_system(self):
         self.system = System(mode="train",
                              global_step=0,
-                             batch_size=None,
                              num_devices=get_num_devices(),
                              log_steps=self.log_steps,
                              total_epochs=self.epochs,
@@ -134,7 +133,6 @@ class Estimator:
 
     def _run_epoch(self):
         self._run_traces_on_epoch_begin()
-        self.system.batch_size = self.pipeline.get_batch_size(mode=self.system.mode, epoch=self.system.epoch_idx)
         ds_iter = self.pipeline.get_iterator(mode=self.system.mode, epoch=self.system.epoch_idx)
         for self.system.batch_idx, batch in enumerate(ds_iter):
             if self.network.framework == "tensorflow":
@@ -192,7 +190,6 @@ class System:
     def __init__(self,
                  mode: str,
                  global_step: int,
-                 batch_size: int,
                  num_devices: int,
                  log_steps: int,
                  total_epochs: int,
@@ -201,7 +198,6 @@ class System:
                  batch_idx: int):
         self.mode = mode
         self.global_step = global_step
-        self.batch_size = batch_size
         self.num_devices = num_devices
         self.log_steps = log_steps
         self.total_epochs = total_epochs
