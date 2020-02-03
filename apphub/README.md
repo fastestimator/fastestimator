@@ -63,7 +63,8 @@ $ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 ### Image Generation
 * **CVAE:** Image feature representation learning and image generation with Convolutional Variational AutoEncoder on Mnist dataset. [[paper](https://arxiv.org/abs/1312.6114)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/cvae_mnist/cvae_mnist.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/cvae_mnist/cvae_mnist.ipynb)]
 
-* **Cycle-GAN:** Unpaired image-to-image translation between two domain using Cycle-GAN.[[paper](https://arxiv.org/abs/1703.10593)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/cyclegan_horse2zebra/cyclegan_horse2zebra.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/cyclegan_horse2zebra/cyclegan.ipynb)]
+* **Cycle-GAN:** Unpaired image-to-image translation between two domain using Cycle-GAN.[[paper](https://arxiv.org/abs/1703.10593)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/cyclegan_horse2zebra/cyclegan_horse2zebra.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/cyclegan_horse2zebra/cyclegan_horse2zebra.ipynb)]
+
 
 * **DCGAN:** Image generation with Deep Convolutional GAN on Mnist dataset. [[paper](https://arxiv.org/abs/1511.06434)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/dcgan_mnist/dcgan_mnist.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/dcgan_mnist/dcgan_mnist.ipynb)]
 
