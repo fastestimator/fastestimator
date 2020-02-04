@@ -24,7 +24,12 @@ if __name__ == "__main__":
             exec_time = int((time.time() - start_time) / 60) 
             report[test_name] = {"fail": result, "time":exec_time}
             if result:
-                fail_list.append(test_name)
+                print("------------------------ {} fails ------------------------".format(test_name))
+                error_report_file = ".".join(f.split(".")[:-1]) + ".txt"
+                print("================================ error log ================================")
+                os.system("cat " + os.path.abspath(os.path.join(dirpath, error_report_file)))
+                print("===========================================================================")
+                 fail_list.append(test_name)
 
     for dirpath, _, filenames in os.walk(test_tutorial_script_dir):
         if dirpath.split("/")[-1] == "template": 
@@ -33,7 +38,7 @@ if __name__ == "__main__":
         for f in filenames:
             if f.split(".")[-1] != "py":
                 continue
-
+            
             print(os.path.abspath(os.path.join(dirpath, f)))
             test_name = os.path.join(dirpath.split("/")[-1], f)
             start_time = time.time()
@@ -41,6 +46,11 @@ if __name__ == "__main__":
             exec_time = int((time.time() - start_time) / 60) 
             report[test_name] = {"fail": result, "time":exec_time}
             if result:
+                print("------------------------ {} fails ------------------------".format(test_name))
+                error_report_file = ".".join(f.split(".")[:-1]) + ".txt"
+                print("================================ error log ================================")
+                os.system("cat " + os.path.abspath(os.path.join(dirpath, error_report_file)))
+                print("===========================================================================")
                 fail_list.append(test_name)
 
     print("the report is: {}".format(report))
