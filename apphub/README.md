@@ -65,7 +65,6 @@ $ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 
 * **Cycle-GAN:** Unpaired image-to-image translation between two domain using Cycle-GAN.[[paper](https://arxiv.org/abs/1703.10593)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/cyclegan_horse2zebra/cyclegan_horse2zebra.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/cyclegan_horse2zebra/cyclegan_horse2zebra.ipynb)]
 
-
 * **DCGAN:** Image generation with Deep Convolutional GAN on Mnist dataset. [[paper](https://arxiv.org/abs/1511.06434)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/dcgan_mnist/dcgan_mnist.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/dcgan_mnist/dcgan_mnist.ipynb)]
 
 * **PGGAN:** High-resolution image generation with progressive growing of GANs on NIH chest X-ray dataset. [[paper](https://arxiv.org/abs/1710.10196)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/pggan_nihchestxray/pggan_nihchestxray_128.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/pggan_nihchestxray/pggan_nihchestxray_128.ipynb)]
