@@ -10,11 +10,11 @@ if __name__ == "__main__":
     report={}
     fail_list=[]
     for dirpath, _, filenames in os.walk(test_apphub_script_dir):
-        if dirpath.split("/")[-1] == "template": 
+        if dirpath.endswith("/template"):
             continue
 
         for f in filenames:
-            if f.split(".")[-1] != "py":
+            if not f.endswith(".py"):
                 continue
 
             print(os.path.abspath(os.path.join(dirpath, f)))
@@ -32,11 +32,11 @@ if __name__ == "__main__":
                  fail_list.append(test_name)
 
     for dirpath, _, filenames in os.walk(test_tutorial_script_dir):
-        if dirpath.split("/")[-1] == "template":
+        if dirpath.endswith("/template"):
             continue
 
         for f in filenames:
-            if f.split(".")[-1] != "py":
+            if not f.endswith(".py"):
                 continue
 
             print(os.path.abspath(os.path.join(dirpath, f)))
