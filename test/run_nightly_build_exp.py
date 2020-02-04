@@ -34,5 +34,3 @@ if __name__ == "__main__":
     print("the report is: {}".format(report))
     print("the fail list is: {}".format(fail_list))
     os.system("rm -rf /tmp/tmp*")
-
-

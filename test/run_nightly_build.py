@@ -38,7 +38,7 @@ if __name__ == "__main__":
         for f in filenames:
             if f.split(".")[-1] != "py":
                 continue
-            
+
             print(os.path.abspath(os.path.join(dirpath, f)))
             test_name = os.path.join(dirpath.split("/")[-1], f)
             start_time = time.time()
@@ -56,5 +56,3 @@ if __name__ == "__main__":
     print("the report is: {}".format(report))
     print("the fail list is: {}".format(fail_list))
     os.system("rm -rf /tmp/tmp*")
-
-
