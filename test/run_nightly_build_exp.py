@@ -4,7 +4,7 @@ import time
 
 # os.system() will return 0 when it execute sucessfully
 if __name__ == "__main__":
-    test_apphub_script_dir = os.path.abspath(os.path.join(__file__, "..", "apphub_scripts3"))
+    test_apphub_script_dir = os.path.abspath(os.path.join(__file__, "..", "apphub_scripts2"))
 
     report={}
     fail_list=[]
@@ -24,13 +24,16 @@ if __name__ == "__main__":
             report[test_name] = {"fail": result, "time":exec_time}
 
             if result:
-                print("------------------------ {} fails ------------------------".format(test_name))
-                fail_list.append(test_name)
+                os.system("echo ------------------------ {} fails ------------------------".format(test_name))
                 error_report_file = ".".join(f.split(".")[:-1]) + ".txt"
-                print("================================ error log ================================")
+                os.system("echo ================================ error log ================================")
                 os.system("cat " + os.path.abspath(os.path.join(dirpath, error_report_file)))
-                print("===========================================================================")
+                os.system("echo ===========================================================================")
+                fail_list.append(test_name)
 
     print("the report is: {}".format(report))
     print("the fail list is: {}".format(fail_list))
     os.system("rm -rf /tmp/tmp*")
+
+    if fail_list:
+        raise ValueError("not all tests passed")
