@@ -32,7 +32,7 @@ if __name__ == "__main__":
                  fail_list.append(test_name)
 
     for dirpath, _, filenames in os.walk(test_tutorial_script_dir):
-        if dirpath.split("/")[-1] == "template": 
+        if dirpath.split("/")[-1] == "template":
             continue
 
         for f in filenames:
