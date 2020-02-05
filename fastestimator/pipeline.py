@@ -15,7 +15,7 @@
 import os
 import sys
 import time
-from typing import Any, Dict, Iterable, Iterator, List, Optional, Set, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Optional, Set, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
@@ -39,9 +39,10 @@ class OpDataset(Dataset):
         # The following variables could technically by computed on the fly, but don't want to waste clock cycles
         self.epoch, self.epoch_ops, self.state_dict = 0, [], []
         self.set_epoch_and_mode(0, "train")
+        self.effective_outputs = set()
 
     def __getitem__(self, index):
-        item = self.dataset.__getitem__(index)
+        item = self.dataset[index]
         op_data = None
         for op in self.epoch_ops:
             op_data = get_inputs_by_op(op, item, op_data)
@@ -60,9 +61,6 @@ class OpDataset(Dataset):
             # TODO - rather than filtering every epoch the ops should probably be separated up-front
             self.epoch_ops = list(filter(lambda op: op.mode is None or op.mode == mode, self.epoch_ops))
         self.state_dict = {"epoch": epoch, "mode": mode}
-
-    def get_signature_epochs(self) -> List[int]:
-        return self.signature_epochs
 
 
 class OpDataLoader(DataLoader):
@@ -105,40 +103,44 @@ def get_per_epoch(ops: Iterable[Union[T, Scheduler[T]]], epoch: int) -> List[T]:
     return per_epoch
 
 
-class BasePipeline:
+class TorchPipeline:
     def __init__(self, dataloaders: dict):
         self.dataloaders = dataloaders
 
     def get_num_steps(self, mode: str, epoch: int) -> int:
-        dataloader = self.get_iterator(mode=mode, epoch=epoch)
-        return len(dataloader)
+        loader = self.get_loader(mode=mode, epoch=epoch)
+        return len(loader)
 
     def get_modes(self) -> Set[str]:
         return set([mode for mode in self.dataloaders.keys() if self.dataloaders[mode] is not None])
 
-    def get_iterator(self, mode: str, epoch: int = 0) -> Iterator:
+    def get_loader(self, mode: str, epoch: int = 0):
         return self.dataloaders[mode]
 
     def benchmark(self, mode: str = "train", num_steps: int = 1000, log_interval: int = 100, epoch: int = 0):
-        itr = self.get_iterator(mode=mode, epoch=epoch)
+        loader = self.get_loader(mode=mode, epoch=epoch)
         start = time.perf_counter()
-        for idx in range(num_steps + 1):
-            _ = next(itr)
+        for idx, _ in enumerate(loader):
             if idx % log_interval == 0 and idx > 0:
                 duration = time.perf_counter() - start
                 iters_per_sec = log_interval / duration
                 print("FastEstimator: Step: {}, Epoch: {}, Steps/sec: {}".format(idx, epoch, iters_per_sec))
                 start = time.perf_counter()
+            if idx == num_steps:
+                break
 
-    def show_results(self, mode: str = "train", num_steps: int = 1, epoch: int = 0):
-        data = []
-        itr = self.get_iterator(mode=mode, epoch=epoch)
-        for _ in range(num_steps):
-            data.append(next(itr))
-        return data
+    def get_all_output_keys(self) -> Set[str]:
+        modes = self.get_modes()
+        output_keys = set()
+        for mode in modes:
+            itr = iter(self.get_loader(mode=mode, epoch=0))
+            data = next(itr)
+            assert isinstance(data, dict), "please make sure data output format is dictionary"
+            output_keys = output_keys.union(set(data.keys()))
+        return output_keys
 
 
-class FEPipeline(BasePipeline):
+class FEPipeline(TorchPipeline):
     dataloaders: Dict[str, Scheduler[DataLoader]]
     batch_size: Scheduler[int]
     """ A class representing the data pipeline for FastEstimator
@@ -175,14 +177,32 @@ class FEPipeline(BasePipeline):
     def _build_loader(self, dataset: OpDataset, shuffle: bool = True):
         return OpDataLoader(dataset, batch_size=self.batch_size, shuffle=shuffle, num_workers=self.num_process)
 
+    def get_all_output_keys(self) -> Set[str]:
+        modes = self.get_modes()
+        output_keys = set()
+        for mode in modes:
+            itr = iter(self.get_loader(mode=mode, epoch=0).dataset.dataset)
+            data = next(itr)
+            assert isinstance(data, dict), "please make sure data output format is dictionary"
+            output_keys = output_keys.union(set(data.keys()))
+            for op in self.ops:
+                if isinstance(op, Scheduler):
+                    keys_lists = [to_list(x.outputs) for x in op.epoch_dict.values() if not x is None]
+                    for keys_list in keys_lists:
+                        output_keys.update(keys_list)
+                else:
+                    output_keys.update(to_list(op.outputs))
+        output_keys -= {None}
+        return output_keys
 
-class TensorFlowPipeline(BasePipeline):
+
+class TFPipeline(TorchPipeline):
     def get_num_steps(self, mode: str, epoch: int) -> int:
-        dataset = self.get_iterator(mode=mode, epoch=epoch)
-        num_steps = tf.data.experimental.cardinality(dataset)
-        if num_steps in [tf.data.experimental.INFINITE_CARDINALITY, tf.data.experimental.UNKNOWN_CARDINALITY]:
+        dataset = self.get_loader(mode=mode, epoch=epoch)
+        num_steps = int(tf.data.experimental.cardinality(dataset))
+        if num_steps < 1:
             raise ValueError("Cannot infer total steps, please provide 'steps_per_epoch' in Estimator")
-        return int(num_steps)
+        return num_steps
 
 
 # noinspection PyPep8Naming
@@ -190,7 +210,7 @@ def Pipeline(train_data: Union[Dataset, DataLoader, Scheduler, tf.data.Dataset, 
              eval_data: Union[Dataset, DataLoader, Scheduler, tf.data.Dataset, None] = None,
              batch_size: Union[int, Scheduler] = 1,
              ops: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp, Scheduler[NumpyOp]]]] = None,
-             num_process: Union[int, None] = None) -> BasePipeline:
+             num_process: Union[int, None] = None) -> TorchPipeline:
     data = train_data if train_data is not None else eval_data
     assert data is not None, "At least one of train_data or eval_data must be provided"
     if train_data is not None and eval_data is not None:
@@ -198,9 +218,9 @@ def Pipeline(train_data: Union[Dataset, DataLoader, Scheduler, tf.data.Dataset, 
                                                                                (DataLoader, tf.data.Dataset)):
             assert type(train_data) == type(eval_data), "Cannot mix and match Torch Loaders and tf Datasets"
     if isinstance(data, tf.data.Dataset):
-        pipeline = TensorFlowPipeline({"train": train_data, "eval": eval_data})
+        pipeline = TFPipeline({"train": train_data, "eval": eval_data})
     elif isinstance(data, DataLoader):
-        pipeline = BasePipeline({"train": train_data, "eval": eval_data})
+        pipeline = TorchPipeline({"train": train_data, "eval": eval_data})
     else:
         pipeline = FEPipeline(train_data, eval_data, batch_size, ops=ops, num_process=num_process)
     return pipeline

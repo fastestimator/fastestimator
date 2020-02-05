@@ -12,15 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-
 from collections import ChainMap
 from typing import Any, Iterable, List, Optional, Set, Union
 
 from fastestimator.backend import torch_to_tf
-from fastestimator.network import Network
+from fastestimator.network import BaseNetwork, TFNetwork
 from fastestimator.op.op import get_inputs_by_key
 from fastestimator.op.tensorop.model import UpdateOp
-from fastestimator.pipeline import BasePipeline
+from fastestimator.pipeline import FEPipeline, TorchPipeline
 from fastestimator.trace import EvalEssential, Logger, Trace, TrainEssential
 from fastestimator.util.util import draw, get_num_devices, to_list
 
@@ -41,15 +40,15 @@ class Estimator:
         log_steps (int, optional): Interval steps of logging. Defaults to 100.
         monitor_names (str, list): Additional keys to print in logger
     """
-    pipeline: BasePipeline
+    pipeline: TorchPipeline
     epochs: int
     steps_per_epoch: Optional[int]
     traces: List[Trace]
     log_steps: int
 
     def __init__(self,
-                 pipeline: BasePipeline,
-                 network: Network,
+                 pipeline: TorchPipeline,
+                 network: BaseNetwork,
                  epochs: int,
                  steps_per_epoch: Optional[int] = None,
                  traces: Union[Trace, Iterable[Trace]] = None,
@@ -72,7 +71,13 @@ class Estimator:
         self._prepare_estimator()
         self._prepare_network()
         self._prepare_pipeline()
+        self._check_keys()
         return self._start()
+
+    def _check_keys(self):
+        self.pipeline.all_outputs = self.pipeline.get_all_output_keys()
+        assert self.trace_inputs.issubset(self.pipeline.all_outputs | self.network.all_outputs)
+        self.network.effective_outputs = self.network.all_outputs & self.trace_inputs
 
     def _prepare_pipeline(self):
         if self.steps_per_epoch is None:
@@ -80,7 +85,7 @@ class Estimator:
         self.system.total_steps = self.epochs * self.steps_per_epoch
 
     def _prepare_network(self):
-        self.network.exported_keys = self.network.op_outputs.intersection(self.trace_inputs)
+        self.network.exported_keys = self.network.all_outputs.intersection(self.trace_inputs)
 
     def _prepare_estimator(self):
         self.do_eval = "eval" in self.pipeline.get_modes()  # TODO - Scheduling
@@ -133,9 +138,9 @@ class Estimator:
 
     def _run_epoch(self):
         self._run_traces_on_epoch_begin()
-        ds_iter = self.pipeline.get_iterator(mode=self.system.mode, epoch=self.system.epoch_idx)
+        ds_iter = self.pipeline.get_loader(mode=self.system.mode, epoch=self.system.epoch_idx)
         for self.system.batch_idx, batch in enumerate(ds_iter):
-            if self.network.framework == "tensorflow":
+            if isinstance(self.network, TFNetwork):
                 batch = torch_to_tf(batch)  # TODO - this should maybe be handled somewhere else...
             if self.system.batch_idx == self.steps_per_epoch and self.system.mode == "train":
                 break
