@@ -56,7 +56,8 @@ pipeline{
                         stage('Test-GPU'){
                             steps{
                                 sh '''
-                                    . $WORKSPACE/../venv/bin/activate
+                                    . /home/ubuntu/anaconda3/etc/profile.d/conda.sh
+                                    conda activate tf2.0_p36
                                     python3 test/run_nightly_build.py
                                 '''
                             }
@@ -72,9 +73,8 @@ pipeline{
                 withCredentials([string(credentialsId: 'pypi_password', variable: 'PYPI_PWD')]) {
 
                     sh '''
-                       echo hello
-                       echo ${PYPI_PWD}
-                        . $WORKSPACE/../venv/bin/activate
+                        . /home/ubuntu/anaconda3/etc/profile.d/conda.sh
+                        conda activate tf2.0_p36
                         rm -rf dist/*
                         FASTESTIMATOR_IS_NIGHTLY=1 python setup.py sdist bdist_wheel
                         twine upload dist/* -u fastestimatordev -p ${PYPI_PWD}
