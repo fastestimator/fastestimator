@@ -47,8 +47,8 @@ pipeline{
                                     chmod 775 -R .
                                     . /home/ubuntu/anaconda3/etc/profile.d/conda.sh
                                     conda activate tf2.0_p36
-                                    pip3 install pytest numpy nibabel pydicom tensorflow-gpu==2.0.0 ipython ipykernel twine scikit-image notebook
-                                    pip3 install -e .
+                                    pip install pytest numpy nibabel pydicom tensorflow-gpu==2.0.0 ipython ipykernel twine scikit-image notebook
+                                    pip install -e .
                                     ipython kernel install --user --name=nightly-build
                                 '''
                             }
