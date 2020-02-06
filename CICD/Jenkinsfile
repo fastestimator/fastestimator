@@ -1,10 +1,10 @@
 pipeline {
-  agent any
+  agent jenkins-pr
   stages {
     stage('Build') {
       steps {
         sh '''
-            ANACONDA_DIR=/home/ec2-user/anaconda3
+            ANACONDA_DIR=/home/ubuntu/anaconda3
             JENKINS_ENV_DIR=/var/lib/jenkins/.conda/envs
             ENV_NAME=pr_env
 
@@ -13,7 +13,7 @@ pipeline {
                 conda create --name $ENV_NAME python=3.6 -y
             fi
 
-            conda activate $JENKINS_ENV_DIR/$ENV_NAME
+            conda activate $ENV_NAME
             pip install pytest numpy nibabel pydicom tensorflow-gpu==2.0.0 twine ipython ipykernel
             pip install -e .
 
@@ -23,12 +23,12 @@ pipeline {
     stage('Test') {
         steps {
             sh '''
-                ANACONDA_DIR=/home/ec2-user/anaconda3
+                ANACONDA_DIR=/home/ubuntu/anaconda3
                 JENKINS_ENV_DIR=/var/lib/jenkins/.conda/envs
                 ENV_NAME=pr_env
 
                 . $ANACONDA_DIR/etc/profile.d/conda.sh
-                conda activate $JENKINS_ENV_DIR/$ENV_NAME
+                conda activate $ENV_NAME
                 python3 -m pytest
             '''
         }
