@@ -11,16 +11,15 @@ pipeline{
                                 sh '''
                                     cp -r ./tutorial/* ./
                                     chmod 775 -R .
-                                    JENKINS_DIR=$WORKSPACE/..
-                                    PATH=$JENKINS_DIR/venv/bin:/usr/local/bin:$PATH
-                                    echo $WORKSPACE
-                                    if [ ! -d "$JENKINS_DIR/venv"  ]; then
-                                        virtualenv -p python3.6 $JENKINS_DIR/venv
-                                    fi
-                                    . $JENKINS_DIR/venv/bin/activate
 
-                                    pip3 install pytest numpy nibabel pydicom tensorflow==2.0.0 ipython ipykernel scikit-image notebook
-                                    pip3 install -e .
+                                    if [ ! -d "/home/ubuntu/anaconda3/envs/nightly_env"  ]; then
+                                        conda create --name nightly_env python=3.6 -y
+                                    fi
+
+                                    . /home/ubuntu/anaconda3/etc/profile.d/conda.sh
+                                    conda activate nightly_env
+                                    pip install pytest numpy nibabel pydicom tensorflow==2.0.0 ipython ipykernel scikit-image notebook
+                                    pip install -e .
                                     ipython kernel install --user --name=nightly-build
                                 '''
                             }
@@ -28,11 +27,11 @@ pipeline{
                         stage('Test-CPU'){
                             steps{
                                sh '''
-                                    echo $WORKSPACE
-                                    . $WORKSPACE/../venv/bin/activate
+                                    . /home/ubuntu/anaconda3/etc/profile.d/conda.sh
+                                    conda activate nightly_env
                                     python3 test/run_nightly_build.py
                                 '''
-                            }                           
+                            }
                         }
                     }
                 }
@@ -45,16 +44,15 @@ pipeline{
                                 sh '''
                                     cp -r ./tutorial/* ./
                                     chmod 775 -R .
-                                    JENKINS_DIR=$WORKSPACE/..
-                                    PATH=$JENKINS_DIR/venv/bin:/usr/local/bin:$PATH
-                                    echo $WORKSPACE
-                                    if [ ! -d "$JENKINS_DIR/venv"  ]; then
-                                        virtualenv -p python3.6 $JENKINS_DIR/venv
-                                    fi
-                                    . $JENKINS_DIR/venv/bin/activate
 
-                                    pip3 install pytest numpy nibabel pydicom tensorflow-gpu==2.0.0 ipython ipykernel twine scikit-image notebook
-                                    pip3 install -e .                                    
+                                    if [ ! -d "/home/ubuntu/anaconda3/envs/nightly_env"  ]; then
+                                        conda create --name nightly_env python=3.6 -y
+                                    fi
+
+                                    . /home/ubuntu/anaconda3/etc/profile.d/conda.sh
+                                    conda activate nightly_env
+                                    pip install pytest numpy nibabel pydicom tensorflow-gpu==2.0.0 ipython ipykernel twine scikit-image notebook
+                                    pip install -e .
                                     ipython kernel install --user --name=nightly-build
                                 '''
                             }
@@ -62,10 +60,11 @@ pipeline{
                         stage('Test-GPU'){
                             steps{
                                 sh '''
-                                    . $WORKSPACE/../venv/bin/activate
+                                    . /home/ubuntu/anaconda3/etc/profile.d/conda.sh
+                                    conda activate nightly_env
                                     python3 test/run_nightly_build.py
                                 '''
-                            }                           
+                            }
                         }
                     }
                 }
@@ -76,16 +75,15 @@ pipeline{
             agent {label 'jenkinsnightly_gpu'}
             steps{
                 withCredentials([string(credentialsId: 'pypi_password', variable: 'PYPI_PWD')]) {
-                    
+
                     sh '''
-                       echo hello
-                       echo ${PYPI_PWD}
-                        . $WORKSPACE/../venv/bin/activate
+                        . /home/ubuntu/anaconda3/etc/profile.d/conda.sh
+                        conda activate nightly_env
                         rm -rf dist/*
-                        FASTESTIMATOR_IS_NIGHTLY=1 python setup.py sdist bdist_wheel 
-                        twine upload dist/* -u fastestimatordev -p ${PYPI_PWD} 
-                       
-                    '''                   
+                        FASTESTIMATOR_IS_NIGHTLY=1 python setup.py sdist bdist_wheel
+                        twine upload dist/* -u fastestimatordev -p ${PYPI_PWD}
+
+                    '''
                 }
             }
         }
@@ -98,7 +96,7 @@ pipeline{
                     git clone https://github.com/fastestimator-util/fastestimator-misc.git fastestimator-misc
                 '''
                 withDockerRegistry(credentialsId: 'docker-hub-credentials', url:'') {
-                    sh ''' 
+                    sh '''
                         docker build -t fastestimator/fastestimator:nightly-cpu --no-cache - < fastestimator-misc/docker/nightly/Dockerfile.cpu
                         docker push fastestimator/fastestimator:nightly-cpu
                         docker build -t fastestimator/fastestimator:nightly-gpu --no-cache - < fastestimator-misc/docker/nightly/Dockerfile.gpu

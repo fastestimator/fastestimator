@@ -11,7 +11,7 @@ if __name__ == "__main__":
         
     py_file = os.path.join(source_dir, example_name + ".py")
 
-    train_info = "--epochs 2 --batch_size 2 --step_per_epoch 10 --validation_steps 5""
+    train_info = "--epochs 2 --batch_size 2 --steps_per_epoch 10 --validation_steps 5"
     result = os.system("fastestimator train {} {} 2>> {}".format(py_file, train_info, stderr_file))
 
     if result:

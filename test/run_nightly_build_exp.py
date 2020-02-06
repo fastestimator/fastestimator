@@ -4,8 +4,7 @@ import time
 
 # os.system() will return 0 when it execute sucessfully
 if __name__ == "__main__":
-    test_apphub_script_dir = os.path.abspath(os.path.join(__file__, "..", "apphub_scripts"))
-    test_tutorial_script_dir = os.path.abspath(os.path.join(__file__, "..", "tutorial_scripts"))
+    test_apphub_script_dir = os.path.abspath(os.path.join(__file__, "..", "apphub_scripts2"))
 
     report={}
     fail_list=[]
@@ -23,28 +22,7 @@ if __name__ == "__main__":
             result = os.system("python3 " + os.path.abspath(os.path.join(dirpath, f)))
             exec_time = int((time.time() - start_time) / 60)
             report[test_name] = {"fail": result, "time":exec_time}
-            if result:
-                os.system("echo ------------------------ {} fails ------------------------".format(test_name))
-                error_report_file = ".".join(f.split(".")[:-1]) + ".txt"
-                os.system("echo ================================ error log ================================")
-                os.system("cat " + os.path.abspath(os.path.join(dirpath, error_report_file)))
-                os.system("echo ===========================================================================")
-                fail_list.append(test_name)
 
-    for dirpath, _, filenames in os.walk(test_tutorial_script_dir):
-        if dirpath.endswith("/template"):
-            continue
-
-        for f in filenames:
-            if not f.endswith(".py"):
-                continue
-
-            print(os.path.abspath(os.path.join(dirpath, f)))
-            test_name = os.path.join(dirpath.split("/")[-1], f)
-            start_time = time.time()
-            result = os.system("python3 " + os.path.abspath(os.path.join(dirpath, f)))
-            exec_time = int((time.time() - start_time) / 60)
-            report[test_name] = {"fail": result, "time":exec_time}
             if result:
                 os.system("echo ------------------------ {} fails ------------------------".format(test_name))
                 error_report_file = ".".join(f.split(".")[:-1]) + ".txt"
