@@ -1,5 +1,5 @@
 pipeline {
-  agent jenkins-pr
+  agent {label 'jenkins-pr'}
   stages {
     stage('Build') {
       steps {
