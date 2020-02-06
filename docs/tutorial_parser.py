@@ -11,7 +11,8 @@ import tempfile
 
 fe_dir = 'fastestimator'
 tutorial_md_dir = 'tutorials_md'
-tmp_markdown = os.path.join(tempfile.gettempdir(), tutorial_md_dir)
+tmp_markdown = '../../tmp_output/tutorials'
+#tmp_markdown = os.path.join(tempfile.gettempdir(), tutorial_md_dir)
 struct_json_path = os.path.join(tmp_markdown, 'structure_tutorial.json')
 
 re_sidebar_title = '[^A-Za-z0-9:!,$%. ]+'

@@ -7,7 +7,7 @@ import sys
 import tempfile
 
 titles = ['Args', 'Raises', 'Returns']
-
+save_dir = '../../tmp_output/api'
 
 def extractmarkdown(module, save_path):
     output = list()
@@ -155,7 +155,7 @@ def generatedocs():
         [str]: Returns absolute path to the generated markdown directory
     """
     fe_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../fastestimator')
-    save_dir = os.path.join(tempfile.gettempdir(), 'fe')
+    #save_dir = os.path.join(tempfile.gettempdir(), 'fe')
     #insert project path to system path to later detect the modules in project
     sys.path.insert(0, fe_path)
     #parent directory where all the markdown files will be stored
@@ -223,7 +223,7 @@ def generate_json(path):
 
 
 docs_path = generatedocs()
-struct_json = os.path.join(tempfile.gettempdir(), 'structure.json')
+struct_json = os.path.join(save_dir, 'structure.json')
 with open(struct_json, 'w') as f:
     fe_json = json.dumps(generate_json(docs_path))
     f.write(fe_json)
