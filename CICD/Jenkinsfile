@@ -1,34 +1,31 @@
 pipeline {
   agent {label 'jenkins-pr'}
+  environment {
+      JENKINS_ANACONDA_DIR='/home/ubuntu/anaconda3'
+      JENKINS_PYTHON_ENV='pr_env'
+  }
   stages {
     stage('Build') {
       steps {
         sh '''
-            ANACONDA_DIR=/home/ubuntu/anaconda3
-            JENKINS_ENV_DIR=/var/lib/jenkins/.conda/envs
-            ENV_NAME=pr_env
-
-            . $ANACONDA_DIR/etc/profile.d/conda.sh
-            if [ ! -d "$JENKINS_ENV_DIR/$ENV_NAME" ]; then
-                conda create --name $ENV_NAME python=3.6 -y
+            . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
+            if [ -d "$JENKINS_ANACONDA_DIR/envs/$JENKINS_PYTHON_ENV" ]; then
+                conda remove --name $JENKINS_PYTHON_ENV -all -y
             fi
-
-            conda activate $ENV_NAME
-            pip install pytest numpy nibabel pydicom tensorflow-gpu==2.0.0 twine ipython ipykernel
+            conda create --name $JENKINS_PYTHON_ENV python=3.6 -y
+            conda activate $JENKINS_PYTHON_ENV
+            pip install pytest numpy nibabel pydicom twine ipython ipykernel
+            conda install tensorflow-gpu=2.0.0
             pip install -e .
-
+            pip freeze | tee requirement.txt
         '''
       }
     }
     stage('Test') {
         steps {
             sh '''
-                ANACONDA_DIR=/home/ubuntu/anaconda3
-                JENKINS_ENV_DIR=/var/lib/jenkins/.conda/envs
-                ENV_NAME=pr_env
-
-                . $ANACONDA_DIR/etc/profile.d/conda.sh
-                conda activate $ENV_NAME
+                . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
+                conda activate $JENKINS_PYTHON_ENV
                 python3 -m pytest
             '''
         }
