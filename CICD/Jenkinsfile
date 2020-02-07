@@ -1,19 +1,19 @@
 pipeline {
   agent {label 'jenkins-pr'}
   environment{
-      ANACONDA_DIR=/home/ubuntu/anaconda3
-      ENV_NAME=pr_env
+      JENKINS_ANACONDA_DIR=/home/ubuntu/anaconda3
+      JENKINS_PYTHON_ENV=pr_env
   }
   stages {
     stage('Build') {
       steps {
         sh '''
-            . $ANACONDA_DIR/etc/profile.d/conda.sh
-            if [ -d "$ANACONDA_DIR/envs/$ENV_NAME" ]; then
-                conda remove --name $ENV_NAME -all -y
+            . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
+            if [ -d "$JENKINS_ANACONDA_DIR/envs/$JENKINS_PYTHON_ENV" ]; then
+                conda remove --name $JENKINS_PYTHON_ENV -all -y
             fi
-            conda create --name $ENV_NAME python=3.6 -y
-            conda activate $ENV_NAME
+            conda create --name $JENKINS_PYTHON_ENV python=3.6 -y
+            conda activate $JENKINS_PYTHON_ENV
             pip install pytest numpy nibabel pydicom twine ipython ipykernel
             conda install tensorflow-gpu=2.0.0
             pip install -e .
@@ -24,8 +24,8 @@ pipeline {
     stage('Test') {
         steps {
             sh '''
-                . $ANACONDA_DIR/etc/profile.d/conda.sh
-                conda activate $ENV_NAME
+                . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
+                conda activate $JENKINS_PYTHON_ENV
                 python3 -m pytest
             '''
         }
