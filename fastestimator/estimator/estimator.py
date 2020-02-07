@@ -104,9 +104,10 @@ class Estimator:
                     self.callbacks.remove(callback_obj)
             if isinstance(callback_obj, TensorBoard) and self.rank != 0:
                 self.callbacks.remove(callback_obj)
-            if isinstance(callback_obj, (ReduceLROnPlateau, EarlyStopping)):
-               callback_obj.num_process = self.num_process
-               callback_obj.rank = self.rank
+            if hasattr(callback_obj, "num_process"):
+                callback_obj.num_process = self.num_process
+            if hasattr(callback_obj, "rank"):
+                callback_obj.rank = self.rank
             if isinstance(callback_obj, LearningRateScheduler):
                 callback_obj.schedule.epochs = self.epochs
                 callback_obj.schedule.steps_per_epoch = self.steps_per_epoch
