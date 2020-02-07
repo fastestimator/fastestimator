@@ -5,18 +5,18 @@ pipeline {
       steps {
         sh '''
             ANACONDA_DIR=/home/ubuntu/anaconda3
-            JENKINS_ENV_DIR=/var/lib/jenkins/.conda/envs
             ENV_NAME=pr_env
 
             . $ANACONDA_DIR/etc/profile.d/conda.sh
-            if [ ! -d "$JENKINS_ENV_DIR/$ENV_NAME" ]; then
-                conda create --name $ENV_NAME python=3.6 -y
+            if [ -d "$ANACONDA_DIR/envs/$ENV_NAME" ]; then
+                conda remove --name $ENV_NAME -all -y
             fi
-
+            conda create --name $ENV_NAME python=3.6 -y
             conda activate $ENV_NAME
-            pip install pytest numpy nibabel pydicom tensorflow-gpu==2.0.0 twine ipython ipykernel
+            pip install pytest numpy nibabel pydicom twine ipython ipykernel
+            conda install tensorflow-gpu=2.0.0
             pip install -e .
-
+            pip freeze | tee requirement.txt
         '''
       }
     }
@@ -24,7 +24,6 @@ pipeline {
         steps {
             sh '''
                 ANACONDA_DIR=/home/ubuntu/anaconda3
-                JENKINS_ENV_DIR=/var/lib/jenkins/.conda/envs
                 ENV_NAME=pr_env
 
                 . $ANACONDA_DIR/etc/profile.d/conda.sh
