@@ -1,6 +1,6 @@
 pipeline {
   agent {label 'jenkins-pr'}
-  environment{
+  environment {
       JENKINS_ANACONDA_DIR=/home/ubuntu/anaconda3
       JENKINS_PYTHON_ENV=pr_env
   }
