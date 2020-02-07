@@ -1,12 +1,13 @@
 pipeline {
   agent {label 'jenkins-pr'}
+  environment{
+      ANACONDA_DIR=/home/ubuntu/anaconda3
+      ENV_NAME=pr_env
+  }
   stages {
     stage('Build') {
       steps {
         sh '''
-            ANACONDA_DIR=/home/ubuntu/anaconda3
-            ENV_NAME=pr_env
-
             . $ANACONDA_DIR/etc/profile.d/conda.sh
             if [ -d "$ANACONDA_DIR/envs/$ENV_NAME" ]; then
                 conda remove --name $ENV_NAME -all -y
@@ -23,9 +24,6 @@ pipeline {
     stage('Test') {
         steps {
             sh '''
-                ANACONDA_DIR=/home/ubuntu/anaconda3
-                ENV_NAME=pr_env
-
                 . $ANACONDA_DIR/etc/profile.d/conda.sh
                 conda activate $ENV_NAME
                 python3 -m pytest
