@@ -69,8 +69,14 @@ $ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 
 * **PGGAN:** High-resolution image generation with progressive growing of GANs on NIH chest X-ray dataset. [[paper](https://arxiv.org/abs/1710.10196)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/pggan_nihchestxray/pggan_nihchestxray_128.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/pggan_nihchestxray/pggan_nihchestxray_128.ipynb)]
 
+* **SRGAN:** Photo-Realistic single image super-resolution using Generative Adversarial Network on ImageNet dataset. [[paper](https://arxiv.org/pdf/1609.04802.pdf)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/srgan_imagenet/srgan_imagenet.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/srgan_imagenet/srgan_imagenet.ipynb)]
+
+* **SRRESNET:** Photo-Realistic single image super-resolution using Generative Adversarial Network with Residual units on ImageNet dataset. [[paper](https://arxiv.org/pdf/1609.04802.pdf)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/srgan_imagenet/srresnet_imagenet.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/srgan_imagenet/srresnet_imagenet.ipynb)]
+
 ### Semantic Segmentation
 * **UNet:** Lung segmentation with UNet using chest X-ray dataset. [[paper](https://arxiv.org/abs/1505.04597)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/semantic_segmentation/unet_montgomery/unet_montgomery.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/semantic_segmentation/unet_montgomery/unet_montgomery.ipynb)]
+
+* **UNet3D:** Tumor detection in MR images using Brats 2018 data. [[paper](https://arxiv.org/pdf/1802.10508.pdf)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/semantic_segmentation/unet3d/3DUnetMRBrainSegmentation_Isensee.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/semantic_segmentation/unet3d/3DUnetMRBrainSegmentation_Isensee.ipynb)]
 
 ### Object Detection
 * **RetinaNet:** object detection with RetinaNet on COCO2017 dataset. [[paper](https://arxiv.org/abs/1708.02002)][[code](https://github.com/vbvg2008/fastestimator/blob/master/apphub/instance_detection/retinanet_coco/retinanet_coco.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/instance_detection/retinanet_coco/retinanet_coco.ipynb)]
