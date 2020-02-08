@@ -12,5 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.op import NumpyOp, TensorOp, get_current_ops, get_inputs_by_key, get_inputs_by_op, \
-    write_outputs_by_key
+
+from torch.utils.data import Dataset
+
+from fastestimator.op import get_inputs_by_op, write_outputs_by_key
+
+
+class OpDataset(Dataset):
+    def __init__(self, dataset, ops, mode):
+        self.dataset = dataset
+        self.ops = ops
+        self.mode = mode
+
+    def __getitem__(self, index):
+        item = self.dataset[index]
+        op_data = None
+        for op in self.ops:
+            op_data = get_inputs_by_op(op, item, op_data)
+            op_data = op.forward(op_data, {"mode": self.mode})
+            if op.outputs:
+                write_outputs_by_key(item, op_data, op.outputs)
+        return item
+
+    def __len__(self):
+        return len(self.dataset)

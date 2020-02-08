@@ -16,7 +16,9 @@
 import json
 import subprocess
 from ast import literal_eval
-from typing import List, Any
+from functools import reduce
+from math import gcd
+from typing import Any, List
 
 from pyfiglet import Figlet
 
@@ -76,3 +78,10 @@ def get_num_devices() -> int:
     except:
         num_devices = 1
     return num_devices
+
+
+def lcms(*numbers):
+    def lcm(a, b):
+        return int(a * b / gcd(a, b))
+
+    return reduce(lcm, numbers)

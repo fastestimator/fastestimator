@@ -12,59 +12,86 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import pdb
 from collections import ChainMap
 from typing import Any, Dict, List, Mapping, Set, Union
 
 import tensorflow as tf
 import torch
 
-from fastestimator.op import TensorOp, get_inputs_by_op, get_ops_by_mode, write_outputs_by_key
+from fastestimator.op import TensorOp, get_current_ops, get_inputs_by_op, write_outputs_by_key
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
-from fastestimator.schedule import Scheduler
-from fastestimator.util.util import NonContext, to_list
+from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
+from fastestimator.util.util import NonContext, lcms, to_list
 
 
 class BaseNetwork:
     def __init__(self, ops, models):
         self.ops = to_list(ops)
         self.models = models
-        self.effective_inputs = self.get_effective_input_keys()
-        self.all_outputs = self.get_all_output_keys()
-        self.effective_outputs = set()
+        self._verify_inputs()
+        self.effective_inputs = dict()
+        self.effective_outputs = dict()
+        self.epoch_ops = []
 
-    def get_effective_input_keys(self) -> Set[str]:
+    def _verify_inputs(self):
+        for op in self.ops:
+            if isinstance(op, (RepeatScheduler, EpochScheduler)):
+                for epoch_op in op.get_items():
+                    assert isinstance(epoch_op, TensorOp), "unsupported op format, must provide TensorOp in Network"
+            else:
+                assert isinstance(op, TensorOp), "unsupported op format, must provide TensorOp in Network"
+
+    def load_epoch(self, mode, epoch):
+        self.epoch_ops = get_current_ops(self.ops, mode, epoch)
+
+    def get_loss_keys(self) -> Set[str]:
+        loss_keys = set()
+        for op in self.ops:
+            if isinstance(op, (RepeatScheduler, EpochScheduler)):
+                for epoch_op in op.get_items():
+                    if isinstance(epoch_op, UpdateOp):
+                        loss_keys.update(to_list(epoch_op.inputs))
+            else:
+                if isinstance(op, UpdateOp):
+                    loss_keys.update(to_list(op.inputs))
+        return loss_keys
+
+    def get_effective_input_keys(self, mode, total_epoches) -> Set[str]:
         input_keys = set()
         produced_keys = set()
-        for op in self.ops:
-            #gather input keys
-            if isinstance(op, Scheduler):
-                keys_lists = [to_list(x.inputs) for x in op.epoch_dict.values() if not x is None]
-                for keys_list in keys_lists:
-                    input_keys.update(set(key for key in keys_list if not key in produced_keys))
-            else:
-                input_keys.update(set(key for key in to_list(op.inputs) if not key in produced_keys))
-            #keep track of intermediate output keys
-            if isinstance(op, Scheduler):
-                keys_lists = [x.outputs for x in op.epoch_dict.values() if not x is None]
-                if all(map(lambda x: x == keys_lists[0], keys_lists)):
-                    produced_keys.update(keys_lists[0])
-            else:
+        for epoch in self.get_signature_epoches(total_epoches):
+            for op in get_current_ops(self.ops, mode, epoch):
+                input_keys.update(set(key for key in to_list(op.inputs) if key not in produced_keys))
                 produced_keys.update(to_list(op.outputs))
         input_keys -= {None}
         return input_keys
 
-    def get_all_output_keys(self) -> Set[str]:
+    def get_all_output_keys(self, mode, total_epoches) -> Set[str]:
         output_keys = set()
-        for op in self.ops:
-            if isinstance(op, Scheduler):
-                keys_lists = [to_list(x.outputs) for x in op.epoch_dict.values() if not x is None]
-                for keys_list in keys_lists:
-                    output_keys.update(keys_list)
-            else:
+        for epoch in self.get_signature_epoches(total_epoches):
+            for op in get_current_ops(self.ops, mode, epoch):
                 output_keys.update(to_list(op.outputs))
         output_keys -= {None}
         return output_keys
+
+    def get_signature_epoches(self, total_epoches):
+        signature_epoches = {0}
+        epoch_keys = {0}
+        repeat_cycles = {1}
+        for x in self.ops:
+            if isinstance(x, EpochScheduler):
+                epoch_keys.update(x.epoch_dict.keys())
+            elif isinstance(x, RepeatScheduler):
+                repeat_cycles.add(x.cycle_length)
+        least_common_cycle = lcms(*repeat_cycles)
+        epoch_keys = sorted(epoch_keys)
+        for idx, epoch in enumerate(epoch_keys):
+            if idx + 1 < len(epoch_keys):
+                signature_epoches.update(range(epoch, epoch + min(epoch_keys[idx + 1] - epoch, least_common_cycle)))
+            else:
+                signature_epoches.update(range(epoch, epoch + least_common_cycle))
+        signature_epoches = set(epoch for epoch in signature_epoches if epoch < total_epoches)
+        return signature_epoches
 
     @staticmethod
     def _forward_batch(batch: Mapping[str, Any], state: Dict[str, Any], ops: List[TensorOp]):
