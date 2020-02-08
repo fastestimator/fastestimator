@@ -31,8 +31,8 @@ class MeanAvgPrecision(Trace):
         self.output_name = output_name
         assert len(self.output_name) == 3, 'MeanAvgPrecision  trace adds  3  fields mAP AP50 AP75 to state '
 
-        self.iou_thres = np.linspace(.5, 0.95, np.round((0.95 - .5) / .05) + 1, endpoint=True)
-        self.rec_thres = np.linspace(.0, 1.00, np.round((1.00 - .0) / .01) + 1, endpoint=True)
+        self.iou_thres = np.linspace(.5, 0.95, np.round((0.95 - .5) / .05).astype(np.int) + 1, endpoint=True)
+        self.rec_thres = np.linspace(.0, 1.00, np.round((1.00 - .0) / .01).astype(np.int) + 1, endpoint=True)
         self.categories = [n + 1 for n in range(num_classes)]  # MSCOCO style class label starts from 1
         self.maxdets = 100
         self.image_ids = []
