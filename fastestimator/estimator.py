@@ -15,8 +15,10 @@
 from collections import ChainMap
 from typing import Any, Iterable, List, Optional, Set, Union
 
-from fastestimator.backend import torch_to_tf
-from fastestimator.network import BaseNetwork, TFNetwork
+import tensorflow as tf
+
+from fastestimator.backend import to_tensor
+from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
 from fastestimator.op.op import get_inputs_by_key
 from fastestimator.op.tensorop.model import UpdateOp
 from fastestimator.pipeline import Pipeline
@@ -92,6 +94,7 @@ class Estimator:
                         total_epochs=self.epochs,
                         epoch_idx=0,
                         batch_idx=0)
+        system.network = self.network
         for trace in self.traces:
             trace.system = system
         return system
@@ -112,7 +115,7 @@ class Estimator:
                     trace_inputs.update(filter(None, to_list(trace.inputs)))
                     monitor_names.update(filter(None, to_list(trace.log_names)))
             self.trace_inputs[mode] = trace_inputs
-        self.traces.append(Logger(log_names=monitor_names, loss_names=loss_keys))
+        traces.append(Logger(log_names=monitor_names, loss_names=loss_keys))
         return traces
 
     def _start(self):
@@ -129,19 +132,24 @@ class Estimator:
     def _run_epoch(self):
         self._run_traces_on_epoch_begin()
         self.network.load_epoch(mode=self.system.mode, epoch=self.system.epoch_idx)
-        loader = self.pipeline.get_loader(mode=self.system.mode, epoch=self.system.epoch_idx)
-        for self.system.batch_idx, batch in enumerate(loader):
+        self.system.loader = self.pipeline.get_loader(mode=self.system.mode, epoch=self.system.epoch_idx)
+        for self.system.batch_idx, batch in enumerate(self.system.loader):
             if self.system.batch_idx == self.steps_per_epoch and self.system.mode == "train":
                 break
             batch = self._configure_tensor(batch)
             self._run_traces_on_batch_begin()
-            prediction = self.network.run_step(batch, {"mode": self.system.mode, "epoch": self.system.epoch_idx})
+            prediction = self.network.run_step(batch, {"mode": self.system.mode})
             self._run_traces_on_batch_end(batch, prediction)
             if self.system.mode == "train":
                 self.system.update_global_step()
         self._run_traces_on_epoch_end()
 
     def _configure_tensor(self, batch):
+        if isinstance(self.system.loader, tf.data.Dataset):
+            if isinstance(self.network, TorchNetwork):
+                batch = to_tensor(batch, target_type="torch")
+        elif isinstance(self.network, TFNetwork):
+            batch = to_tensor(batch, target_type="tensorflow")
         return batch
 
     def _run_traces_on_begin(self):
@@ -201,6 +209,8 @@ class System:
         self.epoch_idx = epoch_idx
         self.batch_idx = batch_idx
         self.buffer = {}
+        self.loader = None
+        self.network = None
 
     def add_buffer(self, key: str, value: Any):
         self.buffer[key] = value

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import pdb
 from collections import ChainMap
 from typing import Any, Dict, List, Mapping, Set, Union
 
@@ -107,7 +108,7 @@ def Network(ops):
     models = set()
     for op in ops:
         if isinstance(op, Scheduler):
-            models_in_schedule = set(x.model for x in op.epoch_dict.values() if isinstance(x, (ModelOp, UpdateOp)))
+            models_in_schedule = set(x.model for x in op.get_items() if isinstance(x, (ModelOp, UpdateOp)))
             models.update(models_in_schedule)
         elif isinstance(op, (ModelOp, UpdateOp)):
             models.add(op.model)
@@ -146,11 +147,11 @@ class TorchNetwork(BaseNetwork):
             dictionary containing the predictions of current epoch
         """
         new_batch = {}
-        ops = get_ops_by_mode(self.ops, state["mode"])
-        for key in self.effective_inputs:
+        mode = state["mode"]
+        for key in self.effective_inputs[mode]:
             if key in batch:
                 new_batch[key] = batch[key]
-        prediction = self._forward_step(new_batch, state, ops, self.effective_outputs)
+        prediction = self._forward_step(new_batch, state, self.epoch_ops, self.effective_outputs[mode])
         return prediction
 
     def _forward_step(self,
@@ -189,14 +190,17 @@ class TFNetwork(BaseNetwork):
             dictionary containing the predictions of current epoch
         """
         new_batch = {}
-        ops = get_ops_by_mode(self.ops, state["mode"])
-        for key in self.effective_inputs:
+        mode = state["mode"]
+        for key in self.effective_inputs[mode]:
             if key in batch:
                 new_batch[key] = batch[key]
         if debug:
-            prediction = self._forward_step_eager(new_batch, state, ops, self.effective_outputs)
+            prediction = self._forward_step_eager(new_batch, state, self.epoch_ops, self.effective_outputs[mode])
         else:
-            prediction = self._forward_step_static(new_batch, state, ops, to_list(self.effective_outputs))
+            prediction = self._forward_step_static(new_batch,
+                                                   state,
+                                                   self.epoch_ops,
+                                                   to_list(self.effective_outputs[mode]))
         return prediction
 
     def _forward_step_eager(self,
@@ -207,7 +211,6 @@ class TFNetwork(BaseNetwork):
         batch = ChainMap({}, batch)
         prediction = {}
         mode = state["mode"]
-        # use gradient tape for tensorflow train, otherwise use a dummy tape
         with tf.GradientTape(persistent=True) if mode == "train" else NonContext() as tape:
             state['tape'] = tape
             self._forward_batch(batch, state, ops)
@@ -227,7 +230,6 @@ class TFNetwork(BaseNetwork):
         batch = ChainMap({}, batch)
         prediction = {}
         mode = state["mode"]
-        # use gradient tape for tensorflow train, otherwise use a dummy tape
         with tf.GradientTape(persistent=True) if mode == "train" else NonContext() as tape:
             state['tape'] = tape
             self._forward_batch(batch, state, ops)
