@@ -76,7 +76,16 @@ class Estimator:
         return self._start()
 
     def _warmup(self):
-        pass
+        pipeline_signature_epoches = self.pipeline.get_signature_epoches(self.epochs)
+        network_signature_epoches = self.network.get_signature_epoches(self.epochs)
+        signature_epoches = pipeline_signature_epoches | network_signature_epoches
+        for epoch in signature_epoches:
+            for mode in self.pipeline.get_modes():
+                self.network.load_epoch(mode, epoch)
+                batch = next(iter(self.pipeline.get_loader(mode, epoch)))
+                batch = self._configure_tensor(batch)
+                prediction = self.network.run_step(batch, {"mode": mode, "warmup": True})
+                self.network.unload_epoch()
 
     def _check_keys(self):
         for mode in self.pipeline.get_modes():
@@ -138,10 +147,11 @@ class Estimator:
                 break
             batch = self._configure_tensor(batch)
             self._run_traces_on_batch_begin()
-            prediction = self.network.run_step(batch, {"mode": self.system.mode})
+            prediction = self.network.run_step(batch, {"mode": self.system.mode, "warmup": False})
             self._run_traces_on_batch_end(batch, prediction)
             if self.system.mode == "train":
                 self.system.update_global_step()
+        self.network.unload_epoch()
         self._run_traces_on_epoch_end()
 
     def _configure_tensor(self, batch):

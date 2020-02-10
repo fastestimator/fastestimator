@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import pdb
 from collections import ChainMap
 from typing import Any, Dict, List, Mapping, Set, Union
 
@@ -26,9 +25,8 @@ from fastestimator.util.util import NonContext, lcms, to_list
 
 
 class BaseNetwork:
-    def __init__(self, ops, models):
+    def __init__(self, ops):
         self.ops = to_list(ops)
-        self.models = models
         self._verify_inputs()
         self.effective_inputs = dict()
         self.effective_outputs = dict()
@@ -44,6 +42,9 @@ class BaseNetwork:
 
     def load_epoch(self, mode, epoch):
         self.epoch_ops = get_current_ops(self.ops, mode, epoch)
+
+    def unload_epoch(self):
+        pass
 
     def get_loss_keys(self) -> Set[str]:
         loss_keys = set()
@@ -123,26 +124,35 @@ def Network(ops):
     assert len(framework) == 1, "please make sure either tensorflow or torch model is used in network"
 
     if framework.pop() == "tensorflow":
-        network = TFNetwork(ops, models)
+        network = TFNetwork(ops)
     else:
-        network = TorchNetwork(ops, models)
+        network = TorchNetwork(ops)
     return network
 
 
 class TorchNetwork(BaseNetwork):
-    def __init__(self, ops, models):
-        super().__init__(ops, models)
+    def __init__(self, ops):
+        super().__init__(ops)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.epoch_models = set()
+
+    def load_epoch(self, mode, epoch):
+        self.epoch_ops = get_current_ops(self.ops, mode, epoch)
         if self.device.type == "cuda":
-            for model in self.models:
+            self.epoch_models = set(op.model for op in self.epoch_ops if isinstance(op, (UpdateOp, ModelOp)))
+            for model in self.epoch_models:
                 model.to(self.device)
 
-    def run_step(self, batch: Dict[str, Any], state: Dict[str, Any], debug: bool = False) -> Dict[str, Any]:
+    def unload_epoch(self):
+        if self.device.type == "cuda":
+            for model in self.epoch_models:
+                model.to("cpu")
+
+    def run_step(self, batch: Dict[str, Any], state: Dict[str, Any]) -> Dict[str, Any]:
         """Execute the ops in Network
         Args:
             batch : dictionary that contains batch data after the pipeline
             state : dictionary that contains meta data
-            debug : whether to run in eager mode (only available for TFNetwork)
         Returns:
             dictionary containing the predictions of current epoch
         """
@@ -177,15 +187,14 @@ class TorchNetwork(BaseNetwork):
 
 
 class TFNetwork(BaseNetwork):
-    def __init__(self, ops, models):
-        super().__init__(ops, models)
+    def __init__(self, ops):
+        super().__init__(ops)
 
-    def run_step(self, batch: Dict[str, Any], state: Dict[str, Any], debug: bool = False) -> Dict[str, Any]:
+    def run_step(self, batch: Dict[str, Any], state: Dict[str, Any]) -> Dict[str, Any]:
         """Execute the ops in Network
         Args:
             batch : dictionary that contains batch data after the pipeline
             state : dictionary that contains meta data
-            debug : whether to run in eager mode (only available for TFNetwork)
         Returns:
             dictionary containing the predictions of current epoch
         """
@@ -194,7 +203,7 @@ class TFNetwork(BaseNetwork):
         for key in self.effective_inputs[mode]:
             if key in batch:
                 new_batch[key] = batch[key]
-        if debug:
+        if state["warmup"]:
             prediction = self._forward_step_eager(new_batch, state, self.epoch_ops, self.effective_outputs[mode])
         else:
             prediction = self._forward_step_static(new_batch,
