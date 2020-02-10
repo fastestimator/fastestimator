@@ -51,6 +51,8 @@ $ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 ### Domain Adaptation
 * **Adversarial Discriminative Domain Adaptation (ADDA):** Adapting trained MNIST clasifier to USPS digits dataset without label data. [[paper](https://arxiv.org/abs/1702.05464)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/domain_adaptation/ADDA/ADDA.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/domain_adaptation/ADDA/ADDA.ipynb)]
 
+* **Unsupervised Domain Adaptation by Backpropagation:** Training a Domain Adversarial Neural Network (DANN) on MNIST dataset  (with label) and USPS dataset (without label) via gradient reversal layer. [[paper](https://arxiv.org/abs/1702.05464)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/domain_adaptation/DANN/DANN.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/domain_adaptation/DANN/DANN.ipynb)]
+
 ### Image Classification
 * **DenseNet:** Image classifier with DenseNet121 on Cifar10 dataset. [[paper](https://arxiv.org/abs/1608.06993)][[code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/densenet121_cifar10/densenet121_cifar10.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/densenet121_cifar10/densenet121_cifar10.ipynb)]
 
