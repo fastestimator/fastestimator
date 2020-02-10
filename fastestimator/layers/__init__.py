@@ -22,3 +22,4 @@ from fastestimator.layers.pixel_norm import PixelNormalization
 from fastestimator.layers.reflection_padding_2d import ReflectionPadding2D
 from fastestimator.layers.sub_pixel_conv_2d import SubPixelConv2D
 from fastestimator.layers.uncertainty_weighted_loss import UncertaintyWeightedLoss
+from fastestimator.layers.grad_reversal import GradReversal
