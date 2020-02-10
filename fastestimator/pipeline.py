@@ -94,9 +94,11 @@ class Pipeline:
         self.transformed_dataset = {}
         self.dataset_schedule = {}
         self.all_output_keys = set()
-        # TFrecord only
+        # TFrecord and generator
+        self.feature_dtype = {"train": [], "eval": []}
+        self.generator_tensor_shape = {"train": [], "eval": []}
+        # TFrecord
         self.summary_file = {}
-        self.feature_dtype = {"train": [], "eval": []}  #TFrecord and generator
         self.record_feature_shape = {"train": [], "eval": []}
         self.compression = {"train": [], "eval": []}
         self.file_names = {"train": [], "eval": []}
@@ -145,10 +147,13 @@ class Pipeline:
         self.all_features[mode].append(data)
         assert isinstance(data, dict), "the output of generator must be a dictionary with feature name as key"
         feature_dtype = dict()
+        generator_tensor_shape = dict()
         for key, value in data.items():
             value = np.asarray(value)
             feature_dtype[key] = convert_tf_dtype(str(value.dtype))
+            generator_tensor_shape[key] = value.shape
         self.feature_dtype[mode].append(feature_dtype)
+        self.generator_tensor_shape[mode].append(generator_tensor_shape)
         self.num_examples[mode].append(0)
         self.shuffle_buffer[mode].append(0)
 
@@ -224,7 +229,8 @@ class Pipeline:
                     ds_temp = tf.data.Dataset.from_tensor_slices(self.all_features[mode][idx])
                 else:
                     ds_temp = tf.data.Dataset.from_generator(self.data[mode],
-                                                             output_types=self.feature_dtype[mode][idx])
+                                                             output_types=self.feature_dtype[mode][idx],
+                                                             output_shapes=self.generator_tensor_shape[mode][idx])
             else:
                 if mode == "train":
                     ds_temp = tf.data.Dataset.from_tensor_slices(self.file_names[mode][idx])
