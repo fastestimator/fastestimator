@@ -401,7 +401,7 @@ class Pipeline:
         ds_iter = self.dataset_schedule[mode].get_current_value(current_epoch)
         for _ in range(num_steps):
             data.append(next(ds_iter))
-        if self.global_batch_multiplier > 1:
+        if self.global_batch_multiplier > 1 and fe.distribute_strategy:
             data = [per_replica_to_global(item) for item in data]
         if not reuse:
             self._reset()
