@@ -41,7 +41,7 @@ def parse_string_to_python(val: str) -> Any:
             return val
 
 
-def to_list(data: Any) -> List:
+def to_list(data: Any) -> List[Any]:
     """Convert data to a list.
     Args:
         data: Input data, with or without a python container.

@@ -15,12 +15,12 @@
 import os
 import time
 import warnings
-from typing import List, Set, Union
+from typing import List, Optional, Set, Union
 
 import tensorflow as tf
 from torch.utils.data import DataLoader, Dataset
 
-from fastestimator.dataset.fe_dataset import OpDataset
+from fastestimator.dataset.op_dataset import OpDataset
 from fastestimator.op import NumpyOp, get_current_ops
 from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
 from fastestimator.util.util import lcms, to_list
@@ -33,7 +33,7 @@ class Pipeline:
                  test_data: Union[Dataset, DataLoader, tf.data.Dataset, None] = None,
                  batch_size: Union[int, Scheduler, None] = None,
                  ops: Union[None, NumpyOp, Scheduler, List[Union[NumpyOp, Scheduler]]] = None,
-                 num_process: Union[int, None] = None):
+                 num_process: Optional[int] = None):
         self.data = {x: y for (x, y) in zip(["train", "eval", "test"], [train_data, eval_data, test_data]) if y}
         self.batch_size = batch_size
         self.ops = ops
@@ -64,7 +64,6 @@ class Pipeline:
                 for batch_size in self.batch_size.get_items():
                     assert isinstance(batch_size, int), "unsupported batch_size format"
             #ops check
-            assert isinstance(self.ops, list), "unsupported ops format"
             for op in self.ops:
                 if isinstance(op, (RepeatScheduler, EpochScheduler)):
                     for epoch_op in op.get_items():
@@ -85,7 +84,7 @@ class Pipeline:
             raise ValueError("Unsupported dataset type for {}".format(mode))
 
     def get_modes(self) -> Set[str]:
-        return set(mode for mode in self.data.keys())
+        return set(self.data.keys())
 
     def benchmark(self, mode: str = "train", num_steps: int = 1000, log_interval: int = 100, epoch: int = 0):
         loader = self.get_loader(mode=mode, epoch=epoch)
@@ -111,7 +110,7 @@ class Pipeline:
             data = DataLoader(op_dataset, batch_size=batch_size, shuffle=mode == "train", num_workers=self.num_process)
         return data
 
-    def get_signature_epoches(self, total_epoches):
+    def get_signature_epoches(self, epochs):
         signature_epoches = {0}
         epoch_keys = {0}
         repeat_cycles = {1}
@@ -127,12 +126,12 @@ class Pipeline:
                 signature_epoches.update(range(epoch, epoch + min(epoch_keys[idx + 1] - epoch, least_common_cycle)))
             else:
                 signature_epoches.update(range(epoch, epoch + least_common_cycle))
-        signature_epoches = set(epoch for epoch in signature_epoches if epoch < total_epoches)
+        signature_epoches = set(epoch for epoch in signature_epoches if epoch < epochs)
         return signature_epoches
 
-    def get_all_output_keys(self, mode, total_epoches) -> Set[str]:
+    def get_all_output_keys(self, mode, epochs) -> Set[str]:
         output_keys = set()
-        for epoch in self.get_signature_epoches(total_epoches):
+        for epoch in self.get_signature_epoches(epochs):
             loader = self.get_loader(mode=mode, epoch=epoch)
             data = next(iter(loader))
             assert isinstance(data, dict), "please make sure data output format is dictionary"

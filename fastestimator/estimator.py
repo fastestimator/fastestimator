@@ -23,6 +23,7 @@ from fastestimator.op.op import get_inputs_by_key
 from fastestimator.op.tensorop.model import UpdateOp
 from fastestimator.pipeline import Pipeline
 from fastestimator.trace import EvalEssential, Logger, Trace, TrainEssential
+from fastestimator.util.system import System
 from fastestimator.util.util import draw, get_num_devices, to_list
 
 
@@ -100,7 +101,7 @@ class Estimator:
                         global_step=0,
                         num_devices=get_num_devices(),
                         log_steps=self.log_steps,
-                        total_epochs=self.epochs,
+                        epochs=self.epochs,
                         epoch_idx=0,
                         batch_idx=0)
         system.network = self.network
@@ -200,40 +201,3 @@ class Estimator:
         for trace in self.traces:
             trace.on_end()
         self.system.clear_buffer()
-
-
-class System:
-    def __init__(self,
-                 mode: str,
-                 global_step: int,
-                 num_devices: int,
-                 log_steps: int,
-                 total_epochs: int,
-                 epoch_idx: int,
-                 batch_idx: int):
-        self.mode = mode
-        self.global_step = global_step
-        self.num_devices = num_devices
-        self.log_steps = log_steps
-        self.total_epochs = total_epochs
-        self.epoch_idx = epoch_idx
-        self.batch_idx = batch_idx
-        self.buffer = {}
-        self.loader = None
-        self.network = None
-
-    def add_buffer(self, key: str, value: Any):
-        self.buffer[key] = value
-
-    def clear_buffer(self):
-        del self.buffer
-        self.buffer = {}
-
-    def read_buffer(self, key: str) -> Any:
-        return self.buffer[key]
-
-    def update_epoch_idx(self):
-        self.epoch_idx += 1
-
-    def update_global_step(self):
-        self.global_step += 1

@@ -16,14 +16,11 @@
 
 class Scheduler:
     def get_current_value(self, epoch: int):
-        return None
-
-    def get_items(self):
         raise NotImplementedError
 
 
 class RepeatScheduler(Scheduler):
-    def __init__(self, repeat_list):
+    def __init__(self, repeat_list: list):
         assert isinstance(repeat_list, list), "must provide a list as input of RepeatSchedule"
         self.repeat_list = repeat_list
         self.cycle_length = len(repeat_list)

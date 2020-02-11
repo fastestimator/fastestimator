@@ -19,7 +19,7 @@ from fastestimator.op import get_inputs_by_op, write_outputs_by_key
 
 
 class OpDataset(Dataset):
-    def __init__(self, dataset, ops, mode):
+    def __init__(self, dataset: Dataset, ops: list, mode: str):
         self.dataset = dataset
         self.ops = ops
         self.mode = mode

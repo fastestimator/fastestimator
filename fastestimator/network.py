@@ -40,7 +40,7 @@ class BaseNetwork:
             else:
                 assert isinstance(op, TensorOp), "unsupported op format, must provide TensorOp in Network"
 
-    def load_epoch(self, mode, epoch):
+    def load_epoch(self, mode: str, epoch: int):
         self.epoch_ops = get_current_ops(self.ops, mode, epoch)
 
     def unload_epoch(self):
@@ -58,7 +58,7 @@ class BaseNetwork:
                     loss_keys.update(to_list(op.inputs))
         return loss_keys
 
-    def get_effective_input_keys(self, mode, total_epoches) -> Set[str]:
+    def get_effective_input_keys(self, mode: str, total_epoches: int) -> Set[str]:
         input_keys = set()
         produced_keys = set()
         for epoch in self.get_signature_epoches(total_epoches):
@@ -68,7 +68,7 @@ class BaseNetwork:
         input_keys -= {None}
         return input_keys
 
-    def get_all_output_keys(self, mode, total_epoches) -> Set[str]:
+    def get_all_output_keys(self, mode: str, total_epoches: int) -> Set[str]:
         output_keys = set()
         for epoch in self.get_signature_epoches(total_epoches):
             for op in get_current_ops(self.ops, mode, epoch):
@@ -76,7 +76,7 @@ class BaseNetwork:
         output_keys -= {None}
         return output_keys
 
-    def get_signature_epoches(self, total_epoches):
+    def get_signature_epoches(self, total_epoches: int):
         signature_epoches = {0}
         epoch_keys = {0}
         repeat_cycles = {1}
@@ -105,6 +105,7 @@ class BaseNetwork:
                 write_outputs_by_key(batch, data, op.outputs)
 
 
+# noinspection PyPep8Naming
 def Network(ops):
     models = set()
     for op in ops:
@@ -121,12 +122,17 @@ def Network(ops):
             framework.add("tensorflow")
         elif isinstance(model, torch.nn.Module):
             framework.add("pytorch")
+        else:
+            framework.add("unknown")
     assert len(framework) == 1, "please make sure either tensorflow or torch model is used in network"
 
-    if framework.pop() == "tensorflow":
+    framework = framework.pop()
+    if framework == "tensorflow":
         network = TFNetwork(ops)
-    else:
+    elif framework == "pytorch":
         network = TorchNetwork(ops)
+    else:
+        raise ValueError("Unkown model type")
     return network
 
 
@@ -136,7 +142,7 @@ class TorchNetwork(BaseNetwork):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.epoch_models = set()
 
-    def load_epoch(self, mode, epoch):
+    def load_epoch(self, mode: str, epoch: int):
         self.epoch_ops = get_current_ops(self.ops, mode, epoch)
         if self.device.type == "cuda":
             self.epoch_models = set(op.model for op in self.epoch_ops if isinstance(op, (UpdateOp, ModelOp)))

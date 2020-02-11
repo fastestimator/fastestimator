@@ -20,7 +20,6 @@ import tensorflow as tf
 import torch
 
 from fastestimator.schedule import Scheduler
-from fastestimator.util.util import to_list
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
@@ -63,7 +62,7 @@ def get_current_ops(ops: Iterable[OpType], mode: str, epoch: int = 0) -> List[Op
     for op in ops:
         if isinstance(op, Scheduler):
             op = op.get_current_value(epoch)
-        if op and (op.mode is None or mode in to_list(op.mode)):
+        if op and (op.mode is None or mode in op.mode):
             selected_ops.append(op)
     return selected_ops
 
