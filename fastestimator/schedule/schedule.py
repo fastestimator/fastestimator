@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Dict, TypeVar, Generic, List, Callable
+from typing import Dict, TypeVar, Generic, List
 
 T = TypeVar('T')
 
@@ -21,16 +21,11 @@ class Scheduler(Generic[T]):
     def get_current_value(self, epoch: int) -> T:
         raise NotImplementedError
 
-
-class EnumerableScheduler(Scheduler[T]):
-    def get_current_value(self, epoch: int) -> T:
-        raise NotImplementedError
-
     def get_all_values(self) -> List[T]:
         raise NotImplementedError
 
 
-class RepeatScheduler(EnumerableScheduler[T]):
+class RepeatScheduler(Scheduler[T]):
     def __init__(self, repeat_list: List[T]):
         assert isinstance(repeat_list, List), "must provide a list as input of RepeatSchedule"
         self.repeat_list = repeat_list
@@ -44,16 +39,7 @@ class RepeatScheduler(EnumerableScheduler[T]):
         return self.repeat_list
 
 
-class FunctionScheduler(Scheduler[T]):
-    def __init__(self, schedule_fun: Callable[[int], T]):
-        assert hasattr(schedule_fun, '__call__'), "must provide a lambda function with epoch as input"
-        self.schedule_fun = schedule_fun
-
-    def get_current_value(self, epoch: int) -> T:
-        return self.schedule_fun(epoch)
-
-
-class EpochScheduler(EnumerableScheduler[T]):
+class EpochScheduler(Scheduler[T]):
     def __init__(self, epoch_dict: Dict[int, T]):
         assert isinstance(epoch_dict, dict), "must provide dictionary as epoch_dict"
         self.epoch_dict = epoch_dict

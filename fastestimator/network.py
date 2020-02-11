@@ -19,7 +19,7 @@ import tensorflow as tf
 import torch
 from fastestimator.op import TensorOp, get_current_ops, get_inputs_by_op, write_outputs_by_key
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
-from fastestimator.schedule import EpochScheduler, RepeatScheduler, EnumerableScheduler
+from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
 from fastestimator.util.util import NonContext, lcms, to_list
 
 
@@ -33,7 +33,7 @@ class BaseNetwork:
 
     def _verify_inputs(self):
         for op in self.ops:
-            if isinstance(op, EnumerableScheduler):
+            if isinstance(op, Scheduler):
                 for epoch_op in op.get_all_values():
                     assert isinstance(epoch_op, TensorOp), "unsupported op format, must provide TensorOp in Network"
             else:
@@ -48,7 +48,7 @@ class BaseNetwork:
     def get_loss_keys(self) -> Set[str]:
         loss_keys = set()
         for op in self.ops:
-            if isinstance(op, EnumerableScheduler):
+            if isinstance(op, Scheduler):
                 for epoch_op in op.get_all_values():
                     if isinstance(epoch_op, UpdateOp):
                         loss_keys.update(to_list(epoch_op.inputs))
@@ -57,26 +57,26 @@ class BaseNetwork:
                     loss_keys.update(to_list(op.inputs))
         return loss_keys
 
-    def get_effective_input_keys(self, mode: str, total_epoches: int) -> Set[str]:
+    def get_effective_input_keys(self, mode: str, total_epochs: int) -> Set[str]:
         input_keys = set()
         produced_keys = set()
-        for epoch in self.get_signature_epoches(total_epoches):
+        for epoch in self.get_signature_epochs(total_epochs):
             for op in get_current_ops(self.ops, mode, epoch):
                 input_keys.update(set(key for key in to_list(op.inputs) if key not in produced_keys))
                 produced_keys.update(to_list(op.outputs))
         input_keys -= {None}
         return input_keys
 
-    def get_all_output_keys(self, mode: str, total_epoches: int) -> Set[str]:
+    def get_all_output_keys(self, mode: str, total_epochs: int) -> Set[str]:
         output_keys = set()
-        for epoch in self.get_signature_epoches(total_epoches):
+        for epoch in self.get_signature_epochs(total_epochs):
             for op in get_current_ops(self.ops, mode, epoch):
                 output_keys.update(to_list(op.outputs))
         output_keys -= {None}
         return output_keys
 
-    def get_signature_epoches(self, total_epoches: int):
-        signature_epoches = {0}
+    def get_signature_epochs(self, total_epochs: int):
+        signature_epochs = {0}
         epoch_keys = {0}
         repeat_cycles = {1}
         for x in self.ops:
@@ -88,11 +88,11 @@ class BaseNetwork:
         epoch_keys = sorted(epoch_keys)
         for idx, epoch in enumerate(epoch_keys):
             if idx + 1 < len(epoch_keys):
-                signature_epoches.update(range(epoch, epoch + min(epoch_keys[idx + 1] - epoch, least_common_cycle)))
+                signature_epochs.update(range(epoch, epoch + min(epoch_keys[idx + 1] - epoch, least_common_cycle)))
             else:
-                signature_epoches.update(range(epoch, epoch + least_common_cycle))
-        signature_epoches = set(epoch for epoch in signature_epoches if epoch < total_epoches)
-        return signature_epoches
+                signature_epochs.update(range(epoch, epoch + least_common_cycle))
+        signature_epochs = set(epoch for epoch in signature_epochs if epoch < total_epochs)
+        return signature_epochs
 
     @staticmethod
     def _forward_batch(batch: Mapping[str, Any], state: Dict[str, Any], ops: List[TensorOp]):
@@ -111,7 +111,7 @@ class BaseNetwork:
 def Network(ops):
     models = set()
     for op in ops:
-        if isinstance(op, EnumerableScheduler):
+        if isinstance(op, Scheduler):
             models_in_schedule = set(x.model for x in op.get_all_values() if isinstance(x, (ModelOp, UpdateOp)))
             models.update(models_in_schedule)
         elif isinstance(op, (ModelOp, UpdateOp)):

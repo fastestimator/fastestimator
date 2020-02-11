@@ -21,7 +21,7 @@ import numpy as np
 import tensorflow as tf
 from fastestimator.dataset.op_dataset import OpDataset
 from fastestimator.op import NumpyOp, get_current_ops
-from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler, EnumerableScheduler
+from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
 from fastestimator.util.util import lcms, to_list
 from torch.utils.data import DataLoader, Dataset
 
@@ -29,15 +29,13 @@ DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
 
 
 class Pipeline:
-    def __init__(
-            self,
-            train_data: Union[None, DataSource, EnumerableScheduler[DataSource]] = None,
-            eval_data: Union[None, DataSource, EnumerableScheduler[DataSource]] = None,
-            test_data: Union[None, DataSource, EnumerableScheduler[DataSource]] = None,
-            batch_size: Union[None, int, EnumerableScheduler[int]] = None,
-            ops: Union[None, NumpyOp, EnumerableScheduler[NumpyOp], List[
-                Union[NumpyOp, EnumerableScheduler[NumpyOp]]]] = None,
-            num_process: Optional[int] = None):
+    def __init__(self,
+                 train_data: Union[None, DataSource, Scheduler[DataSource]] = None,
+                 eval_data: Union[None, DataSource, Scheduler[DataSource]] = None,
+                 test_data: Union[None, DataSource, Scheduler[DataSource]] = None,
+                 batch_size: Union[None, int, Scheduler[int]] = None,
+                 ops: Union[None, NumpyOp, Scheduler[NumpyOp], List[Union[NumpyOp, Scheduler[NumpyOp]]]] = None,
+                 num_process: Optional[int] = None):
         self.data = {x: y for (x, y) in zip(["train", "eval", "test"], [train_data, eval_data, test_data]) if y}
         self.batch_size = batch_size
         self.ops = ops
@@ -49,7 +47,7 @@ class Pipeline:
 
     def _verify_inputs(self):
         for mode, dataset in self.data.items():
-            if isinstance(dataset, EnumerableScheduler):
+            if isinstance(dataset, Scheduler):
                 for ds in dataset.get_all_values():
                     self._verify_dataset(mode, ds)
             else:
@@ -63,13 +61,13 @@ class Pipeline:
         if isinstance(dataset, Dataset):
             self.fe_dataset_exist = True
             # batch_size check
-            assert isinstance(self.batch_size, (EnumerableScheduler, int)), "unsupported batch_size format"
-            if isinstance(self.batch_size, EnumerableScheduler):
+            assert isinstance(self.batch_size, (Scheduler, int)), "unsupported batch_size format"
+            if isinstance(self.batch_size, Scheduler):
                 for batch_size in self.batch_size.get_all_values():
                     assert isinstance(batch_size, int), "unsupported batch_size format"
             # ops check
             for op in self.ops:
-                if isinstance(op, EnumerableScheduler):
+                if isinstance(op, Scheduler):
                     for epoch_op in op.get_all_values():
                         assert isinstance(epoch_op, NumpyOp), "unsupported op format, must provide NumpyOp in Pipeline"
                 else:
@@ -118,8 +116,8 @@ class Pipeline:
                               worker_init_fn=lambda _: np.random.seed())
         return data
 
-    def get_signature_epoches(self, epochs):
-        signature_epoches = {0}
+    def get_signature_epochs(self, epochs):
+        signature_epochs = {0}
         epoch_keys = {0}
         repeat_cycles = {1}
         for x in self.ops + list(self.data.values()) + [self.batch_size]:
@@ -131,15 +129,15 @@ class Pipeline:
         epoch_keys = sorted(epoch_keys)
         for idx, epoch in enumerate(epoch_keys):
             if idx + 1 < len(epoch_keys):
-                signature_epoches.update(range(epoch, epoch + min(epoch_keys[idx + 1] - epoch, least_common_cycle)))
+                signature_epochs.update(range(epoch, epoch + min(epoch_keys[idx + 1] - epoch, least_common_cycle)))
             else:
-                signature_epoches.update(range(epoch, epoch + least_common_cycle))
-        signature_epoches = set(epoch for epoch in signature_epoches if epoch < epochs)
-        return signature_epoches
+                signature_epochs.update(range(epoch, epoch + least_common_cycle))
+        signature_epochs = set(epoch for epoch in signature_epochs if epoch < epochs)
+        return signature_epochs
 
     def get_all_output_keys(self, mode, epochs) -> Set[str]:
         output_keys = set()
-        for epoch in self.get_signature_epoches(epochs):
+        for epoch in self.get_signature_epochs(epochs):
             loader = self.get_loader(mode=mode, epoch=epoch)
             data = next(iter(loader))
             assert isinstance(data, dict), "please make sure data output format is dictionary"
