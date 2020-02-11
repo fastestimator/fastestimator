@@ -17,6 +17,8 @@ import time
 import warnings
 from typing import List, Optional, Set, Union
 
+import numpy as np
+
 import tensorflow as tf
 from torch.utils.data import DataLoader, Dataset
 
@@ -107,7 +109,7 @@ class Pipeline:
             batch_size = self.batch_size
             if isinstance(batch_size, Scheduler):
                 batch_size = batch_size.get_current_value(epoch)
-            data = DataLoader(op_dataset, batch_size=batch_size, shuffle=mode == "train", num_workers=self.num_process)
+            data = DataLoader(op_dataset, batch_size=batch_size, shuffle=mode == "train", num_workers=self.num_process, worker_init_fn=lambda _: np.random.seed())
         return data
 
     def get_signature_epoches(self, epochs):
