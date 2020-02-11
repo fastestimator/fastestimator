@@ -17,10 +17,9 @@ from typing import Any, Dict, List, Mapping, Set, Union
 
 import tensorflow as tf
 import torch
-
 from fastestimator.op import TensorOp, get_current_ops, get_inputs_by_op, write_outputs_by_key
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
-from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
+from fastestimator.schedule import EpochScheduler, RepeatScheduler, EnumerableScheduler
 from fastestimator.util.util import NonContext, lcms, to_list
 
 
@@ -34,8 +33,8 @@ class BaseNetwork:
 
     def _verify_inputs(self):
         for op in self.ops:
-            if isinstance(op, (RepeatScheduler, EpochScheduler)):
-                for epoch_op in op.get_items():
+            if isinstance(op, EnumerableScheduler):
+                for epoch_op in op.get_all_values():
                     assert isinstance(epoch_op, TensorOp), "unsupported op format, must provide TensorOp in Network"
             else:
                 assert isinstance(op, TensorOp), "unsupported op format, must provide TensorOp in Network"
@@ -49,8 +48,8 @@ class BaseNetwork:
     def get_loss_keys(self) -> Set[str]:
         loss_keys = set()
         for op in self.ops:
-            if isinstance(op, (RepeatScheduler, EpochScheduler)):
-                for epoch_op in op.get_items():
+            if isinstance(op, EnumerableScheduler):
+                for epoch_op in op.get_all_values():
                     if isinstance(epoch_op, UpdateOp):
                         loss_keys.update(to_list(epoch_op.inputs))
             else:
@@ -104,13 +103,16 @@ class BaseNetwork:
             if op.outputs:
                 write_outputs_by_key(batch, data, op.outputs)
 
+    def run_step(self, batch: Dict[str, Any], state: Dict[str, Any]) -> Dict[str, Any]:
+        raise NotImplementedError
+
 
 # noinspection PyPep8Naming
 def Network(ops):
     models = set()
     for op in ops:
-        if isinstance(op, Scheduler):
-            models_in_schedule = set(x.model for x in op.get_items() if isinstance(x, (ModelOp, UpdateOp)))
+        if isinstance(op, EnumerableScheduler):
+            models_in_schedule = set(x.model for x in op.get_all_values() if isinstance(x, (ModelOp, UpdateOp)))
             models.update(models_in_schedule)
         elif isinstance(op, (ModelOp, UpdateOp)):
             models.add(op.model)

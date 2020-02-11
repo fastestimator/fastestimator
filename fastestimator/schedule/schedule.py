@@ -12,38 +12,49 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from typing import Dict, TypeVar, Generic, List, Callable
+
+T = TypeVar('T')
 
 
-class Scheduler:
-    def get_current_value(self, epoch: int):
+class Scheduler(Generic[T]):
+    def get_current_value(self, epoch: int) -> T:
         raise NotImplementedError
 
 
-class RepeatScheduler(Scheduler):
-    def __init__(self, repeat_list: list):
-        assert isinstance(repeat_list, list), "must provide a list as input of RepeatSchedule"
+class EnumerableScheduler(Scheduler[T]):
+    def get_current_value(self, epoch: int) -> T:
+        raise NotImplementedError
+
+    def get_all_values(self) -> List[T]:
+        raise NotImplementedError
+
+
+class RepeatScheduler(EnumerableScheduler[T]):
+    def __init__(self, repeat_list: List[T]):
+        assert isinstance(repeat_list, List), "must provide a list as input of RepeatSchedule"
         self.repeat_list = repeat_list
         self.cycle_length = len(repeat_list)
         assert self.cycle_length > 1, "list length must be greater than 1"
 
-    def get_current_value(self, epoch: int):
+    def get_current_value(self, epoch: int) -> T:
         return self.repeat_list[epoch % self.cycle_length]
 
-    def get_items(self):
+    def get_all_values(self) -> List[T]:
         return self.repeat_list
 
 
-class FunctionScheduler(Scheduler):
-    def __init__(self, schedule_fun):
+class FunctionScheduler(Scheduler[T]):
+    def __init__(self, schedule_fun: Callable[[int], T]):
         assert hasattr(schedule_fun, '__call__'), "must provide a lambda function with epoch as input"
         self.schedule_fun = schedule_fun
 
-    def get_current_value(self, epoch: int):
+    def get_current_value(self, epoch: int) -> T:
         return self.schedule_fun(epoch)
 
 
-class EpochScheduler(Scheduler):
-    def __init__(self, epoch_dict):
+class EpochScheduler(EnumerableScheduler[T]):
+    def __init__(self, epoch_dict: Dict[int, T]):
         assert isinstance(epoch_dict, dict), "must provide dictionary as epoch_dict"
         self.epoch_dict = epoch_dict
         self.keys = sorted(self.epoch_dict)
@@ -52,14 +63,14 @@ class EpochScheduler(Scheduler):
             assert isinstance(key, int), "found non-integer key: {}".format(key)
             assert key >= 0, "found negative key: {}".format(key)
 
-    def get_current_value(self, epoch: int):
+    def get_current_value(self, epoch: int) -> T:
         if epoch in self.keys:
             value = self.epoch_dict[epoch]
         else:
             value = self.epoch_dict[self._get_last_key(epoch)]
         return value
 
-    def get_items(self):
+    def get_all_values(self) -> List[T]:
         return list(self.epoch_dict.values())
 
     def _get_last_key(self, epoch: int) -> int:

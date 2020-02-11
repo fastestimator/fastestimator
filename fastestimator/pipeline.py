@@ -15,27 +15,29 @@
 import os
 import time
 import warnings
-from typing import List, Optional, Set, Union
+from typing import List, Optional, Set, Union, TypeVar
 
 import numpy as np
-
 import tensorflow as tf
-from torch.utils.data import DataLoader, Dataset
-
 from fastestimator.dataset.op_dataset import OpDataset
 from fastestimator.op import NumpyOp, get_current_ops
-from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
+from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler, EnumerableScheduler
 from fastestimator.util.util import lcms, to_list
+from torch.utils.data import DataLoader, Dataset
+
+DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
 
 
 class Pipeline:
-    def __init__(self,
-                 train_data: Union[Dataset, DataLoader, Scheduler, tf.data.Dataset, None] = None,
-                 eval_data: Union[Dataset, DataLoader, tf.data.Dataset, None] = None,
-                 test_data: Union[Dataset, DataLoader, tf.data.Dataset, None] = None,
-                 batch_size: Union[int, Scheduler, None] = None,
-                 ops: Union[None, NumpyOp, Scheduler, List[Union[NumpyOp, Scheduler]]] = None,
-                 num_process: Optional[int] = None):
+    def __init__(
+            self,
+            train_data: Union[None, DataSource, EnumerableScheduler[DataSource]] = None,
+            eval_data: Union[None, DataSource, EnumerableScheduler[DataSource]] = None,
+            test_data: Union[None, DataSource, EnumerableScheduler[DataSource]] = None,
+            batch_size: Union[None, int, EnumerableScheduler[int]] = None,
+            ops: Union[None, NumpyOp, EnumerableScheduler[NumpyOp], List[
+                Union[NumpyOp, EnumerableScheduler[NumpyOp]]]] = None,
+            num_process: Optional[int] = None):
         self.data = {x: y for (x, y) in zip(["train", "eval", "test"], [train_data, eval_data, test_data]) if y}
         self.batch_size = batch_size
         self.ops = ops
@@ -47,8 +49,8 @@ class Pipeline:
 
     def _verify_inputs(self):
         for mode, dataset in self.data.items():
-            if isinstance(dataset, (RepeatScheduler, EpochScheduler)):
-                for ds in dataset.get_items():
+            if isinstance(dataset, EnumerableScheduler):
+                for ds in dataset.get_all_values():
                     self._verify_dataset(mode, ds)
             else:
                 self._verify_dataset(mode, dataset)
@@ -60,19 +62,19 @@ class Pipeline:
     def _verify_dataset(self, mode, dataset):
         if isinstance(dataset, Dataset):
             self.fe_dataset_exist = True
-            #batch_size check
-            assert isinstance(self.batch_size, (RepeatScheduler, EpochScheduler, int)), "unsupported batch_size format"
-            if isinstance(self.batch_size, Scheduler):
-                for batch_size in self.batch_size.get_items():
+            # batch_size check
+            assert isinstance(self.batch_size, (EnumerableScheduler, int)), "unsupported batch_size format"
+            if isinstance(self.batch_size, EnumerableScheduler):
+                for batch_size in self.batch_size.get_all_values():
                     assert isinstance(batch_size, int), "unsupported batch_size format"
-            #ops check
+            # ops check
             for op in self.ops:
-                if isinstance(op, (RepeatScheduler, EpochScheduler)):
-                    for epoch_op in op.get_items():
+                if isinstance(op, EnumerableScheduler):
+                    for epoch_op in op.get_all_values():
                         assert isinstance(epoch_op, NumpyOp), "unsupported op format, must provide NumpyOp in Pipeline"
                 else:
                     assert isinstance(op, NumpyOp), "unsupported op format, must provide NumpyOp in Pipeline"
-            #num_process check
+            # num_process check
             if self.num_process:
                 assert isinstance(self.num_process, int), "number of process must be integer or None"
         elif isinstance(dataset, (DataLoader, tf.data.Dataset)):
@@ -100,7 +102,7 @@ class Pipeline:
             if idx == num_steps:
                 break
 
-    def get_loader(self, mode: str, epoch: int = 0):
+    def get_loader(self, mode: str, epoch: int = 0) -> Union[DataLoader, tf.data.Dataset]:
         data = self.data[mode]
         if isinstance(data, Scheduler):
             data = data.get_current_value(epoch)
@@ -109,7 +111,11 @@ class Pipeline:
             batch_size = self.batch_size
             if isinstance(batch_size, Scheduler):
                 batch_size = batch_size.get_current_value(epoch)
-            data = DataLoader(op_dataset, batch_size=batch_size, shuffle=mode == "train", num_workers=self.num_process, worker_init_fn=lambda _: np.random.seed())
+            data = DataLoader(op_dataset,
+                              batch_size=batch_size,
+                              shuffle=mode == "train",
+                              num_workers=self.num_process,
+                              worker_init_fn=lambda _: np.random.seed())
         return data
 
     def get_signature_epoches(self, epochs):

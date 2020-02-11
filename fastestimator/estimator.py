@@ -13,14 +13,12 @@
 # limitations under the License.
 # ==============================================================================
 from collections import ChainMap
-from typing import Any, Iterable, List, Optional, Set, Union
+from typing import Iterable, List, Optional, Union
 
 import tensorflow as tf
-
 from fastestimator.backend import to_tensor
 from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
 from fastestimator.op.op import get_inputs_by_key
-from fastestimator.op.tensorop.model import UpdateOp
 from fastestimator.pipeline import Pipeline
 from fastestimator.trace import EvalEssential, Logger, Trace, TrainEssential
 from fastestimator.util.system import System
