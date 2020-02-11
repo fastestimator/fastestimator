@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import time
-from typing import Iterable, Union, Callable, List, Any
+from typing import Any, Callable, Iterable, List, Union
 
 import numpy as np
 
@@ -47,26 +47,21 @@ class Trace:
     def on_begin(self):
         """Runs once at the beginning of training
         """
-
     def on_epoch_begin(self):
         """Runs at the beginning of each epoch
         """
-
     def on_batch_begin(self):
         """Runs at the beginning of each batch
         """
-
     def on_batch_end(self, data: List[Any]):
         """Runs at the end of each batch
 
         Args:
             data: value fetched by the inputs
         """
-
     def on_epoch_end(self):
         """Runs at the end of each epoch
         """
-
     def on_end(self):
         """Runs once at the end training.
         """
@@ -78,31 +73,26 @@ class TrainEssential(Trace):
     """
     def __init__(self, monitor_names):
         self.monitor_names = to_list(monitor_names)
-        log_names = to_list(monitor_names.union({"examples/sec", "progress", "total_time", "total_steps"}))
+        log_names = to_list(monitor_names.union({"steps/sec", "total_time"}))
         super().__init__(mode="train", inputs=self.monitor_names, log_names=log_names)
         self.elapse_times = []
-        self.num_example = 0
         self.time_start = None
         self.train_start = None
         self.system = None
 
     def on_begin(self):
-        self.system.add_buffer("total_steps", self.system.total_steps)
         self.train_start = time.perf_counter()
 
     def on_epoch_begin(self):
         self.time_start = time.perf_counter()
 
     def on_batch_end(self, data):
-        self.num_example += self.system.batch_size
         if self.system.global_step % self.system.log_steps == 0:
             for idx, key in enumerate(self.monitor_names):
                 self.system.add_buffer(key, data[idx])
             self.elapse_times.append(time.perf_counter() - self.time_start)
-            self.system.add_buffer("examples/sec", round(self.num_example / np.sum(self.elapse_times), 1))
-            self.system.add_buffer("progress", "{:.1%}".format(self.system.global_step / self.system.total_steps))
+            self.system.add_buffer("steps/sec", round(self.system.log_steps / np.sum(self.elapse_times), 1))
             self.elapse_times = []
-            self.num_example = 0
             self.time_start = time.perf_counter()
 
     def on_epoch_end(self):

@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, Iterable, TypeVar, List, Dict, Any
+from typing import Any, Dict, Iterable, List, TypeVar, Union
 
 import tensorflow as tf
 import torch
+from tensorflow.python.framework import ops as tfops
 
 from fastestimator.backend.update_model import update_model
 from fastestimator.op import TensorOp
@@ -39,4 +40,11 @@ class UpdateOp(TensorOp):
         self.model = model
 
     def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]):
-        update_model(self.model, data, tape=state['tape'])
+        if state["warmup"]:
+            if isinstance(self.model, tf.keras.Model):
+                with tfops.init_scope():
+                    _ = self.model.optimizer.iterations
+                    self.model.optimizer._create_hypers()
+                    self.model.optimizer._create_slots(self.model.trainable_variables)
+        else:
+            update_model(self.model, data, tape=state['tape'])

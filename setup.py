@@ -35,29 +35,22 @@ def get_name():
 setup(
     name=get_name(),
     version=get_version(),
-    description="Deep learning Application framework",
+    description="Deep learning framework",
     packages=find_packages(),
     package_dir={'': '.'},
     long_description="FastEstimator is a high-level deep learning API. With the help of FastEstimator, you can easily \
-                    build a high-performance deep learning model and run it anywhere."                                                                                                                                                                                                                                                                  ,
+                    build a high-performance deep learning model and run it anywhere.",
     author="FastEstimator Dev",
     url='https://github.com/fastestimator/fastestimator',
     license="Apache License 2.0",
     keywords="fastestimator tensorflow",
     classifiers=[
         "License :: OSI Approved :: Apache Software License",
-        "Programming Language :: Python :: 3", ],
+        "Programming Language :: Python :: 3",
+    ],
 
     # Declare minimal set for installation
-    install_requires=[
-        'numpy',
-        'tensorflow>=2.1',
-        'torch @ https://download.pytorch.org/whl/torch_stable.html',
-        'albumentations',
-        'torch',  # List a second time to make the IDE happy
-        'opencv-python',
-        'scipy'
-    ],
+    install_requires=['numpy', 'albumentations', 'pyfiglet', 'opencv-python', 'scipy'],
     # Declare extra set for installation
     extras_require={},
     scripts=['bin/fastestimator'])
