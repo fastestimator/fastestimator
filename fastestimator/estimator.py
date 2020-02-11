@@ -13,14 +13,12 @@
 # limitations under the License.
 # ==============================================================================
 from collections import ChainMap
-from typing import Any, Iterable, List, Optional, Set, Union
+from typing import Iterable, List, Optional, Union
 
 import tensorflow as tf
-
 from fastestimator.backend import to_tensor
 from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
 from fastestimator.op.op import get_inputs_by_key
-from fastestimator.op.tensorop.model import UpdateOp
 from fastestimator.pipeline import Pipeline
 from fastestimator.trace import EvalEssential, Logger, Trace, TrainEssential
 from fastestimator.util.system import System
@@ -77,10 +75,10 @@ class Estimator:
         return self._start()
 
     def _warmup(self):
-        pipeline_signature_epoches = self.pipeline.get_signature_epoches(self.epochs)
-        network_signature_epoches = self.network.get_signature_epoches(self.epochs)
-        signature_epoches = pipeline_signature_epoches | network_signature_epoches
-        for epoch in signature_epoches:
+        pipeline_signature_epochs = self.pipeline.get_signature_epochs(self.epochs)
+        network_signature_epochs = self.network.get_signature_epochs(self.epochs)
+        signature_epochs = pipeline_signature_epochs | network_signature_epochs
+        for epoch in signature_epochs:
             for mode in self.pipeline.get_modes():
                 self.network.load_epoch(mode, epoch)
                 batch = next(iter(self.pipeline.get_loader(mode, epoch)))

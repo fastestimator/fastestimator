@@ -12,4 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.schedule.schedule import EpochScheduler, FunctionScheduler, RepeatScheduler, Scheduler
+from fastestimator.schedule.schedule import Scheduler, EpochScheduler, RepeatScheduler
