@@ -12,14 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from typing import List
 
 from torch.utils.data import Dataset
-
+from fastestimator.op.op import NumpyOp
 from fastestimator.op import get_inputs_by_op, write_outputs_by_key
 
 
 class OpDataset(Dataset):
-    def __init__(self, dataset: Dataset, ops: list, mode: str):
+    def __init__(self, dataset: Dataset, ops: List[NumpyOp], mode: str):
         self.dataset = dataset
         self.ops = ops
         self.mode = mode
