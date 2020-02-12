@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from fastestimator.dataset.csv_dataset import CSVDataset
 from fastestimator.dataset.generator_dataset import GeneratorDataset
 from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset, LabeledDirDatasets
 from fastestimator.dataset.numpy_dataset import NumpyDataset
