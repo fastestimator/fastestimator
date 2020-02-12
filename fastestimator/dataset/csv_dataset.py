@@ -20,13 +20,13 @@ from torch.utils.data import Dataset
 
 
 class CSVDataset(Dataset):
-    """ CSVDataset reads entries from a CSV file, where the first row is the header. The root directory of the csv file 
-         may be accessed using dataset.parent_path. This may be useful if the csv contains relative path information 
+    """ CSVDataset reads entries from a CSV file, where the first row is the header. The root directory of the csv file
+         may be accessed using dataset.parent_path. This may be useful if the csv contains relative path information
          that you want to feed into, say, an ImageReader Op
     Args:
         csv_path: The (absolute) path to the CSV file
         delimiter: What delimiter is used by the file
-        kwargs: Other arguments to be passed through to pandas csv reader function 
+        kwargs: Other arguments to be passed through to pandas csv reader function
             (https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html)
     """
     def __init__(self, csv_path: str, delimiter: str = ",", **kwargs):
@@ -39,3 +39,28 @@ class CSVDataset(Dataset):
 
     def __getitem__(self, index: int) -> Dict:
         return self.data[index]
+
+
+class CSVDatasets:
+    """ A class which instantiates multiple CSVDataset from a folder containing one or more .csv files
+    Args:
+        root_dir: The path to the directory containing CSV files
+        delimiter: What delimiter is used by the file
+        kwargs: Other arguments to be passed through to pandas csv reader function
+            (https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html)
+    """
+    datasets: Dict[str, CSVDataset]
+
+    def __init__(self, root_dir: str, delimiter: str = ",", **kwargs):
+        root_dir = os.path.normpath(root_dir)
+        self.datasets = {}
+        try:
+            _, _, files = next(os.walk(root_dir))
+            for file in files:
+                if file.endswith(".csv"):
+                    self.datasets[file[0:-4]] = CSVDataset(os.path.join(root_dir, file), delimiter=delimiter, **kwargs)
+        except StopIteration:
+            raise ValueError("Invalid directory structure for CSVDatasets at root: {}".format(root_dir))
+
+    def __getitem__(self, mode: str) -> CSVDataset:
+        return self.datasets[mode]
