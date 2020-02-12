@@ -26,8 +26,8 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 class Accuracy(Trace):
-    def __init__(self, true_key, pred_key, log_names="accuracy"):
-        super().__init__(inputs=(true_key, pred_key), mode="eval", log_names=log_names)
+    def __init__(self, true_key, pred_key, output_name="accuracy"):
+        super().__init__(inputs=(true_key, pred_key), mode="eval", outputs=output_name)
         self.total = 0
         self.correct = 0
 
@@ -46,4 +46,4 @@ class Accuracy(Trace):
         self.total += len(label_pred.ravel())
 
     def on_epoch_end(self):
-        self.system.add_buffer(self.log_names, self.correct / self.total)
+        self.system.add_buffer(self.outputs, self.correct / self.total)

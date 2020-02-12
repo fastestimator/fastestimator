@@ -12,18 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any
+from typing import Any, Optional
+from fastestimator.util.util import get_num_devices
 
 
 class System:
     def __init__(self,
-                 mode: str,
-                 global_step: int,
-                 num_devices: int,
-                 log_steps: int,
-                 epochs: int,
-                 epoch_idx: int,
-                 batch_idx: int):
+                 mode: str = "train",
+                 global_step: int = 0,
+                 num_devices: int = get_num_devices(),
+                 log_steps: Optional[int] = None,
+                 epochs: int = 0,
+                 epoch_idx: int = 0,
+                 batch_idx: int = 0):
         self.mode = mode
         self.global_step = global_step
         self.num_devices = num_devices
@@ -45,8 +46,14 @@ class System:
     def read_buffer(self, key: str) -> Any:
         return self.buffer[key]
 
-    def update_epoch_idx(self):
-        self.epoch_idx += 1
-
     def update_global_step(self):
         self.global_step += 1
+
+    def reset(self):
+        self.mode = "train"
+        self.global_step = 0
+        self.epoch_idx = 0
+        self.batch_idx = 0
+        self.loader = None
+        self.network = None
+        self.clear_buffer()
