@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import os
 import time
 import warnings
 from typing import List, Optional, Set, Union, TypeVar
@@ -23,6 +22,7 @@ from fastestimator.dataset.op_dataset import OpDataset
 from fastestimator.op import NumpyOp, get_current_ops
 from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
 from fastestimator.util.util import lcms, to_list
+from psutil import cpu_count
 from torch.utils.data import DataLoader, Dataset
 
 DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
@@ -38,33 +38,31 @@ class Pipeline:
                  num_process: Optional[int] = None):
         self.data = {x: y for (x, y) in zip(["train", "eval", "test"], [train_data, eval_data, test_data]) if y}
         self.batch_size = batch_size
-        self.ops = ops
-        self.num_process = num_process
-        self.fe_dataset_exist = False
-        self._verify_inputs()
         self.ops = [] if ops is None else to_list(ops)
-        self.num_process = os.cpu_count() if num_process is None else num_process
+        self.num_process = num_process if num_process is not None else cpu_count(logical=False)
+        self._verify_inputs(**{k: v for k, v in locals().items() if k != 'self'})
 
-    def _verify_inputs(self):
+    def _verify_inputs(self, **kwargs):
+        fe_dataset = False
         for mode, dataset in self.data.items():
             if isinstance(dataset, Scheduler):
                 for ds in dataset.get_all_values():
-                    self._verify_dataset(mode, ds)
+                    fe_dataset = self._verify_dataset(mode, ds, **kwargs) or fe_dataset
             else:
-                self._verify_dataset(mode, dataset)
-        if not self.fe_dataset_exist:
-            assert not self.batch_size, "only support batch_size with built-in dataset in Pipeline"
-            assert not self.ops, "only support ops with built-in dataset in Pipeline"
-            assert not self.num_process, "only support num_process with built-in dataset in Pipeline"
+                fe_dataset = self._verify_dataset(mode, dataset, **kwargs) or fe_dataset
+        if not fe_dataset:
+            assert kwargs['batch_size'] is None, "only support batch_size with built-in dataset in Pipeline"
+            assert kwargs['ops'] is None, "only support ops with built-in dataset in Pipeline"
+            assert kwargs['num_process'] is None, "only support num_process with built-in dataset in Pipeline"
 
-    def _verify_dataset(self, mode, dataset):
+    def _verify_dataset(self, mode: str, dataset: DataSource, **kwargs) -> bool:
         if isinstance(dataset, Dataset):
-            self.fe_dataset_exist = True
             # batch_size check
-            assert isinstance(self.batch_size, (Scheduler, int)), "unsupported batch_size format"
+            assert isinstance(self.batch_size, (Scheduler, int)), \
+                "unsupported batch_size format: {}".format(self.batch_size)
             if isinstance(self.batch_size, Scheduler):
                 for batch_size in self.batch_size.get_all_values():
-                    assert isinstance(batch_size, int), "unsupported batch_size format"
+                    assert isinstance(batch_size, int), "unsupported batch_size format: {}".format(self.batch_size)
             # ops check
             for op in self.ops:
                 if isinstance(op, Scheduler):
@@ -73,15 +71,16 @@ class Pipeline:
                 else:
                     assert isinstance(op, NumpyOp), "unsupported op format, must provide NumpyOp in Pipeline"
             # num_process check
-            if self.num_process:
-                assert isinstance(self.num_process, int), "number of process must be integer or None"
+            assert isinstance(self.num_process, int), "number of processes must be an integer"
+            return True
         elif isinstance(dataset, (DataLoader, tf.data.Dataset)):
-            if self.batch_size:
+            if kwargs['batch_size'] is not None:
                 warnings.warn("batch_size will only be used for built-in dataset")
-            if self.ops:
+            if kwargs['ops'] is not None:
                 warnings.warn("ops will only be used for built-in dataset")
-            if self.num_process:
+            if kwargs['num_process'] is not None:
                 warnings.warn("num_process will only be used for built-in dataset")
+            return False
         else:
             raise ValueError("Unsupported dataset type for {}".format(mode))
 

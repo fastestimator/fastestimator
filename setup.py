@@ -46,11 +46,10 @@ setup(
     keywords="fastestimator tensorflow",
     classifiers=[
         "License :: OSI Approved :: Apache Software License",
-        "Programming Language :: Python :: 3",
-    ],
+        "Programming Language :: Python :: 3", ],
 
     # Declare minimal set for installation
-    install_requires=['numpy', 'albumentations', 'pyfiglet', 'opencv-python', 'scipy'],
+    install_requires=['numpy', 'albumentations', 'pyfiglet', 'opencv-python', 'scipy', 'psutil'],
     # Declare extra set for installation
     extras_require={},
     scripts=['bin/fastestimator'])
