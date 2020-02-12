@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Dict, TypeVar, Generic, List
+from typing import Dict, TypeVar, Generic, List, Union
 
 T = TypeVar('T')
 
@@ -66,3 +66,10 @@ class EpochScheduler(Scheduler[T]):
                 break
             last_key = key
         return last_key
+
+
+def schedule(arg: Union[T, Scheduler[T]]) -> Scheduler[T]:
+    if isinstance(arg, Scheduler):
+        return arg
+    else:
+        return EpochScheduler({0: arg})

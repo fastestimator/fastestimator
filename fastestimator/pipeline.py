@@ -14,13 +14,13 @@
 # ==============================================================================
 import time
 import warnings
-from typing import List, Optional, Set, Union, TypeVar
+from typing import List, Optional, Set, Union, TypeVar, Dict
 
 import numpy as np
 import tensorflow as tf
 from fastestimator.dataset.op_dataset import OpDataset
 from fastestimator.op import NumpyOp, get_current_ops
-from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
+from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler, schedule
 from fastestimator.util.util import lcms, to_list
 from psutil import cpu_count
 from torch.utils.data import DataLoader, Dataset
@@ -29,6 +29,11 @@ DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
 
 
 class Pipeline:
+    data: Dict[str, Scheduler[DataSource]]
+    batch_size: Scheduler[int]
+    ops: List[Scheduler[NumpyOp]]
+    num_process: int
+
     def __init__(self,
                  train_data: Union[None, DataSource, Scheduler[DataSource]] = None,
                  eval_data: Union[None, DataSource, Scheduler[DataSource]] = None,
@@ -36,43 +41,39 @@ class Pipeline:
                  batch_size: Union[None, int, Scheduler[int]] = None,
                  ops: Union[None, NumpyOp, Scheduler[NumpyOp], List[Union[NumpyOp, Scheduler[NumpyOp]]]] = None,
                  num_process: Optional[int] = None):
-        self.data = {x: y for (x, y) in zip(["train", "eval", "test"], [train_data, eval_data, test_data]) if y}
-        self.batch_size = batch_size
-        self.ops = [] if ops is None else to_list(ops)
+        self.data = {
+            x: schedule(y)
+            for (x, y) in zip(["train", "eval", "test"], [train_data, eval_data, test_data]) if y
+        }
+        self.batch_size = schedule(batch_size if batch_size is not None else 0)
+        self.ops = [schedule(op) for op in ([] if ops is None else to_list(ops))]
         self.num_process = num_process if num_process is not None else cpu_count(logical=False)
         self._verify_inputs(**{k: v for k, v in locals().items() if k != 'self'})
 
     def _verify_inputs(self, **kwargs):
         fe_dataset = False
         for mode, dataset in self.data.items():
-            if isinstance(dataset, Scheduler):
-                for ds in dataset.get_all_values():
-                    fe_dataset = self._verify_dataset(mode, ds, **kwargs) or fe_dataset
-            else:
-                fe_dataset = self._verify_dataset(mode, dataset, **kwargs) or fe_dataset
+            for ds in dataset.get_all_values():
+                self._verify_dataset(mode, ds, **kwargs)
+                if isinstance(ds, Dataset):
+                    fe_dataset = True
         if not fe_dataset:
             assert kwargs['batch_size'] is None, "only support batch_size with built-in dataset in Pipeline"
             assert kwargs['ops'] is None, "only support ops with built-in dataset in Pipeline"
             assert kwargs['num_process'] is None, "only support num_process with built-in dataset in Pipeline"
 
-    def _verify_dataset(self, mode: str, dataset: DataSource, **kwargs) -> bool:
+    def _verify_dataset(self, mode: str, dataset: DataSource, **kwargs):
         if isinstance(dataset, Dataset):
             # batch_size check
-            assert isinstance(self.batch_size, (Scheduler, int)), \
-                "unsupported batch_size format: {}".format(self.batch_size)
-            if isinstance(self.batch_size, Scheduler):
-                for batch_size in self.batch_size.get_all_values():
-                    assert isinstance(batch_size, int), "unsupported batch_size format: {}".format(self.batch_size)
+            for batch_size in self.batch_size.get_all_values():
+                assert isinstance(batch_size, int), "unsupported batch_size format: {}".format(self.batch_size)
+                assert batch_size > 0, "batch_size must be greater than zero, but received: {}".format(self.batch_size)
             # ops check
             for op in self.ops:
-                if isinstance(op, Scheduler):
-                    for epoch_op in op.get_all_values():
-                        assert isinstance(epoch_op, NumpyOp), "unsupported op format, must provide NumpyOp in Pipeline"
-                else:
-                    assert isinstance(op, NumpyOp), "unsupported op format, must provide NumpyOp in Pipeline"
+                for epoch_op in op.get_all_values():
+                    assert isinstance(epoch_op, NumpyOp), "unsupported op format, must provide NumpyOp in Pipeline"
             # num_process check
             assert isinstance(self.num_process, int), "number of processes must be an integer"
-            return True
         elif isinstance(dataset, (DataLoader, tf.data.Dataset)):
             if kwargs['batch_size'] is not None:
                 warnings.warn("batch_size will only be used for built-in dataset")
@@ -80,7 +81,6 @@ class Pipeline:
                 warnings.warn("ops will only be used for built-in dataset")
             if kwargs['num_process'] is not None:
                 warnings.warn("num_process will only be used for built-in dataset")
-            return False
         else:
             raise ValueError("Unsupported dataset type for {}".format(mode))
 
@@ -100,14 +100,10 @@ class Pipeline:
                 break
 
     def get_loader(self, mode: str, epoch: int = 0) -> Union[DataLoader, tf.data.Dataset]:
-        data = self.data[mode]
-        if isinstance(data, Scheduler):
-            data = data.get_current_value(epoch)
+        data = self.data[mode].get_current_value(epoch)
         if isinstance(data, Dataset):
             op_dataset = OpDataset(data, get_current_ops(self.ops, mode, epoch), mode)
-            batch_size = self.batch_size
-            if isinstance(batch_size, Scheduler):
-                batch_size = batch_size.get_current_value(epoch)
+            batch_size = self.batch_size.get_current_value(epoch)
             data = DataLoader(op_dataset,
                               batch_size=batch_size,
                               shuffle=mode == "train",
