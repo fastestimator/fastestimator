@@ -14,8 +14,9 @@ re_route_title = '[^A-Za-z0-9 ]+'
 re_url = '\[notebook\]\((.*)\)'
 
 apphub_md_dir = 'apphub_md'
-tmp_markdown = os.path.join(tempfile.gettempdir(), apphub_md_dir)
-struct_json_path = os.path.join(tmp_markdown, 'structure_apphub.json')
+tmp_dir = '/var/lib/jenkins/workspace/tmp_output'
+tmp_markdown = os.path.join(tmp_dir, 'example')
+struct_json_path = os.path.join(tmp_markdown, 'structure.json')
 apphub_toc_path = os.path.join(tmp_markdown, 'apphub_toc.md')
 apphub_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../apphub/')
 
