@@ -7,7 +7,8 @@ import sys
 import tempfile
 
 titles = ['Args', 'Raises', 'Returns']
-
+tmp_output = '/var/lib/jenkins/workspace/tmp_output'
+save_dir = os.path.join(tmp_output, 'api')
 
 def extractmarkdown(module, save_path):
     output = list()

@@ -11,8 +11,9 @@ import tempfile
 
 fe_dir = 'fastestimator'
 tutorial_md_dir = 'tutorials_md'
-tmp_markdown = os.path.join(tempfile.gettempdir(), tutorial_md_dir)
-struct_json_path = os.path.join(tmp_markdown, 'structure_tutorial.json')
+tmp_output = '/var/lib/jenkins/workspace/tmp_output'
+tmp_markdown = os.path.join(tmp_output, 'tutorial')
+struct_json_path = os.path.join(tmp_markdown, 'structure.json')
 
 re_sidebar_title = '[^A-Za-z0-9:!,$%. ]+'
 re_route_title = '[^A-Za-z0-9 ]+'
