@@ -58,7 +58,7 @@ class FEDataset(Dataset):
         elif method == 'from_front':
             indices = [i for i in range(int_sum)]
         elif method == 'from_back':
-            indices = [i for i in range(original_size - 1, original_size - int_sum - 1, -1)]
+            indices = [i for i in range(original_size - int_sum, original_size)]
         start = 0
         for stop in n_samples:
             splits.append((indices[i] for i in range(start, start + stop)))
