@@ -13,13 +13,13 @@
 # limitations under the License.
 # ==============================================================================
 import os
-from typing import Dict
+from typing import Dict, Generator, List, Any
 
 import pandas as pd
-from torch.utils.data import Dataset
+from fastestimator.dataset.fe_dataset import FEDataset
 
 
-class CSVDataset(Dataset):
+class CSVDataset(FEDataset):
     """ CSVDataset reads entries from a CSV file, where the first row is the header. The root directory of the csv file
          may be accessed using dataset.parent_path. This may be useful if the csv contains relative path information
          that you want to feed into, say, an ImageReader Op
@@ -39,6 +39,22 @@ class CSVDataset(Dataset):
 
     def __getitem__(self, index: int) -> Dict:
         return self.data[index]
+
+    @classmethod
+    def _skip_init(cls, data: Dict[int, Dict[str, Any]], parent_path: str) -> 'CSVDataset':
+        obj = cls.__new__(cls)
+        obj.data = data
+        obj.parent_path = parent_path
+        return obj
+
+    def _do_split(self, splits: List[Generator[int, None, None]]) -> List['CSVDataset']:
+        results = []
+        for split in splits:
+            data = {new_idx: self.data.pop(old_idx) for new_idx, old_idx in enumerate(split)}
+            results.append(CSVDataset._skip_init(data, self.parent_path))
+        # Re-key the remaining data to be contiguous from 0 to new max index
+        self.data = {new_idx: v for new_idx, (old_idx, v) in enumerate(self.data.items())}
+        return results
 
 
 class CSVDatasets:
