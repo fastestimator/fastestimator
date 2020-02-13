@@ -12,18 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import os
 import time
 import warnings
-from typing import List, Optional, Set, Union, TypeVar
+from typing import List, Optional, Set, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
+from torch.utils.data import DataLoader, Dataset
+
 from fastestimator.dataset.op_dataset import OpDataset
 from fastestimator.op import NumpyOp, get_current_ops
 from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
 from fastestimator.util.util import lcms, to_list
-from psutil import cpu_count
-from torch.utils.data import DataLoader, Dataset
 
 DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
 
@@ -39,7 +40,7 @@ class Pipeline:
         self.data = {x: y for (x, y) in zip(["train", "eval", "test"], [train_data, eval_data, test_data]) if y}
         self.batch_size = batch_size
         self.ops = [] if ops is None else to_list(ops)
-        self.num_process = num_process if num_process is not None else cpu_count(logical=False)
+        self.num_process = num_process if num_process is not None else os.cpu_count()
         self._verify_inputs(**{k: v for k, v in locals().items() if k != 'self'})
 
     def _verify_inputs(self, **kwargs):
