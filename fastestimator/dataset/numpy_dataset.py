@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import List, Generator, Dict, Any
+from typing import List, Iterable, Dict, Any, Sequence
 
 import numpy as np
 from fastestimator.dataset.fe_dataset import FEDataset
@@ -43,7 +43,7 @@ class NumpyDataset(FEDataset):
         obj.data = data
         return obj
 
-    def _do_split(self, splits: List[Generator[int, None, None]]) -> List['NumpyDataset']:
+    def _do_split(self, splits: Sequence[Iterable[int]]) -> List['NumpyDataset']:
         results = []
         for split in splits:
             data = {new_idx: self.data.pop(old_idx) for new_idx, old_idx in enumerate(split)}

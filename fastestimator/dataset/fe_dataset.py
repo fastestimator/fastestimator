@@ -14,7 +14,7 @@
 # ==============================================================================
 import math
 import random
-from typing import Dict, Any, Union, List, Generator
+from typing import Dict, Any, Union, List, Sequence, Iterable
 
 from torch.utils.data import Dataset
 
@@ -26,11 +26,10 @@ class FEDataset(Dataset):
     def __getitem__(self, index: int) -> Dict[str, Any]:
         raise NotImplementedError
 
-    def split(self, *fractions: Union[float, int], method: str = "random") -> Union['FEDataset', List['FEDataset']]:
+    def split(self, *fractions: Union[float, int, Iterable[int]]) -> Union['FEDataset', List['FEDataset']]:
         assert len(fractions) > 0, "split requires at least one fraction argument"
         original_size = len(self)
-        split_types = ("random", "from_front", "from_back")
-        assert method in split_types, "split type must be one of {}, but recieved: {}".format(split_types, method)
+        method = None
         frac_sum = 0
         int_sum = 0
         n_samples = []
@@ -40,33 +39,42 @@ class FEDataset(Dataset):
                 frac = math.ceil(original_size * frac)
                 int_sum += frac
                 n_samples.append(frac)
+                if method is None:
+                    method = 'number'
+                assert method == 'number', "Split supports either numeric splits or lists of indices but not both"
             elif isinstance(frac, int):
                 int_sum += frac
                 n_samples.append(frac)
+                if method is None:
+                    method = 'number'
+                assert method == 'number', "Split supports either numeric splits or lists of indices but not both"
+            elif isinstance(frac, Iterable):
+                if method is None:
+                    method = 'indices'
+                assert method == 'indices', "Split supports either numeric splits or lists of indices but not both"
             else:
-                raise ValueError("split only accepts float or int type splits, but {} was given".format(frac))
+                raise ValueError(
+                    "split only accepts float, int, or iter[int] type splits, but {} was given".format(frac))
         assert frac_sum < 1, "total split fraction should sum to less than 1.0, but got: {}".format(frac_sum)
         assert int_sum < original_size, \
             "total split requirements ({}) should sum to less than dataset size ({})".format(int_sum, original_size)
 
         splits = []
-        indices = []
-        if method == 'random':
+        if method == 'number':
+            indices = []
             # TODO - convert to a linear congruential generator for large datasets?
             # https://stackoverflow.com/questions/9755538/how-do-i-create-a-list-of-random-numbers-without-duplicates
             indices = random.sample(range(original_size), int_sum)
-        elif method == 'from_front':
-            indices = [i for i in range(int_sum)]
-        elif method == 'from_back':
-            indices = [i for i in range(original_size - int_sum, original_size)]
-        start = 0
-        for stop in n_samples:
-            splits.append((indices[i] for i in range(start, start + stop)))
-            start += stop
+            start = 0
+            for stop in n_samples:
+                splits.append((indices[i] for i in range(start, start + stop)))
+                start += stop
+        elif method == 'indices':
+            splits = fractions
         splits = self._do_split(splits)
         if len(fractions) == 1:
             return splits[0]
         return splits
 
-    def _do_split(self, splits: List[Generator[int, None, None]]) -> List['FEDataset']:
+    def _do_split(self, splits: Sequence[Iterable[int]]) -> List['FEDataset']:
         raise NotImplementedError

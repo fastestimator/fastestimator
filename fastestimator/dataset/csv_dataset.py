@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import os
-from typing import Dict, Generator, List, Any
+from typing import Dict, Iterable, List, Any, Sequence
 
 import pandas as pd
 from fastestimator.dataset.fe_dataset import FEDataset
@@ -47,7 +47,7 @@ class CSVDataset(FEDataset):
         obj.parent_path = parent_path
         return obj
 
-    def _do_split(self, splits: List[Generator[int, None, None]]) -> List['CSVDataset']:
+    def _do_split(self, splits: Sequence[Iterable[int]]) -> List['CSVDataset']:
         results = []
         for split in splits:
             data = {new_idx: self.data.pop(old_idx) for new_idx, old_idx in enumerate(split)}
