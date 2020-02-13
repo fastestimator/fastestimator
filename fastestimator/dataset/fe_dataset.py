@@ -27,6 +27,7 @@ class FEDataset(Dataset):
         raise NotImplementedError
 
     def split(self, *fractions: Union[float, int], method: str = "random") -> Union['FEDataset', List['FEDataset']]:
+        assert len(fractions) > 0, "split requires at least one fraction argument"
         original_size = len(self)
         split_types = ("random", "from_front", "from_back")
         assert method in split_types, "split type must be one of {}, but recieved: {}".format(split_types, method)
@@ -62,7 +63,10 @@ class FEDataset(Dataset):
         for stop in n_samples:
             splits.append((indices[i] for i in range(start, start + stop)))
             start += stop
-        return self._do_split(splits)
+        splits = self._do_split(splits)
+        if len(fractions) == 1:
+            return splits[0]
+        return splits
 
     def _do_split(self, splits: List[Generator[int, None, None]]) -> List['FEDataset']:
         raise NotImplementedError
