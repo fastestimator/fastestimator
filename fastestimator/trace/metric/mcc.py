@@ -20,13 +20,17 @@ import tensorflow as tf
 import torch
 from fastestimator.backend.to_number import to_number
 from fastestimator.trace.trace import Trace
+from sklearn.metrics import matthews_corrcoef
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
-class Accuracy(Trace):
-    """ A trace which computes the accuracy for a given set of predictions. Consider using MCC instead
-        (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6941312/)
+class MCC(Trace):
+    """ A trace which computes the Matthews Correlation Coefficient for a given set of predictions. This is a preferable
+        metric to accuracy or F1 score since it automatically corrects for class imbalances and does not depend on the
+        choice of target class (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6941312/). Ideal value is 1, a value of 0 
+        means your predictions are completely uncorrelated with the true data. A value less than zero implies 
+        anti-correlation (you should invert your classifier predictions in order to do better)
 
     Args:
         true_key: The key of the true (known) class values
@@ -34,14 +38,14 @@ class Accuracy(Trace):
         mode: What mode to execute in (None to execute in all modes)
         output_name: What to call the output from this trace (for example in the logger output)
     """
-    def __init__(self, true_key: str, pred_key: str, mode: Optional[str] = "eval", output_name: str = "accuracy"):
+    def __init__(self, true_key: str, pred_key: str, mode: Optional[str] = "eval", output_name: str = "mcc"):
         super().__init__(inputs=(true_key, pred_key), mode=mode, outputs=output_name)
-        self.total = 0
-        self.correct = 0
+        self.y_true = []
+        self.y_pred = []
 
     def on_epoch_begin(self):
-        self.total = 0
-        self.correct = 0
+        self.y_true = []
+        self.y_pred = []
 
     def on_batch_end(self, data: List[Tensor]):
         y_true, y_pred = to_number(data[0]), to_number(data[1])
@@ -50,8 +54,8 @@ class Accuracy(Trace):
         else:
             label_pred = np.argmax(y_pred, axis=-1)
         assert label_pred.size == y_true.size
-        self.correct += np.sum(label_pred.ravel() == y_true.ravel())
-        self.total += len(label_pred.ravel())
+        self.y_true.extend(y_true)
+        self.y_pred.extend(label_pred)
 
     def on_epoch_end(self):
-        self.system.add_buffer(self.outputs, self.correct / self.total)
+        self.system.add_buffer(self.outputs, matthews_corrcoef(y_true=self.y_true, y_pred=self.y_pred))
