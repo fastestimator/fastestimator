@@ -14,18 +14,19 @@
 # ==============================================================================
 
 import os
-from typing import Optional, Union, Dict
+from copy import deepcopy
+from typing import Optional, Union, Dict, Sequence, Iterable, Any, List
 
+import numpy as np
 import tensorflow as tf
 from scipy.linalg import hadamard
-from torch.utils.data import Dataset
-import numpy as np
-from copy import deepcopy
+
+from fastestimator.dataset.fe_dataset import FEDataset
 
 
-class LabeledDirDataset(Dataset):
+class LabeledDirDataset(FEDataset):
     """ A dataset which reads files from a folder hierarchy like root/class/data.file
-    
+
     Args:
         root_dir: The path to the directory containing data sorted by folders
         data_label: What key to assign to the data values in the data dictionary
@@ -44,9 +45,7 @@ class LabeledDirDataset(Dataset):
                  label_mapping: Union[str, Dict[str, Union[str, int, np.ndarray]]] = "int",
                  file_extension: Optional[str] = None):
         assert isinstance(label_mapping, Dict) or label_mapping in {"string", "int", "onehot", "ecc"}
-        self.data_label = data_label
-        self.key_label = key_label
-        self.data = []
+        data = []
         root_dir = os.path.normpath(root_dir)
         try:
             _, dirs, _ = next(os.walk(root_dir))
@@ -65,30 +64,47 @@ class LabeledDirDataset(Dataset):
             else:
                 self.mapping = label_mapping
                 assert self.mapping.keys() >= set(dirs), \
-                    "Mapping provided to LabeledDirDataset is missing key(s): {}".format(set(dirs)-self.mapping.keys())
+                    "Mapping provided to LabeledDirDataset is missing key(s): {}".format(
+                        set(dirs) - self.mapping.keys())
             for path, label in self.mapping.items():
                 path = os.path.join(root_dir, path)
                 _, _, entries = next(os.walk(path))
-                self.data.extend(
+                data.extend(
                     (os.path.join(path, entry), label) for entry in entries if entry.endswith(file_extension or ""))
         except StopIteration:
             raise ValueError("Invalid directory structure for LabeledDirDataset at root: {}".format(root_dir))
-        self.size = len(self.data)
+        self.data = {i: {data_label: data[i][0], key_label: data[i][1]} for i in range(len(data))}
 
     def __len__(self):
-        return self.size
+        return len(self.data)
 
     def __getitem__(self, index: int):
-        data, label = self.data[index]
-        return {self.data_label: data, self.key_label: label}
+        return deepcopy(self.data[index])
 
     def get_mapping(self) -> Dict[str, Union[str, int, np.ndarray]]:
         return deepcopy(self.mapping)
 
+    @classmethod
+    def _skip_init(cls, data: Dict[int, Dict[str, Any]], mapping: Dict[str, Union[str, int,
+                                                                                  np.ndarray]]) -> 'LabeledDirDataset':
+        obj = cls.__new__(cls)
+        obj.data = data
+        obj.mapping = mapping
+        return obj
+
+    def _do_split(self, splits: Sequence[Iterable[int]]) -> List['LabeledDirDataset']:
+        results = []
+        for split in splits:
+            data = {new_idx: self.data.pop(old_idx) for new_idx, old_idx in enumerate(split)}
+            results.append(LabeledDirDataset._skip_init(data, self.mapping))
+        # Re-key the remaining data to be contiguous from 0 to new max index
+        self.data = {new_idx: v for new_idx, (old_idx, v) in enumerate(self.data.items())}
+        return results
+
 
 class LabeledDirDatasets:
     """ A class which instantiates multiple LabeledDirDataset from a folder hierarchy like: root/mode/class/data.file
-    
+
     Args:
         root_dir: The path to the directory containing data sorted by folders
         data_label: What key to assign to the data values in the data dictionary
