@@ -13,12 +13,13 @@
 # limitations under the License.
 # ==============================================================================
 import time
-from typing import Any, Callable, Iterable, List, Union, Set
+from typing import Iterable, List, Union, Set
 
 import numpy as np
+
 from fastestimator.backend.to_number import to_number
-from fastestimator.util.system import System
-from fastestimator.util.util import to_list, draw
+from fastestimator.util import System, Data
+from fastestimator.util.util import draw
 
 
 class Trace:
@@ -30,9 +31,12 @@ class Trace:
                         execute
     """
     system: System
+    inputs: Union[None, str, List[str]]
+    outputs: Union[None, str, List[str]]
+    mode: Union[None, str, Set[str]]
 
     def __init__(self,
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
+                 inputs: Union[None, str, Iterable[str]] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
                  mode: Union[None, str, Iterable[str]] = None):
         if isinstance(inputs, Iterable) and not isinstance(inputs, str):
@@ -48,25 +52,25 @@ class Trace:
         else:
             self.mode = mode
 
-    def on_begin(self):
+    def on_begin(self, data: Data):
         """Runs once at the beginning of training
         """
-    def on_epoch_begin(self):
+    def on_epoch_begin(self, data: Data):
         """Runs at the beginning of each epoch
         """
-    def on_batch_begin(self):
+    def on_batch_begin(self, data: Data):
         """Runs at the beginning of each batch
         """
-    def on_batch_end(self, data: List[Any]):
+    def on_batch_end(self, data: Data):
         """Runs at the end of each batch
 
         Args:
             data: value fetched by the inputs
         """
-    def on_epoch_end(self):
+    def on_epoch_end(self, data: Data):
         """Runs at the end of each epoch
         """
-    def on_end(self):
+    def on_end(self, data: Data):
         """Runs once at the end training.
         """
 
@@ -75,116 +79,111 @@ class TrainEssential(Trace):
     """Essential training information for logging during training. Please don't add this trace into an estimator
     manually. An estimator will add it automatically.
     """
-    def __init__(self, monitor_names):
-        self.monitor_names = to_list(monitor_names)
-        outputs = to_list(monitor_names.union({"steps/sec", "total_time"}))
-        super().__init__(mode="train", inputs=self.monitor_names, outputs=outputs)
+    def __init__(self):
+        super().__init__(mode="train", inputs=None, outputs=["steps/sec", "total_time"])
         self.elapse_times = []
         self.time_start = None
         self.train_start = None
 
-    def on_begin(self):
+    def on_begin(self, data):
         self.train_start = time.perf_counter()
 
-    def on_epoch_begin(self):
+    def on_epoch_begin(self, data):
         if self.system.log_steps:
             self.time_start = time.perf_counter()
 
     def on_batch_end(self, data):
         if self.system.log_steps and self.system.global_step % self.system.log_steps == 0:
-            for idx, key in enumerate(self.monitor_names):
-                self.system.add_buffer(key, data[idx])
             self.elapse_times.append(time.perf_counter() - self.time_start)
-            self.system.add_buffer("steps/sec", round(self.system.log_steps / np.sum(self.elapse_times), 1))
+            data.write_and_log("steps/sec", round(self.system.log_steps / np.sum(self.elapse_times), 1))
             self.elapse_times = []
             self.time_start = time.perf_counter()
 
-    def on_epoch_end(self):
+    def on_epoch_end(self, data):
         if self.system.log_steps:
             self.elapse_times.append(time.perf_counter() - self.time_start)
 
-    def on_end(self):
-        self.system.add_buffer("total_time", "{} sec".format(round(time.perf_counter() - self.train_start, 2)))
+    def on_end(self, data):
+        data.write_and_log("total_time", "{} sec".format(round(time.perf_counter() - self.train_start, 2)))
 
 
 class EvalEssential(Trace):
-    def __init__(self, loss_keys):
-        self.loss_keys = to_list(loss_keys)
-        super().__init__(mode="eval", inputs=self.loss_keys, outputs=self._configure_outputs())
+    def __init__(self, loss_keys: Set[str]):
+        super().__init__(mode="eval", inputs=loss_keys, outputs=self._configure_outputs(loss_keys))
         self.eval_results = None
         self.best_loss = None
         self.since_best = 0
 
-    def _configure_outputs(self) -> List[str]:
-        outputs = [elem for elem in self.loss_keys]
-        if len(self.loss_keys) == 1:
-            outputs.append("min_" + self.loss_keys[0])
+    @staticmethod
+    def _configure_outputs(inputs: Set[str]) -> List[str]:
+        outputs = [elem for elem in inputs]
+        if len(inputs) == 1:
+            outputs.append("min_" + next(iter(inputs)))
             outputs.append("since_best")
         return outputs
 
-    def on_epoch_begin(self):
+    def on_epoch_begin(self, data):
         self.eval_results = None
 
     def on_batch_end(self, data):
         if self.eval_results is None:
-            self.eval_results = dict((key, [data[idx]]) for idx, key in enumerate(self.loss_keys))
+            self.eval_results = {k: [data[k]] for k in self.inputs}
         else:
-            for idx, key in enumerate(self.loss_keys):
-                self.eval_results[key].append(data[idx])
+            for key in self.inputs:
+                self.eval_results[key].append(data[key])
 
-    def on_epoch_end(self):
+    def on_epoch_end(self, data):
         for key, value_list in self.eval_results.items():
-            self.system.add_buffer(key, np.mean(np.array(value_list), axis=0))
-        if len(self.loss_keys) == 1:
-            loss_name = self.loss_keys[0]
-            current_loss = self.system.read_buffer(loss_name)
+            data.write_and_log(key, np.mean(np.array(value_list), axis=0))
+        if len(self.inputs) == 1:
+            loss_name = self.inputs[0]
+            current_loss = data[loss_name]
             if self.best_loss is None or current_loss < self.best_loss:
                 self.best_loss = current_loss
                 self.since_best = 0
             else:
                 self.since_best += 1
-            self.system.add_buffer("min_" + loss_name, self.best_loss)
-            self.system.add_buffer("since_best", self.since_best)
+            data.write_and_log("min_" + loss_name, self.best_loss)
+            data.write_and_log("since_best", self.since_best)
 
 
 class Logger(Trace):
     """Trace that prints log, please don't add this trace into an estimator manually.
 
     Args:
-        log_names (set): set of keys to print from system buffer
+        extra_log_keys (set): set of keys to print from system buffer
     """
-    def __init__(self, log_names: Set[str], loss_names: Set[str]):
-        super().__init__()
-        self.log_names = log_names
+    def __init__(self, extra_log_keys: Set[str], loss_names: Set[str]):
+        super().__init__(inputs=extra_log_keys | loss_names)
+        self.extra_log_keys = extra_log_keys
         self.loss_names = loss_names
 
-    def on_begin(self):
+    def on_begin(self, data):
         draw()
-        self._print_message("FastEstimator-Start: step: {}; ".format(self.system.global_step))
+        self._print_message("FastEstimator-Start: step: {}; ".format(self.system.global_step), data)
 
     def on_batch_end(self, data):
         if self.system.mode == "train" and self.system.log_steps and self.system.global_step % self.system.log_steps \
                 == 0:
-            self._print_message("FastEstimator-Train: step: {}; ".format(self.system.global_step))
+            self._print_message("FastEstimator-Train: step: {}; ".format(self.system.global_step), data)
 
-    def on_epoch_end(self):
+    def on_epoch_end(self, data):
         if self.system.mode == "eval":
-            self._print_message("FastEstimator-Eval: step: {}; ".format(self.system.global_step), True)
+            self._print_message("FastEstimator-Eval: step: {}; ".format(self.system.global_step), data, True)
 
-    def on_end(self):
-        self._print_message("FastEstimator-Finish: step: {}; ".format(self.system.global_step))
+    def on_end(self, data):
+        self._print_message("FastEstimator-Finish: step: {}; ".format(self.system.global_step), data)
 
-    def _print_message(self, header, log_epoch=False):
+    def _print_message(self, header, data, log_epoch=False):
         log_message = header
         if log_epoch:
             log_message += "epoch: {}; ".format(self.system.epoch_idx)
-        for key, val in self.system.buffer.items():
-            if key in self.log_names:
-                val = to_number(val)
-                if key in self.loss_names:
-                    val = np.round(val, decimals=7)
-                if isinstance(val, np.ndarray):
-                    log_message += "\n{}:\n{};".format(key, np.array2string(val, separator=','))
-                else:
-                    log_message += "{}: {}; ".format(key, str(val))
+        for key, val in data.get_to_log(self.inputs).items():
+            val = to_number(val)
+            if key in self.loss_names:
+                val = np.round(val, decimals=7)
+            if isinstance(val, np.ndarray):
+                log_message += "\n{}:\n{};".format(key, np.array2string(val, separator=','))
+            else:
+                log_message += "{}: {}; ".format(key, str(val))
         print(log_message)
