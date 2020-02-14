@@ -22,7 +22,7 @@ from fastestimator.op.op import get_inputs_by_key
 from fastestimator.pipeline import Pipeline
 from fastestimator.trace import EvalEssential, Logger, Trace, TrainEssential
 from fastestimator.util.system import System
-from fastestimator.util.util import draw, get_num_devices, to_list
+from fastestimator.util.util import to_list
 
 
 class Estimator:
@@ -30,22 +30,20 @@ class Estimator:
     up `Pipeline`, `Network`, `Trace` objects together and defines the whole optimization process with other training
     necessary information.
     Args:
-        pipeline (obj): Pipeline object that defines the data processing workflow. It should be an instance of
+        pipeline: Pipeline object that defines the data processing workflow. It should be an instance of
             `fastestimator.pipepline.pipeline.Pipeline`
-        network (obj): Network object that defines models and their external connection. It should be an instance of
+        network: Network object that defines models and their external connection. It should be an instance of
             `fastestimator.network.network.Network`
-        epochs (int): Number of epooch to run.
-        steps_per_epoch (int, optional): maximum steps to run for each epoch. If None, all data will be used
-        traces (list, optional): List of the traces objects to run during training. If None, there will be only basic
+        epochs: Number of epooch to run.
+        steps_per_epoch: maximum steps to run for each epoch. If None, all data will be used
+        traces: List of the traces objects to run during training. If None, there will be only basic
             traces.
-        log_steps (int, optional): Interval steps of logging. Defaults to 100.
-        monitor_names (str, list): Additional keys to print in logger
+        log_steps: Interval steps of logging. Defaults to 100.
+        monitor_names: Additional keys to print in logger
     """
     pipeline: Pipeline
-    epochs: int
     steps_per_epoch: Optional[int]
     traces: List[Trace]
-    log_steps: int
 
     def __init__(self,
                  pipeline: Pipeline,
@@ -53,30 +51,28 @@ class Estimator:
                  epochs: int,
                  steps_per_epoch: Optional[int] = None,
                  traces: Union[Trace, Iterable[Trace]] = None,
-                 log_steps: int = 100,
+                 log_steps: Optional[int] = 100,
                  monitor_names: Optional[str] = None):
         self.pipeline = pipeline
         self.network = network
-        self.epochs = epochs
         self.steps_per_epoch = steps_per_epoch
         self.traces = [] if traces is None else to_list(traces)
-        self.log_steps = log_steps
-        assert log_steps is None or log_steps > 0, "log_steps must be positive or None"
+        assert log_steps is None or log_steps >= 0, \
+            "log_steps must be None or positive (or 0 to disable only train logging)"
         self.monitor_names = monitor_names
-        self.system = None
+        self.system = System(log_steps=log_steps, epochs=epochs)
         self.trace_inputs = dict()
 
     def fit(self):
-        draw()
         self.traces = self._prepare_traces()
-        self.system = self._prepare_system()
+        self._prepare_system()
         self._check_keys()
         self._warmup()
         return self._start()
 
     def _warmup(self):
-        pipeline_signature_epochs = self.pipeline.get_signature_epochs(self.epochs)
-        network_signature_epochs = self.network.get_signature_epochs(self.epochs)
+        pipeline_signature_epochs = self.pipeline.get_signature_epochs(self.system.epochs)
+        network_signature_epochs = self.network.get_signature_epochs(self.system.epochs)
         signature_epochs = pipeline_signature_epochs | network_signature_epochs
         for epoch in signature_epochs:
             for mode in self.pipeline.get_modes():
@@ -88,24 +84,17 @@ class Estimator:
 
     def _check_keys(self):
         for mode in self.pipeline.get_modes():
-            pipeline_all_outputs = self.pipeline.get_all_output_keys(mode, self.epochs)
-            network_all_outputs = self.network.get_all_output_keys(mode, self.epochs)
+            pipeline_all_outputs = self.pipeline.get_all_output_keys(mode, self.system.epochs)
+            network_all_outputs = self.network.get_all_output_keys(mode, self.system.epochs)
             assert self.trace_inputs[mode].issubset(pipeline_all_outputs | network_all_outputs), "found missing key"
-            self.network.effective_inputs[mode] = self.network.get_effective_input_keys(mode, self.epochs)
+            self.network.effective_inputs[mode] = self.network.get_effective_input_keys(mode, self.system.epochs)
             self.network.effective_outputs[mode] = network_all_outputs.intersection(self.trace_inputs[mode])
 
     def _prepare_system(self):
-        system = System(mode="train",
-                        global_step=0,
-                        num_devices=get_num_devices(),
-                        log_steps=self.log_steps,
-                        epochs=self.epochs,
-                        epoch_idx=0,
-                        batch_idx=0)
-        system.network = self.network
+        self.system.reset()
+        self.system.network = self.network
         for trace in self.traces:
-            trace.system = system
-        return system
+            trace.system = self.system
 
     def _prepare_traces(self):
         self.trace_inputs = dict()
@@ -115,26 +104,26 @@ class Estimator:
         traces.insert(0, TrainEssential(monitor_names=monitor_names))
         modes = self.pipeline.get_modes() - {"test"}
         if "eval" in modes:
-            traces.append(EvalEssential(loss_keys=loss_keys))
+            traces.insert(1, EvalEssential(loss_keys=loss_keys))
         for mode in modes:
             trace_inputs = set()
             for trace in traces:
                 if trace.mode is None or mode in to_list(trace.mode):
                     trace_inputs.update(filter(None, to_list(trace.inputs)))
-                    monitor_names.update(filter(None, to_list(trace.log_names)))
+                    monitor_names.update(filter(None, to_list(trace.outputs)))
             self.trace_inputs[mode] = trace_inputs
-        traces.append(Logger(log_names=monitor_names, loss_names=loss_keys))
+        if self.system.log_steps is not None:
+            traces.append(Logger(log_names=monitor_names, loss_names=loss_keys))
         return traces
 
     def _start(self):
         self._run_traces_on_begin()
-        for self.system.epoch_idx in range(self.epochs):
+        for self.system.epoch_idx in range(self.system.epochs):
             self.system.mode = "train"
             self._run_epoch()
             if "eval" in self.pipeline.get_modes():
                 self.system.mode = "eval"
                 self._run_epoch()
-            self.system.update_epoch_idx()
         self._run_traces_on_end()
 
     def _run_epoch(self):
