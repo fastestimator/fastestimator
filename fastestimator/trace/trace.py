@@ -19,7 +19,7 @@ import numpy as np
 
 from fastestimator.backend.to_number import to_number
 from fastestimator.util import System, Data
-from fastestimator.util.util import draw
+from fastestimator.util.util import draw, to_set
 
 
 class Trace:
@@ -85,25 +85,25 @@ class TrainEssential(Trace):
         self.time_start = None
         self.train_start = None
 
-    def on_begin(self, data):
+    def on_begin(self, data: Data):
         self.train_start = time.perf_counter()
 
-    def on_epoch_begin(self, data):
+    def on_epoch_begin(self, data: Data):
         if self.system.log_steps:
             self.time_start = time.perf_counter()
 
-    def on_batch_end(self, data):
+    def on_batch_end(self, data: Data):
         if self.system.log_steps and self.system.global_step % self.system.log_steps == 0:
             self.elapse_times.append(time.perf_counter() - self.time_start)
             data.write_and_log("steps/sec", round(self.system.log_steps / np.sum(self.elapse_times), 1))
             self.elapse_times = []
             self.time_start = time.perf_counter()
 
-    def on_epoch_end(self, data):
+    def on_epoch_end(self, data: Data):
         if self.system.log_steps:
             self.elapse_times.append(time.perf_counter() - self.time_start)
 
-    def on_end(self, data):
+    def on_end(self, data: Data):
         data.write_and_log("total_time", "{} sec".format(round(time.perf_counter() - self.train_start, 2)))
 
 
@@ -122,17 +122,17 @@ class EvalEssential(Trace):
             outputs.append("since_best")
         return outputs
 
-    def on_epoch_begin(self, data):
+    def on_epoch_begin(self, data: Data):
         self.eval_results = None
 
-    def on_batch_end(self, data):
+    def on_batch_end(self, data: Data):
         if self.eval_results is None:
             self.eval_results = {k: [data[k]] for k in self.inputs}
         else:
             for key in self.inputs:
                 self.eval_results[key].append(data[key])
 
-    def on_epoch_end(self, data):
+    def on_epoch_end(self, data: Data):
         for key, value_list in self.eval_results.items():
             data.write_and_log(key, np.mean(np.array(value_list), axis=0))
         if len(self.inputs) == 1:
@@ -158,27 +158,27 @@ class Logger(Trace):
         self.extra_log_keys = extra_log_keys
         self.loss_names = loss_names
 
-    def on_begin(self, data):
+    def on_begin(self, data: Data):
         draw()
         self._print_message("FastEstimator-Start: step: {}; ".format(self.system.global_step), data)
 
-    def on_batch_end(self, data):
+    def on_batch_end(self, data: Data):
         if self.system.mode == "train" and self.system.log_steps and self.system.global_step % self.system.log_steps \
                 == 0:
             self._print_message("FastEstimator-Train: step: {}; ".format(self.system.global_step), data)
 
-    def on_epoch_end(self, data):
+    def on_epoch_end(self, data: Data):
         if self.system.mode == "eval":
             self._print_message("FastEstimator-Eval: step: {}; ".format(self.system.global_step), data, True)
 
-    def on_end(self, data):
+    def on_end(self, data: Data):
         self._print_message("FastEstimator-Finish: step: {}; ".format(self.system.global_step), data)
 
-    def _print_message(self, header, data, log_epoch=False):
+    def _print_message(self, header: str, data: Data, log_epoch: bool = False):
         log_message = header
         if log_epoch:
             log_message += "epoch: {}; ".format(self.system.epoch_idx)
-        for key, val in data.get_to_log(self.inputs).items():
+        for key, val in data.get_to_log(to_set(self.inputs)).items():
             val = to_number(val)
             if key in self.loss_names:
                 val = np.round(val, decimals=7)

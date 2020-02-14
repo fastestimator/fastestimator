@@ -18,7 +18,7 @@ import subprocess
 from ast import literal_eval
 from functools import reduce
 from math import gcd
-from typing import Any, List
+from typing import Any, List, Set
 
 from pyfiglet import Figlet
 
@@ -53,6 +53,21 @@ def to_list(data: Any) -> List[Any]:
             data = list(data)
         else:
             data = [data]
+    return data
+
+
+def to_set(data: Any) -> Set[Any]:
+    """Convert data to a set.
+    Args:
+        data: Input data, with or without a python container.
+    Returns:
+        list: Replace python container with set or make input a set.
+    """
+    if not isinstance(data, set):
+        if isinstance(data, (tuple, list)):
+            data = set(data)
+        else:
+            data = {data}
     return data
 
 
