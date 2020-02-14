@@ -19,8 +19,9 @@ from typing import Optional, Union, Dict, Sequence, Iterable, Any, List
 
 import numpy as np
 import tensorflow as tf
-from fastestimator.dataset.fe_dataset import FEDataset
 from scipy.linalg import hadamard
+
+from fastestimator.dataset.fe_dataset import FEDataset
 
 
 class LabeledDirDataset(FEDataset):
@@ -78,14 +79,14 @@ class LabeledDirDataset(FEDataset):
         return len(self.data)
 
     def __getitem__(self, index: int):
-        return self.data[index]
+        return deepcopy(self.data[index])
 
     def get_mapping(self) -> Dict[str, Union[str, int, np.ndarray]]:
         return deepcopy(self.mapping)
 
     @classmethod
-    def _skip_init(cls, data: Dict[int, Dict[str, Any]],
-                   mapping: Dict[str, Union[str, int, np.ndarray]]) -> 'LabeledDirDataset':
+    def _skip_init(cls, data: Dict[int, Dict[str, Any]], mapping: Dict[str, Union[str, int,
+                                                                                  np.ndarray]]) -> 'LabeledDirDataset':
         obj = cls.__new__(cls)
         obj.data = data
         obj.mapping = mapping
