@@ -18,7 +18,7 @@ import subprocess
 from ast import literal_eval
 from functools import reduce
 from math import gcd
-from typing import Any, List
+from typing import Any, List, Set
 
 from pyfiglet import Figlet
 
@@ -42,17 +42,36 @@ def parse_string_to_python(val: str) -> Any:
 
 
 def to_list(data: Any) -> List[Any]:
-    """Convert data to a list.
+    """Convert data to a list. A single None value will be converted to the empty list.
     Args:
         data: Input data, with or without a python container.
     Returns:
         list: Replace python container with list or make input a list.
     """
+    if data is None:
+        return []
     if not isinstance(data, list):
         if isinstance(data, (tuple, set)):
             data = list(data)
         else:
             data = [data]
+    return data
+
+
+def to_set(data: Any) -> Set[Any]:
+    """Convert data to a set. A single None value will be converted to the empty set.
+    Args:
+        data: Input data, with or without a python container.
+    Returns:
+        list: Replace python container with set or make input a set.
+    """
+    if data is None:
+        return set()
+    if not isinstance(data, set):
+        if isinstance(data, (tuple, list)):
+            data = set(data)
+        else:
+            data = {data}
     return data
 
 

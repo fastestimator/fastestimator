@@ -13,15 +13,13 @@
 # limitations under the License.
 # ==============================================================================
 
-from typing import List, TypeVar, Optional
+from typing import Optional
 
 import numpy as np
-import tensorflow as tf
-import torch
+
 from fastestimator.backend.to_number import to_number
 from fastestimator.trace.trace import Trace
-
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+from fastestimator.util import Data
 
 
 class Accuracy(Trace):
@@ -39,12 +37,20 @@ class Accuracy(Trace):
         self.total = 0
         self.correct = 0
 
-    def on_epoch_begin(self):
+    @property
+    def true_key(self):
+        return self.inputs[0]
+
+    @property
+    def pred_key(self):
+        return self.inputs[1]
+
+    def on_epoch_begin(self, data: Data):
         self.total = 0
         self.correct = 0
 
-    def on_batch_end(self, data: List[Tensor]):
-        y_true, y_pred = to_number(data[0]), to_number(data[1])
+    def on_batch_end(self, data: Data):
+        y_true, y_pred = to_number(data[self.true_key]), to_number(data[self.pred_key])
         if y_pred.shape[-1] == 1:
             label_pred = np.round(y_pred)
         else:
@@ -53,5 +59,5 @@ class Accuracy(Trace):
         self.correct += np.sum(label_pred.ravel() == y_true.ravel())
         self.total += len(label_pred.ravel())
 
-    def on_epoch_end(self):
-        self.system.add_buffer(self.outputs, self.correct / self.total)
+    def on_epoch_end(self, data: Data):
+        data.write_with_log(self.outputs[0], self.correct / self.total)

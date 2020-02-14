@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 from collections import ChainMap
-from typing import Any, Dict, List, Mapping, Set, Union
+from typing import Any, Dict, List, Mapping, Set, Union, Iterable
 
 import tensorflow as tf
 import torch
@@ -24,7 +24,7 @@ from fastestimator.util.util import NonContext, lcms, to_list
 
 
 class BaseNetwork:
-    def __init__(self, ops):
+    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]):
         self.ops = to_list(ops)
         self._verify_inputs()
         self.effective_inputs = dict()
@@ -64,7 +64,6 @@ class BaseNetwork:
             for op in get_current_ops(self.ops, mode, epoch):
                 input_keys.update(set(key for key in to_list(op.inputs) if key not in produced_keys))
                 produced_keys.update(to_list(op.outputs))
-        input_keys -= {None}
         return input_keys
 
     def get_all_output_keys(self, mode: str, total_epochs: int) -> Set[str]:
@@ -72,7 +71,6 @@ class BaseNetwork:
         for epoch in self.get_signature_epochs(total_epochs):
             for op in get_current_ops(self.ops, mode, epoch):
                 output_keys.update(to_list(op.outputs))
-        output_keys -= {None}
         return output_keys
 
     def get_signature_epochs(self, total_epochs: int):
