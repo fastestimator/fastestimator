@@ -64,4 +64,4 @@ class MCC(Trace):
         self.y_pred.extend(label_pred)
 
     def on_epoch_end(self, data: Data):
-        data.write_and_log(self.outputs, matthews_corrcoef(y_true=self.y_true, y_pred=self.y_pred))
+        data.write_with_log(self.outputs, matthews_corrcoef(y_true=self.y_true, y_pred=self.y_pred))

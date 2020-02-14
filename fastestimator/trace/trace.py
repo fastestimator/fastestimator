@@ -19,7 +19,7 @@ import numpy as np
 
 from fastestimator.backend.to_number import to_number
 from fastestimator.util import System, Data
-from fastestimator.util.util import draw, to_set
+from fastestimator.util.util import draw, to_set, to_list
 
 
 class Trace:
@@ -31,26 +31,17 @@ class Trace:
                         execute
     """
     system: System
-    inputs: Union[None, str, List[str]]
-    outputs: Union[None, str, List[str]]
-    mode: Union[None, str, Set[str]]
+    inputs: List[str]
+    outputs: List[str]
+    mode: Set[str]
 
     def __init__(self,
                  inputs: Union[None, str, Iterable[str]] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
                  mode: Union[None, str, Iterable[str]] = None):
-        if isinstance(inputs, Iterable) and not isinstance(inputs, str):
-            self.inputs = list(inputs)
-        else:
-            self.inputs = inputs
-        if isinstance(outputs, Iterable) and not isinstance(outputs, str):
-            self.outputs = list(outputs)
-        else:
-            self.outputs = outputs
-        if isinstance(mode, Iterable) and not isinstance(mode, str):
-            self.mode = set(mode)
-        else:
-            self.mode = mode
+        self.inputs = to_list(inputs)
+        self.outputs = to_list(outputs)
+        self.mode = to_set(mode)
 
     def on_begin(self, data: Data):
         """Runs once at the beginning of training
@@ -95,7 +86,7 @@ class TrainEssential(Trace):
     def on_batch_end(self, data: Data):
         if self.system.log_steps and self.system.global_step % self.system.log_steps == 0:
             self.elapse_times.append(time.perf_counter() - self.time_start)
-            data.write_and_log("steps/sec", round(self.system.log_steps / np.sum(self.elapse_times), 1))
+            data.write_with_log("steps/sec", round(self.system.log_steps / np.sum(self.elapse_times), 1))
             self.elapse_times = []
             self.time_start = time.perf_counter()
 
@@ -104,7 +95,7 @@ class TrainEssential(Trace):
             self.elapse_times.append(time.perf_counter() - self.time_start)
 
     def on_end(self, data: Data):
-        data.write_and_log("total_time", "{} sec".format(round(time.perf_counter() - self.train_start, 2)))
+        data.write_with_log("total_time", "{} sec".format(round(time.perf_counter() - self.train_start, 2)))
 
 
 class EvalEssential(Trace):
@@ -134,7 +125,7 @@ class EvalEssential(Trace):
 
     def on_epoch_end(self, data: Data):
         for key, value_list in self.eval_results.items():
-            data.write_and_log(key, np.mean(np.array(value_list), axis=0))
+            data.write_with_log(key, np.mean(np.array(value_list), axis=0))
         if len(self.inputs) == 1:
             loss_name = self.inputs[0]
             current_loss = data[loss_name]
@@ -143,8 +134,8 @@ class EvalEssential(Trace):
                 self.since_best = 0
             else:
                 self.since_best += 1
-            data.write_and_log("min_" + loss_name, self.best_loss)
-            data.write_and_log("since_best", self.since_best)
+            data.write_with_log("min_" + loss_name, self.best_loss)
+            data.write_with_log("since_best", self.since_best)
 
 
 class Logger(Trace):
@@ -178,7 +169,7 @@ class Logger(Trace):
         log_message = header
         if log_epoch:
             log_message += "epoch: {}; ".format(self.system.epoch_idx)
-        for key, val in data.get_to_log(to_set(self.inputs)).items():
+        for key, val in data.read_logs(to_set(self.inputs)).items():
             val = to_number(val)
             if key in self.loss_names:
                 val = np.round(val, decimals=7)

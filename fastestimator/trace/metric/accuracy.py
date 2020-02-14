@@ -60,4 +60,4 @@ class Accuracy(Trace):
         self.total += len(label_pred.ravel())
 
     def on_epoch_end(self, data: Data):
-        data.write_and_log(self.outputs, self.correct / self.total)
+        data.write_with_log(self.outputs, self.correct / self.total)

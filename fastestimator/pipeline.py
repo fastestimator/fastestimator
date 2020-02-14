@@ -39,7 +39,7 @@ class Pipeline:
                  num_process: Optional[int] = None):
         self.data = {x: y for (x, y) in zip(["train", "eval", "test"], [train_data, eval_data, test_data]) if y}
         self.batch_size = batch_size
-        self.ops = [] if ops is None else to_list(ops)
+        self.ops = to_list(ops)
         self.num_process = num_process if num_process is not None else os.cpu_count()
         self._verify_inputs(**{k: v for k, v in locals().items() if k != 'self'})
 
@@ -145,5 +145,4 @@ class Pipeline:
             if isinstance(loader, DataLoader) and isinstance(loader.dataset, OpDataset):
                 for op in loader.dataset.ops:
                     output_keys.update(to_list(op.outputs))
-        output_keys -= {None}
         return output_keys

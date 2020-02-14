@@ -22,7 +22,7 @@ from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
 from fastestimator.pipeline import Pipeline
 from fastestimator.trace import EvalEssential, Logger, Trace, TrainEssential
 from fastestimator.util import System, Data
-from fastestimator.util.util import to_list
+from fastestimator.util.util import to_list, to_set
 
 
 class Estimator:
@@ -51,16 +51,16 @@ class Estimator:
                  network: BaseNetwork,
                  epochs: int,
                  steps_per_epoch: Optional[int] = None,
-                 traces: Union[Trace, Iterable[Trace]] = None,
+                 traces: Union[None, Trace, Iterable[Trace]] = None,
                  log_steps: Optional[int] = 100,
-                 monitor_names: Optional[Union[str, Set[str]]] = None):
+                 monitor_names: Union[None, str, Iterable[str]] = None):
         self.pipeline = pipeline
         self.network = network
         self.steps_per_epoch = steps_per_epoch
-        self.traces = [] if traces is None else to_list(traces)
+        self.traces = to_list(traces)
         assert log_steps is None or log_steps >= 0, \
             "log_steps must be None or positive (or 0 to disable only train logging)"
-        self.monitor_names = monitor_names or set()
+        self.monitor_names = to_set(monitor_names)
         self.system = System(log_steps=log_steps, epochs=epochs)
         self.trace_inputs = dict()
 
@@ -110,8 +110,8 @@ class Estimator:
         for mode in modes:
             trace_inputs = set()
             for trace in traces:
-                if trace.mode is None or mode in to_list(trace.mode):
-                    trace_inputs.update(filter(None, to_list(trace.inputs)))
+                if not trace.mode or mode in trace.mode:
+                    trace_inputs.update(trace.inputs)
             self.trace_inputs[mode] = trace_inputs
         return traces
 
@@ -161,28 +161,28 @@ class Estimator:
     def _run_traces_on_epoch_begin(self):
         data = Data()
         for trace in self.traces:
-            if trace.mode is None or self.system.mode in trace.mode:
+            if not trace.mode or self.system.mode in trace.mode:
                 trace.on_epoch_begin(data)
         self._check_early_exit()
 
     def _run_traces_on_batch_begin(self):
         data = Data()
         for trace in self.traces:
-            if trace.mode is None or self.system.mode in trace.mode:
+            if not trace.mode or self.system.mode in trace.mode:
                 trace.on_batch_begin(data)
         self._check_early_exit()
 
     def _run_traces_on_batch_end(self, batch, prediction):
         data = Data(ChainMap(prediction, batch))
         for trace in self.traces:
-            if trace.mode is None or self.system.mode in trace.mode:
+            if not trace.mode or self.system.mode in trace.mode:
                 trace.on_batch_end(data)
         self._check_early_exit()
 
     def _run_traces_on_epoch_end(self):
         data = Data()
         for trace in self.traces:
-            if trace.mode is None or self.system.mode in trace.mode:
+            if not trace.mode or self.system.mode in trace.mode:
                 trace.on_epoch_end(data)
         self._check_early_exit()
 

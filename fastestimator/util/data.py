@@ -21,11 +21,11 @@ class Data(ChainMap[str, Any]):
     def __init__(self, batch_data: Optional[MutableMapping[str, Any]] = None):
         super().__init__({}, batch_data or {})
 
-    def write_and_log(self, key: str, value: Any):
+    def write_with_log(self, key: str, value: Any):
         self.__setitem__(key, value)
 
-    def write_no_log(self, key: str, value: Any):
+    def write_without_log(self, key: str, value: Any):
         self.maps[1][key] = value
 
-    def get_to_log(self, extra_keys: Set[str]) -> Dict[str, Any]:
+    def read_logs(self, extra_keys: Set[str]) -> Dict[str, Any]:
         return {**{k: v for k, v in self.maps[1].items() if k in extra_keys}, **self.maps[0]}
