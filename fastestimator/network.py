@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Mapping, Set, Union
 
 import tensorflow as tf
 import torch
+
 from fastestimator.op import TensorOp, get_current_ops, get_inputs_by_op, write_outputs_by_key
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
@@ -315,7 +316,10 @@ def _fe_compile(model: Union[tf.keras.Model, torch.nn.Module],
         if framework == "tensorflow":
             optimizer = tf_optimizer_fn[optimizer]()
         else:
-            optimizer = pytorch_optimizer_fn[optimizer](params=model.parameters())
+            if optimizer == "sgd":
+                optimizer = pytorch_optimizer_fn[optimizer](params=model.parameters(), lr=0.1)
+            else:
+                optimizer = pytorch_optimizer_fn[optimizer](params=model.parameters())
 
     # optimizer instance check
     if framework == "tensorflow":
