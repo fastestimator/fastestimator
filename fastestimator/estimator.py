@@ -13,16 +13,16 @@
 # limitations under the License.
 # ==============================================================================
 from collections import ChainMap
-from typing import Iterable, List, Optional, Union
+from typing import Iterable, List, Optional, Union, Set
 
 import tensorflow as tf
+
 from fastestimator.backend import to_tensor
 from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
-from fastestimator.op.op import get_inputs_by_key
 from fastestimator.pipeline import Pipeline
 from fastestimator.trace import EvalEssential, Logger, Trace, TrainEssential
-from fastestimator.util.system import System
-from fastestimator.util.util import to_list
+from fastestimator.util import System, Data
+from fastestimator.util.util import to_list, to_set
 
 
 class Estimator:
@@ -44,22 +44,23 @@ class Estimator:
     pipeline: Pipeline
     steps_per_epoch: Optional[int]
     traces: List[Trace]
+    monitor_names: Set[str]
 
     def __init__(self,
                  pipeline: Pipeline,
                  network: BaseNetwork,
                  epochs: int,
                  steps_per_epoch: Optional[int] = None,
-                 traces: Union[Trace, Iterable[Trace]] = None,
+                 traces: Union[None, Trace, Iterable[Trace]] = None,
                  log_steps: Optional[int] = 100,
-                 monitor_names: Optional[str] = None):
+                 monitor_names: Union[None, str, Iterable[str]] = None):
         self.pipeline = pipeline
         self.network = network
         self.steps_per_epoch = steps_per_epoch
-        self.traces = [] if traces is None else to_list(traces)
+        self.traces = to_list(traces)
         assert log_steps is None or log_steps >= 0, \
             "log_steps must be None or positive (or 0 to disable only train logging)"
-        self.monitor_names = monitor_names
+        self.monitor_names = to_set(monitor_names)
         self.system = System(log_steps=log_steps, epochs=epochs)
         self.trace_inputs = dict()
 
@@ -100,30 +101,31 @@ class Estimator:
         self.trace_inputs = dict()
         traces = [trace for trace in self.traces]
         loss_keys = self.network.get_loss_keys()
-        monitor_names = set(filter(None, to_list(self.monitor_names))).union(loss_keys)
-        traces.insert(0, TrainEssential(monitor_names=monitor_names))
+        traces.insert(0, TrainEssential())
         modes = self.pipeline.get_modes() - {"test"}
         if "eval" in modes:
             traces.insert(1, EvalEssential(loss_keys=loss_keys))
+        if self.system.log_steps is not None:
+            traces.append(Logger(extra_log_keys=self.monitor_names, loss_names=loss_keys))
         for mode in modes:
             trace_inputs = set()
             for trace in traces:
-                if trace.mode is None or mode in to_list(trace.mode):
-                    trace_inputs.update(filter(None, to_list(trace.inputs)))
-                    monitor_names.update(filter(None, to_list(trace.outputs)))
+                if not trace.mode or mode in trace.mode:
+                    trace_inputs.update(trace.inputs)
             self.trace_inputs[mode] = trace_inputs
-        if self.system.log_steps is not None:
-            traces.append(Logger(log_names=monitor_names, loss_names=loss_keys))
         return traces
 
     def _start(self):
-        self._run_traces_on_begin()
-        for self.system.epoch_idx in range(self.system.epochs):
-            self.system.mode = "train"
-            self._run_epoch()
-            if "eval" in self.pipeline.get_modes():
-                self.system.mode = "eval"
+        try:
+            self._run_traces_on_begin()
+            for self.system.epoch_idx in range(self.system.epochs):
+                self.system.mode = "train"
                 self._run_epoch()
+                if "eval" in self.pipeline.get_modes():
+                    self.system.mode = "eval"
+                    self._run_epoch()
+        except EarlyStop:
+            pass  # On early stopping we still want to run the final traces and return results
         self._run_traces_on_end()
 
     def _run_epoch(self):
@@ -151,40 +153,48 @@ class Estimator:
         return batch
 
     def _run_traces_on_begin(self):
+        data = Data()
         for trace in self.traces:
-            trace.on_begin()
-        self.system.clear_buffer()
+            trace.on_begin(data)
+        self._check_early_exit()
 
     def _run_traces_on_epoch_begin(self):
+        data = Data()
         for trace in self.traces:
-            if trace.mode is None or self.system.mode in trace.mode:
-                trace.on_epoch_begin()
-        self.system.clear_buffer()
+            if not trace.mode or self.system.mode in trace.mode:
+                trace.on_epoch_begin(data)
+        self._check_early_exit()
 
     def _run_traces_on_batch_begin(self):
+        data = Data()
         for trace in self.traces:
-            if trace.mode is None or self.system.mode in trace.mode:
-                trace.on_batch_begin()
-        self.system.clear_buffer()
+            if not trace.mode or self.system.mode in trace.mode:
+                trace.on_batch_begin(data)
+        self._check_early_exit()
 
     def _run_traces_on_batch_end(self, batch, prediction):
-        batch = ChainMap(prediction, batch)
+        data = Data(ChainMap(prediction, batch))
         for trace in self.traces:
-            if trace.mode is None or self.system.mode in trace.mode:
-                if trace.inputs:
-                    data = get_inputs_by_key(batch, trace.inputs)
-                else:
-                    data = None
+            if not trace.mode or self.system.mode in trace.mode:
                 trace.on_batch_end(data)
-        self.system.clear_buffer()
+        self._check_early_exit()
 
     def _run_traces_on_epoch_end(self):
+        data = Data()
         for trace in self.traces:
-            if trace.mode is None or self.system.mode in trace.mode:
-                trace.on_epoch_end()
-        self.system.clear_buffer()
+            if not trace.mode or self.system.mode in trace.mode:
+                trace.on_epoch_end(data)
+        self._check_early_exit()
 
     def _run_traces_on_end(self):
+        data = Data()
         for trace in self.traces:
-            trace.on_end()
-        self.system.clear_buffer()
+            trace.on_end(data)
+
+    def _check_early_exit(self):
+        if self.system.stop_training:
+            raise EarlyStop
+
+
+class EarlyStop(Exception):
+    pass

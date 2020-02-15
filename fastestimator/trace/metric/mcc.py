@@ -13,23 +13,21 @@
 # limitations under the License.
 # ==============================================================================
 
-from typing import List, TypeVar, Optional
+from typing import Optional
 
 import numpy as np
-import tensorflow as tf
-import torch
-from fastestimator.backend.to_number import to_number
-from fastestimator.trace.trace import Trace
 from sklearn.metrics import matthews_corrcoef
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+from fastestimator.backend.to_number import to_number
+from fastestimator.trace.trace import Trace
+from fastestimator.util import Data
 
 
 class MCC(Trace):
     """ A trace which computes the Matthews Correlation Coefficient for a given set of predictions. This is a preferable
         metric to accuracy or F1 score since it automatically corrects for class imbalances and does not depend on the
-        choice of target class (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6941312/). Ideal value is 1, a value of 0 
-        means your predictions are completely uncorrelated with the true data. A value less than zero implies 
+        choice of target class (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6941312/). Ideal value is 1, a value of 0
+        means your predictions are completely uncorrelated with the true data. A value less than zero implies
         anti-correlation (you should invert your classifier predictions in order to do better)
 
     Args:
@@ -43,12 +41,20 @@ class MCC(Trace):
         self.y_true = []
         self.y_pred = []
 
-    def on_epoch_begin(self):
+    @property
+    def true_key(self):
+        return self.inputs[0]
+
+    @property
+    def pred_key(self):
+        return self.inputs[1]
+
+    def on_epoch_begin(self, data: Data):
         self.y_true = []
         self.y_pred = []
 
-    def on_batch_end(self, data: List[Tensor]):
-        y_true, y_pred = to_number(data[0]), to_number(data[1])
+    def on_batch_end(self, data: Data):
+        y_true, y_pred = to_number(data[self.true_key]), to_number(data[self.pred_key])
         if y_pred.shape[-1] == 1:
             label_pred = np.round(y_pred)
         else:
@@ -57,5 +63,5 @@ class MCC(Trace):
         self.y_true.extend(y_true)
         self.y_pred.extend(label_pred)
 
-    def on_epoch_end(self):
-        self.system.add_buffer(self.outputs, matthews_corrcoef(y_true=self.y_true, y_pred=self.y_pred))
+    def on_epoch_end(self, data: Data):
+        data.write_with_log(self.outputs[0], matthews_corrcoef(y_true=self.y_true, y_pred=self.y_pred))
