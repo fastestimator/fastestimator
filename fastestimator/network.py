@@ -98,7 +98,7 @@ class BaseNetwork:
         data = None
         for op in ops:
             data = get_inputs_by_op(op, batch, data)
-            data = op.forward(data, state)
+            data = to_list(op.forward(data, state))
             if op.outputs:
                 write_outputs_by_keys(batch, data, op.outputs)
 

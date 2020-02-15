@@ -15,8 +15,10 @@
 from typing import List
 
 from torch.utils.data import Dataset
-from fastestimator.op.op import NumpyOp
+
 from fastestimator.op import get_inputs_by_op, write_outputs_by_keys
+from fastestimator.op.op import NumpyOp
+from fastestimator.util.util import to_list
 
 
 class OpDataset(Dataset):
@@ -30,7 +32,7 @@ class OpDataset(Dataset):
         op_data = None
         for op in self.ops:
             op_data = get_inputs_by_op(op, item, op_data)
-            op_data = op.forward(op_data, {"mode": self.mode})
+            op_data = to_list(op.forward(op_data, {"mode": self.mode}))
             if op.outputs:
                 write_outputs_by_keys(item, op_data, op.outputs)
         return item

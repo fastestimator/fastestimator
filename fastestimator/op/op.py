@@ -39,12 +39,13 @@ class Op:
 
 
 class TensorOp(Op):
-    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
+    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
         return data
 
 
 class NumpyOp(Op):
-    def forward(self, data: Union[List[np.ndarray], List[str]], state: Dict[str, Any]) -> List[np.ndarray]:
+    def forward(self, data: Union[List[np.ndarray], List[str]],
+                state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
         return data
 
 
