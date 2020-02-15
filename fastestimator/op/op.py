@@ -12,34 +12,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, TypeVar, Union, Set, MutableMapping
 
 import numpy as np
 import tensorflow as tf
 import torch
 
 from fastestimator.schedule import Scheduler
+from fastestimator.util.util import to_list, to_set
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 class Op:
+    inputs: List[str]
+    outputs: List[str]
+    mode: Set[str]
+    in_list: bool  # Whether inputs should be presented as a list or an individual value
+    out_list: bool  # Whether outputs will be returned as a list or an individual value
+
     def __init__(self,
                  inputs: Union[None, str, Iterable[str], Callable] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
                  mode: Union[None, str, Iterable[str]] = None):
-        if isinstance(inputs, Iterable) and not isinstance(inputs, str):
-            self.inputs = list(inputs)
-        else:
-            self.inputs = inputs
-        if isinstance(outputs, Iterable) and not isinstance(outputs, str):
-            self.outputs = list(outputs)
-        else:
-            self.outputs = outputs
-        if isinstance(mode, Iterable) and not isinstance(mode, str):
-            self.mode = set(mode)
-        else:
-            self.mode = mode
+        self.inputs = to_list(inputs)
+        self.outputs = to_list(outputs)
+        self.mode = to_set(mode)
+        self.in_list = not isinstance(inputs, (str, Callable))
+        self.out_list = not isinstance(outputs, str)
 
 
 class TensorOp(Op):
@@ -48,7 +48,7 @@ class TensorOp(Op):
 
 
 class NumpyOp(Op):
-    def forward(self, data: Union[np.ndarray, List[np.ndarray], str, List[str]],
+    def forward(self, data: Union[np.ndarray, List[np.ndarray]],
                 state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
         return data
 
@@ -61,7 +61,7 @@ def get_current_ops(ops: Iterable[OpType], mode: str, epoch: int = 0) -> List[Op
     for op in ops:
         if isinstance(op, Scheduler):
             op = op.get_current_value(epoch)
-        if op and (op.mode is None or mode in op.mode):
+        if op and (not op.mode or mode in op.mode):
             selected_ops.append(op)
     return selected_ops
 
@@ -72,21 +72,22 @@ def get_inputs_by_op(op: Op, store: Mapping[str, Any], default: Optional[Any] = 
         if isinstance(op.inputs, Callable):
             data = op.inputs()
         else:
-            data = get_inputs_by_key(store, op.inputs)
+            data = _get_inputs_by_keys(store, op.inputs)
+            if not op.in_list:
+                data = data[0]
     return data
 
 
-def get_inputs_by_key(store: Mapping[str, Any], inputs_key: str) -> Any:
-    if isinstance(inputs_key, list):
-        data = [store[key] for key in inputs_key]
-    else:
-        data = store[inputs_key]
-    return data
+def _get_inputs_by_keys(store: Mapping[str, Any], input_keys: List[str]) -> Any:
+    return [store[key] for key in input_keys]
 
 
-def write_outputs_by_key(store: Mapping[str, Any], output: Any, outputs_key: str):
-    if isinstance(outputs_key, str):
-        store[outputs_key] = output
-    else:
-        for key, data in zip(outputs_key, output):
-            store[key] = data
+def write_outputs_by_op(op: Op, store: MutableMapping[str, Any], outputs: Any):
+    if not op.out_list:
+        outputs = [outputs]
+    _write_outputs_by_keys(store, outputs, op.outputs)
+
+
+def _write_outputs_by_keys(store: MutableMapping[str, Any], outputs: List[Any], output_keys: List[str]):
+    for key, data in zip(output_keys, outputs):
+        store[key] = data
