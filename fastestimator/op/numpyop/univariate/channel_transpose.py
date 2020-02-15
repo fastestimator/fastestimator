@@ -36,9 +36,5 @@ class ChannelTranspose(NumpyOp):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.axes = axes
 
-    def forward(self, data: Union[np.ndarray, List[np.ndarray]],
-                state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
-        if isinstance(data, list):
-            return [np.transpose(elem, self.axes) for elem in data]
-        else:
-            return np.transpose(data, self.axes)
+    def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
+        return [np.transpose(elem, self.axes) for elem in data]

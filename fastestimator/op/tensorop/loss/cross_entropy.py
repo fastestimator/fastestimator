@@ -44,9 +44,9 @@ class CrossEntropy(TensorOp):
         self.average_loss = average_loss
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
 
-    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
+    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
         y_pred, y_true = data
         loss = cross_entropy(y_pred, y_true, apply_softmax=self.apply_softmax)
         if self.average_loss:
             loss = reduce_loss(loss)
-        return loss
+        return [loss]

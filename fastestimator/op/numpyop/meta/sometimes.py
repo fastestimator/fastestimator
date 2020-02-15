@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, Dict, Any, List
+from typing import Dict, Any, List
 
 import numpy as np
 
@@ -31,8 +31,7 @@ class Sometimes(NumpyOp):
         self.numpy_op = numpy_op
         self.prob = prob
 
-    def forward(self, data: Union[np.ndarray, List[np.ndarray]],
-                state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
+    def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
         """Execute the operator with probability
 
         Args:

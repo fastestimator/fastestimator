@@ -44,7 +44,7 @@ class ModelOp(TensorOp):
         self.model = model
         self.trainable = trainable
 
-    def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
+    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
         training = state['mode'] == "train" and self.trainable
-        data = feed_forward(self.model, data, training=training)
-        return data
+        data = feed_forward(self.model, data[0], training=training)
+        return [data]

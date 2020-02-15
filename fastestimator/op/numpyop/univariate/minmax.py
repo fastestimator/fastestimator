@@ -21,7 +21,7 @@ from fastestimator.op import NumpyOp
 
 class Minmax(NumpyOp):
     """Normalize data using the minmax method
-    
+
     Args:
             inputs: Key(s) of images to be normalized
             outputs: Key(s) of images to be normalized
@@ -36,12 +36,8 @@ class Minmax(NumpyOp):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.epsilon = epsilon
 
-    def forward(self, data: Union[np.ndarray, List[np.ndarray]],
-                state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
-        if isinstance(data, list):
-            return [self._apply_minmax(elem) for elem in data]
-        else:
-            return self._apply_minmax(data)
+    def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
+        return [self._apply_minmax(elem) for elem in data]
 
     def _apply_minmax(self, data):
         data_max = np.max(data)

@@ -39,7 +39,7 @@ class UpdateOp(TensorOp):
         super().__init__(inputs=loss_name, outputs=None, mode=mode)
         self.model = model
 
-    def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]):
+    def forward(self, data: List[Tensor], state: Dict[str, Any]):
         if state["warmup"]:
             if isinstance(self.model, tf.keras.Model):
                 with tfops.init_scope():
@@ -47,4 +47,4 @@ class UpdateOp(TensorOp):
                     self.model.optimizer._create_hypers()
                     self.model.optimizer._create_slots(self.model.trainable_variables)
         else:
-            update_model(self.model, data, tape=state['tape'])
+            update_model(self.model, data[0], tape=state['tape'])

@@ -144,5 +144,5 @@ class Pipeline:
             output_keys = output_keys.union(set(data.keys()))
             if isinstance(loader, DataLoader) and isinstance(loader.dataset, OpDataset):
                 for op in loader.dataset.ops:
-                    output_keys.update(to_list(op.outputs))
+                    output_keys.update(op.outputs)
         return output_keys

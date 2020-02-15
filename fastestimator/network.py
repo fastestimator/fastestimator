@@ -13,11 +13,12 @@
 # limitations under the License.
 # ==============================================================================
 from collections import ChainMap
-from typing import Any, Dict, List, Mapping, Set, Union, Iterable
+from typing import Any, Dict, List, MutableMapping, Set, Union, Iterable
 
 import tensorflow as tf
 import torch
-from fastestimator.op import TensorOp, get_current_ops, get_inputs_by_op, write_outputs_by_key
+
+from fastestimator.op import TensorOp, get_current_ops, get_inputs_by_op, write_outputs_by_keys
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
 from fastestimator.util.util import NonContext, lcms, to_list
@@ -51,10 +52,10 @@ class BaseNetwork:
             if isinstance(op, Scheduler):
                 for epoch_op in op.get_all_values():
                     if isinstance(epoch_op, UpdateOp):
-                        loss_keys.update(to_list(epoch_op.inputs))
+                        loss_keys.update(epoch_op.inputs)
             else:
                 if isinstance(op, UpdateOp):
-                    loss_keys.update(to_list(op.inputs))
+                    loss_keys.update(op.inputs)
         return loss_keys
 
     def get_effective_input_keys(self, mode: str, total_epochs: int) -> Set[str]:
@@ -62,15 +63,15 @@ class BaseNetwork:
         produced_keys = set()
         for epoch in self.get_signature_epochs(total_epochs):
             for op in get_current_ops(self.ops, mode, epoch):
-                input_keys.update(set(key for key in to_list(op.inputs) if key not in produced_keys))
-                produced_keys.update(to_list(op.outputs))
+                input_keys.update(set(key for key in op.inputs if key not in produced_keys))
+                produced_keys.update(op.outputs)
         return input_keys
 
     def get_all_output_keys(self, mode: str, total_epochs: int) -> Set[str]:
         output_keys = set()
         for epoch in self.get_signature_epochs(total_epochs):
             for op in get_current_ops(self.ops, mode, epoch):
-                output_keys.update(to_list(op.outputs))
+                output_keys.update(op.outputs)
         return output_keys
 
     def get_signature_epochs(self, total_epochs: int):
@@ -93,13 +94,13 @@ class BaseNetwork:
         return signature_epochs
 
     @staticmethod
-    def _forward_batch(batch: Mapping[str, Any], state: Dict[str, Any], ops: List[TensorOp]):
+    def _forward_batch(batch: MutableMapping[str, Any], state: Dict[str, Any], ops: List[TensorOp]):
         data = None
         for op in ops:
             data = get_inputs_by_op(op, batch, data)
             data = op.forward(data, state)
             if op.outputs:
-                write_outputs_by_key(batch, data, op.outputs)
+                write_outputs_by_keys(batch, data, op.outputs)
 
     def run_step(self, batch: Dict[str, Any], state: Dict[str, Any]) -> Dict[str, Any]:
         raise NotImplementedError
