@@ -29,7 +29,6 @@ class System:
     epoch_idx: int  # The current epoch index for the training (starting from 0)
     batch_idx: int  # The current batch index within an epoch (starting from 0)
     stop_training: bool  # A flag to signal that training should abort before 'epochs' has been reached
-    loader: Union[None, DataLoader, tf.data.Dataset]  # A reference to the object loading data this epoch
     network: Optional[object]  # A reference to the network being used this epoch  # TODO - circular reference
 
     def __init__(self,
@@ -55,5 +54,4 @@ class System:
         self.epoch_idx = 0
         self.batch_idx = 0
         self.stop_training = False
-        self.loader = None
         self.network = None
