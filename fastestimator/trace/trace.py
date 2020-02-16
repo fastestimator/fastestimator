@@ -13,13 +13,13 @@
 # limitations under the License.
 # ==============================================================================
 import time
-from typing import Iterable, List, Union, Set
+from typing import Iterable, List, Set, Union
 
 import numpy as np
 
 from fastestimator.backend.to_number import to_number
-from fastestimator.util import System, Data
-from fastestimator.util.util import draw, to_set, to_list
+from fastestimator.util import Data, System
+from fastestimator.util.util import to_list, to_set
 
 
 class Trace:
@@ -150,7 +150,6 @@ class Logger(Trace):
         self.loss_names = loss_names
 
     def on_begin(self, data: Data):
-        draw()
         self._print_message("FastEstimator-Start: step: {}; ".format(self.system.global_step), data)
 
     def on_batch_end(self, data: Data):
