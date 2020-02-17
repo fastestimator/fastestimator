@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+"""NumpyOp for image resize."""
 import cv2
 import numpy as np
 
@@ -44,7 +45,9 @@ class Resize(NumpyOp):
         self.keep_ratio = keep_ratio
 
     def forward(self, data, state):
-        data_dim = data.ndim
+        original_dim = data.ndim
+
+        # Calculate and apply paddings
         if self.keep_ratio:
             original_ratio = data.shape[1] / data.shape[0]
             target_ratio = self.target_size[1] / self.target_size[0]
@@ -55,7 +58,12 @@ class Resize(NumpyOp):
                 pad = (data.shape[0] * target_ratio - data.shape[1]) / 2
                 pad_boarder = (0, 0, np.ceil(pad).astype(np.int), np.floor(pad).astype(np.int))
             data = cv2.copyMakeBorder(data, *pad_boarder, cv2.BORDER_CONSTANT)
+
+        # Resize padded image
         data = cv2.resize(data, (self.target_size[1], self.target_size[0]), self.resize_method)
-        if data.ndim == data_dim - 1:
+
+        # Restore image dimension
+        if data.ndim == original_dim - 1:
             data = np.expand_dims(data, -1)
+
         return data

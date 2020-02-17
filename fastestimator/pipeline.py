@@ -24,8 +24,8 @@ import tensorflow as tf
 import fastestimator as fe
 from fastestimator.op import get_inputs_by_key, get_inputs_by_op, get_op_from_mode, verify_ops, write_outputs_by_key
 from fastestimator.op.tensorop import TensorFilter
+from fastestimator.record_writer import RecordWriter
 from fastestimator.schedule import Scheduler
-from fastestimator.util import RecordWriter
 from fastestimator.util.tfrecord import get_features
 from fastestimator.util.util import convert_tf_dtype, flatten_list, get_num_devices, per_replica_to_global
 
@@ -94,9 +94,11 @@ class Pipeline:
         self.transformed_dataset = {}
         self.dataset_schedule = {}
         self.all_output_keys = set()
-        # TFrecord only
-        self.summary_file = {}
+        # TFrecord and generator
         self.feature_dtype = {"train": [], "eval": []}
+        self.generator_tensor_shape = {"train": [], "eval": []}
+        # TFrecord
+        self.summary_file = {}
         self.record_feature_shape = {"train": [], "eval": []}
         self.compression = {"train": [], "eval": []}
         self.file_names = {"train": [], "eval": []}
@@ -108,7 +110,7 @@ class Pipeline:
         """Create the dataset used by the pipeline by running all the ops specified.
         """
         if isinstance(self.data, dict):
-            self._get_numpy_config()
+            self._get_dict_config()
         elif isinstance(self.data, (RecordWriter, str)):
             if isinstance(self.data, RecordWriter):
                 data_path = self.data.save_dir
@@ -128,16 +130,37 @@ class Pipeline:
             self.feature_name.values())))) - {None}
         self._is_prepared = True
 
-    def _get_numpy_config(self):
+    def _get_dict_config(self):
         for mode in self.possible_mode:
             if mode in self.data:
                 self.mode_list.append(mode)
-                self.all_features[mode].append(self.data[mode])
-                self._get_numpy_config_mode(mode)
+                mode_data = self.data[mode]
+                if isinstance(mode_data, dict):
+                    self._get_numpy_config_mode(mode)
+                elif hasattr(mode_data, '__call__'):
+                    self._get_generator_config_mode(mode)
+                else:
+                    raise ValueError("unsupported data format")
+
+    def _get_generator_config_mode(self, mode):
+        data = next(self.data[mode]())
+        self.all_features[mode].append(data)
+        assert isinstance(data, dict), "the output of generator must be a dictionary with feature name as key"
+        feature_dtype = dict()
+        generator_tensor_shape = dict()
+        for key, value in data.items():
+            value = np.asarray(value)
+            feature_dtype[key] = convert_tf_dtype(str(value.dtype))
+            generator_tensor_shape[key] = value.shape
+        self.feature_dtype[mode].append(feature_dtype)
+        self.generator_tensor_shape[mode].append(generator_tensor_shape)
+        self.num_examples[mode].append(0)
+        self.shuffle_buffer[mode].append(0)
 
     def _get_numpy_config_mode(self, mode):
-        num_examples_list = []
         data = self.data[mode]
+        self.all_features[mode].append(data)
+        num_examples_list = []
         for key in data.keys():
             feature_data = data[key]
             if isinstance(feature_data, list):
@@ -202,7 +225,12 @@ class Pipeline:
         # Data Reading
         for idx in range(len(self.all_features[mode])):
             if isinstance(self.data, dict):
-                ds_temp = tf.data.Dataset.from_tensor_slices(self.all_features[mode][idx])
+                if isinstance(self.data[mode], dict):
+                    ds_temp = tf.data.Dataset.from_tensor_slices(self.all_features[mode][idx])
+                else:
+                    ds_temp = tf.data.Dataset.from_generator(self.data[mode],
+                                                             output_types=self.feature_dtype[mode][idx],
+                                                             output_shapes=self.generator_tensor_shape[mode][idx])
             else:
                 if mode == "train":
                     ds_temp = tf.data.Dataset.from_tensor_slices(self.file_names[mode][idx])
@@ -216,9 +244,10 @@ class Pipeline:
                                                       compression_type=self.compression[mode][idx])
                 ds_temp = ds_temp.map(lambda ds_lam: self._decode_records(ds_lam, mode, idx),
                                       num_parallel_calls=self.num_core)
-            if mode == "train" or self.eval_shuffle:
+            if (mode == "train" or self.eval_shuffle) and self.shuffle_buffer[mode][idx]:
                 ds_temp = ds_temp.shuffle(self.shuffle_buffer[mode][idx])
-            ds_temp = ds_temp.repeat()
+            if self.num_examples[mode][idx]:
+                ds_temp = ds_temp.repeat()
             ds_tuple += ds_temp,
         # Combine dataset from different unpaired feature sets
         if len(self.all_features[mode]) > 1:
@@ -362,7 +391,7 @@ class Pipeline:
         global_batch_size = batch_per_device * self.global_batch_multiplier
         return global_batch_size
 
-    def show_results(self, mode="train", num_steps=1, current_epoch=0):
+    def show_results(self, mode="train", num_steps=1, current_epoch=0, reuse=False):
         """Processes the pipeline ops on the given input data.
 
         Args:
@@ -378,9 +407,10 @@ class Pipeline:
         ds_iter = self.dataset_schedule[mode].get_current_value(current_epoch)
         for _ in range(num_steps):
             data.append(next(ds_iter))
-        if self.global_batch_multiplier > 1:
+        if self.global_batch_multiplier > 1 and fe.distribute_strategy:
             data = [per_replica_to_global(item) for item in data]
-        self._reset()
+        if not reuse:
+            self._reset()
         return data
 
     def benchmark(self, mode="train", num_steps=1000, log_interval=100, current_epoch=0):

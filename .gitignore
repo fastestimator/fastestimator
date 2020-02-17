@@ -110,3 +110,13 @@ ENV/
 
 # tutorial output files
 /tutorial/outputs
+
+# for sphinx website develop
+/docs
+
+# test report 
+/test/apphub_scripts/**/*.txt
+/test/apphub_scripts/**/*.ipynb
+
+/test/tutorial_scripts/**/*.txt
+/test/tutorial_scripts/**/*.ipynb

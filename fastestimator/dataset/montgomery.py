@@ -21,7 +21,7 @@ from pathlib import Path
 import pandas as pd
 import wget
 
-from fastestimator.util.wget import bar_custom, callback_progress
+from fastestimator.util.wget_util import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress
 
@@ -35,9 +35,15 @@ def load_data(path=None):
             `fastestimator_data` under user's home directory.
 
     Returns:
-        (tuple): tuple containing:
-            csv_path (str): Path to the summary csv file.
-            path (str): Path to data root directory.
+        tuple: (csv_path, path) tuple, where
+        
+        * **csv_path** (str) -- Path to the summary csv file, containing the following columns:
+        
+            * image (str): Image directory relative to the returned path.
+            * mask_left (str): Left lung mask directory relative to the returned path.
+            * mask_right (str): Right lung mask directory relative to the returned path.
+            
+        * **path** (str) -- Path to data directory.
 
     """
     home = str(Path.home())
@@ -45,7 +51,7 @@ def load_data(path=None):
     if path is None:
         path = os.path.join(home, 'fastestimator_data', 'Montgomery')
     else:
-        path = os.path.abspath(path)
+        path = os.path.join(os.path.abspath(path), 'Montgomery')
     os.makedirs(path, exist_ok=True)
 
     csv_path = os.path.join(path, "montgomery.csv")

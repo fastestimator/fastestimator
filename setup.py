@@ -1,7 +1,13 @@
 import os
+import sys
 import re
-
+import datetime
 from setuptools import find_packages, setup
+
+is_nightly = os.environ.get('FASTESTIMATOR_IS_NIGHTLY', None)
+
+if is_nightly is not None:
+    sys.stderr.write("Using '%s=%s' environment variable!\n" % ('FASTESTIMATOR_IS_NIGHTLY', is_nightly))
 
 
 def get_version():
@@ -9,11 +15,24 @@ def get_version():
     version_re = re.compile(r'''__version__ = ['"](.+)['"]''')
     with open(os.path.join(path, 'fastestimator', '__init__.py')) as f:
         init = f.read()
-    return version_re.search(init).group(1)
+
+    now = datetime.datetime.now()
+    version = version_re.search(init).group(1)
+    if is_nightly:
+        return "{}.dev{:04}{:02}{:02}{:02}{:02}".format(version, now.year, now.month, now.day, now.hour, now.minute)
+    else:
+        return version
+
+
+def get_name():
+    if is_nightly:
+        return "fastestimator-nightly"
+    else:
+        return "fastestimator"
 
 
 setup(
-    name="fastestimator",
+    name=get_name(),
     version=get_version(),
     description="Deep learning Application framework",
     packages=find_packages(),
@@ -41,12 +60,19 @@ setup(
         'scipy',
         'pytest',
         'pytest-cov',
-        'tensorflow-probability',
+        'tensorflow-probability==0.8.0',
         'umap-learn',
         'tqdm',
         'opencv-python',
         'papermill',
-        'tf-explain'
+        'tf-explain',
+        'slackclient',
+        'nest_asyncio',
+        'pycocotools-fix',
+        'nibabel>= 2.5.1',
+        'nilearn',
+        'SimpleITK',
+        'tensorflow-addons==0.6.0'
     ],
     # Declare extra set for installation
     extras_require={},

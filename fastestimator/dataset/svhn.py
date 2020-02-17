@@ -16,14 +16,13 @@
 import os
 import tarfile
 from concurrent.futures.process import ProcessPoolExecutor
-from operator import add
 from pathlib import Path
 
 import h5py
 import pandas as pd
-
 import wget
-from fastestimator.util.wget import bar_custom, callback_progress
+
+from fastestimator.util.wget_util import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress
 
@@ -97,7 +96,7 @@ def _create_csv(data_folder, mode, csv_path):
     mat_data.close()
     print("Found {} examples for {}.".format(num_examples, mode))
 
-    df = pd.DataFrame(columns=['image', 'label', 'x1', 'y1', 'x2', 'y2'])
+    df = pd.DataFrame(columns=['image', 'label', 'x1', 'y1', 'width', 'height'])
     print("Retrieving bounding box for {} data. This will take several minutes ...".format(mode))
     futures = []
     with ProcessPoolExecutor(max_workers=os.cpu_count() or 1) as executor:
@@ -111,8 +110,8 @@ def _create_csv(data_folder, mode, csv_path):
             'label': bbox["label"],
             'x1': bbox["left"],
             'y1': bbox["top"],
-            'x2': list(map(add, bbox['left'], bbox['width'])),
-            'y2': list(map(add, bbox['top'], bbox['height']))
+            'width': bbox['width'],
+            'height': bbox['height']
         }
         df = df.append(row_dict, ignore_index=True)
 
@@ -129,10 +128,19 @@ def load_data(path=None):
             `fastestimator_data` under user's home directory.
 
     Returns:
-        (tuple): tuple containing:
-            train_csv (str): Path to train csv file.
-            test_csv (str): Path to test csv file.
-            path (str): Path to data root directory.
+        tuple: (train_csv, test_csv, path) tuple, where
+        
+        * **train_csv (str)** -- Path to train csv file, containing the following columns:
+        
+            * image (str): Image directory relative to the returned path.
+            * label (list): Categorical labels of each objects.
+            * x1 (list): Top left x coordinate of object bounding boxes.
+            * y1 (list): Top left y coordinate of object bounding boxes.
+            * width (list): Width of the bounding boxes.
+            * height (list): Height of the bounding boxes.
+            
+        * **test_csv** (str) -- Path to test csv file, containing the same columns as train_csv.
+        * **path** (str) -- Path to data directory.
 
     """
     home = str(Path.home())
@@ -140,7 +148,7 @@ def load_data(path=None):
     if path is None:
         path = os.path.join(home, 'fastestimator_data', 'SVHN')
     else:
-        path = os.path.abspath(path)
+        path = os.path.join(os.path.abspath(path), 'SVHN')
     os.makedirs(path, exist_ok=True)
 
     train_csv = os.path.join(path, 'train.csv')

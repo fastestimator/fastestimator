@@ -233,27 +233,29 @@ class Estimator:
                 state["epoch"] = epoch
                 state["num_examples"] = self.num_examples[mode].get_current_value(epoch)
                 state["warmup"] = True
-                ops, model_list, epoch_losses = self.network.load_epoch(epoch, mode)
+                ops = self.network.load_epoch(epoch, mode)
                 if fe.distribute_strategy:
-                    fe.distribute_strategy.experimental_run_v2(self.network.run_step,
-                                                               args=(batch, ops, model_list, epoch_losses, state))
+                    fe.distribute_strategy.experimental_run_v2(self.network.run_step, args=(batch, ops, state))
                 else:
-                    self.network.run_step(batch, ops, model_list, epoch_losses, state)
+                    self.network.run_step(batch, ops, state)
 
     def _start(self):
-        self.train_step = 0
-        self._run_traces_on_begin({
-            "train_step": self.train_step,
-            "num_devices": self.num_devices,
-            "log_steps": self.log_steps,
-            "persist_summary": bool(self.summary),
-            "total_epochs": self.epochs,
-            "total_train_steps": self.total_train_steps
-        })
-        for self.train_epoch in range(self.epochs):
-            self._run_epoch("train")
-            if self.do_eval:
-                self._run_epoch("eval")
+        try:
+            self.train_step = 0
+            self._run_traces_on_begin({
+                "train_step": self.train_step,
+                "num_devices": self.num_devices,
+                "log_steps": self.log_steps,
+                "persist_summary": bool(self.summary),
+                "total_epochs": self.epochs,
+                "total_train_steps": self.total_train_steps
+            })
+            for self.train_epoch in range(self.epochs):
+                self._run_epoch("train")
+                if self.do_eval:
+                    self._run_epoch("eval")
+        except EarlyStop:
+            pass  # On early stopping we still want to run the final traces and then return results
         summary = Summary(self.summary)
         self._run_traces_on_end({"train_step": self.train_step, "epoch": self.train_epoch, "summary": summary})
         return None if not self.summary else summary
@@ -267,9 +269,11 @@ class Estimator:
             max_steps = self.steps_per_epoch
         elif self.validation_steps and mode == "eval":
             max_steps = self.validation_steps
-        else:
+        elif num_examples > 0:
             max_steps = num_examples // global_batch_size
-        ops, model_list, epoch_losses = self.network.load_epoch(self.train_epoch, mode)
+        else:
+            raise ValueError("must specify steps_per_epoch or validations_steps when using generator")
+        ops = self.network.load_epoch(self.train_epoch, mode)
         self._run_traces_on_epoch_begin({
             "mode": mode, "epoch": self.train_epoch, "train_step": self.train_step, "num_examples": num_examples
         })
@@ -287,8 +291,6 @@ class Estimator:
                 prediction, batch = self._forward_step_parallel(
                     batch,
                     ops,
-                    model_list,
-                    epoch_losses,
                     {
                         "mode": mode,
                         "batch_size": global_batch_size,
@@ -301,8 +303,6 @@ class Estimator:
                 prediction = self._forward_step(
                     batch,
                     ops,
-                    model_list,
-                    epoch_losses,
                     {
                         "mode": mode,
                         "batch_size": global_batch_size,
@@ -372,30 +372,27 @@ class Estimator:
 
     def _check_early_exit(self):
         if self.network.stop_training:
-            self._run_traces_on_end({
-                "train_step": self.train_step,
-                "train_epoch": self.train_epoch,
-                "num_devices": self.num_devices, })
-            exit(0)
+            raise EarlyStop
 
     @tf.function
-    def _forward_step(self, batch, ops, model_list, epoch_losses, state):
-        prediction = self.network.run_step(batch, ops, model_list, epoch_losses, state)
-        #expand dimension on scalar value for consistency with distributed training
+    def _forward_step(self, batch, ops, state):
+        prediction = self.network.run_step(batch, ops, state)
+        # expand dimension on scalar value for consistency with distributed training
         for key, value in prediction.items():
             if isinstance(value, tf.Tensor) and value.shape.rank == 0:
                 prediction[key] = tf.expand_dims(value, axis=0)
         return prediction
 
     @tf.function
-    def _forward_step_parallel(self, batch, ops, model_list, epoch_losses, state):
-        prediction = fe.distribute_strategy.experimental_run_v2(self.network.run_step,
-                                                                args=(
-                                                                    batch,
-                                                                    ops,
-                                                                    model_list,
-                                                                    epoch_losses,
-                                                                    state, ))
+    def _forward_step_parallel(self, batch, ops, state):
+        prediction = fe.distribute_strategy.experimental_run_v2(self.network.run_step, args=(
+            batch,
+            ops,
+            state, ))
         prediction = per_replica_to_global(prediction)
         batch = per_replica_to_global(batch)
         return prediction, batch
+
+
+class EarlyStop(Exception):
+    pass

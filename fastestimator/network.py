@@ -12,16 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from collections import ChainMap
+from collections import ChainMap, defaultdict
 
 import tensorflow as tf
-from tensorflow.python.framework import ops as tfops
 
 import fastestimator as fe
 from fastestimator.op import get_inputs_by_op, get_op_from_mode, verify_ops, write_outputs_by_key
-from fastestimator.op.tensorop import ModelOp
+from fastestimator.op.tensorop import Loss, ModelOp, UpdateOp
 from fastestimator.schedule import Scheduler
-from fastestimator.util.util import NonContext, flatten_list, to_list
+from fastestimator.util.util import NonContext, flatten_list, to_list, to_set
 
 
 class Network:
@@ -55,6 +54,7 @@ class Network:
             for epoch in signature_epoch:
                 epoch_ops = []
                 epoch_model = []
+                epoch_model_update = defaultdict(lambda: False)
                 # generate ops for specific mode and epoch
                 for op in mode_ops:
                     if isinstance(op, Scheduler):
@@ -71,8 +71,15 @@ class Network:
                     if isinstance(op, ModelOp):
                         if op.model not in epoch_model:
                             epoch_model.append(op.model)
+                            epoch_model_update[op.model] = epoch_model_update[op.model]
                         if op.model not in all_models:
                             all_models.append(op.model)
+                    if isinstance(op, UpdateOp):
+                        epoch_model_update[op.model] = True
+                if mode == "train":
+                    for model, has_update in epoch_model_update.items():
+                        if not has_update:
+                            epoch_ops.append(UpdateOp(model=model))
                 assert epoch_model, "Network has no model for epoch {}".format(epoch)
                 epoch_ops_map[epoch] = epoch_ops
                 epoch_model_map[epoch] = epoch_model
@@ -102,23 +109,20 @@ class Network:
              list of the models, epoch losses
         """
         ops = self.op_schedule[mode].get_current_value(epoch)
-        model_list = self.model_schedule[mode].get_current_value(epoch)
-        epoch_losses = []
-        for model in model_list:
-            if model.loss_name not in epoch_losses:
-                epoch_losses.append(model.loss_name)
-        self.epoch_losses = epoch_losses
-        return ops, model_list, epoch_losses
+        epoch_losses = set()
+        for op in ops:
+            if isinstance(op, Loss):
+                epoch_losses |= to_set(op.outputs)
+        self.epoch_losses = to_list(epoch_losses)
+        return ops
 
-    def run_step(self, batch, ops, model_list, epoch_losses, state):
+    def run_step(self, batch, ops, state):
         """Function that calculates the loss and gradients for curent step in training. It also constructs the higher
         level computational graph between the models before the training.
 
         Args:
             batch : dictionary that contains batch data and predictions from last epoch
             ops : Model operation dictionary that contains 'Inputs','Mode', and 'Outputs'
-            model_list : List of the models
-            epoch_losses : List of epoch losses.
             state : run time dictionary that contains following keys 'mode' and 'batch size'
 
         Returns:
@@ -127,28 +131,10 @@ class Network:
         prediction = {}
         batch = ChainMap(prediction, batch)
         mode = state["mode"]
-        global_batch_size = state["batch_size"]
-        warmup = state["warmup"]
-        num_model = len(model_list)
         # use gradient tape for train, otherwise use a dummy tape
         with tf.GradientTape(persistent=True) if mode == "train" else NonContext() as tape:
             state['tape'] = tape
             self._forward(batch, state, ops)
-            reduced_loss = self._reduce_loss(batch, global_batch_size, epoch_losses, warmup)
-        # update model only for train mode
-        if mode == "train":
-            for idx in range(num_model):
-                model = model_list[idx]
-                loss = reduced_loss[model.loss_name]
-                optimizer = model.optimizer
-                if warmup:
-                    with tfops.init_scope():  # pylint: disable=not-context-manager
-                        _ = optimizer.iterations
-                        optimizer._create_hypers()  # pylint: disable=protected-access
-                        optimizer._create_slots(model_list[idx].trainable_variables)  # pylint: disable=protected-access
-                else:
-                    gradients = tape.gradient(loss, model.trainable_variables)
-                    optimizer.apply_gradients(zip(gradients, model.trainable_variables))
         del state['tape']
         del tape
         return prediction
@@ -162,31 +148,26 @@ class Network:
             if op.outputs:
                 write_outputs_by_key(batch, data, op.outputs)
 
-    def _reduce_loss(self, batch, global_batch_size, epoch_losses, warmup):
-        reduced_loss = {}
-        for loss_name in epoch_losses:
-            element_wise_loss = batch[loss_name]
-            if warmup:
-                assert element_wise_loss.ndim != 0 and element_wise_loss.shape[0] == global_batch_size / \
-                    self.num_devices, "please make sure loss is element-wise loss"
-            reduced_loss[loss_name] = tf.reduce_sum(element_wise_loss) / global_batch_size
-        return reduced_loss
 
-
-def build(model_def, model_name, optimizer, loss_name):
+def build(model_def, model_name, optimizer, loss_name, custom_objects=None):
     """build keras model instance in FastEstimator
 
     Args:
-        model_def (function): function definition of tf.keras model
+        model_def (function): function definition of tf.keras model or path of model file(h5)
         model_name (str, list, tuple): model name(s)
         optimizer (str, optimizer, list, tuple): optimizer(s)
         loss_name (str, list, tuple): loss name(s)
+        custom_objects (dict): dictionary that maps custom
 
     Returns:
         model: model(s) compiled by FastEstimator
     """
     with fe.distribute_strategy.scope() if fe.distribute_strategy else NonContext():
-        model = to_list(model_def())
+        if isinstance(model_def, str):
+            model = tf.keras.models.load_model(model_def, custom_objects=custom_objects)
+        else:
+            model = model_def()
+        model = to_list(model)
         model_name = to_list(model_name)
         optimizer = to_list(optimizer)
         loss_name = to_list(loss_name)

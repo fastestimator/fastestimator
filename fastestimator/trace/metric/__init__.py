@@ -16,5 +16,6 @@ from fastestimator.trace.metric.accuracy import Accuracy
 from fastestimator.trace.metric.confusion_matrix import ConfusionMatrix
 from fastestimator.trace.metric.dice import Dice
 from fastestimator.trace.metric.f1_score import F1Score
+from fastestimator.trace.metric.mean_avg_precision import MeanAvgPrecision
 from fastestimator.trace.metric.precision import Precision
 from fastestimator.trace.metric.recall import Recall

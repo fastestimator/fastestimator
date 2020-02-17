@@ -22,7 +22,7 @@ from pathlib import Path
 import pandas as pd
 import wget
 
-from fastestimator.util.wget import bar_custom, callback_progress
+from fastestimator.util.wget_util import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress
 
@@ -45,12 +45,25 @@ def load_data(path=None):
             `fastestimator_data` under user's home directory.
 
     Returns:
-        (tuple): tuple containing:
-            train_a_csv (str): Path to trainA csv file.
-            train_b_csv (str): Path to trainB csv file.
-            test_a_csv (str): Path to testA csv file.
-            test_b_csv (str): Path to testB csv file.
-            path (str): Path to data root directory.
+        tuple: (train_a_csv, train_b_csv, test_a_csv, test_b_csv, path) tuple, where
+        
+        * **train_a_csv** (str) -- Path to trainA csv file, containing the following column:
+        
+            * imgA: Image directory relative to the returned path.
+            
+        * **train_b_csv** (str) -- Path to trainB csv file, containing the following column:
+        
+            * imgB: Image directory relative to the returned path.
+            
+        * **test_a_csv** (str) -- Path to testA csv file, containing the following column:
+        
+            * imgA: Image directory relative to the returned path.
+            
+        * **test_b_csv** (str) -- Path to testB csv file, containing the following column:
+        
+            * imgB: Image directory relative to the returned path.
+            
+        * **path** (str) -- Path to data directory.
 
     """
     home = str(Path.home())
@@ -58,7 +71,7 @@ def load_data(path=None):
     if path is None:
         path = os.path.join(home, 'fastestimator_data', 'horse2zebra')
     else:
-        path = os.path.abspath(path)
+        path = os.path.join(os.path.abspath(path), 'horse2zebra')
     os.makedirs(path, exist_ok=True)
 
     data_compressed_path = os.path.join(path, 'horse2zebra.zip')

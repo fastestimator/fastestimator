@@ -1,9 +1,10 @@
 # FastEstimator
 
-[![Build Status](http://34.215.239.27:8080/buildStatus/icon?job=fe_git%2Ffastestimator%2Fmaster)](http://34.215.239.27:8080/job/fe_git/job/fastestimator/job/master/)
-[![Build Status](http://34.215.239.27:8080/buildStatus/icon?subject=build-nightly&job=fastestimator-nightly)](http://34.215.239.27:8080/job/fastestimator-nightly/)
+[![Build Status](http://52.36.103.172:8080/buildStatus/icon?subject=PR-build&job=fe_git%2Ffastestimator%2Fmaster)](http://52.36.103.172:8080/job/fe_git/job/fastestimator/job/master/)
+[![Build Status](http://52.36.103.172:8080/buildStatus/icon?subject=nightly-build&job=nightly)](http://52.36.103.172:8080/job/nightly/)
 
 FastEstimator is a high-level deep learning API. With the help of FastEstimator, you can easily build a high-performance deep learning model and run it anywhere. :wink:
+
 
 ## Prerequisites:
 * Python >= 3.5
@@ -12,15 +13,31 @@ FastEstimator is a high-level deep learning API. With the help of FastEstimator,
     * GPU:  `pip install tensorflow-gpu==2.0.0`
     * CPU:  `pip install tensorflow==2.0.0`
 
+* Pytorch backend is coming soon!
 
 ## Installation
-`pip install fastestimator==1.0b0`
+Please choose one:
+* I have no idea what FastEstimator is about:
+```
+pip install fastestimator==1.0b2
+```
+* I want to keep up to date with the latest:
+```
+pip install fastestimator-nightly
+```
+* I'm here to play hardcore mode:
 
-## [Docker Hub](https://hub.docker.com/r/fastestimator/fastestimator/tags)
-Docker container creates isolated virtual environment that shares resources with host machine. Docker provides an easy way to set up FastEstimator environment, users can pull image from Docker Hub.
+```
+git clone https://github.com/fastestimator/fastestimator.git
+pip install -e fastestimator
+```
 
-* GPU: `docker pull fastestimator/fastestimator:1.0b0-gpu`
-* CPU: `docker pull fastestimator/fastestimator:1.0b0-cpu`
+
+## Docker Hub
+Docker container creates isolated virtual environment that shares resources with host machine. Docker provides an easy way to set up FastEstimator environment, users can pull image from [Docker Hub](https://hub.docker.com/r/fastestimator/fastestimator/tags).
+
+* GPU: `docker pull fastestimator/fastestimator:1.0b2-gpu`
+* CPU: `docker pull fastestimator/fastestimator:1.0b2-cpu`
 
 ## Start your first FastEstimator training
 
@@ -28,8 +45,16 @@ Docker container creates isolated virtual environment that shares resources with
 $ python ./apphub/image_classification/lenet_mnist/lenet_mnist.py
 ```
 
+## Tutorial
+
+We have [tutorial series](https://github.com/fastestimator/fastestimator/tree/master/tutorial) that walk through everything you need to know about FastEstimator.
+
+## Example
+
+Check out [Application Hub](https://github.com/fastestimator/fastestimator/tree/master/apphub) for end-to-end deep learning examples in FastEstimator.
+
 ## Documentation
-For more info, check out [FastEstimator documentation](https://fastestimator.org)
+For more info, check out our [FastEstimator documentation](https://www.fastestimator.org).
 
 ## Citation
 Please cite FastEstimator in your publications if it helps your research:

@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 import wget
 
-from fastestimator.util.wget import bar_custom, callback_progress
+from fastestimator.util.wget_util import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress
 
@@ -25,14 +25,19 @@ def load_data(path=None):
             `fastestimator_data` under user's home directory.
 
     Returns:
-        (tuple): tuple containing:
-            csv_path (str): Path to the summary csv file.
-            path (str): Data folder path.
+        tuple: (csv_path, path) tuple, where
+        
+        * **csv_path** (str) -- Path to the summary csv file containing the following column:
+        
+            * x (str): Image directory relative to the returned path.
+            
+        * **path** (str) -- Data folder path.
+
     """
     if path is None:
         path = os.path.join(str(Path.home()), 'fastestimator_data', 'NIH_Chestxray')
     else:
-        path = os.path.abspath(path)
+        path = os.path.join(os.path.abspath(path), 'NIH_Chestxray')
     os.makedirs(path, exist_ok=True)
     #download data
     links = [
@@ -55,7 +60,6 @@ def load_data(path=None):
     #extract data
     image_extracted_path = os.path.join(path, 'images')
     if not os.path.exists(image_extracted_path):
-        print(" ")
         for idx, data_path in enumerate(data_paths):
             print("Extracting {}, file {} / {}".format(data_path, idx + 1, len(links)))
             with tarfile.open(data_path) as img_tar:

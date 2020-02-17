@@ -23,16 +23,31 @@ class AdversarialSample(TensorOp):
     https://arxiv.org/abs/1412.6572)
 
     Args:
-        inputs: key of the input to be mixed up
-        outputs: key to store the mixed-up input
-        mode: what mode to execute in.
-        epsilon: epsilon value to perturb the input to create adversarial examples
+        inputs (str): key of the input to be attacked
+        loss (str): key of the loss value to use in the attack - mutually exclusive with gradients
+        gradients (str): key of the gradients to use in the attack - mutually exclusive with loss
+        outputs (str): key to store the mixed-up input
+        mode (str): what mode to execute in.
+        epsilon (float): epsilon value to perturb the input to create adversarial examples
+        clip_low (float): a minimum value to clip the output by (defaults to min value of data)
+        clip_high (float): a maximum value to clip the output by (defaults to max value of data)
     """
-    def __init__(self, inputs, outputs=None, mode=None, epsilon=0.1):
-        assert len(inputs) == 2, \
-            "AdversarialSample requires 2 inputs: a loss value and the input data which lead to the loss"
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+    def __init__(self,
+                 inputs,
+                 loss=None,
+                 gradients=None,
+                 outputs=None,
+                 mode=None,
+                 epsilon=0.01,
+                 clip_low=None,
+                 clip_high=None):
+        assert (loss or gradients) is not None and not (loss and gradients) is not None, \
+            "AdversarialSample requires either a loss key or a gradient key, but not both"
+        self.loss_mode = loss is not None
+        super().__init__(inputs=[loss or gradients, inputs], outputs=outputs, mode=mode)
         self.epsilon = epsilon
+        self.clip_low = clip_low
+        self.clip_high = clip_high
 
     def forward(self, data, state):
         """ Forward method to perform mixup batch augmentation
@@ -44,11 +59,12 @@ class AdversarialSample(TensorOp):
         Returns:
             Adversarial example created from perturbing the input data
         """
-        clean_loss, clean_data = data
+        gradients, data = data
         tape = state['tape']
         with tape.stop_recording():
-            grad_clean = tape.gradient(clean_loss, clean_data)
-            adverse_data = tf.clip_by_value(clean_data + self.epsilon * tf.sign(grad_clean),
-                                            tf.reduce_min(clean_data),
-                                            tf.reduce_max(clean_data))
+            if self.loss_mode:
+                gradients = tape.gradient(gradients, data)
+            adverse_data = tf.clip_by_value(data + self.epsilon * tf.sign(gradients),
+                                            self.clip_low or tf.reduce_min(data),
+                                            self.clip_high or tf.reduce_max(data))
         return adverse_data

@@ -12,12 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
 from fastestimator.summary import Summary
-from fastestimator.trace import Trace
 from fastestimator.summary.logs import plot_logs
+from fastestimator.trace import Trace
+from fastestimator.util.util import to_list
+from fastestimator.xai import fig_to_img, show_image
 
 
 class Logger(Trace):
@@ -75,11 +78,13 @@ class Logger(Trace):
 class VisLogger(Logger):
     """A Logger which visualizes to the screen during training
     """
-    def __init__(self, vis_steps, **plot_args):
+    def __init__(self, vis_steps=None, show_images=None, **plot_args):
         super().__init__()
         self.vis_steps = vis_steps
         self.plot_args = plot_args
         self.true_persist = False
+        self.show_images = to_list(show_images) if show_images else []
+        self.images = {}
 
     def on_begin(self, state):
         self.log_steps = state['log_steps']
@@ -89,15 +94,63 @@ class VisLogger(Logger):
 
     def on_batch_end(self, state):
         super().on_batch_end(state)
-        if state["mode"] == "train" and state["train_step"] > 0 and state["train_step"] % self.vis_steps == 0:
-            fig = plot_logs(self.summary, **self.plot_args)
-            plt.draw()
-            plt.pause(0.000001)
-            plt.close(fig)
+        change = False
+        if self.vis_steps and state[
+                "mode"] == "train" and state["train_step"] > 0 and state["train_step"] % self.vis_steps == 0:
+            img = self._gen_log_image()
+            self.images["logs"] = img
+            change = True
+
+        change = self._find_images(state) or change
+
+        if change:
+            self._display_images()
+
+    def on_epoch_end(self, state):
+        super().on_epoch_end(state)
+        change = self._find_images(state)
+        if change:
+            self._display_images()
 
     def on_end(self, state):
         self._print_message("FastEstimator-Finish: step: {}; ".format(state["train_step"]), state)
         if self.true_persist:
             state['summary'].merge(self.summary)
-        plot_logs(self.summary, **self.plot_args)
+        img = self._gen_log_image()
+        self.images["logs"] = img
+        self._find_images(state)
+        self._display_images()
         plt.show()
+
+    def _gen_log_image(self):
+        old_backend = matplotlib.get_backend()
+        matplotlib.use("Agg")
+        fig = plot_logs(self.summary, **self.plot_args)
+        fig.canvas.draw()
+        img = fig_to_img(fig, batch=False)
+        matplotlib.use(old_backend)
+        return img
+
+    @staticmethod
+    def _display_image(img, title):
+        # TODO - Figure out how to keep the windows from forcefully overlapping each-other every time they render
+        fig = plt.figure(title, clear=True, tight_layout=True)
+        ax = fig.add_subplot(111)
+        show_image(img, axis=ax)
+        fig.canvas.draw()
+
+    def _display_images(self):
+        for title, img in self.images.items():
+            self._display_image(img=img, title=title)
+        plt.pause(1e-6)
+
+    def _find_images(self, state):
+        found = False
+        for key in self.show_images:
+            imgs = state.get(key)
+            if imgs is not None:
+                for idx, img in enumerate(imgs):
+                    img_key = "{}{}".format(key, "_{}".format(idx) if idx > 0 else "")
+                    self.images[img_key] = img
+                    found = True
+        return found

@@ -15,25 +15,29 @@
 import math
 
 import tensorflow as tf
-
 from fastestimator.op import TensorOp
-
+from fastestimator.util.util import to_list
 
 class Augmentation2D(TensorOp):
     """ This class supports commonly used 2D random affine transformations for data augmentation.
     Either a scalar ``x`` or a tuple ``[x1, x2]`` can be specified for rotation, shearing, shifting, and zoom.
 
     Args:
-        rotation_range: Scalar (x) that represents the range of random rotation (in degrees) from -x to x /
-            Tuple ([x1, x2]) that represents  the range of random rotation between x1 and x2.
-        width_shift_range: Float (x) that represents the range of random width shift (in pixels) from -x to x /
-            Tuple ([x1, x2]) that represents  the range of random width shift between x1 and x2.
-        height_shift_range: Float (x) that represents the range of random height shift (in pixels) from -x to x /
-            Tuple ([x1, x2]) that represents  the range of random height shift between x1 and x2.
-        shear_range: Scalar (x) that represents the range of random shear (in degrees) from -x to x /
-            Tuple ([x1, x2]) that represents  the range of random shear between x1 and x2.
-        zoom_range: Float (x) that represents the range of random zoom (in percentage) from -x to x /
-            Tuple ([x1, x2]) that represents  the range of random zoom between x1 and x2.
+        rotation_range: can be one of the following, valid value in [0.0, 360.0)
+            * Float (x) that represents the range of random rotation (in degrees) from -x to x.
+            * Tuple of floats ([x1, x2]) that represents  the range of random rotation(in degrees) between x1 and x2.
+        width_shift_range: can be one of the following, with the value in [0.0, 1.0)
+            * Float (x) that represents the range of random width shift (in ratio) between -x and x
+            * Tuple of floats ([x1, x2]) that represents  the range of random width shift (in ratio) between x1 and x2.
+        height_shift_range: can be one of the following, with the value in [0.0, 1.0)
+            * Float (x) that represents the range of random height shift (in ratio) between -x and x
+            * Tuple of floats ([x1, x2]) that represents  the range of random height shift (in ratio) between x1 and x2.
+        shear_range: can be one of the following, with the value in [0.0, 180)
+            * Float (x) that represents the range of random shear (in degrees) from -x to x
+            * Tuple of floats ([x1, x2]) that represents  the range of random shear between x1 and x2.
+        zoom_range: can be one of the following, valid value should be non-negative, shrink if < 1.0, zoom if > 1.0.
+            * Float (x) that represents the range of random zoom/shrink from [min(1.0, x) , max(1.0, x))
+            * Tuple of floats ([x1, x2]) that represents  the range of random zoom between x1 and x2.
         flip_left_right: Boolean representing whether to flip the image horizontally with a probability of 0.5.
         flip_up_down: Boolean representing whether to flip the image vertically with a probability of 0.5.
         mode: Augmentation on 'training' data or 'evaluation' data.
@@ -54,6 +58,8 @@ class Augmentation2D(TensorOp):
         self.width_shift_range = width_shift_range
         self.height_shift_range = height_shift_range
         self.shear_range = shear_range
+        zoom_range_list = to_list(zoom_range)
+        assert all([z > 0 for z in zoom_range_list]), "zoom range should be positive"
         self.zoom_range = zoom_range
         self.flip_left_right_boolean = flip_left_right
         self.flip_up_down_boolean = flip_up_down
@@ -160,8 +166,8 @@ class Augmentation2D(TensorOp):
         """
         zoom_range = [0., 0.]
         if type(self.zoom_range) is not tuple and type(self.zoom_range) is not list:
-            zoom_range[0] = 1 - self.zoom_range
-            zoom_range[1] = 1 + self.zoom_range
+            zoom_range[0] = min(self.zoom_range, 1.0)
+            zoom_range[1] = max(self.zoom_range, 1.0)
         else:
             zoom_range = self.zoom_range
         self.zoom_range = zoom_range
@@ -314,8 +320,8 @@ class Augmentation2D(TensorOp):
                 data = list(data)
             else:
                 data = [data]
-        self.width = tf.cast(data[0].shape[-3], tf.float32)
-        self.height = tf.cast(data[0].shape[-2], tf.float32)
+        self.width = tf.cast(tf.shape(data[0])[-3], tf.float32)
+        self.height = tf.cast(tf.shape(data[0])[-2], tf.float32)
         self.setup()
         for idx, single_data in enumerate(data):
             augment_data = self._transform(single_data)
@@ -338,7 +344,7 @@ class Augmentation2D(TensorOp):
 
         x_shape = self.width
         y_shape = self.height
-        z_shape = tf.cast(data.shape[-1], tf.float32)
+        z_shape = tf.cast(tf.shape(data)[-1], tf.float32)
 
         x_range = tf.range(x_shape)
         y_range = tf.range(y_shape)
@@ -360,9 +366,8 @@ class Augmentation2D(TensorOp):
         y_ = tf.cast(tf.clip_by_value(tf.round(y_), 0, y_shape - 1), tf.int32)
         z_ = tf.cast(z_, tf.int32)
         final_coords = tf.stack([x_, y_, z_], axis=-1)
-        gather_and_reshape = lambda ex: tf.reshape(tf.gather_nd(ex, final_coords), ex.shape)
-
-        if len(data.shape) > 3:
+        gather_and_reshape = lambda ex: tf.reshape(tf.gather_nd(ex, final_coords), tf.shape(ex))
+        if data.shape and len(data.shape) > 3:
             result = tf.map_fn(fn=gather_and_reshape, elems=data, dtype=dtype)
         else:
             result = gather_and_reshape(data)

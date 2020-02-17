@@ -19,6 +19,7 @@ import string
 import sys
 import time
 from ast import literal_eval
+from collections import defaultdict
 from contextlib import ContextDecorator
 from itertools import chain
 
@@ -27,6 +28,7 @@ import PIL
 # noinspection PyPackageRequirements
 import tensorflow as tf
 from tensorflow.python.client import device_lib
+from tensorflow.python.distribute.values import DistributedValues
 
 
 def load_image(file_path, strip_alpha=False, channels=3):
@@ -121,6 +123,33 @@ def convert_tf_dtype(datatype):
         "float16": tf.float16,
         "float32": tf.float32,
         "float64": tf.float64
+    }
+    return datatype_map[datatype]
+
+
+def convert_np_dtype(datatype):
+    """Return the numpy datatype from string.
+
+    Args:
+        datatype: String of datatype
+
+    Returns:
+        numpy data type
+    """
+    datatype_map = {
+        "bool": np.bool,
+        "int8": np.int8,
+        "int16": np.int16,
+        "int32": np.int32,
+        "int64": np.int64,
+        "uint8": np.uint8,
+        "uint16": np.uint16,
+        "uint32": np.uint32,
+        "uint64": np.uint64,
+        "float16": np.float16,
+        "float32": np.float32,
+        "float64": np.float64,
+        "string": np.str
     }
     return datatype_map[datatype]
 
@@ -358,12 +387,28 @@ def per_replica_to_global(data):
     Returns:
         obj: Combined data from all replicas.
     """
+    if isinstance(data, DistributedValues):
+        if data.values[0].shape.rank == 0:
+            return tf.stack(data.values)
+        else:
+            return tf.concat(data.values, axis=0)
+    if isinstance(data, dict):
+        result = {}
+        for key, val in data.items():
+            result[key] = per_replica_to_global(val)
+        return result
+    if isinstance(data, list):
+        return [per_replica_to_global(val) for val in data]
+    if isinstance(data, tuple):
+        return tuple([per_replica_to_global(val) for val in data])
+    if isinstance(data, set):
+        return set([per_replica_to_global(val) for val in data])
 
-    new_data = {}
-    for key, value in data.items():
-        if isinstance(value.values[0], tf.Tensor):
-            if value.values[0].shape.rank == 0:
-                new_data[key] = tf.stack(value.values)
-            else:
-                new_data[key] = tf.concat(value.values, axis=0)
-    return new_data
+
+class KeyDefaultDict(defaultdict):
+    def __missing__(self, key):
+        if self.default_factory is None:
+            raise KeyError(key)
+        else:
+            ret = self[key] = self.default_factory(key)
+            return ret

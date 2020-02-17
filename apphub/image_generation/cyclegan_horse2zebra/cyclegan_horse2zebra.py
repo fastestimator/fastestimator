@@ -15,15 +15,16 @@
 import os
 import tempfile
 
-import fastestimator as fe
 import tensorflow as tf
+
+import fastestimator as fe
+from fastestimator import RecordWriter
 from fastestimator.architecture.cyclegan import build_discriminator, build_generator
 from fastestimator.dataset.horse2zebra import load_data
 from fastestimator.op import TensorOp
 from fastestimator.op.numpyop import ImageReader
 from fastestimator.op.tensorop import Loss, ModelOp
 from fastestimator.trace import ModelSaver
-from fastestimator.util import RecordWriter
 
 
 class Myrescale(TensorOp):
