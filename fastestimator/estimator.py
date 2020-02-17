@@ -13,16 +13,17 @@
 # limitations under the License.
 # ==============================================================================
 from collections import ChainMap
-from typing import Iterable, List, Optional, Union, Set
+from typing import Iterable, List, Optional, Set, Union
 
 import tensorflow as tf
+from torch.utils.data import DataLoader
 
-from fastestimator.backend import to_tensor
+from fastestimator.backend import to_tensor, to_type
 from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
 from fastestimator.pipeline import Pipeline
 from fastestimator.trace import EvalEssential, Logger, Trace, TrainEssential
-from fastestimator.util import System, Data
-from fastestimator.util.util import to_list, to_set
+from fastestimator.util import Data, System
+from fastestimator.util.util import draw, to_list, to_set
 
 
 class Estimator:
@@ -65,6 +66,7 @@ class Estimator:
         self.trace_inputs = dict()
 
     def fit(self):
+        draw()
         self.traces = self._prepare_traces()
         self._prepare_system()
         self._check_keys()
@@ -78,8 +80,12 @@ class Estimator:
         for epoch in signature_epochs:
             for mode in self.pipeline.get_modes():
                 self.network.load_epoch(mode, epoch)
-                batch = next(iter(self.pipeline.get_loader(mode, epoch)))
-                batch = self._configure_tensor(batch)
+                loader = self._configure_loader(self.pipeline.get_loader(mode, epoch))
+                if isinstance(loader, tf.data.Dataset):
+                    batch = list(loader.take(1))[0]
+                else:
+                    batch = next(iter(loader))
+                batch = self._configure_tensor(loader, batch)
                 prediction = self.network.run_step(batch, {"mode": mode, "warmup": True})
                 self.network.unload_epoch()
 
@@ -131,11 +137,11 @@ class Estimator:
     def _run_epoch(self):
         self._run_traces_on_epoch_begin()
         self.network.load_epoch(mode=self.system.mode, epoch=self.system.epoch_idx)
-        self.system.loader = self.pipeline.get_loader(mode=self.system.mode, epoch=self.system.epoch_idx)
-        for self.system.batch_idx, batch in enumerate(self.system.loader):
+        loader = self._configure_loader(self.pipeline.get_loader(mode=self.system.mode, epoch=self.system.epoch_idx))
+        for self.system.batch_idx, batch in enumerate(loader):
             if self.system.batch_idx == self.steps_per_epoch and self.system.mode == "train":
                 break
-            batch = self._configure_tensor(batch)
+            batch = self._configure_tensor(loader, batch)
             self._run_traces_on_batch_begin()
             prediction = self.network.run_step(batch, {"mode": self.system.mode, "warmup": False})
             self._run_traces_on_batch_end(batch, prediction)
@@ -144,12 +150,19 @@ class Estimator:
         self.network.unload_epoch()
         self._run_traces_on_epoch_end()
 
-    def _configure_tensor(self, batch):
-        if isinstance(self.system.loader, tf.data.Dataset):
-            if isinstance(self.network, TorchNetwork):
-                batch = to_tensor(batch, target_type="torch")
-        elif isinstance(self.network, TFNetwork):
-            batch = to_tensor(batch, target_type="tensorflow")
+    def _configure_loader(self, loader):
+        new_loader = loader
+        if isinstance(loader, DataLoader) and isinstance(self.network, TFNetwork):
+            data_type = to_type(to_tensor(loader.dataset[0], target_type="tensorflow"))
+            new_loader = tf.data.Dataset.from_generator(lambda: loader, data_type)
+            new_loader = new_loader.prefetch(1)
+            if self.steps_per_epoch and self.system.mode == "train":
+                new_loader = new_loader.take(self.steps_per_epoch)
+        return new_loader
+
+    def _configure_tensor(self, loader, batch):
+        if isinstance(loader, tf.data.Dataset) and isinstance(self.network, TorchNetwork):
+            batch = to_tensor(batch, target_type="torch")
         return batch
 
     def _run_traces_on_begin(self):
