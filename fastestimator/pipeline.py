@@ -90,15 +90,17 @@ class Pipeline:
 
     def benchmark(self, mode: str = "train", num_steps: int = 1000, log_interval: int = 100, epoch: int = 0):
         loader = self.get_loader(mode=mode, epoch=epoch)
+        if isinstance(loader, tf.data.Dataset):
+            loader = loader.take(num_steps)
         start = time.perf_counter()
         for idx, _ in enumerate(loader):
+            if idx == num_steps:
+                break
             if idx % log_interval == 0 and idx > 0:
                 duration = time.perf_counter() - start
                 iters_per_sec = log_interval / duration
                 print("FastEstimator: Step: {}, Epoch: {}, Steps/sec: {}".format(idx, epoch, iters_per_sec))
                 start = time.perf_counter()
-            if idx == num_steps:
-                break
 
     def get_loader(self, mode: str, epoch: int = 0) -> Union[DataLoader, tf.data.Dataset]:
         data = self.data[mode]
