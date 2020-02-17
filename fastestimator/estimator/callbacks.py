@@ -215,6 +215,7 @@ class EarlyStopping(tf.keras.callbacks.Callback):
         self.min_delta = abs(min_delta)
         self.wait = 0
         self.stopped_epoch = 0
+        self.num_process = 1
         self.rank = 0
 
         if mode not in ['auto', 'min', 'max']:
