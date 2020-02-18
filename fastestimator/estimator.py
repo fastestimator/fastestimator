@@ -64,14 +64,18 @@ class Estimator:
         self.monitor_names = to_set(monitor_names)
         self.system = System(log_steps=log_steps, epochs=epochs)
         self.trace_inputs = dict()
+        self.traces_in_use = []
 
     def fit(self):
         draw()
-        self.traces = self._prepare_traces()
+        self.traces_in_use = self._prepare_traces()
         self._prepare_system()
         self._check_keys()
         self._warmup()
-        return self._start()
+        return self._start_train()
+
+    def predict(self):
+        self.traces_in_use = self._prepare_traces()
 
     def _warmup(self):
         pipeline_signature_epochs = self.pipeline.get_signature_epochs(self.system.epochs)
@@ -86,7 +90,7 @@ class Estimator:
                 else:
                     batch = next(iter(loader))
                 batch = self._configure_tensor(loader, batch)
-                prediction = self.network.run_step(batch, {"mode": mode, "warmup": True})
+                self.network.run_step(batch, {"mode": mode, "warmup": True})
                 self.network.unload_epoch()
 
     def _check_keys(self):
@@ -100,7 +104,7 @@ class Estimator:
     def _prepare_system(self):
         self.system.reset()
         self.system.network = self.network
-        for trace in self.traces:
+        for trace in self.traces_in_use:
             trace.system = self.system
 
     def _prepare_traces(self):
@@ -121,7 +125,7 @@ class Estimator:
             self.trace_inputs[mode] = trace_inputs
         return traces
 
-    def _start(self):
+    def _start_train(self):
         try:
             self._run_traces_on_begin()
             for self.system.epoch_idx in range(self.system.epochs):
@@ -167,41 +171,41 @@ class Estimator:
 
     def _run_traces_on_begin(self):
         data = Data()
-        for trace in self.traces:
+        for trace in self.traces_in_use:
             trace.on_begin(data)
         self._check_early_exit()
 
     def _run_traces_on_epoch_begin(self):
         data = Data()
-        for trace in self.traces:
+        for trace in self.traces_in_use:
             if not trace.mode or self.system.mode in trace.mode:
                 trace.on_epoch_begin(data)
         self._check_early_exit()
 
     def _run_traces_on_batch_begin(self):
         data = Data()
-        for trace in self.traces:
+        for trace in self.traces_in_use:
             if not trace.mode or self.system.mode in trace.mode:
                 trace.on_batch_begin(data)
         self._check_early_exit()
 
     def _run_traces_on_batch_end(self, batch, prediction):
         data = Data(ChainMap(prediction, batch))
-        for trace in self.traces:
+        for trace in self.traces_in_use:
             if not trace.mode or self.system.mode in trace.mode:
                 trace.on_batch_end(data)
         self._check_early_exit()
 
     def _run_traces_on_epoch_end(self):
         data = Data()
-        for trace in self.traces:
+        for trace in self.traces_in_use:
             if not trace.mode or self.system.mode in trace.mode:
                 trace.on_epoch_end(data)
         self._check_early_exit()
 
     def _run_traces_on_end(self):
         data = Data()
-        for trace in self.traces:
+        for trace in self.traces_in_use:
             trace.on_end(data)
 
     def _check_early_exit(self):
