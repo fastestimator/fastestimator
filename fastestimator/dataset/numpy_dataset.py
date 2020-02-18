@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from copy import deepcopy
 from typing import List, Iterable, Dict, Any, Sequence
 
 import numpy as np
@@ -37,7 +36,7 @@ class NumpyDataset(FEDataset):
         return len(self.data)
 
     def __getitem__(self, index):
-        return deepcopy(self.data[index])
+        return self.data[index]
 
     @classmethod
     def _skip_init(cls, data: Dict[int, Dict[str, Any]]) -> 'NumpyDataset':

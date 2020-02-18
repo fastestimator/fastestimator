@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from copy import deepcopy
 from typing import List
 
 from torch.utils.data import Dataset
+
+from fastestimator.op import get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.op import NumpyOp
-from fastestimator.op import get_inputs_by_op, write_outputs_by_key
 
 
 class OpDataset(Dataset):
@@ -26,13 +28,13 @@ class OpDataset(Dataset):
         self.mode = mode
 
     def __getitem__(self, index):
-        item = self.dataset[index]
+        item = deepcopy(self.dataset[index])  # Deepcopy to prevent ops from overwriting values in datasets
         op_data = None
         for op in self.ops:
             op_data = get_inputs_by_op(op, item, op_data)
             op_data = op.forward(op_data, {"mode": self.mode})
             if op.outputs:
-                write_outputs_by_key(item, op_data, op.outputs)
+                write_outputs_by_op(op, item, op_data)
         return item
 
     def __len__(self):

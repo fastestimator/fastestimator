@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, Dict, Any, List
+import random
+from typing import Dict, Any, List, Union
 
 import numpy as np
-import random
+
 from fastestimator.op import NumpyOp
 
 
@@ -26,12 +27,12 @@ class OneOf(NumpyOp):
             numpy_ops: A list of ops to choose between
     """
     def __init__(self, *numpy_ops: NumpyOp):
-        inputs = list(numpy_ops[0].inputs)
-        outputs = list(numpy_ops[0].outputs)
+        inputs = numpy_ops[0].inputs
+        outputs = numpy_ops[0].outputs
         mode = numpy_ops[0].mode
         for op in numpy_ops[1:]:
-            assert inputs == list(op.inputs), "All ops within a OneOf must share the same inputs"
-            assert outputs == list(op.outputs), "All ops within a OneOf must share the same outputs"
+            assert inputs == op.inputs, "All ops within a OneOf must share the same inputs"
+            assert outputs == op.outputs, "All ops within a OneOf must share the same outputs"
             assert mode == op.mode, "All ops within a OneOf must share the same mode"
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.numpy_ops = numpy_ops

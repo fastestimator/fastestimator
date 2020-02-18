@@ -12,10 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Optional, Union
-
-import tensorflow as tf
-from torch.utils.data import DataLoader
+from typing import Optional
 
 from fastestimator.util.util import get_num_devices
 
@@ -30,12 +27,14 @@ class System:
     batch_idx: int  # The current batch index within an epoch (starting from 0)
     stop_training: bool  # A flag to signal that training should abort before 'epochs' has been reached
     network: Optional[object]  # A reference to the network being used this epoch  # TODO - circular reference
+    max_steps_per_epoch: Optional[int]  # Training epoch will complete after n steps even if loader is not yet exhausted
 
     def __init__(self,
                  mode: str = "train",
                  num_devices: int = get_num_devices(),
                  log_steps: Optional[int] = None,
-                 epochs: int = 0):
+                 epochs: int = 0,
+                 max_steps_per_epoch: Optional[int] = None):
         self.mode = mode
         self.global_step = 0
         self.num_devices = num_devices
@@ -43,6 +42,7 @@ class System:
         self.epochs = epochs
         self.epoch_idx = 0
         self.batch_idx = 0
+        self.max_steps_per_epoch = max_steps_per_epoch
         self.stop_training = False
 
     def update_global_step(self):

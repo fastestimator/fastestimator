@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 import warnings
-from copy import deepcopy
 from typing import Any, Dict, Generator, Sequence, Iterable, List, Sized
 
 from fastestimator.dataset.fe_dataset import FEDataset
@@ -29,7 +28,7 @@ class GeneratorDataset(FEDataset):
         return self.samples_per_epoch
 
     def __getitem__(self, index: int):
-        return deepcopy(self.generator.send(index))
+        return self.generator.send(index)
 
     def _do_split(self, splits: Sequence[Iterable[int]]) -> List['GeneratorDataset']:
         warnings.warn("You probably don't actually want to split a generator dataset")
