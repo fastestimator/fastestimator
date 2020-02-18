@@ -64,11 +64,11 @@ class Precision(Trace):
     def pred_key(self):
         return self.inputs[1]
 
-    def on_epoch_begin(self, data:Data):
+    def on_epoch_begin(self, data: Data):
         self.y_true = []
         self.y_pred = []
 
-    def on_batch_end(self, data:Data):
+    def on_batch_end(self, data: Data):
         groundtruth_label = to_number(data[self.true_key])
         if groundtruth_label.shape[-1] > 1 and len(groundtruth_label.shape) > 1:
             groundtruth_label = np.argmax(groundtruth_label, axis=-1)
@@ -80,10 +80,10 @@ class Precision(Trace):
             prediction_label = np.argmax(prediction_score, axis=-1)
         assert prediction_label.size == groundtruth_label.size
         self.binary_classification = binary_classification or prediction_score.shape[-1] == 2
-        self.y_pred.append(list(prediction_label.ravel()))
-        self.y_true.append(list(groundtruth_label.ravel()))
-        
-    def on_epoch_end(self, data:Data):
+        self.y_pred += list(prediction_label.ravel())
+        self.y_true += list(groundtruth_label.ravel())
+
+    def on_epoch_end(self, data: Data):
         if self.average == 'auto':
             if self.binary_classification:
                 score = precision_score(np.ravel(self.y_true),
