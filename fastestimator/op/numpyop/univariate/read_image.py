@@ -13,13 +13,12 @@
 # limitations under the License.
 # ==============================================================================
 import os
+from typing import Union, Iterable, Callable, Any, Dict, List
 
 import cv2
 import numpy as np
 
 from fastestimator.op import NumpyOp
-from typing import Union, Iterable, Callable, Any, Dict, List
-from fastestimator.util.util import to_list
 
 
 class ReadImage(NumpyOp):
@@ -45,12 +44,11 @@ class ReadImage(NumpyOp):
         self.grey_scale = grey_scale
         if grey_scale:
             self.color_flag = cv2.IMREAD_GRAYSCALE
+        self.in_list, self.out_list = True, True
 
-    def forward(self, data: Union[str, List[str]], state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
-        is_list = isinstance(data, list)
-        paths = to_list(data)
+    def forward(self, data: List[str], state: Dict[str, Any]) -> List[np.ndarray]:
         results = []
-        for path in paths:
+        for path in data:
             path = os.path.normpath(os.path.join(self.parent_path, path))
             img = cv2.imread(path, self.color_flag)
             if not self.grey_scale:
@@ -60,4 +58,4 @@ class ReadImage(NumpyOp):
             if self.grey_scale:
                 img = np.expand_dims(img, -1)
             results.append(img)
-        return results if is_list else results[0]
+        return results
