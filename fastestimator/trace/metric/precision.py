@@ -35,7 +35,7 @@ class Precision(Trace):
     def __init__(self,
                  true_key: str,
                  pred_key: str,
-                 mode: Union[str, List] = ["eval", "test"],
+                 mode: Union[str, List[str]] = ["eval", "test"],
                  output_name: str = "precision"):
         super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode)
         self.binary_classification = None

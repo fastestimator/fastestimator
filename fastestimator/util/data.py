@@ -28,4 +28,4 @@ class Data(ChainMap[str, Any]):
         self.maps[1][key] = value
 
     def read_logs(self, extra_keys: Set[str]) -> Dict[str, Any]:
-        return {**{k: self.__getitem__(k) for k in extra_keys if self.__contains__(k)}, **self.maps[0]}
+        return {**{k: v for k, v in self.maps[1].items() if k in extra_keys}, **self.maps[0]}

@@ -141,8 +141,10 @@ class Estimator:
         self._run_traces_on_end()
 
     def _start_test(self):
+        self._run_traces_on_begin()
         self.system.mode = "test"
         self._run_epoch()
+        self._run_traces_on_end()
 
     def _run_epoch(self):
         self._run_traces_on_epoch_begin()
