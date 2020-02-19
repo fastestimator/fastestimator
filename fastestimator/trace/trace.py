@@ -148,7 +148,8 @@ class Logger(Trace):
         super().__init__(inputs=extra_log_keys)
 
     def on_begin(self, data: Data):
-        self._print_message("FastEstimator-Start: step: {}; ".format(self.system.global_step), data)
+        if not self.system.mode == "test":
+            self._print_message("FastEstimator-Start: step: {}; ".format(self.system.global_step), data)
 
     def on_batch_end(self, data: Data):
         if self.system.mode == "train" and self.system.log_steps and self.system.global_step % self.system.log_steps \
@@ -162,7 +163,8 @@ class Logger(Trace):
             self._print_message("FastEstimator-Test:", data)
 
     def on_end(self, data: Data):
-        self._print_message("FastEstimator-Finish: step: {}; ".format(self.system.global_step), data)
+        if not self.system.mode == "test":
+            self._print_message("FastEstimator-Finish: step: {}; ".format(self.system.global_step), data)
 
     def _print_message(self, header: str, data: Data, log_epoch: bool = False):
         log_message = header

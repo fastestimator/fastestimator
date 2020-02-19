@@ -56,50 +56,46 @@ class Estimator:
                  monitor_names: Union[None, str, Iterable[str]] = None):
         self.pipeline = pipeline
         self.network = network
+        self.epochs = epochs
         self.traces = to_list(traces)
         assert log_steps is None or log_steps >= 0, \
             "log_steps must be None or positive (or 0 to disable only train logging)"
         self.monitor_names = to_set(monitor_names)
-        self.system = System(log_steps=log_steps, epochs=epochs, max_steps_per_epoch=max_steps_per_epoch)
+        self.system = System(log_steps=log_steps, total_epochs=epochs, max_steps_per_epoch=max_steps_per_epoch)
         self.trace_inputs = dict()
-        self.traces_in_use = []
+        self._prepare_traces()
+        self._check_keys()
 
     def fit(self):
         draw()
-        self.traces_in_use = self._prepare_traces(modes=self.pipeline.get_modes())
-        self._prepare_system()
-        self._check_keys(modes=self.pipeline.get_modes())
+        self.system.reset()
         self._warmup()
         return self._start_train()
 
     def test(self):
-        self.traces_in_use = self._prepare_traces(modes={"test"})
-        self._prepare_system()
-        self._check_keys(modes={"test"})
         return self._start_test()
 
-    def _prepare_traces(self, modes: Set[str]):
-        self.trace_inputs = dict()
-        loss_keys = set()
-        traces = [trace for trace in self.traces]
+    def _prepare_traces(self):
+        modes = self.pipeline.get_modes()
+        loss_keys = self.network.get_loss_keys()
         if "train" in modes:
-            loss_keys = self.network.get_loss_keys()
-            traces.insert(0, TrainEssential())
-            if "eval" in modes:
-                traces.insert(1, EvalEssential(loss_keys=loss_keys))
+            self.traces.insert(0, TrainEssential())
+        if "eval" in modes:
+            self.traces.insert(1, EvalEssential(loss_keys=loss_keys))
         if self.system.log_steps is not None:
-            traces.append(Logger(extra_log_keys=self.monitor_names | loss_keys))
+            self.traces.append(Logger(extra_log_keys=self.monitor_names | loss_keys))
         for mode in modes:
             trace_inputs = set()
-            for trace in traces:
+            for trace in self.traces:
                 if not trace.mode or mode in trace.mode:
                     trace_inputs.update(trace.inputs)
             self.trace_inputs[mode] = trace_inputs
-        return traces
+        for trace in self.traces:
+            trace.system = self.system
 
     def _warmup(self):
-        pipeline_signature_epochs = self.pipeline.get_signature_epochs(self.system.epochs)
-        network_signature_epochs = self.network.get_signature_epochs(self.system.epochs)
+        pipeline_signature_epochs = self.pipeline.get_signature_epochs(self.system.total_epochs)
+        network_signature_epochs = self.network.get_signature_epochs(self.system.total_epochs)
         signature_epochs = pipeline_signature_epochs | network_signature_epochs
         for epoch in signature_epochs:
             for mode in self.pipeline.get_modes():
@@ -113,26 +109,22 @@ class Estimator:
                 self.network.run_step(batch, {"mode": mode, "warmup": True})
                 self.network.unload_epoch()
 
-    def _check_keys(self, modes):
-        for mode in modes:
-            pipeline_all_outputs = self.pipeline.get_all_output_keys(mode, self.system.epochs)
-            network_all_outputs = self.network.get_all_output_keys(mode, self.system.epochs)
-            assert self.trace_inputs[mode].issubset(pipeline_all_outputs | network_all_outputs), "found missing key"
-            self.network.effective_inputs[mode] = self.network.get_effective_input_keys(mode, self.system.epochs)
+    def _check_keys(self):
+        for mode in self.pipeline.get_modes():
+            pipeline_all_outputs = self.pipeline.get_all_output_keys(mode, self.system.total_epochs)
+            network_all_outputs = self.network.get_all_output_keys(mode, self.system.total_epochs)
+            assert self.trace_inputs[mode].issubset(pipeline_all_outputs | network_all_outputs), \
+                "found missing key during {}".format(mode)
+            self.network.effective_inputs[mode] = self.network.get_effective_input_keys(mode, self.system.total_epochs)
             self.network.effective_outputs[mode] = network_all_outputs.intersection(self.trace_inputs[mode])
 
-    def _prepare_system(self):
-        self.system.reset()
-        self.system.network = self.network
-        for trace in self.traces_in_use:
-            trace.system = self.system
-
     def _start_train(self):
+        self._run_traces_on_begin()
         try:
-            self._run_traces_on_begin()
-            for self.system.epoch_idx in range(self.system.epochs):
-                self.system.mode = "train"
-                self._run_epoch()
+            for self.system.epoch_idx in range(self.system.total_epochs):
+                if "train" in self.pipeline.get_modes():
+                    self.system.mode = "train"
+                    self._run_epoch()
                 if "eval" in self.pipeline.get_modes():
                     self.system.mode = "eval"
                     self._run_epoch()
@@ -141,8 +133,9 @@ class Estimator:
         self._run_traces_on_end()
 
     def _start_test(self):
-        self._run_traces_on_begin()
         self.system.mode = "test"
+        self.system.epoch_idx = self.epochs
+        self._run_traces_on_begin()
         self._run_epoch()
         self._run_traces_on_end()
 
@@ -179,41 +172,41 @@ class Estimator:
 
     def _run_traces_on_begin(self):
         data = Data()
-        for trace in self.traces_in_use:
+        for trace in self.traces:
             trace.on_begin(data)
         self._check_early_exit()
 
     def _run_traces_on_epoch_begin(self):
         data = Data()
-        for trace in self.traces_in_use:
+        for trace in self.traces:
             if not trace.mode or self.system.mode in trace.mode:
                 trace.on_epoch_begin(data)
         self._check_early_exit()
 
     def _run_traces_on_batch_begin(self):
         data = Data()
-        for trace in self.traces_in_use:
+        for trace in self.traces:
             if not trace.mode or self.system.mode in trace.mode:
                 trace.on_batch_begin(data)
         self._check_early_exit()
 
     def _run_traces_on_batch_end(self, batch, prediction):
         data = Data(ChainMap(prediction, batch))
-        for trace in self.traces_in_use:
+        for trace in self.traces:
             if not trace.mode or self.system.mode in trace.mode:
                 trace.on_batch_end(data)
         self._check_early_exit()
 
     def _run_traces_on_epoch_end(self):
         data = Data()
-        for trace in self.traces_in_use:
+        for trace in self.traces:
             if not trace.mode or self.system.mode in trace.mode:
                 trace.on_epoch_end(data)
         self._check_early_exit()
 
     def _run_traces_on_end(self):
         data = Data()
-        for trace in self.traces_in_use:
+        for trace in self.traces:
             trace.on_end(data)
 
     def _check_early_exit(self):
