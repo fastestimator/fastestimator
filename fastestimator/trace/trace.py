@@ -144,10 +144,8 @@ class Logger(Trace):
     Args:
         extra_log_keys (set): set of keys to print from system buffer
     """
-    def __init__(self, extra_log_keys: Set[str], loss_names: Set[str]):
-        super().__init__(inputs=extra_log_keys | loss_names)
-        self.extra_log_keys = extra_log_keys
-        self.loss_names = loss_names
+    def __init__(self, extra_log_keys: Set[str]):
+        super().__init__(inputs=extra_log_keys)
 
     def on_begin(self, data: Data):
         self._print_message("FastEstimator-Start: step: {}; ".format(self.system.global_step), data)
@@ -160,6 +158,8 @@ class Logger(Trace):
     def on_epoch_end(self, data: Data):
         if self.system.mode == "eval":
             self._print_message("FastEstimator-Eval: step: {}; ".format(self.system.global_step), data, True)
+        elif self.system.mode == "test":
+            self._print_message("FastEstimator-Test:", data)
 
     def on_end(self, data: Data):
         self._print_message("FastEstimator-Finish: step: {}; ".format(self.system.global_step), data)
@@ -168,10 +168,8 @@ class Logger(Trace):
         log_message = header
         if log_epoch:
             log_message += "epoch: {}; ".format(self.system.epoch_idx)
-        for key, val in data.read_logs(to_set(self.inputs)).items():
+        for key, val in data.read_logs(self.inputs).items():
             val = to_number(val)
-            if key in self.loss_names:
-                val = np.round(val, decimals=7)
             if isinstance(val, np.ndarray):
                 log_message += "\n{}:\n{};".format(key, np.array2string(val, separator=','))
             else:

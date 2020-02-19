@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
-from typing import Optional
+from typing import List, Union
 
 import numpy as np
 
@@ -32,7 +32,11 @@ class Accuracy(Trace):
         mode: What mode to execute in (None to execute in all modes)
         output_name: What to call the output from this trace (for example in the logger output)
     """
-    def __init__(self, true_key: str, pred_key: str, mode: Optional[str] = "eval", output_name: str = "accuracy"):
+    def __init__(self,
+                 true_key: str,
+                 pred_key: str,
+                 mode: Union[str, List] = ["eval", "test"],
+                 output_name: str = "accuracy"):
         super().__init__(inputs=(true_key, pred_key), mode=mode, outputs=output_name)
         self.total = 0
         self.correct = 0
