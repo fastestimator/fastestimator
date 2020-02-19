@@ -29,7 +29,7 @@ wget.callback_progress = callback_progress
 
 def load_data(root_dir: str = None) -> CSVDataset:
     """
-    Download the USPS dataset to local storage if not already downloaded
+    Download the montgomery dataset to local storage if not already downloaded
     Args:
         root_dir: The path to store the USPS data. If not provided then data is saved to `fastestimator_data` in the
                   users home directory
