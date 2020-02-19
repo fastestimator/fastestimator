@@ -98,7 +98,3 @@ class USPSDataset(LabeledDirDatasets):
         images = np.reshape(images_vec, (images_vec.shape[0], 16, 16))
         labels = data[:, 0].astype(int)
         return images, labels
-
-
-if __name__ == "__main__":
-    ds = USPSDataset()
