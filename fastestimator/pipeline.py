@@ -21,7 +21,7 @@ import numpy as np
 import tensorflow as tf
 from torch.utils.data import DataLoader, Dataset
 
-from fastestimator.dataset.op_dataset import OpDataset
+from fastestimator.dataset.dataset import OpDataset
 from fastestimator.op import NumpyOp, get_current_ops
 from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
 from fastestimator.util.util import lcms, to_list
@@ -30,6 +30,8 @@ DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
 
 
 class Pipeline:
+    ops: List[Union[NumpyOp, Scheduler[NumpyOp]]]
+
     def __init__(self,
                  train_data: Union[None, DataSource, Scheduler[DataSource]] = None,
                  eval_data: Union[None, DataSource, Scheduler[DataSource]] = None,
@@ -118,7 +120,7 @@ class Pipeline:
                               worker_init_fn=lambda _: np.random.seed())
         return data
 
-    def get_signature_epochs(self, epochs):
+    def get_signature_epochs(self, epochs: int):
         signature_epochs = {0}
         epoch_keys = {0}
         repeat_cycles = {1}
@@ -137,7 +139,7 @@ class Pipeline:
         signature_epochs = set(epoch for epoch in signature_epochs if epoch < epochs)
         return signature_epochs
 
-    def get_all_output_keys(self, mode, epochs) -> Set[str]:
+    def get_all_output_keys(self, mode: str, epochs: int) -> Set[str]:
         output_keys = set()
         for epoch in self.get_signature_epochs(epochs):
             loader = self.get_loader(mode=mode, epoch=epoch)

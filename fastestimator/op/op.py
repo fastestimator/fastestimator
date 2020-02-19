@@ -53,10 +53,10 @@ class NumpyOp(Op):
         return data
 
 
-OpType = TypeVar('OpType', Op, NumpyOp, TensorOp)
+OpType = TypeVar('OpType', bound=Op)
 
 
-def get_current_ops(ops: Iterable[OpType], mode: str, epoch: int = 0) -> List[OpType]:
+def get_current_ops(ops: Iterable[Union[OpType, Scheduler[OpType]]], mode: str, epoch: int = 0) -> List[OpType]:
     selected_ops = []
     for op in ops:
         if isinstance(op, Scheduler):
