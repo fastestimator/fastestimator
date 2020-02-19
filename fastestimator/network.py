@@ -107,7 +107,7 @@ class BaseNetwork:
 
 
 # noinspection PyPep8Naming
-def Network(ops):
+def Network(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]):
     models = set()
     for op in ops:
         if isinstance(op, Scheduler):
@@ -138,7 +138,7 @@ def Network(ops):
 
 
 class TorchNetwork(BaseNetwork):
-    def __init__(self, ops):
+    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]):
         super().__init__(ops)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.epoch_models = set()
@@ -194,7 +194,7 @@ class TorchNetwork(BaseNetwork):
 
 
 class TFNetwork(BaseNetwork):
-    def __init__(self, ops):
+    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]):
         super().__init__(ops)
 
     def run_step(self, batch: Dict[str, Any], state: Dict[str, Any]) -> Dict[str, Any]:

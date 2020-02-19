@@ -16,7 +16,7 @@ from typing import List, Iterable, Dict, Any, Sequence
 
 import numpy as np
 
-from fastestimator.dataset.fe_dataset import FEDataset
+from fastestimator.dataset.dataset import FEDataset
 
 
 class NumpyDataset(FEDataset):

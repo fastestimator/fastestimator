@@ -15,7 +15,7 @@
 import warnings
 from typing import Any, Dict, Generator, Sequence, Iterable, List, Sized
 
-from fastestimator.dataset.fe_dataset import FEDataset
+from fastestimator.dataset.dataset import FEDataset
 
 
 class GeneratorDataset(FEDataset):

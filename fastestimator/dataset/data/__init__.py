@@ -12,9 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-# FEDataset and OpDataset intentionally not imported here to reduce user confusion with auto-complete
-from fastestimator.dataset.csv_dataset import CSVDataset, CSVDatasets
-from fastestimator.dataset.data import USPSDataset
-from fastestimator.dataset.generator_dataset import GeneratorDataset
-from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset, LabeledDirDatasets
-from fastestimator.dataset.numpy_dataset import NumpyDataset
+from fastestimator.dataset.data.usps_dataset import USPSDataset

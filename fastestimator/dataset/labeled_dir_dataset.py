@@ -21,7 +21,7 @@ import numpy as np
 import tensorflow as tf
 from scipy.linalg import hadamard
 
-from fastestimator.dataset.fe_dataset import FEDataset
+from fastestimator.dataset.dataset import FEDataset
 
 
 class LabeledDirDataset(FEDataset):
