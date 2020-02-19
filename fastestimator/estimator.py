@@ -35,7 +35,7 @@ class Estimator:
             `fastestimator.pipepline.pipeline.Pipeline`
         network: Network object that defines models and their external connection. It should be an instance of
             `fastestimator.network.network.Network`
-        epochs: Number of epooch to run.
+        epochs: Number of epochs to run.
         max_steps_per_epoch: maximum steps to run for each epoch. If None, all data will be used
         traces: List of the traces objects to run during training. If None, there will be only basic
             traces.

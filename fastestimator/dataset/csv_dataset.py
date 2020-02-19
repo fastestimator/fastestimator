@@ -17,7 +17,7 @@ from typing import Dict, Iterable, List, Any, Sequence
 
 import pandas as pd
 
-from fastestimator.dataset.fe_dataset import FEDataset
+from fastestimator.dataset.dataset import FEDataset
 
 
 class CSVDataset(FEDataset):
