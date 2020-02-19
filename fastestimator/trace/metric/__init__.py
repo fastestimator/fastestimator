@@ -13,4 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.trace.metric.accuracy import Accuracy
+from fastestimator.trace.metric.precision import Precision
 from fastestimator.trace.metric.mcc import MCC
+
