@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from typing import List, Optional, Union
+
 import numpy as np
 from sklearn.metrics import precision_score
-from typing import Optional, Union, List
 
 from fastestimator.backend.to_number import to_number
 from fastestimator.trace.trace import Trace
@@ -27,37 +28,16 @@ class Precision(Trace):
     Args:
         true_key: Name of the keys in the ground truth label in data pipeline.
         pred_key: Name of the keys in predicted label. Defaults to None.
-        labels: The set of labels to include. For more details please refer tosklearn.metrics.precision_score. Defaults
-            to None.
-        pos_label: The class to report. For more details please refer to sklearn.metrics.precision_score. Defaults to 1.
-        average: It should be one of {"auto", "binary", "micro", "macro", "weighted", "samples", None}. If "auto", the
-            trace will detect the input data type and choose the right average for you. Otherwise, it will pass its to
-            sklearn.metrics.precision_score. Defaults to "auto".
-        sample_weight: Sample weight. If None, it will not apply sample weight. For more details please refer to
-            sklearn.metrics.precision_score. Defaults to None.
         mode: Restrict the trace to run only on given modes {'train', 'eval', 'test'}. None will always execute.
             Defaults to 'eval'.
         output_name: Name of the key to store to the state. Defaults to "precision".
     """
-
-    y_true: List[int]
-    y_pred: List[int]
-
     def __init__(self,
                  true_key: str,
                  pred_key: str,
-                 labels: Optional[list] = None,
-                 pos_label: Union[int, str] = 1,
-                 average: str = 'auto',
-                 sample_weight: Optional[np.ndarray] = None,
-                 mode: str = "eval",
-                 output_name: Optional[str] = "precision"):
-                 
+                 mode: Union[str, List] = ["eval", "test"],
+                 output_name: str = "precision"):
         super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode)
-        self.labels = labels
-        self.pos_label = pos_label
-        self.average = average
-        self.sample_weight = sample_weight
         self.binary_classification = None
 
     @property
@@ -88,27 +68,8 @@ class Precision(Trace):
         self.y_true += list(groundtruth_label.ravel())
 
     def on_epoch_end(self, data: Data):
-        if self.average == 'auto':
-            if self.binary_classification:
-                score = precision_score(np.ravel(self.y_true),
-                                        np.ravel(self.y_pred),
-                                        self.labels,
-                                        self.pos_label,
-                                        average='binary',
-                                        sample_weight=self.sample_weight)
-            else:
-                score = precision_score(np.ravel(self.y_true),
-                                        np.ravel(self.y_pred),
-                                        self.labels,
-                                        self.pos_label,
-                                        average=None,
-                                        sample_weight=self.sample_weight)
+        if self.binary_classification:
+            score = precision_score(np.ravel(self.y_true), np.ravel(self.y_pred), average='binary')
         else:
-            score = precision_score(np.ravel(self.y_true),
-                                    np.ravel(self.y_pred),
-                                    self.labels,
-                                    self.pos_label,
-                                    self.average,
-                                    self.sample_weight)
-
+            score = precision_score(np.ravel(self.y_true), np.ravel(self.y_pred), average=None)
         data.write_with_log(self.outputs[0], score)
