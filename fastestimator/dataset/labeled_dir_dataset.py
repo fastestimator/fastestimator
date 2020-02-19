@@ -82,11 +82,11 @@ class LabeledDirDataset(FEDataset):
         return deepcopy(self.data[index])
 
     def get_mapping(self) -> Dict[str, Union[str, int, np.ndarray]]:
-        return deepcopy(self.mapping)
+        return self.mapping
 
     @classmethod
-    def _skip_init(cls, data: Dict[int, Dict[str, Any]], mapping: Dict[str, Union[str, int,
-                                                                                  np.ndarray]]) -> 'LabeledDirDataset':
+    def _skip_init(cls, data: Dict[int, Dict[str, Any]],
+                   mapping: Dict[str, Union[str, int, np.ndarray]]) -> 'LabeledDirDataset':
         obj = cls.__new__(cls)
         obj.data = data
         obj.mapping = mapping

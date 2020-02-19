@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 import os
-from copy import deepcopy
 from typing import Dict, Iterable, List, Any, Sequence
 
 import pandas as pd
@@ -40,7 +39,7 @@ class CSVDataset(FEDataset):
         return len(self.data)
 
     def __getitem__(self, index: int) -> Dict:
-        return deepcopy(self.data[index])
+        return self.data[index]
 
     @classmethod
     def _skip_init(cls, data: Dict[int, Dict[str, Any]], parent_path: str) -> 'CSVDataset':
