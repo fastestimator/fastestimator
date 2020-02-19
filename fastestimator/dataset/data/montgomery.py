@@ -12,24 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Download Montgomery dataset from  http://openi.nlm.nih.gov/imgs/collections/NLM-MontgomeryCXRSet.zip."""
 import os
 import zipfile
 from glob import glob
 from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 import wget
-from fastestimator.dataset.csv_dataset import CSVDataset
 
+from fastestimator.dataset.csv_dataset import CSVDataset
 from fastestimator.util.wget_util import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress
 
 
-def load_data(root_dir: str = None) -> CSVDataset:
+def load_data(root_dir: Optional[str] = None) -> CSVDataset:
     """
-    Download the montgomery dataset to local storage if not already downloaded
+    Download the montgomery dataset to local storage if not already downloaded.
+    Sourced from: http://openi.nlm.nih.gov/imgs/collections/NLM-MontgomeryCXRSet.zip
     Args:
         root_dir: The path to store the USPS data. If not provided then data is saved to `fastestimator_data` in the
                   users home directory
