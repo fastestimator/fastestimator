@@ -14,11 +14,11 @@
 # ==============================================================================
 from collections import OrderedDict
 from copy import deepcopy
-from typing import Optional, List, Union, Dict, Any
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
-from albumentations import ImageOnlyTransform, ReplayCompose, Compose, DualTransform, BboxParams, KeypointParams
 
+from albumentations import BboxParams, Compose, DualTransform, ImageOnlyTransform, KeypointParams, ReplayCompose
 from fastestimator.op import NumpyOp
 
 
@@ -33,6 +33,7 @@ class ImageOnlyAlbumentation(NumpyOp):
             assert len(self.inputs) == len(self.outputs), "Input and Output lengths must match"
         self.func = Compose(transforms=[func])
         self.replay_func = ReplayCompose(transforms=[deepcopy(func)])
+        self.in_list, self.out_list = True, True
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
         results = [self.replay_func(image=data[0])]
