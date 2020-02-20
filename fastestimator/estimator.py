@@ -137,7 +137,9 @@ class Estimator:
 
     def _start_test(self):
         self.system.mode = "test"
-        self.system.epoch_idx = self.system.total_epochs
+        if not self.system.stop_training:
+            self.system.epoch_idx = self.system.total_epochs - 1
+        self.system.stop_training = False
         self._run_traces_on_begin()
         self._run_epoch()
         self._run_traces_on_end()
