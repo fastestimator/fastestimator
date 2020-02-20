@@ -16,7 +16,7 @@ import gzip
 import os
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Optional
 
 import numpy as np
 import wget
@@ -60,7 +60,7 @@ def _extract_images_labels(filename: str) -> Tuple[np.ndarray, np.ndarray]:
     return images, labels
 
 
-def load_data(root_dir: str = None) -> Tuple[LabeledDirDataset, LabeledDirDataset]:
+def load_data(root_dir: Optional[str] = None) -> Tuple[LabeledDirDataset, LabeledDirDataset]:
     """
     Download the USPS dataset to local storage if not already downloaded
     Args:
