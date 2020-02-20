@@ -69,14 +69,16 @@ class Estimator:
         self._prepare_traces()
         self._check_keys()
 
-    def fit(self):
+    def fit(self, summary: Optional[str] = None):
         draw()
-        self.system.reset()
+        self.system.reset(summary)
         self._warmup()
-        return self._start_train()
+        self._start_train()
+        return self.system.summary or None
 
     def test(self):
-        return self._start_test()
+        self._start_test()
+        return self.system.summary or None
 
     def _prepare_traces(self):
         modes = self.pipeline.get_modes()

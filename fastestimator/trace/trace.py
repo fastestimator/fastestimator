@@ -171,8 +171,10 @@ class Logger(Trace):
         log_message = header
         if log_epoch:
             log_message += "epoch: {}; ".format(self.system.epoch_idx)
+            self.system.write_summary('epoch', self.system.global_step)
         for key, val in data.read_logs(to_set(self.inputs)).items():
             val = to_number(val)
+            self.system.write_summary(key, val)
             if isinstance(val, np.ndarray):
                 log_message += "\n{}:\n{};".format(key, np.array2string(val, separator=','))
             else:

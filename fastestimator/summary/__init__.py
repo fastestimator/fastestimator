@@ -13,3 +13,4 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.summary.system import System
+from fastestimator.summary.summary import Summary

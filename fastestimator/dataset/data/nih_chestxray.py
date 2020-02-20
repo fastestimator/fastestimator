@@ -17,9 +17,9 @@ import tarfile
 from pathlib import Path
 from typing import Optional
 
-import pandas as pd
 import wget
-from fastestimator.dataset.csv_dataset import CSVDataset
+
+from fastestimator.dataset.unlabeled_dir_dataset import UnlabeledDirDataset
 from fastestimator.util.wget_util import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress
@@ -31,7 +31,7 @@ def _download_data(link: str, data_path: str, idx: int, total_idx: int):
         wget.download(link, data_path, bar=bar_custom)
 
 
-def load_data(root_dir: Optional[str] = None) -> CSVDataset:
+def load_data(root_dir: Optional[str] = None) -> UnlabeledDirDataset:
     """Download the NIH dataset to local storage.
 
     Args:
@@ -75,13 +75,4 @@ def load_data(root_dir: Optional[str] = None) -> CSVDataset:
             with tarfile.open(data_path) as img_tar:
                 img_tar.extractall(root_dir)
 
-    # generate_csv
-    csv_path = os.path.join(root_dir, 'nih_chestxray.csv')
-    if not os.path.exists(csv_path):
-        image_names = [
-            os.path.relpath(os.path.join(image_extracted_path, x), root_dir) for x in os.listdir(image_extracted_path)
-        ]
-        df = pd.DataFrame(image_names, columns=["x"])
-        df.to_csv(csv_path, index=False)
-
-    return CSVDataset(csv_path)
+    return UnlabeledDirDataset(image_extracted_path, file_extension='.png', recursive_search=False)

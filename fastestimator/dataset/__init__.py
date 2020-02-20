@@ -18,3 +18,4 @@ from fastestimator.dataset.data import usps, montgomery, mnist, cifar10, nih_che
 from fastestimator.dataset.generator_dataset import GeneratorDataset
 from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset, LabeledDirDatasets
 from fastestimator.dataset.numpy_dataset import NumpyDataset
+from fastestimator.dataset.unlabeled_dir_dataset import UnlabeledDirDataset
