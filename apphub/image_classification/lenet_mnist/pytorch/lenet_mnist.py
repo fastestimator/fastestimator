@@ -19,7 +19,7 @@ import tensorflow as tf
 import fastestimator as fe
 from fastestimator.architecture.pytorch import LeNet
 from fastestimator.dataset import NumpyDataset
-from fastestimator.op.numpyop import Minmax, ExpandDims
+from fastestimator.op.numpyop import ExpandDims, Minmax
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.pipeline import Pipeline
@@ -31,8 +31,10 @@ def get_estimator(batch_size=32):
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.mnist.load_data()
     train_data = NumpyDataset({"x": x_train, "y": y_train})
     eval_data = NumpyDataset({"x": x_eval, "y": y_eval})
+    test_data = eval_data.split(0.5)
     pipeline = Pipeline(train_data=train_data,
                         eval_data=eval_data,
+                        test_data=test_data,
                         batch_size=batch_size,
                         ops=[ExpandDims(inputs="x", outputs="x", axis=0), Minmax(inputs="x", outputs="x")])
     # step 2
@@ -53,3 +55,4 @@ def get_estimator(batch_size=32):
 if __name__ == "__main__":
     est = get_estimator()
     est.fit()
+    est.test()

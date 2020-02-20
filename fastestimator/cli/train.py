@@ -16,7 +16,7 @@ import argparse
 import json
 import os
 import sys
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 
 from fastestimator.util.util import parse_string_to_python
 

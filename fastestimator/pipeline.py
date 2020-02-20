@@ -120,7 +120,7 @@ class Pipeline:
                               worker_init_fn=lambda _: np.random.seed())
         return data
 
-    def get_signature_epochs(self, epochs: int):
+    def get_signature_epochs(self, total_epochs: int):
         signature_epochs = {0}
         epoch_keys = {0}
         repeat_cycles = {1}
@@ -136,12 +136,12 @@ class Pipeline:
                 signature_epochs.update(range(epoch, epoch + min(epoch_keys[idx + 1] - epoch, least_common_cycle)))
             else:
                 signature_epochs.update(range(epoch, epoch + least_common_cycle))
-        signature_epochs = set(epoch for epoch in signature_epochs if epoch < epochs)
+        signature_epochs = set(epoch for epoch in signature_epochs if epoch < total_epochs)
         return signature_epochs
 
-    def get_all_output_keys(self, mode: str, epochs: int) -> Set[str]:
+    def get_all_output_keys(self, mode: str, total_epochs: int) -> Set[str]:
         output_keys = set()
-        for epoch in self.get_signature_epochs(epochs):
+        for epoch in self.get_signature_epochs(total_epochs):
             loader = self.get_loader(mode=mode, epoch=epoch)
             data = next(iter(loader))
             assert isinstance(data, dict), "please make sure data output format is dictionary"

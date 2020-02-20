@@ -14,6 +14,7 @@
 # ==============================================================================
 from typing import Optional
 
+from fastestimator.network import BaseNetwork
 from fastestimator.util.util import get_num_devices
 
 
@@ -22,24 +23,25 @@ class System:
     global_step: int  # How many training steps have elapsed
     num_devices: int  # How many GPUs are available for training
     log_steps: Optional[int]  # Log every n steps (0 to disable train logging, None to disable all logging)
-    epochs: int  # How many total epochs training is expected to run for
+    total_epochs: int  # How many epochs training is expected to run for
     epoch_idx: int  # The current epoch index for the training (starting from 0)
     batch_idx: int  # The current batch index within an epoch (starting from 0)
-    stop_training: bool  # A flag to signal that training should abort before 'epochs' has been reached
-    network: Optional[object]  # A reference to the network being used this epoch  # TODO - circular reference
+    stop_training: bool  # A flag to signal that training should abort
+    network: BaseNetwork  # A reference to the network being used this epoch
     max_steps_per_epoch: Optional[int]  # Training epoch will complete after n steps even if loader is not yet exhausted
 
     def __init__(self,
+                 network: BaseNetwork,
                  mode: str = "train",
                  num_devices: int = get_num_devices(),
                  log_steps: Optional[int] = None,
-                 epochs: int = 0,
+                 total_epochs: int = 0,
                  max_steps_per_epoch: Optional[int] = None):
         self.mode = mode
         self.global_step = 0
         self.num_devices = num_devices
         self.log_steps = log_steps
-        self.epochs = epochs
+        self.total_epochs = total_epochs
         self.epoch_idx = 0
         self.batch_idx = 0
         self.max_steps_per_epoch = max_steps_per_epoch
@@ -54,4 +56,3 @@ class System:
         self.epoch_idx = 0
         self.batch_idx = 0
         self.stop_training = False
-        self.network = None
