@@ -27,7 +27,7 @@ class System:
     epoch_idx: int  # The current epoch index for the training (starting from 0)
     batch_idx: int  # The current batch index within an epoch (starting from 0)
     stop_training: bool  # A flag to signal that training should abort
-    network: Optional[object]  # A reference to the network being used this epoch
+    network: BaseNetwork  # A reference to the network being used this epoch
     max_steps_per_epoch: Optional[int]  # Training epoch will complete after n steps even if loader is not yet exhausted
 
     def __init__(self,
