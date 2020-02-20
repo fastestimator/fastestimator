@@ -21,8 +21,9 @@ from torch.utils.data import DataLoader
 from fastestimator.backend import to_tensor, to_type
 from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
 from fastestimator.pipeline import Pipeline
+from fastestimator.summary import System
 from fastestimator.trace import EvalEssential, Logger, Trace, TrainEssential
-from fastestimator.util import Data, System
+from fastestimator.util import Data
 from fastestimator.util.util import draw, to_list, to_set
 
 
@@ -56,12 +57,14 @@ class Estimator:
                  monitor_names: Union[None, str, Iterable[str]] = None):
         self.pipeline = pipeline
         self.network = network
-        self.epochs = epochs
         self.traces = to_list(traces)
         assert log_steps is None or log_steps >= 0, \
             "log_steps must be None or positive (or 0 to disable only train logging)"
         self.monitor_names = to_set(monitor_names)
-        self.system = System(log_steps=log_steps, total_epochs=epochs, max_steps_per_epoch=max_steps_per_epoch)
+        self.system = System(network=network,
+                             log_steps=log_steps,
+                             total_epochs=epochs,
+                             max_steps_per_epoch=max_steps_per_epoch)
         self.trace_inputs = dict()
         self._prepare_traces()
         self._check_keys()
@@ -134,7 +137,7 @@ class Estimator:
 
     def _start_test(self):
         self.system.mode = "test"
-        self.system.epoch_idx = self.epochs
+        self.system.epoch_idx = self.system.total_epochs
         self._run_traces_on_begin()
         self._run_epoch()
         self._run_traces_on_end()

@@ -18,7 +18,8 @@ from typing import Iterable, List, Set, Union
 import numpy as np
 
 from fastestimator.backend.to_number import to_number
-from fastestimator.util import Data, System
+from fastestimator.summary import System
+from fastestimator.util import Data
 from fastestimator.util.util import to_list, to_set
 
 
