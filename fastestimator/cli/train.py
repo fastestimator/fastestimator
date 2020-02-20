@@ -18,38 +18,11 @@ import os
 import sys
 from typing import Any, Dict, List, Optional
 
-from fastestimator.util.util import parse_string_to_python
+from fastestimator import Estimator
+from fastestimator.cli.cli_util import parse_cli_to_dictionary
 
 
-def parse_cli_to_dictionary(input_list: Optional[List[str]]) -> Dict[str, Any]:
-    """
-    Args:
-        input_list: A list of input strings from a cli
-
-    Returns:
-        A dictionary constructed from the input list, with values converted to python objects where applicable
-    """
-    result = {}
-    if input_list is None:
-        return result
-    key = ""
-    val = ""
-    idx = 0
-    while idx < len(input_list):
-        if input_list[idx].startswith("--"):
-            if len(key) > 0:
-                result[key] = parse_string_to_python(val)
-            val = ""
-            key = input_list[idx].strip('--')
-        else:
-            val += input_list[idx]
-        idx += 1
-    if len(key) > 0:
-        result[key] = parse_string_to_python(val)
-    return result
-
-
-def train(args: Dict[str, Any], unknown: Optional[List[str]]):
+def _get_estimator(args: Dict[str, Any], unknown: Optional[List[str]]) -> Estimator:
     entry_point = args['entry_point']
     hyperparameters = {}
     if args['hyperparameters_json']:
@@ -60,8 +33,17 @@ def train(args: Dict[str, Any], unknown: Optional[List[str]]):
     dir_name = os.path.abspath(os.path.dirname(entry_point))
     sys.path.insert(0, dir_name)
     spec_module = __import__(module_name, globals(), locals(), ["get_estimator"])
-    estimator = spec_module.get_estimator(**hyperparameters)
+    return spec_module.get_estimator(**hyperparameters)
+
+
+def train(args: Dict[str, Any], unknown: Optional[List[str]]):
+    estimator = _get_estimator(args, unknown)
     estimator.fit()
+
+
+def test(args: Dict[str, Any], unknown: Optional[List[str]]):
+    estimator = _get_estimator(args, unknown)
+    estimator.test()
 
 
 def configure_train_parser(subparsers: argparse.PARSER):
@@ -80,3 +62,21 @@ def configure_train_parser(subparsers: argparse.PARSER):
         'Arguments to be passed through to the get_estimator() call. \
         Examples might look like --epochs <int>, --batch_size <int>, --optimizer <str>, etc...')
     parser.set_defaults(func=train)
+
+
+def configure_test_parser(subparsers: argparse.PARSER):
+    parser = subparsers.add_parser('test',
+                                   description='Test a FastEstimator model',
+                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+                                   allow_abbrev=False)
+    # use an argument group for required flag arguments since otherwise they will show up as optional in the help
+    parser.add_argument('entry_point', type=str, help='The path to the model python file')
+    parser.add_argument('--hyperparameters',
+                        dest='hyperparameters_json',
+                        type=str,
+                        help="The path to the hyperparameters JSON file")
+    parser.add_argument_group(
+        'hyperparameter arguments',
+        'Arguments to be passed through to the get_estimator() call. \
+        Examples might look like --epochs <int>, --batch_size <int>, --optimizer <str>, etc...')
+    parser.set_defaults(func=test)
