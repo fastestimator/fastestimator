@@ -39,6 +39,8 @@ class Recall(Trace):
                  output_name: str = "recall"):
         super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode)
         self.binary_classification = None
+        self.y_true = []
+        self.y_pred = []
 
     @property
     def true_key(self):
@@ -53,23 +55,21 @@ class Recall(Trace):
         self.y_pred = []
 
     def on_batch_end(self, data: Data):
-        groundtruth_label = to_number(data[self.true_key])
-        if groundtruth_label.shape[-1] > 1 and len(groundtruth_label.shape) > 1:
-            groundtruth_label = np.argmax(groundtruth_label, axis=-1)
-        prediction_score = to_number(data[self.pred_key])
-        binary_classification = prediction_score.shape[-1] == 1
-        if binary_classification:
-            prediction_label = np.round(prediction_score)
+        y_true, y_pred = to_number(data[self.true_key]), to_number(data[self.pred_key])
+        self.binary_classification = y_pred.shape[-1] == 1
+        if y_true.shape[-1] > 1 and y_true.ndim > 1:
+            y_true = np.argmax(y_true, axis=-1)
+        if y_pred.shape[-1] > 1:
+            y_pred = np.argmax(y_pred, axis=-1)
         else:
-            prediction_label = np.argmax(prediction_score, axis=-1)
-        assert prediction_label.size == groundtruth_label.size
-        self.binary_classification = binary_classification or prediction_score.shape[-1] == 2
-        self.y_pred += list(prediction_label.ravel())
-        self.y_true += list(groundtruth_label.ravel())
+            y_pred = np.round(y_pred)
+        assert y_pred.size == y_true.size
+        self.y_pred.extend(y_pred.ravel())
+        self.y_true.extend(y_true.ravel())
 
     def on_epoch_end(self, data: Data):
         if self.binary_classification:
-            score = recall_score(np.ravel(self.y_true), np.ravel(self.y_pred), average='binary')
+            score = recall_score(self.y_true, self.y_pred, average='binary')
         else:
-            score = recall_score(np.ravel(self.y_true), np.ravel(self.y_pred), average=None)
+            score = recall_score(self.y_true, self.y_pred, average=None)
         data.write_with_log(self.outputs[0], score)
