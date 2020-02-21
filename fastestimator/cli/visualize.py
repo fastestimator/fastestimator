@@ -16,7 +16,8 @@ import argparse
 import sys
 from typing import Dict, Any, List
 
-from fastestimator.cli.cli_util import parse_log_dir, SaveAction
+from fastestimator.cli.cli_util import SaveAction
+from fastestimator.summary.logs import parse_log_dir
 
 
 def logs(args: Dict[str, Any], unknown: List[Any]):
