@@ -146,7 +146,7 @@ class Logger(Trace):
         extra_log_keys (set): set of keys to print from system buffer
     """
     def __init__(self, extra_log_keys: Set[str]):
-        super().__init__(inputs=extra_log_keys)
+        super().__init__(inputs=extra_log_keys | {"*"})
 
     def on_begin(self, data: Data):
         if not self.system.mode == "test":

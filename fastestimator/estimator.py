@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from collections import ChainMap
-from typing import Iterable, List, Optional, Set, Union
+import itertools
+from collections import ChainMap, deque
+from typing import Iterable, List, Optional, Set, Union, Dict
 
 import tensorflow as tf
 from torch.utils.data import DataLoader
@@ -22,7 +23,7 @@ from fastestimator.backend import to_tensor, to_type
 from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
 from fastestimator.pipeline import Pipeline
 from fastestimator.summary import System
-from fastestimator.trace import EvalEssential, Logger, Trace, TrainEssential
+from fastestimator.trace import EvalEssential, Logger, Trace, TrainEssential, ModelSaver
 from fastestimator.util import Data
 from fastestimator.util.util import draw, to_list, to_set
 
@@ -46,6 +47,8 @@ class Estimator:
     pipeline: Pipeline
     traces: List[Trace]
     monitor_names: Set[str]
+    trace_inputs: Dict[str, Set[str]]  # {mode: {keys}}
+    trace_outputs: Dict[str, Set[str]]  # {mode: {keys}}
 
     def __init__(self,
                  pipeline: Pipeline,
@@ -66,6 +69,7 @@ class Estimator:
                              total_epochs=epochs,
                              max_steps_per_epoch=max_steps_per_epoch)
         self.trace_inputs = dict()
+        self.trace_outputs = dict()
         self._prepare_traces()
         self._check_keys()
 
@@ -80,6 +84,63 @@ class Estimator:
         self._start_test()
         return self.system.summary or None
 
+    def _sort_traces(self):
+        # This is essentially a topological sort, but it doesn't seem worthwhile to convert the data into a graph
+        # representation in order to get the slightly better asymptotic runtime complexity
+        modes = self.pipeline.get_modes()
+        pipeline_all_outputs = set(
+            itertools.chain.from_iterable(
+                [self.pipeline.get_all_output_keys(mode, self.system.total_epochs) for mode in modes]))
+        network_all_outputs = set(
+            itertools.chain.from_iterable(
+                [self.network.get_all_output_keys(mode, self.system.total_epochs) for mode in modes]))
+        sorted_traces = []
+        available_outputs = set(self.system.__dict__.keys()) | pipeline_all_outputs | network_all_outputs
+        end_traces = deque()
+        intermediate_traces = deque()
+        intermediate_outputs = set()
+        trace_deque = deque(self.traces)
+        while trace_deque:
+            trace = trace_deque.popleft()
+            ins = set(trace.inputs)
+            outs = set(trace.outputs)
+            if not ins:
+                sorted_traces.append(trace)
+                available_outputs |= outs
+            elif "*" in ins:
+                if outs:
+                    end_traces.appendleft(trace)
+                else:
+                    end_traces.append(trace)
+            elif ins <= available_outputs:
+                sorted_traces.append(trace)
+                available_outputs |= outs
+            else:
+                intermediate_traces.append(trace)
+                intermediate_outputs |= outs
+
+        already_seen = set()
+        while intermediate_traces:
+            trace = intermediate_traces.popleft()
+            ins = set(trace.inputs)
+            outs = set(trace.outputs)
+            already_seen.add(trace)
+            if ins <= available_outputs:
+                sorted_traces.append(trace)
+                available_outputs |= outs
+                already_seen.clear()
+            elif ins <= (available_outputs | intermediate_outputs):
+                intermediate_traces.append(trace)
+            else:
+                raise AssertionError("Trace {} has unsatisfiable inputs: {}".format(
+                    type(trace).__name__, ", ".join(ins - (available_outputs | intermediate_outputs))))
+
+            if intermediate_traces and len(already_seen) == len(intermediate_traces):
+                raise AssertionError("Dependency cycle detected amongst traces: {}".format(", ".join(
+                    [type(tr).__name__ for tr in already_seen])))
+        sorted_traces.extend(list(end_traces))
+        self.traces = sorted_traces
+
     def _prepare_traces(self):
         modes = self.pipeline.get_modes()
         loss_keys = self.network.get_loss_keys()
@@ -91,12 +152,22 @@ class Estimator:
             self.traces.append(Logger(extra_log_keys=self.monitor_names | loss_keys))
         for mode in modes:
             trace_inputs = set()
+            # '*' is a reserved key for traces to indicate that they want to receive all available output
+            trace_outputs = {"*"}
             for trace in self.traces:
                 if not trace.mode or mode in trace.mode:
                     trace_inputs.update(trace.inputs)
+                    trace_outputs.update(trace.outputs)
             self.trace_inputs[mode] = trace_inputs
+            self.trace_outputs[mode] = trace_outputs
+        no_save_warning = True
         for trace in self.traces:
             trace.system = self.system
+            if isinstance(trace, ModelSaver):
+                no_save_warning = False
+        if no_save_warning:
+            print("FastEstimator-Warn: No ModelSaver Trace detected. Models will not be saved.")
+        self._sort_traces()
 
     def _warmup(self):
         pipeline_signature_epochs = self.pipeline.get_signature_epochs(self.system.total_epochs)
@@ -118,8 +189,9 @@ class Estimator:
         for mode in self.pipeline.get_modes():
             pipeline_all_outputs = self.pipeline.get_all_output_keys(mode, self.system.total_epochs)
             network_all_outputs = self.network.get_all_output_keys(mode, self.system.total_epochs)
-            assert self.trace_inputs[mode].issubset(pipeline_all_outputs | network_all_outputs), \
-                "found missing key during {}".format(mode)
+            unmet_requirements = self.trace_inputs[mode] - (pipeline_all_outputs
+                                                            | network_all_outputs | self.trace_outputs[mode])
+            assert not unmet_requirements, "found missing key(s) during {}: {}".format(mode, unmet_requirements)
             self.network.effective_inputs[mode] = self.network.get_effective_input_keys(mode, self.system.total_epochs)
             self.network.effective_outputs[mode] = network_all_outputs.intersection(self.trace_inputs[mode])
 
