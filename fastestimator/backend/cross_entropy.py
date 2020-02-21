@@ -35,7 +35,13 @@ def cross_entropy(y_pred: Tensor, y_true: Tensor, apply_softmax: bool = False) -
     assert isinstance(y_pred, (tf.Tensor, torch.Tensor)), "only support tf.Tensor or torch.Tensor as y_pred"
     assert isinstance(y_true, (tf.Tensor, torch.Tensor)), "only support tf.Tensor or torch.Tensor as y_true"
     if isinstance(y_pred, tf.Tensor):
-        ce = tf.losses.sparse_categorical_crossentropy(y_true, y_pred, from_logits=apply_softmax)
+        if y_pred._rank() > 1 and y_pred.shape[-1] > 1:
+            if y_true._rank() > 1 and y_true.shape[-1] > 1:
+                ce = tf.losses.categorical_crossentropy(y_true, y_pred, from_logits=apply_softmax)
+            else:
+                ce = tf.losses.sparse_categorical_crossentropy(y_true, y_pred, from_logits=apply_softmax)
+        else:
+            ce = tf.losses.binary_crossentropy(y_true=y_true, y_pred=y_pred, from_logits=apply_softmax)
     else:
         if apply_softmax:
             ce = torch.nn.CrossEntropyLoss(reduction="none")(y_pred, y_true)
