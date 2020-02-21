@@ -15,9 +15,9 @@
 from typing import Optional, Union
 
 import tensorflow as tf
-from torch.utils.data import DataLoader
 
-from fastestimator.util.util import get_num_devices
+import torch
+from torch.utils.data import DataLoader
 
 
 class System:
@@ -33,7 +33,7 @@ class System:
 
     def __init__(self,
                  mode: str = "train",
-                 num_devices: int = get_num_devices(),
+                 num_devices: int = torch.cuda.device_count(),
                  log_steps: Optional[int] = None,
                  epochs: int = 0):
         self.mode = mode

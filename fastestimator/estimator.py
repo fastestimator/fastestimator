@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import pdb
 from collections import ChainMap
 from typing import Iterable, List, Optional, Set, Union
 
 import tensorflow as tf
-from torch.utils.data import DataLoader
 
 from fastestimator.backend import to_tensor, to_type
 from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
@@ -24,6 +24,7 @@ from fastestimator.pipeline import Pipeline
 from fastestimator.trace import EvalEssential, Logger, Trace, TrainEssential
 from fastestimator.util import Data, System
 from fastestimator.util.util import draw, to_list, to_set
+from torch.utils.data import DataLoader
 
 
 class Estimator:
@@ -79,6 +80,7 @@ class Estimator:
         signature_epochs = pipeline_signature_epochs | network_signature_epochs
         for epoch in signature_epochs:
             for mode in self.pipeline.get_modes():
+                state = {"mode": mode, "warmup": True}
                 self.network.load_epoch(mode, epoch)
                 loader = self._configure_loader(self.pipeline.get_loader(mode, epoch))
                 if isinstance(loader, tf.data.Dataset):
@@ -86,7 +88,11 @@ class Estimator:
                 else:
                     batch = next(iter(loader))
                 batch = self._configure_tensor(loader, batch)
-                prediction = self.network.run_step(batch, {"mode": mode, "warmup": True})
+                strategy = tf.distribute.get_strategy()
+                if isinstance(strategy, tf.distribute.MirroredStrategy):
+                    strategy.experimental_run_v2(self.network.run_step, args=(batch, state))
+                else:
+                    self.network.run_step(batch, state)
                 self.network.unload_epoch()
 
     def _check_keys(self):
@@ -135,6 +141,7 @@ class Estimator:
         self._run_traces_on_end()
 
     def _run_epoch(self):
+        state = {"mode": self.system.mode, "warmup": False}
         self._run_traces_on_epoch_begin()
         self.network.load_epoch(mode=self.system.mode, epoch=self.system.epoch_idx)
         loader = self._configure_loader(self.pipeline.get_loader(mode=self.system.mode, epoch=self.system.epoch_idx))
@@ -143,7 +150,12 @@ class Estimator:
                 break
             batch = self._configure_tensor(loader, batch)
             self._run_traces_on_batch_begin()
-            prediction = self.network.run_step(batch, {"mode": self.system.mode, "warmup": False})
+            strategy = tf.distribute.get_strategy()
+            if isinstance(strategy, tf.distribute.MirroredStrategy):
+                prediction = strategy.experimental_run_v2(self.network.run_step, args=(batch, state))
+                pdb.set_trace()
+            else:
+                prediction = self.network.run_step(batch, state)
             self._run_traces_on_batch_end(batch, prediction)
             if self.system.mode == "train":
                 self.system.update_global_step()
@@ -153,9 +165,16 @@ class Estimator:
     def _configure_loader(self, loader):
         new_loader = loader
         if isinstance(loader, DataLoader) and isinstance(self.network, TFNetwork):
-            data_type = to_type(to_tensor(loader.dataset[0], target_type="tensorflow"))
-            new_loader = tf.data.Dataset.from_generator(lambda: loader, data_type)
+            batch = to_tensor(loader.dataset[0], target_type="tensorflow")
+            data_type = to_type(batch)
+            new_loader = tf.data.Dataset.from_generator(lambda: loader,
+                                                        data_type,
+                                                        output_shapes={
+                                                            "x": [None, None, None, None], "y": [None]
+                                                        })
             new_loader = new_loader.prefetch(1)
+            if isinstance(tf.distribute.get_strategy(), tf.distribute.MirroredStrategy):
+                new_loader = tf.distribute.get_strategy().experimental_distribute_dataset(new_loader)
             if self.steps_per_epoch and self.system.mode == "train":
                 new_loader = new_loader.take(self.steps_per_epoch)
         return new_loader

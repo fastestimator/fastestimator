@@ -13,11 +13,11 @@
 # limitations under the License.
 # ==============================================================================
 from collections import ChainMap
-from typing import Any, Dict, List, Mapping, Set, Union, Iterable
+from typing import Any, Dict, Iterable, List, Mapping, Set, Union
 
 import tensorflow as tf
-import torch
 
+import torch
 from fastestimator.op import TensorOp, get_current_ops, get_inputs_by_op, write_outputs_by_key
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
@@ -131,6 +131,7 @@ def Network(ops):
     if framework == "tensorflow":
         network = TFNetwork(ops)
     elif framework == "pytorch":
+        tf.distribute.experimental_set_strategy(None)
         network = TorchNetwork(ops)
     else:
         raise ValueError("Unkown model type")
