@@ -1,6 +1,6 @@
 import argparse
 import os
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Sequence, Union, Optional
 
 from fastestimator.util.util import parse_string_to_python
 
@@ -10,12 +10,20 @@ class SaveAction(argparse.Action):
     A custom save action which is used to populate a secondary variable inside of an exclusive group. Used if this file
     is invoked directly during argument parsing.
     """
-    def __init__(self, option_strings, dest, nargs='?', **kwargs):
+    def __init__(self,
+                 option_strings: Sequence[str],
+                 dest: str,
+                 nargs: Union[int, str, None] = '?',
+                 **kwargs: Dict[str, Any]):
         if '?' != nargs:
             raise ValueError("nargs must be \'?\'")
         super().__init__(option_strings, dest, nargs, **kwargs)
 
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(self,
+                 parser: argparse.ArgumentParser,
+                 namespace: argparse.Namespace,
+                 values: Optional[str],
+                 option_string: Optional[str] = None):
         setattr(namespace, self.dest, True)
         setattr(namespace, self.dest + '_dir', values if values is None else os.path.join(values, ''))
 

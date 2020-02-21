@@ -171,7 +171,7 @@ class Logger(Trace):
         log_message = header
         if log_epoch:
             log_message += "epoch: {}; ".format(self.system.epoch_idx)
-            self.system.write_summary('epoch', self.system.global_step)
+            self.system.write_summary('epoch', self.system.epoch_idx)
         for key, val in data.read_logs(to_set(self.inputs)).items():
             val = to_number(val)
             self.system.write_summary(key, val)
