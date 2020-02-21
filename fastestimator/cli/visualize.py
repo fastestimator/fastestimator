@@ -16,7 +16,8 @@ import argparse
 import sys
 from typing import Dict, Any, List
 
-from fastestimator.cli.cli_util import parse_log_dir, SaveAction
+from fastestimator.cli.cli_util import SaveAction
+from fastestimator.summary.logs import parse_log_dir
 
 
 def logs(args: Dict[str, Any], unknown: List[Any]):
@@ -97,7 +98,7 @@ def configure_log_parser(subparsers: argparse._SubParsersAction):
 
 def configure_visualization_parser(subparsers: argparse._SubParsersAction):
     visualization_parser = subparsers.add_parser('visualize',
-                                                 description='Generates various types of visualiztaions',
+                                                 description='Generates various types of visualizations',
                                                  allow_abbrev=False)
     visualization_subparsers = visualization_parser.add_subparsers()
     # In python 3.7 the following 2 lines could be put into the .add_subparsers() call
