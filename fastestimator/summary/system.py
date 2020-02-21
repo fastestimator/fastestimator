@@ -63,6 +63,14 @@ class System:
         self.stop_training = False
         self.summary = Summary(summary_name)
 
+    def reset_for_test(self, summary_name: Optional[str] = None):
+        self.mode = "test"
+        if not self.stop_training:
+            self.epoch_idx = self.total_epochs - 1
+        self.stop_training = False
+        self.summary.name = summary_name or self.summary.name  # Keep old experiment name if new one not provided
+        self.summary.history.pop('test', None)
+
     def write_summary(self, key: str, value: Any):
         if self.summary:
             self.summary.history[self.mode][key][self.global_step] = value

@@ -81,7 +81,8 @@ class Estimator:
         self._start_train()
         return self.system.summary or None
 
-    def test(self):
+    def test(self, summary: Optional[str] = None):
+        self.system.reset_for_test(summary)
         self._start_test()
         return self.system.summary or None
 
@@ -216,10 +217,6 @@ class Estimator:
         self._run_traces_on_end()
 
     def _start_test(self):
-        self.system.mode = "test"
-        if not self.system.stop_training:
-            self.system.epoch_idx = self.system.total_epochs - 1
-        self.system.stop_training = False
         self._run_traces_on_begin()
         self._run_epoch()
         self._run_traces_on_end()
