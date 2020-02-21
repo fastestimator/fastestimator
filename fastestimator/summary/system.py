@@ -14,9 +14,9 @@
 # ==============================================================================
 from typing import Any, Optional
 
+import torch
 from fastestimator.network import BaseNetwork
 from fastestimator.summary.summary import Summary
-from fastestimator.util.util import get_num_devices
 
 
 class System:

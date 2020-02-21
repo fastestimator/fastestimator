@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import itertools
+import pdb
 from collections import ChainMap, deque
 from typing import Dict, Iterable, List, Optional, Set, Union
 
@@ -250,6 +251,7 @@ class Estimator:
         if isinstance(loader, DataLoader) and isinstance(self.network, TFNetwork):
             batch = to_tensor(loader.dataset[0], target_type="tensorflow")
             data_type = to_type(batch)
+            pdb.set_trace()
             new_loader = tf.data.Dataset.from_generator(lambda: loader,
                                                         data_type,
                                                         output_shapes={
@@ -258,8 +260,8 @@ class Estimator:
             new_loader = new_loader.prefetch(1)
             if isinstance(tf.distribute.get_strategy(), tf.distribute.MirroredStrategy):
                 new_loader = tf.distribute.get_strategy().experimental_distribute_dataset(new_loader)
-            if self.steps_per_epoch and self.system.mode == "train":
-                new_loader = new_loader.take(self.steps_per_epoch)
+            if self.system.max_steps_per_epoch and self.system.mode == "train":
+                new_loader = new_loader.take(self.system.max_steps_per_epoch)
         return new_loader
 
     def _configure_tensor(self, loader, batch):

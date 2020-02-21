@@ -17,6 +17,7 @@ from typing import Any, Dict, Iterable, List, MutableMapping, Set, Union
 
 import tensorflow as tf
 
+import torch
 from fastestimator.op import TensorOp, get_current_ops, get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
