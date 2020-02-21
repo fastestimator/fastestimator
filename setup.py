@@ -50,7 +50,17 @@ setup(
 
     # Declare minimal set for installation
     install_requires=[
-        'numpy', 'albumentations', 'pyfiglet', 'opencv-python', 'scipy', 'pandas', 'sklearn', 'wget', 'pillow'
+        'numpy',
+        'albumentations',
+        'pyfiglet',
+        'opencv-python',
+        'scipy',
+        'pandas',
+        'sklearn',
+        'wget',
+        'pillow',
+        'seaborn',
+        'matplotlib'
     ],
     # Declare extra set for installation
     extras_require={},

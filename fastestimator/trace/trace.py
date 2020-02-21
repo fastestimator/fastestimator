@@ -146,7 +146,7 @@ class Logger(Trace):
         extra_log_keys (set): set of keys to print from system buffer
     """
     def __init__(self, extra_log_keys: Set[str]):
-        super().__init__(inputs=extra_log_keys)
+        super().__init__(inputs=extra_log_keys | {"*"})
 
     def on_begin(self, data: Data):
         if not self.system.mode == "test":
@@ -161,7 +161,7 @@ class Logger(Trace):
         if self.system.mode == "eval":
             self._print_message("FastEstimator-Eval: step: {}; ".format(self.system.global_step), data, True)
         elif self.system.mode == "test":
-            self._print_message("FastEstimator-Test:", data)
+            self._print_message("FastEstimator-Test: ", data, True)
 
     def on_end(self, data: Data):
         if not self.system.mode == "test":
@@ -171,8 +171,10 @@ class Logger(Trace):
         log_message = header
         if log_epoch:
             log_message += "epoch: {}; ".format(self.system.epoch_idx)
+            self.system.write_summary('epoch', self.system.global_step)
         for key, val in data.read_logs(to_set(self.inputs)).items():
             val = to_number(val)
+            self.system.write_summary(key, val)
             if isinstance(val, np.ndarray):
                 log_message += "\n{}:\n{};".format(key, np.array2string(val, separator=','))
             else:

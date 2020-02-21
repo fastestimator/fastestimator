@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Optional
+from typing import Any, Optional
 
 from fastestimator.network import BaseNetwork
 from fastestimator.util.util import get_num_devices
+from fastestimator.summary.summary import Summary
 
 
 class System:
@@ -29,6 +30,7 @@ class System:
     stop_training: bool  # A flag to signal that training should abort
     network: BaseNetwork  # A reference to the network being used this epoch
     max_steps_per_epoch: Optional[int]  # Training epoch will complete after n steps even if loader is not yet exhausted
+    summary: Summary  # An object to write experiment results to
 
     def __init__(self,
                  network: BaseNetwork,
@@ -37,6 +39,8 @@ class System:
                  log_steps: Optional[int] = None,
                  total_epochs: int = 0,
                  max_steps_per_epoch: Optional[int] = None):
+
+        self.network = network
         self.mode = mode
         self.global_step = 0
         self.num_devices = num_devices
@@ -46,13 +50,19 @@ class System:
         self.batch_idx = 0
         self.max_steps_per_epoch = max_steps_per_epoch
         self.stop_training = False
+        self.summary = Summary(None)
 
     def update_global_step(self):
         self.global_step += 1
 
-    def reset(self):
+    def reset(self, summary_name: Optional[str] = None):
         self.mode = "train"
         self.global_step = 0
         self.epoch_idx = 0
         self.batch_idx = 0
         self.stop_training = False
+        self.summary = Summary(summary_name)
+
+    def write_summary(self, key: str, value: Any):
+        if self.summary:
+            self.summary.history[self.mode][key][self.global_step] = value

@@ -12,5 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.summary.system import System
-from fastestimator.summary.summary import Summary
+from fastestimator.summary.logs.log_plot import visualize_logs, plot_logs
+from fastestimator.summary.logs.log_parse import parse_log_dir, parse_log_files
