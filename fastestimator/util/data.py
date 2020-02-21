@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Optional, Dict, Any, List, Set, MutableMapping, ChainMap
+from typing import Any, ChainMap, Dict, List, MutableMapping, Optional, Set
 
 
 class Data(ChainMap[str, Any]):

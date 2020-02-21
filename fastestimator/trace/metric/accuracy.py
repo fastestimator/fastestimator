@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-
-from typing import Optional
+from typing import List, Union
 
 import numpy as np
 
@@ -32,7 +31,11 @@ class Accuracy(Trace):
         mode: What mode to execute in (None to execute in all modes)
         output_name: What to call the output from this trace (for example in the logger output)
     """
-    def __init__(self, true_key: str, pred_key: str, mode: Optional[str] = "eval", output_name: str = "accuracy"):
+    def __init__(self,
+                 true_key: str,
+                 pred_key: str,
+                 mode: Union[str, List[str]] = ["eval", "test"],
+                 output_name: str = "accuracy"):
         super().__init__(inputs=(true_key, pred_key), mode=mode, outputs=output_name)
         self.total = 0
         self.correct = 0
@@ -51,13 +54,15 @@ class Accuracy(Trace):
 
     def on_batch_end(self, data: Data):
         y_true, y_pred = to_number(data[self.true_key]), to_number(data[self.pred_key])
-        if y_pred.shape[-1] == 1:
-            label_pred = np.round(y_pred)
+        if y_true.shape[-1] > 1 and y_true.ndim > 1:
+            y_true = np.argmax(y_true, axis=-1)
+        if y_pred.shape[-1] > 1:
+            y_pred = np.argmax(y_pred, axis=-1)
         else:
-            label_pred = np.argmax(y_pred, axis=-1)
-        assert label_pred.size == y_true.size
-        self.correct += np.sum(label_pred.ravel() == y_true.ravel())
-        self.total += len(label_pred.ravel())
+            y_pred = np.round(y_pred)
+        assert y_pred.size == y_true.size
+        self.correct += np.sum(y_pred.ravel() == y_true.ravel())
+        self.total += len(y_pred.ravel())
 
     def on_epoch_end(self, data: Data):
         data.write_with_log(self.outputs[0], self.correct / self.total)

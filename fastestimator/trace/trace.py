@@ -18,7 +18,8 @@ from typing import Iterable, List, Set, Union
 import numpy as np
 
 from fastestimator.backend.to_number import to_number
-from fastestimator.util import Data, System
+from fastestimator.summary import System
+from fastestimator.util import Data
 from fastestimator.util.util import to_list, to_set
 
 
@@ -144,13 +145,12 @@ class Logger(Trace):
     Args:
         extra_log_keys (set): set of keys to print from system buffer
     """
-    def __init__(self, extra_log_keys: Set[str], loss_names: Set[str]):
-        super().__init__(inputs=extra_log_keys | loss_names)
-        self.extra_log_keys = extra_log_keys
-        self.loss_names = loss_names
+    def __init__(self, extra_log_keys: Set[str]):
+        super().__init__(inputs=extra_log_keys | {"*"})
 
     def on_begin(self, data: Data):
-        self._print_message("FastEstimator-Start: step: {}; ".format(self.system.global_step), data)
+        if not self.system.mode == "test":
+            self._print_message("FastEstimator-Start: step: {}; ".format(self.system.global_step), data)
 
     def on_batch_end(self, data: Data):
         if self.system.mode == "train" and self.system.log_steps and self.system.global_step % self.system.log_steps \
@@ -160,18 +160,21 @@ class Logger(Trace):
     def on_epoch_end(self, data: Data):
         if self.system.mode == "eval":
             self._print_message("FastEstimator-Eval: step: {}; ".format(self.system.global_step), data, True)
+        elif self.system.mode == "test":
+            self._print_message("FastEstimator-Test: ", data, True)
 
     def on_end(self, data: Data):
-        self._print_message("FastEstimator-Finish: step: {}; ".format(self.system.global_step), data)
+        if not self.system.mode == "test":
+            self._print_message("FastEstimator-Finish: step: {}; ".format(self.system.global_step), data)
 
     def _print_message(self, header: str, data: Data, log_epoch: bool = False):
         log_message = header
         if log_epoch:
             log_message += "epoch: {}; ".format(self.system.epoch_idx)
+            self.system.write_summary('epoch', self.system.global_step)
         for key, val in data.read_logs(to_set(self.inputs)).items():
             val = to_number(val)
-            if key in self.loss_names:
-                val = np.round(val, decimals=7)
+            self.system.write_summary(key, val)
             if isinstance(val, np.ndarray):
                 log_message += "\n{}:\n{};".format(key, np.array2string(val, separator=','))
             else:

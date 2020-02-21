@@ -14,11 +14,13 @@
 # ==============================================================================
 """Utilities for FastEstimator."""
 import json
+import re
+import string
 import subprocess
 from ast import literal_eval
 from functools import reduce
 from math import gcd
-from typing import Any, List, Set
+from typing import Any, List, Set, Optional
 
 from pyfiglet import Figlet
 
@@ -93,3 +95,32 @@ def lcms(*numbers):
         return int(a * b / gcd(a, b))
 
     return reduce(lcm, numbers)
+
+
+def prettify_metric_name(metric: str) -> str:
+    """Add spaces to camel case words, then swap _ for space, and capitalize each word
+
+    Args:
+        metric: A string to be formatted
+    Returns:
+        The formatted version of 'metric'
+    """
+    return string.capwords(re.sub("([a-z])([A-Z])", r"\g<1> \g<2>", metric).replace("_", " "))
+
+
+def strip_suffix(target: Optional[str], suffix: Optional[str]) -> Optional[str]:
+    """Remove the given suffix from the target if it is present there
+
+    Args:
+        target: A string to be formatted
+        suffix: A string to be removed from 'target'
+
+    Returns:
+        The formatted version of 'target'
+    """
+    if suffix is None or target is None:
+        return target
+    s_len = len(suffix)
+    if target[-s_len:] == suffix:
+        return target[:-s_len]
+    return target

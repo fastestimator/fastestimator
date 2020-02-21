@@ -49,7 +49,19 @@ setup(
         "Programming Language :: Python :: 3", ],
 
     # Declare minimal set for installation
-    install_requires=['numpy', 'albumentations', 'pyfiglet', 'opencv-python', 'scipy', 'pandas', 'sklearn'],
+    install_requires=[
+        'numpy',
+        'albumentations',
+        'pyfiglet',
+        'opencv-python',
+        'scipy',
+        'pandas',
+        'sklearn',
+        'wget',
+        'pillow',
+        'seaborn',
+        'matplotlib'
+    ],
     # Declare extra set for installation
     extras_require={},
     scripts=['bin/fastestimator'])

@@ -12,5 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.cli.train import configure_train_parser, configure_test_parser
-from fastestimator.cli.visualize import configure_visualization_parser
+from typing import Tuple
+
+import tensorflow as tf
+
+from fastestimator.dataset.numpy_dataset import NumpyDataset
+
+
+def load_data() -> Tuple[NumpyDataset, NumpyDataset]:
+    (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.cifar10.load_data()
+    train_data = NumpyDataset({"x": x_train, "y": y_train})
+    eval_data = NumpyDataset({"x": x_eval, "y": y_eval})
+    return train_data, eval_data

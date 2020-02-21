@@ -25,4 +25,6 @@ def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray]) -> np.ndarray:
         data = data.numpy()
     elif isinstance(data, torch.Tensor):
         data = data.data.numpy()
+    if isinstance(data, np.ndarray) and data.size == 1:
+        data = data.item()
     return data

@@ -12,36 +12,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-
-from typing import List, Union
+from typing import List, Optional, Union
 
 import numpy as np
-from sklearn.metrics import matthews_corrcoef
+from sklearn.metrics import precision_score
 
 from fastestimator.backend.to_number import to_number
 from fastestimator.trace.trace import Trace
 from fastestimator.util import Data
 
 
-class MCC(Trace):
-    """ A trace which computes the Matthews Correlation Coefficient for a given set of predictions. This is a preferable
-        metric to accuracy or F1 score since it automatically corrects for class imbalances and does not depend on the
-        choice of target class (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6941312/). Ideal value is 1, a value of 0
-        means your predictions are completely uncorrelated with the true data. A value less than zero implies
-        anti-correlation (you should invert your classifier predictions in order to do better)
+class Precision(Trace):
+    """Computes precision for classification task and report it back to logger.
 
     Args:
-        true_key: The key of the true (known) class values
-        pred_key: The key of the predicted class values
-        mode: What mode to execute in (None to execute in all modes)
-        output_name: What to call the output from this trace (for example in the logger output)
+        true_key: Name of the keys in the ground truth label in data pipeline.
+        pred_key: Name of the keys in predicted label. Defaults to None.
+        mode: Restrict the trace to run only on given modes {'train', 'eval', 'test'}. None will always execute.
+            Defaults to 'eval'.
+        output_name: Name of the key to store to the state. Defaults to "precision".
     """
     def __init__(self,
                  true_key: str,
                  pred_key: str,
                  mode: Union[str, List[str]] = ["eval", "test"],
-                 output_name: str = "mcc"):
-        super().__init__(inputs=(true_key, pred_key), mode=mode, outputs=output_name)
+                 output_name: str = "precision"):
+        super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode)
+        self.binary_classification = None
         self.y_true = []
         self.y_pred = []
 
@@ -59,6 +56,7 @@ class MCC(Trace):
 
     def on_batch_end(self, data: Data):
         y_true, y_pred = to_number(data[self.true_key]), to_number(data[self.pred_key])
+        self.binary_classification = y_pred.shape[-1] == 1
         if y_true.shape[-1] > 1 and y_true.ndim > 1:
             y_true = np.argmax(y_true, axis=-1)
         if y_pred.shape[-1] > 1:
@@ -66,8 +64,12 @@ class MCC(Trace):
         else:
             y_pred = np.round(y_pred)
         assert y_pred.size == y_true.size
-        self.y_true.extend(y_true)
-        self.y_pred.extend(y_pred)
+        self.y_pred.extend(y_pred.ravel())
+        self.y_true.extend(y_true.ravel())
 
     def on_epoch_end(self, data: Data):
-        data.write_with_log(self.outputs[0], matthews_corrcoef(y_true=self.y_true, y_pred=self.y_pred))
+        if self.binary_classification:
+            score = precision_score(self.y_true, self.y_pred, average='binary')
+        else:
+            score = precision_score(self.y_true, self.y_pred, average=None)
+        data.write_with_log(self.outputs[0], score)

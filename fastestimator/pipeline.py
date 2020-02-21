@@ -21,7 +21,7 @@ import numpy as np
 import tensorflow as tf
 from torch.utils.data import DataLoader, Dataset
 
-from fastestimator.dataset.op_dataset import OpDataset
+from fastestimator.dataset.dataset import OpDataset
 from fastestimator.op import NumpyOp, get_current_ops
 from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
 from fastestimator.util.util import lcms, to_list
@@ -30,6 +30,8 @@ DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
 
 
 class Pipeline:
+    ops: List[Union[NumpyOp, Scheduler[NumpyOp]]]
+
     def __init__(self,
                  train_data: Union[None, DataSource, Scheduler[DataSource]] = None,
                  eval_data: Union[None, DataSource, Scheduler[DataSource]] = None,
@@ -118,7 +120,7 @@ class Pipeline:
                               worker_init_fn=lambda _: np.random.seed())
         return data
 
-    def get_signature_epochs(self, epochs):
+    def get_signature_epochs(self, total_epochs: int):
         signature_epochs = {0}
         epoch_keys = {0}
         repeat_cycles = {1}
@@ -134,17 +136,17 @@ class Pipeline:
                 signature_epochs.update(range(epoch, epoch + min(epoch_keys[idx + 1] - epoch, least_common_cycle)))
             else:
                 signature_epochs.update(range(epoch, epoch + least_common_cycle))
-        signature_epochs = set(epoch for epoch in signature_epochs if epoch < epochs)
+        signature_epochs = set(epoch for epoch in signature_epochs if epoch < total_epochs)
         return signature_epochs
 
-    def get_all_output_keys(self, mode, epochs) -> Set[str]:
+    def get_all_output_keys(self, mode: str, total_epochs: int) -> Set[str]:
         output_keys = set()
-        for epoch in self.get_signature_epochs(epochs):
+        for epoch in self.get_signature_epochs(total_epochs):
             loader = self.get_loader(mode=mode, epoch=epoch)
             data = next(iter(loader))
             assert isinstance(data, dict), "please make sure data output format is dictionary"
             output_keys = output_keys.union(set(data.keys()))
             if isinstance(loader, DataLoader) and isinstance(loader.dataset, OpDataset):
                 for op in loader.dataset.ops:
-                    output_keys.update(to_list(op.outputs))
+                    output_keys.update(op.outputs)
         return output_keys

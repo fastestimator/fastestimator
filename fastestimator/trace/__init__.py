@@ -13,4 +13,5 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.trace.trace import Trace, TrainEssential, EvalEssential, Logger
-from fastestimator.trace.metric import Accuracy, MCC
+from fastestimator.trace.metric import Accuracy, MCC, Precision, Precision
+from fastestimator.trace.io import ModelSaver
