@@ -135,3 +135,19 @@ def strip_suffix(target: Optional[str], suffix: Optional[str]) -> Optional[str]:
     if target[-s_len:] == suffix:
         return target[:-s_len]
     return target
+
+def is_number(s: str):  # pylint: disable=invalid-name
+    """Check if a given string can be converted into a number.
+
+    Args:
+        s: A string
+
+    Returns:
+        True iff the string represents a number
+
+    """
+    try:
+        float(s)
+        return True
+    except (ValueError, TypeError):
+        return False
