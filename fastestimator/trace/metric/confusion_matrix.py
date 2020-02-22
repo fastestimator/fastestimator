@@ -13,8 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 
-from typing import List, Union
-
 import numpy as np
 from sklearn.metrics import confusion_matrix
 
