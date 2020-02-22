@@ -15,16 +15,17 @@
 import os
 import time
 import warnings
+from functools import lru_cache
 from typing import List, Optional, Set, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
-from torch.utils.data import DataLoader, Dataset
 
 from fastestimator.dataset.dataset import OpDataset
 from fastestimator.op import NumpyOp, get_current_ops
 from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
-from fastestimator.util.util import lcms, to_list
+from fastestimator.util.util import Timer, lcms, to_list
+from torch.utils.data import DataLoader, Dataset
 
 DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
 
@@ -139,14 +140,20 @@ class Pipeline:
         signature_epochs = set(epoch for epoch in signature_epochs if epoch < total_epochs)
         return signature_epochs
 
+    @lru_cache(maxsize=None, typed=True)
     def get_all_output_keys(self, mode: str, total_epochs: int) -> Set[str]:
         output_keys = set()
         for epoch in self.get_signature_epochs(total_epochs):
             loader = self.get_loader(mode=mode, epoch=epoch)
-            data = next(iter(loader))
+            if isinstance(loader, DataLoader):
+                if isinstance(loader.dataset, OpDataset):
+                    data = loader.dataset.dataset[0]
+                    for op in loader.dataset.ops:
+                        output_keys.update(op.outputs)
+                else:
+                    data = loader.dataset[0]
+            else:
+                data = next(iter(loader))
             assert isinstance(data, dict), "please make sure data output format is dictionary"
-            output_keys = output_keys.union(set(data.keys()))
-            if isinstance(loader, DataLoader) and isinstance(loader.dataset, OpDataset):
-                for op in loader.dataset.ops:
-                    output_keys.update(op.outputs)
+            output_keys.update(data.keys())
         return output_keys

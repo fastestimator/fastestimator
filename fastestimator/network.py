@@ -40,8 +40,9 @@ class BaseNetwork:
             else:
                 assert isinstance(op, TensorOp), "unsupported op format, must provide TensorOp in Network"
 
-    def load_epoch(self, mode: str, epoch: int):
-        self.epoch_ops = get_current_ops(self.ops, mode, epoch)
+    def load_epoch(self, mode: str, epoch: int) -> Set[TensorOp]:
+        epoch_ops = get_current_ops(self.ops, mode, epoch)
+        return epoch_ops
 
     def unload_epoch(self):
         pass
@@ -74,7 +75,7 @@ class BaseNetwork:
                 output_keys.update(op.outputs)
         return output_keys
 
-    def get_signature_epochs(self, total_epochs: int):
+    def get_signature_epochs(self, total_epochs: int) -> Set[int]:
         signature_epochs = {0}
         epoch_keys = {0}
         repeat_cycles = {1}
@@ -102,8 +103,27 @@ class BaseNetwork:
             if op.outputs:
                 write_outputs_by_op(op, batch, data)
 
-    def run_step(self, batch: Dict[str, Any], state: Dict[str, Any]) -> Dict[str, Any]:
+    def get_effective_batch_input(self, batch: MutableMapping[str, Any], mode: str) -> Dict[str, Any]:
+        new_batch = {}
+        for key in self.effective_inputs[mode]:
+            if key in batch:
+                new_batch[key] = batch[key]
+        return new_batch
+
+    def forward_step_eager(self,
+                           batch: Dict[str, Any],
+                           state: Dict[str, Any],
+                           ops: List[TensorOp],
+                           effective_outputs: List[str]):
         raise NotImplementedError
+
+    def forward_step_static(self,
+                            batch: Dict[str, Any],
+                            state: Dict[str, Any],
+                            ops: List[TensorOp],
+                            effective_outputs: List[str]):
+
+        return self.forward_step_eager(batch, state, ops, effective_outputs)
 
 
 # noinspection PyPep8Naming
@@ -144,39 +164,24 @@ class TorchNetwork(BaseNetwork):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.epoch_models = set()
 
-    def load_epoch(self, mode: str, epoch: int):
-        self.epoch_ops = get_current_ops(self.ops, mode, epoch)
+    def load_epoch(self, mode: str, epoch: int) -> List[TensorOp]:
+        epoch_ops = get_current_ops(self.ops, mode, epoch)
         if self.device.type == "cuda":
-            self.epoch_models = set(op.model for op in self.epoch_ops if isinstance(op, (UpdateOp, ModelOp)))
+            self.epoch_models = set(op.model for op in epoch_ops if isinstance(op, (UpdateOp, ModelOp)))
             for model in self.epoch_models:
                 model.to(self.device)
+        return epoch_ops
 
     def unload_epoch(self):
         if self.device.type == "cuda":
             for model in self.epoch_models:
                 model.to("cpu")
 
-    def run_step(self, batch: Dict[str, Any], state: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute the ops in Network
-        Args:
-            batch : dictionary that contains batch data after the pipeline
-            state : dictionary that contains meta data
-        Returns:
-            dictionary containing the predictions of current epoch
-        """
-        new_batch = {}
-        mode = state["mode"]
-        for key in self.effective_inputs[mode]:
-            if key in batch:
-                new_batch[key] = batch[key]
-        prediction = self._forward_step(new_batch, state, self.epoch_ops, self.effective_outputs[mode])
-        return prediction
-
-    def _forward_step(self,
-                      batch: Dict[str, Any],
-                      state: Dict[str, Any],
-                      ops: List[TensorOp],
-                      effective_outputs: Set[str]) -> Dict[str, Any]:
+    def forward_step_eager(self,
+                           batch: Dict[str, Any],
+                           state: Dict[str, Any],
+                           ops: List[TensorOp],
+                           effective_outputs: List[str]) -> Dict[str, Any]:
         prediction = {}
         mode = state["mode"]
         state["tape"] = NonContext()
@@ -195,36 +200,11 @@ class TorchNetwork(BaseNetwork):
 
 
 class TFNetwork(BaseNetwork):
-    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]):
-        super().__init__(ops)
-
-    def run_step(self, batch: Dict[str, Any], state: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute the ops in Network
-        Args:
-            batch : dictionary that contains batch data after the pipeline
-            state : dictionary that contains meta data
-        Returns:
-            dictionary containing the predictions of current epoch
-        """
-        new_batch = {}
-        mode = state["mode"]
-        for key in self.effective_inputs[mode]:
-            if key in batch:
-                new_batch[key] = batch[key]
-        if state["warmup"]:
-            prediction = self._forward_step_eager(new_batch, state, self.epoch_ops, self.effective_outputs[mode])
-        else:
-            prediction = self._forward_step_static(new_batch,
-                                                   state,
-                                                   self.epoch_ops,
-                                                   to_list(self.effective_outputs[mode]))
-        return prediction
-
-    def _forward_step_eager(self,
-                            batch: Dict[str, Any],
-                            state: Dict[str, Any],
-                            ops: List[TensorOp],
-                            effective_outputs: Set[str]) -> Dict[str, Any]:
+    def forward_step_eager(self,
+                           batch: Dict[str, Any],
+                           state: Dict[str, Any],
+                           ops: List[TensorOp],
+                           effective_outputs: List[str]) -> Dict[str, Any]:
         batch = ChainMap({}, batch)
         prediction = {}
         mode = state["mode"]
@@ -239,11 +219,11 @@ class TFNetwork(BaseNetwork):
         return prediction
 
     @tf.function
-    def _forward_step_static(self,
-                             batch: Dict[str, Any],
-                             state: Dict[str, Any],
-                             ops: List[TensorOp],
-                             effective_outputs: List[str]) -> Dict[str, Any]:
+    def forward_step_static(self,
+                            batch: Dict[str, Any],
+                            state: Dict[str, Any],
+                            ops: List[TensorOp],
+                            effective_outputs: List[str]) -> Dict[str, Any]:
         batch = ChainMap({}, batch)
         prediction = {}
         mode = state["mode"]
