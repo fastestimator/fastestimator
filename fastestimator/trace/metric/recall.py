@@ -34,9 +34,14 @@ class Recall(Trace):
     """
     def __init__(self,
                  true_key: str,
-                 pred_key: str,
-                 mode: Union[str, List[str]] = ["eval", "test"],
+                 pred_key: Optional[str] = None,
+                 labels: Optional[str] = None,
+                 pos_label: Optional[Union[int, str]] = 1,
+                 average: Optional[str] = 'auto',
+                 sample_weight: Optional[np.ndarray] = None,
+                 mode: Optional[str] = "eval",
                  output_name: str = "recall"):
+
         super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode)
         self.binary_classification = None
         self.y_true = []

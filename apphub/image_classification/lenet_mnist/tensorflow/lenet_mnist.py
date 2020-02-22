@@ -22,7 +22,7 @@ from fastestimator.op.numpyop import ExpandDims, Minmax
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.pipeline import Pipeline
-from fastestimator.trace.metric import Accuracy
+from fastestimator.trace.metric import Accuracy, Recall
 
 
 def get_estimator(batch_size=32):
@@ -46,7 +46,7 @@ def get_estimator(batch_size=32):
     estimator = fe.Estimator(pipeline=pipeline,
                              network=network,
                              epochs=2,
-                             traces=Accuracy(true_key="y", pred_key="y_pred"))
+                             traces=[Accuracy(true_key="y", pred_key="y_pred"), Recall(true_key="y", pred_key="y_pred")])
     return estimator
 
 
