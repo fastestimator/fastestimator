@@ -12,33 +12,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+
 from typing import Union, Set
 
 import numpy as np
+from sklearn.metrics import confusion_matrix
 
 from fastestimator.backend.to_number import to_number
 from fastestimator.trace.trace import Trace
 from fastestimator.util import Data
 
 
-class Accuracy(Trace):
-    """ A trace which computes the accuracy for a given set of predictions. Consider using MCC instead
-        (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6941312/)
+class ConfusionMatrix(Trace):
+    """Computes confusion matrix between y_true and y_predict.
 
     Args:
-        true_key: The key of the true (known) class values
-        pred_key: The key of the predicted class values
-        mode: What mode to execute in (None to execute in all modes)
-        output_name: What to call the output from this trace (for example in the logger output)
+        true_key: Name of the key that corresponds to ground truth in batch dictionary
+        pred_key: Name of the key that corresponds to predicted score in batch dictionary
+        num_classes: Total number of classes of the confusion matrix.
+        mode: Restrict the trace to run only on given modes {'train', 'eval', 'test'}. None will always
+                    execute. Defaults to 'eval'.
+        output_name: Name of the key to store to the state. Defaults to "confusion_matrix".
     """
     def __init__(self,
                  true_key: str,
                  pred_key: str,
+                 num_classes: int,
                  mode: Union[str, Set[str]] = ("eval", "test"),
-                 output_name: str = "accuracy"):
-        super().__init__(inputs=(true_key, pred_key), mode=mode, outputs=output_name)
-        self.total = 0
-        self.correct = 0
+                 output_name: str = "confusion_matrix"):
+        super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode)
+        self.num_classes = num_classes
+        self.matrix = None
 
     @property
     def true_key(self):
@@ -49,8 +53,7 @@ class Accuracy(Trace):
         return self.inputs[1]
 
     def on_epoch_begin(self, data: Data):
-        self.total = 0
-        self.correct = 0
+        self.matrix = None
 
     def on_batch_end(self, data: Data):
         y_true, y_pred = to_number(data[self.true_key]), to_number(data[self.pred_key])
@@ -61,8 +64,13 @@ class Accuracy(Trace):
         else:
             y_pred = np.round(y_pred)
         assert y_pred.size == y_true.size
-        self.correct += np.sum(y_pred.ravel() == y_true.ravel())
-        self.total += len(y_pred.ravel())
+
+        batch_confusion = confusion_matrix(y_true, y_pred, labels=list(range(0, self.num_classes)))
+
+        if self.matrix is None:
+            self.matrix = batch_confusion
+        else:
+            self.matrix += batch_confusion
 
     def on_epoch_end(self, data: Data):
-        data.write_with_log(self.outputs[0], self.correct / self.total)
+        data.write_with_log(self.outputs[0], self.matrix)

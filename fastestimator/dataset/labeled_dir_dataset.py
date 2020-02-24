@@ -29,8 +29,8 @@ class LabeledDirDataset(FEDataset):
 
     Args:
         root_dir: The path to the directory containing data sorted by folders
-        data_label: What key to assign to the data values in the data dictionary
-        key_label: What key to assign to the label values in the data dictionary
+        data_key: What key to assign to the data values in the data dictionary
+        label_key: What key to assign to the label values in the data dictionary
         label_mapping: One of * 'string' - The folder names will be used as the labels
                               * 'int' - The folder names will be mapped onto non-negative integers
                               * 'onehot' - The folder names will be mapped onto onehot vectors
@@ -40,8 +40,8 @@ class LabeledDirDataset(FEDataset):
     """
     def __init__(self,
                  root_dir: str,
-                 data_label: str = "x",
-                 key_label: str = "y",
+                 data_key: str = "x",
+                 label_key: str = "y",
                  label_mapping: Union[str, Dict[str, Union[str, int, np.ndarray]]] = "int",
                  file_extension: Optional[str] = None):
         assert isinstance(label_mapping, Dict) or label_mapping in {"string", "int", "onehot", "ecc"}
@@ -73,7 +73,7 @@ class LabeledDirDataset(FEDataset):
                     (os.path.join(path, entry), label) for entry in entries if entry.endswith(file_extension or ""))
         except StopIteration:
             raise ValueError("Invalid directory structure for LabeledDirDataset at root: {}".format(root_dir))
-        self.data = {i: {data_label: data[i][0], key_label: data[i][1]} for i in range(len(data))}
+        self.data = {i: {data_key: data[i][0], label_key: data[i][1]} for i in range(len(data))}
 
     def __len__(self):
         return len(self.data)
@@ -107,8 +107,8 @@ class LabeledDirDatasets:
 
     Args:
         root_dir: The path to the directory containing data sorted by folders
-        data_label: What key to assign to the data values in the data dictionary
-        key_label: What key to assign to the label values in the data dictionary
+        data_key: What key to assign to the data values in the data dictionary
+        label_key: What key to assign to the label values in the data dictionary
         label_mapping: One of * 'string' - The folder names will be used as the labels
                               * 'int' - The folder names will be mapped onto non-negative integers
                               * 'onehot' - The folder names will be mapped onto onehot vectors
@@ -118,8 +118,8 @@ class LabeledDirDatasets:
     """
     def __init__(self,
                  root_dir: str,
-                 data_label: str = "x",
-                 key_label: str = "y",
+                 data_key: str = "x",
+                 label_key: str = "y",
                  label_mapping: Union[str, Dict[str, Union[str, int, np.ndarray]]] = "int",
                  file_extension: Optional[str] = None):
         root_dir = os.path.normpath(root_dir)
@@ -132,8 +132,8 @@ class LabeledDirDatasets:
             # that it has all the keys
             first_key = "train" if "train" in dirs else dirs[0]
             self.datasets[first_key] = LabeledDirDataset(root_dir=os.path.join(root_dir, first_key),
-                                                         data_label=data_label,
-                                                         key_label=key_label,
+                                                         data_key=data_key,
+                                                         label_key=label_key,
                                                          label_mapping=label_mapping,
                                                          file_extension=file_extension)
             # This won't change anything if label_mapping was passed in as a dictionary from the start, but will ensure
@@ -141,8 +141,8 @@ class LabeledDirDatasets:
             label_mapping = self.datasets[first_key].get_mapping()
             self.datasets.update({
                 mode: LabeledDirDataset(root_dir=os.path.join(root_dir, mode),
-                                        data_label=data_label,
-                                        key_label=key_label,
+                                        data_key=data_key,
+                                        label_key=label_key,
                                         label_mapping=label_mapping,
                                         file_extension=file_extension)
                 for mode in dirs if mode is not first_key
