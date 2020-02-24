@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import List, Union
+from typing import Union, Set
 
 import numpy as np
 
@@ -34,7 +34,7 @@ class Accuracy(Trace):
     def __init__(self,
                  true_key: str,
                  pred_key: str,
-                 mode: Union[str, List[str]] = ["eval", "test"],
+                 mode: Union[str, Set[str]] = ("eval", "test"),
                  output_name: str = "accuracy"):
         super().__init__(inputs=(true_key, pred_key), mode=mode, outputs=output_name)
         self.total = 0

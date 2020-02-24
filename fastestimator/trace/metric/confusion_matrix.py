@@ -13,6 +13,8 @@
 # limitations under the License.
 # ==============================================================================
 
+from typing import Union, Set
+
 import numpy as np
 from sklearn.metrics import confusion_matrix
 
@@ -36,10 +38,11 @@ class ConfusionMatrix(Trace):
                  true_key: str,
                  pred_key: str,
                  num_classes: int,
-                 mode: str = "eval",
+                 mode: Union[str, Set[str]] = ("eval", "test"),
                  output_name: str = "confusion_matrix"):
         super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode)
         self.num_classes = num_classes
+        self.matrix = None
 
     @property
     def true_key(self):
@@ -50,11 +53,10 @@ class ConfusionMatrix(Trace):
         return self.inputs[1]
 
     def on_epoch_begin(self, data: Data):
-        self.confusion = None
+        self.matrix = None
 
     def on_batch_end(self, data: Data):
         y_true, y_pred = to_number(data[self.true_key]), to_number(data[self.pred_key])
-        self.binary_classification = y_pred.shape[-1] == 1
         if y_true.shape[-1] > 1 and y_true.ndim > 1:
             y_true = np.argmax(y_true, axis=-1)
         if y_pred.shape[-1] > 1:
@@ -65,10 +67,10 @@ class ConfusionMatrix(Trace):
 
         batch_confusion = confusion_matrix(y_true, y_pred, labels=list(range(0, self.num_classes)))
 
-        if self.confusion is None:
-            self.confusion = batch_confusion
+        if self.matrix is None:
+            self.matrix = batch_confusion
         else:
-            self.confusion += batch_confusion
+            self.matrix += batch_confusion
 
     def on_epoch_end(self, data: Data):
-        data.write_with_log(self.outputs[0], self.confusion)
+        data.write_with_log(self.outputs[0], self.matrix)

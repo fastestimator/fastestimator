@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
-from typing import List, Union
+from typing import Set, Union
 
 import numpy as np
 from sklearn.metrics import matthews_corrcoef
@@ -39,7 +39,7 @@ class MCC(Trace):
     def __init__(self,
                  true_key: str,
                  pred_key: str,
-                 mode: Union[str, List[str]] = ["eval", "test"],
+                 mode: Union[str, Set[str]] = ("eval", "test"),
                  output_name: str = "mcc"):
         super().__init__(inputs=(true_key, pred_key), mode=mode, outputs=output_name)
         self.y_true = []
