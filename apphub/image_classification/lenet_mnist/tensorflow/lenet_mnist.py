@@ -14,7 +14,6 @@
 # ==============================================================================
 """This example showcase FastEstimator usage for tensorflow users. In this file, we use tf.dataset as data input.
 """
-
 import fastestimator as fe
 from fastestimator.architecture.tensorflow import LeNet
 from fastestimator.dataset import mnist

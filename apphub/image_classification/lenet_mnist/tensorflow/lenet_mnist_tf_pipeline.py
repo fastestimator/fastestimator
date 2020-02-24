@@ -46,8 +46,10 @@ def get_tensorflow_dataset(x, y, shuffle=True):
 def get_estimator():
     # step 1
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.mnist.load_data()
-    pipeline = fe.Pipeline(train_data=get_tensorflow_dataset(x=np.expand_dims(x_train, -1), y=y_train),
-                           eval_data=get_tensorflow_dataset(x=np.expand_dims(x_eval, -1), y=y_eval, shuffle=False))
+    pipeline = fe.Pipeline(
+        train_data=get_tensorflow_dataset(x=np.expand_dims(x_train, -1), y=y_train),
+        eval_data=get_tensorflow_dataset(x=np.expand_dims(x_eval[:5000], -1), y=y_eval[:5000], shuffle=False),
+        test_data=get_tensorflow_dataset(x=np.expand_dims(x_eval[5000:], -1), y=y_eval[5000:], shuffle=False))
     # step 2
     model = fe.build(model=LeNet(), optimizer="adam")
     network = fe.Network(ops=[
@@ -66,3 +68,4 @@ def get_estimator():
 if __name__ == "__main__":
     est = get_estimator()
     est.fit()
+    est.test()

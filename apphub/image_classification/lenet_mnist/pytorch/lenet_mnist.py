@@ -14,7 +14,6 @@
 # ==============================================================================
 """This example showcase FastEstimator usage for pytorch users. In this file, we use data loader as data input.
 """
-
 import fastestimator as fe
 from fastestimator.architecture.pytorch import LeNet
 from fastestimator.dataset import mnist

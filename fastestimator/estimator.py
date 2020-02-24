@@ -13,11 +13,11 @@
 # limitations under the License.
 # ==============================================================================
 import itertools
-import pdb
 from collections import ChainMap, deque
 from typing import Dict, Iterable, List, Optional, Set, Union
 
 import tensorflow as tf
+from tensorflow.python.distribute.input_lib import DistributedDataset
 
 from fastestimator.backend import to_shape, to_tensor, to_type
 from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
@@ -270,15 +270,17 @@ class Estimator:
 
     def _configure_loader(self, loader):
         new_loader = loader
-        if isinstance(loader, DataLoader) and isinstance(self.network, TFNetwork):
-            batch = to_tensor(next(iter(loader)), target_type="tensorflow")
+        if isinstance(new_loader, DataLoader) and isinstance(self.network, TFNetwork):
+            batch = to_tensor(loader.dataset[0], target_type="tensorflow")
             data_type = to_type(batch)
             data_shape = to_shape(batch)
             for key, shape in data_shape.items():
-                data_shape[key] = [None] * len(shape)
+                data_shape[key] = [None] * (len(shape) + 1)
             new_loader = tf.data.Dataset.from_generator(lambda: loader, data_type, output_shapes=data_shape)
             new_loader = new_loader.prefetch(1)
-            if isinstance(tf.distribute.get_strategy(), tf.distribute.MirroredStrategy):
+        if isinstance(new_loader, tf.data.Dataset):
+            if isinstance(tf.distribute.get_strategy(),
+                          tf.distribute.MirroredStrategy) and not isinstance(new_loader, DistributedDataset):
                 new_loader = tf.distribute.get_strategy().experimental_distribute_dataset(new_loader)
             if self.system.max_steps_per_epoch and self.system.mode == "train":
                 new_loader = new_loader.take(self.system.max_steps_per_epoch)

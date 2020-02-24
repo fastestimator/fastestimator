@@ -34,7 +34,7 @@ class System:
 
     def __init__(self,
                  network: BaseNetwork,
-                 mode: str = "train",
+                 mode: Optional[str] = None,
                  num_devices: int = torch.cuda.device_count(),
                  log_steps: Optional[int] = None,
                  total_epochs: int = 0,

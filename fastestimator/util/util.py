@@ -190,7 +190,7 @@ def per_replica_to_global(data):
     """
     if isinstance(data, DistributedValues):
         if data.values[0].shape.rank == 0:
-            return tf.stack(data.values)
+            return tf.reduce_mean(data.values)
         else:
             return tf.concat(data.values, axis=0)
     if isinstance(data, dict):
