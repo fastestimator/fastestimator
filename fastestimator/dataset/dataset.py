@@ -19,6 +19,7 @@ from typing import Dict, Any, Union, Sequence, Iterable, List
 
 from torch.utils.data import Dataset
 
+from fastestimator.dataset.unpaired_dataset import UnpairedDataset
 from fastestimator.op import get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.op import NumpyOp
 
@@ -87,6 +88,8 @@ class FEDataset(Dataset):
 class OpDataset(Dataset):
     def __init__(self, dataset: Dataset, ops: List[NumpyOp], mode: str):
         self.dataset = dataset
+        if isinstance(self.dataset, UnpairedDataset):
+            self.dataset.shuffle()
         self.ops = ops
         self.mode = mode
 

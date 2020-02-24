@@ -1,0 +1,86 @@
+# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+"""Download horse2zebra dataset from https://people.eecs.berkeley.edu/~taesung_park/CycleGAN/datasets/horse2zebra.zip.
+"""
+import os
+import zipfile
+from pathlib import Path
+from typing import Optional, Tuple
+
+import wget
+
+from fastestimator.dataset.unlabeled_dir_dataset import UnlabeledDirDataset
+from fastestimator.dataset.unpaired_dataset import UnpairedDataset
+from fastestimator.util.wget_util import bar_custom, callback_progress
+
+wget.callback_progress = callback_progress
+
+
+def load_data(root_dir: Optional[str] = None) -> Tuple[UnpairedDataset, UnpairedDataset]:
+    """Download the horse2zebra dataset to local storage, if not already downloaded.
+
+    Args:
+        root_dir: The path to store the data. When `path` is not provided, will save at
+            `fastestimator_data` under user's home directory.
+
+    Returns:
+        (TrainData, EvalData)
+    """
+    home = str(Path.home())
+
+    if root_dir is None:
+        root_dir = os.path.join(home, 'fastestimator_data', 'horse2zebra')
+    else:
+        root_dir = os.path.join(os.path.abspath(root_dir), 'horse2zebra')
+    os.makedirs(root_dir, exist_ok=True)
+
+    data_compressed_path = os.path.join(root_dir, 'horse2zebra.zip')
+    data_folder_path = os.path.join(root_dir, 'images')
+
+    if not os.path.exists(data_folder_path):
+        # download
+        if not os.path.exists(data_compressed_path):
+            print("Downloading data to {}".format(root_dir))
+            wget.download('https://people.eecs.berkeley.edu/~taesung_park/CycleGAN/datasets/horse2zebra.zip',
+                          root_dir,
+                          bar=bar_custom)
+
+        # extract
+        print("\nExtracting files ...")
+        with zipfile.ZipFile(data_compressed_path, 'r') as zip_file:
+            zip_file.extractall(root_dir)
+        os.rename(os.path.join(root_dir, 'horse2zebra'), data_folder_path)
+
+    test_a = UnlabeledDirDataset(root_dir=os.path.join(data_folder_path, 'testA'),
+                                 data_key="A",
+                                 file_extension='.jpg',
+                                 recursive_search=False)
+    test_b = UnlabeledDirDataset(root_dir=os.path.join(data_folder_path, 'testB'),
+                                 data_key="B",
+                                 file_extension='.jpg',
+                                 recursive_search=False)
+    train_a = UnlabeledDirDataset(root_dir=os.path.join(data_folder_path, 'trainA'),
+                                  data_key="A",
+                                  file_extension='.jpg',
+                                  recursive_search=False)
+    train_b = UnlabeledDirDataset(root_dir=os.path.join(data_folder_path, 'trainB'),
+                                  data_key="B",
+                                  file_extension='.jpg',
+                                  recursive_search=False)
+
+    train = UnpairedDataset(train_a, train_b)
+    test = UnpairedDataset(test_a, test_b)
+
+    return train, test

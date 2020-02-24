@@ -12,4 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.dataset.data import usps, montgomery, mnist, cifar10, nih_chestxray
+from fastestimator.dataset.data import usps, montgomery, mnist, cifar10, nih_chestxray, horse2zebra
