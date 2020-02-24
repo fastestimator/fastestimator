@@ -24,7 +24,7 @@ import tensorflow as tf
 from fastestimator.dataset.dataset import OpDataset
 from fastestimator.op import NumpyOp, get_current_ops
 from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
-from fastestimator.util.util import Timer, lcms, to_list
+from fastestimator.util.util import lcms, to_list
 from torch.utils.data import DataLoader, Dataset
 
 DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)

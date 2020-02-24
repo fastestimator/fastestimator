@@ -179,7 +179,7 @@ def strip_suffix(target: Optional[str], suffix: Optional[str]) -> Optional[str]:
     return target
 
 
-def per_replica_to_global(data):
+def per_replica_to_global(data: Any) -> Any:
     """Combine data from "per-replica" values.
     For multi-GPU training, data are distributed using `tf.distribute.Strategy.experimental_distribute_dataset`. This
     method collects data from all replicas and combine them into one.

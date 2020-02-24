@@ -30,7 +30,6 @@ class BaseNetwork:
         self._verify_inputs()
         self.effective_inputs = dict()
         self.effective_outputs = dict()
-        self.epoch_ops = []
 
     def _verify_inputs(self):
         for op in self.ops:
@@ -40,7 +39,7 @@ class BaseNetwork:
             else:
                 assert isinstance(op, TensorOp), "unsupported op format, must provide TensorOp in Network"
 
-    def load_epoch(self, mode: str, epoch: int) -> Set[TensorOp]:
+    def load_epoch(self, mode: str, epoch: int) -> List[TensorOp]:
         epoch_ops = get_current_ops(self.ops, mode, epoch)
         return epoch_ops
 

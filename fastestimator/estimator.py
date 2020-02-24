@@ -279,11 +279,11 @@ class Estimator:
             new_loader = tf.data.Dataset.from_generator(lambda: loader, data_type, output_shapes=data_shape)
             new_loader = new_loader.prefetch(1)
         if isinstance(new_loader, tf.data.Dataset):
+            if self.system.max_steps_per_epoch and self.system.mode == "train":
+                new_loader = new_loader.take(self.system.max_steps_per_epoch)
             if isinstance(tf.distribute.get_strategy(),
                           tf.distribute.MirroredStrategy) and not isinstance(new_loader, DistributedDataset):
                 new_loader = tf.distribute.get_strategy().experimental_distribute_dataset(new_loader)
-            if self.system.max_steps_per_epoch and self.system.mode == "train":
-                new_loader = new_loader.take(self.system.max_steps_per_epoch)
         return new_loader
 
     def _configure_tensor(self, loader, batch):

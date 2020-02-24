@@ -19,13 +19,13 @@ import numpy as np
 
 
 def to_shape(data: Any) -> Any:
-    """convert the value of any data sturcture to data type
+    """return the shape of any data in same structure
 
     Args:
-        data (Any): source data
+        data: source data
 
     Returns:
-        data: data type with same data structure
+        shape: data shape with same data structure
     """
     if isinstance(data, dict):
         return {key: to_shape(value) for (key, value) in data.items()}

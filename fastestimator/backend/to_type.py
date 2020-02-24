@@ -22,7 +22,7 @@ def to_type(data: Any) -> Any:
     """convert the value of any data sturcture to data type
 
     Args:
-        data (Any): source data
+        data: source data
 
     Returns:
         data: data type with same data structure
