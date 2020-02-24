@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
-from typing import Union, List
+from typing import Union, Set
 
 import numpy as np
 from sklearn.metrics import confusion_matrix
@@ -38,7 +38,7 @@ class ConfusionMatrix(Trace):
                  true_key: str,
                  pred_key: str,
                  num_classes: int,
-                 mode: Union[str, List[str]] = ("eval", "test"),
+                 mode: Union[str, Set[str]] = ("eval", "test"),
                  output_name: str = "confusion_matrix"):
         super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode)
         self.num_classes = num_classes
