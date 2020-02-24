@@ -34,7 +34,7 @@ class Accuracy(Trace):
     def __init__(self,
                  true_key: str,
                  pred_key: str,
-                 mode: Union[str, List[str]] = ["eval", "test"],
+                 mode: Union[str, List[str]] = ("eval", "test"),
                  output_name: str = "accuracy"):
         super().__init__(inputs=(true_key, pred_key), mode=mode, outputs=output_name)
         self.total = 0

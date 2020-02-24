@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Download horse2zebra dataset from https://people.eecs.berkeley.edu/~taesung_park/CycleGAN/datasets/horse2zebra.zip.
-"""
 import os
 import zipfile
 from pathlib import Path
@@ -30,6 +28,7 @@ wget.callback_progress = callback_progress
 
 def load_data(root_dir: Optional[str] = None) -> Tuple[UnpairedDataset, UnpairedDataset]:
     """Download the horse2zebra dataset to local storage, if not already downloaded.
+        Sourced from: https://people.eecs.berkeley.edu/~taesung_park/CycleGAN/datasets/horse2zebra.zip
 
     Args:
         root_dir: The path to store the data. When `path` is not provided, will save at
