@@ -60,7 +60,9 @@ setup(
         'wget',
         'pillow',
         'seaborn',
-        'matplotlib'
+        'matplotlib',
+        'requests',
+        'tqdm'
     ],
     # Declare extra set for installation
     extras_require={},
