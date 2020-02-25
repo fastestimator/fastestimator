@@ -20,7 +20,7 @@ from fastestimator.summary.summary import Summary
 
 
 class System:
-    mode: Optional[str]  # What is the current execution mode of the estimator ('train', 'eval', 'test')
+    mode: Optional[str]  # What is the current execution mode of the estimator ('train', 'eval', 'test'), None if warmup
     global_step: int  # How many training steps have elapsed
     num_devices: int  # How many GPUs are available for training
     log_steps: Optional[int]  # Log every n steps (0 to disable train logging, None to disable all logging)
