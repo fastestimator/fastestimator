@@ -15,6 +15,7 @@
 from typing import TypeVar, Union
 
 import tensorflow as tf
+
 import torch
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)

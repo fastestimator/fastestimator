@@ -16,13 +16,17 @@
 import json
 import re
 import string
-import subprocess
+import sys
+import time
 from ast import literal_eval
+from contextlib import ContextDecorator
 from functools import reduce
 from math import gcd
-from typing import Any, List, Set, Optional
+from typing import Any, List, Optional, Set
 
+import tensorflow as tf
 from pyfiglet import Figlet
+from tensorflow.python.distribute.values import DistributedValues
 
 
 def parse_string_to_python(val: str) -> Any:
@@ -87,18 +91,56 @@ class NonContext(object):
         pass
 
 
+class Suppressor(object):
+    """A class which can be used to silence output of function calls.
+    Example: ::
+        with Suppressor():
+            func(args)
+    """
+    def __enter__(self):
+        # pylint: disable=attribute-defined-outside-init
+        self.stdout = sys.stdout
+        self.stderr = sys.stderr
+        # pylint: enable=attribute-defined-outside-init
+        sys.stdout = self
+        sys.stderr = self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        sys.stdout = self.stdout
+        sys.stderr = self.stderr
+        if exc_type is not None:
+            raise
+
+    def write(self, dummy):  # pylint: disable=missing-docstring
+        pass
+
+
+class Timer(ContextDecorator):
+    """
+    A class that can be used to time things: ::
+        with Timer():
+            func(args)
+        @Timer()
+        def func(args)
+    """
+    def __init__(self, name="Task"):
+        self.name = name
+        self.start = None
+        self.end = None
+        self.interval = None
+
+    def __enter__(self):
+        self.start = time.perf_counter()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.end = time.perf_counter()
+        self.interval = self.end - self.start
+        tf.print("{} took {} seconds".format(self.name, self.interval))
+
+
 def draw():
     print(Figlet(font="slant").renderText("FastEstimator"))
-
-
-def get_num_devices() -> int:
-    try:
-        result = subprocess.run(['nvidia-smi', '-q'], stdout=subprocess.PIPE).stdout.decode('utf-8')
-        lines = [line.split() for line in result.splitlines() if line.startswith("Attached GPUs")]
-        num_devices = int(lines[0][-1])
-    except:
-        num_devices = 1
-    return num_devices
 
 
 def lcms(*numbers):
@@ -135,3 +177,30 @@ def strip_suffix(target: Optional[str], suffix: Optional[str]) -> Optional[str]:
     if target[-s_len:] == suffix:
         return target[:-s_len]
     return target
+
+
+def per_replica_to_global(data: Any) -> Any:
+    """Combine data from "per-replica" values.
+    For multi-GPU training, data are distributed using `tf.distribute.Strategy.experimental_distribute_dataset`. This
+    method collects data from all replicas and combine them into one.
+    Args:
+        data: Distributed data.
+    Returns:
+        obj: Combined data from all replicas.
+    """
+    if isinstance(data, DistributedValues):
+        if data.values[0].shape.rank == 0:
+            return tf.reduce_mean(data.values)
+        else:
+            return tf.concat(data.values, axis=0)
+    if isinstance(data, dict):
+        result = {}
+        for key, val in data.items():
+            result[key] = per_replica_to_global(val)
+        return result
+    if isinstance(data, list):
+        return [per_replica_to_global(val) for val in data]
+    if isinstance(data, tuple):
+        return tuple([per_replica_to_global(val) for val in data])
+    if isinstance(data, set):
+        return set([per_replica_to_global(val) for val in data])

@@ -14,6 +14,12 @@
 # ==============================================================================
 __version__ = '1.0'
 
+import tensorflow as tf
+
+import torch
 from fastestimator.estimator import Estimator
 from fastestimator.network import Network, build
 from fastestimator.pipeline import Pipeline
+
+if torch.cuda.device_count() > 1:
+    tf.distribute.experimental_set_strategy(tf.distribute.MirroredStrategy())
