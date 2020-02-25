@@ -18,24 +18,30 @@ from typing import Any
 import numpy as np
 
 
-def to_shape(data: Any) -> Any:
+def to_shape(data: Any, add_batch=False, exact_shape=True) -> Any:
     """return the shape of any data in same structure
 
     Args:
         data: source data
-
+        add_batch: whether to add a batch dimension at the font
+        exact_shape: whether to get the exact shape, if False, shape will be filled with None
     Returns:
         shape: data shape with same data structure
     """
     if isinstance(data, dict):
-        return {key: to_shape(value) for (key, value) in data.items()}
+        return {key: to_shape(value, add_batch, exact_shape) for (key, value) in data.items()}
     elif isinstance(data, list):
-        return [to_shape(val) for val in data]
+        return [to_shape(val, add_batch, exact_shape) for val in data]
     elif isinstance(data, tuple):
-        return tuple([to_shape(val) for val in data])
+        return tuple([to_shape(val, add_batch, exact_shape) for val in data])
     elif isinstance(data, set):
-        return set([to_shape(val) for val in data])
+        return set([to_shape(val, add_batch, exact_shape) for val in data])
     elif hasattr(data, "shape"):
-        return data.shape
+        shape = data.shape
+        if not exact_shape:
+            shape = [None] * len(shape)
+        if add_batch:
+            shape = [None] + list(shape)
+        return shape
     else:
-        return np.array(data).shape
+        return to_shape(np.array(data), add_batch, exact_shape)

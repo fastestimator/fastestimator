@@ -273,9 +273,7 @@ class Estimator:
         if isinstance(new_loader, DataLoader) and isinstance(self.network, TFNetwork):
             batch = to_tensor(loader.dataset[0], target_type="tensorflow")
             data_type = to_type(batch)
-            data_shape = to_shape(batch)
-            for key, shape in data_shape.items():
-                data_shape[key] = [None] * (len(shape) + 1)
+            data_shape = to_shape(batch, add_batch=True, exact_shape=False)
             new_loader = tf.data.Dataset.from_generator(lambda: loader, data_type, output_shapes=data_shape)
             new_loader = new_loader.prefetch(1)
         if isinstance(new_loader, tf.data.Dataset):
