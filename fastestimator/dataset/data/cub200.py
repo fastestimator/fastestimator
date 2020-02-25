@@ -16,7 +16,7 @@ import os
 import random
 import tarfile
 from pathlib import Path
-
+from typing import Optional
 import pandas as pd
 import wget
 
@@ -25,7 +25,7 @@ from fastestimator.dataset.csv_dataset import CSVDataset
 wget.callback_progress = callback_progress
 
 
-def load_data(root_dir=None) -> CSVDataset:
+def load_data(root_dir: Optional[str] = None) -> CSVDataset:
     """Download the Caltech-UCSD Birds 200 (CUB200) dataset to local storage, if not already downloaded.
         Sourced from http://www.vision.caltech.edu/visipedia/CUB-200.html
 
