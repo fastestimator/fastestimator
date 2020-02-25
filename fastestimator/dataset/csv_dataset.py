@@ -25,15 +25,15 @@ class CSVDataset(FEDataset):
          may be accessed using dataset.parent_path. This may be useful if the csv contains relative path information
          that you want to feed into, say, an ImageReader Op
     Args:
-        csv_path: The (absolute) path to the CSV file
+        file_path: The (absolute) path to the CSV file
         delimiter: What delimiter is used by the file
         kwargs: Other arguments to be passed through to pandas csv reader function
             (https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html)
     """
-    def __init__(self, csv_path: str, delimiter: str = ",", **kwargs):
-        df = pd.read_csv(csv_path, delimiter=delimiter, **kwargs)
+    def __init__(self, file_path: str, delimiter: str = ",", **kwargs):
+        df = pd.read_csv(file_path, delimiter=delimiter, **kwargs)
         self.data = df.to_dict(orient='index')
-        self.parent_path = os.path.dirname(csv_path)
+        self.parent_path = os.path.dirname(file_path)
 
     def __len__(self) -> int:
         return len(self.data)

@@ -21,3 +21,4 @@ from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset, Labeled
 from fastestimator.dataset.numpy_dataset import NumpyDataset
 from fastestimator.dataset.unlabeled_dir_dataset import UnlabeledDirDataset
 from fastestimator.dataset.unpaired_dataset import UnpairedDataset
+from fastestimator.dataset.pickle_dataset import PickleDataset

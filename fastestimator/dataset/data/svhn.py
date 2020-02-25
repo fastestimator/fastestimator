@@ -22,8 +22,7 @@ import pandas as pd
 import tqdm
 import wget
 
-from fastestimator.dataset.csv_dataset import CSVDataset, CSVDatasets
-from fastestimator.util.util import parse_string_to_python as to_py
+from fastestimator.dataset.pickle_dataset import PickleDataset
 from fastestimator.util.wget_util import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress
@@ -73,15 +72,14 @@ def _get_bbox(index: int, hdf5_data: h5py.File) -> Dict[str, List[int]]:
     return meta_data
 
 
-def _create_csv(data_folder: str, mode: str, csv_path: str):
-    """Creates bounding boxes for all images. This will generate a csv file indicating for each image the label and
-    bounding box coordinates and return the corresponding DataFrame.
+def _extract_metadata(data_folder: str, mode: str, save_path: str):
+    """Creates bounding boxes for all images. This will generate a file indicating for each image the label and
+    bounding box coordinates.
 
     Args:
         data_folder: Path to data directory containing digitStruct.mat file.
         mode: Training or testing.
-        csv_path: Path to save the csv file containing the bounding boxes information.
-
+        save_path: Path to save the file containing the bounding box information.
     """
     mat_path = os.path.join(data_folder, 'digitStruct.mat')
     mat_data = h5py.File(mat_path, 'r')
@@ -106,11 +104,11 @@ def _create_csv(data_folder: str, mode: str, csv_path: str):
             }
             df = df.append(row_dict, ignore_index=True)
 
-    df.to_csv(csv_path, index=False)
-    print("Data summary is saved at {}".format(csv_path))
+    df.to_pickle(save_path)
+    print("Data summary is saved at {}".format(save_path))
 
 
-def load_data(root_dir: Optional[str] = None) -> Tuple[CSVDataset, CSVDataset]:
+def load_data(root_dir: Optional[str] = None) -> Tuple[PickleDataset, PickleDataset]:
     """Download the Street View House Numbers (SVHN) dataset to local storage, if not already downloaded.
     Args:
         root_dir: The path to store the SVHN data. When `path` is not provided, will save at
@@ -127,8 +125,8 @@ def load_data(root_dir: Optional[str] = None) -> Tuple[CSVDataset, CSVDataset]:
         root_dir = os.path.join(os.path.abspath(root_dir), 'SVHN')
     os.makedirs(root_dir, exist_ok=True)
 
-    train_csv = os.path.join(root_dir, 'train.csv')
-    test_csv = os.path.join(root_dir, 'test.csv')
+    train_file_path = os.path.join(root_dir, 'train.pickle')
+    test_file_path = os.path.join(root_dir, 'test.pickle')
     train_compressed_path = os.path.join(root_dir, "train.tar.gz")
     test_compressed_path = os.path.join(root_dir, "test.tar.gz")
     train_folder_path = os.path.join(root_dir, "train")
@@ -154,16 +152,12 @@ def load_data(root_dir: Optional[str] = None) -> Tuple[CSVDataset, CSVDataset]:
         with tarfile.open(test_compressed_path) as tar:
             tar.extractall(root_dir)
 
-    # glob and generate csv
-    if not os.path.exists(train_csv):
+    # glob and generate bbox files
+    if not os.path.exists(train_file_path):
         print("\nConstructing bounding box data ...")
-        _create_csv(train_folder_path, "train", train_csv)
-    if not os.path.exists(test_csv):
+        _extract_metadata(train_folder_path, "train", train_file_path)
+    if not os.path.exists(test_file_path):
         print("\nConstructing bounding box data ...")
-        _create_csv(test_folder_path, "test", test_csv)
+        _extract_metadata(test_folder_path, "test", test_file_path)
 
-    datasets = CSVDatasets(root_dir,
-                           converters={
-                               "label": to_py, "x1": to_py, "y1": to_py, "width": to_py, "height": to_py
-                           })
-    return datasets["train"], datasets["test"]
+    return PickleDataset(train_file_path), PickleDataset(test_file_path)
