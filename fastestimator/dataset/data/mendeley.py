@@ -15,7 +15,7 @@
 import os
 import zipfile
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Optional
 
 import requests
 from tqdm import tqdm
@@ -23,7 +23,7 @@ from tqdm import tqdm
 from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset, LabeledDirDatasets
 
 
-def load_data(root_dir=None) -> Tuple[LabeledDirDataset, LabeledDirDataset]:
+def load_data(root_dir: Optional[str] = None) -> Tuple[LabeledDirDataset, LabeledDirDataset]:
     """Download the Mendeley dataset to local storage, if not already downloaded.
 
     Kermany, Daniel; Zhang, Kang; Goldbaum, Michael (2018), "Labeled Optical Coherence Tomography (OCT) and Chest X-Ray

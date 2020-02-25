@@ -62,7 +62,8 @@ setup(
         'seaborn',
         'matplotlib',
         'requests',
-        'tqdm'
+        'tqdm',
+        'h5py'
     ],
     # Declare extra set for installation
     extras_require={},
