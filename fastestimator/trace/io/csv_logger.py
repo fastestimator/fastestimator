@@ -13,15 +13,13 @@
 # limitations under the License.
 # ==============================================================================
 import os
-import pdb
 from typing import List, Set, Union
 
 import pandas as pd
 
-from fastestimator.backend.to_number import to_number
 from fastestimator.trace import Trace
 from fastestimator.util import Data
-from fastestimator.util.util import to_list, to_set
+from fastestimator.util.util import to_list
 
 
 class CSVLogger(Trace):
