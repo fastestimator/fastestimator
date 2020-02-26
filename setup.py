@@ -64,7 +64,7 @@ setup(
         'requests',
         'tqdm',
         'h5py',
-        'pycocotools'
+        'pycocotools-fix'
     ],
     # Declare extra set for installation
     extras_require={},
