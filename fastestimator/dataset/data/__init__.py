@@ -13,4 +13,4 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.dataset.data import usps, montgomery, mnist, cifar10, nih_chestxray, horse2zebra, cub200, mendeley, \
-    svhn
+    svhn, mscoco
