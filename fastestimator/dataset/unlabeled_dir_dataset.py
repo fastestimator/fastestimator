@@ -14,7 +14,6 @@
 # ==============================================================================
 
 import os
-from copy import deepcopy
 from typing import Optional, Dict, Sequence, Iterable, Any, List
 
 from fastestimator.dataset.dataset import FEDataset
@@ -57,12 +56,14 @@ class UnlabeledDirDataset(FEDataset):
         return len(self.data)
 
     def __getitem__(self, index: int):
-        return deepcopy(self.data[index])
+        return self.data[index]
 
     @classmethod
-    def _skip_init(cls, data: Dict[int, Dict[str, Any]]) -> 'UnlabeledDirDataset':
+    def _skip_init(cls, data: Dict[int, Dict[str, Any]], **kwargs) -> 'UnlabeledDirDataset':
         obj = cls.__new__(cls)
         obj.data = data
+        for k, v in kwargs.items():
+            obj.__setattr__(k, v)
         return obj
 
     def _do_split(self, splits: Sequence[Iterable[int]]) -> List['UnlabeledDirDataset']:

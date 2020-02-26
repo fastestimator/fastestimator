@@ -85,11 +85,13 @@ class LabeledDirDataset(FEDataset):
         return self.mapping
 
     @classmethod
-    def _skip_init(cls, data: Dict[int, Dict[str, Any]],
-                   mapping: Dict[str, Union[str, int, np.ndarray]]) -> 'LabeledDirDataset':
+    def _skip_init(cls, data: Dict[int, Dict[str, Any]], mapping: Dict[str, Union[str, int, np.ndarray]],
+                   **kwargs) -> 'LabeledDirDataset':
         obj = cls.__new__(cls)
         obj.data = data
         obj.mapping = mapping
+        for k, v in kwargs.items():
+            obj.__setattr__(k, v)
         return obj
 
     def _do_split(self, splits: Sequence[Iterable[int]]) -> List['LabeledDirDataset']:

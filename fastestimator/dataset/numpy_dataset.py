@@ -39,9 +39,11 @@ class NumpyDataset(FEDataset):
         return self.data[index]
 
     @classmethod
-    def _skip_init(cls, data: Dict[int, Dict[str, Any]]) -> 'NumpyDataset':
+    def _skip_init(cls, data: Dict[int, Dict[str, Any]], **kwargs) -> 'NumpyDataset':
         obj = cls.__new__(cls)
         obj.data = data
+        for k, v in kwargs.items():
+            obj.__setattr__(k, v)
         return obj
 
     def _do_split(self, splits: Sequence[Iterable[int]]) -> List['NumpyDataset']:

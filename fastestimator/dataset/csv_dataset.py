@@ -42,10 +42,12 @@ class CSVDataset(FEDataset):
         return self.data[index]
 
     @classmethod
-    def _skip_init(cls, data: Dict[int, Dict[str, Any]], parent_path: str) -> 'CSVDataset':
+    def _skip_init(cls, data: Dict[int, Dict[str, Any]], parent_path: str, **kwargs) -> 'CSVDataset':
         obj = cls.__new__(cls)
         obj.data = data
         obj.parent_path = parent_path
+        for k, v in kwargs.items():
+            obj.__setattr__(k, v)
         return obj
 
     def _do_split(self, splits: Sequence[Iterable[int]]) -> List['CSVDataset']:

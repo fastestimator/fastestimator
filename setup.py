@@ -63,7 +63,8 @@ setup(
         'matplotlib',
         'requests',
         'tqdm',
-        'h5py'
+        'h5py',
+        'pycocotools'
     ],
     # Declare extra set for installation
     extras_require={},
