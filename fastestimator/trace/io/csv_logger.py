@@ -12,66 +12,47 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Optional, List
-
 import os
+import pdb
+from typing import List, Set, Union
 
+import pandas as pd
+
+from fastestimator.backend.to_number import to_number
 from fastestimator.trace import Trace
-from fastestimator.util.util import is_number, to_list
 from fastestimator.util import Data
+from fastestimator.util.util import to_list, to_set
 
 
 class CSVLogger(Trace):
-    """Log monitored quantity in CSV file manner
+    """Log monitored quantity in CSV file
     Args:
         filename: Output filename.
-        monitor_names: List of key names to monitor. The names can be
-            {"mode", "epoch", "train_step", or output names that other traces
-            create}. If None, it will record all. Defaults to None.
-        separator: Seperator for numbers. Defaults to ", ".
-        append: If true, it will write csv file in append mode. Otherwise, it
-            will overwrite the existed file. Defaults to False.
-        mode: Restrict the trace to run only on given modes {'train', 'eval',
-            'test'}. None will always execute. Defaults to 'eval'.
+        monitor_names: List of key names to monitor.
+        mode: Restrict the trace to run only on given modes. None will always execute.
     """
     def __init__(self,
                  filename: str,
-                 monitor_names: Optional[List[str]] = None,
-                 separator: str = ", ",
-                 append: bool = False,
-                 mode: str = "eval"):
-        self.keys = monitor_names if monitor_names is None else to_list(monitor_names)
-        super().__init__(inputs="*" if self.keys is None else monitor_names, mode=mode)
-        self.separator = separator
+                 monitor_names: Union[List[str], str],
+                 mode: Union[str, Set[str]] = ("eval", "test")):
+        super().__init__(inputs=to_list(monitor_names), mode=mode)
         self.filename = filename
-        self.append = append
+        self.data = None
 
     def on_begin(self, data: Data):
-        self.file = open(self.filename, 'a' if self.append else 'w')
-        self.file_empty = os.stat(self.filename).st_size == 0
+        self.data = {key: [] for key in self.inputs}
+        self.data["mode"] = []
+        self.data["epoch"] = []
 
     def on_epoch_end(self, data: Data):
-        if self.keys is None:
-            self._infer_keys(data)
-        self._make_header()
-        vals = [data.get(key, "") for key in self.keys]
-        vals = [str(val.numpy()) if hasattr(val, "numpy") else str(val) for val in vals]
-        self.file.write("\n" + self.separator.join(vals))
+        self.data["mode"].append(self.system.mode)
+        self.data["epoch"].append(self.system.epoch_idx)
+        for key in self.inputs:
+            self.data[key].append(data[key])
 
     def on_end(self, data: Data):
-        self.file.flush()
-        self.file.close()
-
-    def _infer_keys(self, data: Data):
-        monitored_keys = []
-        for key, val in data.items():
-            if isinstance(val, str) or is_number(val):
-                monitored_keys.append(key)
-            elif hasattr(val, "numpy") and len(val.numpy().shape) == 1:
-                monitored_keys.append(key)
-        self.keys = sorted(monitored_keys)
-
-    def _make_header(self):
-        if self.file_empty:
-            self.file.write(self.separator.join(self.keys))
-            self.file_empty = False
+        df = pd.DataFrame(data=self.data)
+        if os.path.exists(self.filename):
+            df.to_csv(self.filename, mode='a', index=False)
+        else:
+            df.to_csv(self.filename, index=False)

@@ -61,7 +61,7 @@ def get_estimator():
     estimator = fe.Estimator(pipeline=pipeline,
                              network=network,
                              epochs=2,
-                             traces=[Accuracy(true_key="y", pred_key="y_pred")])
+                             traces=Accuracy(true_key="y", pred_key="y_pred"))
     return estimator
 
 
