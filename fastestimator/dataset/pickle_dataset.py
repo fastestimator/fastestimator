@@ -12,45 +12,46 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import List, Iterable, Dict, Any, Sequence
+import os
+from typing import Dict, Iterable, List, Any, Sequence
 
-import numpy as np
+import pandas as pd
 
 from fastestimator.dataset.dataset import FEDataset
 
 
-class NumpyDataset(FEDataset):
-    def __init__(self, data: Dict[str, np.ndarray]):
-        size = None
-        for key, val in data.items():
-            if isinstance(val, np.ndarray):
-                if size is not None:
-                    assert val.shape[0] == size, "All data arrays must have the same number of elements"
-                else:
-                    size = val.shape[0]
-        assert isinstance(size, int), \
-            "Could not infer size of data. Please ensure you are passing numpy arrays in the data dictionary."
-        self.data = {i: {k: v[i] for k, v in data.items()} for i in range(size)}
+class PickleDataset(FEDataset):
+    """ PickleDataset reads entries from pickled pandas data-frames. The root directory of the pickle file
+         may be accessed using dataset.parent_path. This may be useful if the file contains relative path information
+         that you want to feed into, say, an ImageReader Op
+    Args:
+        file_path: The (absolute) path to the pickle file
+    """
+    def __init__(self, file_path: str):
+        df = pd.read_pickle(file_path)
+        self.data = df.to_dict(orient='index')
+        self.parent_path = os.path.dirname(file_path)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.data)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> Dict:
         return self.data[index]
 
     @classmethod
-    def _skip_init(cls, data: Dict[int, Dict[str, Any]], **kwargs) -> 'NumpyDataset':
+    def _skip_init(cls, data: Dict[int, Dict[str, Any]], parent_path: str, **kwargs) -> 'PickleDataset':
         obj = cls.__new__(cls)
         obj.data = data
+        obj.parent_path = parent_path
         for k, v in kwargs.items():
             obj.__setattr__(k, v)
         return obj
 
-    def _do_split(self, splits: Sequence[Iterable[int]]) -> List['NumpyDataset']:
+    def _do_split(self, splits: Sequence[Iterable[int]]) -> List['PickleDataset']:
         results = []
         for split in splits:
             data = {new_idx: self.data.pop(old_idx) for new_idx, old_idx in enumerate(split)}
-            results.append(NumpyDataset._skip_init(data))
+            results.append(PickleDataset._skip_init(data, self.parent_path))
         # Re-key the remaining data to be contiguous from 0 to new max index
         self.data = {new_idx: v for new_idx, (old_idx, v) in enumerate(self.data.items())}
         return results

@@ -16,11 +16,20 @@ from typing import Union
 
 import numpy as np
 import tensorflow as tf
+
 import torch
 
 
 # TODO - Technically the return value here might be a np number if the data is a tf.Tensor
 def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray]) -> np.ndarray:
+    """convert tensor values to python values
+
+    Args:
+        data: any tensor value
+
+    Returns:
+        np.ndarray: python value of the tensor
+    """
     if isinstance(data, tf.Tensor):
         data = data.numpy()
     elif isinstance(data, torch.Tensor):

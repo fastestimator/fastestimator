@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import List, Optional, Union
+from typing import Set, Union
 
 import numpy as np
 from sklearn.metrics import precision_score
@@ -35,7 +35,7 @@ class Precision(Trace):
     def __init__(self,
                  true_key: str,
                  pred_key: str,
-                 mode: Union[str, List[str]] = ["eval", "test"],
+                 mode: Union[str, Set[str]] = ("eval", "test"),
                  output_name: str = "precision"):
         super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode)
         self.binary_classification = None

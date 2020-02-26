@@ -14,13 +14,13 @@
 # ==============================================================================
 from typing import Any, Optional
 
+import torch
 from fastestimator.network import BaseNetwork
-from fastestimator.util.util import get_num_devices
 from fastestimator.summary.summary import Summary
 
 
 class System:
-    mode: str  # What is the current execution mode of the estimator ('train', 'eval', 'test')
+    mode: Optional[str]  # What is the current execution mode of the estimator ('train', 'eval', 'test'), None if warmup
     global_step: int  # How many training steps have elapsed
     num_devices: int  # How many GPUs are available for training
     log_steps: Optional[int]  # Log every n steps (0 to disable train logging, None to disable all logging)
@@ -34,8 +34,8 @@ class System:
 
     def __init__(self,
                  network: BaseNetwork,
-                 mode: str = "train",
-                 num_devices: int = get_num_devices(),
+                 mode: Optional[str] = None,
+                 num_devices: int = torch.cuda.device_count(),
                  log_steps: Optional[int] = None,
                  total_epochs: int = 0,
                  max_steps_per_epoch: Optional[int] = None):

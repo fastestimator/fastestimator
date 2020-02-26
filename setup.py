@@ -60,7 +60,11 @@ setup(
         'wget',
         'pillow',
         'seaborn',
-        'matplotlib'
+        'matplotlib',
+        'requests',
+        'tqdm',
+        'h5py',
+        'pycocotools-fix'
     ],
     # Declare extra set for installation
     extras_require={},

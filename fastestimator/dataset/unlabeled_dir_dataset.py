@@ -14,7 +14,6 @@
 # ==============================================================================
 
 import os
-from copy import deepcopy
 from typing import Optional, Dict, Sequence, Iterable, Any, List
 
 from fastestimator.dataset.dataset import FEDataset
@@ -25,7 +24,7 @@ class UnlabeledDirDataset(FEDataset):
 
     Args:
         root_dir: The path to the directory containing data
-        data_label: What key to assign to the data values in the data dictionary
+        data_key: What key to assign to the data values in the data dictionary
         file_extension: If provided then only files ending with the file_extension will be included
         recursive_search: Whether to search within subdirectories for files
     """
@@ -33,7 +32,7 @@ class UnlabeledDirDataset(FEDataset):
 
     def __init__(self,
                  root_dir: str,
-                 data_label: str = "x",
+                 data_key: str = "x",
                  file_extension: Optional[str] = None,
                  recursive_search: bool = True):
         data = []
@@ -51,18 +50,20 @@ class UnlabeledDirDataset(FEDataset):
                     break
         except StopIteration:
             raise ValueError("Invalid directory structure for UnlabeledDirDataset at root: {}".format(root_dir))
-        self.data = {i: {data_label: data[i][0]} for i in range(len(data))}
+        self.data = {i: {data_key: data[i][0]} for i in range(len(data))}
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, index: int):
-        return deepcopy(self.data[index])
+        return self.data[index]
 
     @classmethod
-    def _skip_init(cls, data: Dict[int, Dict[str, Any]]) -> 'UnlabeledDirDataset':
+    def _skip_init(cls, data: Dict[int, Dict[str, Any]], **kwargs) -> 'UnlabeledDirDataset':
         obj = cls.__new__(cls)
         obj.data = data
+        for k, v in kwargs.items():
+            obj.__setattr__(k, v)
         return obj
 
     def _do_split(self, splits: Sequence[Iterable[int]]) -> List['UnlabeledDirDataset']:

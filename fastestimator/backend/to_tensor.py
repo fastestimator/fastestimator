@@ -17,6 +17,7 @@ from typing import Any
 
 import numpy as np
 import tensorflow as tf
+
 import torch
 
 
@@ -24,8 +25,8 @@ def to_tensor(data: Any, target_type: str) -> Any:
     """convert the value of any data sturcture to tensor
 
     Args:
-        data (Any): source data
-        target_type (str): target data type, can be either "tensorflow" or "pytorch"
+        data: source data
+        target_type: target data type, can be either "tensorflow" or "pytorch"
 
     Returns:
         data: target data
