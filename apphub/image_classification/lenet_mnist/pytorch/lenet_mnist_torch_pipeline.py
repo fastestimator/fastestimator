@@ -16,13 +16,13 @@
 """
 import numpy as np
 import tensorflow as tf
+from torch.utils.data import DataLoader, Dataset
 
 import fastestimator as fe
 from fastestimator.architecture.pytorch import LeNet
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.metric import Accuracy
-from torch.utils.data import DataLoader, Dataset
 
 
 class MnistDataset(Dataset):
@@ -67,7 +67,7 @@ def get_estimator():
     estimator = fe.Estimator(pipeline=pipeline,
                              network=network,
                              epochs=2,
-                             traces=[Accuracy(true_key="y", pred_key="y_pred")])
+                             traces=Accuracy(true_key="y", pred_key="y_pred"))
     return estimator
 
 

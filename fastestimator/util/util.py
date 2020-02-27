@@ -178,21 +178,6 @@ def strip_suffix(target: Optional[str], suffix: Optional[str]) -> Optional[str]:
         return target[:-s_len]
     return target
 
-def is_number(s: str):  # pylint: disable=invalid-name
-    """Check if a given string can be converted into a number.
-
-    Args:
-        s: A string
-
-    Returns:
-        True iff the string represents a number
-
-    """
-    try:
-        float(s)
-        return True
-    except (ValueError, TypeError):
-        return False
 
 def per_replica_to_global(data: Any) -> Any:
     """Combine data from "per-replica" values.
