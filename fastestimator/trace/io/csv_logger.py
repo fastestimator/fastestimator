@@ -13,7 +13,9 @@
 # limitations under the License.
 # ==============================================================================
 import os
-from typing import List, Set, Union
+import pdb
+from collections import defaultdict
+from typing import List, Optional, Set, Union
 
 import pandas as pd
 
@@ -26,27 +28,29 @@ class CSVLogger(Trace):
     """Log monitored quantity in CSV file
     Args:
         filename: Output filename.
-        monitor_names: List of key names to monitor.
+        monitor_names: List of key names to monitor, if None then all metrics will be recorded.
         mode: Restrict the trace to run only on given modes. None will always execute.
     """
     def __init__(self,
                  filename: str,
-                 monitor_names: Union[List[str], str],
+                 monitor_names: Optional[Union[List[str], str]] = None,
                  mode: Union[str, Set[str]] = ("eval", "test")):
-        super().__init__(inputs=to_list(monitor_names), mode=mode)
+        super().__init__(inputs="*" if monitor_names is None else monitor_names, mode=mode)
         self.filename = filename
         self.data = None
 
     def on_begin(self, data: Data):
-        self.data = {key: [] for key in self.inputs}
-        self.data["mode"] = []
-        self.data["epoch"] = []
+        self.data = defaultdict(list)
 
     def on_epoch_end(self, data: Data):
         self.data["mode"].append(self.system.mode)
         self.data["epoch"].append(self.system.epoch_idx)
-        for key in self.inputs:
-            self.data[key].append(data[key])
+        if "*" in self.inputs:
+            for key, value in data.read_logs(set()).items():
+                self.data[key].append(value)
+        else:
+            for key in self.inputs:
+                self.data[key].append(data[key])
 
     def on_end(self, data: Data):
         df = pd.DataFrame(data=self.data)
