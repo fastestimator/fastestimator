@@ -22,7 +22,7 @@ import numpy as np
 import wget
 from PIL import Image
 
-from fastestimator.dataset.labeled_dir_dataset import LabeledDirDatasets, LabeledDirDataset
+from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset
 from fastestimator.util.wget_util import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress
@@ -102,5 +102,5 @@ def load_data(root_dir: Optional[str] = None) -> Tuple[LabeledDirDataset, Labele
         _write_data(test_images, test_labels, test_base_path, "test")
 
     # make datasets
-    datasets = LabeledDirDatasets(root_dir=root_dir, file_extension=".png")
-    return datasets['train'], datasets['test']
+    return LabeledDirDataset(train_base_path, file_extension=".png"), LabeledDirDataset(test_base_path,
+                                                                                        file_extension=".png")

@@ -21,7 +21,7 @@ from fastestimator.dataset.dataset import FEDataset
 
 
 class LabeledDirDataset(FEDataset):
-    """ A dataset which reads files from a folder hierarchy like root/class/data.file
+    """ A dataset which reads files from a folder hierarchy like root/class(/es)/data.file
 
     Args:
         root_dir: The path to the directory containing data sorted by folders
@@ -92,51 +92,3 @@ class LabeledDirDataset(FEDataset):
         # Re-key the remaining data to be contiguous from 0 to new max index
         self.data = {new_idx: v for new_idx, (old_idx, v) in enumerate(self.data.items())}
         return results
-
-
-class LabeledDirDatasets:
-    """ A class which instantiates multiple LabeledDirDataset from a folder hierarchy like: root/mode/class/data.file
-
-    Args:
-        root_dir: The path to the directory containing data sorted by folders
-        data_key: What key to assign to the data values in the data dictionary
-        label_key: What key to assign to the label values in the data dictionary
-        label_mapping: A dictionary defining the mapping to use. If not provided will map classes to int labels
-        file_extension: If provided then only files ending with the file_extension will be included
-    """
-    def __init__(self,
-                 root_dir: str,
-                 data_key: str = "x",
-                 label_key: str = "y",
-                 label_mapping: Optional[Dict[str, Any]] = None,
-                 file_extension: Optional[str] = None):
-        root_dir = os.path.normpath(root_dir)
-        try:
-            _, dirs, _ = next(os.walk(root_dir))
-            self.datasets = {}
-            # We're going to do the training data first since it shouldn't have any missing class types for inferring
-            # label mapping. Once the label mapping is built it will be passed to all of the other datasets to ensure
-            # they use the same values. If 'train' is not available then we just have to pick the first folder and hope
-            # that it has all the keys
-            first_key = "train" if "train" in dirs else dirs[0]
-            self.datasets[first_key] = LabeledDirDataset(root_dir=os.path.join(root_dir, first_key),
-                                                         data_key=data_key,
-                                                         label_key=label_key,
-                                                         label_mapping=label_mapping,
-                                                         file_extension=file_extension)
-            # This won't change anything if label_mapping was passed in as a dictionary from the start, but will ensure
-            # that if we're inferring label mappings we will get consistent mappings over all the data
-            label_mapping = self.datasets[first_key].get_mapping()
-            self.datasets.update({
-                mode: LabeledDirDataset(root_dir=os.path.join(root_dir, mode),
-                                        data_key=data_key,
-                                        label_key=label_key,
-                                        label_mapping=label_mapping,
-                                        file_extension=file_extension)
-                for mode in dirs if mode is not first_key
-            })
-        except StopIteration:
-            raise ValueError("Invalid directory structure for LabeledDirDatasets at root: {}".format(root_dir))
-
-    def __getitem__(self, mode: str) -> LabeledDirDataset:
-        return self.datasets[mode]
