@@ -14,79 +14,69 @@
 # ==============================================================================
 
 import os
-from copy import deepcopy
-from typing import Optional, Union, Dict, Sequence, Iterable, Any, List
-
-import numpy as np
-import tensorflow as tf
-from scipy.linalg import hadamard
+from collections import deque
+from typing import Optional, Dict, Sequence, Iterable, Any, List
 
 from fastestimator.dataset.dataset import FEDataset
 
 
 class LabeledDirDataset(FEDataset):
-    """ A dataset which reads files from a folder hierarchy like root/class/data.file
+    """ A dataset which reads files from a folder hierarchy like root/class(/es)/data.file
 
     Args:
         root_dir: The path to the directory containing data sorted by folders
         data_key: What key to assign to the data values in the data dictionary
         label_key: What key to assign to the label values in the data dictionary
-        label_mapping: One of * 'string' - The folder names will be used as the labels
-                              * 'int' - The folder names will be mapped onto non-negative integers
-                              * 'onehot' - The folder names will be mapped onto onehot vectors
-                              * 'ecc' - The folder names will be mapped onto an error-correcting-code vector
-                              * Dict[string, Any] - A dictionary defining the mapping to use
+        label_mapping: A dictionary defining the mapping to use. If not provided will map classes to int labels
         file_extension: If provided then only files ending with the file_extension will be included
     """
+    data: Dict[int, Dict[str, Any]]
+
     def __init__(self,
                  root_dir: str,
                  data_key: str = "x",
                  label_key: str = "y",
-                 label_mapping: Union[str, Dict[str, Union[str, int, np.ndarray]]] = "int",
+                 label_mapping: Optional[Dict[str, Any]] = None,
                  file_extension: Optional[str] = None):
-        assert isinstance(label_mapping, Dict) or label_mapping in {"string", "int", "onehot", "ecc"}
-        data = []
+        # Recursively find all the data
         root_dir = os.path.normpath(root_dir)
-        try:
-            _, dirs, _ = next(os.walk(root_dir))
-            if isinstance(label_mapping, str):
-                labels = dirs
-                if label_mapping is not "string":
-                    num_classes = len(dirs)
-                    labels = [i for i in range(num_classes)]
-                    if label_mapping is "onehot":
-                        labels = tf.keras.utils.to_categorical(labels, num_classes=num_classes, dtype='int32')
-                    if label_mapping is "ecc":
-                        # We'll use a minimum code length of 16, or else whatever power of 2 is >= the number of classes
-                        code_length = max(16, 1 << (num_classes - 1).bit_length())
-                        labels = hadamard(code_length)
-                self.mapping = {clazz: label for clazz, label in zip(dirs, labels)}
-            else:
-                self.mapping = label_mapping
-                assert self.mapping.keys() >= set(dirs), \
-                    "Mapping provided to LabeledDirDataset is missing key(s): {}".format(
-                        set(dirs) - self.mapping.keys())
-            for path, label in self.mapping.items():
-                path = os.path.join(root_dir, path)
-                _, _, entries = next(os.walk(path))
-                data.extend(
-                    (os.path.join(path, entry), label) for entry in entries if entry.endswith(file_extension or ""))
-        except StopIteration:
-            raise ValueError("Invalid directory structure for LabeledDirDataset at root: {}".format(root_dir))
-        self.data = {i: {data_key: data[i][0], label_key: data[i][1]} for i in range(len(data))}
+        data = {}
+        keys = deque([""])
+        for _, dirs, entries in os.walk(root_dir):
+            key = keys.popleft()
+            dirs = [os.path.join(key, d) for d in dirs]
+            dirs.reverse()
+            keys.extendleft(dirs)
+            entries = [
+                os.path.join(key, e) for e in entries if not e.startswith(".") and e.endswith(file_extension or "")
+            ]
+            if entries:
+                data[key] = entries
+        # Compute label mappings
+        self.mapping = label_mapping or {label: idx for idx, label in enumerate(sorted(data.keys()))}
+        assert self.mapping.keys() >= data.keys(), \
+            "Mapping provided to LabeledDirDataset is missing key(s): {}".format(
+                data.keys() - self.mapping.keys())
+        # Store the data by index
+        self.data = {}
+        idx = 0
+        for key, values in data.items():
+            label = self.mapping[key]
+            for value in values:
+                self.data[idx] = {data_key: os.path.join(root_dir, value), label_key: label}
+                idx += 1
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, index: int):
-        return deepcopy(self.data[index])
+        return self.data[index]
 
-    def get_mapping(self) -> Dict[str, Union[str, int, np.ndarray]]:
+    def get_mapping(self) -> Dict[str, Any]:
         return self.mapping
 
     @classmethod
-    def _skip_init(cls, data: Dict[int, Dict[str, Any]], mapping: Dict[str, Union[str, int, np.ndarray]],
-                   **kwargs) -> 'LabeledDirDataset':
+    def _skip_init(cls, data: Dict[int, Dict[str, Any]], mapping: Dict[str, Any], **kwargs) -> 'LabeledDirDataset':
         obj = cls.__new__(cls)
         obj.data = data
         obj.mapping = mapping
@@ -102,55 +92,3 @@ class LabeledDirDataset(FEDataset):
         # Re-key the remaining data to be contiguous from 0 to new max index
         self.data = {new_idx: v for new_idx, (old_idx, v) in enumerate(self.data.items())}
         return results
-
-
-class LabeledDirDatasets:
-    """ A class which instantiates multiple LabeledDirDataset from a folder hierarchy like: root/mode/class/data.file
-
-    Args:
-        root_dir: The path to the directory containing data sorted by folders
-        data_key: What key to assign to the data values in the data dictionary
-        label_key: What key to assign to the label values in the data dictionary
-        label_mapping: One of * 'string' - The folder names will be used as the labels
-                              * 'int' - The folder names will be mapped onto non-negative integers
-                              * 'onehot' - The folder names will be mapped onto onehot vectors
-                              * 'ecc' - The folder names will be mapped onto an error-correcting-code vector
-                              * Dict[string, Any] - A dictionary defining the mapping to use
-        file_extension: If provided then only files ending with the file_extension will be included
-    """
-    def __init__(self,
-                 root_dir: str,
-                 data_key: str = "x",
-                 label_key: str = "y",
-                 label_mapping: Union[str, Dict[str, Union[str, int, np.ndarray]]] = "int",
-                 file_extension: Optional[str] = None):
-        root_dir = os.path.normpath(root_dir)
-        try:
-            _, dirs, _ = next(os.walk(root_dir))
-            self.datasets = {}
-            # We're going to do the training data first since it shouldn't have any missing class types for inferring
-            # label mapping. Once the label mapping is built it will be passed to all of the other datasets to ensure
-            # they use the same values. If 'train' is not available then we just have to pick the first folder and hope
-            # that it has all the keys
-            first_key = "train" if "train" in dirs else dirs[0]
-            self.datasets[first_key] = LabeledDirDataset(root_dir=os.path.join(root_dir, first_key),
-                                                         data_key=data_key,
-                                                         label_key=label_key,
-                                                         label_mapping=label_mapping,
-                                                         file_extension=file_extension)
-            # This won't change anything if label_mapping was passed in as a dictionary from the start, but will ensure
-            # that if we're inferring label mappings we will get consistent mappings over all the data
-            label_mapping = self.datasets[first_key].get_mapping()
-            self.datasets.update({
-                mode: LabeledDirDataset(root_dir=os.path.join(root_dir, mode),
-                                        data_key=data_key,
-                                        label_key=label_key,
-                                        label_mapping=label_mapping,
-                                        file_extension=file_extension)
-                for mode in dirs if mode is not first_key
-            })
-        except StopIteration:
-            raise ValueError("Invalid directory structure for LabeledDirDatasets at root: {}".format(root_dir))
-
-    def __getitem__(self, mode: str) -> LabeledDirDataset:
-        return self.datasets[mode]

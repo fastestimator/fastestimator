@@ -13,12 +13,13 @@
 # limitations under the License.
 # ==============================================================================
 # FEDataset and OpDataset intentionally not imported here to reduce user confusion with auto-complete
-from fastestimator.dataset.csv_dataset import CSVDataset, CSVDatasets
+from fastestimator.dataset.csv_dataset import CSVDataset
 from fastestimator.dataset.data import usps, montgomery, mnist, cifar10, nih_chestxray, horse2zebra, cub200, mendeley, \
-    svhn, mscoco
+    svhn, mscoco, omniglot
 from fastestimator.dataset.generator_dataset import GeneratorDataset
-from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset, LabeledDirDatasets
+from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset
 from fastestimator.dataset.numpy_dataset import NumpyDataset
 from fastestimator.dataset.unlabeled_dir_dataset import UnlabeledDirDataset
 from fastestimator.dataset.unpaired_dataset import UnpairedDataset
 from fastestimator.dataset.pickle_dataset import PickleDataset
+from fastestimator.dataset.siamese_dir_dataset import SiameseDirDataset

@@ -25,7 +25,7 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 class Op:
-    inputs: List[str]
+    inputs: List[Union[str, Callable]]
     outputs: List[str]
     mode: Set[str]
     in_list: bool  # Whether inputs should be presented as a list or an individual value
@@ -69,25 +69,14 @@ def get_current_ops(ops: Iterable[Union[OpType, Scheduler[OpType]]], mode: str, 
 def get_inputs_by_op(op: Op, store: Mapping[str, Any], default: Optional[Any] = None) -> Any:
     data = default
     if op.inputs:
-        if isinstance(op.inputs, Callable):
-            data = op.inputs()
-        else:
-            data = _get_inputs_by_keys(store, op.inputs)
-            if not op.in_list:
-                data = data[0]
+        data = [store[key] if not isinstance(key, Callable) else key() for key in op.inputs]
+        if not op.in_list:
+            data = data[0]
     return data
-
-
-def _get_inputs_by_keys(store: Mapping[str, Any], input_keys: List[str]) -> Any:
-    return [store[key] for key in input_keys]
 
 
 def write_outputs_by_op(op: Op, store: MutableMapping[str, Any], outputs: Any):
     if not op.out_list:
         outputs = [outputs]
-    _write_outputs_by_keys(store, outputs, op.outputs)
-
-
-def _write_outputs_by_keys(store: MutableMapping[str, Any], outputs: List[Any], output_keys: List[str]):
-    for key, data in zip(output_keys, outputs):
+    for key, data in zip(op.outputs, outputs):
         store[key] = data

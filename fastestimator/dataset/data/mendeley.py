@@ -20,7 +20,7 @@ from typing import Tuple, Optional
 import requests
 from tqdm import tqdm
 
-from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset, LabeledDirDatasets
+from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset
 
 
 def load_data(root_dir: Optional[str] = None) -> Tuple[LabeledDirDataset, LabeledDirDataset]:
@@ -72,9 +72,8 @@ def load_data(root_dir: Optional[str] = None) -> Tuple[LabeledDirDataset, Labele
             # There's some garbage data from macOS in the zip file that gets filtered out here
             zip_file.extractall(root_dir, filter(lambda x: x.startswith("chest_xray/"), zip_file.namelist()))
 
-    datasets = LabeledDirDatasets(root_dir=data_folder_path,
-                                  label_mapping={
-                                      'NORMAL': 0, 'PNEUMONIA': 1
-                                  },
-                                  file_extension=".jpeg")
-    return datasets['train'], datasets['test']
+    label_mapping = {'NORMAL': 0, 'PNEUMONIA': 1}
+    return LabeledDirDataset(os.path.join(data_folder_path, "train"), label_mapping=label_mapping,
+                             file_extension=".jpeg"), LabeledDirDataset(os.path.join(data_folder_path, "test"),
+                                                                        label_mapping=label_mapping,
+                                                                        file_extension=".jpeg")
