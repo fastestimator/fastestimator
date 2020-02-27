@@ -78,9 +78,5 @@ def get_inputs_by_op(op: Op, store: Mapping[str, Any], default: Optional[Any] = 
 def write_outputs_by_op(op: Op, store: MutableMapping[str, Any], outputs: Any):
     if not op.out_list:
         outputs = [outputs]
-    _write_outputs_by_keys(store, outputs, op.outputs)
-
-
-def _write_outputs_by_keys(store: MutableMapping[str, Any], outputs: List[Any], output_keys: List[str]):
-    for key, data in zip(output_keys, outputs):
+    for key, data in zip(op.outputs, outputs):
         store[key] = data
