@@ -33,7 +33,7 @@ class FEDataset(Dataset):
 
     def split(self, *fractions: Union[float, int, Iterable[int]]) -> Union['FEDataset', List['FEDataset']]:
         assert len(fractions) > 0, "split requires at least one fraction argument"
-        original_size = len(self)
+        original_size = self._split_length()
         method = None
         frac_sum = 0
         int_sum = 0
@@ -66,7 +66,6 @@ class FEDataset(Dataset):
 
         splits = []
         if method == 'number':
-            indices = []
             # TODO - convert to a linear congruential generator for large datasets?
             # https://stackoverflow.com/questions/9755538/how-do-i-create-a-list-of-random-numbers-without-duplicates
             indices = random.sample(range(original_size), int_sum)
@@ -80,6 +79,10 @@ class FEDataset(Dataset):
         if len(fractions) == 1:
             return splits[0]
         return splits
+
+    def _split_length(self) -> int:
+        # Useful if sub-classes want to split by something other than indices (see SiameseDirDataset for example)
+        return len(self)
 
     def _do_split(self, splits: Sequence[Iterable[int]]) -> List['FEDataset']:
         raise NotImplementedError
