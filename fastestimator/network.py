@@ -134,7 +134,7 @@ class BaseNetwork:
         return self.forward_step_eager(batch, state, ops, effective_outputs)
 
 
-def _collect_models(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]):
+def _collect_models(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> Set[Union[tf.keras.Model, torch.nn.Module]]:
     models = set()
     for op in ops:
         if isinstance(op, Scheduler):
