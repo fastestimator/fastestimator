@@ -16,45 +16,34 @@
 import tempfile
 
 import numpy as np
-from sklearn.preprocessing import StandardScaler
-from sklearn.datasets import load_breast_cancer
-from sklearn.model_selection import train_test_split
-
 import fastestimator as fe
 import tensorflow as tf
 from fastestimator.op.tensorop.model import ModelOp
-from fastestimator.trace import ModelSaver
+from fastestimator.trace.io import ModelSaver
 from fastestimator.pipeline import Pipeline
 from fastestimator.estimator import Estimator
-from tensorflow.python.keras import layers
-# from fastestimator.op.tensorop.loss import MeanSquaredError
+from fastestimator.op.tensorop.loss import MeanSquaredError
+from fastestimator.trace.metric import Accuracy
 
 
 def create_dnn():
     model = tf.keras.Sequential()
 
-    model.add(layers.Dense(32, activation="relu", input_shape=(30, )))
-    model.add(layers.Dropout(0.5))
-    model.add(layers.Dense(16, activation="relu"))
-    model.add(layers.Dropout(0.5))
-    model.add(layers.Dense(8, activation="relu"))
-    model.add(layers.Dropout(0.5))
-    model.add(layers.Dense(1, activation="linear"))
+    model.add(tf.keras.layers.Dense(32, activation="relu", input_shape=(30, )))
+    model.add(tf.keras.layers.Dropout(0.5))
+    model.add(tf.keras.layers.Dense(16, activation="relu"))
+    model.add(tf.keras.layers.Dropout(0.5))
+    model.add(tf.keras.layers.Dense(8, activation="relu"))
+    model.add(tf.keras.layers.Dropout(0.5))
+    model.add(tf.keras.layers.Dense(1, activation="linear"))
 
     return model
 
 
 def get_estimator(epochs=50, batch_size=32, steps_per_epoch=None, validation_steps=None, model_dir=tempfile.mkdtemp()):
-    (X, y) = load_breast_cancer(True)
-    x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-
     # step 1. prepare data
-    scaler = StandardScaler()
-    x_train = scaler.fit_transform(x_train)
-    x_eval = scaler.transform(x_eval)
-    train_data = {"x": x_train, "y": np.expand_dims(y_train, -1)}
-    eval_data = {"x": x_eval, "y": np.expand_dims(y_eval, -1)}
     data = {"train": train_data, "eval": eval_data}
+    
     pipeline = Pipeline(train_data=train_data,
                         eval_data=eval_data,
                         test_data=test_data,
@@ -67,14 +56,11 @@ def get_estimator(epochs=50, batch_size=32, steps_per_epoch=None, validation_ste
     ])
 
     # step 3.prepare estimator
-    traces = [ModelSaver(model_name="dnn", save_dir=model_dir, save_best=True)]
-    estimator = Estimator(network=network,
-                             pipeline=pipeline,
-                             epochs=epochs,
-                             steps_per_epoch=steps_per_epoch,
-                             validation_steps=validation_steps,
+    estimator = Estimator(pipeline=pipeline,
+                             network=network,
+                             epochs=2,
                              log_steps=10,
-                             traces=traces)
+                             traces=Accuracy(true_key="y", pred_key="y_pred"))
     return estimator
 
 

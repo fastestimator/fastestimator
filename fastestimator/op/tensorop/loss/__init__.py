@@ -12,4 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.tensorop.loss.cross_entropy import CrossEntropy
+from fastestimator.op.tensorop.loss.cross_entropy import CrossEntropy, MeanSquaredError
