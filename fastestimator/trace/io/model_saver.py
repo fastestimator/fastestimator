@@ -24,7 +24,7 @@ from fastestimator.util import Data
 
 
 class ModelSaver(Trace):
-    """Save trained model in hdf5 format.
+    """Save trained model in hdf5/pt format.
 
     Args:
         model: Model instance defined by user (tf.keras.Model or torch.nn.Module)
