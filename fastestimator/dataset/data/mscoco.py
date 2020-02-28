@@ -14,6 +14,7 @@
 # ==============================================================================
 import os
 import zipfile
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Optional, Dict, Tuple
 
@@ -43,7 +44,7 @@ class MSCOCODataset(UnlabeledDirDataset):
             self.captions = COCO(caption_file) if include_captions else None
 
     def __getitem__(self, index: int):
-        response = super().__getitem__(index)
+        response = deepcopy(super().__getitem__(index))
         image = response["image"]
         image_id = int(os.path.splitext(os.path.basename(image))[0])
         if self.instances:

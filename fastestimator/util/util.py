@@ -179,6 +179,24 @@ def strip_suffix(target: Optional[str], suffix: Optional[str]) -> Optional[str]:
     return target
 
 
+def strip_prefix(target: Optional[str], prefix: Optional[str]) -> Optional[str]:
+    """Remove the given preffix from the target if it is present there
+
+    Args:
+        target: A string to be formatted
+        prefix: A string to be removed from 'target'
+
+    Returns:
+        The formatted version of 'target'
+    """
+    if prefix is None or target is None:
+        return target
+    s_len = len(prefix)
+    if target[:s_len] == prefix:
+        return target[s_len:]
+    return target
+
+
 def per_replica_to_global(data: Any) -> Any:
     """Combine data from "per-replica" values.
     For multi-GPU training, data are distributed using `tf.distribute.Strategy.experimental_distribute_dataset`. This

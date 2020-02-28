@@ -16,9 +16,12 @@ import math
 import random
 from collections import defaultdict
 from functools import lru_cache
-from typing import Dict, Any, Union, Sequence, Iterable, List, Optional, Hashable
+from typing import Dict, Any, Union, Sequence, Iterable, List, Optional, Hashable, Tuple
 
+import jsonpickle
 from torch.utils.data import Dataset
+
+from fastestimator.util.util import strip_prefix, strip_suffix
 
 
 class KeySummary:
@@ -41,7 +44,10 @@ class KeySummary:
         self.dtype = dtype
 
     def __repr__(self):
-        return "<KeySummary {}>".format({k: v for k, v in self.__dict__.items() if v is not None})
+        return "<KeySummary {}>".format(self.__getstate__())
+
+    def __getstate__(self):
+        return {k: v for k, v in self.__dict__.items() if v is not None}
 
 
 class DatasetSummary:
@@ -74,7 +80,13 @@ class DatasetSummary:
         self.keys = keys
 
     def __repr__(self):
-        return "<DatasetSummary {}>".format({k: v for k, v in self.__dict__.items() if v is not None})
+        return "<DatasetSummary {}>".format(self.__getstate__())
+
+    def __getstate__(self):
+        return {k: v for k, v in self.__dict__.items() if v is not None}
+
+    def __str__(self):
+        return jsonpickle.dumps(self, unpicklable=False)
 
 
 class FEDataset(Dataset):
@@ -185,43 +197,62 @@ class InMemoryDataset(FEDataset):
         return results
 
     def summary(self) -> DatasetSummary:
-        # Not calling self.data.values() here since child classes might add extra keys to their get_item calls (mscoco)
+        # We will check whether the dataset is doing additional pre-processing on top of the self.data keys. If not we
+        # can extract extra information about the data without incurring a large computational time cost
+        final_example = self[0]
+        original_example = self.data[0]
+        keys = final_example.keys()
         shapes = {}
         dtypes = {}
-        unique_vals = defaultdict(set)
-        keep_iterating = True
-        for example in (self[i] for i in range(len(self))):
-            if not keep_iterating:
-                break
-            keep_iterating = False
-            for key in example.keys():
-                val = example[key]
-                # Find the number of unique values
-                if isinstance(val, Hashable):
-                    unique_vals[key].add(val)
-                    keep_iterating = True
-                # Get the shape
-                if key not in shapes:
-                    if hasattr(val, "shape"):
-                        shapes[key] = list(val.shape)
-                    else:
-                        shapes[key] = []
-                # Check to see whether shape is ragged or not
-                if hasattr(val, "shape"):
-                    val_shape = val.shape
-                    for idx, base in enumerate(shapes[key]):
-                        if val_shape[idx] != base:
-                            shapes[key][idx] = None
-                        if shapes[key][idx] is not None:
-                            keep_iterating = True
-                # Collect dtype
-                if key not in dtypes:
-                    if hasattr(val, "dtype"):
-                        dtypes[key] = str(val.dtype)
-                    else:
-                        dtypes[key] = type(val)
+        n_unique_vals = defaultdict(lambda: 0)
+        for key in keys:
+            final_val = final_example[key]
+            dtypes[key] = self._get_type(final_val)
+            shapes[key] = self._get_shape(final_val)
+
+            # Check whether type and shape have changed by get_item
+            if key in original_example:
+                original_val = original_example[key]
+                original_dtype = self._get_type(original_val)
+                original_shape = self._get_shape(original_val)
+
+                # If no changes, then we can relatively quickly count the unique values using self.data
+                if dtypes[key] == original_dtype and shapes[key] == original_shape and isinstance(
+                        original_val, Hashable):
+                    n_unique_vals[key] = len({self.data[i][key] for i in range(len(self.data))})
+
         key_summary = {
-            key: KeySummary(dtype=dtypes[key], num_unique_values=len(unique_vals[key]) or None, shape=shapes[key])
-            for key in dtypes.keys()
+            key: KeySummary(dtype=dtypes[key], num_unique_values=n_unique_vals[key] or None, shape=shapes[key])
+            for key in keys
         }
         return DatasetSummary(num_instances=len(self), keys=key_summary)
+
+    @staticmethod
+    def _get_type(obj: Any) -> str:
+        if hasattr(obj, "dtype"):
+            result = str(obj.dtype)
+        elif isinstance(obj, (List, Tuple)):
+            # TODO - if zeroth element happens to be empty, should still find values somehow
+            if len(obj) > 0:
+                result = "List[{}]".format(InMemoryDataset._get_type(obj[0]))
+            else:
+                result = strip_suffix(strip_prefix(str(type(obj)), "<class '"), "'>")
+        else:
+            result = strip_suffix(strip_prefix(str(type(obj)), "<class '"), "'>")
+        return result
+
+    @staticmethod
+    def _get_shape(obj: Any) -> List[Optional[int]]:
+        if hasattr(obj, "shape"):
+            result = list(obj.shape)
+        elif isinstance(obj, (List, Tuple)):
+            result = [None]
+            # TODO - if zeroth element happens to be empty, should still find values somehow
+            if len(obj) > 0:
+                result.extend(InMemoryDataset._get_shape(obj[0]))
+                # Converting shape inside ragged collection to None since likely changes between samples
+                for idx in range(len(result)):
+                    result[idx] = None
+        else:
+            result = []
+        return result
