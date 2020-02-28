@@ -146,7 +146,7 @@ def _collect_models(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> Set[
 
 
 # noinspection PyPep8Naming
-def Network(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]):
+def Network(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> BaseNetwork:
     models = _collect_models(ops)
     assert models, "cannot find model in Network ops"
     framework = set()
@@ -298,7 +298,7 @@ def _build_optimizer(optimizer_fn: Union[str, Callable], model: Union[tf.keras.M
     return optimizer
 
 
-def _optimizer_fn_from_string(name: str, framework: str):
+def _optimizer_fn_from_string(name: str, framework: str) -> Callable:
     tf_optimizer_fn = {
         'adadelta': tf.optimizers.Adadelta,
         'adagrad': tf.optimizers.Adagrad,
@@ -322,7 +322,8 @@ def _optimizer_fn_from_string(name: str, framework: str):
     return optimizer_fn
 
 
-def _optimizer_fn_to_optimizer(optimizer_fn: Callable, model: Union[tf.keras.Model, torch.nn.Module], framework: str):
+def _optimizer_fn_to_optimizer(optimizer_fn: Callable, model: Union[tf.keras.Model, torch.nn.Module],
+                               framework: str) -> Union[tf.optimizers.Optimizer, torch.optim.Optimizer]:
     optimizer = None
     if optimizer_fn:
         if framework == "tensorflow":
