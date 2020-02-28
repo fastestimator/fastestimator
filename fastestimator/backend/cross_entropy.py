@@ -17,10 +17,12 @@ from typing import TypeVar
 import tensorflow as tf
 import torch
 
+from fastestimator.backend.reduce_loss import reduce_loss
+
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
-def cross_entropy(y_pred: Tensor, y_true: Tensor, from_logits: bool = False) -> Tensor:
+def cross_entropy(y_pred: Tensor, y_true: Tensor, from_logits: bool = False, average_loss=True) -> Tensor:
     """calculate cross entropy for tensor inputs
 
     Args:
@@ -47,4 +49,6 @@ def cross_entropy(y_pred: Tensor, y_true: Tensor, from_logits: bool = False) -> 
             ce = torch.nn.CrossEntropyLoss(reduction="none")(y_pred, y_true)
         else:
             ce = torch.nn.NLLLoss(reduction="none")(torch.log(y_pred), y_true.long())
+    if average_loss:
+        ce = reduce_loss(ce)
     return ce

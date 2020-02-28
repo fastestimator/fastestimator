@@ -18,7 +18,6 @@ import tensorflow as tf
 import torch
 
 from fastestimator.backend.cross_entropy import cross_entropy
-from fastestimator.backend.reduce_loss import reduce_loss
 from fastestimator.op.op import TensorOp
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
@@ -46,7 +45,5 @@ class CrossEntropy(TensorOp):
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
         y_pred, y_true = data
-        loss = cross_entropy(y_pred, y_true, from_logits=self.from_logits)
-        if self.average_loss:
-            loss = reduce_loss(loss)
+        loss = cross_entropy(y_pred, y_true, from_logits=self.from_logits, average_loss=self.average_loss)
         return loss

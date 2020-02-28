@@ -43,8 +43,8 @@ class UpdateOp(TensorOp):
         if state["warmup"]:
             if isinstance(self.model, tf.keras.Model):
                 with tfops.init_scope():
-                    _ = self.model.optimizer.iterations
-                    self.model.optimizer._create_hypers()
-                    self.model.optimizer._create_slots(self.model.trainable_variables)
+                    _ = self.model.current_optimizer.iterations
+                    self.model.current_optimizer._create_hypers()
+                    self.model.current_optimizer._create_slots(self.model.trainable_variables)
         else:
             update_model(self.model, data, tape=state['tape'])

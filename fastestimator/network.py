@@ -13,11 +13,11 @@
 # limitations under the License.
 # ==============================================================================
 from collections import ChainMap
-from typing import Any, Dict, Iterable, List, MutableMapping, Set, Union
+from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Set, Union
 
 import tensorflow as tf
-
 import torch
+
 from fastestimator.op import TensorOp, get_current_ops, get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
@@ -25,11 +25,15 @@ from fastestimator.util.util import NonContext, lcms, to_list
 
 
 class BaseNetwork:
-    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]):
+    def __init__(self,
+                 ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
+                 models: Union[tf.keras.Model, torch.nn.Module]):
         self.ops = to_list(ops)
+        self.models = to_list(models)
         self._verify_inputs()
         self.effective_inputs = dict()
         self.effective_outputs = dict()
+        self.epoch_models = set()
 
     def _verify_inputs(self):
         for op in self.ops:
@@ -41,6 +45,13 @@ class BaseNetwork:
 
     def load_epoch(self, mode: str, epoch: int) -> List[TensorOp]:
         epoch_ops = get_current_ops(self.ops, mode, epoch)
+        self.epoch_models = set(op.model for op in epoch_ops if isinstance(op, (UpdateOp, ModelOp)))
+        for model in self.epoch_models:
+            if hasattr(model, "optimizer") and model.optimizer is not None:
+                if isinstance(model.optimizer, Scheduler):
+                    model.current_optimizer = model.optimizer.get_current_value(epoch)
+                else:
+                    model.current_optimizer = model.optimizer
         return epoch_ops
 
     def unload_epoch(self):
@@ -78,7 +89,7 @@ class BaseNetwork:
         signature_epochs = {0}
         epoch_keys = {0}
         repeat_cycles = {1}
-        for x in self.ops:
+        for x in self.ops + [model.optimizer for model in self.models]:
             if isinstance(x, EpochScheduler):
                 epoch_keys.update(x.epoch_dict.keys())
             elif isinstance(x, RepeatScheduler):
@@ -148,25 +159,23 @@ def Network(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]):
 
     framework = framework.pop()
     if framework == "tensorflow":
-        network = TFNetwork(ops)
+        network = TFNetwork(ops, models)
     elif framework == "pytorch":
         tf.distribute.experimental_set_strategy(None)
-        network = TorchNetwork(ops)
+        network = TorchNetwork(ops, models)
     else:
         raise ValueError("Unkown model type")
     return network
 
 
 class TorchNetwork(BaseNetwork):
-    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]):
-        super().__init__(ops)
+    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]], models: Set[torch.nn.Module]):
+        super().__init__(ops, models)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.epoch_models = set()
 
     def load_epoch(self, mode: str, epoch: int) -> List[TensorOp]:
-        epoch_ops = get_current_ops(self.ops, mode, epoch)
+        epoch_ops = super().load_epoch(mode, epoch)
         if self.device.type == "cuda":
-            self.epoch_models = set(op.model for op in epoch_ops if isinstance(op, (UpdateOp, ModelOp)))
             for model in self.epoch_models:
                 model.to(self.device)
         return epoch_ops
@@ -237,75 +246,88 @@ class TFNetwork(BaseNetwork):
         return prediction
 
 
-def build(model: Union[tf.keras.Model, torch.nn.Module, List[tf.keras.Model], List[torch.nn.Module]],
-          optimizer: Union[str,
-                           List[str],
-                           tf.optimizers.Optimizer,
-                           List[tf.optimizers.Optimizer],
-                           torch.optim.Optimizer,
-                           List[torch.optim.Optimizer]]
+def build(model_fn: Callable,
+          optimizer_fn: Union[str, Scheduler, Callable, List[str], List[Callable], List[Scheduler], None]
           ) -> Union[tf.keras.Model, torch.nn.Module, List[tf.keras.Model], List[torch.nn.Module]]:
-    """Associate model instance(s) with optimizer(s)
+    """Build model instances and associate them with optimizers
     Args:
-        model: model instances or list of model instances
-        optimizer: optimizer instance/string or list of optimizer instance/string
+        model_fn: function that define model(s)
+        optimizer_fn: optimizer string/definition or list of optimizer instances/strings. For example:
+                    tensorflow user can do optimizer_fn = lambda: tf.optimizers.Adam(lr=0.1),
+                    pytorch user can do  optimizer_fn = lambda x: torch.optim.Adam(params=x, lr=0.1)
     Returns:
-        models: model(s) compiled by FastEstimator
+        models: model(s) built by FastEstimator
     """
-    models = to_list(model)
-    optimizers = to_list(optimizer)
-    assert len(models) == len(optimizers)
-    for idx, (model, optimizer) in enumerate(zip(models, optimizers)):
-        models[idx] = _fe_compile(model, optimizer)
+    models = to_list(model_fn())
+    optimizer_fn = to_list(optimizer_fn)
+    assert len(models) == len(optimizer_fn)
+    for idx, (model, optimizer_def) in enumerate(zip(models, optimizer_fn)):
+        models[idx] = _fe_compile(model, optimizer_def)
     if len(models) == 1:
         models = models[0]
     return models
 
 
 def _fe_compile(model: Union[tf.keras.Model, torch.nn.Module],
-                optimizer: Union[str, tf.optimizers.Optimizer, torch.optim.Optimizer]
-                ) -> Union[tf.keras.Model, torch.nn.Module]:
-    # model instance check
+                optimizer_fn: Union[str, Scheduler, Callable]) -> Union[tf.keras.Model, torch.nn.Module]:
     if isinstance(model, tf.keras.Model):
         framework = "tensorflow"
     elif isinstance(model, torch.nn.Module):
         framework = "pytorch"
     else:
         raise ValueError("unrecognized model format: {}".format(type(model)))
-
-    # optimizer auto complete
-    if isinstance(optimizer, str):
-        tf_optimizer_fn = {
-            'adadelta': tf.optimizers.Adadelta,
-            'adagrad': tf.optimizers.Adagrad,
-            'adam': tf.optimizers.Adam,
-            'adamax': tf.optimizers.Adamax,
-            'rmsprop': tf.optimizers.RMSprop,
-            'sgd': tf.optimizers.SGD
-        }
-        pytorch_optimizer_fn = {
-            'adadelta': torch.optim.Adadelta,
-            'adagrad': torch.optim.Adagrad,
-            'adam': torch.optim.Adam,
-            'adamax': torch.optim.Adamax,
-            'rmsprop': torch.optim.RMSprop,
-            'sgd': torch.optim.SGD
-        }
-        if framework == "tensorflow":
-            optimizer = tf_optimizer_fn[optimizer]()
-        else:
-            if optimizer == "sgd":
-                optimizer = pytorch_optimizer_fn[optimizer](params=model.parameters(), lr=0.1)
-            else:
-                optimizer = pytorch_optimizer_fn[optimizer](params=model.parameters())
-
-    # optimizer instance check
-    if framework == "tensorflow":
-        assert isinstance(optimizer, tf.optimizers.Optimizer)
+    if isinstance(optimizer_fn, EpochScheduler):
+        for epoch, optimizer_def in optimizer_fn.epoch_dict.items():
+            optimizer_fn.epoch_dict[epoch] = _build_optimizer(optimizer_def, model, framework)
+    elif isinstance(optimizer_fn, RepeatScheduler):
+        for idx, optimizer_def in enumerate(optimizer_fn.repeat_list):
+            optimizer_fn.repeat_list[idx] = _build_optimizer(optimizer_def, model, framework)
     else:
-        assert isinstance(optimizer, torch.optim.Optimizer)
-        optimizer.zero_grad()
-
-    model.optimizer = optimizer
+        optimizer_fn = _build_optimizer(optimizer_fn, model, framework)
+    model.optimizer = optimizer_fn
     model.fe_compiled = True
     return model
+
+
+def _build_optimizer(optimizer_fn: Union[str, Callable], model: Union[tf.keras.Model, torch.nn.Module], framework: str):
+    if isinstance(optimizer_fn, str):
+        optimizer_fn = _optimizer_fn_from_string(optimizer_fn, framework)
+    optimizer = _optimizer_fn_to_optimizer(optimizer_fn, model, framework)
+    return optimizer
+
+
+def _optimizer_fn_from_string(name: str, framework: str):
+    tf_optimizer_fn = {
+        'adadelta': tf.optimizers.Adadelta,
+        'adagrad': tf.optimizers.Adagrad,
+        'adam': tf.optimizers.Adam,
+        'adamax': tf.optimizers.Adamax,
+        'rmsprop': tf.optimizers.RMSprop,
+        'sgd': tf.optimizers.SGD
+    }
+    pytorch_optimizer_fn = {
+        'adadelta': lambda x: torch.optim.Adadelta(params=x),
+        'adagrad': lambda x: torch.optim.Adagrad(params=x),
+        'adam': lambda x: torch.optim.Adam(params=x),
+        'adamax': lambda x: torch.optim.Adamax(params=x),
+        'rmsprop': lambda x: torch.optim.RMSprop(params=x),
+        'sgd': lambda x: torch.optim.SGD(params=x, lr=0.01)
+    }
+    if framework == "tensorflow":
+        optimizer_fn = tf_optimizer_fn[name]
+    else:
+        optimizer_fn = pytorch_optimizer_fn[name]
+    return optimizer_fn
+
+
+def _optimizer_fn_to_optimizer(optimizer_fn: Callable, model: Union[tf.keras.Model, torch.nn.Module], framework: str):
+    optimizer = None
+    if optimizer_fn:
+        if framework == "tensorflow":
+            optimizer = optimizer_fn()
+            assert isinstance(optimizer, tf.optimizers.Optimizer)
+        else:
+            optimizer = optimizer_fn(model.parameters())
+            assert isinstance(optimizer, torch.optim.Optimizer)
+            optimizer.zero_grad()
+    return optimizer

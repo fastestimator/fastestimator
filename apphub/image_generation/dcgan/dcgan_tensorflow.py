@@ -13,9 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 """DCGAN example using MNIST data set."""
-
-import pdb
-
 import tensorflow as tf
 from tensorflow.python.keras import layers
 
@@ -24,7 +21,6 @@ from fastestimator.backend import cross_entropy
 from fastestimator.dataset import mnist
 from fastestimator.op import TensorOp
 from fastestimator.op.numpyop import ExpandDims, Normalize
-from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 
 
@@ -71,7 +67,7 @@ def discriminator():
     return model
 
 
-def get_estimator(batch_size=256):
+def get_estimator(batch_size=256, epochs=50):
     train_data, _ = mnist.load_data()
     pipeline = fe.Pipeline(
         train_data=train_data,
@@ -80,8 +76,8 @@ def get_estimator(batch_size=256):
             ExpandDims(inputs="x", outputs="x"),
             Normalize(inputs="x", outputs="x", mean=1.0, std=1.0, max_pixel_value=127.5)
         ])
-    gen_model = fe.build(model=generator(), optimizer=tf.optimizers.Adam(1e-4))
-    disc_model = fe.build(model=discriminator(), optimizer=tf.optimizers.Adam(1e-4))
+    gen_model = fe.build(model_fn=generator, optimizer_fn=lambda: tf.optimizers.Adam(1e-4))
+    disc_model = fe.build(model_fn=discriminator, optimizer_fn=lambda: tf.optimizers.Adam(1e-4))
     network = fe.Network(ops=[
         ModelOp(model=gen_model, inputs=lambda: tf.random.normal([batch_size, 100]), outputs="x_fake"),
         ModelOp(model=disc_model, inputs="x_fake", outputs="fake_score"),
@@ -91,7 +87,7 @@ def get_estimator(batch_size=256):
         DLoss(inputs=("true_score", "fake_score"), outputs="dloss"),
         UpdateOp(model=disc_model, loss_name="dloss")
     ])
-    estimator = fe.Estimator(pipeline=pipeline, network=network, epochs=2)
+    estimator = fe.Estimator(pipeline=pipeline, network=network, epochs=epochs)
     return estimator
 
 
