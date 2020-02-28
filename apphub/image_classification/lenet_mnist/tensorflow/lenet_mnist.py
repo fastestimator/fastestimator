@@ -35,7 +35,7 @@ def get_estimator(batch_size=32):
                         ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")])
 
     # step 2
-    model = fe.build(model=LeNet(), optimizer="adam")
+    model = fe.build(model_fn=LeNet, optimizer_fn="adam")
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="x", outputs="y_pred"),
         CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),

@@ -17,16 +17,19 @@ from typing import TypeVar
 import tensorflow as tf
 import torch
 
+from fastestimator.backend.reduce_loss import reduce_loss
+
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
-def cross_entropy(y_pred: Tensor, y_true: Tensor, apply_softmax: bool = False) -> Tensor:
+def cross_entropy(y_pred: Tensor, y_true: Tensor, from_logits: bool = False, average_loss: bool = True) -> Tensor:
     """calculate cross entropy for tensor inputs
 
     Args:
         y_pred: prediction score for each class, in [Batch, C]
         y_true: ground truth class label index, in [Batch]
-        apply_softmax: whether to apply softmax to y_pred. Defaults to False.
+        from_logits: whether y_pred is from logits(without softmax). Defaults to False.
+        average_loss: whether to average the element-wise loss
 
     Returns:
         categorical cross entropy
@@ -37,14 +40,16 @@ def cross_entropy(y_pred: Tensor, y_true: Tensor, apply_softmax: bool = False) -
     if isinstance(y_pred, tf.Tensor):
         if y_pred._rank() > 1 and y_pred.shape[-1] > 1:
             if y_true._rank() > 1 and y_true.shape[-1] > 1:
-                ce = tf.losses.categorical_crossentropy(y_true, y_pred, from_logits=apply_softmax)
+                ce = tf.losses.categorical_crossentropy(y_true, y_pred, from_logits=from_logits)
             else:
-                ce = tf.losses.sparse_categorical_crossentropy(y_true, y_pred, from_logits=apply_softmax)
+                ce = tf.losses.sparse_categorical_crossentropy(y_true, y_pred, from_logits=from_logits)
         else:
-            ce = tf.losses.binary_crossentropy(y_true=y_true, y_pred=y_pred, from_logits=apply_softmax)
+            ce = tf.losses.binary_crossentropy(y_true=y_true, y_pred=y_pred, from_logits=from_logits)
     else:
-        if apply_softmax:
+        if from_logits:
             ce = torch.nn.CrossEntropyLoss(reduction="none")(y_pred, y_true)
         else:
             ce = torch.nn.NLLLoss(reduction="none")(torch.log(y_pred), y_true.long())
+    if average_loss:
+        ce = reduce_loss(ce)
     return ce
