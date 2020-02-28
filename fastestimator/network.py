@@ -291,7 +291,8 @@ def _fe_compile(model: Union[tf.keras.Model, torch.nn.Module],
     return model
 
 
-def _build_optimizer(optimizer_fn: Union[str, Callable], model: Union[tf.keras.Model, torch.nn.Module], framework: str):
+def _build_optimizer(optimizer_fn: Union[str, Callable], model: Union[tf.keras.Model, torch.nn.Module],
+                     framework: str) -> Union[tf.optimizers.Optimizer, torch.optim.Optimizer]:
     if isinstance(optimizer_fn, str):
         optimizer_fn = _optimizer_fn_from_string(optimizer_fn, framework)
     optimizer = _optimizer_fn_to_optimizer(optimizer_fn, model, framework)
