@@ -22,7 +22,7 @@ from ast import literal_eval
 from contextlib import ContextDecorator
 from functools import reduce
 from math import gcd
-from typing import Any, List, Optional, Set
+from typing import Any, List, Optional, Set, Tuple
 
 import tensorflow as tf
 from pyfiglet import Figlet
@@ -222,3 +222,31 @@ def per_replica_to_global(data: Any) -> Any:
         return tuple([per_replica_to_global(val) for val in data])
     if isinstance(data, set):
         return set([per_replica_to_global(val) for val in data])
+
+
+def get_type(obj: Any) -> str:
+    if hasattr(obj, "dtype"):
+        result = str(obj.dtype)
+    elif isinstance(obj, (List, Tuple)):
+        if len(obj) > 0:
+            result = "List[{}]".format(_get_type(obj[0]))
+        else:
+            result = strip_suffix(strip_prefix(str(type(obj)), "<class '"), "'>")
+    else:
+        result = strip_suffix(strip_prefix(str(type(obj)), "<class '"), "'>")
+    return result
+
+
+def get_shape(obj: Any) -> List[Optional[int]]:
+    if hasattr(obj, "shape"):
+        result = list(obj.shape)
+    elif isinstance(obj, (List, Tuple)):
+        result = [None]
+        if len(obj) > 0:
+            result.extend(_get_shape(obj[0]))
+            # Converting shape inside ragged collection to None since likely changes between samples
+            for idx in range(len(result)):
+                result[idx] = None
+    else:
+        result = []
+    return result

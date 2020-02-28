@@ -16,12 +16,12 @@ import math
 import random
 from collections import defaultdict
 from functools import lru_cache
-from typing import Dict, Any, Union, Sequence, Iterable, List, Optional, Hashable, Tuple
+from typing import Dict, Any, Union, Sequence, Iterable, List, Optional, Hashable
 
 import jsonpickle
 from torch.utils.data import Dataset
 
-from fastestimator.util.util import strip_prefix, strip_suffix
+from fastestimator.util.util import get_type, get_shape
 
 
 class KeySummary:
@@ -207,14 +207,15 @@ class InMemoryDataset(FEDataset):
         n_unique_vals = defaultdict(lambda: 0)
         for key in keys:
             final_val = final_example[key]
-            dtypes[key] = self._get_type(final_val)
-            shapes[key] = self._get_shape(final_val)
+            # TODO - if val is empty list, should find a sample which has entries
+            dtypes[key] = get_type(final_val)
+            shapes[key] = get_shape(final_val)
 
             # Check whether type and shape have changed by get_item
             if key in original_example:
                 original_val = original_example[key]
-                original_dtype = self._get_type(original_val)
-                original_shape = self._get_shape(original_val)
+                original_dtype = get_type(original_val)
+                original_shape = get_shape(original_val)
 
                 # If no changes, then we can relatively quickly count the unique values using self.data
                 if dtypes[key] == original_dtype and shapes[key] == original_shape and isinstance(
@@ -226,33 +227,3 @@ class InMemoryDataset(FEDataset):
             for key in keys
         }
         return DatasetSummary(num_instances=len(self), keys=key_summary)
-
-    @staticmethod
-    def _get_type(obj: Any) -> str:
-        if hasattr(obj, "dtype"):
-            result = str(obj.dtype)
-        elif isinstance(obj, (List, Tuple)):
-            # TODO - if zeroth element happens to be empty, should still find values somehow
-            if len(obj) > 0:
-                result = "List[{}]".format(InMemoryDataset._get_type(obj[0]))
-            else:
-                result = strip_suffix(strip_prefix(str(type(obj)), "<class '"), "'>")
-        else:
-            result = strip_suffix(strip_prefix(str(type(obj)), "<class '"), "'>")
-        return result
-
-    @staticmethod
-    def _get_shape(obj: Any) -> List[Optional[int]]:
-        if hasattr(obj, "shape"):
-            result = list(obj.shape)
-        elif isinstance(obj, (List, Tuple)):
-            result = [None]
-            # TODO - if zeroth element happens to be empty, should still find values somehow
-            if len(obj) > 0:
-                result.extend(InMemoryDataset._get_shape(obj[0]))
-                # Converting shape inside ragged collection to None since likely changes between samples
-                for idx in range(len(result)):
-                    result[idx] = None
-        else:
-            result = []
-        return result

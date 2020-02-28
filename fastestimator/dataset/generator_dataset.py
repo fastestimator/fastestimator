@@ -17,6 +17,7 @@ from functools import lru_cache
 from typing import Any, Dict, Generator, Sequence, Iterable, List, Sized
 
 from fastestimator.dataset.dataset import FEDataset, DatasetSummary, KeySummary
+from fastestimator.util.util import get_type, get_shape
 
 
 class GeneratorDataset(FEDataset):
@@ -49,14 +50,9 @@ class GeneratorDataset(FEDataset):
         sample = self[0]
         key_summary = {}
         for key in sample.keys():
-            if hasattr(sample, "shape"):
-                # TODO - Check to see whether shape is ragged or not
-                shape = list(sample.shape)
-            else:
-                shape = []
-            if hasattr(sample, "dtype"):
-                dtype = str(sample.dtype)
-            else:
-                dtype = type(sample)
+            val = sample[key]
+            # TODO - if val is empty list, should find a sample which has entries
+            shape = get_shape(val)
+            dtype = get_type(val)
             key_summary[key] = KeySummary(num_unique_values=None, shape=shape, dtype=dtype)
         return DatasetSummary(num_instances=self.samples_per_epoch, keys=key_summary)
