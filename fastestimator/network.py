@@ -25,11 +25,9 @@ from fastestimator.util.util import NonContext, lcms, to_list
 
 
 class BaseNetwork:
-    def __init__(self,
-                 ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
-                 models: Union[tf.keras.Model, torch.nn.Module]):
+    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]):
         self.ops = to_list(ops)
-        self.models = to_list(models)
+        self.models = to_list(_collect_models(ops))
         self._verify_inputs()
         self.effective_inputs = dict()
         self.effective_outputs = dict()
@@ -136,8 +134,7 @@ class BaseNetwork:
         return self.forward_step_eager(batch, state, ops, effective_outputs)
 
 
-# noinspection PyPep8Naming
-def Network(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]):
+def _collect_models(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]):
     models = set()
     for op in ops:
         if isinstance(op, Scheduler):
@@ -145,8 +142,13 @@ def Network(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]):
             models.update(models_in_schedule)
         elif isinstance(op, (ModelOp, UpdateOp)):
             models.add(op.model)
-    assert models, "cannot find model in Network ops"
+    return models
 
+
+# noinspection PyPep8Naming
+def Network(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]):
+    models = _collect_models(ops)
+    assert models, "cannot find model in Network ops"
     framework = set()
     for model in models:
         if isinstance(model, tf.keras.Model):
@@ -159,18 +161,18 @@ def Network(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]):
 
     framework = framework.pop()
     if framework == "tensorflow":
-        network = TFNetwork(ops, models)
+        network = TFNetwork(ops)
     elif framework == "pytorch":
         tf.distribute.experimental_set_strategy(None)
-        network = TorchNetwork(ops, models)
+        network = TorchNetwork(ops)
     else:
         raise ValueError("Unkown model type")
     return network
 
 
 class TorchNetwork(BaseNetwork):
-    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]], models: Set[torch.nn.Module]):
-        super().__init__(ops, models)
+    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]):
+        super().__init__(ops)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def load_epoch(self, mode: str, epoch: int) -> List[TensorOp]:
