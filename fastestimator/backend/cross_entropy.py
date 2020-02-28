@@ -22,13 +22,14 @@ from fastestimator.backend.reduce_loss import reduce_loss
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
-def cross_entropy(y_pred: Tensor, y_true: Tensor, from_logits: bool = False, average_loss=True) -> Tensor:
+def cross_entropy(y_pred: Tensor, y_true: Tensor, from_logits: bool = False, average_loss: bool = True) -> Tensor:
     """calculate cross entropy for tensor inputs
 
     Args:
         y_pred: prediction score for each class, in [Batch, C]
         y_true: ground truth class label index, in [Batch]
         from_logits: whether y_pred is from logits(without softmax). Defaults to False.
+        average_loss: whether to average the element-wise loss
 
     Returns:
         categorical cross entropy
