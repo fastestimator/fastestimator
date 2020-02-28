@@ -15,7 +15,7 @@
 import os
 import zipfile
 from pathlib import Path
-from typing import Any, Optional, Dict, Sequence, Iterable, List, Tuple
+from typing import Any, Optional, Dict, Tuple
 
 import wget
 from pycocotools.coco import COCO
@@ -78,15 +78,6 @@ class MSCOCODataset(UnlabeledDirDataset):
             annotations = self.captions.loadAnns(annotation_ids)
             for annotation in annotations:
                 data["caption"].append(annotation['caption'])
-
-    def _do_split(self, splits: Sequence[Iterable[int]]) -> List['MSCOCODataset']:
-        results = []
-        for split in splits:
-            data = {new_idx: self.data.pop(old_idx) for new_idx, old_idx in enumerate(split)}
-            results.append(MSCOCODataset._skip_init(data, instances=self.instances, captions=self.captions))
-        # Re-key the remaining data to be contiguous from 0 to new max index
-        self.data = {new_idx: v for new_idx, (old_idx, v) in enumerate(self.data.items())}
-        return results
 
 
 def load_data(root_dir: Optional[str] = None, load_objects: bool = True,

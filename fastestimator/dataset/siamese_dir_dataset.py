@@ -18,6 +18,7 @@ from typing import Optional, Dict, Any, List, Tuple, Set, Sequence, Iterable
 
 import numpy as np
 
+from fastestimator.dataset.dataset import DatasetSummary
 from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset
 
 
@@ -75,16 +76,16 @@ class SiameseDirDataset(LabeledDirDataset):
             data = {new_idx: self.data.pop(old_idx) for new_idx, old_idx in enumerate(split)}
             class_data = self._data_to_class(data, self.label_key)
             results.append(
-                SiameseDirDataset._skip_init(data,
-                                             self.mapping,
-                                             class_data=class_data,
-                                             percent_matching_data=self.percent_matching_data,
-                                             data_key_left=self.data_key_left,
-                                             data_key_right=self.data_key_right,
-                                             label_key=self.label_key))
+                self._skip_init(data,
+                                class_data=class_data,
+                                **{k: v
+                                   for k, v in self.__dict__.items() if k not in {'data', 'class_data'}}))
         # Re-key the remaining data to be contiguous from 0 to new max index
         self.data = {new_idx: v for new_idx, (old_idx, v) in enumerate(self.data.items())}
         self.class_data = self._data_to_class(self.data, self.label_key)
+        # The summary function is being cached by a base class, so reset our cache here
+        # noinspection PyUnresolvedReferences
+        self.summary.cache_clear()
         return results
 
     def __getitem__(self, index: int):
@@ -127,3 +128,9 @@ class SiameseDirDataset(LabeledDirDataset):
             index = np.random.choice(list(self.class_data[clazz]))
             l2.append(self.data[index][self.data_key_left])
         return l1, l2
+
+    def summary(self) -> DatasetSummary:
+        summary = super().summary()
+        # since class key is re-mapped, remove class key mapping to reduce confusion
+        summary.class_key_mapping = None
+        return summary

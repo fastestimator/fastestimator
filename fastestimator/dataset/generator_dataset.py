@@ -13,9 +13,10 @@
 # limitations under the License.
 # ==============================================================================
 import warnings
+from functools import lru_cache
 from typing import Any, Dict, Generator, Sequence, Iterable, List, Sized
 
-from fastestimator.dataset.dataset import FEDataset
+from fastestimator.dataset.dataset import FEDataset, DatasetSummary, KeySummary
 
 
 class GeneratorDataset(FEDataset):
@@ -23,6 +24,7 @@ class GeneratorDataset(FEDataset):
         self.generator = generator
         self.samples_per_epoch = samples_per_epoch
         next(self.generator)  # Can't send non-none values to a new generator, so need to run a 'warm-up' first
+        self.summary = lru_cache(maxsize=1)(self.summary)
 
     def __len__(self):
         return self.samples_per_epoch
@@ -42,3 +44,19 @@ class GeneratorDataset(FEDataset):
             results.append(GeneratorDataset(self.generator, size))
             self.samples_per_epoch -= size
         return results
+
+    def summary(self) -> DatasetSummary:
+        sample = self[0]
+        key_summary = {}
+        for key in sample.keys():
+            if hasattr(sample, "shape"):
+                # TODO - Check to see whether shape is ragged or not
+                shape = list(sample.shape)
+            else:
+                shape = []
+            if hasattr(sample, "dtype"):
+                dtype = str(sample.dtype)
+            else:
+                dtype = type(sample)
+            key_summary[key] = KeySummary(num_unique_values=None, shape=shape, dtype=dtype)
+        return DatasetSummary(num_instances=self.samples_per_epoch, keys=key_summary)
