@@ -51,7 +51,7 @@ def get_estimator():
         eval_data=get_tensorflow_dataset(x=np.expand_dims(x_eval[:5000], -1), y=y_eval[:5000], shuffle=False),
         test_data=get_tensorflow_dataset(x=np.expand_dims(x_eval[5000:], -1), y=y_eval[5000:], shuffle=False))
     # step 2
-    model = fe.build(model=LeNet(), optimizer="adam")
+    model = fe.build(model_fn=LeNet, optimizer_fn="adam")
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="x", outputs="y_pred"),
         CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),
