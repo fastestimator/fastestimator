@@ -13,16 +13,14 @@
 # limitations under the License.
 # ==============================================================================
 
-import tempfile
-
-import numpy as np
-import fastestimator as fe
 import tensorflow as tf
-from fastestimator.op.tensorop.model import ModelOp
-from fastestimator.trace.io import ModelSaver
-from fastestimator.pipeline import Pipeline
+
+import fastestimator as fe
+from fastestimator.dataset import breast_cancer
 from fastestimator.estimator import Estimator
-from fastestimator.op.tensorop.loss import MeanSquaredError
+from fastestimator.op.tensorop.loss import CrossEntropy
+from fastestimator.op.tensorop.model import ModelOp, UpdateOp
+from fastestimator.pipeline import Pipeline
 from fastestimator.trace.metric import Accuracy
 
 
@@ -35,35 +33,36 @@ def create_dnn():
     model.add(tf.keras.layers.Dropout(0.5))
     model.add(tf.keras.layers.Dense(8, activation="relu"))
     model.add(tf.keras.layers.Dropout(0.5))
-    model.add(tf.keras.layers.Dense(1, activation="linear"))
+    model.add(tf.keras.layers.Dense(1, activation="sigmoid"))
 
     return model
 
 
-def get_estimator(epochs=50, batch_size=32, steps_per_epoch=None, validation_steps=None, model_dir=tempfile.mkdtemp()):
+def get_estimator(batch_size=32):
     # step 1. prepare data
-    data = {"train": train_data, "eval": eval_data}
-    
-    pipeline = Pipeline(train_data=train_data,
-                        eval_data=eval_data,
-                        test_data=test_data,
-                        batch_size=batch_size)
+    train_data, eval_data = breast_cancer.load_data()
+    test_data = eval_data.split(0.5)
+
+    pipeline = Pipeline(train_data=train_data, eval_data=eval_data, test_data=test_data, batch_size=batch_size)
 
     # step 2. prepare model
-    model = fe.build(model=create_dnn, optimizer="adam")
+    model = fe.build(model_fn=create_dnn, optimizer_fn="adam")
     network = fe.Network(ops=[
-        ModelOp(inputs="x", model=model, outputs="y_pred"), MeanSquaredError(inputs=("y", "y_pred"), outputs="loss")
+        ModelOp(inputs="x", model=model, outputs="y_pred"),
+        CrossEntropy(inputs=("y_pred", "y"), outputs="loss"),
+        UpdateOp(model=model, loss_name="loss")
     ])
 
     # step 3.prepare estimator
     estimator = Estimator(pipeline=pipeline,
-                             network=network,
-                             epochs=2,
-                             log_steps=10,
-                             traces=Accuracy(true_key="y", pred_key="y_pred"))
+                          network=network,
+                          epochs=10,
+                          log_steps=10,
+                          traces=Accuracy(true_key="y", pred_key="y_pred"))
     return estimator
 
 
 if __name__ == "__main__":
     est = get_estimator()
     est.fit()
+    est.test()

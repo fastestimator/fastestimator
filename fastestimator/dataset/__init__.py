@@ -15,7 +15,7 @@
 # FEDataset and OpDataset intentionally not imported here to reduce user confusion with auto-complete
 from fastestimator.dataset.csv_dataset import CSVDataset
 from fastestimator.dataset.data import usps, montgomery, mnist, cifar10, nih_chestxray, horse2zebra, cub200, mendeley, \
-    svhn, mscoco, omniglot
+    svhn, mscoco, omniglot, breast_cancer
 from fastestimator.dataset.generator_dataset import GeneratorDataset
 from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset
 from fastestimator.dataset.numpy_dataset import NumpyDataset
