@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import pdb
 from typing import TypeVar
 
 import tensorflow as tf
@@ -46,8 +47,9 @@ def cross_entropy(y_pred: Tensor, y_true: Tensor, from_logits: bool = False, ave
         else:
             ce = tf.losses.binary_crossentropy(y_true=y_true, y_pred=y_pred, from_logits=from_logits)
     else:
+        pdb.set_trace()
         if from_logits:
-            ce = torch.nn.CrossEntropyLoss(reduction="none")(y_pred, y_true)
+            ce = torch.nn.CrossEntropyLoss(reduction="none")(y_pred, y_true.long())
         else:
             ce = torch.nn.NLLLoss(reduction="none")(torch.log(y_pred), y_true.long())
     if average_loss:

@@ -57,14 +57,18 @@ class Generator(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.fc1 = nn.Linear(7 * 7 * 256, bias=False)
-        self.bn1 = nn.BatchNorm1d(7 * 7 * 256)
+        self.bn1d = nn.BatchNorm1d(7 * 7 * 256)
         self.conv_tran1 = nn.ConvTranspose2d(256, 128, 5, bias=False)
-        self.bn2 = nn.BatchNorm2d(128)
-        self.conv_tran2 = nn.ConvTranspose2d(
-            128,
-            64,
-            5,
-            bias=False, )
+        self.bn2d1 = nn.BatchNorm2d(128)
+        self.conv_tran2 = nn.ConvTranspose2d(128, 64, 5, bias=False)
+        self.bn2d2 = nn.BatchNorm2d(64)
+        self.convtrans3 = nn.ConvTranspose2d(64, 1, 5, bias=False)
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.bn1(x)
+        x = fn.leaky_relu(x)
+        
 
 
 def generator():
