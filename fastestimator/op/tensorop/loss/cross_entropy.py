@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Callable, Dict, Iterable, List, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, TypeVar, Union
 
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.cross_entropy import cross_entropy
+from fastestimator.backend import binary_crossentropy, categorical_crossentropy, sparse_categorical_crossentropy
 from fastestimator.op.op import TensorOp
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
@@ -32,18 +32,36 @@ class CrossEntropy(TensorOp):
         mode: 'train', 'eval' or None
         from_logits: whether y_pred is logits (without softmax). Defaults to False.
         average_loss: whether to average the element-wise loss after the Loss Op
+        form: form of cross entropy, can be 'binary', 'categorical', 'sparse'. None will automatically infer type based
+              on tensor shape.
     """
     def __init__(self,
                  inputs: Union[None, str, Iterable[str], Callable] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
                  mode: Union[None, str, Iterable[str]] = None,
                  from_logits: bool = False,
-                 average_loss: bool = True):
+                 average_loss: bool = True,
+                 form: Optional[str] = None):
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.from_logits = from_logits
         self.average_loss = average_loss
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.form = form
+        self.cross_entropy_fn = {
+            "binary": binary_crossentropy,
+            "categorical": categorical_crossentropy,
+            "sparse": sparse_categorical_crossentropy
+        }
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
         y_pred, y_true = data
-        loss = cross_entropy(y_pred, y_true, from_logits=self.from_logits, average_loss=self.average_loss)
+        form = self.form
+        if form is None:
+            if len(y_pred.shape) == 2 and y_pred.shape[-1] > 1:
+                if len(y_true.shape) == 2 and y_true.shape[-1] > 1:
+                    form = "categorical"
+                else:
+                    form = "sparse"
+            else:
+                form = "binary"
+        loss = self.cross_entropy_fn[form](y_pred, y_true, from_logits=self.from_logits, average_loss=self.average_loss)
         return loss

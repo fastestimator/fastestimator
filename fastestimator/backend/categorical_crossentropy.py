@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import pdb
 from typing import TypeVar
 
 import tensorflow as tf
@@ -23,35 +22,35 @@ from fastestimator.backend.reduce_loss import reduce_loss
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
-def cross_entropy(y_pred: Tensor, y_true: Tensor, from_logits: bool = False, average_loss: bool = True) -> Tensor:
-    """calculate cross entropy for tensor inputs
+def categorical_crossentropy(y_pred: Tensor, y_true: Tensor, from_logits: bool = False,
+                             average_loss: bool = True) -> Tensor:
+    """calculate categorical crossentropy
 
     Args:
-        y_pred: prediction score for each class, in [Batch, C]
-        y_true: ground truth class label index, in [Batch]
-        from_logits: whether y_pred is from logits(without softmax). Defaults to False.
+        y_pred: prediction with shape: [Batch, C],  dtype: float32
+        y_true: encoded ground truth with shape [Batch, C], dtype: float32 or int
+        from_logits: whether y_pred is from logits, if yes, softmax will be applied to prediction. Defaults to False.
         average_loss: whether to average the element-wise loss
 
     Returns:
-        categorical cross entropy
+        Tensor: categorical cross entropy
     """
     assert type(y_pred) == type(y_true), "y_pred and y_true must be same tensor type"
     assert isinstance(y_pred, (tf.Tensor, torch.Tensor)), "only support tf.Tensor or torch.Tensor as y_pred"
     assert isinstance(y_true, (tf.Tensor, torch.Tensor)), "only support tf.Tensor or torch.Tensor as y_true"
     if isinstance(y_pred, tf.Tensor):
-        if y_pred._rank() > 1 and y_pred.shape[-1] > 1:
-            if y_true._rank() > 1 and y_true.shape[-1] > 1:
-                ce = tf.losses.categorical_crossentropy(y_true, y_pred, from_logits=from_logits)
-            else:
-                ce = tf.losses.sparse_categorical_crossentropy(y_true, y_pred, from_logits=from_logits)
-        else:
-            ce = tf.losses.binary_crossentropy(y_true=y_true, y_pred=y_pred, from_logits=from_logits)
+        ce = tf.losses.categorical_crossentropy(y_pred=y_pred, y_true=y_true, from_logits=from_logits)
     else:
-        pdb.set_trace()
-        if from_logits:
-            ce = torch.nn.CrossEntropyLoss(reduction="none")(y_pred, y_true.long())
-        else:
-            ce = torch.nn.NLLLoss(reduction="none")(torch.log(y_pred), y_true.long())
+        y_true = y_true.to(torch.float)
+        ce = _categorical_crossentropy_torch(y_pred=y_pred, y_true=y_true, from_logits=from_logits)
     if average_loss:
         ce = reduce_loss(ce)
+    return ce
+
+
+def _categorical_crossentropy_torch(y_pred: Tensor, y_true: Tensor, from_logits: bool) -> Tensor:
+    if from_logits:
+        ce = torch.sum(-y_true * torch.nn.LogSoftmax(dim=1)(y_pred), 1)
+    else:
+        ce = torch.sum(-y_true * torch.log(y_pred), 1)
     return ce

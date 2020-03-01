@@ -26,8 +26,8 @@ def reduce_loss(loss: Tensor) -> Tensor:
         if len(loss.shape) == 1:
             loss = tf.reduce_mean(loss)
     elif isinstance(loss, torch.Tensor):
-        assert loss.ndimension() < 2, "loss must be one-dimentional or scalar"
-        if loss.ndimension() == 1:
+        assert len(loss.shape) < 2, "loss must be one-dimentional or scalar"
+        if len(loss.shape) == 1:
             loss = torch.mean(loss)
     else:
         raise ValueError("loss must be either tf.Tensor or torch.Tensor")
