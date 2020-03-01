@@ -18,15 +18,16 @@ from typing import Dict, Iterable, List, Optional, Set, Union
 
 import tensorflow as tf
 from tensorflow.python.distribute.input_lib import DistributedDataset
+from torch.utils.data import DataLoader
 
 from fastestimator.backend import to_shape, to_tensor, to_type
 from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
 from fastestimator.pipeline import Pipeline
 from fastestimator.summary import System
-from fastestimator.trace import EvalEssential, Logger, ModelSaver, Trace, TrainEssential
+from fastestimator.trace import EvalEssential, Logger, Trace, TrainEssential
+from fastestimator.trace.io import ModelSaver
 from fastestimator.util import Data
 from fastestimator.util.util import Suppressor, draw, per_replica_to_global, to_list, to_set
-from torch.utils.data import DataLoader
 
 
 class Estimator:
