@@ -20,12 +20,12 @@ from typing import List, Optional, Set, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
+from torch.utils.data import DataLoader, Dataset
 
-from fastestimator.dataset.dataset import OpDataset
+from fastestimator.dataset.op_dataset import OpDataset
 from fastestimator.op import NumpyOp, get_current_ops
 from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
 from fastestimator.util.util import lcms, to_list
-from torch.utils.data import DataLoader, Dataset
 
 DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
 

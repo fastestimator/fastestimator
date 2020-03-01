@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import List, Iterable, Dict, Any, Sequence
+from typing import Dict
 
 import numpy as np
 
-from fastestimator.dataset.dataset import FEDataset
+from fastestimator.dataset.dataset import InMemoryDataset
 
 
-class NumpyDataset(FEDataset):
+class NumpyDataset(InMemoryDataset):
     def __init__(self, data: Dict[str, np.ndarray]):
         size = None
         for key, val in data.items():
@@ -30,27 +30,4 @@ class NumpyDataset(FEDataset):
                     size = val.shape[0]
         assert isinstance(size, int), \
             "Could not infer size of data. Please ensure you are passing numpy arrays in the data dictionary."
-        self.data = {i: {k: v[i] for k, v in data.items()} for i in range(size)}
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, index):
-        return self.data[index]
-
-    @classmethod
-    def _skip_init(cls, data: Dict[int, Dict[str, Any]], **kwargs) -> 'NumpyDataset':
-        obj = cls.__new__(cls)
-        obj.data = data
-        for k, v in kwargs.items():
-            obj.__setattr__(k, v)
-        return obj
-
-    def _do_split(self, splits: Sequence[Iterable[int]]) -> List['NumpyDataset']:
-        results = []
-        for split in splits:
-            data = {new_idx: self.data.pop(old_idx) for new_idx, old_idx in enumerate(split)}
-            results.append(NumpyDataset._skip_init(data))
-        # Re-key the remaining data to be contiguous from 0 to new max index
-        self.data = {new_idx: v for new_idx, (old_idx, v) in enumerate(self.data.items())}
-        return results
+        super().__init__({i: {k: v[i] for k, v in data.items()} for i in range(size)})

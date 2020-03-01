@@ -144,7 +144,7 @@ def load_data(root_dir: Optional[str] = None) -> Tuple[PickleDataset, PickleData
 
     if not os.path.exists(test_folder_path):
         # download
-        if os.path.exists(test_compressed_path):
+        if not os.path.exists(test_compressed_path):
             print("Downloading eval data to {}".format(root_dir))
             wget.download('http://ufldl.stanford.edu/housenumbers/test.tar.gz', root_dir, bar=bar_custom)
         # extract
