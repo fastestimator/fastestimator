@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
-from typing import List, Optional, Set, TypeVar, Union
+from typing import Set, Union
 
 import numpy as np
 from sklearn.metrics import f1_score
