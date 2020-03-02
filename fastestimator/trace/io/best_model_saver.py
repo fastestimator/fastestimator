@@ -58,5 +58,5 @@ class BestModelSaver(Trace):
     def on_epoch_end(self, data: Data):
         if self.save_dir and self.monitor_op(data[self.metric], self.best):
             self.best = data[self.metric]
-            model_name = "{}_epoch_{}_best_{}".format(self.model.model_name, self.system.epoch_idx, self.metric)
+            model_name = "{}_best_{}".format(self.model.model_name, self.metric)
             save_model(self.model, self.save_dir, model_name)

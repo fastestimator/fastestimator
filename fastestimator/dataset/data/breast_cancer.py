@@ -24,7 +24,7 @@ from fastestimator.dataset.numpy_dataset import NumpyDataset
 
 def load_data() -> Tuple[NumpyDataset, NumpyDataset]:
     (X, y) = load_breast_cancer(True)
-    x_train, x_eval, y_train, y_eval = train_test_split(X, y, test_size=0.2)
+    x_train, x_eval, y_train, y_eval = train_test_split(X, y, test_size=0.2, random_state=42)
     x_train, x_eval = np.float32(x_train), np.float32(x_eval)
     scaler = StandardScaler()
     x_train = scaler.fit_transform(x_train)

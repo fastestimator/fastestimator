@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 from collections import ChainMap
-from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, Set, Union
+from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Set, Union
 
 import tensorflow as tf
 
