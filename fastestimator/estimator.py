@@ -18,16 +18,16 @@ from typing import Dict, Iterable, List, Optional, Set, Union
 
 import tensorflow as tf
 from tensorflow.python.distribute.input_lib import DistributedDataset
-from torch.utils.data import DataLoader
 
 from fastestimator.backend import to_shape, to_tensor, to_type
 from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
 from fastestimator.pipeline import Pipeline
 from fastestimator.summary import System
 from fastestimator.trace import EvalEssential, Logger, Trace, TrainEssential
-from fastestimator.trace.io import ModelSaver
+from fastestimator.trace.io import BestModelSaver, ModelSaver
 from fastestimator.util import Data
 from fastestimator.util.util import Suppressor, draw, per_replica_to_global, to_list, to_set
+from torch.utils.data import DataLoader
 
 
 class Estimator:
@@ -166,7 +166,7 @@ class Estimator:
         no_save_warning = True
         for trace in self.traces:
             trace.system = self.system
-            if isinstance(trace, ModelSaver):
+            if isinstance(trace, (ModelSaver, BestModelSaver)):
                 no_save_warning = False
         if no_save_warning:
             print("FastEstimator-Warn: No ModelSaver Trace detected. Models will not be saved.")
