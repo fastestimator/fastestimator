@@ -16,8 +16,8 @@ from typing import Optional, Union
 
 import numpy as np
 import tensorflow as tf
-import torch
 
+import torch
 from fastestimator.backend.save_model import save_model
 from fastestimator.trace.trace import Trace
 from fastestimator.util import Data
@@ -37,6 +37,10 @@ class BestModelSaver(Trace):
                  save_dir: str,
                  metric: Optional[str] = None,
                  save_best_mode: str = "min"):
+        if not metric:
+            assert hasattr(model, "loss_name"), "cannot infer model loss name, please put the model to UpdateOp first"
+            assert len(model.loss_name) == 1, "the model has more than one losses, please provide the metric explicitly"
+            metric = next(iter(model.loss_name))
         super().__init__(mode="eval", inputs=metric)
         self.model = model
         self.save_dir = save_dir
@@ -51,13 +55,8 @@ class BestModelSaver(Trace):
         else:
             raise ValueError("save_best_mode must be either 'min' or 'max'")
 
-    def on_begin(self, data: Data):
-        if not self.metric:
-            assert hasattr(self.model, "loss_name"), "model has no loss specified in UpdateOp of Network"
-            self.metric = self.model.loss_name
-
     def on_epoch_end(self, data: Data):
         if self.save_dir and self.monitor_op(data[self.metric], self.best):
             self.best = data[self.metric]
-            model_name = "epoch_{}_best_{}".format(self.system.epoch_idx, self.metric)
+            model_name = "{}_epoch_{}_best_{}".format(self.model.model_name, self.system.epoch_idx, self.metric)
             save_model(self.model, self.save_dir, model_name)

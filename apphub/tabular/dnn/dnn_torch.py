@@ -14,11 +14,10 @@
 # ==============================================================================
 import tempfile
 
+import fastestimator as fe
 import torch
 import torch.nn as nn
 import torch.nn.functional as fn
-
-import fastestimator as fe
 from fastestimator.dataset import breast_cancer
 from fastestimator.estimator import Estimator
 from fastestimator.op.tensorop.loss import CrossEntropy
@@ -50,7 +49,7 @@ class DNN(torch.nn.Module):
         x = fn.relu(x)
         x = self.dp3(x)
         x = self.fc4(x)
-        x = fn.sigmoid(x)
+        x = torch.sigmoid(x)
         return x
 
 

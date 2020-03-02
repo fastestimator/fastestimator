@@ -15,16 +15,16 @@
 from typing import Union
 
 import tensorflow as tf
+
 import torch
 
 
 def load_model(model: Union[tf.keras.Model, torch.nn.Module], weights_path: str):
-    """Save tensorflow or pytorch model weights to a specific directory
+    """Load weights to tensorflow or pytorch model instance
 
     Args:
         model : model instance
-        save_dir :folder path to save model
-        model_name : name of the model without extension
+        weights_path : path of the weights file
     """
     assert isinstance(model, (tf.keras.Model, torch.nn.Module)), "unsupported model instance type"
 

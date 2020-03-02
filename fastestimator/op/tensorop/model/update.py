@@ -15,9 +15,9 @@
 from typing import Any, Dict, Iterable, List, TypeVar, Union
 
 import tensorflow as tf
-import torch
 from tensorflow.python.framework import ops as tfops
 
+import torch
 from fastestimator.backend.update_model import update_model
 from fastestimator.op import TensorOp
 
@@ -38,7 +38,10 @@ class UpdateOp(TensorOp):
                  mode: Union[None, str, Iterable[str]] = "train"):
         super().__init__(inputs=loss_name, outputs=None, mode=mode)
         self.model = model
-        self.loss_name = loss_name
+        if not hasattr(self.model, "loss_name"):
+            self.model.loss_name = {loss_name}
+        else:
+            self.model.loss_name.add(loss_name)
 
     def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]):
         if state["warmup"]:

@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union
+from typing import Optional, Union
 
 import tensorflow as tf
-import torch
 
+import torch
 from fastestimator.backend.save_model import save_model
 from fastestimator.trace.trace import Trace
 from fastestimator.util import Data
@@ -38,5 +38,5 @@ class ModelSaver(Trace):
 
     def on_epoch_end(self, data: Data):
         if self.save_dir and self.system.epoch_idx % self.frequency == 0:
-            model_name = "epoch_{}".format(self.system.epoch_idx)
+            model_name = "{}_epoch_{}".format(self.model.model_name, self.system.epoch_idx)
             save_model(self.model, self.save_dir, model_name)
