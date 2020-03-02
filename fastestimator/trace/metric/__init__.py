@@ -17,3 +17,4 @@ from fastestimator.trace.metric.recall import Recall
 from fastestimator.trace.metric.precision import Precision
 from fastestimator.trace.metric.confusion_matrix import ConfusionMatrix
 from fastestimator.trace.metric.mcc import MCC
+from fastestimator.trace.metric.f1_score import F1Score

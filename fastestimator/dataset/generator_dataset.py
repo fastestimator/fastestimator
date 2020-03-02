@@ -13,9 +13,11 @@
 # limitations under the License.
 # ==============================================================================
 import warnings
+from functools import lru_cache
 from typing import Any, Dict, Generator, Sequence, Iterable, List, Sized
 
-from fastestimator.dataset.dataset import FEDataset
+from fastestimator.dataset.dataset import FEDataset, DatasetSummary, KeySummary
+from fastestimator.util.util import get_type, get_shape
 
 
 class GeneratorDataset(FEDataset):
@@ -23,6 +25,7 @@ class GeneratorDataset(FEDataset):
         self.generator = generator
         self.samples_per_epoch = samples_per_epoch
         next(self.generator)  # Can't send non-none values to a new generator, so need to run a 'warm-up' first
+        self.summary = lru_cache(maxsize=1)(self.summary)
 
     def __len__(self):
         return self.samples_per_epoch
@@ -42,3 +45,14 @@ class GeneratorDataset(FEDataset):
             results.append(GeneratorDataset(self.generator, size))
             self.samples_per_epoch -= size
         return results
+
+    def summary(self) -> DatasetSummary:
+        sample = self[0]
+        key_summary = {}
+        for key in sample.keys():
+            val = sample[key]
+            # TODO - if val is empty list, should find a sample which has entries
+            shape = get_shape(val)
+            dtype = get_type(val)
+            key_summary[key] = KeySummary(num_unique_values=None, shape=shape, dtype=dtype)
+        return DatasetSummary(num_instances=self.samples_per_epoch, keys=key_summary)

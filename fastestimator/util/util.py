@@ -22,7 +22,7 @@ from ast import literal_eval
 from contextlib import ContextDecorator
 from functools import reduce
 from math import gcd
-from typing import Any, List, Optional, Set
+from typing import Any, List, Optional, Set, Tuple
 
 import tensorflow as tf
 from pyfiglet import Figlet
@@ -179,6 +179,24 @@ def strip_suffix(target: Optional[str], suffix: Optional[str]) -> Optional[str]:
     return target
 
 
+def strip_prefix(target: Optional[str], prefix: Optional[str]) -> Optional[str]:
+    """Remove the given preffix from the target if it is present there
+
+    Args:
+        target: A string to be formatted
+        prefix: A string to be removed from 'target'
+
+    Returns:
+        The formatted version of 'target'
+    """
+    if prefix is None or target is None:
+        return target
+    s_len = len(prefix)
+    if target[:s_len] == prefix:
+        return target[s_len:]
+    return target
+
+
 def per_replica_to_global(data: Any) -> Any:
     """Combine data from "per-replica" values.
     For multi-GPU training, data are distributed using `tf.distribute.Strategy.experimental_distribute_dataset`. This
@@ -204,3 +222,31 @@ def per_replica_to_global(data: Any) -> Any:
         return tuple([per_replica_to_global(val) for val in data])
     if isinstance(data, set):
         return set([per_replica_to_global(val) for val in data])
+
+
+def get_type(obj: Any) -> str:
+    if hasattr(obj, "dtype"):
+        result = str(obj.dtype)
+    elif isinstance(obj, (List, Tuple)):
+        if len(obj) > 0:
+            result = "List[{}]".format(get_type(obj[0]))
+        else:
+            result = strip_suffix(strip_prefix(str(type(obj)), "<class '"), "'>")
+    else:
+        result = strip_suffix(strip_prefix(str(type(obj)), "<class '"), "'>")
+    return result
+
+
+def get_shape(obj: Any) -> List[Optional[int]]:
+    if hasattr(obj, "shape"):
+        result = list(obj.shape)
+    elif isinstance(obj, (List, Tuple)):
+        result = [None]
+        if len(obj) > 0:
+            result.extend(get_shape(obj[0]))
+            # Converting shape inside ragged collection to None since likely changes between samples
+            for idx in range(len(result)):
+                result[idx] = None
+    else:
+        result = []
+    return result

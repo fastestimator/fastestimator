@@ -14,8 +14,9 @@
 # ==============================================================================
 import os
 import zipfile
+from copy import deepcopy
 from pathlib import Path
-from typing import Any, Optional, Dict, Sequence, Iterable, List, Tuple
+from typing import Any, Optional, Dict, Tuple
 
 import wget
 from pycocotools.coco import COCO
@@ -35,41 +36,47 @@ class MSCOCODataset(UnlabeledDirDataset):
                  image_dir: str,
                  annotation_file: str,
                  caption_file: str,
-                 include_masks: bool = True,
+                 include_bboxes: bool = True,
+                 include_masks: bool = False,
                  include_captions: bool = False):
         super().__init__(root_dir=image_dir, data_key="image", recursive_search=False)
+        self.include_bboxes = include_bboxes
+        self.include_masks = include_masks
         with Suppressor():
-            self.instances = COCO(annotation_file) if include_masks else None
+            self.instances = COCO(annotation_file)
             self.captions = COCO(caption_file) if include_captions else None
 
     def __getitem__(self, index: int):
-        response = super().__getitem__(index)
+        response = deepcopy(super().__getitem__(index))
         image = response["image"]
         image_id = int(os.path.splitext(os.path.basename(image))[0])
-        if self.instances:
-            self._populate_instance_data(response, image_id)
+        self._populate_instance_data(response, image_id)
         if self.captions:
             self._populate_caption_data(response, image_id)
         return response
 
     def _populate_instance_data(self, data: Dict[str, Any], image_id: int):
-        data["x1"] = []
-        data["y1"] = []
-        data["width"] = []
-        data["height"] = []
         data["obj_label"] = []
-        data["obj_mask"] = []
+        if self.include_bboxes:
+            data["x1"] = []
+            data["y1"] = []
+            data["width"] = []
+            data["height"] = []
+        if self.include_masks:
+            data["obj_mask"] = []
         annotation_ids = self.instances.getAnnIds(imgIds=image_id, iscrowd=False)
         data["num_obj"] = len(annotation_ids)
         if annotation_ids:
             annotations = self.instances.loadAnns(annotation_ids)
             for annotation in annotations:
-                data["x1"].append(annotation['bbox'][0])
-                data["y1"].append(annotation['bbox'][1])
-                data["width"].append(annotation['bbox'][2])
-                data["height"].append(annotation['bbox'][3])
                 data["obj_label"].append(annotation['category_id'])
-                data["obj_mask"].append(self.instances.annToMask(annotation))
+                if self.include_bboxes:
+                    data["x1"].append(annotation['bbox'][0])
+                    data["y1"].append(annotation['bbox'][1])
+                    data["width"].append(annotation['bbox'][2])
+                    data["height"].append(annotation['bbox'][3])
+                if self.include_masks:
+                    data["obj_mask"].append(self.instances.annToMask(annotation))
 
     def _populate_caption_data(self, data: Dict[str, Any], image_id: int):
         data["caption"] = []
@@ -79,25 +86,19 @@ class MSCOCODataset(UnlabeledDirDataset):
             for annotation in annotations:
                 data["caption"].append(annotation['caption'])
 
-    def _do_split(self, splits: Sequence[Iterable[int]]) -> List['MSCOCODataset']:
-        results = []
-        for split in splits:
-            data = {new_idx: self.data.pop(old_idx) for new_idx, old_idx in enumerate(split)}
-            results.append(MSCOCODataset._skip_init(data, instances=self.instances, captions=self.captions))
-        # Re-key the remaining data to be contiguous from 0 to new max index
-        self.data = {new_idx: v for new_idx, (old_idx, v) in enumerate(self.data.items())}
-        return results
 
-
-def load_data(root_dir: Optional[str] = None, load_objects: bool = True,
+def load_data(root_dir: Optional[str] = None,
+              load_bboxes: bool = True,
+              load_masks: bool = False,
               load_captions: bool = False) -> Tuple[MSCOCODataset, MSCOCODataset]:
     """Download the COCO dataset to local storage, if not already downloaded.
 
     Args:
         root_dir: The path to store the COCO data. When `path` is not provided, will save at
             `fastestimator_data` under home directory.
-        load_objects: whether to get object-related data, defaults to True.
-        load_captions: whether to get caption-related data, defaults to False.
+        load_bboxes: whether to get bbox-related data
+        load_masks: whether to serve mask data (in the form of an array of 1-hot images)
+        load_captions: whether to get caption-related data
 
     Returns:
         TrainData, EvalData
@@ -138,9 +139,11 @@ def load_data(root_dir: Optional[str] = None, load_objects: bool = True,
     return MSCOCODataset(train_data,
                          train_annotation,
                          train_captions,
-                         include_masks=load_objects,
+                         include_bboxes=load_bboxes,
+                         include_masks=load_masks,
                          include_captions=load_captions), MSCOCODataset(eval_data,
                                                                         eval_annotation,
                                                                         eval_captions,
-                                                                        include_masks=load_objects,
+                                                                        include_bboxes=load_bboxes,
+                                                                        include_masks=load_masks,
                                                                         include_captions=load_captions)
