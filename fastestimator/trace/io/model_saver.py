@@ -37,6 +37,7 @@ class ModelSaver(Trace):
         self.frequency = frequency
 
     def on_epoch_end(self, data: Data):
+        #No model will be saved when save_dir is None, which makes smoke test easier.
         if self.save_dir and self.system.epoch_idx % self.frequency == 0:
             model_name = "{}_epoch_{}".format(self.model.model_name, self.system.epoch_idx)
             save_model(self.model, self.save_dir, model_name)

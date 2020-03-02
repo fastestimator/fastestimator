@@ -56,6 +56,7 @@ class BestModelSaver(Trace):
             raise ValueError("save_best_mode must be either 'min' or 'max'")
 
     def on_epoch_end(self, data: Data):
+        #No model will be saved when save_dir is None, which makes smoke test easier.
         if self.save_dir and self.monitor_op(data[self.metric], self.best):
             self.best = data[self.metric]
             model_name = "{}_best_{}".format(self.model.model_name, self.metric)
