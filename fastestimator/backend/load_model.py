@@ -12,25 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Optional, Union
+from typing import Union
 
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.reduce_loss import reduce_loss
 
+def load_model(model: Union[tf.keras.Model, torch.nn.Module], weights_path: str):
+    """Save tensorflow or pytorch model weights to a specific directory
 
-def update_model(model: Union[tf.keras.Model, torch.nn.Module],
-                 loss: Union[tf.Tensor, torch.Tensor],
-                 tape: Optional[tf.GradientTape] = None):
-    loss = reduce_loss(loss)
+    Args:
+        model : model instance
+        save_dir :folder path to save model
+        model_name : name of the model without extension
+    """
+    assert isinstance(model, (tf.keras.Model, torch.nn.Module)), "unsupported model instance type"
+
     if isinstance(model, tf.keras.Model):
-        with tape.stop_recording():
-            gradients = tape.gradient(loss, model.trainable_variables)
-            model.current_optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-    elif isinstance(model, torch.nn.Module):
-        loss.backward(retain_graph=True)
-        model.current_optimizer.step()
-        model.current_optimizer.zero_grad()
+        model.load_weights(weights_path)
     else:
-        raise ValueError("Unrecognized model instance {}".format(type(model)))
+        model.load_state_dict(torch.load(weights_path))
+    print("Loaded model weights from {}".format(weights_path))

@@ -13,6 +13,8 @@
 # limitations under the License.
 # ==============================================================================
 """DCGAN example using MNIST data set."""
+import tempfile
+
 import tensorflow as tf
 from tensorflow.python.keras import layers
 
@@ -22,6 +24,7 @@ from fastestimator.dataset import mnist
 from fastestimator.op import TensorOp
 from fastestimator.op.numpyop import ExpandDims, Normalize
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
+from fastestimator.trace.io import ModelSaver
 
 
 class GLoss(TensorOp):
@@ -67,7 +70,7 @@ def discriminator():
     return model
 
 
-def get_estimator(batch_size=256, epochs=50):
+def get_estimator(batch_size=256, epochs=50, save_dir=tempfile.mkdtemp()):
     train_data, _ = mnist.load_data()
     pipeline = fe.Pipeline(
         train_data=train_data,
@@ -87,7 +90,10 @@ def get_estimator(batch_size=256, epochs=50):
         DLoss(inputs=("true_score", "fake_score"), outputs="dloss"),
         UpdateOp(model=disc_model, loss_name="dloss")
     ])
-    estimator = fe.Estimator(pipeline=pipeline, network=network, epochs=epochs)
+    estimator = fe.Estimator(pipeline=pipeline,
+                             network=network,
+                             epochs=epochs,
+                             traces=ModelSaver(model=gen_model, save_dir=save_dir, frequency=5))
     return estimator
 
 

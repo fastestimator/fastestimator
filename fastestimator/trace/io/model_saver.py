@@ -40,4 +40,3 @@ class ModelSaver(Trace):
         if self.save_dir and self.system.epoch_idx % self.frequency == 0:
             model_name = "epoch_{}".format(self.system.epoch_idx)
             save_model(self.model, self.save_dir, model_name)
-            print("FastEstimator-ModelSaver: Saving model to {}".format(self.save_dir))

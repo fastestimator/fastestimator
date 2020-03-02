@@ -31,8 +31,9 @@ def save_model(model: Union[tf.keras.Model, torch.nn.Module], save_dir: str, mod
     save_dir = os.path.normpath(save_dir)
     os.makedirs(save_dir, exist_ok=True)
     if isinstance(model, tf.keras.Model):
-        model.save_weights(os.path.join(save_dir, "{}.h5".format(model_name)))
-
+        model_path = os.path.join(save_dir, "{}.h5".format(model_name))
+        model.save_weights(model_path)
     else:
-        torch.save(model.state_dict(), os.path.join(save_dir, "{}.pt".format(model_name)))
-        print("saved model to {}".format(os.path.join(save_dir, "{}.h5".format(model_name))))
+        model_path = os.path.join(save_dir, "{}.pt".format(model_name))
+        torch.save(model.state_dict(), model_path)
+    print("Saved model to {}".format(model_path))
