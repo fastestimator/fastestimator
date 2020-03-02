@@ -12,5 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.trace.io.model_saver import ModelSaver
+from fastestimator.trace.io.best_model_saver import BestModelSaver
 from fastestimator.trace.io.csv_logger import CSVLogger
+from fastestimator.trace.io.model_saver import ModelSaver

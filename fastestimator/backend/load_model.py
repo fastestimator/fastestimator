@@ -12,23 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import TypeVar
+from typing import Union
 
 import tensorflow as tf
+
 import torch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
+def load_model(model: Union[tf.keras.Model, torch.nn.Module], weights_path: str):
+    """Load weights to tensorflow or pytorch model instance
 
-def reduce_loss(loss: Tensor) -> Tensor:
-    if isinstance(loss, tf.Tensor):
-        assert len(loss.shape) < 2, "loss must be one-dimentional or scalar"
-        if len(loss.shape) == 1:
-            loss = tf.reduce_mean(loss)
-    elif isinstance(loss, torch.Tensor):
-        assert len(loss.shape) < 2, "loss must be one-dimentional or scalar"
-        if len(loss.shape) == 1:
-            loss = torch.mean(loss)
+    Args:
+        model : model instance
+        weights_path : path of the weights file
+    """
+    assert isinstance(model, (tf.keras.Model, torch.nn.Module)), "unsupported model instance type"
+
+    if isinstance(model, tf.keras.Model):
+        model.load_weights(weights_path)
     else:
-        raise ValueError("loss must be either tf.Tensor or torch.Tensor")
-    return loss
+        model.load_state_dict(torch.load(weights_path))
+    print("Loaded model weights from {}".format(weights_path))

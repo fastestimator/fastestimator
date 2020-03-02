@@ -12,11 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.backend.cross_entropy import cross_entropy
+from fastestimator.backend.binary_crossentropy import binary_crossentropy
+from fastestimator.backend.categorical_crossentropy import categorical_crossentropy
 from fastestimator.backend.feed_forward import feed_forward
+from fastestimator.backend.load_model import load_model
 from fastestimator.backend.reduce_loss import reduce_loss
+from fastestimator.backend.save_model import save_model
+from fastestimator.backend.sparse_categorical_crossentropy import sparse_categorical_crossentropy
 from fastestimator.backend.to_number import to_number
+from fastestimator.backend.to_shape import to_shape
 from fastestimator.backend.to_tensor import to_tensor
 from fastestimator.backend.to_type import to_type
-from fastestimator.backend.to_shape import to_shape
 from fastestimator.backend.update_model import update_model

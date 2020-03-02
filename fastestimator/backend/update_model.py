@@ -29,7 +29,7 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
             gradients = tape.gradient(loss, model.trainable_variables)
             model.current_optimizer.apply_gradients(zip(gradients, model.trainable_variables))
     elif isinstance(model, torch.nn.Module):
-        loss.backward()
+        loss.backward(retain_graph=True)
         model.current_optimizer.step()
         model.current_optimizer.zero_grad()
     else:

@@ -26,13 +26,13 @@ def to_tensor(data: Any, target_type: str) -> Any:
 
     Args:
         data: source data
-        target_type: target data type, can be either "tensorflow" or "pytorch"
+        target_type: target data type, can be either "tf" or "torch"
 
     Returns:
         data: target data
     """
-    target_instance = {"tensorflow": tf.Tensor, "torch": torch.Tensor}
-    conversion_function = {"tensorflow": tf.convert_to_tensor, "torch": torch.from_numpy}
+    target_instance = {"tf": tf.Tensor, "torch": torch.Tensor}
+    conversion_function = {"tf": tf.convert_to_tensor, "torch": torch.from_numpy}
     if isinstance(data, target_instance[target_type]):
         return data
     elif isinstance(data, dict):

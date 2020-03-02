@@ -16,8 +16,9 @@ from collections import ChainMap
 from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Set, Union
 
 import tensorflow as tf
-import torch
 
+import torch
+from fastestimator.backend import load_model
 from fastestimator.op import TensorOp, get_current_ops, get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
@@ -152,17 +153,17 @@ def Network(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> BaseNetwork:
     framework = set()
     for model in models:
         if isinstance(model, tf.keras.Model):
-            framework.add("tensorflow")
+            framework.add("tf")
         elif isinstance(model, torch.nn.Module):
-            framework.add("pytorch")
+            framework.add("torch")
         else:
             framework.add("unknown")
     assert len(framework) == 1, "please make sure either tensorflow or torch model is used in network"
 
     framework = framework.pop()
-    if framework == "tensorflow":
+    if framework == "tf":
         network = TFNetwork(ops)
-    elif framework == "pytorch":
+    elif framework == "torch":
         tf.distribute.experimental_set_strategy(None)
         network = TorchNetwork(ops)
     else:
@@ -249,7 +250,9 @@ class TFNetwork(BaseNetwork):
 
 
 def build(model_fn: Callable,
-          optimizer_fn: Union[str, Scheduler, Callable, List[str], List[Callable], List[Scheduler], None]
+          optimizer_fn: Union[str, Scheduler, Callable, List[str], List[Callable], List[Scheduler], None],
+          weights_path: Union[str, None, List[Union[str, None]]] = None,
+          model_names: Union[str, List[str], None] = None
           ) -> Union[tf.keras.Model, torch.nn.Module, List[tf.keras.Model], List[torch.nn.Module]]:
     """Build model instances and associate them with optimizers
     Args:
@@ -257,25 +260,44 @@ def build(model_fn: Callable,
         optimizer_fn: optimizer string/definition or list of optimizer instances/strings. For example:
                     tensorflow user can do optimizer_fn = lambda: tf.optimizers.Adam(lr=0.1),
                     pytorch user can do  optimizer_fn = lambda x: torch.optim.Adam(params=x, lr=0.1)
+        model_names: names of the model that will be used for logging purpose. If None, name will be assigned.
+        weights_path: weights path to load from. Defaults None.
     Returns:
         models: model(s) built by FastEstimator
     """
-    models = to_list(model_fn())
-    optimizer_fn = to_list(optimizer_fn)
-    assert len(models) == len(optimizer_fn)
-    for idx, (model, optimizer_def) in enumerate(zip(models, optimizer_fn)):
-        models[idx] = _fe_compile(model, optimizer_def)
+    if not hasattr(build, "count"):
+        build.count = 0
+
+    def _generate_model_names(num_names):
+        names = ["model" if i + build.count == 0 else "model{}".format(i + build.count) for i in range(num_names)]
+        build.count += num_names
+        return names
+
+    models, optimizer_fn = to_list(model_fn()), to_list(optimizer_fn)
+    if not model_names:
+        model_names = _generate_model_names(len(models))
+    model_names = to_list(model_names)
+    if weights_path:
+        weights_path = to_list(weights_path)
+    else:
+        weights_path = [None] * len(models)
+    assert len(models) == len(optimizer_fn) == len(weights_path) == len(model_names), \
+        "Found inconsistency in number of models, optimizers, model_names or weights"
+    for idx, (model, optimizer_def, weight, name) in enumerate(zip(models, optimizer_fn, weights_path, model_names)):
+        models[idx] = _fe_compile(model, optimizer_def, weight, name)
     if len(models) == 1:
         models = models[0]
     return models
 
 
 def _fe_compile(model: Union[tf.keras.Model, torch.nn.Module],
-                optimizer_fn: Union[str, Scheduler, Callable]) -> Union[tf.keras.Model, torch.nn.Module]:
+                optimizer_fn: Union[str, Scheduler, Callable],
+                weight: Union[str, None],
+                name: str) -> Union[tf.keras.Model, torch.nn.Module]:
     if isinstance(model, tf.keras.Model):
-        framework = "tensorflow"
+        framework = "tf"
     elif isinstance(model, torch.nn.Module):
-        framework = "pytorch"
+        framework = "torch"
     else:
         raise ValueError("unrecognized model format: {}".format(type(model)))
     if isinstance(optimizer_fn, EpochScheduler):
@@ -286,7 +308,10 @@ def _fe_compile(model: Union[tf.keras.Model, torch.nn.Module],
             optimizer_fn.repeat_list[idx] = _build_optimizer(optimizer_def, model, framework)
     else:
         optimizer_fn = _build_optimizer(optimizer_fn, model, framework)
+    if weight:
+        load_model(model, weight)
     model.optimizer = optimizer_fn
+    model.model_name = name
     model.fe_compiled = True
     return model
 
@@ -316,7 +341,7 @@ def _optimizer_fn_from_string(name: str, framework: str) -> Callable:
         'rmsprop': lambda x: torch.optim.RMSprop(params=x),
         'sgd': lambda x: torch.optim.SGD(params=x, lr=0.01)
     }
-    if framework == "tensorflow":
+    if framework == "tf":
         optimizer_fn = tf_optimizer_fn[name]
     else:
         optimizer_fn = pytorch_optimizer_fn[name]
@@ -327,7 +352,7 @@ def _optimizer_fn_to_optimizer(optimizer_fn: Callable, model: Union[tf.keras.Mod
                                framework: str) -> Union[tf.optimizers.Optimizer, torch.optim.Optimizer]:
     optimizer = None
     if optimizer_fn:
-        if framework == "tensorflow":
+        if framework == "tf":
             optimizer = optimizer_fn()
             assert isinstance(optimizer, tf.optimizers.Optimizer)
         else:

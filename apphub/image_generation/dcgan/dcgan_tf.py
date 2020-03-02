@@ -13,27 +13,30 @@
 # limitations under the License.
 # ==============================================================================
 """DCGAN example using MNIST data set."""
+import tempfile
+
 import tensorflow as tf
 from tensorflow.python.keras import layers
 
 import fastestimator as fe
-from fastestimator.backend import cross_entropy
+from fastestimator.backend import binary_crossentropy
 from fastestimator.dataset import mnist
 from fastestimator.op import TensorOp
 from fastestimator.op.numpyop import ExpandDims, Normalize
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
+from fastestimator.trace.io import ModelSaver
 
 
 class GLoss(TensorOp):
     def forward(self, data, state):
-        return cross_entropy(y_pred=data, y_true=tf.ones_like(data), from_logits=True)
+        return binary_crossentropy(y_pred=data, y_true=tf.ones_like(data), from_logits=True)
 
 
 class DLoss(TensorOp):
     def forward(self, data, state):
         true_score, fake_score = data
-        real_loss = cross_entropy(y_pred=true_score, y_true=tf.ones_like(true_score), from_logits=True)
-        fake_loss = cross_entropy(y_pred=fake_score, y_true=tf.zeros_like(fake_score), from_logits=True)
+        real_loss = binary_crossentropy(y_pred=true_score, y_true=tf.ones_like(true_score), from_logits=True)
+        fake_loss = binary_crossentropy(y_pred=fake_score, y_true=tf.zeros_like(fake_score), from_logits=True)
         total_loss = real_loss + fake_loss
         return total_loss
 
@@ -67,7 +70,7 @@ def discriminator():
     return model
 
 
-def get_estimator(batch_size=256, epochs=50):
+def get_estimator(batch_size=256, epochs=50, save_dir=tempfile.mkdtemp()):
     train_data, _ = mnist.load_data()
     pipeline = fe.Pipeline(
         train_data=train_data,
@@ -87,7 +90,10 @@ def get_estimator(batch_size=256, epochs=50):
         DLoss(inputs=("true_score", "fake_score"), outputs="dloss"),
         UpdateOp(model=disc_model, loss_name="dloss")
     ])
-    estimator = fe.Estimator(pipeline=pipeline, network=network, epochs=epochs)
+    estimator = fe.Estimator(pipeline=pipeline,
+                             network=network,
+                             epochs=epochs,
+                             traces=ModelSaver(model=gen_model, save_dir=save_dir, frequency=5))
     return estimator
 
 

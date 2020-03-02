@@ -12,6 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.trace.trace import Trace, TrainEssential, EvalEssential, Logger
-from fastestimator.trace.io import ModelSaver, CSVLogger
-from fastestimator.trace.metric import Accuracy, MCC, Precision, Recall, ConfusionMatrix, F1Score
+from fastestimator.trace.trace import EvalEssential, Logger, Trace, TrainEssential
