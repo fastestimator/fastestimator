@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""This example showcase FastEstimator usage for tensorflow users. In this file, we use tf.dataset as data input.
-"""
 import tempfile
 
 import fastestimator as fe
