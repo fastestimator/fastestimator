@@ -25,7 +25,12 @@ from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
 
 
-def get_estimator(batch_size=32, save_dir=tempfile.mkdtemp()):
+def get_estimator(
+    epochs=2,
+    batch_size=32,
+    max_steps_per_epoch=None,
+    save_dir=tempfile.mkdtemp(),
+):
     # step 1
     train_data, eval_data = mnist.load_data()
     test_data = eval_data.split(0.5)
@@ -46,7 +51,11 @@ def get_estimator(batch_size=32, save_dir=tempfile.mkdtemp()):
         Accuracy(true_key="y", pred_key="y_pred"),
         BestModelSaver(model=model, save_dir=save_dir, metric="accuracy", save_best_mode="max")
     ]
-    estimator = fe.Estimator(pipeline=pipeline, network=network, epochs=2, traces=traces)
+    estimator = fe.Estimator(pipeline=pipeline,
+                             network=network,
+                             epochs=epochs,
+                             traces=traces,
+                             max_steps_per_epoch=max_steps_per_epoch)
     return estimator
 
 

@@ -70,7 +70,7 @@ def discriminator():
     return model
 
 
-def get_estimator(batch_size=256, epochs=50, save_dir=tempfile.mkdtemp()):
+def get_estimator(epochs=50, batch_size=256, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
     train_data, _ = mnist.load_data()
     pipeline = fe.Pipeline(
         train_data=train_data,
@@ -93,7 +93,8 @@ def get_estimator(batch_size=256, epochs=50, save_dir=tempfile.mkdtemp()):
     estimator = fe.Estimator(pipeline=pipeline,
                              network=network,
                              epochs=epochs,
-                             traces=ModelSaver(model=gen_model, save_dir=save_dir, frequency=5))
+                             traces=ModelSaver(model=gen_model, save_dir=save_dir, frequency=5),
+                             max_steps_per_epoch=max_steps_per_epoch)
     return estimator
 
 
