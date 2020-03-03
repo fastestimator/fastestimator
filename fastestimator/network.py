@@ -164,7 +164,6 @@ def Network(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> BaseNetwork:
     if framework == "tf":
         network = TFNetwork(ops)
     elif framework == "torch":
-        tf.distribute.experimental_set_strategy(None)
         network = TorchNetwork(ops)
     else:
         raise ValueError("Unkown model type")
@@ -274,17 +273,32 @@ def build(model_fn: Callable,
         return names
 
     models, optimizer_fn = to_list(model_fn()), to_list(optimizer_fn)
+    # check framework
+    if isinstance(models[0], tf.keras.Model):
+        framework = "tf"
+    elif isinstance(models[0], torch.nn.Module):
+        framework = "torch"
+    else:
+        raise ValueError("unrecognized model format: {}".format(type(models[0])))
+    # multi-gpu handling
+    if framework == "tf" and torch.cuda.device_count() > 1 and not isinstance(tf.distribute.get_strategy(),
+                                                                              tf.distribute.MirroredStrategy):
+        tf.distribute.experimental_set_strategy(tf.distribute.MirroredStrategy())
+        models = to_list(model_fn())
+    # generate names
     if not model_names:
         model_names = _generate_model_names(len(models))
     model_names = to_list(model_names)
+    # load weights
     if weights_path:
         weights_path = to_list(weights_path)
     else:
         weights_path = [None] * len(models)
     assert len(models) == len(optimizer_fn) == len(weights_path) == len(model_names), \
         "Found inconsistency in number of models, optimizers, model_names or weights"
+    #create optimizer
     for idx, (model, optimizer_def, weight, name) in enumerate(zip(models, optimizer_fn, weights_path, model_names)):
-        models[idx] = _fe_compile(model, optimizer_def, weight, name)
+        models[idx] = _fe_compile(model, optimizer_def, weight, name, framework)
     if len(models) == 1:
         models = models[0]
     return models
@@ -293,13 +307,9 @@ def build(model_fn: Callable,
 def _fe_compile(model: Union[tf.keras.Model, torch.nn.Module],
                 optimizer_fn: Union[str, Scheduler, Callable],
                 weight: Union[str, None],
-                name: str) -> Union[tf.keras.Model, torch.nn.Module]:
-    if isinstance(model, tf.keras.Model):
-        framework = "tf"
-    elif isinstance(model, torch.nn.Module):
-        framework = "torch"
-    else:
-        raise ValueError("unrecognized model format: {}".format(type(model)))
+                name: str,
+                framework: str) -> Union[tf.keras.Model, torch.nn.Module]:
+
     if isinstance(optimizer_fn, EpochScheduler):
         for epoch, optimizer_def in optimizer_fn.epoch_dict.items():
             optimizer_fn.epoch_dict[epoch] = _build_optimizer(optimizer_def, model, framework)
