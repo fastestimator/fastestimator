@@ -17,7 +17,6 @@ from typing import Tuple
 import numpy as np
 from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 
 from fastestimator.dataset.numpy_dataset import NumpyDataset
 
@@ -26,9 +25,6 @@ def load_data() -> Tuple[NumpyDataset, NumpyDataset]:
     (X, y) = load_breast_cancer(True)
     x_train, x_eval, y_train, y_eval = train_test_split(X, y, test_size=0.2, random_state=42)
     x_train, x_eval = np.float32(x_train), np.float32(x_eval)
-    scaler = StandardScaler()
-    x_train = scaler.fit_transform(x_train)
-    x_eval = scaler.transform(x_eval)
     train_data = NumpyDataset({"x": x_train, "y": y_train})
     eval_data = NumpyDataset({"x": x_eval, "y": y_eval})
     return train_data, eval_data
