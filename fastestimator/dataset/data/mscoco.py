@@ -16,7 +16,7 @@ import os
 import zipfile
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Optional, Dict, Tuple
+from typing import Any, Optional, Dict, Tuple, Union
 
 import wget
 from pycocotools.coco import COCO
@@ -46,8 +46,12 @@ class MSCOCODataset(UnlabeledDirDataset):
             self.instances = COCO(annotation_file)
             self.captions = COCO(caption_file) if include_captions else None
 
-    def __getitem__(self, index: int):
-        response = deepcopy(super().__getitem__(index))
+    def __getitem__(self, index: Union[int, str]):
+        response = super().__getitem__(index)
+        if isinstance(index, str):
+            return response
+        else:
+            response = deepcopy(response)
         image = response["image"]
         image_id = int(os.path.splitext(os.path.basename(image))[0])
         self._populate_instance_data(response, image_id)

@@ -17,7 +17,7 @@ import random
 from collections import defaultdict
 from functools import lru_cache
 from typing import Dict, Any, Union, Sequence, Iterable, List, Optional, Hashable
-
+import numpy as np
 import jsonpickle
 from torch.utils.data import Dataset
 
@@ -172,8 +172,25 @@ class InMemoryDataset(FEDataset):
     def __len__(self) -> int:
         return len(self.data)
 
-    def __getitem__(self, index: int) -> Dict[str, Any]:
-        return self.data[index]
+    def __getitem__(self, index: Union[int, str]) -> Union[Dict[str, Any], np.ndarray, List[Any]]:
+        if isinstance(index, int):
+            return self.data[index]
+        else:
+            result = [elem[index] for elem in self.data.values()]
+            if isinstance(result[0], np.ndarray):
+                return np.array(result)
+            return result
+
+    def __setitem__(self, key: Union[int, str], value: Union[Dict[str, Any], Sequence[Any]]):
+        if isinstance(key, int):
+            assert isinstance(value, Dict), "if setting a value using an integer index, must provide a dictionary"
+            self.data[key] = value
+        else:
+            assert len(value) == len(self.data), \
+                "input value must be of length {}, but had length {}".format(len(self.data), len(value))
+            for i in range(len(self.data)):
+                self.data[i][key] = value[i]
+        self.summary.cache_clear()
 
     def _skip_init(self, data: Dict[int, Dict[str, Any]], **kwargs) -> 'InMemoryDataset':
         obj = self.__class__.__new__(self.__class__)

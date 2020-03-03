@@ -14,10 +14,12 @@
 # ==============================================================================
 import tempfile
 
-import fastestimator as fe
 import torch
 import torch.nn as nn
 import torch.nn.functional as fn
+from sklearn.preprocessing import StandardScaler
+
+import fastestimator as fe
 from fastestimator.dataset import breast_cancer
 from fastestimator.estimator import Estimator
 from fastestimator.op.tensorop.loss import CrossEntropy
@@ -57,6 +59,13 @@ def get_estimator(batch_size=32, save_dir=tempfile.mkdtemp()):
     # step 1. prepare data
     train_data, eval_data = breast_cancer.load_data()
     test_data = eval_data.split(0.5)
+
+    # Apply some global pre-processing to the data
+    scaler = StandardScaler()
+    train_data["x"] = scaler.fit_transform(train_data["x"])
+    eval_data["x"] = scaler.transform(eval_data["x"])
+    test_data["x"] = scaler.transform(test_data["x"])
+
     pipeline = Pipeline(train_data=train_data, eval_data=eval_data, test_data=test_data, batch_size=batch_size)
 
     # step 2. prepare model
