@@ -25,12 +25,7 @@ from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
 
 
-def get_estimator(
-    epochs=2,
-    batch_size=32,
-    max_steps_per_epoch=None,
-    save_dir=tempfile.mkdtemp(),
-):
+def get_estimator(epochs=2, batch_size=32, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
     # step 1
     train_data, eval_data = mnist.load_data()
     test_data = eval_data.split(0.5)
