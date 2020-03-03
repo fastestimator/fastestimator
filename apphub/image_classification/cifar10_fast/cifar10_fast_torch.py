@@ -93,7 +93,6 @@ class FastCifar(nn.Module):
         x = torch.flatten(x, 1)
         x = self.fc1(x)
         x = fn.softmax(x, dim=-1)
-
         return x
 
 
@@ -112,7 +111,6 @@ class Residual(nn.Module):
         x = self.conv2(x)
         x = self.conv2_bn(x)
         x = fn.leaky_relu(x, negative_slope=0.1)
-
         return x
 
 

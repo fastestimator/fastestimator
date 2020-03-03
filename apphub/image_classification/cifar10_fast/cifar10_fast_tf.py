@@ -87,6 +87,7 @@ def my_model():
     x = layers.Dense(10)(x)
     x = layers.Activation('softmax', dtype='float32')(x)
     model = tf.keras.Model(inputs=inp, outputs=x)
+
     return model
 
 
