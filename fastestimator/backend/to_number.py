@@ -20,7 +20,6 @@ import tensorflow as tf
 import torch
 
 
-# TODO - Technically the return value here might be a np number if the data is a tf.Tensor
 def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray]) -> np.ndarray:
     """convert tensor values to python values
 
@@ -34,6 +33,4 @@ def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray]) -> np.ndarray:
         data = data.numpy()
     elif isinstance(data, torch.Tensor):
         data = data.data.numpy()
-    if isinstance(data, np.ndarray) and data.size == 1:
-        data = data.item()
     return data
