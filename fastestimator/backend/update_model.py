@@ -15,21 +15,22 @@
 from typing import Optional, Union
 
 import tensorflow as tf
-import torch
 
+import torch
 from fastestimator.backend.reduce_loss import reduce_loss
 
 
 def update_model(model: Union[tf.keras.Model, torch.nn.Module],
                  loss: Union[tf.Tensor, torch.Tensor],
-                 tape: Optional[tf.GradientTape] = None):
+                 tape: Optional[tf.GradientTape] = None,
+                 final_update: bool = True):
     loss = reduce_loss(loss)
     if isinstance(model, tf.keras.Model):
         with tape.stop_recording():
             gradients = tape.gradient(loss, model.trainable_variables)
             model.current_optimizer.apply_gradients(zip(gradients, model.trainable_variables))
     elif isinstance(model, torch.nn.Module):
-        loss.backward(retain_graph=True)
+        loss.backward(retain_graph=not final_update)
         model.current_optimizer.step()
         model.current_optimizer.zero_grad()
     else:

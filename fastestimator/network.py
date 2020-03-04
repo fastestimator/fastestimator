@@ -119,21 +119,6 @@ class BaseNetwork:
                 new_batch[key] = batch[key]
         return new_batch
 
-    def forward_step_eager(self,
-                           batch: Dict[str, Any],
-                           state: Dict[str, Any],
-                           ops: List[TensorOp],
-                           effective_outputs: List[str]):
-        raise NotImplementedError
-
-    def forward_step_static(self,
-                            batch: Dict[str, Any],
-                            state: Dict[str, Any],
-                            ops: List[TensorOp],
-                            effective_outputs: List[str]):
-
-        return self.forward_step_eager(batch, state, ops, effective_outputs)
-
 
 def _collect_models(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> Set[Union[tf.keras.Model, torch.nn.Module]]:
     models = set()
@@ -180,6 +165,9 @@ class TorchNetwork(BaseNetwork):
         if self.device.type == "cuda":
             for model in self.epoch_models:
                 model.to(self.device)
+        update_ops = [op for op in epoch_ops if isinstance(op, UpdateOp)]
+        for idx, update_op in enumerate(update_ops):
+            update_op.final_update = idx == len(update_ops) - 1
         return epoch_ops
 
     def unload_epoch(self):
@@ -188,25 +176,33 @@ class TorchNetwork(BaseNetwork):
                 model.to("cpu")
 
     def forward_step_eager(self,
-                           batch: Dict[str, Any],
+                           batch_in: Dict[str, Any],
                            state: Dict[str, Any],
                            ops: List[TensorOp],
                            effective_outputs: List[str]) -> Dict[str, Any]:
-        prediction = {}
         mode = state["mode"]
         state["tape"] = NonContext()
+        #copy data to gpu
         if self.device.type == "cuda":
-            for key, val in batch.items():
-                batch[key] = val.to(self.device)
+            batch = {key: val.to(self.device) for key, val in batch_in.items()}
+        else:
+            batch = {key: val for key, val in batch_in.items()}
+        #gpu operation
         with torch.no_grad() if mode != "train" else NonContext():
             self._forward_batch(batch, state, ops)
-        for key in effective_outputs:
-            if key in batch:
-                value = batch[key]
-                if self.device.type == "cuda":
-                    value = value.to("cpu")
-                prediction[key] = value
-        return prediction
+        #copy data to cpu
+        if self.device.type == "cuda":
+            batch_out = {key: batch[key].to("cpu") for key in effective_outputs if key in batch}
+        else:
+            batch_out = {key: batch[key] for key in effective_outputs if key in batch}
+        return batch_out
+
+    def forward_step_static(self,
+                            batch_in: Dict[str, Any],
+                            state: Dict[str, Any],
+                            ops: List[TensorOp],
+                            effective_outputs: List[str]):
+        return self.forward_step_eager(batch_in, state, ops, effective_outputs)
 
 
 class TFNetwork(BaseNetwork):
@@ -281,10 +277,12 @@ def build(model_fn: Callable,
     else:
         raise ValueError("unrecognized model format: {}".format(type(models[0])))
     # multi-gpu handling
-    if framework == "tf" and torch.cuda.device_count() > 1 and not isinstance(tf.distribute.get_strategy(),
-                                                                              tf.distribute.MirroredStrategy):
-        tf.distribute.experimental_set_strategy(tf.distribute.MirroredStrategy())
-        models = to_list(model_fn())
+    if torch.cuda.device_count() > 1:
+        if framework == "tf" and not isinstance(tf.distribute.get_strategy(), tf.distribute.MirroredStrategy):
+            tf.distribute.experimental_set_strategy(tf.distribute.MirroredStrategy())
+            models = to_list(model_fn())
+        if framework == "torch":
+            models = [torch.nn.DataParallel(model) for model in models]
     # generate names
     if not model_names:
         model_names = _generate_model_names(len(models))

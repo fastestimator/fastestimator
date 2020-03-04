@@ -187,14 +187,14 @@ class Estimator:
                     else:
                         batch = next(iter(loader))
                 batch = self._configure_tensor(loader, batch)
-                batch = self.network.get_effective_batch_input(batch, mode)
+                batch_in = self.network.get_effective_batch_input(batch, mode)
                 strategy = tf.distribute.get_strategy()
                 if isinstance(strategy, tf.distribute.MirroredStrategy):
                     strategy.experimental_run_v2(
                         self.network.forward_step_eager,
-                        args=(batch, state, network_epoch_ops, to_list(self.network.effective_outputs[mode])))
+                        args=(batch_in, state, network_epoch_ops, to_list(self.network.effective_outputs[mode])))
                 else:
-                    self.network.forward_step_eager(batch,
+                    self.network.forward_step_eager(batch_in,
                                                     state,
                                                     network_epoch_ops,
                                                     to_list(self.network.effective_outputs[mode]))
@@ -242,13 +242,13 @@ class Estimator:
                 if self.system.batch_idx == self.system.max_steps_per_epoch and self.system.mode == "train":
                     break
                 batch = self._configure_tensor(loader, batch)
-                effective_batch = self.network.get_effective_batch_input(batch, self.system.mode)
+                batch_in = self.network.get_effective_batch_input(batch, self.system.mode)
                 self._run_traces_on_batch_begin()
                 strategy = tf.distribute.get_strategy()
                 if isinstance(strategy, tf.distribute.MirroredStrategy):
                     prediction = strategy.experimental_run_v2(
                         self.network.forward_step_static,
-                        args=(effective_batch,
+                        args=(batch_in,
                               state,
                               network_epoch_ops,
                               to_list(self.network.effective_outputs[self.system.mode])))
@@ -256,10 +256,7 @@ class Estimator:
                     prediction = per_replica_to_global(prediction)
                 else:
                     prediction = self.network.forward_step_static(
-                        effective_batch,
-                        state,
-                        network_epoch_ops,
-                        to_list(self.network.effective_outputs[self.system.mode]))
+                        batch_in, state, network_epoch_ops, to_list(self.network.effective_outputs[self.system.mode]))
                 self._run_traces_on_batch_end(batch, prediction)
                 if self.system.mode == "train":
                     self.system.update_global_step()
