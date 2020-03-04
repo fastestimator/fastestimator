@@ -16,8 +16,8 @@ from typing import Optional, Union
 
 import numpy as np
 import tensorflow as tf
-
 import torch
+
 from fastestimator.backend.save_model import save_model
 from fastestimator.trace.trace import Trace
 from fastestimator.util import Data
@@ -30,7 +30,7 @@ class BestModelSaver(Trace):
         model: model instance
         save_dir: folder path to save model
         metric: eval metric name to monitor, if None, the model's loss will be used
-        saved_best_mode: can be 'min' or 'max'. Defaults to 'min'.
+        save_best_mode: can be 'min' or 'max'. Defaults to 'min'.
     """
     def __init__(self,
                  model: Union[tf.keras.Model, torch.nn.Module],
@@ -44,7 +44,6 @@ class BestModelSaver(Trace):
         super().__init__(mode="eval", inputs=metric)
         self.model = model
         self.save_dir = save_dir
-        self.metric = metric
         self.save_best_mode = save_best_mode
         if self.save_best_mode == "min":
             self.best = np.Inf
@@ -55,8 +54,12 @@ class BestModelSaver(Trace):
         else:
             raise ValueError("save_best_mode must be either 'min' or 'max'")
 
+    @property
+    def metric(self):
+        return self.inputs[0]
+
     def on_epoch_end(self, data: Data):
-        #No model will be saved when save_dir is None, which makes smoke test easier.
+        # No model will be saved when save_dir is None, which makes smoke test easier.
         if self.save_dir and self.monitor_op(data[self.metric], self.best):
             self.best = data[self.metric]
             model_name = "{}_best_{}".format(self.model.model_name, self.metric)
