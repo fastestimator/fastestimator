@@ -15,8 +15,8 @@
 from typing import Optional, Union
 
 import tensorflow as tf
-
 import torch
+
 from fastestimator.backend.reduce_loss import reduce_loss
 
 
@@ -26,6 +26,9 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
                  final_update: bool = True):
     loss = reduce_loss(loss)
     if isinstance(model, tf.keras.Model):
+        strategy = tf.distribute.get_strategy()
+        if isinstance(strategy, tf.distribute.MirroredStrategy):
+            loss = loss / strategy.num_replicas_in_sync
         with tape.stop_recording():
             gradients = tape.gradient(loss, model.trainable_variables)
             model.current_optimizer.apply_gradients(zip(gradients, model.trainable_variables))
