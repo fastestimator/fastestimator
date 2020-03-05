@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 from collections import ChainMap
-from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Set, Union
+from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Set, Tuple, Union
 
 import tensorflow as tf
 import torch
@@ -167,7 +167,7 @@ class TorchNetwork(BaseNetwork):
             for model in self.epoch_models:
                 model.to("cpu")
 
-    def _get_effective_batch_input(self, batch, mode):
+    def _get_effective_batch_input(self, batch: MutableMapping[str, Any], mode: str) -> Dict[str, Any]:
         #copy data to gpu
         if self.device.type == "cuda":
             new_batch = {key: batch[key].to(self.device) for key in self.effective_inputs[mode] if key in batch}
@@ -175,7 +175,7 @@ class TorchNetwork(BaseNetwork):
             new_batch = {key: batch[key] for key in self.effective_inputs[mode] if key in batch}
         return new_batch
 
-    def run_step(self, batch, state):
+    def run_step(self, batch: Dict[str, Any], state: Dict[str, Any]) -> Tuple[Dict[str, Any]]:
         batch_in = self._get_effective_batch_input(batch, state["mode"])
         mode = state["mode"]
         state["tape"] = NonContext()
@@ -191,7 +191,7 @@ class TorchNetwork(BaseNetwork):
 
 
 class TFNetwork(BaseNetwork):
-    def run_step(self, batch, state):
+    def run_step(self, batch: Dict[str, Any], state: Dict[str, Any]) -> Tuple[Dict[str, Any]]:
         batch_in = self._get_effective_batch_input(batch, state["mode"])
         strategy = tf.distribute.get_strategy()
         if isinstance(strategy, tf.distribute.MirroredStrategy):
