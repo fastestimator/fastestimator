@@ -175,7 +175,7 @@ class Logger(Trace):
         for key, val in data.read_logs(to_set(self.inputs)).items():
             val = to_number(val)
             self.system.write_summary(key, val)
-            if isinstance(val, np.ndarray):
+            if val.size > 1:
                 log_message += "\n{}:\n{};".format(key, np.array2string(val, separator=','))
             else:
                 log_message += "{}: {}; ".format(key, str(val))

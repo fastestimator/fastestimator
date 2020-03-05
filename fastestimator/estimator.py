@@ -18,6 +18,7 @@ from typing import Dict, Iterable, List, Optional, Set, Union
 
 import tensorflow as tf
 from tensorflow.python.distribute.input_lib import DistributedDataset
+from torch.utils.data import DataLoader
 
 from fastestimator.backend import to_shape, to_tensor, to_type
 from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
@@ -26,8 +27,7 @@ from fastestimator.summary import System
 from fastestimator.trace import EvalEssential, Logger, Trace, TrainEssential
 from fastestimator.trace.io import BestModelSaver, ModelSaver
 from fastestimator.util import Data
-from fastestimator.util.util import Suppressor, draw, per_replica_to_global, to_list, to_set
-from torch.utils.data import DataLoader
+from fastestimator.util.util import Suppressor, draw, to_list, to_set
 
 
 class Estimator:
@@ -180,24 +180,14 @@ class Estimator:
             for mode in self.pipeline.get_modes():
                 state = {"mode": mode, "warmup": True}
                 loader = self._configure_loader(self.pipeline.get_loader(mode, epoch))
-                network_epoch_ops = self.network.load_epoch(mode, epoch)
+                self.network.load_epoch(mode, epoch)
                 with Suppressor():
                     if isinstance(loader, tf.data.Dataset):
                         batch = list(loader.take(1))[0]
                     else:
                         batch = next(iter(loader))
                 batch = self._configure_tensor(loader, batch)
-                batch_in = self.network.get_effective_batch_input(batch, mode)
-                strategy = tf.distribute.get_strategy()
-                if isinstance(strategy, tf.distribute.MirroredStrategy):
-                    strategy.experimental_run_v2(
-                        self.network.forward_step_eager,
-                        args=(batch_in, state, network_epoch_ops, to_list(self.network.effective_outputs[mode])))
-                else:
-                    self.network.forward_step_eager(batch_in,
-                                                    state,
-                                                    network_epoch_ops,
-                                                    to_list(self.network.effective_outputs[mode]))
+                self.network.run_step(batch, state)
                 self.network.unload_epoch()
 
     def _check_keys(self):
@@ -241,22 +231,9 @@ class Estimator:
                     batch = next(loader)
                 if self.system.batch_idx == self.system.max_steps_per_epoch and self.system.mode == "train":
                     break
-                batch = self._configure_tensor(loader, batch)
-                batch_in = self.network.get_effective_batch_input(batch, self.system.mode)
                 self._run_traces_on_batch_begin()
-                strategy = tf.distribute.get_strategy()
-                if isinstance(strategy, tf.distribute.MirroredStrategy):
-                    prediction = strategy.experimental_run_v2(
-                        self.network.forward_step_static,
-                        args=(batch_in,
-                              state,
-                              network_epoch_ops,
-                              to_list(self.network.effective_outputs[self.system.mode])))
-                    batch = per_replica_to_global(batch)
-                    prediction = per_replica_to_global(prediction)
-                else:
-                    prediction = self.network.forward_step_static(
-                        batch_in, state, network_epoch_ops, to_list(self.network.effective_outputs[self.system.mode]))
+                batch = self._configure_tensor(loader, batch)
+                batch, prediction = self.network.run_step(batch, state)
                 self._run_traces_on_batch_end(batch, prediction)
                 if self.system.mode == "train":
                     self.system.update_global_step()
