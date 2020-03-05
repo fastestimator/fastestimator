@@ -168,7 +168,7 @@ class TorchNetwork(BaseNetwork):
                 model.to("cpu")
 
     def _get_effective_batch_input(self, batch: MutableMapping[str, Any], mode: str) -> Dict[str, Any]:
-        #copy data to gpu
+        # copy data to gpu
         if self.device.type == "cuda":
             new_batch = {key: batch[key].to(self.device) for key in self.effective_inputs[mode] if key in batch}
         else:
@@ -179,10 +179,10 @@ class TorchNetwork(BaseNetwork):
         batch_in = self._get_effective_batch_input(batch, state["mode"])
         mode = state["mode"]
         state["tape"] = NonContext()
-        #gpu operation
+        # gpu operation
         with torch.no_grad() if mode != "train" else NonContext():
             self._forward_batch(batch_in, state, self.epoch_ops)
-        #copy data to cpu
+        # copy data to cpu
         if self.device.type == "cuda":
             prediction = {key: batch_in[key].to("cpu") for key in self.effective_outputs[mode] if key in batch_in}
         else:
@@ -314,7 +314,7 @@ def build(
         weights_path = [None] * len(models)
     assert len(models) == len(optimizer_fn) == len(weights_path) == len(model_names), \
         "Found inconsistency in number of models, optimizers, model_names or weights"
-    #create optimizer
+    # create optimizer
     for idx, (model, optimizer_def, weight, name) in enumerate(zip(models, optimizer_fn, weights_path, model_names)):
         models[idx] = _fe_compile(model, optimizer_def, weight, name, framework)
     if len(models) == 1:
