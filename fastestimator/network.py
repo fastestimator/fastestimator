@@ -159,8 +159,8 @@ class TorchNetwork(BaseNetwork):
             for model in self.epoch_models:
                 model.to(self.device)
         update_ops = [op for op in self.epoch_ops if isinstance(op, UpdateOp)]
-        for update_op in update_ops:
-            update_op.retain_graph = len(update_ops) != 1
+        for idx, update_op in enumerate(update_ops):
+            update_op.retain_graph = idx != len(update_ops) - 1
 
     def unload_epoch(self):
         if self.device.type == "cuda":
