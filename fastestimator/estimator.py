@@ -178,16 +178,15 @@ class Estimator:
         signature_epochs = pipeline_signature_epochs | network_signature_epochs
         for epoch in signature_epochs:
             for mode in self.pipeline.get_modes():
-                state = {"mode": mode, "warmup": True}
                 loader = self._configure_loader(self.pipeline.get_loader(mode, epoch))
-                self.network.load_epoch(mode, epoch)
+                self.network.load_epoch(mode, epoch, warmup=True)
                 with Suppressor():
                     if isinstance(loader, tf.data.Dataset):
                         batch = list(loader.take(1))[0]
                     else:
                         batch = next(iter(loader))
                 batch = self._configure_tensor(loader, batch)
-                self.network.run_step(batch, state)
+                self.network.run_step(batch)
                 self.network.unload_epoch()
 
     def _check_keys(self):
@@ -220,10 +219,9 @@ class Estimator:
         self._run_traces_on_end({"test"})
 
     def _run_epoch(self):
-        state = {"mode": self.system.mode, "warmup": False}
         self._run_traces_on_epoch_begin()
         loader = iter(self._configure_loader(self.pipeline.get_loader(self.system.mode, self.system.epoch_idx)))
-        network_epoch_ops = self.network.load_epoch(mode=self.system.mode, epoch=self.system.epoch_idx)
+        self.network.load_epoch(mode=self.system.mode, epoch=self.system.epoch_idx)
         self.system.batch_idx = 0
         while True:
             try:
@@ -233,7 +231,7 @@ class Estimator:
                     break
                 self._run_traces_on_batch_begin()
                 batch = self._configure_tensor(loader, batch)
-                batch, prediction = self.network.run_step(batch, state)
+                batch, prediction = self.network.run_step(batch)
                 self._run_traces_on_batch_end(batch, prediction)
                 if self.system.mode == "train":
                     self.system.update_global_step()

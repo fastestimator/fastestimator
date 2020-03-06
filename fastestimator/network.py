@@ -34,6 +34,7 @@ class BaseNetwork:
         self.effective_outputs = dict()
         self.epoch_ops = []
         self.epoch_models = set()
+        self.epoch_state = dict()
 
     def _verify_inputs(self):
         for op in self.ops:
@@ -43,9 +44,13 @@ class BaseNetwork:
             else:
                 assert isinstance(op, TensorOp), "unsupported op format, must provide TensorOp in Network"
 
-    def load_epoch(self, mode: str, epoch: int) -> List[TensorOp]:
+    def load_epoch(self, mode: str, epoch: int, warmup: bool = False):
         self.epoch_ops = get_current_ops(self.ops, mode, epoch)
         self.epoch_models = set(op.model for op in self.epoch_ops if isinstance(op, (UpdateOp, ModelOp)))
+        gradient_ops = [op for op in self.epoch_ops if hasattr(op, "retain_graph")]
+        for idx, gradient_op in enumerate(gradient_ops):
+            gradient_op.retain_graph = idx != len(gradient_ops) - 1
+        self.epoch_state = {"warmup": warmup, "mode": mode, "req_grad": len(gradient_ops) > 0}
         for model in self.epoch_models:
             if hasattr(model, "optimizer") and model.optimizer is not None:
                 if isinstance(model.optimizer, Scheduler):
@@ -153,14 +158,11 @@ class TorchNetwork(BaseNetwork):
         super().__init__(ops)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    def load_epoch(self, mode: str, epoch: int) -> List[TensorOp]:
-        super().load_epoch(mode, epoch)
+    def load_epoch(self, mode: str, epoch: int, warmup: bool = False):
+        super().load_epoch(mode, epoch, warmup)
         if self.device.type == "cuda":
             for model in self.epoch_models:
                 model.to(self.device)
-        gradient_ops = [op for op in self.epoch_ops if hasattr(op, "retain_graph")]
-        for idx, gradient_op in enumerate(gradient_ops):
-            gradient_op.retain_graph = idx != len(gradient_ops) - 1
 
     def unload_epoch(self):
         if self.device.type == "cuda":
@@ -175,13 +177,13 @@ class TorchNetwork(BaseNetwork):
             new_batch = {key: batch[key] for key in self.effective_inputs[mode] if key in batch}
         return new_batch
 
-    def run_step(self, batch: Dict[str, Any], state: Dict[str, Any]) -> Tuple[Dict[str, Any]]:
-        batch_in = self._get_effective_batch_input(batch, state["mode"])
-        mode = state["mode"]
-        state["tape"] = NonContext()
+    def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any]]:
+        mode = self.epoch_state["mode"]
+        batch_in = self._get_effective_batch_input(batch, mode)
+        self.epoch_state["tape"] = NonContext()
         # gpu operation
-        with torch.no_grad() if mode != "train" else NonContext():
-            self._forward_batch(batch_in, state, self.epoch_ops)
+        with torch.no_grad() if not self.epoch_state["req_grad"] else NonContext():
+            self._forward_batch(batch_in, self.epoch_state, self.epoch_ops)
         # copy data to cpu
         if self.device.type == "cuda":
             prediction = {
@@ -194,31 +196,32 @@ class TorchNetwork(BaseNetwork):
 
 
 class TFNetwork(BaseNetwork):
-    def run_step(self, batch: Dict[str, Any], state: Dict[str, Any]) -> Tuple[Dict[str, Any]]:
-        batch_in = self._get_effective_batch_input(batch, state["mode"])
+    def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any]]:
+        mode = self.epoch_state["mode"]
+        batch_in = self._get_effective_batch_input(batch, mode)
         strategy = tf.distribute.get_strategy()
         if isinstance(strategy, tf.distribute.MirroredStrategy):
-            if state["warmup"]:
+            if self.epoch_state["warmup"]:
                 prediction = strategy.experimental_run_v2(
                     self._forward_step_eager,
-                    args=(batch_in, state, self.epoch_ops, to_list(self.effective_outputs[state["mode"]])))
+                    args=(batch_in, self.epoch_state, self.epoch_ops, to_list(self.effective_outputs[mode])))
             else:
                 prediction = strategy.experimental_run_v2(
                     self._forward_step_static,
-                    args=(batch_in, state, self.epoch_ops, to_list(self.effective_outputs[state["mode"]])))
+                    args=(batch_in, self.epoch_state, self.epoch_ops, to_list(self.effective_outputs[mode])))
                 batch = per_replica_to_global(batch)
                 prediction = per_replica_to_global(prediction)
         else:
-            if state["warmup"]:
+            if self.epoch_state["warmup"]:
                 prediction = self._forward_step_eager(batch_in,
-                                                      state,
+                                                      self.epoch_state,
                                                       self.epoch_ops,
-                                                      to_list(self.effective_outputs[state["mode"]]))
+                                                      to_list(self.effective_outputs[mode]))
             else:
                 prediction = self._forward_step_static(batch_in,
-                                                       state,
+                                                       self.epoch_state,
                                                        self.epoch_ops,
-                                                       to_list(self.effective_outputs[state["mode"]]))
+                                                       to_list(self.effective_outputs[mode]))
         return batch, prediction
 
     def _get_effective_batch_input(self, batch: MutableMapping[str, Any], mode: str) -> Dict[str, Any]:
@@ -235,8 +238,7 @@ class TFNetwork(BaseNetwork):
                             effective_outputs: List[str]) -> Dict[str, Any]:
         batch = ChainMap({}, batch)
         prediction = {}
-        mode = state["mode"]
-        with tf.GradientTape(persistent=True) if mode == "train" else NonContext() as tape:
+        with tf.GradientTape(persistent=True) if state["req_grad"] else NonContext() as tape:
             state['tape'] = tape
             self._forward_batch(batch, state, ops)
         del state['tape']
@@ -254,8 +256,7 @@ class TFNetwork(BaseNetwork):
                              effective_outputs: List[str]) -> Dict[str, Any]:
         batch = ChainMap({}, batch)
         prediction = {}
-        mode = state["mode"]
-        with tf.GradientTape(persistent=True) if mode == "train" else NonContext() as tape:
+        with tf.GradientTape(persistent=True) if state["req_grad"] else NonContext() as tape:
             state['tape'] = tape
             self._forward_batch(batch, state, ops)
         del state['tape']
