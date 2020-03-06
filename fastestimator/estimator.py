@@ -201,7 +201,7 @@ class Estimator:
             self.network.effective_outputs[mode] = network_all_outputs.intersection(self.trace_inputs[mode])
 
     def _start_train(self):
-        self._run_traces_on_begin()
+        self._run_traces_on_begin({"train", "eval"})
         try:
             for self.system.epoch_idx in range(self.system.total_epochs):
                 if "train" in self.pipeline.get_modes():
@@ -212,12 +212,12 @@ class Estimator:
                     self._run_epoch()
         except EarlyStop:
             pass  # On early stopping we still want to run the final traces and return results
-        self._run_traces_on_end()
+        self._run_traces_on_end({"train", "eval"})
 
     def _start_test(self):
-        self._run_traces_on_begin()
+        self._run_traces_on_begin({"test"})
         self._run_epoch()
-        self._run_traces_on_end()
+        self._run_traces_on_end({"test"})
 
     def _run_epoch(self):
         state = {"mode": self.system.mode, "warmup": False}
@@ -264,10 +264,11 @@ class Estimator:
             batch = to_tensor(batch, target_type="torch")
         return batch
 
-    def _run_traces_on_begin(self):
+    def _run_traces_on_begin(self, run_modes: Set[str]):
         data = Data()
         for trace in self.traces:
-            trace.on_begin(data)
+            if not trace.mode or trace.mode & run_modes:
+                trace.on_begin(data)
         self._check_early_exit()
 
     def _run_traces_on_epoch_begin(self):
@@ -298,10 +299,11 @@ class Estimator:
                 trace.on_epoch_end(data)
         self._check_early_exit()
 
-    def _run_traces_on_end(self):
+    def _run_traces_on_end(self, run_modes: Set[str]):
         data = Data()
         for trace in self.traces:
-            trace.on_end(data)
+            if not trace.mode or trace.mode & run_modes:
+                trace.on_end(data)
 
     def _check_early_exit(self):
         if self.system.stop_training:
