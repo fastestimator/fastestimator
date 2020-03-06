@@ -15,9 +15,9 @@
 from typing import Any, Dict, Iterable, List, TypeVar, Union
 
 import tensorflow as tf
+import torch
 from tensorflow.python.framework import ops as tfops
 
-import torch
 from fastestimator.backend.update_model import update_model
 from fastestimator.op import TensorOp
 
@@ -38,7 +38,7 @@ class UpdateOp(TensorOp):
                  mode: Union[None, str, Iterable[str]] = "train"):
         super().__init__(inputs=loss_name, outputs=None, mode=mode)
         self.model = model
-        self.final_update = False
+        self.retain_graph = False
         if not hasattr(self.model, "loss_name"):
             self.model.loss_name = {loss_name}
         else:
@@ -52,4 +52,4 @@ class UpdateOp(TensorOp):
                     self.model.current_optimizer._create_hypers()
                     self.model.current_optimizer._create_slots(self.model.trainable_variables)
         else:
-            update_model(self.model, data, tape=state['tape'], final_update=self.final_update)
+            update_model(self.model, data, tape=state['tape'], retain_graph=self.retain_graph)

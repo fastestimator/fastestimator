@@ -159,8 +159,8 @@ class TorchNetwork(BaseNetwork):
             for model in self.epoch_models:
                 model.to(self.device)
         update_ops = [op for op in self.epoch_ops if isinstance(op, UpdateOp)]
-        for idx, update_op in enumerate(update_ops):
-            update_op.final_update = idx == len(update_ops) - 1
+        for update_op in update_ops:
+            update_op.retain_graph = len(update_ops) != 1
 
     def unload_epoch(self):
         if self.device.type == "cuda":
@@ -184,9 +184,12 @@ class TorchNetwork(BaseNetwork):
             self._forward_batch(batch_in, state, self.epoch_ops)
         # copy data to cpu
         if self.device.type == "cuda":
-            prediction = {key: batch_in[key].to("cpu") for key in self.effective_outputs[mode] if key in batch_in}
+            prediction = {
+                key: batch_in[key].detach_().to("cpu")
+                for key in self.effective_outputs[mode] if key in batch_in
+            }
         else:
-            prediction = {key: batch_in[key] for key in self.effective_outputs[mode] if key in batch_in}
+            prediction = {key: batch_in[key].detach() for key in self.effective_outputs[mode] if key in batch_in}
         return batch, prediction
 
 
