@@ -39,3 +39,4 @@ from fastestimator.op.numpyop.univariate.random_rain import RandomRain
 from fastestimator.op.numpyop.univariate.read_image import ReadImage
 from fastestimator.op.numpyop.univariate.rgb_shift import RGBShift
 from fastestimator.op.numpyop.univariate.to_float import ToFloat
+from fastestimator.op.numpyop.univariate.smooth_one_hot import SmoothOneHot
