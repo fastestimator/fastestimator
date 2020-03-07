@@ -22,14 +22,18 @@ from fastestimator.backend.reduce_loss import reduce_loss
 
 def update_model(model: Union[tf.keras.Model, torch.nn.Module],
                  loss: Union[tf.Tensor, torch.Tensor],
-                 tape: Optional[tf.GradientTape] = None):
+                 tape: Optional[tf.GradientTape] = None,
+                 retain_graph: bool = True):
     loss = reduce_loss(loss)
     if isinstance(model, tf.keras.Model):
+        strategy = tf.distribute.get_strategy()
+        if isinstance(strategy, tf.distribute.MirroredStrategy):
+            loss = loss / strategy.num_replicas_in_sync
         with tape.stop_recording():
             gradients = tape.gradient(loss, model.trainable_variables)
             model.current_optimizer.apply_gradients(zip(gradients, model.trainable_variables))
     elif isinstance(model, torch.nn.Module):
-        loss.backward(retain_graph=True)
+        loss.backward(retain_graph=retain_graph)
         model.current_optimizer.step()
         model.current_optimizer.zero_grad()
     else:

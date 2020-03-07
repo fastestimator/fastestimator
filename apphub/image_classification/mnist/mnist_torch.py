@@ -20,7 +20,6 @@ from fastestimator.dataset import mnist
 from fastestimator.op.numpyop import ExpandDims, Minmax
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
-from fastestimator.pipeline import Pipeline
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
 
@@ -29,11 +28,11 @@ def get_estimator(epochs=2, batch_size=32, max_steps_per_epoch=None, save_dir=te
     # step 1
     train_data, eval_data = mnist.load_data()
     test_data = eval_data.split(0.5)
-    pipeline = Pipeline(train_data=train_data,
-                        eval_data=eval_data,
-                        test_data=test_data,
-                        batch_size=batch_size,
-                        ops=[ExpandDims(inputs="x", outputs="x", axis=0), Minmax(inputs="x", outputs="x")])
+    pipeline = fe.Pipeline(train_data=train_data,
+                           eval_data=eval_data,
+                           test_data=test_data,
+                           batch_size=batch_size,
+                           ops=[ExpandDims(inputs="x", outputs="x", axis=0), Minmax(inputs="x", outputs="x")])
     # step 2
     model = fe.build(model_fn=LeNet, optimizer_fn="adam")
     network = fe.Network(ops=[

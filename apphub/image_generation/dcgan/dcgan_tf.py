@@ -15,13 +15,14 @@
 """DCGAN example using MNIST data set."""
 import tempfile
 
+import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import layers
 
 import fastestimator as fe
 from fastestimator.backend import binary_crossentropy
 from fastestimator.dataset import mnist
-from fastestimator.op import TensorOp
+from fastestimator.op import NumpyOp, TensorOp
 from fastestimator.op.numpyop import ExpandDims, Normalize
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import ModelSaver
@@ -77,12 +78,13 @@ def get_estimator(epochs=50, batch_size=256, max_steps_per_epoch=None, save_dir=
         batch_size=batch_size,
         ops=[
             ExpandDims(inputs="x", outputs="x"),
-            Normalize(inputs="x", outputs="x", mean=1.0, std=1.0, max_pixel_value=127.5)
+            Normalize(inputs="x", outputs="x", mean=1.0, std=1.0, max_pixel_value=127.5),
+            NumpyOp(inputs=lambda: np.random.normal(size=[100]).astype('float32'), outputs="z")
         ])
     gen_model = fe.build(model_fn=generator, optimizer_fn=lambda: tf.optimizers.Adam(1e-4))
     disc_model = fe.build(model_fn=discriminator, optimizer_fn=lambda: tf.optimizers.Adam(1e-4))
     network = fe.Network(ops=[
-        ModelOp(model=gen_model, inputs=lambda: tf.random.normal([batch_size, 100]), outputs="x_fake"),
+        ModelOp(model=gen_model, inputs="z", outputs="x_fake"),
         ModelOp(model=disc_model, inputs="x_fake", outputs="fake_score"),
         ModelOp(inputs="x", model=disc_model, outputs="true_score"),
         GLoss(inputs="fake_score", outputs="gloss"),

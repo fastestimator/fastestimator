@@ -15,3 +15,4 @@
 from fastestimator.trace.io.best_model_saver import BestModelSaver
 from fastestimator.trace.io.csv_logger import CSVLogger
 from fastestimator.trace.io.model_saver import ModelSaver
+from fastestimator.trace.io.qms import QMSTest

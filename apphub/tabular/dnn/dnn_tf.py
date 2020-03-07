@@ -19,10 +19,8 @@ from sklearn.preprocessing import StandardScaler
 
 import fastestimator as fe
 from fastestimator.dataset import breast_cancer
-from fastestimator.estimator import Estimator
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
-from fastestimator.pipeline import Pipeline
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
 
@@ -50,7 +48,7 @@ def get_estimator(epochs=20, batch_size=32, max_steps_per_epoch=None, save_dir=t
     eval_data["x"] = scaler.transform(eval_data["x"])
     test_data["x"] = scaler.transform(test_data["x"])
 
-    pipeline = Pipeline(train_data=train_data, eval_data=eval_data, test_data=test_data, batch_size=batch_size)
+    pipeline = fe.Pipeline(train_data=train_data, eval_data=eval_data, test_data=test_data, batch_size=batch_size)
 
     # step 2. prepare model
     model = fe.build(model_fn=create_dnn, optimizer_fn="adam")
@@ -65,12 +63,13 @@ def get_estimator(epochs=20, batch_size=32, max_steps_per_epoch=None, save_dir=t
         Accuracy(true_key="y", pred_key="y_pred"),
         BestModelSaver(model=model, save_dir=save_dir, metric="accuracy", save_best_mode="max")
     ]
-    estimator = Estimator(pipeline=pipeline,
-                          network=network,
-                          epochs=epochs,
-                          log_steps=10,
-                          traces=traces,
-                          max_steps_per_epoch=max_steps_per_epoch)
+    estimator = fe.Estimator(pipeline=pipeline,
+                             network=network,
+                             epochs=epochs,
+                             log_steps=10,
+                             traces=traces,
+                             max_steps_per_epoch=max_steps_per_epoch)
+
     return estimator
 
 
