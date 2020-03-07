@@ -53,7 +53,7 @@ class DNN(torch.nn.Module):
         return x
 
 
-def get_estimator(batch_size=32, save_dir=tempfile.mkdtemp()):
+def get_estimator(epochs=20, batch_size=32, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
     # step 1. prepare data
     train_data, eval_data = breast_cancer.load_data()
     test_data = eval_data.split(0.5)
@@ -79,7 +79,12 @@ def get_estimator(batch_size=32, save_dir=tempfile.mkdtemp()):
         Accuracy(true_key="y", pred_key="y_pred"),
         BestModelSaver(model=model, save_dir=save_dir, metric="accuracy", save_best_mode="max")
     ]
-    estimator = fe.Estimator(pipeline=pipeline, network=network, epochs=20, log_steps=10, traces=traces)
+    estimator = fe.Estimator(pipeline=pipeline,
+                             network=network,
+                             epochs=epochs,
+                             log_steps=10,
+                             traces=traces,
+                             max_steps_per_epoch=max_steps_per_epoch)
     return estimator
 
 
