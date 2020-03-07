@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import inspect
 import json
 import os
-from typing import Callable, List, Tuple, Union
+from typing import Callable, List, Union
 
 from fastestimator.trace import Trace
 from fastestimator.util.data import Data
@@ -25,20 +26,17 @@ class QMSTest(Trace):
     def __init__(self,
                  test_descriptions: Union[str, List[str]],
                  test_criterias: Union[List[Callable], Callable],
-                 test_vars: Union[str, Tuple[str], List[Union[str, Tuple[str]]]],
                  test_title: str = "QMSTest",
                  output_path: str = ""):
         self.output_path = output_path
         self.test_title = test_title
         self.test_descriptions = to_list(test_descriptions)
         self.test_criterias = to_list(test_criterias)
-        self.test_vars = to_list(test_vars)
         self._initialize_summary()
-        assert len(self.test_descriptions) == len(self.test_criterias) == len(self.test_vars), \
-            "inconsistent input length found"
+        assert len(self.test_descriptions) == len(self.test_criterias), "inconsistent input length found"
         all_inputs = set()
-        for var in self.test_vars:
-            all_inputs.update(to_list(var))
+        for criteria in self.test_criterias:
+            all_inputs.update(inspect.signature(criteria).parameters.keys())
         super().__init__(inputs=all_inputs, mode="test")
 
     def _initialize_summary(self):
@@ -48,16 +46,17 @@ class QMSTest(Trace):
         self._initialize_summary()
 
     def on_epoch_end(self, data: Data):
-        for var_names, criteria, description in zip(self.test_vars, self.test_criterias, self.test_descriptions):
+        for criteria, description in zip(self.test_criterias, self.test_descriptions):
             story = {"description": description}
-            story["passed"] = str(criteria(*[data[var_name] for var_name in to_list(var_names)]))
+            story["passed"] = str(
+                criteria(*[data[var_name] for var_name in list(inspect.signature(criteria).parameters.keys())]))
             self.json_summary["stories"].append(story)
 
     def on_end(self, data: Data):
         if self.output_path.endswith(".json"):
             json_path = self.output_path
         else:
-            json_path = os.path.join(self.output_path, "{}.json".format("QMS_test"))
+            json_path = os.path.join(self.output_path, "{}.json".format("QMS"))
         with open(json_path, 'w') as fp:
             json.dump(self.json_summary, fp, indent=4)
         print("Saved QMS report to {}".format(json_path))
