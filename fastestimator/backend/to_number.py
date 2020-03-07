@@ -16,7 +16,6 @@ from typing import Union
 
 import numpy as np
 import tensorflow as tf
-
 import torch
 
 
@@ -33,4 +32,4 @@ def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray]) -> np.ndarray:
         data = data.numpy()
     elif isinstance(data, torch.Tensor):
         data = data.data.numpy()
-    return data
+    return np.array(data)
