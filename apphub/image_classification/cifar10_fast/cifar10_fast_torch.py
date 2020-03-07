@@ -28,20 +28,13 @@ from fastestimator.dataset import NumpyDataset
 from fastestimator.dataset.data.cifar10 import load_data
 from fastestimator.op import NumpyOp
 from fastestimator.op.numpyop import ChannelTranspose, CoarseDropout, HorizontalFlip, Normalize, PadIfNeeded, \
-    RandomCrop, Sometimes
+    RandomCrop, SmoothOneHot, Sometimes
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.pipeline import Pipeline
 from fastestimator.trace import Trace
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
-
-
-class SmoothOneHot(NumpyOp):
-    def forward(self, data, state):
-        output = np.full((10), fill_value=0.2 / 9)
-        output[data[0]] = 0.8
-        return output
 
 
 class FastCifar(nn.Module):
@@ -128,7 +121,7 @@ def get_estimator(epochs=24, batch_size=512, max_steps_per_epoch=None, save_dir=
             Sometimes(HorizontalFlip(image_in="x", image_out="x", mode="train")),
             CoarseDropout(inputs="x", outputs="x", mode="train", max_holes=1),
             ChannelTranspose(inputs="x", outputs="x"),
-            SmoothOneHot(inputs="y", outputs="y", mode="train")
+            SmoothOneHot(inputs="y", outputs="y", mode="train", class_num=10, label_smoothing=0.2)
         ])
 
     # step 2: prepare network
