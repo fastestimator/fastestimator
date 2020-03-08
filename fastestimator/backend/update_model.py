@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import pdb
 from typing import Optional, Union
 
 import tensorflow as tf
@@ -35,11 +34,9 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
         with tape.stop_recording():
             model.current_optimizer.apply_gradients(zip(gradients, model.trainable_variables))
     elif isinstance(model, torch.nn.Module):
-        # gradients = get_gradient(loss, model.parameters(), retain_graph=retain_graph)
-        # for gradient, parameter in zip(gradients, model.parameters()):
-        #     parameter.grad = gradient
-        model.current_optimizer.zero_grad()
-        loss.backward(retain_graph=retain_graph)
+        gradients = get_gradient(loss, model.parameters(), retain_graph=retain_graph)
+        for gradient, parameter in zip(gradients, model.parameters()):
+            parameter.grad = gradient
         model.current_optimizer.step()
     else:
         raise ValueError("Unrecognized model instance {}".format(type(model)))
