@@ -18,21 +18,16 @@ ref: https://github.com/davidcpage/cifar10-fast
 """
 import tempfile
 
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as fn
 
 import fastestimator as fe
-from fastestimator.dataset import NumpyDataset
 from fastestimator.dataset.data.cifar10 import load_data
-from fastestimator.op import NumpyOp
-from fastestimator.op.numpyop import ChannelTranspose, CoarseDropout, HorizontalFlip, Normalize, PadIfNeeded, \
-    RandomCrop, SmoothOneHot, Sometimes
+from fastestimator.op.numpyop import ChannelTranspose, CoarseDropout, HorizontalFlip, Normalize, Onehot, PadIfNeeded, \
+    RandomCrop, Sometimes
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
-from fastestimator.pipeline import Pipeline
-from fastestimator.trace import Trace
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
 
@@ -55,32 +50,27 @@ class FastCifar(nn.Module):
 
     def forward(self, x):
         # prep layer
-        # pdb.set_trace()
         x = self.conv0(x)
         x = self.conv0_bn(x)
         x = fn.leaky_relu(x, negative_slope=0.1)
-
         # layer 1
         x = self.conv1(x)
         x = fn.max_pool2d(x, 2)
         x = self.conv1_bn(x)
         x = fn.leaky_relu(x, negative_slope=0.1)
         x = x + self.residual1(x)
-
         # layer 2
         x = self.conv2(x)
         x = fn.max_pool2d(x, 2)
         x = self.conv2_bn(x)
         x = fn.leaky_relu(x, negative_slope=0.1)
         x = x + self.residual2(x)
-
         # layer 3
         x = self.conv3(x)
         x = fn.max_pool2d(x, 2)
         x = self.conv3_bn(x)
         x = fn.leaky_relu(x, negative_slope=0.1)
         x = x + self.residual3(x)
-
         # layer 4
         x = fn.max_pool2d(x, kernel_size=x.size()[2:])
         x = torch.flatten(x, 1)
@@ -110,7 +100,7 @@ class Residual(nn.Module):
 def get_estimator(epochs=24, batch_size=512, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
     # step 1: prepare dataset
     train_data, test_data = load_data()
-    pipeline = Pipeline(
+    pipeline = fe.Pipeline(
         train_data=train_data,
         eval_data=test_data,
         batch_size=batch_size,
@@ -121,7 +111,7 @@ def get_estimator(epochs=24, batch_size=512, max_steps_per_epoch=None, save_dir=
             Sometimes(HorizontalFlip(image_in="x", image_out="x", mode="train")),
             CoarseDropout(inputs="x", outputs="x", mode="train", max_holes=1),
             ChannelTranspose(inputs="x", outputs="x"),
-            SmoothOneHot(inputs="y", outputs="y", mode="train", class_num=10, label_smoothing=0.2)
+            Onehot(inputs="y", outputs="y", mode="train", num_classes=10, label_smoothing=0.2)
         ])
 
     # step 2: prepare network

@@ -17,8 +17,8 @@ from copy import deepcopy
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
-
 from albumentations import BboxParams, Compose, DualTransform, ImageOnlyTransform, KeypointParams, ReplayCompose
+
 from fastestimator.op import NumpyOp
 
 
@@ -36,7 +36,7 @@ class ImageOnlyAlbumentation(NumpyOp):
         self.in_list, self.out_list = True, True
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
-        results = [self.replay_func(image=data[0])]
+        results = [self.replay_func(image=data[0]) if len(data) > 1 else self.func(image=data[0])]
         for i in range(1, len(data)):
             results.append(self.replay_func.replay(results[0]['replay'], image=data[i]))
         return [result["image"] for result in results]

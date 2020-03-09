@@ -106,9 +106,9 @@ def get_estimator(epochs=50, batch_size=256, max_steps_per_epoch=None, save_dir=
     network = fe.Network(ops=[
         ModelOp(model=gen_model, inputs="z", outputs="x_fake"),
         ModelOp(model=disc_model, inputs="x_fake", outputs="fake_score"),
-        ModelOp(inputs="x", model=disc_model, outputs="true_score"),
         GLoss(inputs="fake_score", outputs="gloss"),
         UpdateOp(model=gen_model, loss_name="gloss"),
+        ModelOp(inputs="x", model=disc_model, outputs="true_score"),
         DLoss(inputs=("true_score", "fake_score"), outputs="dloss"),
         UpdateOp(model=disc_model, loss_name="dloss")
     ])

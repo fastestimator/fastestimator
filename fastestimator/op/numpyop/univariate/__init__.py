@@ -33,10 +33,10 @@ from fastestimator.op.numpyop.univariate.minmax import Minmax
 from fastestimator.op.numpyop.univariate.motion_blur import MotionBlur
 from fastestimator.op.numpyop.univariate.multiplicative_noise import MultiplicativeNoise
 from fastestimator.op.numpyop.univariate.normalize import Normalize
+from fastestimator.op.numpyop.univariate.onehot import Onehot
 from fastestimator.op.numpyop.univariate.posterize import Posterize
 from fastestimator.op.numpyop.univariate.random_brightness_contrast import RandomBrightnessContrast
 from fastestimator.op.numpyop.univariate.random_rain import RandomRain
 from fastestimator.op.numpyop.univariate.read_image import ReadImage
 from fastestimator.op.numpyop.univariate.rgb_shift import RGBShift
 from fastestimator.op.numpyop.univariate.to_float import ToFloat
-from fastestimator.op.numpyop.univariate.smooth_one_hot import SmoothOneHot
