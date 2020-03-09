@@ -19,7 +19,7 @@ class Onehot(NumpyOp):
     """
     def __init__(self,
                  num_classes: int,
-                 label_smoothing: Optional[float] = None,
+                 label_smoothing: float = 0.0,
                  inputs: Union[None, str, Iterable[str], Callable] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
                  mode: Union[None, str, Iterable[str]] = None):
@@ -27,8 +27,6 @@ class Onehot(NumpyOp):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.num_classes = num_classes
         self.label_smoothing = label_smoothing
-        if not self.label_smoothing:
-            self.label_smoothing = 0.0
 
     def forward(self, data: Union[int, np.ndarray], state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
         class_index = np.array(data)

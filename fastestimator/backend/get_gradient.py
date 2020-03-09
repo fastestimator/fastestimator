@@ -12,19 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Iterable, Optional, Union
+from typing import Iterable, Optional, TypeVar, Union
 
 import tensorflow as tf
 import torch
 
 from fastestimator.util.util import NonContext
 
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
-def get_gradient(target: Union[tf.Tensor, torch.Tensor],
-                 sources: Union[Iterable[Union[tf.Tensor, torch.Tensor]], tf.Tensor, torch.Tensor],
+
+def get_gradient(target: Tensor,
+                 sources: Union[Iterable[Tensor], Tensor],
                  higher_order: bool = False,
                  tape: Optional[tf.GradientTape] = None,
-                 retain_graph: bool = True) -> Union[Iterable[Union[tf.Tensor, torch.Tensor]], tf.Tensor, torch.Tensor]:
+                 retain_graph: bool = True) -> Union[Iterable[Tensor], Tensor]:
     """calculate gradients of target w.r.t sources
 
     Args:
