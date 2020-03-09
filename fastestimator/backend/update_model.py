@@ -17,6 +17,7 @@ from typing import Optional, Union
 import tensorflow as tf
 import torch
 
+from fastestimator.backend.get_gradient import get_gradient
 from fastestimator.backend.reduce_loss import reduce_loss
 
 
@@ -29,12 +30,13 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
         strategy = tf.distribute.get_strategy()
         if isinstance(strategy, tf.distribute.MirroredStrategy):
             loss = loss / strategy.num_replicas_in_sync
+        gradients = get_gradient(loss, model.trainable_variables, tape=tape)
         with tape.stop_recording():
-            gradients = tape.gradient(loss, model.trainable_variables)
             model.current_optimizer.apply_gradients(zip(gradients, model.trainable_variables))
     elif isinstance(model, torch.nn.Module):
-        loss.backward(retain_graph=retain_graph)
+        gradients = get_gradient(loss, model.parameters(), retain_graph=retain_graph)
+        for gradient, parameter in zip(gradients, model.parameters()):
+            parameter.grad = gradient
         model.current_optimizer.step()
-        model.current_optimizer.zero_grad()
     else:
         raise ValueError("Unrecognized model instance {}".format(type(model)))

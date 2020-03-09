@@ -18,27 +18,20 @@ ref: https://github.com/davidcpage/cifar10-fast
 """
 import tempfile
 
-import numpy as np
 import tensorflow as tf
-from tensorflow.keras.mixed_precision import experimental as mixed_precision
-from tensorflow.python.keras import backend, layers
-from tensorflow.python.keras.regularizers import l2
+from tensorflow.python.keras import layers
 
 import fastestimator as fe
 from fastestimator.dataset import NumpyDataset
 from fastestimator.dataset.data.cifar10 import load_data
 from fastestimator.op import NumpyOp
-from fastestimator.op.numpyop import CoarseDropout, HorizontalFlip, Minmax, Normalize, PadIfNeeded, RandomCrop, \
-    SmoothOneHot, Sometimes
+from fastestimator.op.numpyop import CoarseDropout, HorizontalFlip, Minmax, Normalize, Onehot, PadIfNeeded, \
+    RandomCrop, Sometimes
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
-from fastestimator.pipeline import Pipeline
 from fastestimator.trace import Trace
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
-
-policy = mixed_precision.Policy('mixed_float16')
-mixed_precision.set_policy(policy)
 
 
 def residual(x, num_channel):
@@ -87,7 +80,7 @@ def my_model():
 def get_estimator(epochs=24, batch_size=512, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
     # step 1: prepare dataset
     train_data, test_data = load_data()
-    pipeline = Pipeline(
+    pipeline = fe.Pipeline(
         train_data=train_data,
         eval_data=test_data,
         batch_size=batch_size,
@@ -97,7 +90,7 @@ def get_estimator(epochs=24, batch_size=512, max_steps_per_epoch=None, save_dir=
             RandomCrop(32, 32, image_in="x", image_out="x", mode="train"),
             Sometimes(HorizontalFlip(image_in="x", image_out="x", mode="train")),
             CoarseDropout(inputs="x", outputs="x", mode="train", max_holes=1),
-            SmoothOneHot(inputs="y", outputs="y", mode="train", class_num=10, label_smoothing=0.2)
+            Onehot(inputs="y", outputs="y", mode="train", num_classes=10, label_smoothing=0.2)
         ])
 
     # step 2: prepare network
@@ -109,15 +102,15 @@ def get_estimator(epochs=24, batch_size=512, max_steps_per_epoch=None, save_dir=
     ])
 
     # step 3: prepare estimator
-    estimator = fe.Estimator(
-        pipeline=pipeline,
-        network=network,
-        epochs=epochs,
-        traces=[
-            Accuracy(true_key="y", pred_key="y_pred"),
-            BestModelSaver(model=model, save_dir=save_dir, metric="accuracy", save_best_mode="max")
-        ],
-        max_steps_per_epoch=max_steps_per_epoch)
+    traces = [
+        Accuracy(true_key="y", pred_key="y_pred"),
+        BestModelSaver(model=model, save_dir=save_dir, metric="accuracy", save_best_mode="max")
+    ]
+    estimator = fe.Estimator(pipeline=pipeline,
+                             network=network,
+                             epochs=epochs,
+                             traces=traces,
+                             max_steps_per_epoch=max_steps_per_epoch)
 
     return estimator
 

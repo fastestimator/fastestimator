@@ -267,12 +267,11 @@ class TFNetwork(BaseNetwork):
         return prediction
 
 
-def build(
-    model_fn: Callable,
-    optimizer_fn: Union[str, Scheduler, Callable, List[str], List[Callable], List[Scheduler], None],
-    weights_path: Union[str, None, List[Union[str, None]]] = None,
-    model_names: Union[str, List[str], None] = None
-) -> Union[tf.keras.Model, torch.nn.Module, List[tf.keras.Model], List[torch.nn.Module]]:
+def build(model_fn: Callable,
+          optimizer_fn: Union[str, Scheduler, Callable, List[str], List[Callable], List[Scheduler], None],
+          weights_path: Union[str, None, List[Union[str, None]]] = None,
+          model_names: Union[str, List[str], None] = None
+          ) -> Union[tf.keras.Model, torch.nn.Module, List[tf.keras.Model], List[torch.nn.Module]]:
     """Build model instances and associate them with optimizers
     Args:
         model_fn: function that define model(s)
@@ -390,5 +389,4 @@ def _optimizer_fn_to_optimizer(optimizer_fn: Callable, model: Union[tf.keras.Mod
         else:
             optimizer = optimizer_fn(model.parameters())
             assert isinstance(optimizer, torch.optim.Optimizer)
-            optimizer.zero_grad()
     return optimizer
