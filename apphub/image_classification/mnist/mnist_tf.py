@@ -48,7 +48,7 @@ def get_estimator(epochs=2, batch_size=32, max_steps_per_epoch=None, save_dir=te
     ]
     estimator = fe.Estimator(pipeline=pipeline,
                              network=network,
-                             epochs=2,
+                             epochs=epochs,
                              traces=traces,
                              max_steps_per_epoch=max_steps_per_epoch)
     return estimator

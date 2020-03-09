@@ -27,8 +27,12 @@ class Onehot(NumpyOp):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.num_classes = num_classes
         self.label_smoothing = label_smoothing
+        self.in_list, self.out_list = True, True
 
-    def forward(self, data: Union[int, np.ndarray], state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
+    def forward(self, data: Union[int, np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
+        return [self._apply_onehot(elem) for elem in data]
+
+    def _apply_onehot(self, data):
         class_index = np.array(data)
         assert "int" in str(class_index.dtype)
         assert class_index.size == 1, "data must have only one item"
