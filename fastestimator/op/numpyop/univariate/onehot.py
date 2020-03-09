@@ -11,7 +11,7 @@ class Onehot(NumpyOp):
 
     Args:
         num_classes: Total number of classes.
-        label_smoothing: Smoothing factor. The class index value will become: 1 - label_smoothing + label_smoothing
+        label_smoothing: Smoothing factor, output value become: 1 - label_smoothing + label_smoothing
             / num_classes and The other class index value will become label_smoothing / num_classes
         inputs: Input key(s) of labels to be onehot encoded
         outputs: Output key(s) of labels
