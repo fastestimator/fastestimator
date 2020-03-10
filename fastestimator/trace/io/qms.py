@@ -113,7 +113,7 @@ class QMSDocx():
         A = P.add_run()
         A.bold = True
         A.font.size = Pt(22)
-        A.add_text("Verification Summary report for ... Model")
+        A.add_text("Verification Summary report for Model")
         self.add_line_break(P, 4, font_size=Pt(14))
 
         P = self.doc.add_paragraph()
@@ -179,9 +179,9 @@ class QMSDocx():
         T.style = "Table Grid"
         self.fill_table(
             T,
-            [["Location", "Reference", "Document Name"], ["Myworkshop", "DOC", "Edison AI Model Verification Plan"], [
-                "Myworkshop", "DOC", "Model Evaluation Tool Validation"
-            ], ["Myworkshop", "DOC", "The CRS documents are in Approved state"]])
+            [["Location", "Reference", "Document Name"], ["Myworkshop", "<DOC>", "Edison AI Model Verification Plan"], [
+                "Myworkshop", "<DOC>", "Model Evaluation Tool Validation"
+            ], ["Myworkshop", "<DOC>", "The CRS documents are in Approved state"]])
 
         P = self.doc.add_paragraph()
         self.add_line_break(P, 2, Pt(14))
@@ -211,7 +211,7 @@ class QMSDocx():
 
         P = self.doc.add_paragraph()
         A = P.add_run()
-        A.add_text("Tools used for verification are listed in Model Evaluation Tool Validation DOC")
+        A.add_text("Tools used for verification are listed in Model Evaluation Tool Validation <DOC>")
 
         P = self.doc.add_paragraph()
         self.add_line_break(P, 2, Pt(14))
@@ -228,7 +228,7 @@ class QMSDocx():
         T.style = "Table Grid"
         self.fill_table(T,
                         [["Document", "Location", "Comments"],
-                         ["DOC", "Myworkshop", "Verification Procedure is in Approved state"]])
+                         ["<DOC>", "Myworkshop", "Verification Procedure is in Approved state"]])
 
         P = self.doc.add_paragraph()
         self.add_line_break(P, 1, Pt(14))
