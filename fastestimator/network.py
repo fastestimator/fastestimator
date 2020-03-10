@@ -283,14 +283,13 @@ def build(model_fn: Callable,
     Returns:
         models: model(s) built by FastEstimator
     """
-    if not hasattr(build, "count"):
-        build.count = 0
-
     def _generate_model_names(num_names):
         names = ["model" if i + build.count == 0 else "model{}".format(i + build.count) for i in range(num_names)]
         build.count += num_names
         return names
 
+    if not hasattr(build, "count"):
+        build.count = 0
     models, optimizer_fn = to_list(model_fn()), to_list(optimizer_fn)
     # check framework
     if isinstance(models[0], tf.keras.Model):
