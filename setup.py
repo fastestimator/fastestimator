@@ -66,7 +66,8 @@ setup(
         'tqdm',
         'h5py',
         'pycocotools-fix',
-        'jsonpickle'
+        'jsonpickle',
+        'python-docx'
     ],
     # Declare extra set for installation
     extras_require={},
