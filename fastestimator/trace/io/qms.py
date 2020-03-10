@@ -68,7 +68,7 @@ class QMSTest(Trace):
         if self.json_output.endswith(".json"):
             json_path = self.json_output
         else:
-            json_path = os.path.join(self.output_path, "QMS.json")
+            json_path = os.path.join(self.json_output, "QMS.json")
         with open(json_path, 'w') as fp:
             json.dump(self.json_summary, fp, indent=4)
         print("Saved QMS JSON report to {}".format(json_path))
