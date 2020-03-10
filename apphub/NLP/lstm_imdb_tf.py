@@ -20,7 +20,7 @@ def create_lstm(max_len):
     model.add(layers.Embedding(MAX_WORDS, 64, input_length=max_len))
     model.add(layers.Conv1D(32, 3, padding='same', activation='relu'))
     model.add(layers.MaxPooling1D(pool_size=4))
-    model.add(layers.CuDNNLSTM(64))
+    model.add(layers.LSTM(64))
     model.add(layers.Dense(250, activation='relu'))
     model.add(layers.Dense(1, activation="sigmoid"))
     return model
