@@ -12,4 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.schedule.schedule import Scheduler, EpochScheduler, RepeatScheduler
+from fastestimator.schedule.lr_shedule import cosine_decay
+from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler

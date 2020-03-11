@@ -111,7 +111,7 @@ def get_estimator(epochs=24, batch_size=512, max_steps_per_epoch=None, save_dir=
     train_data, test_data = load_data()
     pipeline = fe.Pipeline(
         train_data=train_data,
-        eval_data=test_data,
+        test_data=test_data,
         batch_size=batch_size,
         ops=[
             Normalize(inputs="x", outputs="x", mean=(0.4914, 0.4822, 0.4465), std=(0.2471, 0.2435, 0.2616)),
@@ -149,3 +149,4 @@ def get_estimator(epochs=24, batch_size=512, max_steps_per_epoch=None, save_dir=
 if __name__ == "__main__":
     est = get_estimator()
     est.fit()
+    est.test()

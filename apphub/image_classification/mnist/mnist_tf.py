@@ -20,6 +20,8 @@ from fastestimator.dataset import mnist
 from fastestimator.op.numpyop import ExpandDims, Minmax
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
+from fastestimator.schedule import cosine_decay
+from fastestimator.trace.adapt import LRScheduler
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
 
@@ -44,7 +46,8 @@ def get_estimator(epochs=2, batch_size=32, max_steps_per_epoch=None, save_dir=te
     # step 3
     traces = [
         Accuracy(true_key="y", pred_key="y_pred"),
-        BestModelSaver(model=model, save_dir=save_dir, metric="accuracy", save_best_mode="max")
+        BestModelSaver(model=model, save_dir=save_dir, metric="accuracy", save_best_mode="max"),
+        LRScheduler(model=model, lr_fn=lambda step: cosine_decay(step, cycle_length=3750, init_lr=1e-3))
     ]
     estimator = fe.Estimator(pipeline=pipeline,
                              network=network,

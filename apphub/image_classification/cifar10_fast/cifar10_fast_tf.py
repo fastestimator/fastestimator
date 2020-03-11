@@ -22,14 +22,11 @@ import tensorflow as tf
 from tensorflow.python.keras import layers
 
 import fastestimator as fe
-from fastestimator.dataset import NumpyDataset
 from fastestimator.dataset.data.cifar10 import load_data
-from fastestimator.op import NumpyOp
 from fastestimator.op.numpyop import CoarseDropout, HorizontalFlip, Minmax, Normalize, Onehot, PadIfNeeded, \
     RandomCrop, Sometimes
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
-from fastestimator.trace import Trace
 from fastestimator.trace.adapt import LRScheduler
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
@@ -37,10 +34,10 @@ from fastestimator.trace.metric import Accuracy
 
 def lr_schedule(step):
     if step <= 490:
-        lr = step / 490 * 0.4
+        lr = step / 490 * 0.04
     else:
-        lr = (2352 - step) / 1862 * 0.4
-    return lr * 0.1
+        lr = (2352 - step) / 1862 * 0.04
+    return lr
 
 
 def residual(x, num_channel):
@@ -91,7 +88,7 @@ def get_estimator(epochs=24, batch_size=512, max_steps_per_epoch=None, save_dir=
     train_data, test_data = load_data()
     pipeline = fe.Pipeline(
         train_data=train_data,
-        eval_data=test_data,
+        test_data=test_data,
         batch_size=batch_size,
         ops=[
             Normalize(inputs="x", outputs="x", mean=(0.4914, 0.4822, 0.4465), std=(0.2471, 0.2435, 0.2616)),
@@ -128,3 +125,4 @@ def get_estimator(epochs=24, batch_size=512, max_steps_per_epoch=None, save_dir=
 if __name__ == "__main__":
     est = get_estimator()
     est.fit()
+    est.test()
