@@ -28,11 +28,11 @@ def load_data(max_len: int, vocab_size: int) -> Tuple[NumpyDataset, NumpyDataset
     """Loads the IMDB Movie review dataset containing 25,000 reviews labeled by sentiments positive or negative.
 
     Args:
-        max_len (int): maximum length of input sequence
-        vocab_size (int): vocabulary size to learn word embeddings
+        max_len : maximum length of input sequence
+        vocab_size : vocabulary size to learn word embeddings
 
     Returns:
-        Tuple[NumpyDataset, NumpyDataset]: Train and Eval datasets
+        TrainData, EvalData
     """
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.imdb.load_data(maxlen=max_len, num_words=vocab_size)
     # pad the sequences to max length

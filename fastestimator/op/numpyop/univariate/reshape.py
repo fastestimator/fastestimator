@@ -12,13 +12,13 @@ class Reshape(NumpyOp):
         shape: target shape
     """
     def __init__(self,
-                 shape: Union[int, Tuple[int]],
+                 shape: Union[int, Tuple[int, ...]],
                  inputs: Union[None, str, Iterable[str], Callable] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
                  mode: Union[None, str, Iterable[str]] = None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.shape = shape
 
-    def forward(self, data: List[Union[int, np.ndarray]], state: Dict[str, Any]) -> List[Union[int, np.ndarray]]:
+    def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
         data = np.reshape(data, self.shape)
         return data
