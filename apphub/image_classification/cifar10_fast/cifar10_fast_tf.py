@@ -40,7 +40,7 @@ def lr_schedule(step):
         lr = step / 490 * 0.4
     else:
         lr = (2352 - step) / 1862 * 0.4
-    return lr
+    return lr * 0.1
 
 
 def residual(x, num_channel):
@@ -103,7 +103,7 @@ def get_estimator(epochs=24, batch_size=512, max_steps_per_epoch=None, save_dir=
         ])
 
     # step 2: prepare network
-    model = fe.build(model_fn=my_model, optimizer_fn=lambda: tf.optimizers.SGD(momentum=0.9, nesterov=True))
+    model = fe.build(model_fn=my_model, optimizer_fn="adam")
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="x", outputs="y_pred"),
         CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),

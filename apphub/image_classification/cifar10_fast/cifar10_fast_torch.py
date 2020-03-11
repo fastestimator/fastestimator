@@ -38,7 +38,7 @@ def lr_schedule(step):
         lr = step / 490 * 0.4
     else:
         lr = (2352 - step) / 1862 * 0.4
-    return lr
+    return lr * 0.1
 
 
 class FastCifar(nn.Module):
