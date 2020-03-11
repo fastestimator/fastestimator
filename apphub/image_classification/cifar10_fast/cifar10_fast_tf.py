@@ -30,8 +30,17 @@ from fastestimator.op.numpyop import CoarseDropout, HorizontalFlip, Minmax, Norm
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace import Trace
+from fastestimator.trace.adapt import LRScheduler
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
+
+
+def lr_schedule(step):
+    if step <= 490:
+        lr = step / 490 * 0.4
+    else:
+        lr = (2352 - step) / 1862 * 0.4
+    return lr
 
 
 def residual(x, num_channel):
@@ -94,7 +103,7 @@ def get_estimator(epochs=24, batch_size=512, max_steps_per_epoch=None, save_dir=
         ])
 
     # step 2: prepare network
-    model = fe.build(model_fn=my_model, optimizer_fn="adam")
+    model = fe.build(model_fn=my_model, optimizer_fn=lambda: tf.optimizers.SGD(momentum=0.9, nesterov=True))
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="x", outputs="y_pred"),
         CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),
@@ -104,7 +113,8 @@ def get_estimator(epochs=24, batch_size=512, max_steps_per_epoch=None, save_dir=
     # step 3: prepare estimator
     traces = [
         Accuracy(true_key="y", pred_key="y_pred"),
-        BestModelSaver(model=model, save_dir=save_dir, metric="accuracy", save_best_mode="max")
+        BestModelSaver(model=model, save_dir=save_dir, metric="accuracy", save_best_mode="max"),
+        LRScheduler(model=model, lr_fn=lr_schedule)
     ]
     estimator = fe.Estimator(pipeline=pipeline,
                              network=network,

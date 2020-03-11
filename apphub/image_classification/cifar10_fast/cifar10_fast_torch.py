@@ -28,8 +28,17 @@ from fastestimator.op.numpyop import ChannelTranspose, CoarseDropout, Horizontal
     RandomCrop, Sometimes
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
+from fastestimator.trace.adapt import LRScheduler
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
+
+
+def lr_schedule(step):
+    if step <= 490:
+        lr = step / 490 * 0.4
+    else:
+        lr = (2352 - step) / 1862 * 0.4
+    return lr
 
 
 class FastCifar(nn.Module):
@@ -123,15 +132,16 @@ def get_estimator(epochs=24, batch_size=512, max_steps_per_epoch=None, save_dir=
     ])
 
     # step 3 prepare estimator
-    estimator = fe.Estimator(
-        pipeline=pipeline,
-        network=network,
-        epochs=epochs,
-        traces=[
-            Accuracy(true_key="y", pred_key="y_pred"),
-            BestModelSaver(model=model, save_dir=save_dir, metric="accuracy", save_best_mode="max")
-        ],
-        max_steps_per_epoch=max_steps_per_epoch)
+    traces = [
+        Accuracy(true_key="y", pred_key="y_pred"),
+        BestModelSaver(model=model, save_dir=save_dir, metric="accuracy", save_best_mode="max"),
+        LRScheduler(model=model, lr_fn=lr_schedule)
+    ]
+    estimator = fe.Estimator(pipeline=pipeline,
+                             network=network,
+                             epochs=epochs,
+                             traces=traces,
+                             max_steps_per_epoch=max_steps_per_epoch)
 
     return estimator
 
