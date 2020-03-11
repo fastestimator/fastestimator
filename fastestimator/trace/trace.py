@@ -79,6 +79,9 @@ class TrainEssential(Trace):
 
     def on_begin(self, data: Data):
         self.train_start = time.perf_counter()
+        for model in self.system.network.models:
+            if hasattr(model, "current_optimizer"):
+                data.write_with_log(model.model_name + "_lr", get_lr(model))
 
     def on_epoch_begin(self, data: Data):
         if self.system.log_steps:
