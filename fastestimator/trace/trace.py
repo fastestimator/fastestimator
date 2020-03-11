@@ -17,7 +17,7 @@ from typing import Iterable, List, Set, Union
 
 import numpy as np
 
-from fastestimator.backend.to_number import to_number
+from fastestimator.backend import get_lr, to_number
 from fastestimator.summary import System
 from fastestimator.util import Data
 from fastestimator.util.util import to_list, to_set
@@ -79,6 +79,9 @@ class TrainEssential(Trace):
 
     def on_begin(self, data: Data):
         self.train_start = time.perf_counter()
+        for model in self.system.network.models:
+            if hasattr(model, "current_optimizer"):
+                data.write_with_log(model.model_name + "_lr", get_lr(model))
 
     def on_epoch_begin(self, data: Data):
         if self.system.log_steps:
@@ -97,6 +100,9 @@ class TrainEssential(Trace):
 
     def on_end(self, data: Data):
         data.write_with_log("total_time", "{} sec".format(round(time.perf_counter() - self.train_start, 2)))
+        for model in self.system.network.models:
+            if hasattr(model, "current_optimizer"):
+                data.write_with_log(model.model_name + "_lr", get_lr(model))
 
 
 class EvalEssential(Trace):

@@ -12,5 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.schedule.lr_shedule import cosine_decay
-from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler
+from typing import Union
+
+import tensorflow as tf
+import torch
+
+
+def get_lr(model: Union[tf.keras.Model, torch.nn.Module]) -> float:
+    """get the learning rate of a given model
+
+    Args:
+        model: model instance
+    Return:
+        lr: learning rate
+    """
+    if isinstance(model, tf.keras.Model):
+        lr = tf.keras.backend.get_value(model.current_optimizer.lr)
+    else:
+        lr = model.current_optimizer.param_groups[0]['lr']
+    return lr
