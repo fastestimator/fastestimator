@@ -1,3 +1,17 @@
+# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
 import tempfile
 
 import torch
@@ -45,25 +59,21 @@ def get_estimator(max_words=10000,
                   batch_size=64,
                   steps_per_epoch=None,
                   model_dir=tempfile.mkdtemp()):
-
     # step 1. prepare data
     train_data, eval_data = imdb_review.load_data(max_len, max_words)
     pipeline = fe.Pipeline(train_data=train_data,
                            eval_data=eval_data,
                            batch_size=batch_size,
                            ops=Reshape(1, inputs="y", outputs="y"))
-
     # step 2. prepare model
-    model = fe.build(model_fn=lambda: ReviewSentiment(max_words=max_words),
-                     optimizer_fn=lambda x: torch.optim.Adam(x, lr=0.001))
+    model = fe.build(model_fn=lambda: ReviewSentiment(max_words=max_words), optimizer_fn="adam")
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="x", outputs="y_pred"),
         CrossEntropy(inputs=("y_pred", "y"), outputs="loss"),
         UpdateOp(model=model, loss_name="loss")
     ])
-
-    traces = [Accuracy(true_key="y", pred_key="y_pred"), BestModelSaver(model=model, save_dir=model_dir)]
     # step 3.prepare estimator
+    traces = [Accuracy(true_key="y", pred_key="y_pred"), BestModelSaver(model=model, save_dir=model_dir)]
     estimator = fe.Estimator(network=network,
                              pipeline=pipeline,
                              epochs=epochs,
