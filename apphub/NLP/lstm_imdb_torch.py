@@ -12,14 +12,11 @@ from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
 
-MAX_WORDS = 10000
-MAX_LEN = 500
-
 
 class ReviewSentiment(nn.Module):
-    def __init__(self, embedding_size=64, hidden_units=64):
+    def __init__(self, max_words, embedding_size=64, hidden_units=64):
         super().__init__()
-        self.embedding = nn.Embedding(MAX_WORDS, embedding_size)
+        self.embedding = nn.Embedding(max_words, embedding_size)
         self.conv1d = nn.Conv1d(in_channels=64, out_channels=32, kernel_size=3, padding=1)
         self.maxpool1d = nn.MaxPool1d(kernel_size=4)
         self.lstm = nn.LSTM(input_size=125, hidden_size=hidden_units, num_layers=1)
@@ -42,17 +39,23 @@ class ReviewSentiment(nn.Module):
         return x
 
 
-def get_estimator(epochs=10, batch_size=64, steps_per_epoch=None, model_dir=tempfile.mkdtemp()):
+def get_estimator(max_words=10000,
+                  max_len=500,
+                  epochs=10,
+                  batch_size=64,
+                  steps_per_epoch=None,
+                  model_dir=tempfile.mkdtemp()):
 
     # step 1. prepare data
-    train_data, eval_data = imdb_review.load_data(MAX_LEN, MAX_WORDS)
+    train_data, eval_data = imdb_review.load_data(max_len, max_words)
     pipeline = fe.Pipeline(train_data=train_data,
                            eval_data=eval_data,
                            batch_size=batch_size,
                            ops=Reshape(1, inputs="y", outputs="y"))
 
     # step 2. prepare model
-    model = fe.build(model_fn=ReviewSentiment, optimizer_fn=lambda x: torch.optim.Adam(x, lr=0.001))
+    model = fe.build(model_fn=lambda: ReviewSentiment(max_words=max_words),
+                     optimizer_fn=lambda x: torch.optim.Adam(x, lr=0.001))
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="x", outputs="y_pred"),
         CrossEntropy(inputs=("y_pred", "y"), outputs="loss"),

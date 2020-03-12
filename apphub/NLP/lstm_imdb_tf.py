@@ -11,13 +11,10 @@ from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
 
-MAX_WORDS = 10000
-MAX_LEN = 500
 
-
-def create_lstm(max_len):
+def create_lstm(max_len, max_words):
     model = tf.keras.Sequential()
-    model.add(layers.Embedding(MAX_WORDS, 64, input_length=max_len))
+    model.add(layers.Embedding(max_words, 64, input_length=max_len))
     model.add(layers.Conv1D(32, 3, padding='same', activation='relu'))
     model.add(layers.MaxPooling1D(pool_size=4))
     model.add(layers.LSTM(64))
@@ -26,10 +23,15 @@ def create_lstm(max_len):
     return model
 
 
-def get_estimator(epochs=10, batch_size=64, steps_per_epoch=None, model_dir=tempfile.mkdtemp()):
+def get_estimator(max_words=10000,
+                  max_len=500,
+                  epochs=10,
+                  batch_size=64,
+                  steps_per_epoch=None,
+                  model_dir=tempfile.mkdtemp()):
 
     # step 1. prepare data
-    train_data, eval_data = imdb_review.load_data(MAX_LEN, MAX_WORDS)
+    train_data, eval_data = imdb_review.load_data(max_len, max_words)
 
     pipeline = fe.Pipeline(train_data=train_data,
                            eval_data=eval_data,
@@ -37,7 +39,7 @@ def get_estimator(epochs=10, batch_size=64, steps_per_epoch=None, model_dir=temp
                            ops=Reshape(1, inputs="y", outputs="y"))
 
     # step 2. prepare model
-    model = fe.build(model_fn=lambda: create_lstm(MAX_LEN), optimizer_fn="adam")
+    model = fe.build(model_fn=lambda: create_lstm(max_len, max_words), optimizer_fn="adam")
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="x", outputs="y_pred"),
         CrossEntropy(inputs=("y_pred", "y"), outputs="loss"),
