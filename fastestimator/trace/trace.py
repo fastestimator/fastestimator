@@ -89,8 +89,9 @@ class TrainEssential(Trace):
 
     def on_batch_end(self, data: Data):
         if self.system.log_steps and self.system.global_step % self.system.log_steps == 0:
-            self.elapse_times.append(time.perf_counter() - self.time_start)
-            data.write_with_log("steps/sec", round(self.system.log_steps / np.sum(self.elapse_times), 1))
+            if self.system.global_step > 0:
+                self.elapse_times.append(time.perf_counter() - self.time_start)
+                data.write_with_log("steps/sec", round(self.system.log_steps / np.sum(self.elapse_times), 2))
             self.elapse_times = []
             self.time_start = time.perf_counter()
 
