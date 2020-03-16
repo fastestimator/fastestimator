@@ -16,7 +16,7 @@ import os
 import time
 import warnings
 from functools import lru_cache
-from typing import List, Optional, Set, TypeVar, Union
+from typing import Any, Dict, List, Optional, Set, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
@@ -91,7 +91,15 @@ class Pipeline:
     def get_modes(self) -> Set[str]:
         return set(self.data.keys())
 
-    def benchmark(self, mode: str = "train", num_steps: int = 1000, log_interval: int = 100, epoch: int = 0):
+    def benchmark(self, mode: str = "train", epoch: int = 0, num_steps: int = 1000, log_interval: int = 100):
+        """benchmark the pipeline processing speed
+
+        Args:
+            mode: Current mode, can be 'train', 'eval' or 'test'.
+            epoch: Current epoch index. Defaults to 0.
+            num_steps: Maximum number of steps to do benchmark on. Defaults to 1000.
+            log_interval: Logging interval. Defaults to 100.
+        """
         loader = self.get_loader(mode=mode, epoch=epoch)
         if isinstance(loader, tf.data.Dataset):
             loader = loader.take(num_steps)
@@ -105,7 +113,42 @@ class Pipeline:
                 print("FastEstimator: Step: {}, Epoch: {}, Steps/sec: {}".format(idx, epoch, iters_per_sec))
                 start = time.perf_counter()
 
-    def get_loader(self, mode: str, epoch: int = 0) -> Union[DataLoader, tf.data.Dataset]:
+    def get_results(self, mode: str = "train", epoch: int = 0,
+                    num_steps: int = 1) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
+        """get the pipeline outputs after all ops
+
+        Args:
+            mode: Current mode, can be 'train', 'eval' or 'test'.
+            epoch: Current epoch index. Defaults to 0.
+            num_steps: number of steps(batches) to get. Defaults to 1.
+
+        Returns:
+            pipeline outputs
+        """
+        results = []
+        loader = self.get_loader(mode=mode, epoch=epoch, shuffle=False)
+        if isinstance(loader, tf.data.Dataset):
+            loader = loader.take(num_steps)
+        for idx, batch in enumerate(loader):
+            if idx == num_steps:
+                break
+            results.append(batch)
+        if len(results) == 1:
+            results = results[0]
+        return results
+
+    def get_loader(self, mode: str, epoch: int = 0,
+                   shuffle: Optional[bool] = None) -> Union[DataLoader, tf.data.Dataset]:
+        """get the data loader given mode and epoch
+
+        Args:
+            mode: Current mode, can be 'train', 'eval' or 'test'.
+            epoch: Current epoch index. Defaults to 0.
+            shuffle: Whether to shuffle, only used with FE dataset. If None, shuffle is based on mode. Defaults to None.
+
+        Returns:
+            data loader given the mode and epoch.
+        """
         data = self.data[mode]
         if isinstance(data, Scheduler):
             data = data.get_current_value(epoch)
@@ -114,9 +157,11 @@ class Pipeline:
             batch_size = self.batch_size
             if isinstance(batch_size, Scheduler):
                 batch_size = batch_size.get_current_value(epoch)
+            if shuffle is None:
+                shuffle = mode == "train"
             data = DataLoader(op_dataset,
                               batch_size=batch_size,
-                              shuffle=mode == "train",
+                              shuffle=shuffle,
                               num_workers=self.num_process,
                               worker_init_fn=lambda _: np.random.seed())
         return data
