@@ -13,3 +13,4 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.architecture.pytorch.lenet import LeNet
+from fastestimator.architecture.pytorch.unet import UNet
