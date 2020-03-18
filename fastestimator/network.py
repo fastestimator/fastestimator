@@ -200,7 +200,7 @@ class TorchNetwork(BaseNetwork):
             prediction = {key: batch_in[key].detach() for key in self.effective_outputs[mode] if key in batch_in}
         return batch, prediction
 
-    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 0):
+    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 0) -> Dict[str, Any]:
         """apply all network operations on given data for certain mode and epoch.
 
         Args:
@@ -290,7 +290,7 @@ class TFNetwork(BaseNetwork):
                 prediction[key] = batch[key]
         return prediction
 
-    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 0):
+    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 0) -> Dict[str, Any]:
         """apply all network operations on given data for certain mode and epoch.
 
         Args:
