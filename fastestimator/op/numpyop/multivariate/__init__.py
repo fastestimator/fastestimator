@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from fastestimator.op.numpyop.multivariate.affine import Affine
 from fastestimator.op.numpyop.multivariate.center_crop import CenterCrop
 from fastestimator.op.numpyop.multivariate.crop import Crop
 from fastestimator.op.numpyop.multivariate.crop_non_empty_mask_if_exists import CropNonEmptyMaskIfExists
