@@ -20,7 +20,7 @@ import numpy as np
 from fastestimator.backend import get_lr, to_number
 from fastestimator.summary import System
 from fastestimator.util import Data
-from fastestimator.util.util import correct_modes, to_list, to_set
+from fastestimator.util.util import parse_modes, to_list, to_set
 
 
 class Trace:
@@ -42,7 +42,7 @@ class Trace:
                  mode: Union[None, str, Iterable[str]] = None):
         self.inputs = to_list(inputs)
         self.outputs = to_list(outputs)
-        self.mode = correct_modes(to_set(mode))
+        self.mode = parse_modes(to_set(mode))
 
     def on_begin(self, data: Data):
         """Runs once at the beginning of training

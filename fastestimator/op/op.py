@@ -19,7 +19,7 @@ import tensorflow as tf
 import torch
 
 from fastestimator.schedule import Scheduler
-from fastestimator.util.util import correct_modes, to_list, to_set
+from fastestimator.util.util import parse_modes, to_list, to_set
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
@@ -37,7 +37,7 @@ class Op:
                  mode: Union[None, str, Iterable[str]] = None):
         self.inputs = to_list(inputs)
         self.outputs = to_list(outputs)
-        self.mode = correct_modes(to_set(mode))
+        self.mode = parse_modes(to_set(mode))
         self.in_list = not isinstance(inputs, (str, Callable))
         self.out_list = not isinstance(outputs, str)
 

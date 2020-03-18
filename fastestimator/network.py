@@ -18,7 +18,7 @@ from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Set, Tup
 import tensorflow as tf
 import torch
 
-from fastestimator.backend import load_model
+from fastestimator.backend import load_model, to_tensor
 from fastestimator.op import TensorOp, get_current_ops, get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
@@ -117,6 +117,12 @@ class BaseNetwork:
             if op.outputs:
                 write_outputs_by_op(op, batch, data)
 
+    def run_step(self, batch: Dict[str, Any]):
+        raise NotImplementedError
+
+    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 0):
+        raise NotImplementedError
+
 
 def _collect_models(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> Set[Union[tf.keras.Model, torch.nn.Module]]:
     models = set()
@@ -194,6 +200,24 @@ class TorchNetwork(BaseNetwork):
             prediction = {key: batch_in[key].detach() for key in self.effective_outputs[mode] if key in batch_in}
         return batch, prediction
 
+    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 0):
+        """apply all network operations on given data for certain mode and epoch.
+
+        Args:
+            data: Input data in dictionary format
+            mode: Current mode, can be "train", "eval", "test" or "infer"
+            epoch: Current epoch index. Defaults to 0.
+
+        Returns:
+            transformed data
+        """
+        self.load_epoch(mode, epoch, warmup=True)
+        data = to_tensor(data, "torch")
+        data, prediction = self.run_step(data)
+        self.unload_epoch()
+        data.update(prediction)
+        return data
+
 
 class TFNetwork(BaseNetwork):
     def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any]]:
@@ -265,6 +289,24 @@ class TFNetwork(BaseNetwork):
             if key in batch:
                 prediction[key] = batch[key]
         return prediction
+
+    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 0):
+        """apply all network operations on given data for certain mode and epoch.
+
+        Args:
+            data: Input data in dictionary format
+            mode: Current mode, can be "train", "eval", "test" or "infer"
+            epoch: Current epoch index. Defaults to 0.
+
+        Returns:
+            transformed data
+        """
+        self.load_epoch(mode, epoch, warmup=True)
+        data = to_tensor(data, target_type="tf")
+        data, prediction = self.run_step(data)
+        self.unload_epoch()
+        data.update(prediction)
+        return data
 
 
 def build(model_fn: Callable,
