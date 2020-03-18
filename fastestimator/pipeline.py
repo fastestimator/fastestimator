@@ -225,7 +225,7 @@ class Pipeline:
         """get the pipeline output keys for a given mode
 
         Args:
-            mode: current mode, can be "train", "eval" or "test"
+            mode: current mode, can be "train", "eval" , "test" or "infer"
             total_epochs: total number of epochs
 
         Returns:
