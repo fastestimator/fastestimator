@@ -118,7 +118,7 @@ class Pipeline:
                 print("FastEstimator: Step: {}, Epoch: {}, Steps/sec: {}".format(idx, epoch, iters_per_sec))
                 start = time.perf_counter()
 
-    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 0):
+    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 0) -> Dict[str, Any]:
         """apply all pipeline operations on given data for certain mode and epoch.
 
         Args:

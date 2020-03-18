@@ -117,10 +117,10 @@ class BaseNetwork:
             if op.outputs:
                 write_outputs_by_op(op, batch, data)
 
-    def run_step(self, batch: Dict[str, Any]):
+    def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         raise NotImplementedError
 
-    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 0):
+    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 0) -> Dict[str, Any]:
         raise NotImplementedError
 
 
