@@ -250,3 +250,16 @@ def get_shape(obj: Any) -> List[Optional[int]]:
     else:
         result = []
     return result
+
+
+def parse_modes(modes: Set[str]) -> Set[str]:
+    valid_fields = {"train", "eval", "test", "infer", "!train", "!eval", "!test", "!infer"}
+    assert modes.issubset(valid_fields), "Invalid modes argument {}".format(modes - valid_fields)
+    negation = set([mode.startswith("!") for mode in modes])
+    assert len(negation) < 2, "cannot mix !mode with mode, found {}".format(modes)
+    if True in negation:
+        new_modes = {"train", "eval", "test", "infer"}
+        for mode in modes:
+            new_modes.discard(mode.strip("!"))
+        modes = new_modes
+    return modes
