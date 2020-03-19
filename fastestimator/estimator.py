@@ -179,7 +179,7 @@ class Estimator:
         for epoch in signature_epochs:
             for mode in self.pipeline.get_modes():
                 loader = self._configure_loader(self.pipeline.get_loader(mode, epoch))
-                self.network.load_epoch(mode, epoch, warmup=True)
+                self.network.load_epoch(mode, epoch, output_keys=self.trace_inputs[mode], warmup=True)
                 with Suppressor():
                     if isinstance(loader, tf.data.Dataset):
                         batch = list(loader.take(1))[0]
@@ -196,8 +196,6 @@ class Estimator:
             unmet_requirements = self.trace_inputs[mode] - (pipeline_all_outputs
                                                             | network_all_outputs | self.trace_outputs[mode])
             assert not unmet_requirements, "found missing key(s) during {}: {}".format(mode, unmet_requirements)
-            self.network.effective_inputs[mode] = self.network.get_effective_input_keys(mode, self.system.total_epochs)
-            self.network.effective_outputs[mode] = network_all_outputs.intersection(self.trace_inputs[mode])
 
     def _start_train(self):
         self._run_traces_on_begin({"train", "eval"})
@@ -221,7 +219,9 @@ class Estimator:
     def _run_epoch(self):
         self._run_traces_on_epoch_begin()
         loader = iter(self._configure_loader(self.pipeline.get_loader(self.system.mode, self.system.epoch_idx)))
-        self.network.load_epoch(mode=self.system.mode, epoch=self.system.epoch_idx)
+        self.network.load_epoch(mode=self.system.mode,
+                                epoch=self.system.epoch_idx,
+                                output_keys=self.trace_inputs[self.system.mode])
         self.system.batch_idx = 0
         while True:
             try:

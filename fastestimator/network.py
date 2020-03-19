@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 from collections import ChainMap
-from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Set, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, Set, Tuple, Union
 
 import tensorflow as tf
 import torch
@@ -44,7 +44,11 @@ class BaseNetwork:
             else:
                 assert isinstance(op, TensorOp), "unsupported op format, must provide TensorOp in Network"
 
-    def load_epoch(self, mode: str, epoch: int, warmup: bool = False):
+    def load_epoch(self, mode: str, epoch: int, output_keys: Optional[Set[str]] = None, warmup: bool = False):
+        self.effective_inputs[mode] = self._get_effective_input_keys_epoch(mode, epoch)
+        self.effective_outputs[mode] = self._get_all_output_keys_epoch(mode, epoch)
+        if output_keys:
+            self.effective_outputs[mode] = self.effective_outputs[mode].intersection(output_keys)
         self.epoch_ops = get_current_ops(self.ops, mode, epoch)
         self.epoch_models = set(op.model for op in self.epoch_ops if isinstance(op, (UpdateOp, ModelOp)))
         gradient_ops = [op for op in self.epoch_ops if hasattr(op, "retain_graph")]
@@ -72,12 +76,6 @@ class BaseNetwork:
                 if isinstance(op, UpdateOp):
                     loss_keys.update(op.inputs)
         return loss_keys
-
-    def get_effective_input_keys(self, mode: str, total_epochs: int) -> Set[str]:
-        input_keys = set()
-        for epoch in self.get_signature_epochs(total_epochs):
-            input_keys.update(self._get_effective_input_keys_epoch(mode, epoch))
-        return input_keys
 
     def _get_effective_input_keys_epoch(self, mode: str, epoch: int) -> Set[str]:
         input_keys = set()
@@ -174,8 +172,8 @@ class TorchNetwork(BaseNetwork):
         super().__init__(ops)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    def load_epoch(self, mode: str, epoch: int, warmup: bool = False):
-        super().load_epoch(mode, epoch, warmup)
+    def load_epoch(self, mode: str, epoch: int, output_keys: Optional[Set[str]] = None, warmup: bool = False):
+        super().load_epoch(mode, epoch, output_keys, warmup)
         if self.device.type == "cuda":
             for model in self.epoch_models:
                 model.to(self.device)
@@ -223,8 +221,6 @@ class TorchNetwork(BaseNetwork):
         """
         self.load_epoch(mode, epoch, warmup=True)
         data = to_tensor(data, "torch")
-        self.effective_inputs[mode] = self._get_effective_input_keys_epoch(mode, epoch)
-        self.effective_outputs[mode] = self._get_all_output_keys_epoch(mode, epoch)
         data, prediction = self.run_step(data)
         self.unload_epoch()
         data.update(prediction)
@@ -315,8 +311,6 @@ class TFNetwork(BaseNetwork):
         """
         self.load_epoch(mode, epoch, warmup=True)
         data = to_tensor(data, target_type="tf")
-        self.effective_inputs[mode] = self._get_effective_input_keys_epoch(mode, epoch)
-        self.effective_outputs[mode] = self._get_all_output_keys_epoch(mode, epoch)
         data, prediction = self.run_step(data)
         self.unload_epoch()
         data.update(prediction)
