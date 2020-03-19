@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import pdb
 from collections import ChainMap
 from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Set, Tuple, Union
 
@@ -75,18 +76,28 @@ class BaseNetwork:
 
     def get_effective_input_keys(self, mode: str, total_epochs: int) -> Set[str]:
         input_keys = set()
-        produced_keys = set()
         for epoch in self.get_signature_epochs(total_epochs):
-            for op in get_current_ops(self.ops, mode, epoch):
-                input_keys.update(set(key for key in op.inputs if key not in produced_keys))
-                produced_keys.update(op.outputs)
+            input_keys.update(self._get_effective_input_keys_epoch(mode, epoch))
+        return input_keys
+
+    def _get_effective_input_keys_epoch(self, mode: str, epoch: int) -> Set[str]:
+        input_keys = set()
+        produced_keys = set()
+        for op in get_current_ops(self.ops, mode, epoch):
+            input_keys.update(set(key for key in op.inputs if key not in produced_keys))
+            produced_keys.update(op.outputs)
         return input_keys
 
     def get_all_output_keys(self, mode: str, total_epochs: int) -> Set[str]:
         output_keys = set()
         for epoch in self.get_signature_epochs(total_epochs):
-            for op in get_current_ops(self.ops, mode, epoch):
-                output_keys.update(op.outputs)
+            output_keys.update(self._get_all_output_keys_epoch(mode, epoch))
+        return output_keys
+
+    def _get_all_output_keys_epoch(self, mode: str, epoch: int) -> Set[str]:
+        output_keys = set()
+        for op in get_current_ops(self.ops, mode, epoch):
+            output_keys.update(op.outputs)
         return output_keys
 
     def get_signature_epochs(self, total_epochs: int) -> Set[int]:
@@ -213,12 +224,9 @@ class TorchNetwork(BaseNetwork):
         """
         self.load_epoch(mode, epoch, warmup=True)
         data = to_tensor(data, "torch")
-        if mode == "infer":
-            self.effective_inputs[mode] = set(data.keys())
-            output_keys = set()
-            for op in self.epoch_ops:
-                output_keys.update(op.outputs)
-            self.effective_outputs[mode] = output_keys
+        if mode == "infer" or mode not in self.effective_inputs:
+            self.effective_inputs[mode] = self._get_effective_input_keys_epoch(mode, epoch)
+            self.effective_outputs[mode] = self._get_all_output_keys_epoch(mode, epoch)
         data, prediction = self.run_step(data)
         self.unload_epoch()
         data.update(prediction)
@@ -309,12 +317,9 @@ class TFNetwork(BaseNetwork):
         """
         self.load_epoch(mode, epoch, warmup=True)
         data = to_tensor(data, target_type="tf")
-        if mode == "infer":
-            self.effective_inputs[mode] = set(data.keys())
-            output_keys = set()
-            for op in self.epoch_ops:
-                output_keys.update(op.outputs)
-            self.effective_outputs[mode] = output_keys
+        if mode == "infer" or mode not in self.effective_inputs:
+            self.effective_inputs[mode] = self._get_effective_input_keys_epoch(mode, epoch)
+            self.effective_outputs[mode] = self._get_all_output_keys_epoch(mode, epoch)
         data, prediction = self.run_step(data)
         self.unload_epoch()
         data.update(prediction)
