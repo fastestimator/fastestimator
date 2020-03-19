@@ -1,3 +1,22 @@
+# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+"""
+Convolutional Variational Auto Encoder (CVAE) example trained from MNIST dataset using PyTorch backend
+Ref: https://www.tensorflow.org/tutorials/generative/cvae
+"""
 import math
 import tempfile
 from typing import Any, Dict, List, Tuple, Union
@@ -27,8 +46,8 @@ class SplitOp(TensorOp):
 
 class ReparameterizepOp(TensorOp):
     """Reparameterization trick. Ensures grads pass thru the sample to the infer net parameters"""
-    def forward(self, data: Union[np.ndarray, List[np.ndarray]],
-                state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
+    def forward(self, data: Tuple[torch.Tensor,torch.Tensor],
+                state: Dict[str, Any]) -> torch.Tensor:
         mean, logvar = data
         eps = torch.randn(mean.shape, device=mean.device)
         A = torch.exp(logvar * 0.5)
@@ -38,8 +57,7 @@ class ReparameterizepOp(TensorOp):
 
 class CVAELoss(TensorOp):
     """Convolutional variational auto-endcoder loss"""
-    def forward(self, data: Union[np.ndarray, List[np.ndarray]],
-                state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
+    def forward(self, data: Tuple[torch.Tensor, ...], state: Dict[str, Any]) -> torch.Tensor:
         cross_ent, mean, logvar, z = data
         cross_ent = cross_ent * (1 * 28 * 28)
         logpz = self._log_normal_pdf(z, 0, 0)

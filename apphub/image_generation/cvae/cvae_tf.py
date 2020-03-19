@@ -1,3 +1,21 @@
+# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+"""
+Convolutional Variational Auto Encoder (CVAE) example trained from MNIST dataset using Tensorflow backend
+Ref: https://www.tensorflow.org/tutorials/generative/cvae
+"""
 import math
 import tempfile
 from typing import Any, Dict, List, Tuple, Union
@@ -16,11 +34,6 @@ from fastestimator.trace.io import BestModelSaver
 LATENT_DIM = 50
 
 
-def _log_normal_pdf(sample, mean, logvar, raxis=1):
-    log2pi = tf.math.log(2. * tf.constant(math.pi))
-    return tf.reduce_sum(-.5 * ((sample - mean)**2. * tf.exp(-logvar) + logvar + log2pi), axis=raxis)
-
-
 class SplitOp(TensorOp):
     """To split the infer net output into two """
     def forward(self, data: tf.Tensor, state: Dict[str, Any]) -> Tuple[tf.Tensor, tf.Tensor]:
@@ -30,9 +43,7 @@ class SplitOp(TensorOp):
 
 class ReparameterizepOp(TensorOp):
     """Reparameterization trick. Ensures grads pass thru the sample to the infer net parameters"""
-    def forward(self, data: Union[np.ndarray, List[np.ndarray]],
-                state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
-        # pdb.set_trace()
+    def forward(self, data: Tuple[tf.Tensor, tf.Tensor], state: Dict[str, Any]) -> tf.Tensor:
         mean, logvar = data
         eps = tf.random.normal(shape=mean.shape)
         return eps * tf.exp(logvar * .5) + mean
@@ -40,15 +51,19 @@ class ReparameterizepOp(TensorOp):
 
 class CVAELoss(TensorOp):
     """Convolutional variational auto-endcoder loss"""
-    def forward(self, data: Union[np.ndarray, List[np.ndarray]],
-                state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
+    def forward(self, data: Tuple[tf.Tensor, ...], state: Dict[str, Any]) -> tf.Tensor:
         cross_ent, mean, logvar, z = data
         cross_ent = cross_ent * (28 * 28 * 1)
-        logpz = _log_normal_pdf(z, 0., 0.)
-        logqz_x = _log_normal_pdf(z, mean, logvar)
+        logpz = self._log_normal_pdf(z, 0., 0.)
+        logqz_x = self._log_normal_pdf(z, mean, logvar)
         total_loss = cross_ent + tf.reduce_mean(-logpz + logqz_x)
 
         return total_loss
+
+    @staticmethod
+    def _log_normal_pdf(sample, mean, logvar, raxis=1):
+        log2pi = tf.math.log(2. * tf.constant(math.pi))
+        return tf.reduce_sum(-.5 * ((sample - mean)**2. * tf.exp(-logvar) + logvar + log2pi), axis=raxis)
 
 
 def encoder_net():
@@ -74,7 +89,7 @@ def decoder_net():
     return generative_model
 
 
-def get_estimator(batch_size=100, epochs=100, max_steps_per_epoch=None, model_dir=tempfile.mkdtemp()):
+def get_estimator(batch_size=100, epochs=100, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
     train_data, test_data = load_data()
 
     pipeline = fe.Pipeline(
@@ -88,8 +103,8 @@ def get_estimator(batch_size=100, epochs=100, max_steps_per_epoch=None, model_di
             Binarize(inputs="x", outputs="x", threshold=0.5)
         ])
 
-    encode_model = fe.build(model_fn=encoder_net, optimizer_fn="adam")
-    decode_model = fe.build(model_fn=decoder_net, optimizer_fn="adam")
+    encode_model = fe.build(model_fn=encoder_net, optimizer_fn="adam", model_names="encoder")
+    decode_model = fe.build(model_fn=decoder_net, optimizer_fn="adam", model_names="decoder")
 
     network = fe.Network(ops=[
         ModelOp(model=encode_model, inputs="x", outputs="meanlogvar"),
@@ -103,7 +118,7 @@ def get_estimator(batch_size=100, epochs=100, max_steps_per_epoch=None, model_di
     ])
 
     traces = [
-        BestModelSaver(model=encode_model, save_dir="encode"), BestModelSaver(model=decode_model, save_dir="decode")
+        BestModelSaver(model=encode_model, save_dir=save_dir), BestModelSaver(model=decode_model, save_dir=save_dir)
     ]
 
     estimator = fe.Estimator(pipeline=pipeline,
