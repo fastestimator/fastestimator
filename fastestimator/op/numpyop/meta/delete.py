@@ -12,6 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.numpyop.meta.delete import Delete
-from fastestimator.op.numpyop.meta.one_of import OneOf
-from fastestimator.op.numpyop.meta.sometimes import Sometimes
+from typing import Any, Dict, List, NoReturn, Union
+
+import numpy as np
+
+from fastestimator.op import NumpyOp
+
+
+class Delete(NumpyOp):
+    """Delete the key, value pairs in data dict.
+
+        Args:
+            keys: Existing keys to be deleted in data dict.
+    """
+    def __init__(self, keys: Union[str, List[str]]):
+        super().__init__(inputs=keys)
+        #self.out_list = True
+
+    def forward(self, data: Union[np.ndarray, List[np.ndarray]], state: Dict[str, Any]) -> List:
+        pass
+        #return [None] * len(self.outputs)
