@@ -17,14 +17,14 @@ from typing import List
 
 from torch.utils.data import Dataset
 
-from fastestimator.dataset.unpaired_dataset import UnpairedDataset
+from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.op import NumpyOp, get_inputs_by_op, write_outputs_by_op
 
 
 class OpDataset(Dataset):
     def __init__(self, dataset: Dataset, ops: List[NumpyOp], mode: str):
         self.dataset = dataset
-        if isinstance(self.dataset, UnpairedDataset):
+        if isinstance(self.dataset, BatchDataset):
             self.dataset.shuffle()
         self.ops = ops
         self.mode = mode

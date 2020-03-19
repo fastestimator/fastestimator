@@ -21,14 +21,14 @@ from typing import Any, Optional, Dict, Tuple, Union
 import wget
 from pycocotools.coco import COCO
 
-from fastestimator.dataset.unlabeled_dir_dataset import UnlabeledDirDataset
+from fastestimator.dataset.dir_dataset import DirDataset
 from fastestimator.util.util import Suppressor
 from fastestimator.util.wget_util import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress
 
 
-class MSCOCODataset(UnlabeledDirDataset):
+class MSCOCODataset(DirDataset):
     instances: Optional[COCO]
     captions: Optional[COCO]
 

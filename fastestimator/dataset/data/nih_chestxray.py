@@ -19,7 +19,7 @@ from typing import Optional
 
 import wget
 
-from fastestimator.dataset.unlabeled_dir_dataset import UnlabeledDirDataset
+from fastestimator.dataset.dir_dataset import DirDataset
 from fastestimator.util.wget_util import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress
@@ -31,7 +31,7 @@ def _download_data(link: str, data_path: str, idx: int, total_idx: int):
         wget.download(link, data_path, bar=bar_custom)
 
 
-def load_data(root_dir: Optional[str] = None) -> UnlabeledDirDataset:
+def load_data(root_dir: Optional[str] = None) -> DirDataset:
     """Download the NIH dataset to local storage.
 
     Args:
@@ -75,4 +75,4 @@ def load_data(root_dir: Optional[str] = None) -> UnlabeledDirDataset:
             with tarfile.open(data_path) as img_tar:
                 img_tar.extractall(root_dir)
 
-    return UnlabeledDirDataset(image_extracted_path, file_extension='.png', recursive_search=False)
+    return DirDataset(image_extracted_path, file_extension='.png', recursive_search=False)
