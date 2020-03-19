@@ -223,9 +223,8 @@ class TorchNetwork(BaseNetwork):
         """
         self.load_epoch(mode, epoch, warmup=True)
         data = to_tensor(data, "torch")
-        if mode == "infer" or mode not in self.effective_inputs:
-            self.effective_inputs[mode] = self._get_effective_input_keys_epoch(mode, epoch)
-            self.effective_outputs[mode] = self._get_all_output_keys_epoch(mode, epoch)
+        self.effective_inputs[mode] = self._get_effective_input_keys_epoch(mode, epoch)
+        self.effective_outputs[mode] = self._get_all_output_keys_epoch(mode, epoch)
         data, prediction = self.run_step(data)
         self.unload_epoch()
         data.update(prediction)
@@ -316,9 +315,8 @@ class TFNetwork(BaseNetwork):
         """
         self.load_epoch(mode, epoch, warmup=True)
         data = to_tensor(data, target_type="tf")
-        if mode == "infer" or mode not in self.effective_inputs:
-            self.effective_inputs[mode] = self._get_effective_input_keys_epoch(mode, epoch)
-            self.effective_outputs[mode] = self._get_all_output_keys_epoch(mode, epoch)
+        self.effective_inputs[mode] = self._get_effective_input_keys_epoch(mode, epoch)
+        self.effective_outputs[mode] = self._get_all_output_keys_epoch(mode, epoch)
         data, prediction = self.run_step(data)
         self.unload_epoch()
         data.update(prediction)
