@@ -23,7 +23,7 @@ import tensorflow as tf
 from torch.utils.data import DataLoader, Dataset
 
 from fastestimator.dataset.op_dataset import OpDataset
-from fastestimator.op import NumpyOp, get_current_ops
+from fastestimator.op import NumpyOp, get_current_ops, get_inputs_by_op, write_outputs_by_op
 from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
 from fastestimator.util.util import lcms, to_list
 
@@ -89,6 +89,11 @@ class Pipeline:
             raise ValueError("Unsupported dataset type for {}".format(mode))
 
     def get_modes(self) -> Set[str]:
+        """get the active modes in pipeline
+
+        Returns:
+            set of active modes
+        """
         return set(self.data.keys())
 
     def benchmark(self, mode: str = "train", epoch: int = 0, num_steps: int = 1000, log_interval: int = 100):
@@ -112,6 +117,28 @@ class Pipeline:
                 iters_per_sec = log_interval / duration
                 print("FastEstimator: Step: {}, Epoch: {}, Steps/sec: {}".format(idx, epoch, iters_per_sec))
                 start = time.perf_counter()
+
+    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 0) -> Dict[str, Any]:
+        """apply all pipeline operations on given data for certain mode and epoch.
+
+        Args:
+            data: Input data in dictionary format
+            mode: Current mode, can be "train", "eval", "test" or "infer"
+            epoch: Current epoch index. Defaults to 0.
+
+        Returns:
+            transformed data
+        """
+        ops = get_current_ops(self.ops, mode, epoch)
+        op_data = None
+        for op in ops:
+            op_data = get_inputs_by_op(op, data, op_data)
+            op_data = op.forward(op_data, {"mode": mode})
+            if op.outputs:
+                write_outputs_by_op(op, data, op_data)
+        for key, value in data.items():
+            data[key] = np.expand_dims(value, 0)
+        return data
 
     def get_results(self, mode: str = "train", epoch: int = 0,
                     num_steps: int = 1) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
@@ -167,6 +194,14 @@ class Pipeline:
         return data
 
     def get_signature_epochs(self, total_epochs: int):
+        """get the signature epochs that scheduler will be effective on.
+
+        Args:
+            total_epochs: total number of epochs
+
+        Returns:
+            set: set of epoch index
+        """
         signature_epochs = {0}
         epoch_keys = {0}
         repeat_cycles = {1}
@@ -187,6 +222,15 @@ class Pipeline:
 
     @lru_cache(maxsize=None, typed=True)
     def get_all_output_keys(self, mode: str, total_epochs: int) -> Set[str]:
+        """get the pipeline output keys for a given mode
+
+        Args:
+            mode: current mode, can be "train", "eval" , "test" or "infer"
+            total_epochs: total number of epochs
+
+        Returns:
+            set of all keys for given mode
+        """
         output_keys = set()
         for epoch in self.get_signature_epochs(total_epochs):
             loader = self.get_loader(mode=mode, epoch=epoch)

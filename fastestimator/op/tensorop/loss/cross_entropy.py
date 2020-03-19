@@ -38,7 +38,7 @@ class CrossEntropy(TensorOp):
     def __init__(self,
                  inputs: Union[None, str, Iterable[str], Callable] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
-                 mode: Union[None, str, Iterable[str]] = None,
+                 mode: Union[None, str, Iterable[str]] = "!infer",
                  from_logits: bool = False,
                  average_loss: bool = True,
                  form: Optional[str] = None):
