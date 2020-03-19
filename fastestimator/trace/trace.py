@@ -20,7 +20,7 @@ import numpy as np
 from fastestimator.backend import get_lr, to_number
 from fastestimator.summary import System
 from fastestimator.util import Data
-from fastestimator.util.util import to_list, to_set
+from fastestimator.util.util import parse_modes, to_list, to_set
 
 
 class Trace:
@@ -42,7 +42,7 @@ class Trace:
                  mode: Union[None, str, Iterable[str]] = None):
         self.inputs = to_list(inputs)
         self.outputs = to_list(outputs)
-        self.mode = to_set(mode)
+        self.mode = parse_modes(to_set(mode))
 
     def on_begin(self, data: Data):
         """Runs once at the beginning of training
@@ -72,10 +72,11 @@ class TrainEssential(Trace):
     manually. An estimator will add it automatically.
     """
     def __init__(self):
-        super().__init__(mode="train", inputs=None, outputs=["steps/sec", "total_time"])
+        super().__init__(mode="train", inputs=None, outputs=["steps/sec", "epoch_time", "total_time"])
         self.elapse_times = []
-        self.time_start = None
         self.train_start = None
+        self.epoch_start = None
+        self.step_start = None
 
     def on_begin(self, data: Data):
         self.train_start = time.perf_counter()
@@ -85,19 +86,21 @@ class TrainEssential(Trace):
 
     def on_epoch_begin(self, data: Data):
         if self.system.log_steps:
-            self.time_start = time.perf_counter()
+            self.epoch_start = time.perf_counter()
+            self.step_start = time.perf_counter()
 
     def on_batch_end(self, data: Data):
         if self.system.log_steps and self.system.global_step % self.system.log_steps == 0:
             if self.system.global_step > 0:
-                self.elapse_times.append(time.perf_counter() - self.time_start)
+                self.elapse_times.append(time.perf_counter() - self.step_start)
                 data.write_with_log("steps/sec", round(self.system.log_steps / np.sum(self.elapse_times), 2))
             self.elapse_times = []
-            self.time_start = time.perf_counter()
+            self.step_start = time.perf_counter()
 
     def on_epoch_end(self, data: Data):
         if self.system.log_steps:
-            self.elapse_times.append(time.perf_counter() - self.time_start)
+            self.elapse_times.append(time.perf_counter() - self.step_start)
+            data.write_with_log("epoch_time", "{} sec".format(round(time.perf_counter() - self.epoch_start, 2)))
 
     def on_end(self, data: Data):
         data.write_with_log("total_time", "{} sec".format(round(time.perf_counter() - self.train_start, 2)))
@@ -165,7 +168,9 @@ class Logger(Trace):
             self._print_message("FastEstimator-Train: step: {}; ".format(self.system.global_step), data)
 
     def on_epoch_end(self, data: Data):
-        if self.system.mode == "eval":
+        if self.system.mode == "train":
+            self._print_message("FastEstimator-Train: step: {}; ".format(self.system.global_step), data, True)
+        elif self.system.mode == "eval":
             self._print_message("FastEstimator-Eval: step: {}; ".format(self.system.global_step), data, True)
         elif self.system.mode == "test":
             self._print_message("FastEstimator-Test: ", data, True)

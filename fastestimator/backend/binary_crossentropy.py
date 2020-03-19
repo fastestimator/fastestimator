@@ -34,7 +34,7 @@ def binary_crossentropy(y_pred: Tensor, y_true: Tensor, from_logits: bool = Fals
     Returns:
         Tensor: binary cross entropy
     """
-    assert type(y_pred) == type(y_true), "y_pred and y_true must be same tensor type"
+    assert type(y_pred) is type(y_true), "y_pred and y_true must be same tensor type"
     assert isinstance(y_pred, (tf.Tensor, torch.Tensor)), "only support tf.Tensor or torch.Tensor as y_pred"
     assert isinstance(y_true, (tf.Tensor, torch.Tensor)), "only support tf.Tensor or torch.Tensor as y_true"
     if isinstance(y_pred, tf.Tensor):
@@ -51,6 +51,7 @@ def binary_crossentropy(y_pred: Tensor, y_true: Tensor, from_logits: bool = Fals
             ce = torch.nn.BCELoss(reduction="none")(input=y_pred, target=y_true.view(y_pred.size()))
         ce = ce.view(ce.shape[0], -1)
         ce = torch.mean(ce, dim=1)
+
     if average_loss:
         ce = reduce_loss(ce)
     return ce
