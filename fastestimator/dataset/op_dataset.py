@@ -15,6 +15,7 @@
 from copy import deepcopy
 from typing import List
 
+import numpy as np
 from torch.utils.data import Dataset
 
 from fastestimator.dataset.batch_dataset import BatchDataset
@@ -30,7 +31,19 @@ class OpDataset(Dataset):
         self.mode = mode
 
     def __getitem__(self, index):
-        item = deepcopy(self.dataset[index])  # Deepcopy to prevent ops from overwriting values in datasets
+        items = deepcopy(self.dataset[index])  # Deepcopy to prevent ops from overwriting values in datasets
+        if isinstance(self.dataset, BatchDataset):
+            for item in items:
+                self._forward(item)
+            items = {key: np.array([item[key] for item in items]) for key in items[0]}
+        else:
+            self._forward(items)
+        return items
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def _forward(self, item):
         op_data = None
         for op in self.ops:
             op_data = get_inputs_by_op(op, item, op_data)
@@ -38,6 +51,3 @@ class OpDataset(Dataset):
             if op.outputs:
                 write_outputs_by_op(op, item, op_data)
         return item
-
-    def __len__(self):
-        return len(self.dataset)

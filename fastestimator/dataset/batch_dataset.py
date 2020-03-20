@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import math
 import random
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
 
@@ -31,10 +32,10 @@ class BatchDataset(FEDataset):
 
         Example:
         Given two datasets if the batch size is 8 and we want to randomly draw 5 from first dataset and remaining 3 from
-         the second: num_sampling = [5, 3].
+         the second: num_samples = [5, 3].
 
         Given two datasets if the batch size is 8 and we want to draw with 0.7 probability from first dataset and 0.3
-        from the second: num_sampling = 8, probability = [0.7, 0.3].
+        from the second: num_samples = 8, probability = [0.7, 0.3].
     """
     def __init__(self,
                  datasets: Union[FEDataset, Iterable[FEDataset]],
@@ -56,7 +57,8 @@ class BatchDataset(FEDataset):
             assert key, "found no key in datasets"
         is_same_key = all([dataset_keys[0] == key for key in dataset_keys])
         is_disjoint_key = sum([len(key) for key in dataset_keys]) == len(set.union(*dataset_keys))
-        assert is_same_key != is_disjoint_key, "dataset keys must be all same or all disjoint"
+        if len(self.datasets) > 1:
+            assert is_same_key != is_disjoint_key, "dataset keys must be all same or all disjoint"
         self.same_feature = is_same_key
         if self.probability:
             assert self.same_feature, "keys must be exactly same among datasets when using probability distribution"
@@ -68,6 +70,8 @@ class BatchDataset(FEDataset):
                 assert isinstance(p, float) and p > 0, "must provide positive float for probability distribution"
         else:
             assert len(self.datasets) == len(self.num_samples), "the number of dataset must match num_samples"
+        if not self.same_feature:
+            assert len(set(self.num_samples)) == 1, "the number of samples must be the same for disjoint features"
 
     def _do_split(self, splits: Sequence[Iterable[int]]):
         # Overwriting the split() method instead of _do_split
@@ -96,23 +100,33 @@ class BatchDataset(FEDataset):
     def summary(self) -> DatasetSummary:
         summaries = [ds.summary() for ds in self.datasets]
         keys = {k: v for summary in summaries for k, v in summary.keys.items()}
-        return DatasetSummary(num_instances=self.__len__(), keys=keys)
+        return DatasetSummary(num_instances=len(self), keys=keys)
 
     def __len__(self) -> int:
         if self.same_feature:
-            length = sum([len(dataset) for dataset in self.datasets]) // sum(self.num_samples)
+            length = math.ceil(sum([len(dataset) for dataset in self.datasets]) / sum(self.num_samples))
         else:
-            length = max([len(ds) // num_sample for (ds, num_sample) in zip(self.datasets, self.num_samples)])
+            num_sample = self.num_samples[0]
+            length = max([math.ceil(len(ds) / num_sample) for ds in self.datasets])
         return length
 
     def __getitem__(self, batch_idx: int) -> List[Dict[str, Any]]:
-        if self.probability:
-            index = list(np.random.choice(range(len(self.datasets)), size=self.num_samples, p=self.probability))
-            num_samples = [index.count(i) for i in range(len(self.datasets))]
-        else:
-            num_samples = self.num_samples
         items = []
-        for dataset, num_sample, index_map in zip(self.datasets, num_samples, self.index_maps):
+        if self.same_feature:
+            if self.probability:
+                index = list(np.random.choice(range(len(self.datasets)), size=self.num_samples, p=self.probability))
+                num_samples = [index.count(i) for i in range(len(self.datasets))]
+            else:
+                num_samples = self.num_samples
+            for dataset, num_sample, index_map in zip(self.datasets, num_samples, self.index_maps):
+                for idx in range(num_sample):
+                    items.append(dataset[index_map[(batch_idx * num_sample + idx) % len(dataset)]])
+        else:
+            num_sample = self.num_samples[0]
             for idx in range(num_sample):
-                items.append(dataset[index_map[(batch_idx * num_sample + idx) % len(dataset)]])
+                paired_items = [
+                    dataset[index_map[(batch_idx * num_sample + idx)] % len(dataset)] for dataset,
+                    index_map in zip(self.datasets, self.index_maps)
+                ]
+                items.append({k: v for d in paired_items for k, v in d.items()})
         return items
