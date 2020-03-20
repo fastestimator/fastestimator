@@ -62,7 +62,7 @@ class Estimator:
                  monitor_names: Union[None, str, Iterable[str]] = None):
         self.pipeline = pipeline
         self.network = network
-        self.traces = to_list(traces)
+        self.traces = [trace for trace in to_list(traces)]
         assert log_steps is None or log_steps >= 0, \
             "log_steps must be None or positive (or 0 to disable only train logging)"
         self.monitor_names = to_set(monitor_names)
