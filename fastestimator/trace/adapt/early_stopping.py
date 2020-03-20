@@ -37,11 +37,11 @@ class EarlyStopping(Trace):
     """
     def __init__(self,
                  monitor: str = "loss",
-                 min_delta: int = 0,
+                 min_delta: float = 0.0,
                  patience: int = 0,
                  compare: str = 'min',
                  baseline: Optional[float] = None,
-                 mode: Optional[str] = 'eval'):
+                 mode: str = 'eval'):
         super().__init__(inputs=monitor, mode=mode)
 
         if len(self.inputs) != 1:
