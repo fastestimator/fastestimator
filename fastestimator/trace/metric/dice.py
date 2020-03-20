@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Optional
+from typing import List, Union
 
 import numpy as np
 
@@ -25,17 +25,18 @@ class Dice(Trace):
     """ Dice score for binary classification between y_true and y_predict.
 
     Args:
-        true_key: The key of the ground truth mask
-        pred_key: The key of the prediction values
-        mode: What mode to execute in (None to execute in all modes)
-        output_name: What to call the output from this trace (for example in the logger output)
+        true_key: The key of the ground truth mask.
+        pred_key: The key of the prediction values.
+        threshold: The threshold for binarizing the prediction.
+        mode: What mode to execute in. Defaults to `["eval", "test"]`.
+        output_name: What to call the output from this trace (for example in the logger output).
     """
     def __init__(self,
                  true_key: str,
                  pred_key: str,
                  threshold: float = 0.5,
-                 mode: Optional[str] = "eval",
-                 output_name: str = "dice"):
+                 mode: Union[None, str, List[str]] = ("eval", "test"),
+                 output_name: str = "Dice") -> None:
         super().__init__(inputs=(true_key, pred_key), mode=mode, outputs=output_name)
         self.threshold = threshold
         self.smooth = 1e-8
