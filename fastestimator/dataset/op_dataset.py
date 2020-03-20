@@ -18,7 +18,7 @@ from typing import List
 from torch.utils.data import Dataset
 
 from fastestimator.dataset.batch_dataset import BatchDataset
-from fastestimator.op import NumpyOp, get_inputs_by_op, write_outputs_by_op
+from fastestimator.op.op import NumpyOp, get_inputs_by_op, write_outputs_by_op
 
 
 class OpDataset(Dataset):

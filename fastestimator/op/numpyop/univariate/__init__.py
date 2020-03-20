@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+# see a complete list of effect in albumentation page: https://albumentations-demo.herokuapp.com
 from fastestimator.op.numpyop.univariate.blur import Blur
 from fastestimator.op.numpyop.univariate.channel_dropout import ChannelDropout
 from fastestimator.op.numpyop.univariate.channel_shuffle import ChannelShuffle
@@ -36,7 +37,16 @@ from fastestimator.op.numpyop.univariate.normalize import Normalize
 from fastestimator.op.numpyop.univariate.onehot import Onehot
 from fastestimator.op.numpyop.univariate.posterize import Posterize
 from fastestimator.op.numpyop.univariate.random_brightness_contrast import RandomBrightnessContrast
+from fastestimator.op.numpyop.univariate.random_fog import RandomFog
+from fastestimator.op.numpyop.univariate.random_gamma import RandomGamma
 from fastestimator.op.numpyop.univariate.random_rain import RandomRain
+from fastestimator.op.numpyop.univariate.random_shadow import RandomShadow
+from fastestimator.op.numpyop.univariate.random_snow import RandomSnow
+from fastestimator.op.numpyop.univariate.random_sun_flare import RandomSunFlare
 from fastestimator.op.numpyop.univariate.read_image import ReadImage
+from fastestimator.op.numpyop.univariate.reshape import Reshape
 from fastestimator.op.numpyop.univariate.rgb_shift import RGBShift
+from fastestimator.op.numpyop.univariate.solarize import Solarize
 from fastestimator.op.numpyop.univariate.to_float import ToFloat
+from fastestimator.op.numpyop.univariate.to_gray import ToGray
+from fastestimator.op.numpyop.univariate.to_sepia import ToSepia

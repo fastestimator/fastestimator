@@ -22,7 +22,7 @@ from fastestimator.backend import load_model, to_tensor
 from fastestimator.op import TensorOp, get_current_ops, get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
-from fastestimator.util.util import NonContext, lcms, per_replica_to_global, to_list
+from fastestimator.util import NonContext, lcms, per_replica_to_global, to_list
 
 
 class BaseNetwork:

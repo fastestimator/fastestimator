@@ -16,9 +16,9 @@ import os
 import re
 from typing import List, Optional, Set
 
-from fastestimator.dataset import DirDataset
-from fastestimator.summary import Summary
+from fastestimator.dataset.dir_dataset import DirDataset
 from fastestimator.summary.logs import visualize_logs
+from fastestimator.summary.summary import Summary
 from fastestimator.util.util import strip_suffix
 
 

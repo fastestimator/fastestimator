@@ -20,7 +20,7 @@ import torch.nn.functional as fn
 
 import fastestimator as fe
 from fastestimator.dataset.data import imdb_review
-from fastestimator.op.numpyop.univariate.reshape import Reshape
+from fastestimator.op.numpyop.univariate import Reshape
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver

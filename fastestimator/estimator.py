@@ -26,8 +26,7 @@ from fastestimator.pipeline import Pipeline
 from fastestimator.summary import System
 from fastestimator.trace import EvalEssential, Logger, Trace, TrainEssential
 from fastestimator.trace.io import BestModelSaver, ModelSaver
-from fastestimator.util import Data
-from fastestimator.util.util import Suppressor, draw, to_list, to_set
+from fastestimator.util import Data, Suppressor, draw, to_list, to_set
 
 
 class Estimator:

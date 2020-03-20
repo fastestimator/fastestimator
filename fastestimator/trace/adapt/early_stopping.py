@@ -17,7 +17,7 @@ from typing import Optional
 import numpy as np
 
 from fastestimator.trace.trace import Trace
-from fastestimator.util import Data
+from fastestimator.util.data import Data
 
 
 class EarlyStopping(Trace):

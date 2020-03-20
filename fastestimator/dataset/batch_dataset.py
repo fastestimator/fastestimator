@@ -26,42 +26,48 @@ class BatchDataset(FEDataset):
 
     Args:
         datasets: FEDataset instance or list of FEDataset instances.
-        num_sampling: number of times to do the sampling according the distribution.
-        distribution: Number of samples or probability to draw from each dataset. it can be a list of integer or float.
-                      Defaults to None, which will be [1, 1, ..., 1].
+        num_samples: Number of samples to draw from dataset(s).
+        probability: Probability to draw from each dataset. Defaults to None.
 
         Example:
-        Given two datasets if the batch size is 8 and we want to draw 5 from first dataset and remaining 3 from the
-        second: num_sampling = 1, distribution = [5, 3].
+        Given two datasets if the batch size is 8 and we want to randomly draw 5 from first dataset and remaining 3 from
+         the second: num_sampling = [5, 3].
 
         Given two datasets if the batch size is 8 and we want to draw with 0.7 probability from first dataset and 0.3
-        from the second: num_sampling = 8, distribution = [0.7, 0.3].
+        from the second: num_sampling = 8, probability = [0.7, 0.3].
     """
     def __init__(self,
                  datasets: Union[FEDataset, Iterable[FEDataset]],
-                 num_sampling: int,
-                 distribution: Optional[Iterable[Union[int, float]]] = None):
-        self.num_sampling = num_sampling
+                 num_samples: Union[int, Iterable[int]],
+                 probability: Optional[Iterable[float]] = None):
         self.datasets = to_list(datasets)
+        self.num_samples = to_list(num_samples)
+        self.probability = to_list(probability)
         self.index_maps = [list(range(len(dataset))) for dataset in self.datasets]
-        if distribution:
-            self.distribution = to_list(distribution)
-        else:
-            self.distribution = [1] * len(self.datasets)
-        self.probability_mode = False
+        self.same_feature = False
         self._check_input()
 
     def _check_input(self):
-        assert len(self.datasets) == len(self.distribution), "the length of distribution and dataset must be consistent"
-        if np.sum(self.distribution) == 1 and len(self.distribution) > 1:
-            self.probability_mode = True
-        for idx, dist in enumerate(self.distribution):
-            if self.probability_mode:
-                assert isinstance(dist, float) and dist > 0, "must provide positive float for probability distribution"
-            else:
-                assert isinstance(dist, int) and dist > 0, "must provide positive integer for sample distribution"
-                # setting num_sampling as 1 for non-probability samoling
-                self.distribution[idx] = self.num_sampling * dist
+        for num_sample in self.num_samples:
+            assert isinstance(num_sample, int) and num_sample > 0, "only accept positive integer type as num_sample"
+        # check dataset keys
+        dataset_keys = [set(dataset[0].keys()) for dataset in self.datasets]
+        for key in dataset_keys:
+            assert key, "found no key in datasets"
+        is_same_key = all([dataset_keys[0] == key for key in dataset_keys])
+        is_disjoint_key = sum([len(key) for key in dataset_keys]) == len(set.union(*dataset_keys))
+        assert is_same_key != is_disjoint_key, "dataset keys must be all same or all disjoint"
+        self.same_feature = is_same_key
+        if self.probability:
+            assert self.same_feature, "keys must be exactly same among datasets when using probability distribution"
+            assert len(self.datasets) == len(self.probability), "the length of dataset must match probability"
+            assert len(self.num_samples) == 1, "num_sample must be scalar for probability mode"
+            assert len(self.datasets) > 1, "number of datasets must be more than one to use probability mode"
+            assert sum(self.probability) == 1, "sum of probability must be 1"
+            for p in self.probability:
+                assert isinstance(p, float) and p > 0, "must provide positive float for probability distribution"
+        else:
+            assert len(self.datasets) == len(self.num_samples), "the number of dataset must match num_samples"
 
     def _do_split(self, splits: Sequence[Iterable[int]]):
         # Overwriting the split() method instead of _do_split
@@ -71,7 +77,7 @@ class BatchDataset(FEDataset):
         new_datasets = [to_list(ds.split(*fractions)) for ds in self.datasets]
         num_splits = len(new_datasets[0])
         new_datasets = [[ds[i] for ds in new_datasets] for i in range(num_splits)]
-        results = [BatchDataset(ds, self.num_sampling, self.distribution) for ds in new_datasets]
+        results = [BatchDataset(ds, self.num_samples, self.probability) for ds in new_datasets]
         # Re-compute personal variables
         self.index_maps = [list(range(len(dataset))) for dataset in self.datasets]
         # Unpack response if only a single split
@@ -93,20 +99,20 @@ class BatchDataset(FEDataset):
         return DatasetSummary(num_instances=self.__len__(), keys=keys)
 
     def __len__(self) -> int:
-        if self.probability_mode:
-            length = np.max([len(dataset) // self.num_sampling for dataset in self.datasets])
+        if self.same_feature:
+            length = sum([len(dataset) for dataset in self.datasets]) // sum(self.num_samples)
         else:
-            length = np.max([len(dataset) // dist for (dataset, dist) in zip(self.datasets, self.distribution)])
+            length = max([len(ds) // num_sample for (ds, num_sample) in zip(self.datasets, self.num_samples)])
         return length
 
-    def __getitem__(self, batch_idx: int) -> Dict[str, Any]:
-        if self.probability_mode:
-            index = list(np.random.choice(range(len(self.datasets)), size=self.num_sampling, p=self.distribution))
-            distribution = [index.count(i) for i in range(len(self.datasets))]
+    def __getitem__(self, batch_idx: int) -> List[Dict[str, Any]]:
+        if self.probability:
+            index = list(np.random.choice(range(len(self.datasets)), size=self.num_samples, p=self.probability))
+            num_samples = [index.count(i) for i in range(len(self.datasets))]
         else:
-            distribution = self.distribution
+            num_samples = self.num_samples
         items = []
-        for dataset, num_sample, index_map in zip(self.datasets, distribution, self.index_maps):
-            for idx in num_sample:
+        for dataset, num_sample, index_map in zip(self.datasets, num_samples, self.index_maps):
+            for idx in range(num_sample):
                 items.append(dataset[index_map[(batch_idx * num_sample + idx) % len(dataset)]])
         return items

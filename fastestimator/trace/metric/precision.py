@@ -19,7 +19,7 @@ from sklearn.metrics import precision_score
 
 from fastestimator.backend.to_number import to_number
 from fastestimator.trace.trace import Trace
-from fastestimator.util import Data
+from fastestimator.util.data import Data
 
 
 class Precision(Trace):
