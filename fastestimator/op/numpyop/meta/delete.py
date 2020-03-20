@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, List, NoReturn, Union
+from typing import Any, Dict, Iterable, List, Union
 
 import numpy as np
 
@@ -25,10 +25,8 @@ class Delete(NumpyOp):
         Args:
             keys: Existing keys to be deleted in data dict.
     """
-    def __init__(self, keys: Union[str, List[str]]):
-        super().__init__(inputs=keys)
-        #self.out_list = True
+    def __init__(self, keys: Union[str, List[str]], mode: Union[None, str, Iterable[str]] = None) -> None:
+        super().__init__(inputs=keys, mode=mode)
 
-    def forward(self, data: Union[np.ndarray, List[np.ndarray]], state: Dict[str, Any]) -> List:
+    def forward(self, data: Union[np.ndarray, List[np.ndarray]], state: Dict[str, Any]) -> None:
         pass
-        #return [None] * len(self.outputs)
