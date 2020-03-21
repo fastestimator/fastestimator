@@ -17,7 +17,7 @@ from typing import List, Tuple
 import numpy as np
 import tensorflow as tf
 
-from fastestimator.dataset.numpy_dataset import NumpyDataset
+from fastestimator.dataset import NumpyDataset
 
 
 def pad(input_list: List[int], padding_size: int, padding_value: int) -> List[int]:

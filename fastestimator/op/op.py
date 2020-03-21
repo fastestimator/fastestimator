@@ -18,8 +18,8 @@ import numpy as np
 import tensorflow as tf
 import torch
 
-from fastestimator.schedule.schedule import Scheduler
-from fastestimator.util.util import parse_modes, to_list, to_set
+from fastestimator.schedule import Scheduler
+from fastestimator.util import parse_modes, to_list, to_set
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 

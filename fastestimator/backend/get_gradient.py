@@ -17,7 +17,7 @@ from typing import Iterable, Optional, TypeVar, Union
 import tensorflow as tf
 import torch
 
-from fastestimator.util.util import NonContext
+from fastestimator.util import NonContext
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 

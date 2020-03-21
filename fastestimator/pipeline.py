@@ -22,7 +22,7 @@ import numpy as np
 import tensorflow as tf
 from torch.utils.data import DataLoader, Dataset, RandomSampler
 
-from fastestimator.dataset.batch_dataset import BatchDataset
+from fastestimator.dataset import BatchDataset
 from fastestimator.dataset.op_dataset import OpDataset
 from fastestimator.op import NumpyOp, get_current_ops, get_inputs_by_op, write_outputs_by_op
 from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
@@ -63,11 +63,11 @@ class Pipeline:
     def _verify_dataset(self, mode: str, dataset: DataSource, **kwargs) -> bool:
         if isinstance(dataset, Dataset):
             # batch_size check
-            assert isinstance(self.batch_size, (Scheduler, int)) or self.batch_size is None, \
+            assert isinstance(self.batch_size, (Scheduler, int, type(None))), \
                 "unsupported batch_size format: {}".format(self.batch_size)
             if isinstance(self.batch_size, Scheduler):
                 for batch_size in self.batch_size.get_all_values():
-                    assert isinstance(batch_size, int) or batch_size is None, \
+                    assert isinstance(batch_size, int, type(None)), \
                         "unsupported batch_size format: {}".format(self.batch_size)
             # ops check
             for op in self.ops:
@@ -186,7 +186,7 @@ class Pipeline:
             batch_size = self.batch_size
             if isinstance(batch_size, Scheduler):
                 batch_size = batch_size.get_current_value(epoch)
-            if isinstance(data, BatchDataset) and not batch_size is None:
+            if isinstance(data, BatchDataset) and batch_size is not None:
                 raise ValueError("batch_size must be None when using BatchDataset")
             if shuffle is None:
                 shuffle = mode == "train"

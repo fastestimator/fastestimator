@@ -18,7 +18,7 @@ import numpy as np
 from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import train_test_split
 
-from fastestimator.dataset.numpy_dataset import NumpyDataset
+from fastestimator.dataset import NumpyDataset
 
 
 def load_data() -> Tuple[NumpyDataset, NumpyDataset]:

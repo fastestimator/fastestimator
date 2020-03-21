@@ -19,7 +19,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
 import numpy as np
 
 from fastestimator.dataset.dataset import DatasetSummary, FEDataset
-from fastestimator.util.util import to_list
+from fastestimator.util import to_list
 
 
 class BatchDataset(FEDataset):
@@ -44,9 +44,9 @@ class BatchDataset(FEDataset):
         self.datasets = to_list(datasets)
         self.num_samples = to_list(num_samples)
         self.probability = to_list(probability)
-        self.index_maps = [list(range(len(dataset))) for dataset in self.datasets]
         self.same_feature = False
         self._check_input()
+        self.index_maps = [list(range(max((len(dataset) for dataset in self.datasets)))) for _ in self.datasets]
 
     def _check_input(self):
         for num_sample in self.num_samples:
@@ -83,7 +83,7 @@ class BatchDataset(FEDataset):
         new_datasets = [[ds[i] for ds in new_datasets] for i in range(num_splits)]
         results = [BatchDataset(ds, self.num_samples, self.probability) for ds in new_datasets]
         # Re-compute personal variables
-        self.index_maps = [list(range(len(dataset))) for dataset in self.datasets]
+        self.index_maps = [list(range(max((len(dataset) for dataset in self.datasets)))) for _ in self.datasets]
         # Unpack response if only a single split
         if len(results) == 1:
             results = results[0]
@@ -120,7 +120,7 @@ class BatchDataset(FEDataset):
                 num_samples = self.num_samples
             for dataset, num_sample, index_map in zip(self.datasets, num_samples, self.index_maps):
                 for idx in range(num_sample):
-                    items.append(dataset[index_map[(batch_idx * num_sample + idx) % len(dataset)]])
+                    items.append(dataset[index_map[(batch_idx * num_sample + idx)] % len(dataset)])
         else:
             num_sample = self.num_samples[0]
             for idx in range(num_sample):

@@ -18,8 +18,8 @@ from typing import List, Optional, Set, Union
 
 import pandas as pd
 
-from fastestimator.trace.trace import Trace
-from fastestimator.util.data import Data
+from fastestimator.trace import Trace
+from fastestimator.util import Data
 
 
 class CSVLogger(Trace):

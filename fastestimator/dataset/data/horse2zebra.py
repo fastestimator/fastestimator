@@ -19,22 +19,23 @@ from typing import Optional, Tuple
 
 import wget
 
-from fastestimator.dataset.dir_dataset import DirDataset
-from fastestimator.util.wget_util import bar_custom, callback_progress
+from fastestimator.dataset import BatchDataset, DirDataset
+from fastestimator.util import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress
 
 
-def load_data(root_dir: Optional[str] = None) -> Tuple[DirDataset]:
+def load_data(batch_size, root_dir: Optional[str] = None) -> Tuple[BatchDataset, BatchDataset]:
     """Download the horse2zebra dataset to local storage, if not already downloaded.
         Sourced from: https://people.eecs.berkeley.edu/~taesung_park/CycleGAN/datasets/horse2zebra.zip
 
     Args:
+        batch_size: Batch size.
         root_dir: The path to store the data. When `path` is not provided, will save at
             `fastestimator_data` under user's home directory.
 
     Returns:
-        (TrainData, EvalData)
+        (train_data, eval_data)
     """
     home = str(Path.home())
 
@@ -77,5 +78,6 @@ def load_data(root_dir: Optional[str] = None) -> Tuple[DirDataset]:
                          data_key="B",
                          file_extension='.jpg',
                          recursive_search=False)
-
-    return train_a, train_b, test_a, test_b
+    outputs = (BatchDataset(datasets=[train_a, train_b], num_samples=[batch_size, batch_size]),
+               BatchDataset(datasets=[test_a, test_b], num_samples=[batch_size, batch_size]))
+    return outputs

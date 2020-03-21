@@ -18,7 +18,7 @@ from typing import Any, Callable, Dict, Iterable, List, Union
 import cv2
 import numpy as np
 
-from fastestimator.op.op import NumpyOp
+from fastestimator.op import NumpyOp
 
 
 class ReadImage(NumpyOp):

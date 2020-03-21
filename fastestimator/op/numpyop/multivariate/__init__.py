@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+# see a complete list of effects in albumentation page: https://albumentations-demo.herokuapp.com
 from fastestimator.op.numpyop.multivariate.affine import Affine
 from fastestimator.op.numpyop.multivariate.center_crop import CenterCrop
 from fastestimator.op.numpyop.multivariate.crop import Crop

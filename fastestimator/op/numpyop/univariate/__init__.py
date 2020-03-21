@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-# see a complete list of effect in albumentation page: https://albumentations-demo.herokuapp.com
+# see a complete list of effects in albumentation page: https://albumentations-demo.herokuapp.com
 from fastestimator.op.numpyop.univariate.blur import Blur
 from fastestimator.op.numpyop.univariate.channel_dropout import ChannelDropout
 from fastestimator.op.numpyop.univariate.channel_shuffle import ChannelShuffle

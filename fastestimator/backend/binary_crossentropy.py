@@ -17,7 +17,7 @@ from typing import TypeVar
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.reduce_loss import reduce_loss
+from fastestimator.backend import reduce_loss
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
