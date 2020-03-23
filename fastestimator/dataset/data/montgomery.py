@@ -21,8 +21,8 @@ from typing import Optional
 import pandas as pd
 import wget
 
-from fastestimator.dataset import CSVDataset
-from fastestimator.util import bar_custom, callback_progress
+from fastestimator.dataset.csv_dataset import CSVDataset
+from fastestimator.util.wget_util import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress
 

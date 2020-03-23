@@ -15,15 +15,15 @@
 import os
 import tarfile
 from pathlib import Path
-from typing import Optional, Tuple, Dict, List
+from typing import Dict, List, Optional, Tuple
 
 import h5py
 import pandas as pd
-import tqdm
 import wget
 
-from fastestimator.dataset import PickleDataset
-from fastestimator.util import bar_custom, callback_progress
+import tqdm
+from fastestimator.dataset.pickle_dataset import PickleDataset
+from fastestimator.util.wget_util import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress
 

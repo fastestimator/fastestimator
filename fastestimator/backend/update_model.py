@@ -17,7 +17,8 @@ from typing import Optional, Union
 import tensorflow as tf
 import torch
 
-from fastestimator.backend import get_gradient, reduce_loss
+from fastestimator.backend.get_gradient import get_gradient
+from fastestimator.backend.reduce_loss import reduce_loss
 
 
 def update_model(model: Union[tf.keras.Model, torch.nn.Module],

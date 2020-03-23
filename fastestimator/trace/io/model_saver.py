@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Optional, Union
+from typing import Union
 
 import tensorflow as tf
 import torch
 
-from fastestimator.backend import save_model
-from fastestimator.trace import Trace
-from fastestimator.util import Data
+from fastestimator.backend.save_model import save_model
+from fastestimator.trace.trace import Trace
+from fastestimator.util.data import Data
 
 
 class ModelSaver(Trace):

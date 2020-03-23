@@ -17,8 +17,8 @@ from typing import Any, Callable, Dict, Iterable, List, TypeVar, Union
 import tensorflow as tf
 import torch
 
-from fastestimator.backend import feed_forward
-from fastestimator.op import TensorOp
+from fastestimator.backend.feed_forward import feed_forward
+from fastestimator.op.op import TensorOp
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 

@@ -22,7 +22,7 @@ import numpy as np
 from torch.utils.data import Dataset
 
 import jsonpickle
-from fastestimator.util import get_shape, get_type
+from fastestimator.util.util import get_shape, get_type
 
 
 class KeySummary:

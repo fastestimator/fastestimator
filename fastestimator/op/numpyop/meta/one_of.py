@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Union
 
 import numpy as np
 
-from fastestimator.op import NumpyOp
+from fastestimator.op.op import NumpyOp
 
 
 class OneOf(NumpyOp):

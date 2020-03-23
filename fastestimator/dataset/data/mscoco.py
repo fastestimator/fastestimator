@@ -20,8 +20,9 @@ from typing import Any, Dict, Optional, Tuple, Union
 
 import wget
 
-from fastestimator.dataset import DirDataset
-from fastestimator.util import Suppressor, bar_custom, callback_progress
+from fastestimator.dataset.dir_dataset import DirDataset
+from fastestimator.util.util import Suppressor
+from fastestimator.util.wget_util import bar_custom, callback_progress
 from pycocotools.coco import COCO
 
 wget.callback_progress = callback_progress

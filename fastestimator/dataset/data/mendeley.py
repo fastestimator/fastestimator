@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 import requests
-from fastestimator.dataset import LabeledDirDataset
+from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset
 from tqdm import tqdm
 
 
