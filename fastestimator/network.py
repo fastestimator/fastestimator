@@ -13,12 +13,12 @@
 # limitations under the License.
 # ==============================================================================
 from collections import ChainMap
-from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Set, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, Set, Tuple, Union
 
 import tensorflow as tf
 import torch
 
-from fastestimator.backend import load_model
+from fastestimator.backend import load_model, to_tensor
 from fastestimator.op import TensorOp, get_current_ops, get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
@@ -44,7 +44,11 @@ class BaseNetwork:
             else:
                 assert isinstance(op, TensorOp), "unsupported op format, must provide TensorOp in Network"
 
-    def load_epoch(self, mode: str, epoch: int, warmup: bool = False):
+    def load_epoch(self, mode: str, epoch: int, output_keys: Optional[Set[str]] = None, warmup: bool = False):
+        self.effective_inputs[mode] = self._get_effective_input_keys_epoch(mode, epoch)
+        self.effective_outputs[mode] = self._get_all_output_keys_epoch(mode, epoch)
+        if output_keys:
+            self.effective_outputs[mode] = self.effective_outputs[mode].intersection(output_keys)
         self.epoch_ops = get_current_ops(self.ops, mode, epoch)
         self.epoch_models = set(op.model for op in self.epoch_ops if isinstance(op, (UpdateOp, ModelOp)))
         gradient_ops = [op for op in self.epoch_ops if hasattr(op, "retain_graph")]
@@ -73,20 +77,24 @@ class BaseNetwork:
                     loss_keys.update(op.inputs)
         return loss_keys
 
-    def get_effective_input_keys(self, mode: str, total_epochs: int) -> Set[str]:
+    def _get_effective_input_keys_epoch(self, mode: str, epoch: int) -> Set[str]:
         input_keys = set()
         produced_keys = set()
-        for epoch in self.get_signature_epochs(total_epochs):
-            for op in get_current_ops(self.ops, mode, epoch):
-                input_keys.update(set(key for key in op.inputs if key not in produced_keys))
-                produced_keys.update(op.outputs)
+        for op in get_current_ops(self.ops, mode, epoch):
+            input_keys.update(set(key for key in op.inputs if key not in produced_keys))
+            produced_keys.update(op.outputs)
         return input_keys
 
     def get_all_output_keys(self, mode: str, total_epochs: int) -> Set[str]:
         output_keys = set()
         for epoch in self.get_signature_epochs(total_epochs):
-            for op in get_current_ops(self.ops, mode, epoch):
-                output_keys.update(op.outputs)
+            output_keys.update(self._get_all_output_keys_epoch(mode, epoch))
+        return output_keys
+
+    def _get_all_output_keys_epoch(self, mode: str, epoch: int) -> Set[str]:
+        output_keys = set()
+        for op in get_current_ops(self.ops, mode, epoch):
+            output_keys.update(op.outputs)
         return output_keys
 
     def get_signature_epochs(self, total_epochs: int) -> Set[int]:
@@ -116,6 +124,12 @@ class BaseNetwork:
             data = op.forward(data, state)
             if op.outputs:
                 write_outputs_by_op(op, batch, data)
+
+    def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        raise NotImplementedError
+
+    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 0) -> Dict[str, Any]:
+        raise NotImplementedError
 
 
 def _collect_models(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> Set[Union[tf.keras.Model, torch.nn.Module]]:
@@ -158,8 +172,8 @@ class TorchNetwork(BaseNetwork):
         super().__init__(ops)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    def load_epoch(self, mode: str, epoch: int, warmup: bool = False):
-        super().load_epoch(mode, epoch, warmup)
+    def load_epoch(self, mode: str, epoch: int, output_keys: Optional[Set[str]] = None, warmup: bool = False):
+        super().load_epoch(mode, epoch, output_keys, warmup)
         if self.device.type == "cuda":
             for model in self.epoch_models:
                 model.to(self.device)
@@ -193,6 +207,24 @@ class TorchNetwork(BaseNetwork):
         else:
             prediction = {key: batch_in[key].detach() for key in self.effective_outputs[mode] if key in batch_in}
         return batch, prediction
+
+    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 0) -> Dict[str, Any]:
+        """apply all network operations on given data for certain mode and epoch.
+
+        Args:
+            data: Input data in dictionary format
+            mode: Current mode, can be "train", "eval", "test" or "infer"
+            epoch: Current epoch index. Defaults to 0.
+
+        Returns:
+            transformed data
+        """
+        self.load_epoch(mode, epoch, warmup=True)
+        data = to_tensor(data, "torch")
+        data, prediction = self.run_step(data)
+        self.unload_epoch()
+        data.update(prediction)
+        return data
 
 
 class TFNetwork(BaseNetwork):
@@ -266,6 +298,24 @@ class TFNetwork(BaseNetwork):
                 prediction[key] = batch[key]
         return prediction
 
+    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 0) -> Dict[str, Any]:
+        """apply all network operations on given data for certain mode and epoch.
+
+        Args:
+            data: Input data in dictionary format
+            mode: Current mode, can be "train", "eval", "test" or "infer"
+            epoch: Current epoch index. Defaults to 0.
+
+        Returns:
+            transformed data
+        """
+        self.load_epoch(mode, epoch, warmup=True)
+        data = to_tensor(data, target_type="tf")
+        data, prediction = self.run_step(data)
+        self.unload_epoch()
+        data.update(prediction)
+        return data
+
 
 def build(model_fn: Callable,
           optimizer_fn: Union[str, Scheduler, Callable, List[str], List[Callable], List[Scheduler], None],
@@ -283,14 +333,13 @@ def build(model_fn: Callable,
     Returns:
         models: model(s) built by FastEstimator
     """
-    if not hasattr(build, "count"):
-        build.count = 0
-
     def _generate_model_names(num_names):
         names = ["model" if i + build.count == 0 else "model{}".format(i + build.count) for i in range(num_names)]
         build.count += num_names
         return names
 
+    if not hasattr(build, "count"):
+        build.count = 0
     models, optimizer_fn = to_list(model_fn()), to_list(optimizer_fn)
     # check framework
     if isinstance(models[0], tf.keras.Model):

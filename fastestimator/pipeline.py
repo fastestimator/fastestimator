@@ -16,14 +16,14 @@ import os
 import time
 import warnings
 from functools import lru_cache
-from typing import List, Optional, Set, TypeVar, Union
+from typing import Any, Dict, List, Optional, Set, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
 from torch.utils.data import DataLoader, Dataset
 
 from fastestimator.dataset.op_dataset import OpDataset
-from fastestimator.op import NumpyOp, get_current_ops
+from fastestimator.op import NumpyOp, get_current_ops, get_inputs_by_op, write_outputs_by_op
 from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
 from fastestimator.util.util import lcms, to_list
 
@@ -89,9 +89,22 @@ class Pipeline:
             raise ValueError("Unsupported dataset type for {}".format(mode))
 
     def get_modes(self) -> Set[str]:
+        """get the active modes in pipeline
+
+        Returns:
+            set of active modes
+        """
         return set(self.data.keys())
 
-    def benchmark(self, mode: str = "train", num_steps: int = 1000, log_interval: int = 100, epoch: int = 0):
+    def benchmark(self, mode: str = "train", epoch: int = 0, num_steps: int = 1000, log_interval: int = 100):
+        """benchmark the pipeline processing speed
+
+        Args:
+            mode: Current mode, can be 'train', 'eval' or 'test'.
+            epoch: Current epoch index. Defaults to 0.
+            num_steps: Maximum number of steps to do benchmark on. Defaults to 1000.
+            log_interval: Logging interval. Defaults to 100.
+        """
         loader = self.get_loader(mode=mode, epoch=epoch)
         if isinstance(loader, tf.data.Dataset):
             loader = loader.take(num_steps)
@@ -105,7 +118,64 @@ class Pipeline:
                 print("FastEstimator: Step: {}, Epoch: {}, Steps/sec: {}".format(idx, epoch, iters_per_sec))
                 start = time.perf_counter()
 
-    def get_loader(self, mode: str, epoch: int = 0) -> Union[DataLoader, tf.data.Dataset]:
+    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 0) -> Dict[str, Any]:
+        """apply all pipeline operations on given data for certain mode and epoch.
+
+        Args:
+            data: Input data in dictionary format
+            mode: Current mode, can be "train", "eval", "test" or "infer"
+            epoch: Current epoch index. Defaults to 0.
+
+        Returns:
+            transformed data
+        """
+        ops = get_current_ops(self.ops, mode, epoch)
+        op_data = None
+        for op in ops:
+            op_data = get_inputs_by_op(op, data, op_data)
+            op_data = op.forward(op_data, {"mode": mode})
+            if op.outputs:
+                write_outputs_by_op(op, data, op_data)
+        for key, value in data.items():
+            data[key] = np.expand_dims(value, 0)
+        return data
+
+    def get_results(self, mode: str = "train", epoch: int = 0,
+                    num_steps: int = 1) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
+        """get the pipeline outputs after all ops
+
+        Args:
+            mode: Current mode, can be 'train', 'eval' or 'test'.
+            epoch: Current epoch index. Defaults to 0.
+            num_steps: number of steps(batches) to get. Defaults to 1.
+
+        Returns:
+            pipeline outputs
+        """
+        results = []
+        loader = self.get_loader(mode=mode, epoch=epoch, shuffle=False)
+        if isinstance(loader, tf.data.Dataset):
+            loader = loader.take(num_steps)
+        for idx, batch in enumerate(loader):
+            if idx == num_steps:
+                break
+            results.append(batch)
+        if len(results) == 1:
+            results = results[0]
+        return results
+
+    def get_loader(self, mode: str, epoch: int = 0,
+                   shuffle: Optional[bool] = None) -> Union[DataLoader, tf.data.Dataset]:
+        """get the data loader given mode and epoch
+
+        Args:
+            mode: Current mode, can be 'train', 'eval' or 'test'.
+            epoch: Current epoch index. Defaults to 0.
+            shuffle: Whether to shuffle, only used with FE dataset. If None, shuffle is based on mode. Defaults to None.
+
+        Returns:
+            data loader given the mode and epoch.
+        """
         data = self.data[mode]
         if isinstance(data, Scheduler):
             data = data.get_current_value(epoch)
@@ -114,14 +184,24 @@ class Pipeline:
             batch_size = self.batch_size
             if isinstance(batch_size, Scheduler):
                 batch_size = batch_size.get_current_value(epoch)
+            if shuffle is None:
+                shuffle = mode == "train"
             data = DataLoader(op_dataset,
                               batch_size=batch_size,
-                              shuffle=mode == "train",
+                              shuffle=shuffle,
                               num_workers=self.num_process,
                               worker_init_fn=lambda _: np.random.seed())
         return data
 
     def get_signature_epochs(self, total_epochs: int):
+        """get the signature epochs that scheduler will be effective on.
+
+        Args:
+            total_epochs: total number of epochs
+
+        Returns:
+            set: set of epoch index
+        """
         signature_epochs = {0}
         epoch_keys = {0}
         repeat_cycles = {1}
@@ -142,6 +222,15 @@ class Pipeline:
 
     @lru_cache(maxsize=None, typed=True)
     def get_all_output_keys(self, mode: str, total_epochs: int) -> Set[str]:
+        """get the pipeline output keys for a given mode
+
+        Args:
+            mode: current mode, can be "train", "eval" , "test" or "infer"
+            total_epochs: total number of epochs
+
+        Returns:
+            set of all keys for given mode
+        """
         output_keys = set()
         for epoch in self.get_signature_epochs(total_epochs):
             loader = self.get_loader(mode=mode, epoch=epoch)

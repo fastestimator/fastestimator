@@ -16,9 +16,11 @@ from fastestimator.backend.binary_crossentropy import binary_crossentropy
 from fastestimator.backend.categorical_crossentropy import categorical_crossentropy
 from fastestimator.backend.feed_forward import feed_forward
 from fastestimator.backend.get_gradient import get_gradient
+from fastestimator.backend.get_lr import get_lr
 from fastestimator.backend.load_model import load_model
 from fastestimator.backend.reduce_loss import reduce_loss
 from fastestimator.backend.save_model import save_model
+from fastestimator.backend.set_lr import set_lr
 from fastestimator.backend.sparse_categorical_crossentropy import sparse_categorical_crossentropy
 from fastestimator.backend.to_number import to_number
 from fastestimator.backend.to_shape import to_shape

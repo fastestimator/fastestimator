@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as fn
-
-import numpy as np
 
 
 class LeNet(torch.nn.Module):
@@ -36,6 +35,7 @@ class LeNet(torch.nn.Module):
         x = fn.relu(x)
         x = fn.max_pool2d(x, 2)
         x = self.conv3(x)
+        x = fn.relu(x)
         x = x.view(-1, np.prod(x.size()[1:]))
         x = self.fc1(x)
         x = fn.relu(x)
