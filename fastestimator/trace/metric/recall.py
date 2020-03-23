@@ -17,9 +17,9 @@ from typing import Set, Union
 import numpy as np
 from sklearn.metrics import recall_score
 
-from fastestimator.backend import to_number
-from fastestimator.trace import Trace
-from fastestimator.util import Data
+from fastestimator.backend.to_number import to_number
+from fastestimator.trace.trace import Trace
+from fastestimator.util.data import Data
 
 
 class Recall(Trace):

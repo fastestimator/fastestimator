@@ -16,7 +16,7 @@ from typing import Any, Callable, Dict, Iterable, List, Tuple, Union
 
 import numpy as np
 
-from fastestimator.op import NumpyOp
+from fastestimator.op.op import NumpyOp
 
 
 class Reshape(NumpyOp):

@@ -22,11 +22,11 @@ import numpy as np
 import tensorflow as tf
 from torch.utils.data import DataLoader, Dataset, RandomSampler
 
-from fastestimator.dataset import BatchDataset
+from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.op_dataset import OpDataset
-from fastestimator.op import NumpyOp, get_current_ops, get_inputs_by_op, write_outputs_by_op
-from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
-from fastestimator.util import lcms, to_list
+from fastestimator.op.op import NumpyOp, get_current_ops, get_inputs_by_op, write_outputs_by_op
+from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler
+from fastestimator.util.util import lcms, to_list
 
 DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
 

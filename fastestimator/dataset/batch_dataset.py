@@ -19,7 +19,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
 import numpy as np
 
 from fastestimator.dataset.dataset import DatasetSummary, FEDataset
-from fastestimator.util import to_list
+from fastestimator.util.util import to_list
 
 
 class BatchDataset(FEDataset):

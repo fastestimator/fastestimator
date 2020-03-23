@@ -19,8 +19,9 @@ from typing import Optional, Tuple
 
 import wget
 
-from fastestimator.dataset import BatchDataset, DirDataset
-from fastestimator.util import bar_custom, callback_progress
+from fastestimator.dataset.batch_dataset import BatchDataset
+from fastestimator.dataset.dir_dataset import DirDataset
+from fastestimator.util.wget_util import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress
 

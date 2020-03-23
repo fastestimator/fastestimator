@@ -18,8 +18,8 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 import numpy as np
 
-from fastestimator.dataset import LabeledDirDataset
 from fastestimator.dataset.dataset import DatasetSummary
+from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset
 
 
 class SiameseDirDataset(LabeledDirDataset):
