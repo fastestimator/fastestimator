@@ -14,12 +14,12 @@
 # ==============================================================================
 
 import os
-from typing import Optional, Dict
+from typing import Dict, Optional
 
 from fastestimator.dataset.dataset import InMemoryDataset
 
 
-class UnlabeledDirDataset(InMemoryDataset):
+class DirDataset(InMemoryDataset):
     """ A dataset which reads files from a folder hierarchy
 
     Args:
@@ -49,5 +49,5 @@ class UnlabeledDirDataset(InMemoryDataset):
                 if not recursive_search:
                     break
         except StopIteration:
-            raise ValueError("Invalid directory structure for UnlabeledDirDataset at root: {}".format(root_dir))
+            raise ValueError("Invalid directory structure for DirDataset at root: {}".format(root_dir))
         super().__init__({i: {data_key: data[i][0]} for i in range(len(data))})

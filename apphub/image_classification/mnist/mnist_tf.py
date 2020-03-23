@@ -16,8 +16,8 @@ import tempfile
 
 import fastestimator as fe
 from fastestimator.architecture.tensorflow import LeNet
-from fastestimator.dataset import mnist
-from fastestimator.op.numpyop import ExpandDims, Minmax
+from fastestimator.dataset.data import mnist
+from fastestimator.op.numpyop.univariate import ExpandDims, Minmax
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.schedule import cosine_decay

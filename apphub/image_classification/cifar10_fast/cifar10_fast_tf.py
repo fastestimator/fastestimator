@@ -23,8 +23,9 @@ from tensorflow.python.keras import layers
 
 import fastestimator as fe
 from fastestimator.dataset.data.cifar10 import load_data
-from fastestimator.op.numpyop import CoarseDropout, HorizontalFlip, Minmax, Normalize, Onehot, PadIfNeeded, \
-    RandomCrop, Sometimes
+from fastestimator.op.numpyop.meta import Sometimes
+from fastestimator.op.numpyop.multivariate import HorizontalFlip, PadIfNeeded, RandomCrop
+from fastestimator.op.numpyop.univariate import CoarseDropout, Minmax, Normalize, Onehot
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.adapt import LRScheduler

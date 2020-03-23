@@ -19,8 +19,9 @@ import numpy as np
 import tensorflow as tf
 import torch
 
-from fastestimator.backend import get_lr, set_lr
-from fastestimator.summary import System
+from fastestimator.backend.get_lr import get_lr
+from fastestimator.backend.set_lr import set_lr
+from fastestimator.summary.system import System
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 

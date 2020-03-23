@@ -17,9 +17,9 @@ from copy import deepcopy
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
-from albumentations import BboxParams, Compose, DualTransform, ImageOnlyTransform, KeypointParams, ReplayCompose
 
-from fastestimator.op import NumpyOp
+from albumentations import BboxParams, Compose, DualTransform, ImageOnlyTransform, KeypointParams, ReplayCompose
+from fastestimator.op.op import NumpyOp
 
 
 class ImageOnlyAlbumentation(NumpyOp):

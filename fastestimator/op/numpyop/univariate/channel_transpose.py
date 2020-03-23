@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, List, Iterable, Callable, Dict, Any
+from typing import Any, Callable, Dict, Iterable, List, Union
 
 import numpy as np
 
-from fastestimator.op import NumpyOp
+from fastestimator.op.op import NumpyOp
 
 
 class ChannelTranspose(NumpyOp):

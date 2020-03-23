@@ -20,13 +20,16 @@ import tensorflow as tf
 from tensorflow.python.distribute.input_lib import DistributedDataset
 from torch.utils.data import DataLoader
 
-from fastestimator.backend import to_shape, to_tensor, to_type
+from fastestimator.backend.to_shape import to_shape
+from fastestimator.backend.to_tensor import to_tensor
+from fastestimator.backend.to_type import to_type
 from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
 from fastestimator.pipeline import Pipeline
-from fastestimator.summary import System
-from fastestimator.trace import EvalEssential, Logger, Trace, TrainEssential
-from fastestimator.trace.io import BestModelSaver, ModelSaver
-from fastestimator.util import Data
+from fastestimator.summary.system import System
+from fastestimator.trace.io.best_model_saver import BestModelSaver
+from fastestimator.trace.io.model_saver import ModelSaver
+from fastestimator.trace.trace import EvalEssential, Logger, Trace, TrainEssential
+from fastestimator.util.data import Data
 from fastestimator.util.util import Suppressor, draw, to_list, to_set
 
 

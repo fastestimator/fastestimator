@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, Iterable, Callable, TypeVar, List, Dict, Any
+from typing import Any, Callable, Dict, Iterable, List, TypeVar, Union
 
 import tensorflow as tf
 import torch

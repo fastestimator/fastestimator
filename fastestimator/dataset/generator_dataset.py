@@ -14,10 +14,10 @@
 # ==============================================================================
 import warnings
 from functools import lru_cache
-from typing import Any, Dict, Generator, Sequence, Iterable, List, Sized
+from typing import Any, Dict, Generator, Iterable, List, Sequence, Sized
 
-from fastestimator.dataset.dataset import FEDataset, DatasetSummary, KeySummary
-from fastestimator.util.util import get_type, get_shape
+from fastestimator.dataset.dataset import DatasetSummary, FEDataset, KeySummary
+from fastestimator.util.util import get_shape, get_type
 
 
 class GeneratorDataset(FEDataset):
