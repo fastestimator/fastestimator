@@ -19,9 +19,8 @@ Ref: https://www.tensorflow.org/tutorials/generative/cvae
 """
 import math
 import tempfile
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, Tuple
 
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as fn
@@ -109,7 +108,7 @@ class DecoderNet(nn.Module):
         x = self.conv2(x)
         x = fn.relu(x)
         x = self.conv3(x)
-
+        x = fn.sigmoid(x)
         return x
 
 
@@ -135,7 +134,7 @@ def get_estimator(batch_size=100, epochs=100, max_steps_per_epoch=None, save_dir
         SplitOp(inputs="meanlogvar", outputs=("mean", "logvar")),
         ReparameterizepOp(inputs=("mean", "logvar"), outputs="z"),
         ModelOp(model=decode_model, inputs="z", outputs="x_logit"),
-        CrossEntropy(inputs=("x_logit", "x"), outputs="cross_entropy", from_logits=True),
+        CrossEntropy(inputs=("x_logit", "x"), outputs="cross_entropy"),
         CVAELoss(inputs=("cross_entropy", "mean", "logvar", "z"), outputs="loss"),
         UpdateOp(model=encode_model, loss_name="loss"),
         UpdateOp(model=decode_model, loss_name="loss"),

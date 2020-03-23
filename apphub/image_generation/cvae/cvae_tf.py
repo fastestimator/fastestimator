@@ -18,9 +18,8 @@ Ref: https://www.tensorflow.org/tutorials/generative/cvae
 """
 import math
 import tempfile
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, Tuple
 
-import numpy as np
 import tensorflow as tf
 
 import fastestimator as fe
@@ -85,7 +84,8 @@ def decoder_net():
         tf.keras.layers.Conv2DTranspose(filters=64, kernel_size=3, strides=(2, 2), padding="SAME", activation='relu'))
     generative_model.add(
         tf.keras.layers.Conv2DTranspose(filters=32, kernel_size=3, strides=(2, 2), padding="SAME", activation='relu'))
-    generative_model.add(tf.keras.layers.Conv2DTranspose(filters=1, kernel_size=3, strides=(1, 1), padding="SAME"))
+    generative_model.add(
+        tf.keras.layers.Conv2DTranspose(filters=1, kernel_size=3, strides=(1, 1), padding="SAME", activation='sigmoid'))
     return generative_model
 
 
@@ -111,7 +111,7 @@ def get_estimator(batch_size=100, epochs=100, max_steps_per_epoch=None, save_dir
         SplitOp(inputs="meanlogvar", outputs=("mean", "logvar")),
         ReparameterizepOp(inputs=("mean", "logvar"), outputs="z"),
         ModelOp(model=decode_model, inputs="z", outputs="x_logit"),
-        CrossEntropy(inputs=("x_logit", "x"), outputs="cross_entropy", from_logits=True),
+        CrossEntropy(inputs=("x_logit", "x"), outputs="cross_entropy"),
         CVAELoss(inputs=("cross_entropy", "mean", "logvar", "z"), outputs="loss"),
         UpdateOp(model=encode_model, loss_name="loss"),
         UpdateOp(model=decode_model, loss_name="loss"),
