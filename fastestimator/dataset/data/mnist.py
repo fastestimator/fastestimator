@@ -16,7 +16,7 @@ from typing import Tuple
 
 import tensorflow as tf
 
-from fastestimator.dataset.numpy_dataset import NumpyDataset
+from fastestimator.dataset import NumpyDataset
 
 
 def load_data() -> Tuple[NumpyDataset, NumpyDataset]:

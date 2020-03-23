@@ -19,8 +19,7 @@ import numpy as np
 
 from fastestimator.backend import get_lr, to_number
 from fastestimator.summary import System
-from fastestimator.util import Data
-from fastestimator.util.util import parse_modes, to_list, to_set
+from fastestimator.util import Data, parse_modes, to_list, to_set
 
 
 class Trace:

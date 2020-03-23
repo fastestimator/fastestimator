@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import random
-from typing import Dict, Any, List, Union
+from typing import Any, Dict, List, Union
 
 import numpy as np
 

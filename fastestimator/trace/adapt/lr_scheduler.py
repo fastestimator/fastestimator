@@ -21,8 +21,8 @@ import torch
 
 from fastestimator.backend import get_lr, set_lr
 from fastestimator.summary import System
-from fastestimator.trace.trace import Trace
-from fastestimator.util.data import Data
+from fastestimator.trace import Trace
+from fastestimator.util import Data
 
 
 class LRScheduler(Trace):

@@ -22,8 +22,8 @@ import numpy as np
 import wget
 from PIL import Image
 
-from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset
-from fastestimator.util.wget_util import bar_custom, callback_progress
+from fastestimator.dataset import LabeledDirDataset
+from fastestimator.util import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress
 

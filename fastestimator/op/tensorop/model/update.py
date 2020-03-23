@@ -18,7 +18,7 @@ import tensorflow as tf
 import torch
 from tensorflow.python.framework import ops as tfops
 
-from fastestimator.backend.update_model import update_model
+from fastestimator.backend import update_model
 from fastestimator.op import TensorOp
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)

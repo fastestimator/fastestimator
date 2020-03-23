@@ -20,12 +20,13 @@ from typing import Any, Dict, List, Optional, Set, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, RandomSampler
 
+from fastestimator.dataset import BatchDataset
 from fastestimator.dataset.op_dataset import OpDataset
 from fastestimator.op import NumpyOp, get_current_ops, get_inputs_by_op, write_outputs_by_op
 from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
-from fastestimator.util.util import lcms, to_list
+from fastestimator.util import lcms, to_list
 
 DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
 
@@ -62,11 +63,12 @@ class Pipeline:
     def _verify_dataset(self, mode: str, dataset: DataSource, **kwargs) -> bool:
         if isinstance(dataset, Dataset):
             # batch_size check
-            assert isinstance(self.batch_size, (Scheduler, int)), \
+            assert isinstance(self.batch_size, (Scheduler, int, type(None))), \
                 "unsupported batch_size format: {}".format(self.batch_size)
             if isinstance(self.batch_size, Scheduler):
                 for batch_size in self.batch_size.get_all_values():
-                    assert isinstance(batch_size, int), "unsupported batch_size format: {}".format(self.batch_size)
+                    assert isinstance(batch_size, int, type(None)), \
+                        "unsupported batch_size format: {}".format(self.batch_size)
             # ops check
             for op in self.ops:
                 if isinstance(op, Scheduler):
@@ -140,8 +142,8 @@ class Pipeline:
             data[key] = np.expand_dims(value, 0)
         return data
 
-    def get_results(self, mode: str = "train", epoch: int = 0,
-                    num_steps: int = 1) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
+    def get_results(self, mode: str = "train", epoch: int = 0, num_steps: int = 1,
+                    shuffle=False) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
         """get the pipeline outputs after all ops
 
         Args:
@@ -153,7 +155,7 @@ class Pipeline:
             pipeline outputs
         """
         results = []
-        loader = self.get_loader(mode=mode, epoch=epoch, shuffle=False)
+        loader = self.get_loader(mode=mode, epoch=epoch, shuffle=shuffle)
         if isinstance(loader, tf.data.Dataset):
             loader = loader.take(num_steps)
         for idx, batch in enumerate(loader):
@@ -184,11 +186,14 @@ class Pipeline:
             batch_size = self.batch_size
             if isinstance(batch_size, Scheduler):
                 batch_size = batch_size.get_current_value(epoch)
+            if isinstance(data, BatchDataset) and batch_size is not None:
+                raise ValueError("batch_size must be None when using BatchDataset")
             if shuffle is None:
                 shuffle = mode == "train"
             data = DataLoader(op_dataset,
                               batch_size=batch_size,
-                              shuffle=shuffle,
+                              shuffle=False if isinstance(data, BatchDataset) else shuffle,
+                              sampler=RandomSampler(op_dataset) if isinstance(data, BatchDataset) and shuffle else None,
                               num_workers=self.num_process,
                               worker_init_fn=lambda _: np.random.seed())
         return data

@@ -14,20 +14,20 @@
 # ==============================================================================
 
 from copy import deepcopy
-from typing import Optional, Dict, Any, List, Tuple, Set, Sequence, Iterable
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 import numpy as np
 
+from fastestimator.dataset import LabeledDirDataset
 from fastestimator.dataset.dataset import DatasetSummary
-from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset
 
 
 class SiameseDirDataset(LabeledDirDataset):
-    """ A dataset which reads files from a folder hierarchy like root/class(/es)/data.file. Data is returned in pairs, 
-        where the label value is 1 if the data are drawn from the same class, and 0 otherwise. One epoch is defined as 
+    """ A dataset which reads files from a folder hierarchy like root/class(/es)/data.file. Data is returned in pairs,
+        where the label value is 1 if the data are drawn from the same class, and 0 otherwise. One epoch is defined as
         the time it takes to visit every data point exactly once as the 'data_key_left'. Each data point may occur zero
-        or many times as 'data_key_right' within the same epoch. SiameseDirDataset.split() will split by class index 
-        rather than by data instance index. 
+        or many times as 'data_key_right' within the same epoch. SiameseDirDataset.split() will split by class index
+        rather than by data instance index.
 
     Args:
         root_dir: The path to the directory containing data sorted by folders
@@ -113,7 +113,7 @@ class SiameseDirDataset(LabeledDirDataset):
             n: The number of samples to draw for computing one shot accuracy. Should be <= the number of total classes
 
         Returns:
-            ([class_a_instance_x, class_a_instance_x, class_a_instance_x, ...], 
+            ([class_a_instance_x, class_a_instance_x, class_a_instance_x, ...],
             [class_a_instance_w, class_b_instance_y, class_c_instance_z, ...])
         """
         assert n > 1, "one_shot_trial requires an n-value of at least 2"

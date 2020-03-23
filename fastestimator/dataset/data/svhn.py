@@ -22,8 +22,8 @@ import pandas as pd
 import tqdm
 import wget
 
-from fastestimator.dataset.pickle_dataset import PickleDataset
-from fastestimator.util.wget_util import bar_custom, callback_progress
+from fastestimator.dataset import PickleDataset
+from fastestimator.util import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress
 

@@ -18,7 +18,7 @@ import tensorflow as tf
 import torch
 
 from fastestimator.backend import binary_crossentropy, categorical_crossentropy, sparse_categorical_crossentropy
-from fastestimator.op.op import TensorOp
+from fastestimator.op import TensorOp
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 

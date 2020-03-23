@@ -20,8 +20,8 @@ from typing import Optional, Tuple
 
 import wget
 
-from fastestimator.dataset.siamese_dir_dataset import SiameseDirDataset
-from fastestimator.util.wget_util import bar_custom, callback_progress
+from fastestimator.dataset import SiameseDirDataset
+from fastestimator.util import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress
 

@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, Iterable, Callable, TypeVar, List, Dict, Any
+from typing import Any, Callable, Dict, Iterable, List, TypeVar, Union
 
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.feed_forward import feed_forward
-from fastestimator.op.op import TensorOp
+from fastestimator.backend import feed_forward
+from fastestimator.op import TensorOp
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 

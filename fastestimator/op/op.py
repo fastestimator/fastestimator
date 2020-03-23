@@ -19,7 +19,7 @@ import tensorflow as tf
 import torch
 
 from fastestimator.schedule import Scheduler
-from fastestimator.util.util import parse_modes, to_list, to_set
+from fastestimator.util import parse_modes, to_list, to_set
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 

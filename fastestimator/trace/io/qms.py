@@ -19,10 +19,8 @@ from typing import Callable, List, Union
 
 from docx import Document
 from docx.shared import Pt
-
 from fastestimator.trace import Trace
-from fastestimator.util.data import Data
-from fastestimator.util.util import to_list
+from fastestimator.util import Data, to_list
 
 
 class QMSTest(Trace):
