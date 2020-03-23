@@ -19,6 +19,7 @@ import numpy as np
 from torch.utils.data import Dataset
 
 from fastestimator.dataset import BatchDataset
+from fastestimator.op.numpyop.util.delete import Delete
 from fastestimator.op.op import NumpyOp, get_inputs_by_op, write_outputs_by_op
 
 
@@ -48,6 +49,9 @@ class OpDataset(Dataset):
         for op in self.ops:
             op_data = get_inputs_by_op(op, item, op_data)
             op_data = op.forward(op_data, {"mode": self.mode})
+            if isinstance(op, Delete):
+                for key in op.inputs:
+                    del item[key]
             if op.outputs:
                 write_outputs_by_op(op, item, op_data)
         return item
