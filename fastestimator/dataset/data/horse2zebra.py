@@ -25,7 +25,7 @@ from fastestimator.util import bar_custom, callback_progress
 wget.callback_progress = callback_progress
 
 
-def load_data(batch_size, root_dir: Optional[str] = None) -> Tuple[BatchDataset, BatchDataset]:
+def load_data(batch_size: int, root_dir: Optional[str] = None) -> Tuple[BatchDataset, BatchDataset]:
     """Download the horse2zebra dataset to local storage, if not already downloaded.
         Sourced from: https://people.eecs.berkeley.edu/~taesung_park/CycleGAN/datasets/horse2zebra.zip
 
