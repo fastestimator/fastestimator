@@ -47,7 +47,7 @@ class EpochScheduler(Scheduler[T]):
         assert 1 in self.epoch_dict, "epoch 1 is missing in dictionary, use None if no op is needed"
         for key in self.keys:
             assert isinstance(key, int), "found non-integer key: {}".format(key)
-            assert key > 1, "found non-positive key: {}".format(key)
+            assert key >= 1, "found non-positive key: {}".format(key)
 
     def get_current_value(self, epoch: int) -> T:
         if epoch in self.keys:
