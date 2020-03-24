@@ -72,8 +72,8 @@ class TrainEssential(Trace):
     """Essential training information for logging during training. Please don't add this trace into an estimator
     manually. An estimator will add it automatically.
     """
-    def __init__(self):
-        super().__init__(mode="train", inputs=None, outputs=["steps/sec", "epoch_time", "total_time"])
+    def __init__(self, loss_keys: Set[str]):
+        super().__init__(inputs=loss_keys, mode="train", outputs=["steps/sec", "epoch_time", "total_time"])
         self.elapse_times = []
         self.train_start = None
         self.epoch_start = None
@@ -94,6 +94,8 @@ class TrainEssential(Trace):
         self.system.update_global_step()
 
     def on_batch_end(self, data: Data):
+        for key in self.inputs:
+            data.write_with_log(key, data[key])
         if self.system.log_steps and (self.system.global_step % self.system.log_steps == 0
                                       or self.system.global_step == 1):
             if self.system.global_step > 1:

@@ -151,11 +151,11 @@ class Estimator:
         modes = self.pipeline.get_modes()
         loss_keys = self.network.get_loss_keys()
         if "train" in modes:
-            self.traces.insert(0, TrainEssential())
+            self.traces.insert(0, TrainEssential(loss_keys=loss_keys))
         if "eval" in modes:
             self.traces.insert(1, EvalEssential(loss_keys=loss_keys))
         if self.system.log_steps is not None:
-            self.traces.append(Logger(extra_log_keys=self.monitor_names | loss_keys))
+            self.traces.append(Logger(extra_log_keys=self.monitor_names))
         for mode in modes:
             trace_inputs = set()
             # '*' is a reserved key for traces to indicate that they want to receive all available output
