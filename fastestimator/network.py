@@ -100,8 +100,8 @@ class BaseNetwork:
         return output_keys
 
     def get_signature_epochs(self, total_epochs: int) -> Set[int]:
-        signature_epochs = {0}
-        epoch_keys = {0}
+        signature_epochs = {1}
+        epoch_keys = {1}
         repeat_cycles = {1}
         for x in self.ops + [model.optimizer for model in self.models]:
             if isinstance(x, EpochScheduler):
@@ -115,7 +115,7 @@ class BaseNetwork:
                 signature_epochs.update(range(epoch, epoch + min(epoch_keys[idx + 1] - epoch, least_common_cycle)))
             else:
                 signature_epochs.update(range(epoch, epoch + least_common_cycle))
-        signature_epochs = set(epoch for epoch in signature_epochs if epoch < total_epochs)
+        signature_epochs = set(epoch for epoch in signature_epochs if epoch <= total_epochs)
         return signature_epochs
 
     @staticmethod
@@ -130,7 +130,7 @@ class BaseNetwork:
     def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         raise NotImplementedError
 
-    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 0) -> Dict[str, Any]:
+    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 1) -> Dict[str, Any]:
         raise NotImplementedError
 
 
@@ -210,13 +210,13 @@ class TorchNetwork(BaseNetwork):
             prediction = {key: batch_in[key].detach() for key in self.effective_outputs[mode] if key in batch_in}
         return batch, prediction
 
-    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 0) -> Dict[str, Any]:
+    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 1) -> Dict[str, Any]:
         """apply all network operations on given data for certain mode and epoch.
 
         Args:
             data: Input data in dictionary format
             mode: Current mode, can be "train", "eval", "test" or "infer"
-            epoch: Current epoch index. Defaults to 0.
+            epoch: Current epoch index. Defaults to 1.
 
         Returns:
             transformed data
@@ -300,13 +300,13 @@ class TFNetwork(BaseNetwork):
                 prediction[key] = batch[key]
         return prediction
 
-    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 0) -> Dict[str, Any]:
+    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 1) -> Dict[str, Any]:
         """apply all network operations on given data for certain mode and epoch.
 
         Args:
             data: Input data in dictionary format
             mode: Current mode, can be "train", "eval", "test" or "infer"
-            epoch: Current epoch index. Defaults to 0.
+            epoch: Current epoch index. Defaults to 1.
 
         Returns:
             transformed data
@@ -343,6 +343,9 @@ def build(model_fn: Callable,
     if not hasattr(build, "count"):
         build.count = 0
     models, optimizer_fn = to_list(model_fn()), to_list(optimizer_fn)
+    # fill optimizer
+    if not optimizer_fn:
+        optimizer_fn = [None]
     # check framework
     if isinstance(models[0], tf.keras.Model):
         framework = "tf"
@@ -377,7 +380,7 @@ def build(model_fn: Callable,
 
 
 def _fe_compile(model: Union[tf.keras.Model, torch.nn.Module],
-                optimizer_fn: Union[str, Scheduler, Callable],
+                optimizer_fn: Union[str, Scheduler, Callable, None],
                 weight: Union[str, None],
                 name: str,
                 framework: str) -> Union[tf.keras.Model, torch.nn.Module]:
@@ -398,7 +401,8 @@ def _fe_compile(model: Union[tf.keras.Model, torch.nn.Module],
     return model
 
 
-def _build_optimizer(optimizer_fn: Union[str, Callable], model: Union[tf.keras.Model, torch.nn.Module],
+def _build_optimizer(optimizer_fn: Union[str, Callable, None],
+                     model: Union[tf.keras.Model, torch.nn.Module],
                      framework: str) -> Union[tf.optimizers.Optimizer, torch.optim.Optimizer]:
     if isinstance(optimizer_fn, str):
         optimizer_fn = _optimizer_fn_from_string(optimizer_fn, framework)
@@ -430,7 +434,8 @@ def _optimizer_fn_from_string(name: str, framework: str) -> Callable:
     return optimizer_fn
 
 
-def _optimizer_fn_to_optimizer(optimizer_fn: Callable, model: Union[tf.keras.Model, torch.nn.Module],
+def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None],
+                               model: Union[tf.keras.Model, torch.nn.Module],
                                framework: str) -> Union[tf.optimizers.Optimizer, torch.optim.Optimizer]:
     optimizer = None
     if optimizer_fn:

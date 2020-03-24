@@ -203,7 +203,7 @@ class Estimator:
     def _start_train(self):
         self._run_traces_on_begin({"train", "eval"})
         try:
-            for self.system.epoch_idx in range(self.system.total_epochs):
+            for self.system.epoch_idx in range(1, self.system.total_epochs + 1):
                 if "train" in self.pipeline.get_modes():
                     self.system.mode = "train"
                     self._run_epoch()
@@ -225,20 +225,18 @@ class Estimator:
         self.network.load_epoch(mode=self.system.mode,
                                 epoch=self.system.epoch_idx,
                                 output_keys=self.trace_inputs[self.system.mode])
-        self.system.batch_idx = 0
+        self.system.batch_idx = None
         while True:
             try:
                 with Suppressor():
                     batch = next(loader)
-                if self.system.batch_idx == self.system.max_steps_per_epoch and self.system.mode == "train":
-                    break
+                self.system.update_batch_idx()
                 self._run_traces_on_batch_begin()
                 batch = self._configure_tensor(loader, batch)
                 batch, prediction = self.network.run_step(batch)
                 self._run_traces_on_batch_end(batch, prediction)
-                if self.system.mode == "train":
-                    self.system.update_global_step()
-                self.system.batch_idx += 1
+                if self.system.batch_idx == self.system.max_steps_per_epoch and self.system.mode == "train":
+                    break
             except StopIteration:
                 break
         self.network.unload_epoch()

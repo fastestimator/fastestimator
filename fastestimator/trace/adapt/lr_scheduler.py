@@ -56,6 +56,7 @@ class LRScheduler(Trace):
             set_lr(self.model, new_lr)
 
     def on_batch_end(self, data: Data):
-        if self.system.log_steps and self.system.global_step % self.system.log_steps == 0:
+        if self.system.log_steps and (self.system.global_step % self.system.log_steps == 0
+                                      or self.system.global_step == 1):
             current_lr = np.float32(get_lr(self.model))
             data.write_with_log(self.outputs[0], current_lr)

@@ -90,9 +90,13 @@ class TrainEssential(Trace):
             self.epoch_start = time.perf_counter()
             self.step_start = time.perf_counter()
 
+    def on_batch_begin(self, data: Data):
+        self.system.update_global_step()
+
     def on_batch_end(self, data: Data):
-        if self.system.log_steps and self.system.global_step % self.system.log_steps == 0:
-            if self.system.global_step > 0:
+        if self.system.log_steps and (self.system.global_step % self.system.log_steps == 0
+                                      or self.system.global_step == 1):
+            if self.system.global_step > 1:
                 self.elapse_times.append(time.perf_counter() - self.step_start)
                 data.write_with_log("steps/sec", round(self.system.log_steps / np.sum(self.elapse_times), 2))
             self.elapse_times = []
@@ -161,11 +165,11 @@ class Logger(Trace):
 
     def on_begin(self, data: Data):
         if not self.system.mode == "test":
-            self._print_message("FastEstimator-Start: step: {}; ".format(self.system.global_step), data)
+            self._print_message("FastEstimator-Start: step: 1; ", data)
 
     def on_batch_end(self, data: Data):
-        if self.system.mode == "train" and self.system.log_steps and self.system.global_step % self.system.log_steps \
-                == 0:
+        if self.system.mode == "train" and self.system.log_steps and (self.system.global_step % self.system.log_steps \
+                == 0 or self.system.global_step == 1):
             self._print_message("FastEstimator-Train: step: {}; ".format(self.system.global_step), data)
 
     def on_epoch_end(self, data: Data):
