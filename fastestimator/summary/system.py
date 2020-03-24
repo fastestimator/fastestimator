@@ -22,12 +22,12 @@ from fastestimator.summary.summary import Summary
 
 class System:
     mode: Optional[str]  # What is the current execution mode of the estimator ('train', 'eval', 'test'), None if warmup
-    global_step: int  # How many training steps have elapsed
+    global_step: Optional[int]  # How many training steps have elapsed
     num_devices: int  # How many GPUs are available for training
     log_steps: Optional[int]  # Log every n steps (0 to disable train logging, None to disable all logging)
     total_epochs: int  # How many epochs training is expected to run for
-    epoch_idx: int  # The current epoch index for the training (starting from 1)
-    batch_idx: int  # The current batch index within an epoch (starting from 1)
+    epoch_idx: Optional[int]  # The current epoch index for the training (starting from 1)
+    batch_idx: Optional[int]  # The current batch index within an epoch (starting from 1)
     stop_training: bool  # A flag to signal that training should abort
     network: BaseNetwork  # A reference to the network being used this epoch
     max_steps_per_epoch: Optional[int]  # Training epoch will complete after n steps even if loader is not yet exhausted

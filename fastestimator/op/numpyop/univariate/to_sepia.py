@@ -16,7 +16,7 @@ from typing import Union, Iterable, Callable
 
 from albumentations.augmentations.transforms import ToSepia as ToSepiaAlb
 
-from fastestimator.op.numpyop.base_augmentations import ImageOnlyAlbumentation
+from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
 
 
 class ToSepia(ImageOnlyAlbumentation):

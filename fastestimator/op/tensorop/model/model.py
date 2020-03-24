@@ -18,7 +18,7 @@ import tensorflow as tf
 import torch
 
 from fastestimator.backend.feed_forward import feed_forward
-from fastestimator.op.op import TensorOp
+from fastestimator.op.tensorop.tensorop import TensorOp
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 

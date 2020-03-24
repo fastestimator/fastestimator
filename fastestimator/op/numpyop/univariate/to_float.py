@@ -16,7 +16,8 @@ from typing import Union, Iterable, Callable, Optional
 
 from albumentations.augmentations.transforms import ToFloat as ToFloatAlb
 
-from fastestimator.op.numpyop.base_augmentations import ImageOnlyAlbumentation
+from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+
 
 
 class ToFloat(ImageOnlyAlbumentation):
@@ -26,7 +27,7 @@ class ToFloat(ImageOnlyAlbumentation):
             inputs: Key(s) of images to be normalized
             outputs: Key(s) of images to be normalized
             mode: What execution mode (train, eval, None) to apply this operation
-            max_value: The maximum value to serve as the divisor. If None it will be inferred by dtype. 
+            max_value: The maximum value to serve as the divisor. If None it will be inferred by dtype.
         Image types:
             any type
     """

@@ -16,7 +16,8 @@ from typing import Union, Iterable, Callable, Tuple
 
 from albumentations.augmentations.transforms import RGBShift as RGBShiftAlb
 
-from fastestimator.op.numpyop.base_augmentations import ImageOnlyAlbumentation
+from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+
 
 
 class RGBShift(ImageOnlyAlbumentation):
@@ -26,11 +27,11 @@ class RGBShift(ImageOnlyAlbumentation):
             inputs: Key(s) of images to be normalized
             outputs: Key(s) of images to be normalized
             mode: What execution mode (train, eval, None) to apply this operation
-            r_shift_limit: range for changing values for the red channel. If r_shift_limit is a single int, the range 
+            r_shift_limit: range for changing values for the red channel. If r_shift_limit is a single int, the range
                 will be (-r_shift_limit, r_shift_limit). Default: (-20, 20).
-            g_shift_limit: range for changing values for the green channel. If g_shift_limit is a single int, the range 
+            g_shift_limit: range for changing values for the green channel. If g_shift_limit is a single int, the range
                 will be (-g_shift_limit, g_shift_limit). Default: (-20, 20).
-            b_shift_limit: range for changing values for the blue channel. If b_shift_limit is a single int, the range 
+            b_shift_limit: range for changing values for the blue channel. If b_shift_limit is a single int, the range
                 will be (-b_shift_limit, b_shift_limit). Default: (-20, 20).
         Image types:
             uint8, float32

@@ -20,7 +20,8 @@ import torch
 
 from fastestimator.backend.load_model import load_model
 from fastestimator.backend.to_tensor import to_tensor
-from fastestimator.op.op import TensorOp, get_current_ops, get_inputs_by_op, write_outputs_by_op
+from fastestimator.op.op import get_current_ops, get_inputs_by_op, write_outputs_by_op
+from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model.model import ModelOp
 from fastestimator.op.tensorop.model.update import UpdateOp
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler

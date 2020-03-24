@@ -16,7 +16,7 @@ from typing import Union, Iterable, Callable
 
 from albumentations.augmentations.transforms import InvertImg as InvertImgAlb
 
-from fastestimator.op.numpyop.base_augmentations import ImageOnlyAlbumentation
+from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
 
 
 class InvertImg(ImageOnlyAlbumentation):

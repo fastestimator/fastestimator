@@ -16,11 +16,12 @@ from typing import Union, Iterable, Callable, Tuple
 
 from albumentations.augmentations.transforms import Posterize as PosterizeAlb
 
-from fastestimator.op.numpyop.base_augmentations import ImageOnlyAlbumentation
+from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+
 
 
 class Posterize(ImageOnlyAlbumentation):
-    """Reduce the number of bits for each color channel 
+    """Reduce the number of bits for each color channel
 
         Args:
             inputs: Key(s) of images to be normalized

@@ -16,7 +16,7 @@ from typing import Union, Iterable, Callable, Tuple
 
 from albumentations.augmentations.transforms import Solarize as SolarizeAlb
 
-from fastestimator.op.numpyop.base_augmentations import ImageOnlyAlbumentation
+from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
 
 
 class Solarize(ImageOnlyAlbumentation):

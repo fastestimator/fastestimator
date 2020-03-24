@@ -25,8 +25,8 @@ from torch.utils.data import DataLoader, Dataset, RandomSampler
 
 from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.op_dataset import OpDataset
-from fastestimator.op.numpyop.util import Delete
-from fastestimator.op.op import NumpyOp, get_current_ops, get_inputs_by_op, write_outputs_by_op
+from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
+from fastestimator.op.op import get_current_ops
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler
 from fastestimator.util.util import lcms, to_list
 
@@ -113,11 +113,11 @@ class Pipeline:
         if isinstance(loader, tf.data.Dataset):
             loader = loader.take(num_steps)
         start = time.perf_counter()
-        for idx, _ in enumerate(loader):
-            if idx + 1 % log_interval == 0:
+        for idx, _ in enumerate(loader, start=1):
+            if idx % log_interval == 0:
                 duration = time.perf_counter() - start
                 iters_per_sec = log_interval / duration
-                print("FastEstimator: Step: {}, Epoch: {}, Steps/sec: {}".format(idx + 1, epoch, iters_per_sec))
+                print("FastEstimator: Step: {}, Epoch: {}, Steps/sec: {}".format(idx, epoch, iters_per_sec))
                 start = time.perf_counter()
             if idx == num_steps:
                 break
@@ -135,15 +135,7 @@ class Pipeline:
         """
         data = deepcopy(data)
         ops = get_current_ops(self.ops, mode, epoch)
-        op_data = None
-        for op in ops:
-            op_data = get_inputs_by_op(op, data, op_data)
-            op_data = op.forward(op_data, {"mode": mode})
-            if isinstance(op, Delete):
-                for key in op.inputs:
-                    del data[key]
-            if op.outputs:
-                write_outputs_by_op(op, data, op_data)
+        forward_numpyop(ops, data, mode)
         for key, value in data.items():
             data[key] = np.expand_dims(value, 0)
         return data
