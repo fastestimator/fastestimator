@@ -17,7 +17,7 @@ from typing import Union, Optional
 from albumentations import BboxParams, KeypointParams
 from albumentations.augmentations.transforms import RandomCropNearBBox as RandomCropNearBBoxAlb
 
-from fastestimator.op.numpyop.base_augmentations import MultiVariateAlbumentation
+from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 
 
 class RandomCropNearBBox(MultiVariateAlbumentation):

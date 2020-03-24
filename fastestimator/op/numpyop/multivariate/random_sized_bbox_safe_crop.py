@@ -18,7 +18,7 @@ import cv2
 from albumentations import BboxParams
 from albumentations.augmentations.transforms import RandomSizedBBoxSafeCrop as RandomSizedBBoxSafeCropAlb
 
-from fastestimator.op.numpyop.base_augmentations import MultiVariateAlbumentation
+from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 
 
 class RandomSizedBBoxSafeCrop(MultiVariateAlbumentation):

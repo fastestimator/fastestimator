@@ -17,7 +17,7 @@ from typing import Union, Optional, Tuple, List
 import cv2
 from albumentations.augmentations.transforms import OpticalDistortion as OpticalDistortionAlb
 
-from fastestimator.op.numpyop.base_augmentations import MultiVariateAlbumentation
+from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 
 
 class OpticalDistortion(MultiVariateAlbumentation):

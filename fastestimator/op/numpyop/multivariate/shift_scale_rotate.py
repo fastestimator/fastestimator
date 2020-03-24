@@ -18,7 +18,7 @@ import cv2
 from albumentations import BboxParams, KeypointParams
 from albumentations.augmentations.transforms import ShiftScaleRotate as ShiftScaleRotateAlb
 
-from fastestimator.op.numpyop.base_augmentations import MultiVariateAlbumentation
+from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 
 
 class ShiftScaleRotate(MultiVariateAlbumentation):

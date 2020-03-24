@@ -18,16 +18,15 @@ from typing import Any, Dict, List
 
 import cv2
 import numpy as np
-import tensorflow as tf
+import torch
 
 import fastestimator as fe
-from fastestimator.architecture.tensorflow import UNet
+from fastestimator.architecture.pytorch import UNet
 from fastestimator.dataset.data import montgomery
-from fastestimator.op import NumpyOp
+from fastestimator.op.numpyop import Delete, NumpyOp
 from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import HorizontalFlip, Resize, Rotate
-from fastestimator.op.numpyop.univariate import Minmax, ReadImage
-from fastestimator.op.numpyop.util import Delete
+from fastestimator.op.numpyop.univariate import Minmax, ReadImage, Reshape
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver
@@ -69,13 +68,16 @@ def get_estimator(epochs=20, batch_size=4, max_steps_per_epoch=None, save_dir=te
             Sometimes(numpy_op=Rotate(
                 image_in="image", mask_in="mask", limit=(-10, 10), border_mode=cv2.BORDER_CONSTANT, mode='train')),
             Minmax(inputs="image", outputs="image"),
-            Minmax(inputs="mask", outputs="mask", mode='!infer')
+            Minmax(inputs="mask", outputs="mask", mode='!infer'),
+            Reshape(shape=(1, 512, 512), inputs="image", outputs="image"),
+            Reshape(shape=(1, 512, 512), inputs="mask", outputs="mask", mode='!infer')
         ])
 
     # step 2
-    model = fe.build(model_fn=lambda: UNet(input_size=(512, 512, 1)),
-                     optimizer_fn=lambda: tf.keras.optimizers.Adam(learning_rate=0.0001),
+    model = fe.build(model_fn=lambda: UNet(input_size=(1, 512, 512)),
+                     optimizer_fn=lambda x: torch.optim.Adam(params=x, lr=0.0001),
                      model_names="lung_segmentation")
+
     network = fe.Network(ops=[
         ModelOp(inputs="image", model=model, outputs="pred_segment"),
         CrossEntropy(inputs=("pred_segment", "mask"), outputs="loss", form="binary"),
@@ -87,13 +89,13 @@ def get_estimator(epochs=20, batch_size=4, max_steps_per_epoch=None, save_dir=te
         Dice(true_key="mask", pred_key="pred_segment"),
         BestModelSaver(model=model, save_dir=save_dir, metric='Dice', save_best_mode='max')
     ]
+
     estimator = fe.Estimator(network=network,
                              pipeline=pipeline,
                              epochs=epochs,
                              log_steps=log_steps,
                              traces=traces,
                              max_steps_per_epoch=max_steps_per_epoch)
-
     return estimator
 
 
