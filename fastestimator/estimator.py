@@ -230,6 +230,8 @@ class Estimator:
             try:
                 with Suppressor():
                     batch = next(loader)
+                if self.system.mode == "train":
+                    self.system.update_global_step()
                 self.system.update_batch_idx()
                 self._run_traces_on_batch_begin()
                 batch = self._configure_tensor(loader, batch)

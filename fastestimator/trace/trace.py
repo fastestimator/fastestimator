@@ -90,9 +90,6 @@ class TrainEssential(Trace):
             self.epoch_start = time.perf_counter()
             self.step_start = time.perf_counter()
 
-    def on_batch_begin(self, data: Data):
-        self.system.update_global_step()
-
     def on_batch_end(self, data: Data):
         for key in self.inputs:
             data.write_with_log(key, data[key])
