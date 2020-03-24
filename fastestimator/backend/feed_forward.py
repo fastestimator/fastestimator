@@ -15,17 +15,22 @@
 from typing import TypeVar, Union
 
 import tensorflow as tf
-
 import torch
+
+from fastestimator.backend.to_tensor import to_tensor
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 def feed_forward(model: Union[tf.keras.Model, torch.nn.Module], x: Tensor, training: bool = True) -> Tensor:
     if isinstance(model, tf.keras.Model):
+        if not isinstance(x, tf.Tensor):
+            x = to_tensor(x, "tf")
         x = model(x, training=training)
     elif isinstance(model, torch.nn.Module):
         model.train(mode=training)
+        if not isinstance(x, torch.Tensor):
+            x = to_tensor(x, "torch")
         x = model(x)
     else:
         raise ValueError("Unrecognized model instance {}".format(type(model)))
