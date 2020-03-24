@@ -19,8 +19,7 @@ from typing import Callable, List, Union
 
 from docx import Document
 from docx.shared import Pt
-
-from fastestimator.trace import Trace
+from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.util import to_list
 

@@ -16,7 +16,7 @@ import gzip
 import os
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 import numpy as np
 import wget

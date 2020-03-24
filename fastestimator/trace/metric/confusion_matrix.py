@@ -13,14 +13,14 @@
 # limitations under the License.
 # ==============================================================================
 
-from typing import Union, Set
+from typing import Set, Union
 
 import numpy as np
 from sklearn.metrics import confusion_matrix
 
 from fastestimator.backend.to_number import to_number
 from fastestimator.trace.trace import Trace
-from fastestimator.util import Data
+from fastestimator.util.data import Data
 
 
 class ConfusionMatrix(Trace):

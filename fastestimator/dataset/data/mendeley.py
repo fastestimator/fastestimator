@@ -15,12 +15,11 @@
 import os
 import zipfile
 from pathlib import Path
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 import requests
-from tqdm import tqdm
-
 from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset
+from tqdm import tqdm
 
 
 def load_data(root_dir: Optional[str] = None) -> Tuple[LabeledDirDataset, LabeledDirDataset]:

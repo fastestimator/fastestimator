@@ -13,3 +13,4 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.architecture.tensorflow.lenet import LeNet
+from fastestimator.architecture.tensorflow.unet import UNet

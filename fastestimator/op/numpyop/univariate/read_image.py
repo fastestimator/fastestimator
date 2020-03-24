@@ -13,12 +13,12 @@
 # limitations under the License.
 # ==============================================================================
 import os
-from typing import Union, Iterable, Callable, Any, Dict, List
+from typing import Any, Callable, Dict, Iterable, List, Union
 
 import cv2
 import numpy as np
 
-from fastestimator.op import NumpyOp
+from fastestimator.op.op import NumpyOp
 
 
 class ReadImage(NumpyOp):

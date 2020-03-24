@@ -19,23 +19,24 @@ from typing import Optional, Tuple
 
 import wget
 
-from fastestimator.dataset.unlabeled_dir_dataset import UnlabeledDirDataset
-from fastestimator.dataset.unpaired_dataset import UnpairedDataset
+from fastestimator.dataset.batch_dataset import BatchDataset
+from fastestimator.dataset.dir_dataset import DirDataset
 from fastestimator.util.wget_util import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress
 
 
-def load_data(root_dir: Optional[str] = None) -> Tuple[UnpairedDataset, UnpairedDataset]:
+def load_data(batch_size: int, root_dir: Optional[str] = None) -> Tuple[BatchDataset, BatchDataset]:
     """Download the horse2zebra dataset to local storage, if not already downloaded.
         Sourced from: https://people.eecs.berkeley.edu/~taesung_park/CycleGAN/datasets/horse2zebra.zip
 
     Args:
+        batch_size: Batch size.
         root_dir: The path to store the data. When `path` is not provided, will save at
             `fastestimator_data` under user's home directory.
 
     Returns:
-        (TrainData, EvalData)
+        (train_data, eval_data)
     """
     home = str(Path.home())
 
@@ -62,24 +63,22 @@ def load_data(root_dir: Optional[str] = None) -> Tuple[UnpairedDataset, Unpaired
             zip_file.extractall(root_dir)
         os.rename(os.path.join(root_dir, 'horse2zebra'), data_folder_path)
 
-    test_a = UnlabeledDirDataset(root_dir=os.path.join(data_folder_path, 'testA'),
-                                 data_key="A",
-                                 file_extension='.jpg',
-                                 recursive_search=False)
-    test_b = UnlabeledDirDataset(root_dir=os.path.join(data_folder_path, 'testB'),
-                                 data_key="B",
-                                 file_extension='.jpg',
-                                 recursive_search=False)
-    train_a = UnlabeledDirDataset(root_dir=os.path.join(data_folder_path, 'trainA'),
-                                  data_key="A",
-                                  file_extension='.jpg',
-                                  recursive_search=False)
-    train_b = UnlabeledDirDataset(root_dir=os.path.join(data_folder_path, 'trainB'),
-                                  data_key="B",
-                                  file_extension='.jpg',
-                                  recursive_search=False)
-
-    train = UnpairedDataset(train_a, train_b)
-    test = UnpairedDataset(test_a, test_b)
-
-    return train, test
+    test_a = DirDataset(root_dir=os.path.join(data_folder_path, 'testA'),
+                        data_key="A",
+                        file_extension='.jpg',
+                        recursive_search=False)
+    test_b = DirDataset(root_dir=os.path.join(data_folder_path, 'testB'),
+                        data_key="B",
+                        file_extension='.jpg',
+                        recursive_search=False)
+    train_a = DirDataset(root_dir=os.path.join(data_folder_path, 'trainA'),
+                         data_key="A",
+                         file_extension='.jpg',
+                         recursive_search=False)
+    train_b = DirDataset(root_dir=os.path.join(data_folder_path, 'trainB'),
+                         data_key="B",
+                         file_extension='.jpg',
+                         recursive_search=False)
+    outputs = (BatchDataset(datasets=[train_a, train_b], num_samples=[batch_size, batch_size]),
+               BatchDataset(datasets=[test_a, test_b], num_samples=[batch_size, batch_size]))
+    return outputs

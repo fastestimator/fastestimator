@@ -15,6 +15,7 @@
 from typing import Any, Optional
 
 import torch
+
 from fastestimator.network import BaseNetwork
 from fastestimator.summary.summary import Summary
 

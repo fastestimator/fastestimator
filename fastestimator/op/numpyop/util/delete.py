@@ -12,4 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.architecture import tensorflow, pytorch
+from typing import Any, Dict, Iterable, List, Union
+
+import numpy as np
+
+from fastestimator.op.op import NumpyOp
+
+
+class Delete(NumpyOp):
+    """Delete the key, value pairs in data dict.
+
+        Args:
+            keys: Existing key(s) to be deleted in data dict.
+    """
+    def __init__(self, keys: Union[str, List[str]], mode: Union[None, str, Iterable[str]] = None) -> None:
+        super().__init__(inputs=keys, mode=mode)
+
+    def forward(self, data: Union[np.ndarray, List[np.ndarray]], state: Dict[str, Any]) -> None:
+        pass

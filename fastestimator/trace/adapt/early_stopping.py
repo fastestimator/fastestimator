@@ -17,7 +17,7 @@ from typing import Optional
 import numpy as np
 
 from fastestimator.trace.trace import Trace
-from fastestimator.util import Data
+from fastestimator.util.data import Data
 
 
 class EarlyStopping(Trace):
@@ -36,12 +36,12 @@ class EarlyStopping(Trace):
                     execute. Defaults to 'eval'.
     """
     def __init__(self,
-                 monitor: Optional[str] = "loss",
-                 min_delta: Optional[int] = 0,
-                 patience: Optional[int] = 0,
+                 monitor: str = "loss",
+                 min_delta: float = 0.0,
+                 patience: int = 0,
                  compare: str = 'min',
                  baseline: Optional[float] = None,
-                 mode: Optional[str] = 'eval'):
+                 mode: str = 'eval'):
         super().__init__(inputs=monitor, mode=mode)
 
         if len(self.inputs) != 1:

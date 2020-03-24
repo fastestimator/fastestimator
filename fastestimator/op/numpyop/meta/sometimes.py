@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Dict, Any, List, Union
+from typing import Any, Dict, List, Union
 
 import numpy as np
 
-from fastestimator.op import NumpyOp
+from fastestimator.op.op import NumpyOp
 
 
 class Sometimes(NumpyOp):
