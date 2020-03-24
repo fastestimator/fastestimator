@@ -12,16 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Callable, Dict, Iterable, List, Mapping, MutableMapping, Optional, Set, TypeVar, Union
-
-import numpy as np
-import tensorflow as tf
-import torch
+from typing import Any, Callable, Iterable, List, Mapping, MutableMapping, Optional, Set, TypeVar, Union
 
 from fastestimator.schedule.schedule import Scheduler
 from fastestimator.util.util import parse_modes, to_list, to_set
-
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 class Op:
@@ -40,17 +34,6 @@ class Op:
         self.mode = parse_modes(to_set(mode))
         self.in_list = not isinstance(inputs, (str, Callable))
         self.out_list = not isinstance(outputs, str)
-
-
-class TensorOp(Op):
-    def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
-        return data
-
-
-class NumpyOp(Op):
-    def forward(self, data: Union[np.ndarray, List[np.ndarray]],
-                state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
-        return data
 
 
 OpType = TypeVar('OpType', bound=Op)

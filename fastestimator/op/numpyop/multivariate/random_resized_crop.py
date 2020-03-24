@@ -18,7 +18,7 @@ import cv2
 from albumentations import BboxParams, KeypointParams
 from albumentations.augmentations.transforms import RandomResizedCrop as RandomResizedCropAlb
 
-from fastestimator.op.numpyop.base_augmentations import MultiVariateAlbumentation
+from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 
 
 class RandomResizedCrop(MultiVariateAlbumentation):

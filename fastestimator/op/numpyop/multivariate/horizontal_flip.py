@@ -17,7 +17,7 @@ from typing import Union, Optional
 from albumentations import BboxParams, KeypointParams
 from albumentations.augmentations.transforms import HorizontalFlip as FlipAlb
 
-from fastestimator.op.numpyop.base_augmentations import MultiVariateAlbumentation
+from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 
 
 class HorizontalFlip(MultiVariateAlbumentation):
@@ -35,8 +35,8 @@ class HorizontalFlip(MultiVariateAlbumentation):
             masks_out: The key to write the modified masks (defaults to masks_in)
             bbox_out: The key to write the modified bounding box(es) (defaults to bbox_in)
             keypoints_out: The key to write the modified keypoints (defaults to keypoints_in)
-            bbox_params: Parameters defining the type of bounding box ('coco', 'pascal_voc', 'albumentations' or 'yolo') 
-            keypoint_params: Parameters defining the type of keypoints ('xy', 'yx', 'xya', 'xys', 'xyas', 'xysa') 
+            bbox_params: Parameters defining the type of bounding box ('coco', 'pascal_voc', 'albumentations' or 'yolo')
+            keypoint_params: Parameters defining the type of keypoints ('xy', 'yx', 'xya', 'xys', 'xyas', 'xysa')
         Image types:
             uint8, float32
     """

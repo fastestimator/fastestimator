@@ -16,7 +16,7 @@ from typing import Any, Callable, Dict, Iterable, List, Union
 
 import numpy as np
 
-from fastestimator.op.op import NumpyOp
+from fastestimator.op.numpyop.numpyop import NumpyOp
 
 
 class Onehot(NumpyOp):

@@ -16,7 +16,7 @@ from typing import Union, Tuple, Iterable, Callable
 
 from albumentations.augmentations.transforms import Normalize as NormalizeAlb
 
-from fastestimator.op.numpyop.base_augmentations import ImageOnlyAlbumentation
+from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
 
 
 class Normalize(ImageOnlyAlbumentation):

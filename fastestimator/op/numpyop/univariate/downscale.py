@@ -17,7 +17,7 @@ from typing import Union, Iterable, Callable
 import cv2
 from albumentations.augmentations.transforms import Downscale as DownscaleAlb
 
-from fastestimator.op.numpyop.base_augmentations import ImageOnlyAlbumentation
+from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
 
 
 class Downscale(ImageOnlyAlbumentation):

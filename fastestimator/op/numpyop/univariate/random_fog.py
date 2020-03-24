@@ -16,7 +16,7 @@ from typing import Union, Iterable, Callable
 
 from albumentations.augmentations.transforms import RandomFog as RandomFogAlb
 
-from fastestimator.op.numpyop.base_augmentations import ImageOnlyAlbumentation
+from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
 
 
 class RandomFog(ImageOnlyAlbumentation):

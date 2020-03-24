@@ -16,7 +16,8 @@ from typing import Union, Iterable, Callable, Tuple
 
 from albumentations.augmentations.transforms import GaussianBlur as GaussianBlurAlb
 
-from fastestimator.op.numpyop.base_augmentations import ImageOnlyAlbumentation
+from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+
 
 
 class GaussianBlur(ImageOnlyAlbumentation):
@@ -26,7 +27,7 @@ class GaussianBlur(ImageOnlyAlbumentation):
             inputs: Key(s) of images to be normalized
             outputs: Key(s) of images to be normalized
             mode: What execution mode (train, eval, None) to apply this operation
-            blur_limit: maximum Gaussian kernel size for blurring the input image. Should be odd and in range [3, inf). 
+            blur_limit: maximum Gaussian kernel size for blurring the input image. Should be odd and in range [3, inf).
                 Default: (3, 7)
         Image types:
             uint8, float32

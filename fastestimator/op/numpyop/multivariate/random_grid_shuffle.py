@@ -16,7 +16,7 @@ from typing import Optional, Tuple
 
 from albumentations.augmentations.transforms import RandomGridShuffle as RandomGridShuffleAlb
 
-from fastestimator.op.numpyop.base_augmentations import MultiVariateAlbumentation
+from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 
 
 class RandomGridShuffle(MultiVariateAlbumentation):

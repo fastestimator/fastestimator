@@ -15,11 +15,11 @@
 import math
 
 
-def cosine_decay(time: int, cycle_length: int, init_lr: float, min_lr: float = 1e-6, start: int = 0):
+def cosine_decay(time: int, cycle_length: int, init_lr: float, min_lr: float = 1e-6, start: int = 1):
     """ learning rate cosine decay function (using half of cosine curve)
 
     Args:
-        time: current step or epoch during training.
+        time: current step or epoch during training starting from 1.
         cycle_length: the decay cycle length.
         init_lr: initial learning rate to decay from.
         min_lr: minimum learning rate.
