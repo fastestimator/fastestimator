@@ -12,4 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.numpyop.util.delete import Delete
+from typing import Any, Dict, List, TypeVar, Union
+
+import tensorflow as tf
+import torch
+
+from fastestimator.op.op import Op
+
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+
+
+class TensorOp(Op):
+    def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
+        return data

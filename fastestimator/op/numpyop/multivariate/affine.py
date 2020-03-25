@@ -16,8 +16,7 @@ from typing import List, Optional, Tuple, TypeVar, Union
 
 from albumentations import BboxParams, KeypointParams
 from albumentations.imgaug.transforms import IAAAffine
-
-from fastestimator.op.numpyop.base_augmentations import MultiVariateAlbumentation
+from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 
 Number = TypeVar('Number', int, float)
 

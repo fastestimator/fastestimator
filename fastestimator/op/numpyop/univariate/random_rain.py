@@ -16,7 +16,7 @@ from typing import Union, Iterable, Callable, Tuple, Optional
 
 from albumentations.augmentations.transforms import RandomRain as RandomRainAlb
 
-from fastestimator.op.numpyop.base_augmentations import ImageOnlyAlbumentation
+from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
 
 
 class RandomRain(ImageOnlyAlbumentation):

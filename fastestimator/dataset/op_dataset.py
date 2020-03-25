@@ -13,14 +13,13 @@
 # limitations under the License.
 # ==============================================================================
 from copy import deepcopy
-from typing import List
+from typing import Any, List, Mapping
 
 import numpy as np
 from torch.utils.data import Dataset
 
 from fastestimator.dataset import BatchDataset
-from fastestimator.op.numpyop.util.delete import Delete
-from fastestimator.op.op import NumpyOp, get_inputs_by_op, write_outputs_by_op
+from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
 
 
 class OpDataset(Dataset):
@@ -31,27 +30,15 @@ class OpDataset(Dataset):
         self.ops = ops
         self.mode = mode
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> Mapping[str, Any]:
         items = deepcopy(self.dataset[index])  # Deepcopy to prevent ops from overwriting values in datasets
         if isinstance(self.dataset, BatchDataset):
             for item in items:
-                self._forward(item)
+                forward_numpyop(self.ops, item, self.mode)
             items = {key: np.array([item[key] for item in items]) for key in items[0]}
         else:
-            self._forward(items)
+            forward_numpyop(self.ops, items, self.mode)
         return items
 
     def __len__(self):
         return len(self.dataset)
-
-    def _forward(self, item):
-        op_data = None
-        for op in self.ops:
-            op_data = get_inputs_by_op(op, item, op_data)
-            op_data = op.forward(op_data, {"mode": self.mode})
-            if isinstance(op, Delete):
-                for key in op.inputs:
-                    del item[key]
-            if op.outputs:
-                write_outputs_by_op(op, item, op_data)
-        return item

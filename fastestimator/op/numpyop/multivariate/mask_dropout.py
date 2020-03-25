@@ -16,7 +16,7 @@ from typing import Union, Optional, Tuple
 
 from albumentations.augmentations.transforms import MaskDropout as MaskDropoutAlb
 
-from fastestimator.op.numpyop.base_augmentations import MultiVariateAlbumentation
+from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 
 
 class MaskDropout(MultiVariateAlbumentation):
