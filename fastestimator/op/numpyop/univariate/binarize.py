@@ -17,7 +17,7 @@ from typing import Any, Callable, Dict, Iterable, List, Union
 
 import numpy as np
 
-from fastestimator.op import NumpyOp
+from fastestimator.op.numpyop import NumpyOp
 
 
 class Binarize(NumpyOp):
