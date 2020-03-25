@@ -89,7 +89,7 @@ def decoder_net():
     return generative_model
 
 
-def get_estimator(batch_size=100, epochs=100, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
+def get_estimator(batch_size=100, epochs=20, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
     train_data, test_data = load_data()
 
     pipeline = fe.Pipeline(

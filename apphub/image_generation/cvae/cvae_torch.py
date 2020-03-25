@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-
 """
 Convolutional Variational Auto Encoder (CVAE) example trained from MNIST dataset using PyTorch backend
 Ref: https://www.tensorflow.org/tutorials/generative/cvae
@@ -45,8 +44,7 @@ class SplitOp(TensorOp):
 
 class ReparameterizepOp(TensorOp):
     """Reparameterization trick. Ensures grads pass thru the sample to the infer net parameters"""
-    def forward(self, data: Tuple[torch.Tensor,torch.Tensor],
-                state: Dict[str, Any]) -> torch.Tensor:
+    def forward(self, data: Tuple[torch.Tensor, torch.Tensor], state: Dict[str, Any]) -> torch.Tensor:
         mean, logvar = data
         eps = torch.randn(mean.shape, device=mean.device)
         A = torch.exp(logvar * 0.5)
@@ -108,11 +106,11 @@ class DecoderNet(nn.Module):
         x = self.conv2(x)
         x = fn.relu(x)
         x = self.conv3(x)
-        x = fn.sigmoid(x)
+        x = torch.sigmoid(x)
         return x
 
 
-def get_estimator(batch_size=100, epochs=100, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
+def get_estimator(batch_size=100, epochs=20, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
     train_data, test_data = load_data()
 
     pipeline = fe.Pipeline(
