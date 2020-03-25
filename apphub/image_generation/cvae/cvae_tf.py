@@ -24,8 +24,8 @@ import tensorflow as tf
 
 import fastestimator as fe
 from fastestimator.dataset.data.mnist import load_data
-from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.numpyop.univariate import Binarize, ExpandDims, Minmax
+from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver
