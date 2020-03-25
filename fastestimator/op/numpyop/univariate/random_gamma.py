@@ -16,7 +16,7 @@ from typing import Union, Iterable, Callable, Tuple
 
 from albumentations.augmentations.transforms import RandomGamma as RandomGammaAlb
 
-from fastestimator.op.numpyop.base_augmentations import ImageOnlyAlbumentation
+from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
 
 
 class RandomGamma(ImageOnlyAlbumentation):

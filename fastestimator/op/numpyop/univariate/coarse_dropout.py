@@ -16,7 +16,7 @@ from typing import Union, List, Iterable, Callable, Optional
 
 from albumentations.augmentations.transforms import CoarseDropout as CoarseDropoutAlb
 
-from fastestimator.op.numpyop.base_augmentations import ImageOnlyAlbumentation
+from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
 
 
 class CoarseDropout(ImageOnlyAlbumentation):

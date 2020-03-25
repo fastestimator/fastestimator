@@ -17,7 +17,7 @@ from typing import Union, Iterable, Callable, List
 import numpy as np
 from albumentations.augmentations.transforms import Equalize as EqualizeAlb
 
-from fastestimator.op.numpyop.base_augmentations import ImageOnlyAlbumentation
+from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
 
 
 class Equalize(ImageOnlyAlbumentation):

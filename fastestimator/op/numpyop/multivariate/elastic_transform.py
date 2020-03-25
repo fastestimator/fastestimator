@@ -17,7 +17,7 @@ from typing import Union, Optional, List
 import cv2
 from albumentations.augmentations.transforms import ElasticTransform as ElasticTransformAlb
 
-from fastestimator.op.numpyop.base_augmentations import MultiVariateAlbumentation
+from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 
 
 class ElasticTransform(MultiVariateAlbumentation):

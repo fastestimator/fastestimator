@@ -16,7 +16,8 @@ from typing import Union, Iterable, Callable, Tuple
 
 from albumentations.augmentations.transforms import MedianBlur as MedianBlurAlb
 
-from fastestimator.op.numpyop.base_augmentations import ImageOnlyAlbumentation
+from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+
 
 
 class MedianBlur(ImageOnlyAlbumentation):
@@ -26,8 +27,8 @@ class MedianBlur(ImageOnlyAlbumentation):
             inputs: Key(s) of images to be normalized
             outputs: Key(s) of images to be normalized
             mode: What execution mode (train, eval, None) to apply this operation
-            blur_limit: maximum aperture linear size for blurring the input image. Should be odd and in range [3, inf). 
-                Default: (3, 5). If image is a float type then only 3 and 5 are valid sizes. 
+            blur_limit: maximum aperture linear size for blurring the input image. Should be odd and in range [3, inf).
+                Default: (3, 5). If image is a float type then only 3 and 5 are valid sizes.
         Image types:
             uint8, float32
     """

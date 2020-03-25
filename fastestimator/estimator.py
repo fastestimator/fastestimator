@@ -151,11 +151,11 @@ class Estimator:
         modes = self.pipeline.get_modes()
         loss_keys = self.network.get_loss_keys()
         if "train" in modes:
-            self.traces.insert(0, TrainEssential())
+            self.traces.insert(0, TrainEssential(loss_keys=loss_keys))
         if "eval" in modes:
             self.traces.insert(1, EvalEssential(loss_keys=loss_keys))
         if self.system.log_steps is not None:
-            self.traces.append(Logger(extra_log_keys=self.monitor_names | loss_keys))
+            self.traces.append(Logger(extra_log_keys=self.monitor_names))
         for mode in modes:
             trace_inputs = set()
             # '*' is a reserved key for traces to indicate that they want to receive all available output
@@ -203,7 +203,7 @@ class Estimator:
     def _start_train(self):
         self._run_traces_on_begin({"train", "eval"})
         try:
-            for self.system.epoch_idx in range(self.system.total_epochs):
+            for self.system.epoch_idx in range(1, self.system.total_epochs + 1):
                 if "train" in self.pipeline.get_modes():
                     self.system.mode = "train"
                     self._run_epoch()
@@ -225,20 +225,20 @@ class Estimator:
         self.network.load_epoch(mode=self.system.mode,
                                 epoch=self.system.epoch_idx,
                                 output_keys=self.trace_inputs[self.system.mode])
-        self.system.batch_idx = 0
+        self.system.batch_idx = None
         while True:
             try:
                 with Suppressor():
                     batch = next(loader)
-                if self.system.batch_idx == self.system.max_steps_per_epoch and self.system.mode == "train":
-                    break
+                if self.system.mode == "train":
+                    self.system.update_global_step()
+                self.system.update_batch_idx()
                 self._run_traces_on_batch_begin()
                 batch = self._configure_tensor(loader, batch)
                 batch, prediction = self.network.run_step(batch)
                 self._run_traces_on_batch_end(batch, prediction)
-                if self.system.mode == "train":
-                    self.system.update_global_step()
-                self.system.batch_idx += 1
+                if self.system.batch_idx == self.system.max_steps_per_epoch and self.system.mode == "train":
+                    break
             except StopIteration:
                 break
         self.network.unload_epoch()
