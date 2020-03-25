@@ -33,6 +33,8 @@ def watch(tensor: Tensor, tape: Optional[tf.GradientTape] = None) -> Tensor:
         tape.watch(tensor)
         return tensor
     elif isinstance(tensor, torch.Tensor):
+        if tensor.requires_grad:
+            return tensor
         # It is tempting to just do tensor.requires_grad = True here, but that will lead to trouble
         return tensor.detach().requires_grad_(True)
     else:
