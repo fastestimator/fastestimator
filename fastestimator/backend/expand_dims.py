@@ -12,27 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union
+
+from typing import TypeVar
 
 import numpy as np
 import tensorflow as tf
 import torch
 
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, torch.autograd.Variable, np.ndarray)
 
-def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray]) -> np.ndarray:
-    """convert tensor values to python values
 
-    Args:
-        data: any tensor value
-
-    Returns:
-        np.ndarray: python value of the tensor
-    """
-    if isinstance(data, tf.Tensor):
-        data = data.numpy()
-    elif isinstance(data, torch.Tensor):
-        if data.requires_grad:
-            data = data.detach().numpy()
-        else:
-            data = data.numpy()
-    return np.array(data)
+def expand_dims(tensor: Tensor, axis: int = 1) -> Tensor:
+    if isinstance(tensor, tf.Tensor):
+        return tf.expand_dims(tensor, axis=axis)
+    elif isinstance(tensor, torch.Tensor):
+        return torch.unsqueeze(tensor, dim=axis)
+    elif isinstance(tensor, np.ndarray):
+        return np.expand_dims(tensor, axis=axis)
+    else:
+        raise ValueError("Unrecognized tensor type {}".format(type(tensor)))

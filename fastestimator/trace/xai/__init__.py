@@ -12,27 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union
-
-import numpy as np
-import tensorflow as tf
-import torch
-
-
-def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray]) -> np.ndarray:
-    """convert tensor values to python values
-
-    Args:
-        data: any tensor value
-
-    Returns:
-        np.ndarray: python value of the tensor
-    """
-    if isinstance(data, tf.Tensor):
-        data = data.numpy()
-    elif isinstance(data, torch.Tensor):
-        if data.requires_grad:
-            data = data.detach().numpy()
-        else:
-            data = data.numpy()
-    return np.array(data)
+from fastestimator.trace.xai.saliency import Saliency

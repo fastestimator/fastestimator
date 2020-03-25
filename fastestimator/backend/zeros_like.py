@@ -12,27 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union
 
-import numpy as np
+from typing import TypeVar, Union
+
 import tensorflow as tf
 import torch
 
+from fastestimator.util.util import STRING_TO_TORCH_DTYPE
 
-def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray]) -> np.ndarray:
-    """convert tensor values to python values
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, torch.autograd.Variable)
 
-    Args:
-        data: any tensor value
 
-    Returns:
-        np.ndarray: python value of the tensor
-    """
-    if isinstance(data, tf.Tensor):
-        data = data.numpy()
-    elif isinstance(data, torch.Tensor):
-        if data.requires_grad:
-            data = data.detach().numpy()
-        else:
-            data = data.numpy()
-    return np.array(data)
+def zeros_like(tensor: Tensor, dtype: Union[None, str] = None) -> Tensor:
+    if isinstance(tensor, tf.Tensor):
+        return tf.zeros_like(tensor, dtype=dtype)
+    elif isinstance(tensor, torch.Tensor):
+        return torch.zeros_like(tensor, dtype=STRING_TO_TORCH_DTYPE[dtype])
+    else:
+        raise ValueError("Unrecognized tensor type {}".format(type(tensor)))

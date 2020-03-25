@@ -31,7 +31,7 @@ class ModelOp(TensorOp):
         inputs : String key of input training data. Defaults to None.
         outputs : String key of predictions. Defaults to None.
         mode : 'train' or 'eval'. Defaults to None.
-        track_input : If 'true' it tracks the gradients with respect to inputs. Defaults to False.  # TODO - bring back
+        trainable: Indicates whether the model should have weights tracked for update
     """
     def __init__(self,
                  model: Union[tf.keras.Model, torch.nn.Module],
