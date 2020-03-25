@@ -152,7 +152,7 @@ class Estimator:
         loss_keys = self.network.get_loss_keys()
         if "train" in modes:
             self.traces.insert(0, TrainEssential(loss_keys=loss_keys))
-        if "eval" in modes:
+        if "eval" in modes and loss_keys.issubset(self.network.get_all_output_keys("eval", self.system.total_epochs)):
             self.traces.insert(1, EvalEssential(loss_keys=loss_keys))
         if self.system.log_steps is not None:
             self.traces.append(Logger(extra_log_keys=self.monitor_names))
