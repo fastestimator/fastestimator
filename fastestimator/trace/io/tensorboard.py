@@ -303,7 +303,7 @@ class TensorBoard(Trace):
             self.painted_graphs = set()
 
     def on_batch_end(self, data: Data):
-        if self.system.network.epoch_models.symmetric_difference(self.painted_graphs):
+        if self.write_graph and self.system.network.epoch_models.symmetric_difference(self.painted_graphs):
             self.writer.write_epoch_models(mode=self.system.mode, data=data)
             self.painted_graphs = self.system.network.epoch_models
         if self.system.mode != 'train':
