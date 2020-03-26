@@ -67,7 +67,8 @@ setup(
         'h5py',
         'pycocotools-fix',
         'jsonpickle',
-        'python-docx'
+        'python-docx',
+        'tensorboard'
     ],
     # Declare extra set for installation
     extras_require={},

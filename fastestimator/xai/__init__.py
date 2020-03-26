@@ -12,5 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.numpyop.numpyop import Delete, NumpyOp, forward_numpyop
-
+from fastestimator.xai.util import show_image, XaiData
+from fastestimator.xai.saliency import SaliencyNet

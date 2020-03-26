@@ -12,5 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.numpyop.numpyop import Delete, NumpyOp, forward_numpyop
 
+from typing import TypeVar
+
+import numpy as np
+import tensorflow as tf
+import torch
+
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, torch.autograd.Variable, np.ndarray)
+
+
+def abs(tensor: Tensor) -> Tensor:
+    if isinstance(tensor, tf.Tensor):
+        return tf.abs(tensor)
+    elif isinstance(tensor, torch.Tensor):
+        return torch.abs(tensor)
+    elif isinstance(tensor, np.ndarray):
+        return np.abs(tensor)
+    else:
+        raise ValueError("Unrecognized tensor type {}".format(type(tensor)))

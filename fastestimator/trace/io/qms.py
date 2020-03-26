@@ -25,12 +25,22 @@ from fastestimator.util.util import to_list
 
 
 class QMSTest(Trace):
+    """ Automate test running and generate QMS report
+
+    Args:
+        test_descriptions: List of text-based description
+        test_criterias: List of test function. function input argument name need to match some keys
+        test_title: Title of the test
+        json_output: Output test result storing path (json)
+        doc_output: Output QMS summary report storing path (docx)
+    """
     def __init__(self,
                  test_descriptions: Union[str, List[str]],
                  test_criterias: Union[List[Callable], Callable],
                  test_title: str = "QMSTest",
                  json_output: str = "",
                  doc_output: str = ""):
+
 
         self.json_output = json_output
         self.doc_output = doc_output

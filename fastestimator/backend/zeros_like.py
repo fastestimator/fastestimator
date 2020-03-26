@@ -12,5 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.numpyop.numpyop import Delete, NumpyOp, forward_numpyop
 
+from typing import TypeVar, Union
+
+import tensorflow as tf
+import torch
+
+from fastestimator.util.util import STRING_TO_TORCH_DTYPE
+
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, torch.autograd.Variable)
+
+
+def zeros_like(tensor: Tensor, dtype: Union[None, str] = None) -> Tensor:
+    if isinstance(tensor, tf.Tensor):
+        return tf.zeros_like(tensor, dtype=dtype)
+    elif isinstance(tensor, torch.Tensor):
+        return torch.zeros_like(tensor, dtype=STRING_TO_TORCH_DTYPE[dtype])
+    else:
+        raise ValueError("Unrecognized tensor type {}".format(type(tensor)))

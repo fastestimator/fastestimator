@@ -22,13 +22,35 @@ from ast import literal_eval
 from contextlib import ContextDecorator
 from functools import reduce
 from math import gcd
-from typing import Any, List, Mapping, Optional, Set, Tuple, Union
+from typing import Any, Callable, List, Mapping, Optional, Set, Tuple, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
+import torch
 from pyfiglet import Figlet
 from tensorflow.python.distribute.values import DistributedValues
 from torch.utils.data.dataloader import default_collate
+
+STRING_TO_TORCH_DTYPE = {
+    None: None,
+    'float32': torch.float32,
+    'float': torch.float,
+    'float64': torch.float64,
+    'double': torch.double,
+    'float16': torch.float16,
+    'half': torch.half,
+    'uint8': torch.uint8,
+    'int8': torch.int8,
+    'int16': torch.int16,
+    'short': torch.short,
+    'int32': torch.int32,
+    'int': torch.int,
+    'int64': torch.int64,
+    'long': torch.long,
+    'bool': torch.bool
+}
+
+T = TypeVar('T')
 
 
 def parse_string_to_python(val: str) -> Any:
@@ -199,7 +221,7 @@ def strip_prefix(target: Optional[str], prefix: Optional[str]) -> Optional[str]:
     return target
 
 
-def per_replica_to_global(data: Any) -> Any:
+def per_replica_to_global(data: T) -> T:
     """Combine data from "per-replica" values.
     For multi-GPU training, data are distributed using `tf.distribute.Strategy.experimental_distribute_dataset`. This
     method collects data from all replicas and combine them into one.
@@ -282,3 +304,30 @@ def pad_data(data: np.ndarray, target_shape: Tuple[int], pad_value: Union[float,
     shape_difference = np.array(target_shape) - np.array(data.shape)
     padded_shape = np.array([np.zeros_like(shape_difference), shape_difference]).T
     return np.pad(data, padded_shape, 'constant', constant_values=pad_value)
+
+
+def is_number(arg: Any) -> bool:
+    """Check if a given string can be converted into a number.
+    Args:
+        arg: an input value
+    Returns:
+        True iff the string represents a number
+    """
+    try:
+        float(arg)
+        return True
+    except (ValueError, TypeError):
+        return False
+
+
+class DefaultKeyDict(dict):
+    """
+    Like collections.defaultdict but it passes the key argument to the default function
+    """
+    def __init__(self, default: Callable, **kwargs):
+        super().__init__(**kwargs)
+        self.factory = default
+
+    def __missing__(self, key):
+        res = self[key] = self.factory(key)
+        return res

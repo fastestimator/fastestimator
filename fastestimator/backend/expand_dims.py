@@ -12,5 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.numpyop.numpyop import Delete, NumpyOp, forward_numpyop
 
+from typing import TypeVar
+
+import numpy as np
+import tensorflow as tf
+import torch
+
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, torch.autograd.Variable, np.ndarray)
+
+
+def expand_dims(tensor: Tensor, axis: int = 1) -> Tensor:
+    if isinstance(tensor, tf.Tensor):
+        return tf.expand_dims(tensor, axis=axis)
+    elif isinstance(tensor, torch.Tensor):
+        return torch.unsqueeze(tensor, dim=axis)
+    elif isinstance(tensor, np.ndarray):
+        return np.expand_dims(tensor, axis=axis)
+    else:
+        raise ValueError("Unrecognized tensor type {}".format(type(tensor)))

@@ -12,5 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.numpyop.numpyop import Delete, NumpyOp, forward_numpyop
 
+from typing import TypeVar, List
+
+import numpy as np
+import tensorflow as tf
+import torch
+
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, torch.autograd.Variable, np.ndarray)
+
+
+def permute(tensor: Tensor, permutation: List[int]) -> Tensor:
+    if isinstance(tensor, tf.Tensor):
+        return tf.transpose(tensor, perm=permutation)
+    elif isinstance(tensor, torch.Tensor):
+        return tensor.permute(*permutation)
+    elif isinstance(tensor, np.ndarray):
+        return np.transpose(tensor, axes=permutation)
+    else:
+        raise ValueError("Unrecognized tensor type {}".format(type(tensor)))

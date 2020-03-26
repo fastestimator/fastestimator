@@ -12,5 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.numpyop.numpyop import Delete, NumpyOp, forward_numpyop
 
+from typing import TypeVar, Union, List
+
+import tensorflow as tf
+import torch
+
+from fastestimator.util.util import to_list
+
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, torch.autograd.Variable)
+
+
+def argmax(tensor: Tensor, axis: int = 0) -> Tensor:
+    if isinstance(tensor, tf.Tensor):
+        return tf.argmax(tensor, axis=axis)
+    elif isinstance(tensor, torch.Tensor):
+        return tensor.max(dim=axis, keepdim=False)[1]
+    else:
+        raise ValueError("Unrecognized tensor type {}".format(type(tensor)))

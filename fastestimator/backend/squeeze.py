@@ -12,5 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.numpyop.numpyop import Delete, NumpyOp, forward_numpyop
 
+from typing import TypeVar, Optional
+
+import numpy as np
+import tensorflow as tf
+import torch
+
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray, torch.autograd.Variable)
+
+
+def squeeze(tensor: Tensor, axis: Optional[int] = None) -> Tensor:
+    if isinstance(tensor, tf.Tensor):
+        return tf.squeeze(tensor, axis=axis)
+    elif isinstance(tensor, torch.Tensor):
+        if axis is None:
+            return torch.squeeze(tensor)
+        else:
+            return torch.squeeze(tensor, dim=axis)
+    elif isinstance(tensor, np.ndarray):
+        return np.squeeze(tensor, axis=axis)
+    else:
+        raise ValueError("Unrecognized tensor type {}".format(type(tensor)))

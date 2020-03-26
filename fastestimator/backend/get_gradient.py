@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Iterable, Optional, TypeVar, Union
+from typing import Iterable, Optional, TypeVar, Union, Tuple
 
 import tensorflow as tf
 import torch
@@ -39,13 +39,19 @@ def get_gradient(target: Tensor,
     Returns:
         gradients as sequence of tensors
     """
-    if tape:
+    if isinstance(target, tf.Tensor):
         with NonContext() if higher_order else tape.stop_recording():
             gradients = tape.gradient(target, sources)
-    else:
+    elif isinstance(target, torch.Tensor):
         gradients = torch.autograd.grad(target,
                                         sources,
+                                        grad_outputs=torch.ones_like(target),
                                         retain_graph=retain_graph,
                                         create_graph=higher_order,
                                         only_inputs=True)
+        if isinstance(gradients, Tuple) and len(gradients) == 1:
+            # Pytorch seems to unnecessarily wrap results into a tuple when a non-scalar target is provided
+            gradients = gradients[0]
+    else:
+        raise ValueError("Unrecognized tensor type {}".format(type(target)))
     return gradients

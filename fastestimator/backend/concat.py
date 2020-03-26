@@ -12,5 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.numpyop.numpyop import Delete, NumpyOp, forward_numpyop
 
+from typing import TypeVar, List, Optional
+
+import tensorflow as tf
+import torch
+
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, torch.autograd.Variable)
+
+
+def concat(tensors: List[Tensor], axis: int = 0) -> Optional[Tensor]:
+    if len(tensors) == 0:
+        return None
+    if isinstance(tensors[0], tf.Tensor):
+        return tf.concat(tensors, axis=axis)
+    elif isinstance(tensors[0], torch.Tensor):
+        return torch.cat(tensors, dim=axis)
+    else:
+        raise ValueError("Unrecognized tensor type {}".format(type(tensors[0])))

@@ -36,4 +36,4 @@ def save_model(model: Union[tf.keras.Model, torch.nn.Module], save_dir: str, mod
     else:
         model_path = os.path.join(save_dir, "{}.pt".format(model_name))
         torch.save(model.state_dict(), model_path)
-    print("Saved model to {}".format(model_path))
+    print("FastEstimator-ModelSaver: saved model to {}".format(model_path))

@@ -12,5 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.numpyop.numpyop import Delete, NumpyOp, forward_numpyop
 
+from typing import TypeVar, Union
+
+import tensorflow as tf
+import torch
+
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, torch.autograd.Variable)
+
+
+def clip_by_value(tensor: Tensor, min_value: Union[int, float], max_value: Union[int, float]) -> Tensor:
+    if isinstance(tensor, tf.Tensor):
+        return tf.clip_by_value(tensor, clip_value_min=min_value, clip_value_max=max_value)
+    elif isinstance(tensor, torch.Tensor):
+        return tensor.clamp(min=min_value, max=max_value)
+    else:
+        raise ValueError("Unrecognized tensor type {}".format(type(tensor)))
