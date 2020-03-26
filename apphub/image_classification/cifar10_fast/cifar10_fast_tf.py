@@ -52,29 +52,29 @@ def residual(x, num_channel):
 
 
 def my_model():
-    #prep layers
+    # prep layers
     inp = layers.Input(shape=(32, 32, 3))
     x = layers.Conv2D(64, 3, padding='same')(inp)
     x = layers.BatchNormalization(momentum=0.8)(x)
     x = layers.LeakyReLU(alpha=0.1)(x)
-    #layer1
+    # layer1
     x = layers.Conv2D(128, 3, padding='same')(x)
     x = layers.MaxPool2D()(x)
     x = layers.BatchNormalization(momentum=0.8)(x)
     x = layers.LeakyReLU(alpha=0.1)(x)
     x = layers.Add()([x, residual(x, 128)])
-    #layer2
+    # layer2
     x = layers.Conv2D(256, 3, padding='same')(x)
     x = layers.MaxPool2D()(x)
     x = layers.BatchNormalization(momentum=0.8)(x)
     x = layers.LeakyReLU(alpha=0.1)(x)
-    #layer3
+    # layer3
     x = layers.Conv2D(512, 3, padding='same')(x)
     x = layers.MaxPool2D()(x)
     x = layers.BatchNormalization(momentum=0.8)(x)
     x = layers.LeakyReLU(alpha=0.1)(x)
     x = layers.Add()([x, residual(x, 512)])
-    #layers4
+    # layers4
     x = layers.GlobalMaxPool2D()(x)
     x = layers.Flatten()(x)
     x = layers.Dense(10)(x)

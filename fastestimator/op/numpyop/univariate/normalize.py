@@ -36,8 +36,8 @@ class Normalize(ImageOnlyAlbumentation):
                  inputs: Union[None, str, Iterable[str], Callable] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
                  mode: Union[None, str, Iterable[str]] = None,
-                 mean: Union[float, Tuple[float]] = (0.485, 0.456, 0.406),
-                 std: Union[float, Tuple[float]] = (0.229, 0.224, 0.225),
+                 mean: Union[float, Tuple[float, ...]] = (0.485, 0.456, 0.406),
+                 std: Union[float, Tuple[float, ...]] = (0.229, 0.224, 0.225),
                  max_pixel_value: float = 255.0):
         super().__init__(NormalizeAlb(mean=mean, std=std, max_pixel_value=max_pixel_value, always_apply=True),
                          inputs=inputs,

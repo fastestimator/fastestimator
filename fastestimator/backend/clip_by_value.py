@@ -12,27 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union
 
-import numpy as np
+from typing import TypeVar, Union
+
 import tensorflow as tf
 import torch
 
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, torch.autograd.Variable)
 
-def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray]) -> np.ndarray:
-    """convert tensor values to python values
 
-    Args:
-        data: any tensor value
-
-    Returns:
-        np.ndarray: python value of the tensor
-    """
-    if isinstance(data, tf.Tensor):
-        data = data.numpy()
-    elif isinstance(data, torch.Tensor):
-        if data.requires_grad:
-            data = data.detach().numpy()
-        else:
-            data = data.numpy()
-    return np.array(data)
+def clip_by_value(tensor: Tensor, min_value: Union[int, float], max_value: Union[int, float]) -> Tensor:
+    if isinstance(tensor, tf.Tensor):
+        return tf.clip_by_value(tensor, clip_value_min=min_value, clip_value_max=max_value)
+    elif isinstance(tensor, torch.Tensor):
+        return tensor.clamp(min=min_value, max=max_value)
+    else:
+        raise ValueError("Unrecognized tensor type {}".format(type(tensor)))

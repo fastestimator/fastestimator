@@ -194,7 +194,7 @@ class TorchNetwork(BaseNetwork):
             new_batch = {key: batch[key] for key in self.effective_inputs[mode] if key in batch}
         return new_batch
 
-    def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any]]:
+    def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         mode = self.epoch_state["mode"]
         batch_in = self._get_effective_batch_input(batch, mode)
         self.epoch_state["tape"] = NonContext()
@@ -231,7 +231,7 @@ class TorchNetwork(BaseNetwork):
 
 
 class TFNetwork(BaseNetwork):
-    def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any]]:
+    def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         mode = self.epoch_state["mode"]
         batch_in = self._get_effective_batch_input(batch, mode)
         strategy = tf.distribute.get_strategy()
@@ -320,11 +320,12 @@ class TFNetwork(BaseNetwork):
         return data
 
 
-def build(model_fn: Callable,
-          optimizer_fn: Union[str, Scheduler, Callable, List[str], List[Callable], List[Scheduler], None],
-          weights_path: Union[str, None, List[Union[str, None]]] = None,
-          model_names: Union[str, List[str], None] = None
-          ) -> Union[tf.keras.Model, torch.nn.Module, List[tf.keras.Model], List[torch.nn.Module]]:
+def build(
+    model_fn: Callable,
+    optimizer_fn: Union[str, Scheduler, Callable, List[str], List[Callable], List[Scheduler], None],
+    weights_path: Union[str, None, List[Union[str, None]]] = None,
+    model_names: Union[str, List[str], None] = None
+) -> Union[tf.keras.Model, torch.nn.Module, List[tf.keras.Model], List[torch.nn.Module]]:
     """Build model instances and associate them with optimizers
     Args:
         model_fn: function that define model(s)
@@ -385,7 +386,6 @@ def _fe_compile(model: Union[tf.keras.Model, torch.nn.Module],
                 weight: Union[str, None],
                 name: str,
                 framework: str) -> Union[tf.keras.Model, torch.nn.Module]:
-
     if isinstance(optimizer_fn, EpochScheduler):
         for epoch, optimizer_def in optimizer_fn.epoch_dict.items():
             optimizer_fn.epoch_dict[epoch] = _build_optimizer(optimizer_def, model, framework)
