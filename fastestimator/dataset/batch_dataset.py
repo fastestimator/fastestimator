@@ -47,6 +47,7 @@ class BatchDataset(FEDataset):
         self.same_feature = False
         self._check_input()
         self.index_maps = [list(range(max((len(dataset) for dataset in self.datasets)))) for _ in self.datasets]
+        self.pad_value = None
 
     def _check_input(self):
         for num_sample in self.num_samples:
