@@ -19,7 +19,7 @@ import torch
 
 from fastestimator.backend.mean_squared_error import mean_squared_error
 from fastestimator.backend.reduce_loss import reduce_loss
-from fastestimator.op.op import TensorOp
+from fastestimator.op.tensorop.tensorop import TensorOp
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
