@@ -202,6 +202,7 @@ def strip_suffix(target: Optional[str], suffix: Optional[str]) -> Optional[str]:
         return target[:-s_len]
     return target
 
+
 def strip_prefix(target: Optional[str], prefix: Optional[str]) -> Optional[str]:
     """Remove the given preffix from the target if it is present there
 
