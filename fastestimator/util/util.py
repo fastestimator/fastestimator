@@ -22,12 +22,14 @@ from ast import literal_eval
 from contextlib import ContextDecorator
 from functools import reduce
 from math import gcd
-from typing import Any, List, Optional, Set, Tuple, TypeVar, Callable
+from typing import Any, Callable, List, Mapping, Optional, Set, Tuple, TypeVar, Union
 
+import numpy as np
 import tensorflow as tf
 import torch
 from pyfiglet import Figlet
 from tensorflow.python.distribute.values import DistributedValues
+from torch.utils.data.dataloader import default_collate
 
 STRING_TO_TORCH_DTYPE = {
     None: None,
@@ -285,6 +287,23 @@ def parse_modes(modes: Set[str]) -> Set[str]:
             new_modes.discard(mode.strip("!"))
         modes = new_modes
     return modes
+
+
+def pad_batch(batch: List[Mapping[str, Any]], pad_value: Union[float, int]) -> Mapping[str, Any]:
+    for key in batch[0].keys():
+        shapes = [data[key].shape for data in batch if hasattr(data[key], "shape")]
+        if len(set(shapes)) > 1:
+            assert len(set(len(shape) for shape in shapes)) == 1, "data within batch must have same rank"
+            max_shapes = tuple(np.max(np.array(shapes), axis=0))
+            for data in batch:
+                data[key] = pad_data(data[key], max_shapes, pad_value)
+    return default_collate(batch)
+
+
+def pad_data(data: np.ndarray, target_shape: Tuple[int], pad_value: Union[float, int]) -> np.ndarray:
+    shape_difference = np.array(target_shape) - np.array(data.shape)
+    padded_shape = np.array([np.zeros_like(shape_difference), shape_difference]).T
+    return np.pad(data, padded_shape, 'constant', constant_values=pad_value)
 
 
 def is_number(arg: Any) -> bool:

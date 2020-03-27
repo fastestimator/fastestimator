@@ -18,6 +18,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, Union
 
+import numpy as np
 import wget
 
 from fastestimator.dataset.dir_dataset import DirDataset
@@ -40,6 +41,8 @@ class MSCOCODataset(DirDataset):
                  include_masks: bool = False,
                  include_captions: bool = False):
         super().__init__(root_dir=image_dir, data_key="image", recursive_search=False)
+        if include_masks:
+            assert include_bboxes, "must include bboxes with mask data"
         self.include_bboxes = include_bboxes
         self.include_masks = include_masks
         with Suppressor():
@@ -47,6 +50,21 @@ class MSCOCODataset(DirDataset):
             self.captions = COCO(caption_file) if include_captions else None
 
     def __getitem__(self, index: Union[int, str]):
+        has_data = False
+        while not has_data:
+            has_box, has_mask, has_caption = True, True, True
+            response = self._get_single_item(index)
+            if self.include_bboxes and not response["bbox"]:
+                has_box = False
+            if self.include_masks and not response["mask"]:
+                has_mask = False
+            if self.captions and not response["caption"]:
+                has_caption = False
+            has_data = has_box and has_mask and has_caption
+            index = np.random.randint(len(self))
+        return response
+
+    def _get_single_item(self, index: Union[int, str]):
         response = super().__getitem__(index)
         if isinstance(index, str):
             return response
@@ -54,33 +72,24 @@ class MSCOCODataset(DirDataset):
             response = deepcopy(response)
         image = response["image"]
         image_id = int(os.path.splitext(os.path.basename(image))[0])
-        self._populate_instance_data(response, image_id)
+        response["image_id"] = image_id
+        if self.include_bboxes:
+            self._populate_instance_data(response, image_id)
         if self.captions:
             self._populate_caption_data(response, image_id)
         return response
 
     def _populate_instance_data(self, data: Dict[str, Any], image_id: int):
-        data["obj_label"] = []
-        if self.include_bboxes:
-            data["x1"] = []
-            data["y1"] = []
-            data["width"] = []
-            data["height"] = []
+        data["bbox"] = []
         if self.include_masks:
-            data["obj_mask"] = []
+            data["mask"] = []
         annotation_ids = self.instances.getAnnIds(imgIds=image_id, iscrowd=False)
-        data["num_obj"] = len(annotation_ids)
         if annotation_ids:
             annotations = self.instances.loadAnns(annotation_ids)
             for annotation in annotations:
-                data["obj_label"].append(annotation['category_id'])
-                if self.include_bboxes:
-                    data["x1"].append(annotation['bbox'][0])
-                    data["y1"].append(annotation['bbox'][1])
-                    data["width"].append(annotation['bbox'][2])
-                    data["height"].append(annotation['bbox'][3])
+                data["bbox"].append(tuple(annotation['bbox'] + [annotation['category_id']]))
                 if self.include_masks:
-                    data["obj_mask"].append(self.instances.annToMask(annotation))
+                    data["mask"].append(self.instances.annToMask(annotation))
 
     def _populate_caption_data(self, data: Dict[str, Any], image_id: int):
         data["caption"] = []
@@ -139,15 +148,16 @@ def load_data(root_dir: Optional[str] = None,
     eval_annotation = os.path.join(annotation_data, "instances_val2017.json")
     train_captions = os.path.join(annotation_data, "captions_train2017.json")
     eval_captions = os.path.join(annotation_data, "captions_val2017.json")
-
-    return MSCOCODataset(train_data,
-                         train_annotation,
-                         train_captions,
-                         include_bboxes=load_bboxes,
-                         include_masks=load_masks,
-                         include_captions=load_captions), MSCOCODataset(eval_data,
-                                                                        eval_annotation,
-                                                                        eval_captions,
-                                                                        include_bboxes=load_bboxes,
-                                                                        include_masks=load_masks,
-                                                                        include_captions=load_captions)
+    train_ds = MSCOCODataset(train_data,
+                             train_annotation,
+                             train_captions,
+                             include_bboxes=load_bboxes,
+                             include_masks=load_masks,
+                             include_captions=load_captions)
+    eval_ds = MSCOCODataset(eval_data,
+                            eval_annotation,
+                            eval_captions,
+                            include_bboxes=load_bboxes,
+                            include_masks=load_masks,
+                            include_captions=load_captions)
+    return train_ds, eval_ds

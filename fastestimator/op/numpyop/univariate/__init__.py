@@ -47,6 +47,7 @@ from fastestimator.op.numpyop.univariate.read_image import ReadImage
 from fastestimator.op.numpyop.univariate.reshape import Reshape
 from fastestimator.op.numpyop.univariate.rgb_shift import RGBShift
 from fastestimator.op.numpyop.univariate.solarize import Solarize
+from fastestimator.op.numpyop.univariate.to_array import ToArray
 from fastestimator.op.numpyop.univariate.to_float import ToFloat
 from fastestimator.op.numpyop.univariate.binarize import Binarize
 from fastestimator.op.numpyop.univariate.to_gray import ToGray
