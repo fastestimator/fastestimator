@@ -94,7 +94,7 @@ pipeline{
         }
 
         stage('Deploy-docker'){
-            agent {label 'jenkinsnightly_1.0dev_cpu'}
+            agent {label 'jenkinsnightly_1.0dev_gpu'}
             steps{
                 // sh '''
                 //     rm -rf ./fastestimator-misc
