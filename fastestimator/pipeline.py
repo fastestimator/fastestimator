@@ -22,6 +22,7 @@ from typing import Any, Dict, List, Optional, Set, TypeVar, Union
 import numpy as np
 import tensorflow as tf
 from torch.utils.data import DataLoader, Dataset, RandomSampler
+from torch.utils.data.dataloader import default_collate
 
 from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.op_dataset import OpDataset
@@ -214,7 +215,7 @@ class Pipeline:
             if self.pad_value is None or isinstance(data, BatchDataset):
                 collate_fn = None
             else:
-                collate_fn = lambda batch: pad_batch(batch, self.pad_value)
+                collate_fn = self._pad_batch_collate
             op_dataset = OpDataset(data, get_current_ops(self.ops, mode, epoch), mode)
             data = DataLoader(op_dataset,
                               batch_size=batch_size,
@@ -224,6 +225,10 @@ class Pipeline:
                               worker_init_fn=lambda _: np.random.seed(),
                               collate_fn=collate_fn)
         return data
+
+    def _pad_batch_collate(self, batch):
+        pad_batch(batch, self.pad_value)
+        return default_collate(batch)
 
     def get_signature_epochs(self, total_epochs: int):
         """get the signature epochs that scheduler will be effective on.
@@ -267,7 +272,7 @@ class Pipeline:
         for epoch in self.get_signature_epochs(total_epochs):
             loader = self.get_loader(mode=mode, epoch=epoch)
             if isinstance(loader, DataLoader):
-                if isinstance(loader.dataset, OpDataset):
+                if isinstance(loader.dataset, OpDataset) and not isinstance(loader.dataset.dataset, BatchDataset):
                     data = loader.dataset.dataset[0]
                     for op in loader.dataset.ops:
                         output_keys.update(op.outputs)
