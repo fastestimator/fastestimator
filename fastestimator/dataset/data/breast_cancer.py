@@ -12,19 +12,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+<<<<<<< HEAD
+=======
+import pdb
+>>>>>>> a0b84151049f2ee23cb1355e1b847c3a12930dd4
 from typing import Tuple
 
 import numpy as np
 from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import train_test_split
+<<<<<<< HEAD
+=======
+from sklearn.preprocessing import StandardScaler
+>>>>>>> a0b84151049f2ee23cb1355e1b847c3a12930dd4
 
 from fastestimator.dataset.numpy_dataset import NumpyDataset
 
 
 def load_data() -> Tuple[NumpyDataset, NumpyDataset]:
     (X, y) = load_breast_cancer(True)
+<<<<<<< HEAD
     x_train, x_eval, y_train, y_eval = train_test_split(X, y, test_size=0.2, random_state=42)
     x_train, x_eval = np.float32(x_train), np.float32(x_eval)
     train_data = NumpyDataset({"x": x_train, "y": y_train})
     eval_data = NumpyDataset({"x": x_eval, "y": y_eval})
+=======
+    x_train, x_eval, y_train, y_eval = train_test_split(X, y, test_size=0.2)
+
+    x_train, x_eval = np.float32(x_train), np.float32(x_eval)
+
+    pdb.set_trace()
+    scaler = StandardScaler()
+    x_train = scaler.fit_transform(x_train)
+    x_eval = scaler.transform(x_eval)
+
+    train_data = NumpyDataset({"x": x_train, "y": np.expand_dims(y_train, -1)})
+    eval_data = NumpyDataset({"x": x_eval, "y": np.expand_dims(y_eval, -1)})
+
+>>>>>>> a0b84151049f2ee23cb1355e1b847c3a12930dd4
     return train_data, eval_data

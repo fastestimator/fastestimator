@@ -12,5 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+<<<<<<< HEAD
 from fastestimator.dataset.data import breast_cancer, cifar10, cub200, horse2zebra, imdb_review, mendeley, mnist, \
     montgomery, mscoco, nih_chestxray, omniglot, svhn, usps
+=======
+from fastestimator.dataset.data import usps, montgomery, mnist, cifar10, nih_chestxray, horse2zebra, cub200, mendeley, \
+    svhn, mscoco, omniglot, breast_cancer
+>>>>>>> a0b84151049f2ee23cb1355e1b847c3a12930dd4
