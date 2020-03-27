@@ -12,5 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.numpyop import meta, multivariate, univariate
-from fastestimator.op.numpyop.numpyop import Delete, NumpyOp, forward_numpyop
+from fastestimator.architecture import pytorch, tensorflow
