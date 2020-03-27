@@ -1,0 +1,117 @@
+pipeline{
+    agent {label 'master'}
+
+    environment {
+        JENKINS_ANACONDA_DIR='/home/ubuntu/anaconda3'
+        JENKINS_PYTHON_ENV='nightly_env'
+    }
+
+    stages {
+        stage('Build-and-test'){
+            parallel{
+                stage('GPU'){
+                    agent {label 'jenkinsnightly_1.0dev_gpu'}
+                    stages{
+                        stage('Build-GPU'){
+                            steps{
+                                sh '''
+                                    . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
+                                    if [ ! -d "$JENKINS_ANACONDA_DIR/envs/nightly_env"  ]; then
+                                        conda create --name $JENKINS_PYTHON_ENV python=3.6 -y
+                                    fi
+
+                                    conda activate $JENKINS_PYTHON_ENV
+                                    pip install torch torchvision tensorflow-gpu==2.1.0
+                                    pip install -e .
+                                    pip install pytest ipython ipykernel papermill
+                                    ipython kernel install --user --name nightly_build
+                                '''
+                            }
+                        }
+                        stage('Test-GPU'){
+                            steps{
+                                sh '''
+                                    . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
+                                    conda activate $JENKINS_PYTHON_ENV
+                                    python3 test/run_nightly_build.py
+                                '''
+                            }
+                        }
+                    }
+                }
+
+                stage('CPU'){
+                    agent {label 'jenkinsnightly_1.0dev_cpu'}
+                    stages{
+                        stage('Build-CPU'){
+                            steps{
+                                sh '''
+                                    . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
+                                    if [ ! -d "$JENKINS_ANACONDA_DIR/envs/nightly_env"  ]; then
+                                        conda create --name $JENKINS_PYTHON_ENV python=3.6 -y
+                                    fi
+
+                                    conda activate $JENKINS_PYTHON_ENV
+                                    pip install torch torchvision tensorflow==2.1.0
+                                    pip install -e .
+                                    pip install pytest ipython ipykernel papermill
+                                    ipython kernel install --user --name nightly_build
+                                '''
+                            }
+                        }
+                        stage('Test-CPU'){
+                            steps{
+                                sh '''
+                                    . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
+                                    conda activate $JENKINS_PYTHON_ENV
+                                    python3 test/run_nightly_build.py
+                                '''
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Deply-pypi'){
+            agent {label 'jenkinsnightly_1.0dev_gpu'}
+            steps{
+                // withCredentials([string(credentialsId: 'pypi_password', variable: 'PYPI_PWD')]) {
+
+                //     sh '''
+                //         . /home/ubuntu/anaconda3/etc/profile.d/conda.sh
+                //         conda activate nightly_env
+                //         rm -rf dist/*
+                //         FASTESTIMATOR_IS_NIGHTLY=1 python setup.py sdist bdist_wheel
+                //         twine upload dist/* -u fastestimatordev -p ${PYPI_PWD}
+
+                //     '''
+                // }
+                sh '''
+                echo finish deploy pypi
+                '''
+            }
+        }
+
+        stage('Deploy-docker'){
+            agent {label 'jenkinsnightly_1.0dev_gpu'}
+            steps{
+                // sh '''
+                //     rm -rf ./fastestimator-misc
+                //     git clone https://github.com/fastestimator-util/fastestimator-misc.git fastestimator-misc
+                // '''
+                // withDockerRegistry(credentialsId: 'docker-hub-credentials', url:'') {
+                //     sh '''
+                //         docker build -t fastestimator/fastestimator:nightly-cpu --no-cache - < fastestimator-misc/docker/nightly/Dockerfile.cpu
+                //         docker push fastestimator/fastestimator:nightly-cpu
+                //         docker build -t fastestimator/fastestimator:nightly-gpu --no-cache - < fastestimator-misc/docker/nightly/Dockerfile.gpu
+                //         docker push fastestimator/fastestimator:nightly-gpu
+                //     '''
+                // }
+                sh '''
+                echo finish docker deploy
+                '''
+            }
+        }
+    }
+}
