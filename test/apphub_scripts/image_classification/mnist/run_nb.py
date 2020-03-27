@@ -1,15 +1,15 @@
 import os
 import time
 
-if __name__ == "__main__":
-    apphub_path = os.path.abspath(os.path.join(__file__, "..", "..", "..", "..", "apphub"))
+from fastestimator.test.nightly_util import get_source_dir_path
 
+if __name__ == "__main__":
+    """The template for running apphub Jupyter notebook sample.
+    Users only need to fill the sections
+    """
     # ====================================  SELF-FILLED SECTION  ===================================
     # The name of the running example file. (without training ".ipynb")
-    example_name = "cifar10_fast"
-
-    # The path to that example directory
-    source_dir = os.path.join(apphub_path, "image_classification", "cifar10_fast")
+    example_name = "mnist"
 
     # The training arguments
     # 1. Usually we set the epochs:2, batch_size:2, max_steps_per_epoch:10
@@ -23,6 +23,7 @@ if __name__ == "__main__":
     if os.path.exists(stderr_file):
         os.remove(stderr_file)
 
+    source_dir = get_source_dir_path(__file__)
     nb_in_file = os.path.join(source_dir, example_name + ".ipynb")
     nb_out_file = os.path.abspath(os.path.join(__file__, "..", example_name + "_out.ipynb"))
 
