@@ -202,22 +202,6 @@ def strip_suffix(target: Optional[str], suffix: Optional[str]) -> Optional[str]:
         return target[:-s_len]
     return target
 
-def is_number(number: str) -> bool:  # pylint: disable=invalid-name
-    """Check if a given string can be converted into a number.
-
-    Args:
-        number: A number stored as string
-
-    Returns:
-        True if the string represents a number
-
-    """
-    try:
-        float(number)
-        return True
-    except (ValueError, TypeError):
-        return False
-
 def strip_prefix(target: Optional[str], prefix: Optional[str]) -> Optional[str]:
     """Remove the given preffix from the target if it is present there
 
