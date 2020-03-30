@@ -234,17 +234,19 @@ def per_replica_to_global(data: T) -> T:
             return tf.reduce_mean(data.values)
         else:
             return tf.concat(data.values, axis=0)
-    if isinstance(data, dict):
+    elif isinstance(data, dict):
         result = {}
         for key, val in data.items():
             result[key] = per_replica_to_global(val)
         return result
-    if isinstance(data, list):
+    elif isinstance(data, list):
         return [per_replica_to_global(val) for val in data]
-    if isinstance(data, tuple):
+    elif isinstance(data, tuple):
         return tuple([per_replica_to_global(val) for val in data])
-    if isinstance(data, set):
+    elif isinstance(data, set):
         return set([per_replica_to_global(val) for val in data])
+    else:
+        return data
 
 
 def get_type(obj: Any) -> str:

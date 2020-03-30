@@ -243,8 +243,8 @@ class TFNetwork(BaseNetwork):
                 prediction = strategy.experimental_run_v2(
                     self._forward_step_static,
                     args=(batch_in, self.epoch_state, self.epoch_ops, to_list(self.effective_outputs[mode])))
-                batch = per_replica_to_global(batch)
-                prediction = per_replica_to_global(prediction)
+            batch = per_replica_to_global(batch)
+            prediction = per_replica_to_global(prediction)
         else:
             if self.epoch_state["warmup"]:
                 prediction = self._forward_step_eager(batch_in,
@@ -316,6 +316,12 @@ class TFNetwork(BaseNetwork):
         data, prediction = self.run_step(data)
         self.unload_epoch()
         data.update(prediction)
+        # handle multi-gpu
+        batch_sizes = set(data[key].shape[0] for key in data)
+        if len(batch_sizes) > 1:
+            min_batch = min(batch_sizes)
+            for key, val in data.items():
+                data[key] = val[0:min_batch]
         return data
 
 
