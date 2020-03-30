@@ -49,8 +49,8 @@ def get_current_ops(ops: Iterable[Union[OpType, Scheduler[OpType]]], mode: str, 
     return selected_ops
 
 
-def get_inputs_by_op(op: Op, store: Mapping[str, Any], default: Optional[Any] = None) -> Any:
-    data = default
+def get_inputs_by_op(op: Op, store: Mapping[str, Any]) -> Any:
+    data = None
     if op.inputs:
         data = [store[key] if not isinstance(key, Callable) else key() for key in op.inputs]
         if not op.in_list:

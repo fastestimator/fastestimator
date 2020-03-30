@@ -1,0 +1,355 @@
+# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+import os
+import re
+from collections import namedtuple
+from typing import Union, List, Dict, Tuple, TypeVar, Any, Iterable, Optional
+
+import matplotlib.pyplot as plt
+import tensorboard as tb
+import tensorflow as tf
+import torch
+from tensorflow.python.framework import ops as tfops
+from tensorflow.python.keras import backend
+from tensorflow.python.ops import summary_ops_v2
+from torch.utils.tensorboard import SummaryWriter
+
+from fastestimator.backend.abs import abs
+from fastestimator.backend.expand_dims import expand_dims
+from fastestimator.backend.permute import permute
+from fastestimator.backend.reduce_sum import reduce_sum
+from fastestimator.backend.reshape import reshape
+from fastestimator.backend.squeeze import squeeze
+from fastestimator.backend.to_number import to_number
+from fastestimator.backend.to_tensor import to_tensor
+from fastestimator.network import TFNetwork, BaseNetwork
+from fastestimator.trace.trace import Trace
+from fastestimator.util.data import Data
+from fastestimator.util.util import is_number, DefaultKeyDict, to_set, to_list
+from fastestimator.xai.util import XaiData
+
+# https://github.com/pytorch/pytorch/issues/30966
+tf.io.gfile = tb.compat.tensorflow_stub.io.gfile
+
+Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+
+
+class _BaseWriter:
+    summary_writers: Dict[str, SummaryWriter]
+    network: BaseNetwork
+
+    def __init__(self, root_log_dir: str, time_stamp: str, network: BaseNetwork):
+        self.summary_writers = DefaultKeyDict(lambda key:
+                                              (SummaryWriter(log_dir=os.path.join(root_log_dir, time_stamp, key))))
+        self.network = network
+
+    def write_epoch_models(self, mode: str, data: Data) -> None:
+        raise NotImplementedError
+
+    def write_weights(self, mode: str, models: Iterable[Model], step: int, visualize: bool) -> None:
+        raise NotImplementedError
+
+    def write_scalars(self, mode: str, scalars: Iterable[Tuple[str, Any]], step: int) -> None:
+        for key, val in scalars:
+            self.summary_writers[mode].add_scalar(tag=key, scalar_value=to_number(val), global_step=step)
+
+    def write_images(self, mode: str, images: Iterable[Tuple[str, Any]], step: int) -> None:
+        for key, img in images:
+            if isinstance(img, XaiData):
+                img = img.paint_figure()
+            if isinstance(img, plt.Figure):
+                self.summary_writers[mode].add_figure(tag=key, figure=img, global_step=step)
+            else:
+                self.summary_writers[mode].add_images(tag=key,
+                                                      img_tensor=to_number(img),
+                                                      global_step=step,
+                                                      dataformats='NCHW' if isinstance(img, torch.Tensor) else 'NHWC')
+
+    def write_embeddings(
+        self,
+        mode: str,
+        embeddings: Iterable[Tuple[str, Tensor, Optional[List[Any]], Optional[Tensor]]],
+        step: int,
+    ):
+        for key, features, labels, label_imgs in embeddings:
+            flat = to_number(reshape(features, [features.shape[0], -1]))
+            if not isinstance(label_imgs, (torch.Tensor, type(None))):
+                label_imgs = to_tensor(label_imgs, 'torch')
+                if len(label_imgs.shape) == 4:
+                    label_imgs = permute(label_imgs, [0, 3, 1, 2])
+            self.summary_writers[mode].add_embedding(mat=flat,
+                                                     metadata=labels,
+                                                     label_img=label_imgs,
+                                                     tag=key,
+                                                     global_step=step)
+
+    def close(self) -> None:
+        modes = list(self.summary_writers.keys())  # break connection with dictionary so can delete in iteration
+        for mode in modes:
+            self.summary_writers[mode].close()
+            del self.summary_writers[mode]
+
+    @staticmethod
+    def _weight_to_image(weight: Tensor, kernel_channels_last: bool = False) -> Optional[Tensor]:
+        """ Logs a weight as a TensorBoard image.
+            Implementation from tensorflow codebase, would have invoked theirs directly but they didn't make it a static
+            method
+        """
+        w_img = squeeze(weight)
+        shape = backend.int_shape(w_img)
+        if len(shape) == 1:  # Bias case
+            w_img = reshape(w_img, [1, shape[0], 1, 1])
+        elif len(shape) == 2:  # Dense layer kernel case
+            if shape[0] > shape[1]:
+                w_img = permute(w_img, [0, 1])
+                shape = backend.int_shape(w_img)
+            w_img = reshape(w_img, [1, shape[0], shape[1], 1])
+        elif len(shape) == 3:  # ConvNet case
+            if kernel_channels_last:
+                # Switch to channels_first to display every kernel as a separate images
+                w_img = permute(w_img, [2, 0, 1])
+            w_img = expand_dims(w_img, axis=-1)
+        elif len(shape) == 4:  # Conv filter with multiple input channels
+            if kernel_channels_last:
+                # Switch to channels first to display kernels as separate images
+                w_img = permute(w_img, [3, 2, 0, 1])
+            w_img = reduce_sum(abs(w_img), axis=1)  # Sum over the each channel within the kernel
+            w_img = expand_dims(w_img, axis=-1)
+        shape = backend.int_shape(w_img)
+        # Not possible to handle 3D convnets etc.
+        if len(shape) == 4 and shape[-1] in [1, 3, 4]:
+            return w_img
+
+
+class _TfWriter(_BaseWriter):
+    tf_summary_writers: Dict[str, tf.summary.SummaryWriter]
+
+    def __init__(self, root_log_dir: str, time_stamp: str, network: TFNetwork):
+        super().__init__(root_log_dir=root_log_dir, time_stamp=time_stamp, network=network)
+        self.tf_summary_writers = DefaultKeyDict(
+            lambda key: (tf.summary.create_file_writer(os.path.join(root_log_dir, time_stamp, key))))
+
+    def write_epoch_models(self, mode: str, data: Data) -> None:
+        with self.tf_summary_writers[mode].as_default(), summary_ops_v2.always_record_summaries():
+            summary_ops_v2.graph(backend.get_graph(), step=0)
+            for model in self.network.epoch_models:
+                summary_writable = (model.__class__.__name__ == 'Sequential'
+                                    or (hasattr(model, '_is_graph_network') and model._is_graph_network))
+                if summary_writable:
+                    summary_ops_v2.keras_model(model.model_name, model, step=0)
+
+    def write_weights(self, mode: str, models: Iterable[Model], step: int, visualize: bool) -> None:
+        # Similar to TF implementation, but multiple models
+        with self.tf_summary_writers[mode].as_default(), summary_ops_v2.always_record_summaries():
+            for model in models:
+                for layer in model.layers:
+                    for weight in layer.weights:
+                        weight_name = weight.name.replace(':', '_')
+                        weight_name = "{}_{}".format(model.model_name, weight_name)
+                        with tfops.init_scope():
+                            weight = backend.get_value(weight)
+                        summary_ops_v2.histogram(weight_name, weight, step=step)
+                        if visualize:
+                            weight = self._weight_to_image(weight=weight, kernel_channels_last=True)
+                            if weight is not None:
+                                summary_ops_v2.image(weight_name, weight, step=step, max_images=weight.shape[0])
+
+    def close(self) -> None:
+        super().close()
+        modes = list(self.tf_summary_writers.keys())  # break connection with dictionary so can delete in iteration
+        for mode in modes:
+            self.tf_summary_writers[mode].close()
+            del self.tf_summary_writers[mode]
+
+
+class _TorchWriter(_BaseWriter):
+    def write_epoch_models(self, mode: str, data: Data) -> None:
+        for model in self.network.epoch_models:
+            model_op = next(filter(lambda op: model is op.model, self.network.epoch_ops))
+            inputs = [data[key] for key in model_op.inputs]
+            if len(inputs) == 1 and not model_op.in_list:
+                inputs = inputs[0]
+            self.summary_writers[mode].add_graph(model, input_to_model=inputs)
+
+    def write_weights(self, mode: str, models: Iterable[Model], step: int, visualize: bool) -> None:
+        for model in models:
+            for name, params in model.named_parameters():
+                name = name.replace(".", "/")
+                name = "{}_{}".format(model.model_name, name)
+                weight = params.data
+                self.summary_writers[mode].add_histogram(tag=name, values=weight, global_step=step)
+                if visualize:
+                    weight = self._weight_to_image(weight=weight)
+                    if weight is not None:
+                        self.summary_writers[mode].add_images(tag=name + "/image",
+                                                              img_tensor=weight,
+                                                              global_step=step,
+                                                              dataformats='NHWC')
+
+
+class TensorBoard(Trace):
+    """Output data for use in TensorBoard. Note that if you plan to run a tensorboard server simultaneous to training, 
+        you may want to consider using the --reload_multifile=true flag until their multi-writer use case is finished
+        https://github.com/tensorflow/tensorboard/issues/1063
+
+    Args:
+        log_dir: Path of the directory where to save the log files to be parsed by TensorBoard.
+            Defaults to 'logs'.
+        update_freq: 'batch', 'epoch', integer, or strings like '10s', '15e'. When using 'batch', writes the losses and
+            metrics to TensorBoard after each batch. The same applies for 'epoch'. If using an integer, let's say 1000,
+            the callback will write the metrics and losses to TensorBoard every 1000 samples. You can also use strings 
+            like '8s' to indicate every 8 steps or '5e' to indicate every 5 epochs. Note that writing too frequently to 
+            TensorBoard can slow down your training. You can use None to disable updating, but this will make the trace
+            mostly useless.
+        write_graph: Whether to visualize the graph in TensorBoard. The log file can become quite large
+            when write_graph is set to True. Defaults to True.
+        write_images: If a string or list of strings is provided, the corresponding keys will be written to
+            Tensorboard images. 
+        weight_histogram_freq: Frequency (in epochs) at which to compute activation and weight histograms for
+            the layers of the model. Same argument format as update_freq
+        paint_weights: If True will write model weights to visualize as an image
+        write_embeddings: If a string or list of strings is provided, the corresponding keys will be written to 
+            Tensorboard embeddings. 
+        embedding_labels: Keys corresponding to label information for the 'write_embeddings'. 
+        embedding_images: Keys corresponding to raw images to be associated with the 'write_embeddings'
+    """
+    Freq = namedtuple('Freq', ['is_step', 'freq'])
+    writer: _BaseWriter
+
+    def _parse_freq(self, freq: Union[None, str, int]) -> Freq:
+        if freq is None:
+            return self.Freq(False, 0)
+        if isinstance(freq, int):
+            if freq < 1:
+                raise ValueError(f"Tensorboard frequency argument must be a positive integer but got {freq}")
+            return self.Freq(True, freq)
+        if isinstance(freq, str):
+            if freq in {'step', 's'}:
+                return self.Freq(True, 1)
+            if freq in {'epoch', 'e'}:
+                return self.Freq(False, 1)
+            parts = re.match(r"^([0-9]+)([se])$", freq)
+            if parts is None:
+                raise ValueError(f"Tensorboard frequency argument must be formatted like <int><s|e> but got {freq}")
+            freq = int(parts[1])
+            if freq < 1:
+                raise ValueError(f"Tensorboard frequency argument must be a positive integer but got {freq}")
+            return self.Freq(parts[2] == 's', freq)
+        else:
+            raise ValueError(f"Unrecognized type passed as Tensorboard frequency: {type(freq)}")
+
+    def __init__(self,
+                 log_dir: str = 'logs',
+                 update_freq: Union[None, int, str] = 100,
+                 write_graph: bool = True,
+                 write_images: Union[None, str, List[str]] = None,
+                 weight_histogram_freq: Union[None, int, str] = None,
+                 paint_weights: bool = False,
+                 write_embeddings: Union[None, str, List[str]] = None,
+                 embedding_labels: Union[None, str, List[str]] = None,
+                 embedding_images: Union[None, str, List[str]] = None):
+        super().__init__(inputs="*")
+        self.root_log_dir = log_dir
+        self.update_freq = self._parse_freq(update_freq)
+        self.write_graph = write_graph
+        self.painted_graphs = set()
+        self.write_images = to_set(write_images)
+        self.histogram_freq = self._parse_freq(weight_histogram_freq)
+        if paint_weights and self.histogram_freq.freq == 0:
+            self.histogram_freq.is_step = False
+            self.histogram_freq.freq = 1
+        self.paint_weights = paint_weights
+        write_embeddings = to_list(write_embeddings)
+        embedding_labels = to_list(embedding_labels)
+        if embedding_labels:
+            assert len(embedding_labels) == len(write_embeddings), \
+                f"Expected {len(write_embeddings)} embedding_labels keys, but recieved {len(embedding_labels)}. Use \
+                None to pad out the list if you have labels for only a subset of all embeddings."
+
+        else:
+            embedding_labels = [None for _ in range(len(write_embeddings))]
+        embedding_images = to_list(embedding_images)
+        if embedding_images:
+            assert len(embedding_images) == len(write_embeddings), \
+                f"Expected {len(write_embeddings)} embedding_images keys, but recieved {len(embedding_images)}. Use \
+                None to pad out the list if you have labels for only a subset of all embeddings."
+
+        else:
+            embedding_images = [None for _ in range(len(write_embeddings))]
+        self.write_embeddings = [(feature, label, img_label) for feature,
+                                 label,
+                                 img_label in zip(write_embeddings, embedding_labels, embedding_images)]
+
+    def on_begin(self, data: Data):
+        print("FastEstimator-Tensorboard: writing logs to {}".format(
+            os.path.abspath(os.path.join(self.root_log_dir, self.system.experiment_time))))
+        self.writer = _TfWriter(self.root_log_dir, self.system.experiment_time, self.system.network) if isinstance(
+            self.system.network, TFNetwork) else _TorchWriter(
+                self.root_log_dir, self.system.experiment_time, self.system.network)
+        if self.write_graph and self.system.global_step == 1:
+            self.painted_graphs = set()
+
+    def on_batch_end(self, data: Data):
+        if self.write_graph and self.system.network.epoch_models.symmetric_difference(self.painted_graphs):
+            self.writer.write_epoch_models(mode=self.system.mode, data=data)
+            self.painted_graphs = self.system.network.epoch_models
+        if self.system.mode != 'train':
+            return
+        if self.histogram_freq.freq and self.histogram_freq.is_step and \
+                self.system.global_step % self.histogram_freq.freq == 0:
+            self.writer.write_weights(mode=self.system.mode,
+                                      models=self.system.network.models,
+                                      step=self.system.global_step,
+                                      visualize=self.paint_weights)
+        if self.update_freq.freq and self.update_freq.is_step and self.system.global_step % self.update_freq.freq == 0:
+            self.writer.write_scalars(mode=self.system.mode,
+                                      step=self.system.global_step,
+                                      scalars=filter(lambda x: is_number(x[1]), data.items()))
+            self.writer.write_images(
+                mode=self.system.mode,
+                step=self.system.global_step,
+                images=filter(lambda x: x[1] is not None, map(lambda y: (y, data.get(y)), self.write_images)))
+            self.writer.write_embeddings(
+                mode=self.system.mode,
+                step=self.system.global_step,
+                embeddings=filter(
+                    lambda x: x[1] is not None,
+                    map(lambda t: (t[0], data.get(t[0]), data.get(t[1]), data.get(t[2])), self.write_embeddings)))
+
+    def on_epoch_end(self, data: Data):
+        if self.system.mode == 'train' and self.histogram_freq.freq and not self.histogram_freq.is_step and \
+                self.system.epoch_idx % self.histogram_freq.freq == 0:
+            self.writer.write_weights(mode=self.system.mode,
+                                      models=self.system.network.models,
+                                      step=self.system.global_step,
+                                      visualize=self.paint_weights)
+        if self.update_freq.freq and (self.update_freq.is_step or self.system.epoch_idx % self.update_freq.freq == 0):
+            self.writer.write_scalars(mode=self.system.mode,
+                                      step=self.system.global_step,
+                                      scalars=filter(lambda x: is_number(x[1]), data.items()))
+            self.writer.write_images(
+                mode=self.system.mode,
+                step=self.system.global_step,
+                images=filter(lambda x: x[1] is not None, map(lambda y: (y, data.get(y)), self.write_images)))
+            self.writer.write_embeddings(
+                mode=self.system.mode,
+                step=self.system.global_step,
+                embeddings=filter(
+                    lambda x: x[1] is not None,
+                    map(lambda t: (t[0], data.get(t[0]), data.get(t[1]), data.get(t[2])), self.write_embeddings)))
+
+    def on_end(self, data: Data):
+        self.writer.close()

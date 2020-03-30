@@ -22,18 +22,36 @@ from typing import Any, Dict, List, Optional, Set, TypeVar, Union
 import numpy as np
 import tensorflow as tf
 from torch.utils.data import DataLoader, Dataset, RandomSampler
+from torch.utils.data.dataloader import default_collate
 
 from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.op_dataset import OpDataset
 from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
 from fastestimator.op.op import get_current_ops
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler
-from fastestimator.util.util import lcms, to_list
+from fastestimator.util.util import lcms, pad_batch, to_list
 
 DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
 
 
 class Pipeline:
+    """Data pipeline class that takes care of the data preprocessing.
+
+    Args:
+        train_data: training data, can be a tf.data.Dataset, fe.dataset or torch.data.DataLoader or a scheduler of them.
+                    Defaults to None, which means no training data available.
+        eval_data: evaludation data, can be a tf.data.Dataset, fe.dataset or torch.data.DataLoader or a scheduler of them.
+                    Defaults to None, which means no evaluation data available.
+        test_data: testing data, can be a tf.data.Dataset, fe.dataset or torch.data.DataLoader or a scheduler of them.
+                    Defaults to None, which means no testing data available.
+        batch_size: batch size, can be an integer or a scheduelr of integer, only used when fe.dataset is available.
+                    Defaults to None.
+        ops: preprocessing numpy ops, only used when fe.dataset is available. Defaults to None.
+        num_process: number of processes, only used whenfe.dataset is available. Defaults to None, which will be the
+                    system cpu count. use num_process=0 for debugging.
+        pad_value: the padding value if batch padding is needed. Defaults to None, which indicates no padding. only used
+                    when fe.dataset is available.
+    """
     ops: List[Union[NumpyOp, Scheduler[NumpyOp]]]
 
     def __init__(self,
@@ -42,11 +60,13 @@ class Pipeline:
                  test_data: Union[None, DataSource, Scheduler[DataSource]] = None,
                  batch_size: Union[None, int, Scheduler[int]] = None,
                  ops: Union[None, NumpyOp, Scheduler[NumpyOp], List[Union[NumpyOp, Scheduler[NumpyOp]]]] = None,
-                 num_process: Optional[int] = None):
+                 num_process: Optional[int] = None,
+                 pad_value: Optional[Union[int, float]] = None):
         self.data = {x: y for (x, y) in zip(["train", "eval", "test"], [train_data, eval_data, test_data]) if y}
         self.batch_size = batch_size
         self.ops = to_list(ops)
         self.num_process = num_process if num_process is not None else os.cpu_count()
+        self.pad_value = pad_value
         self._verify_inputs(**{k: v for k, v in locals().items() if k != 'self'})
 
     def _verify_inputs(self, **kwargs):
@@ -180,21 +200,35 @@ class Pipeline:
         if isinstance(data, Scheduler):
             data = data.get_current_value(epoch)
         if isinstance(data, Dataset):
-            op_dataset = OpDataset(data, get_current_ops(self.ops, mode, epoch), mode)
+            # batch size
             batch_size = self.batch_size
             if isinstance(batch_size, Scheduler):
                 batch_size = batch_size.get_current_value(epoch)
-            if isinstance(data, BatchDataset) and batch_size is not None:
-                raise ValueError("batch_size must be None when using BatchDataset")
+            # batch dataset
+            if isinstance(data, BatchDataset):
+                assert batch_size is None, "batch_size must be None when using BatchDataset"
+                data.pad_value = self.pad_value
+            # shuffle
             if shuffle is None:
                 shuffle = mode == "train"
+            # collate_fn
+            if self.pad_value is None or isinstance(data, BatchDataset):
+                collate_fn = None
+            else:
+                collate_fn = self._pad_batch_collate
+            op_dataset = OpDataset(data, get_current_ops(self.ops, mode, epoch), mode)
             data = DataLoader(op_dataset,
                               batch_size=batch_size,
                               shuffle=False if isinstance(data, BatchDataset) else shuffle,
                               sampler=RandomSampler(op_dataset) if isinstance(data, BatchDataset) and shuffle else None,
                               num_workers=self.num_process,
-                              worker_init_fn=lambda _: np.random.seed())
+                              worker_init_fn=lambda _: np.random.seed(),
+                              collate_fn=collate_fn)
         return data
+
+    def _pad_batch_collate(self, batch):
+        pad_batch(batch, self.pad_value)
+        return default_collate(batch)
 
     def get_signature_epochs(self, total_epochs: int):
         """get the signature epochs that scheduler will be effective on.
@@ -238,7 +272,7 @@ class Pipeline:
         for epoch in self.get_signature_epochs(total_epochs):
             loader = self.get_loader(mode=mode, epoch=epoch)
             if isinstance(loader, DataLoader):
-                if isinstance(loader.dataset, OpDataset):
+                if isinstance(loader.dataset, OpDataset) and not isinstance(loader.dataset.dataset, BatchDataset):
                     data = loader.dataset.dataset[0]
                     for op in loader.dataset.ops:
                         output_keys.update(op.outputs)

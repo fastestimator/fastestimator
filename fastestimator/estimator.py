@@ -23,6 +23,7 @@ from torch.utils.data import DataLoader
 from fastestimator.backend.to_shape import to_shape
 from fastestimator.backend.to_tensor import to_tensor
 from fastestimator.backend.to_type import to_type
+from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
 from fastestimator.pipeline import Pipeline
 from fastestimator.summary.system import System
@@ -247,9 +248,12 @@ class Estimator:
     def _configure_loader(self, loader):
         new_loader = loader
         if isinstance(new_loader, DataLoader) and isinstance(self.network, TFNetwork):
+            add_batch = True
+            if hasattr(loader.dataset, "dataset") and isinstance(loader.dataset.dataset, BatchDataset):
+                add_batch = False
             batch = to_tensor(loader.dataset[0], target_type="tf")
             data_type = to_type(batch)
-            data_shape = to_shape(batch, add_batch=True, exact_shape=False)
+            data_shape = to_shape(batch, add_batch=add_batch, exact_shape=False)
             new_loader = tf.data.Dataset.from_generator(lambda: loader, data_type, output_shapes=data_shape)
             new_loader = new_loader.prefetch(1)
         if isinstance(new_loader, tf.data.Dataset):

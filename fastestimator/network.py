@@ -121,9 +121,8 @@ class BaseNetwork:
 
     @staticmethod
     def _forward_batch(batch: MutableMapping[str, Any], state: Dict[str, Any], ops: List[TensorOp]):
-        data = None
         for op in ops:
-            data = get_inputs_by_op(op, batch, data)
+            data = get_inputs_by_op(op, batch)
             data = op.forward(data, state)
             if op.outputs:
                 write_outputs_by_op(op, batch, data)
@@ -194,7 +193,7 @@ class TorchNetwork(BaseNetwork):
             new_batch = {key: batch[key] for key in self.effective_inputs[mode] if key in batch}
         return new_batch
 
-    def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any]]:
+    def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         mode = self.epoch_state["mode"]
         batch_in = self._get_effective_batch_input(batch, mode)
         self.epoch_state["tape"] = NonContext()
@@ -231,7 +230,7 @@ class TorchNetwork(BaseNetwork):
 
 
 class TFNetwork(BaseNetwork):
-    def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any]]:
+    def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         mode = self.epoch_state["mode"]
         batch_in = self._get_effective_batch_input(batch, mode)
         strategy = tf.distribute.get_strategy()
@@ -385,7 +384,6 @@ def _fe_compile(model: Union[tf.keras.Model, torch.nn.Module],
                 weight: Union[str, None],
                 name: str,
                 framework: str) -> Union[tf.keras.Model, torch.nn.Module]:
-
     if isinstance(optimizer_fn, EpochScheduler):
         for epoch, optimizer_def in optimizer_fn.epoch_dict.items():
             optimizer_fn.epoch_dict[epoch] = _build_optimizer(optimizer_def, model, framework)

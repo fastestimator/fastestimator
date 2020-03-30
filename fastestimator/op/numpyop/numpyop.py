@@ -46,9 +46,8 @@ def forward_numpyop(ops: List[NumpyOp], data: MutableMapping[str, Any], mode: st
         data: data dictionary
         mode: the current execution mode
     """
-    op_data = None
     for op in ops:
-        op_data = get_inputs_by_op(op, data, op_data)
+        op_data = get_inputs_by_op(op, data)
         op_data = op.forward(op_data, {"mode": mode})
         if isinstance(op, Delete):
             for key in op.inputs:

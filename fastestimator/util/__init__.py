@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.util.data import Data
-from fastestimator.util.util import NonContext, Suppressor, Timer, draw, get_shape, get_type, lcms, parse_modes, \
-    parse_string_to_python, per_replica_to_global, prettify_metric_name, strip_prefix, strip_suffix, to_list, to_set
+from fastestimator.util.util import NonContext, Suppressor, Timer, draw, get_shape, get_type, lcms, pad_batch, \
+    pad_data, parse_modes, parse_string_to_python, per_replica_to_global, prettify_metric_name, strip_prefix, \
+    strip_suffix, to_list, to_set
 from fastestimator.util.wget_util import bar_custom, callback_progress
