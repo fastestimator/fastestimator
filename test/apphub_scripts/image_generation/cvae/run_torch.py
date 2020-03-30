@@ -17,7 +17,7 @@ if __name__ == "__main__":
     train_info = "--epochs 2 --batch_size 2 --max_steps_per_epoch 10"
 
     # Do you want to run "fastestimator test"? (bool)
-    need_test = True
+    need_test = False
     # ==============================================================================================
 
     stderr_file = os.path.abspath(os.path.join(__file__, "..", "run_torch_stderr.txt"))
