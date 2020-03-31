@@ -12,29 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, Iterable, TypeVar, List, Dict, Any
+from typing import Union, Iterable, TypeVar, Dict, Any, List
 
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.watch import watch
+from fastestimator.backend.zeros_like import zeros_like
 from fastestimator.op.tensorop.tensorop import TensorOp
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
-class Watch(TensorOp):
-    """Watch one or more tensors for later gradient computation
+class Average(TensorOp):
+    """ Compute the average across tensors
 
     Args:
-        inputs: which tensors to watch during future computation
-        mode: 'train', 'eval', 'test', or None
+        inputs: Keys of tensors to be averaged
+        outputs: The key under which to save the output
+        mode: Some combination of 'train', 'eval', 'test', 'infer', or None
     """
-    def __init__(self, inputs: Union[None, str, Iterable[str]], mode: Union[None, str, Iterable[str]] = "eval"):
-        super().__init__(inputs=inputs, outputs=inputs, mode=mode)
-        self.in_list, self.out_list = True, True
+    def __init__(self, inputs: Union[str, Iterable[str]], outputs: str, mode: Union[None, str, Iterable[str]] = None):
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.in_list, self.out_list = True, False
 
-    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
-        for idx, tensor in enumerate(data):
-            data[idx] = watch(tensor=tensor, tape=state['tape'])
-        return data
+    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
+        result = zeros_like(data[0])
+        for tensor in data:
+            result += tensor
+        return result / len(data)

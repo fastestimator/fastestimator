@@ -12,33 +12,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import numpy as np
+from typing import Tuple
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as fn
 
 
 class LeNet(torch.nn.Module):
-    def __init__(self, n_channels: int = 1, classes: int = 10):
+    def __init__(self, input_shape: Tuple[int, int, int] = (1, 28, 28), classes: int = 10):
         super().__init__()
-        self.conv1 = nn.Conv2d(n_channels, 32, 3)
-        self.conv2 = nn.Conv2d(32, 64, 3)
-        self.conv3 = nn.Conv2d(64, 64, 3)
-        self.fc1 = nn.Linear(3 * 3 * 64, 64)
+        conv_kernel = 3
+        self.pool_kernel = 2
+        self.conv1 = nn.Conv2d(input_shape[0], 32, conv_kernel)
+        self.conv2 = nn.Conv2d(32, 64, conv_kernel)
+        self.conv3 = nn.Conv2d(64, 64, conv_kernel)
+        flat_x = ((((input_shape[1] - (conv_kernel - 1)) // self.pool_kernel) -
+                   (conv_kernel - 1)) // self.pool_kernel) - (conv_kernel - 1)
+        flat_y = ((((input_shape[2] - (conv_kernel - 1)) // self.pool_kernel) -
+                   (conv_kernel - 1)) // self.pool_kernel) - (conv_kernel - 1)
+        self.fc1 = nn.Linear(flat_x * flat_y * 64, 64)
         self.fc2 = nn.Linear(64, classes)
 
     def forward(self, x):
-        x = self.conv1(x)
-        x = fn.relu(x)
-        x = fn.max_pool2d(x, 2)
-        x = self.conv2(x)
-        x = fn.relu(x)
-        x = fn.max_pool2d(x, 2)
-        x = self.conv3(x)
-        x = fn.relu(x)
-        x = x.view(-1, np.prod(x.size()[1:]))
-        x = self.fc1(x)
-        x = fn.relu(x)
-        x = self.fc2(x)
-        x = fn.softmax(x, dim=-1)
+        x = fn.relu(self.conv1(x))
+        x = fn.max_pool2d(x, self.pool_kernel)
+        x = fn.relu(self.conv2(x))
+        x = fn.max_pool2d(x, self.pool_kernel)
+        x = fn.relu(self.conv3(x))
+        x = x.view(x.size(0), -1)
+        x = fn.relu(self.fc1(x))
+        x = fn.softmax(self.fc2(x), dim=-1)
         return x

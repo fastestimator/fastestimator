@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.tensorop.xai.argmax import Argmax
-from fastestimator.op.tensorop.xai.gather import Gather
-from fastestimator.op.tensorop.xai.gradient import GradientOp
-from fastestimator.op.tensorop.xai.watch import Watch
+from fastestimator.op.tensorop.gradient.gradient import GradientOp
+from fastestimator.op.tensorop.gradient.watch import Watch
+from fastestimator.op.tensorop.gradient.fgsm import FGSM

@@ -161,14 +161,14 @@ class Pipeline:
         return data
 
     def get_results(self, mode: str = "train", epoch: int = 1, num_steps: int = 1,
-                    shuffle=False) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
+                    shuffle: bool = False) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
         """get the pipeline outputs after all ops
 
         Args:
             mode: Current mode, can be 'train', 'eval' or 'test'.
             epoch: Current epoch index. Defaults to 1.
             num_steps: number of steps(batches) to get. Defaults to 1.
-
+            shuffle: whether to use shuffling
         Returns:
             pipeline outputs
         """
