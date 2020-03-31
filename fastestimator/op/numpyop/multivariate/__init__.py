@@ -33,6 +33,7 @@ from fastestimator.op.numpyop.multivariate.random_rotate_90 import RandomRotate9
 from fastestimator.op.numpyop.multivariate.random_scale import RandomScale
 from fastestimator.op.numpyop.multivariate.random_sized_bbox_safe_crop import RandomSizedBBoxSafeCrop
 from fastestimator.op.numpyop.multivariate.random_sized_crop import RandomSizedCrop
+from fastestimator.op.numpyop.multivariate.read_mat import ReadMat
 from fastestimator.op.numpyop.multivariate.resize import Resize
 from fastestimator.op.numpyop.multivariate.rotate import Rotate
 from fastestimator.op.numpyop.multivariate.shift_scale_rotate import ShiftScaleRotate
