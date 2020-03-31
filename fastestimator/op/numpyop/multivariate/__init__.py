@@ -21,7 +21,6 @@ from fastestimator.op.numpyop.multivariate.elastic_transform import ElasticTrans
 from fastestimator.op.numpyop.multivariate.flip import Flip
 from fastestimator.op.numpyop.multivariate.grid_distortion import GridDistortion
 from fastestimator.op.numpyop.multivariate.horizontal_flip import HorizontalFlip
-from fastestimator.op.numpyop.multivariate.load_mat import LoadMat
 from fastestimator.op.numpyop.multivariate.longest_max_size import LongestMaxSize
 from fastestimator.op.numpyop.multivariate.mask_dropout import MaskDropout
 from fastestimator.op.numpyop.multivariate.optical_distortion import OpticalDistortion
@@ -34,6 +33,7 @@ from fastestimator.op.numpyop.multivariate.random_rotate_90 import RandomRotate9
 from fastestimator.op.numpyop.multivariate.random_scale import RandomScale
 from fastestimator.op.numpyop.multivariate.random_sized_bbox_safe_crop import RandomSizedBBoxSafeCrop
 from fastestimator.op.numpyop.multivariate.random_sized_crop import RandomSizedCrop
+from fastestimator.op.numpyop.multivariate.read_mat import ReadMat
 from fastestimator.op.numpyop.multivariate.resize import Resize
 from fastestimator.op.numpyop.multivariate.rotate import Rotate
 from fastestimator.op.numpyop.multivariate.shift_scale_rotate import ShiftScaleRotate

@@ -21,7 +21,7 @@ from fastestimator.op.numpyop.numpyop import NumpyOp
 from fastestimator.util.util import to_list
 
 
-class LoadMat(NumpyOp):
+class ReadMat(NumpyOp):
     """Class for reading .mat files, it works when every sample has a separate .mat file.
     Args:
         file_in: Key of file path to be loaded.
