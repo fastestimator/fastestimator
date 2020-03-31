@@ -18,32 +18,26 @@ from typing import Any, Dict, Iterable, List, Union
 from scipy.io import loadmat
 
 from fastestimator.op.numpyop.numpyop import NumpyOp
-from fastestimator.util.util import to_list
 
 
 class ReadMat(NumpyOp):
     """Class for reading .mat files, it works when every sample has a separate .mat file.
     Args:
-        file_in: Key of file path to be loaded.
-        keys_in: Key(s) of dictionaries to read.
-        keys_out: Keys(s) of dictionaries to output.
+        file: Dictionary key that contains the .mat path.
+        keys: Key(s) to read from the .mat file.
         mode: What execution mode (train, eval, test, None) to apply this operation
         parent_path: Parent path that will be prepended to a given filepath
     """
     def __init__(self,
-                 file_in: str,
-                 keys_in: Union[str, Iterable[str]],
-                 keys_out: Union[str, Iterable[str]],
+                 file: str,
+                 keys: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  parent_path: str = ""):
-        self.file_in = file_in
-        self.keys_in = to_list(keys_in)
-        self.keys_out = to_list(keys_out)
+        super().__init__(inputs=file, outputs=keys, mode=mode)
         self.parent_path = parent_path
-        assert len(self.keys_in) == len(self.keys_out), "keys_in and keys_out lengths must match"
-        super().__init__(inputs=self.file_in, outputs=self.keys_out, mode=mode)
+        self.out_list = True
 
     def forward(self, data: str, state: Dict[str, Any]) -> List[Dict[str, Any]]:
         data = loadmat(os.path.normpath(os.path.join(self.parent_path, data)))
-        results = [data[key] for key in self.keys_in]
+        results = [data[key] for key in self.outputs]
         return results
