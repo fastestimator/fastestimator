@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 # see a complete list of effects in albumentation page: https://albumentations-demo.herokuapp.com
+from fastestimator.op.numpyop.univariate.binarize import Binarize
 from fastestimator.op.numpyop.univariate.blur import Blur
 from fastestimator.op.numpyop.univariate.channel_dropout import ChannelDropout
 from fastestimator.op.numpyop.univariate.channel_shuffle import ChannelShuffle
@@ -29,6 +30,7 @@ from fastestimator.op.numpyop.univariate.hue_saturation_value import HueSaturati
 from fastestimator.op.numpyop.univariate.image_compression import ImageCompression
 from fastestimator.op.numpyop.univariate.invert_img import InvertImg
 from fastestimator.op.numpyop.univariate.iso_noise import ISONoise
+from fastestimator.op.numpyop.univariate.mat_reader import MatReader
 from fastestimator.op.numpyop.univariate.median_blur import MedianBlur
 from fastestimator.op.numpyop.univariate.minmax import Minmax
 from fastestimator.op.numpyop.univariate.motion_blur import MotionBlur
@@ -49,6 +51,5 @@ from fastestimator.op.numpyop.univariate.rgb_shift import RGBShift
 from fastestimator.op.numpyop.univariate.solarize import Solarize
 from fastestimator.op.numpyop.univariate.to_array import ToArray
 from fastestimator.op.numpyop.univariate.to_float import ToFloat
-from fastestimator.op.numpyop.univariate.binarize import Binarize
 from fastestimator.op.numpyop.univariate.to_gray import ToGray
 from fastestimator.op.numpyop.univariate.to_sepia import ToSepia
