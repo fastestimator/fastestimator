@@ -89,7 +89,7 @@ class Pipeline:
                 "unsupported batch_size format: {}".format(self.batch_size)
             if isinstance(self.batch_size, Scheduler):
                 for batch_size in self.batch_size.get_all_values():
-                    assert isinstance(batch_size, int, type(None)), \
+                    assert isinstance(batch_size, (int, type(None))), \
                         "unsupported batch_size format: {}".format(self.batch_size)
             # ops check
             for op in self.ops:
@@ -208,6 +208,8 @@ class Pipeline:
             if isinstance(data, BatchDataset):
                 assert batch_size is None, "batch_size must be None when using BatchDataset"
                 data.pad_value = self.pad_value
+            else:
+                assert batch_size is not None, "batch_size should not be None"
             # shuffle
             if shuffle is None:
                 shuffle = mode == "train"
