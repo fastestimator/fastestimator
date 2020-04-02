@@ -18,13 +18,15 @@ from typing import TypeVar, Union
 import tensorflow as tf
 import torch
 
+from fastestimator.backend.to_number import to_number
+
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, torch.autograd.Variable)
 
 
-def clip_by_value(tensor: Tensor, min_value: Union[int, float], max_value: Union[int, float]) -> Tensor:
+def clip_by_value(tensor: Tensor, min_value: Union[int, float, Tensor], max_value: Union[int, float, Tensor]) -> Tensor:
     if isinstance(tensor, tf.Tensor):
         return tf.clip_by_value(tensor, clip_value_min=min_value, clip_value_max=max_value)
     elif isinstance(tensor, torch.Tensor):
-        return tensor.clamp(min=min_value, max=max_value)
+        return tensor.clamp(min=to_number(min_value).item(), max=to_number(max_value).item())
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(tensor)))

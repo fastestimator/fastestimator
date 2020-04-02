@@ -32,9 +32,9 @@ from fastestimator.backend.to_number import to_number
 from fastestimator.backend.zeros_like import zeros_like
 from fastestimator.network import Network
 from fastestimator.op.tensorop.model.model import ModelOp
-from fastestimator.op.tensorop.xai.gather import Gather
-from fastestimator.op.tensorop.xai.gradient import GradientOp
-from fastestimator.op.tensorop.xai.watch import Watch
+from fastestimator.op.tensorop.gather import Gather
+from fastestimator.op.tensorop.gradient.gradient import GradientOp
+from fastestimator.op.tensorop.gradient.watch import Watch
 from fastestimator.util.util import to_list
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)

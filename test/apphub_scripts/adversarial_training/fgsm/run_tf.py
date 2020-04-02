@@ -7,8 +7,8 @@ if __name__ == "__main__":
     Users only need to fill the SELF-FILLED SECTION.
     """
     # =================================  SELF-FILLED SECTION  =====================================
-    # The name of the running example file. (without training "_torch.py" )
-    example_name = "cvae"
+    # The name of the running example file. (without training "_tf.py" )
+    example_name = "fgsm"
 
     # The training arguments
     # 1. Usually we set the epochs:2, batch_size:2, max_steps_per_epoch:10
@@ -17,15 +17,15 @@ if __name__ == "__main__":
     train_info = "--epochs 2 --batch_size 2 --max_steps_per_epoch 10"
 
     # Do you want to run "fastestimator test"? (bool)
-    need_test = False
+    need_test = True
     # ==============================================================================================
 
-    stderr_file = os.path.abspath(os.path.join(__file__, "..", "run_torch_stderr.txt"))
+    stderr_file = os.path.abspath(os.path.join(__file__, "..", "run_tf_stderr.txt"))
     if os.path.exists(stderr_file):
         os.remove(stderr_file)
 
     source_dir = get_source_dir_path(__file__)
-    py_file = os.path.join(source_dir, example_name + "_torch.py")
+    py_file = os.path.join(source_dir, example_name + "_tf.py")
     result = os.system("fastestimator train {} {} 2>> {}".format(py_file, train_info, stderr_file))
 
     if need_test:

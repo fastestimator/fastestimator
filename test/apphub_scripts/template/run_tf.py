@@ -8,16 +8,16 @@ if __name__ == "__main__":
     """
     # =================================  SELF-FILLED SECTION  =====================================
     # The name of the running example file. (without training "_tf.py" )
-    example_name =
+    example_name = ""
 
     # The training arguments
     # 1. Usually we set the epochs:2, batch_size:2, max_steps_per_epoch:10
     # 2. The expression for the following setup is "--epochs 2 --batch_size 2 --max_steps_per_epoch 10"
     # 3. The syntax of this expression is different from run_notebook.py
-    train_info =
+    train_info = ""
 
     # Do you want to run "fastestimator test"? (bool)
-    need_test =
+    need_test = False
     # ==============================================================================================
 
     stderr_file = os.path.abspath(os.path.join(__file__, "..", "run_tf_stderr.txt"))

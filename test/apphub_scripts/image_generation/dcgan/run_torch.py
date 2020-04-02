@@ -8,13 +8,13 @@ if __name__ == "__main__":
     """
     # =================================  SELF-FILLED SECTION  =====================================
     # The name of the running example file. (without training "_torch.py" )
-    example_name = "cvae"
+    example_name = "dcgan"
 
     # The training arguments
     # 1. Usually we set the epochs:2, batch_size:2, max_steps_per_epoch:10
     # 2. The expression for the following setup is "--epochs 2 --batch_size 2 --max_steps_per_epoch 10"
     # 3. The syntax of this expression is different from run_notebook.py
-    train_info = "--epochs 2 --batch_size 2 --max_steps_per_epoch 10"
+    train_info = "--epochs 2 --batch_size 8 --max_steps_per_epoch 10"
 
     # Do you want to run "fastestimator test"? (bool)
     need_test = False
