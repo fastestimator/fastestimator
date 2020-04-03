@@ -31,6 +31,7 @@ from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.schedule import EpochScheduler
 from fastestimator.trace import Trace
 from fastestimator.trace.io import ModelSaver
+from fastestimator.util import get_num_devices
 
 
 def _nf(stage, fmap_base=8192, fmap_decay=1.0, fmap_max=512):
@@ -292,12 +293,9 @@ class GradientPenalty(TensorOp):
 
 
 class RandomVector(TensorOp):
-    def __init__(self, batch_size, outputs, mode=None):
-        super().__init__(inputs=None, outputs=outputs, mode=mode)
-        self.batch_size = batch_size
-
     def forward(self, data, state):
-        return tf.random.normal([self.batch_size, 512])
+        batch_size = data.shape[0]
+        return tf.random.normal([batch_size, 512])
 
 
 class GLoss(TensorOp):
@@ -379,7 +377,7 @@ class ImageSaving(Trace):
             print("on epoch {}, saving image to {}".format(self.system.epoch_idx, self.save_dir))
 
 
-def get_estimator(target_size=1024, epochs=85, save_dir=tempfile.mkdtemp(), max_steps_per_epoch=None):
+def get_estimator(target_size=128, epochs=55, save_dir=tempfile.mkdtemp(), max_steps_per_epoch=None):
     # assert growth parameters
     num_grow = np.log2(target_size) - 2
     assert num_grow > 1 and num_grow % 1 == 0, "need exponential of 2 and greater than 8 as target size"
@@ -402,8 +400,11 @@ def get_estimator(target_size=1024, epochs=85, save_dir=tempfile.mkdtemp(), max_
         epoch: Resize(image_in="x_low_res", image_out="x_low_res", height=size, width=size)
         for (epoch, size) in zip(event_epoch, event_size)
     }
-    local_batch_size_map = {epoch: 512 // size if size <= 128 else 4 for (epoch, size) in zip(event_epoch, event_size)}
-    batch_scheduler = EpochScheduler(epoch_dict=local_batch_size_map)
+    batch_size_map = {
+        epoch: 512 // size * get_num_devices() if size <= 128 else 4 * get_num_devices()
+        for (epoch, size) in zip(event_epoch, event_size)
+    }
+    batch_scheduler = EpochScheduler(epoch_dict=batch_size_map)
     pipeline = fe.Pipeline(
         batch_size=batch_scheduler,
         train_data=dataset,
@@ -425,7 +426,7 @@ def get_estimator(target_size=1024, epochs=85, save_dir=tempfile.mkdtemp(), max_
         model_fn=lambda: build_G(fade_in_alpha, target_resolution=int(np.log2(target_size)), num_channels=1),
         optimizer_fn=[lambda: Adam(0.001, beta_1=0.0, beta_2=0.99, epsilon=1e-8)] * len(event_size) + [None],
         model_names=["g_{}".format(size) for size in event_size] + ["G"])
-    z_vector_map = {epoch: RandomVector(batch_size=local_batch_size_map[epoch], outputs="z") for epoch in event_epoch}
+    z_vector_map = {epoch: RandomVector(inputs="x", outputs="z") for epoch in event_epoch}
     fake_img_map = {
         epoch: ModelOp(inputs="z", outputs="x_fake", model=model)
         for (epoch, model) in zip(event_epoch, g_models[:-1])
@@ -477,8 +478,7 @@ def get_estimator(target_size=1024, epochs=85, save_dir=tempfile.mkdtemp(), max_
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             max_steps_per_epoch=max_steps_per_epoch,
-                             log_steps=10)
+                             max_steps_per_epoch=max_steps_per_epoch)
     return estimator
 
 

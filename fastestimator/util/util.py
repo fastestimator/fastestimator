@@ -331,3 +331,7 @@ class DefaultKeyDict(dict):
     def __missing__(self, key):
         res = self[key] = self.factory(key)
         return res
+
+
+def get_num_devices():
+    return max(torch.cuda.device_count(), 1)
