@@ -14,18 +14,20 @@
 # ==============================================================================
 from typing import Tuple
 
+import tensorflow as tf
 from tensorflow.python.keras.layers import Conv2D, Dropout, Input, MaxPooling2D, UpSampling2D, concatenate
 from tensorflow.python.keras.models import Model
 
 
-def UNet(input_size: Tuple[int, int, int] = (128, 128, 1)):
-    """U-Net model.
-
+# noinspection PyPep8Naming
+def UNet(input_size: Tuple[int, int, int] = (128, 128, 1)) -> tf.keras.Model:
+    """A standard UNet implementation in pytorch
+    
     Args:
-        input_size (tuple, optional): Input image size. Defaults to (128, 128, 3).
-
+        input_size: The size of the input tensor (height, width, channels).
+    
     Returns:
-        A `Model` object.
+        A TensorFlow LeNet model.
     """
     conv_config = {'activation': 'relu', 'padding': 'same', 'kernel_initializer': 'he_normal'}
     up_config = {'size': (2, 2), 'interpolation': 'bilinear'}

@@ -27,17 +27,42 @@ def get_gradient(target: Tensor,
                  higher_order: bool = False,
                  tape: Optional[tf.GradientTape] = None,
                  retain_graph: bool = True) -> Union[Iterable[Tensor], Tensor]:
-    """calculate gradients of target w.r.t sources
+    """Calculate gradients of a target w.r.t sources.
+
+    This method can be used with TensorFlow tensors:
+    ```python
+    x = tf.Variable([1.0, 2.0, 3.0])
+    with tf.GradientTape(persistent=True) as tape:
+        y = x * x
+        
+        b = fe.backend.get_gradient(target=y, sources=x, tape=tape)  # [2.0, 4.0, 6.0]
+        b = fe.backend.get_gradient(target=b, sources=x, tape=tape)  # None
+        
+        b = fe.backend.get_gradient(target=y, sources=x, tape=tape, higher_order=True)  # [2.0, 4.0, 6.0]
+        b = fe.backend.get_gradient(target=b, sources=x, tape=tape)  # [2.0, 2.0, 2.0]
+    ```
+
+    This method can be used with PyTorch tensors:
+    ```python
+    x = torch.tensor([1.0, 2.0, 3.0], requires_grad=True)
+    y = x * x
+    
+    b = fe.backend.get_gradient(target=y, sources=x)  # [2.0, 4.0, 6.0]
+    b = fe.backend.get_gradient(target=b, sources=x)  # Error - b does not have a backwards function
+    
+    b = fe.backend.get_gradient(target=y, sources=x, higher_order=True)  # [2.0, 4.0, 6.0]
+    b = fe.backend.get_gradient(target=b, sources=x)  # [2.0, 2.0, 2.0]
+    ```
 
     Args:
-        target: target tensor
-        sources : sequence of source tensors
-        higher_order : whether the gradient will be used for higher order gradients. Defaults to False.
-        tape : tensorflow gradient tape, only needed when using tensorflow backend. Defaults to None.
-        retain_graph : whether to retain pytorch graph, only valid under pytorch backend. Defaults to True.
+        target: The target (final) tensor.
+        sources: A sequence of source (initial) tensors.
+        higher_order: Whether the gradient will be used for higher order gradients. 
+        tape: TensorFlow gradient tape. Only needed when using the TensorFlow backend.
+        retain_graph: Whether to retain PyTorch graph. Only valid when using the PyTorch backend.
 
     Returns:
-        gradients as sequence of tensors
+        Gradient(s) of the `target` with respect to the `sources`.
     """
     if isinstance(target, tf.Tensor):
         with NonContext() if higher_order else tape.stop_recording():
@@ -50,7 +75,7 @@ def get_gradient(target: Tensor,
                                         create_graph=higher_order,
                                         only_inputs=True)
         if isinstance(gradients, Tuple) and len(gradients) == 1:
-            # Pytorch seems to unnecessarily wrap results into a tuple when a non-scalar target is provided
+            # PyTorch seems to unnecessarily wrap results into a tuple when a non-scalar target is provided
             gradients = gradients[0]
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(target)))
