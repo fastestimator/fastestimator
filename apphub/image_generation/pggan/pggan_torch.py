@@ -17,7 +17,7 @@ import tempfile
 
 import cv2
 import numpy as np
-import tensorflow as tf
+import torch
 from tensorflow.keras import Model, backend, layers
 from tensorflow.keras.optimizers import Adam
 
@@ -51,11 +51,18 @@ class EqualizedLRDense(layers.Layer):
         self.w = self.add_weight(shape=[int(input_shape[-1]), self.units],
                                  initializer=tf.random_normal_initializer(mean=0.0, stddev=1.0),
                                  trainable=True)
-        fan_in = input_shape[-1]
+        fan_in = np.prod(input_shape[-1])
         self.wscale = tf.constant(np.float32(self.gain / np.sqrt(fan_in)))
 
     def call(self, x):
         return tf.matmul(x, self.w) * self.wscale
+
+
+
+
+
+
+
 
 
 class ApplyBias(layers.Layer):
