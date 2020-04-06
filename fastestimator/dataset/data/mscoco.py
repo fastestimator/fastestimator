@@ -39,12 +39,14 @@ class MSCOCODataset(DirDataset):
                  caption_file: str,
                  include_bboxes: bool = True,
                  include_masks: bool = False,
-                 include_captions: bool = False):
+                 include_captions: bool = False,
+                 min_bbox_area=1.0):
         super().__init__(root_dir=image_dir, data_key="image", recursive_search=False)
         if include_masks:
             assert include_bboxes, "must include bboxes with mask data"
         self.include_bboxes = include_bboxes
         self.include_masks = include_masks
+        self.min_bbox_area = min_bbox_area
         with Suppressor():
             self.instances = COCO(annotation_file)
             self.captions = COCO(caption_file) if include_captions else None
@@ -87,9 +89,10 @@ class MSCOCODataset(DirDataset):
         if annotation_ids:
             annotations = self.instances.loadAnns(annotation_ids)
             for annotation in annotations:
-                data["bbox"].append(tuple(annotation['bbox'] + [annotation['category_id']]))
-                if self.include_masks:
-                    data["mask"].append(self.instances.annToMask(annotation))
+                if annotation["bbox"][2] * annotation["bbox"][3] > self.min_bbox_area:
+                    data["bbox"].append(tuple(annotation['bbox'] + [annotation['category_id']]))
+                    if self.include_masks:
+                        data["mask"].append(self.instances.annToMask(annotation))
 
     def _populate_caption_data(self, data: Dict[str, Any], image_id: int):
         data["caption"] = []
