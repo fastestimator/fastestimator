@@ -26,7 +26,7 @@ class Scheduler(Generic[T]):
 
 
 class RepeatScheduler(Scheduler[T]):
-    def __init__(self, repeat_list: List[T]):
+    def __init__(self, repeat_list: List[T]) -> None:
         assert isinstance(repeat_list, List), "must provide a list as input of RepeatSchedule"
         self.repeat_list = repeat_list
         self.cycle_length = len(repeat_list)
@@ -40,7 +40,7 @@ class RepeatScheduler(Scheduler[T]):
 
 
 class EpochScheduler(Scheduler[T]):
-    def __init__(self, epoch_dict: Dict[int, T]):
+    def __init__(self, epoch_dict: Dict[int, T]) -> None:
         assert isinstance(epoch_dict, dict), "must provide dictionary as epoch_dict"
         self.epoch_dict = epoch_dict
         self.keys = sorted(self.epoch_dict)

@@ -29,7 +29,7 @@ class CSVDataset(InMemoryDataset):
         kwargs: Other arguments to be passed through to pandas csv reader function
             (https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html)
     """
-    def __init__(self, file_path: str, delimiter: str = ",", **kwargs):
+    def __init__(self, file_path: str, delimiter: str = ",", **kwargs) -> None:
         df = pd.read_csv(file_path, delimiter=delimiter, **kwargs)
         self.parent_path = os.path.dirname(file_path)
         super().__init__(df.to_dict(orient='index'))

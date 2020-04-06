@@ -129,7 +129,7 @@ class XaiData(OrderedDict):
     """
     n_elements: Dict[int, List[str]]
 
-    def __init__(self, **kwargs: Tensor):
+    def __init__(self, **kwargs: Tensor) -> None:
         self.n_elements = {}  # Not a default dict b/c that complicates the computations later
         # TODO - grouping text keys into single box (true value, predicted value, confidence, etc.)
         super().__init__(**kwargs)

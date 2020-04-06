@@ -20,7 +20,7 @@ from fastestimator.dataset.dataset import InMemoryDataset
 
 
 class NumpyDataset(InMemoryDataset):
-    def __init__(self, data: Dict[str, np.ndarray]):
+    def __init__(self, data: Dict[str, np.ndarray]) -> None:
         size = None
         for key, val in data.items():
             if isinstance(val, np.ndarray):

@@ -31,7 +31,8 @@ class Average(TensorOp):
         outputs: The key under which to save the output
         mode: Some combination of 'train', 'eval', 'test', 'infer', or None
     """
-    def __init__(self, inputs: Union[str, Iterable[str]], outputs: str, mode: Union[None, str, Iterable[str]] = None):
+    def __init__(self, inputs: Union[str, Iterable[str]], outputs: str, mode: Union[None, str,
+                                                                                    Iterable[str]] = None) -> None:
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.in_list, self.out_list = True, False
 

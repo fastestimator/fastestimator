@@ -28,7 +28,7 @@ class LeNet(torch.nn.Module):
         input_shape: The shape of the model input (channels, height, width).
         classes: The number of outputs the model should generate.
     """
-    def __init__(self, input_shape: Tuple[int, int, int] = (1, 28, 28), classes: int = 10):
+    def __init__(self, input_shape: Tuple[int, int, int] = (1, 28, 28), classes: int = 10) -> None:
         super().__init__()
         conv_kernel = 3
         self.pool_kernel = 2

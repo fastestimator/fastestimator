@@ -27,7 +27,7 @@ class UNetEncoderBlock(nn.Module):
         in_channels: How many channels enter the encoder.
         out_channels: How many channels leave the encoder.
     """
-    def __init__(self, in_channels: int, out_channels: int):
+    def __init__(self, in_channels: int, out_channels: int) -> None:
         super().__init__()
         self.layers = nn.Sequential(nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
                                     nn.ReLU(inplace=True),
@@ -52,7 +52,7 @@ class UNetDecoderBlock(nn.Module):
         mid_channels: How many channels are used for the decoder's intermediate layer.
         out_channels: How many channels leave the decoder.
     """
-    def __init__(self, in_channels: int, mid_channels: int, out_channels: int):
+    def __init__(self, in_channels: int, mid_channels: int, out_channels: int) -> None:
         super().__init__()
         self.layers = nn.Sequential(nn.Conv2d(in_channels, mid_channels, 3, padding=1),
                                     nn.ReLU(inplace=True),
@@ -77,7 +77,7 @@ class UNet(nn.Module):
     Args:
         input_size: The size of the input tensor (channels, height, width).
     """
-    def __init__(self, input_size: Tuple[int, int, int] = (1, 128, 128)):
+    def __init__(self, input_size: Tuple[int, int, int] = (1, 128, 128)) -> None:
         super().__init__()
         self.input_size = input_size
         self.enc1 = UNetEncoderBlock(in_channels=input_size[0], out_channels=64)

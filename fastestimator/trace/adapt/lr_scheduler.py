@@ -36,7 +36,7 @@ class LRScheduler(Trace):
     """
     system: System
 
-    def __init__(self, model: Union[tf.keras.Model, torch.nn.Module], lr_fn: Callable):
+    def __init__(self, model: Union[tf.keras.Model, torch.nn.Module], lr_fn: Callable) -> None:
         self.model = model
         self.lr_fn = lr_fn
         assert hasattr(lr_fn, "__call__"), "lr_fn must be a function"

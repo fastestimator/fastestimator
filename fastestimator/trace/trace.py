@@ -77,7 +77,7 @@ class TrainEssential(Trace):
     """Essential training information for logging during training. Please don't add this trace into an estimator
     manually. An estimator will add it automatically.
     """
-    def __init__(self, loss_keys: Set[str]):
+    def __init__(self, loss_keys: Set[str]) -> None:
         super().__init__(inputs=loss_keys, mode="train", outputs=["steps/sec", "epoch_time", "total_time"])
         self.elapse_times = []
         self.train_start = None
@@ -119,7 +119,7 @@ class TrainEssential(Trace):
 
 
 class EvalEssential(Trace):
-    def __init__(self, loss_keys: Set[str], monitor_names: Set[str]):
+    def __init__(self, loss_keys: Set[str], monitor_names: Set[str]) -> None:
         super().__init__(mode="eval",
                          inputs=list(loss_keys) + list(monitor_names),
                          outputs=self._configure_outputs(loss_keys, monitor_names))
@@ -166,7 +166,7 @@ class Logger(Trace):
     Args:
         extra_log_keys (set): set of keys to print from system buffer
     """
-    def __init__(self, extra_log_keys: Set[str]):
+    def __init__(self, extra_log_keys: Set[str]) -> None:
         super().__init__(inputs=extra_log_keys | {"*"})
 
     def on_begin(self, data: Data):

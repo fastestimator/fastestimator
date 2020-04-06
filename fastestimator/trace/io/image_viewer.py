@@ -23,7 +23,7 @@ from fastestimator.xai.util import show_image, XaiData
 
 
 class ImageViewer(Trace):
-    def __init__(self, inputs: Union[str, Sequence[str]], mode: Union[str, Set[str]] = ("eval", "test")):
+    def __init__(self, inputs: Union[str, Sequence[str]], mode: Union[str, Set[str]] = ("eval", "test")) -> None:
         super().__init__(inputs=inputs, mode=mode)
 
     def on_epoch_end(self, data: Data):

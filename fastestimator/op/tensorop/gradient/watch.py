@@ -30,7 +30,7 @@ class Watch(TensorOp):
         inputs: which tensors to watch during future computation
         mode: 'train', 'eval', 'test', or None
     """
-    def __init__(self, inputs: Union[None, str, Iterable[str]], mode: Union[None, str, Iterable[str]] = None):
+    def __init__(self, inputs: Union[None, str, Iterable[str]], mode: Union[None, str, Iterable[str]] = None) -> None:
         super().__init__(inputs=inputs, outputs=inputs, mode=mode)
         self.in_list, self.out_list = True, True
 

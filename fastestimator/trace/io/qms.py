@@ -41,7 +41,6 @@ class QMSTest(Trace):
                  json_output: str = "",
                  doc_output: str = ""):
 
-
         self.json_output = json_output
         self.doc_output = doc_output
         self.test_title = test_title
@@ -92,8 +91,8 @@ class QMSTest(Trace):
         print("Saved QMS summary report to {}".format(doc_path))
 
 
-class QMSDocx():
-    def __init__(self, total_pass, total_fail):
+class QMSDocx:
+    def __init__(self, total_pass, total_fail) -> None:
         self.doc = Document()
         self._write_static_p1()
         self._write_test_result(total_pass, total_fail)

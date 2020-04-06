@@ -146,7 +146,7 @@ class Timer(ContextDecorator):
         @Timer()
         def func(args)
     """
-    def __init__(self, name="Task"):
+    def __init__(self, name="Task") -> None:
         self.name = name
         self.start = None
         self.end = None
@@ -324,7 +324,7 @@ class DefaultKeyDict(dict):
     """
     Like collections.defaultdict but it passes the key argument to the default function
     """
-    def __init__(self, default: Callable, **kwargs):
+    def __init__(self, default: Callable, **kwargs) -> None:
         super().__init__(**kwargs)
         self.factory = default
 
