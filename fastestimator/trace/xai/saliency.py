@@ -100,8 +100,16 @@ class Saliency(Trace):
 
     def on_epoch_end(self, data: Data):
         mode = self.system.mode
-        if self.n_required[mode] > 0:
-            self.samples[mode] = {key: concat(val)[:self.n_required[mode]] for key, val in self.samples[mode].items()}
+        if self.n_found[mode] > 0:
+            if self.n_required[mode] > 0:
+                # We are keeping a user-specified number of samples
+                self.samples[mode] = {
+                    key: concat(val)[:self.n_required[mode]]
+                    for key, val in self.samples[mode].items()
+                }
+            else:
+                # We are keeping one batch of data
+                self.samples[mode] = {key: val[0] for key, val in self.samples[mode].items()}
             # even if you haven't found n_required samples, you're at end of epoch so no point trying to collect more
             self.n_found[mode] = 0
             self.n_required[mode] = 0

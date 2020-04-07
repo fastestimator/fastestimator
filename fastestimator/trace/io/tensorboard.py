@@ -51,7 +51,7 @@ class _BaseWriter:
     summary_writers: Dict[str, SummaryWriter]
     network: BaseNetwork
 
-    def __init__(self, root_log_dir: str, time_stamp: str, network: BaseNetwork):
+    def __init__(self, root_log_dir: str, time_stamp: str, network: BaseNetwork) -> None:
         self.summary_writers = DefaultKeyDict(lambda key:
                                               (SummaryWriter(log_dir=os.path.join(root_log_dir, time_stamp, key))))
         self.network = network
@@ -137,7 +137,7 @@ class _BaseWriter:
 class _TfWriter(_BaseWriter):
     tf_summary_writers: Dict[str, tf.summary.SummaryWriter]
 
-    def __init__(self, root_log_dir: str, time_stamp: str, network: TFNetwork):
+    def __init__(self, root_log_dir: str, time_stamp: str, network: TFNetwork) -> None:
         super().__init__(root_log_dir=root_log_dir, time_stamp=time_stamp, network=network)
         self.tf_summary_writers = DefaultKeyDict(
             lambda key: (tf.summary.create_file_writer(os.path.join(root_log_dir, time_stamp, key))))

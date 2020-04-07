@@ -30,7 +30,7 @@ class ModelSaver(Trace):
         save_dir: folder path to save model
         frequency: model saving frequency in epoch(s). Defaults to 1.
     """
-    def __init__(self, model: Union[tf.keras.Model, torch.nn.Module], save_dir: str, frequency: int = 1):
+    def __init__(self, model: Union[tf.keras.Model, torch.nn.Module], save_dir: str, frequency: int = 1) -> None:
         super().__init__(mode="train")
         self.model = model
         self.save_dir = save_dir

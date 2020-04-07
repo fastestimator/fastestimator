@@ -17,24 +17,49 @@ from typing import TypeVar
 import tensorflow as tf
 import torch
 
+from fastestimator.backend.reduce_mean import reduce_mean
+
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
-def mean_squared_error(y_pred: Tensor, y_true: Tensor) -> Tensor:
-    """calculate mean squared error for tensor inputs
+def mean_squared_error(y_true: Tensor, y_pred: Tensor) -> Tensor:
+    """Calculate mean squared error between two tensors.
+
+    This method can be used with TensorFlow tensors:
+    ```python
+    true = tf.constant([[0, 1, 0, 0], [0,0,0,1], [0,0,1,0], [1,0,0,0]])
+    pred = tf.constant([[0.1, 0.9, 0.05, 0.05], [0.1,0.2,0.0,0.7], [0.0,0.15,0.8,0.05], [1.0,0.0,0.0,0.0]])
+    b = fe.backend.mean_squared_error(y_pred=pred, y_true=true)  # [0.0063, 0.035, 0.016, 0.0]
+    true = tf.constant([[1], [3], [2], [0]])
+    pred = tf.constant([[2.0], [0.0], [2.0], [1.0]])
+    b = fe.backend.mean_squared_error(y_pred=pred, y_true=true)  # [1.0, 9.0, 0.0, 1.0]
+    ```
+
+    This method can be used with PyTorch tensors:
+    ```python
+    true = torch.tensor([[0, 1, 0, 0], [0,0,0,1], [0,0,1,0], [1,0,0,0]])
+    pred = torch.tensor([[0.1, 0.9, 0.05, 0.05], [0.1,0.2,0.0,0.7], [0.0,0.15,0.8,0.05], [1.0,0.0,0.0,0.0]])
+    b = fe.backend.mean_squared_error(y_pred=pred, y_true=true)  # [0.0063, 0.035, 0.016, 0.0]
+    true = tf.constant([[1], [3], [2], [0]])
+    pred = tf.constant([[2.0], [0.0], [2.0], [1.0]])
+    b = fe.backend.mean_squared_error(y_pred=pred, y_true=true)  # [1.0, 9.0, 0.0, 1.0]
+    ```
 
     Args:
-        y_pred: prediction score for each class, in [Batch, C]
-        y_true: ground truth class label index, in [Batch]
+        y_true: Ground truth class labels with a shape like (batch) or (batch, n_classes). dtype: int or float32.
+        y_pred: Prediction score for each class, with a shape like y_true. dtype: float32. 
 
     Returns:
-        MSE value
+        The MSE between `y_true` and `y_pred`
     """
-    assert type(y_pred) == type(y_true), "y_pred and y_true must be same tensor type"
-    assert isinstance(y_pred, (tf.Tensor, torch.Tensor)), "only support tf.Tensor or torch.Tensor as y_pred"
-    assert isinstance(y_true, (tf.Tensor, torch.Tensor)), "only support tf.Tensor or torch.Tensor as y_true"
+    assert type(y_pred) == type(y_true), "y_pred and y_true must be of the same tensor type"
+    assert y_pred.shape == y_true.shape, \
+        f"MSE requires y_true and y_pred to have the same shape, but found {y_true.shape} and {y_pred.shape}"
     if isinstance(y_pred, tf.Tensor):
         mse = tf.losses.MSE(y_true, y_pred)
+    elif isinstance(y_pred, torch.Tensor):
+        mse = reduce_mean(
+            torch.nn.MSELoss(reduction="none")(y_pred, y_true), axis=[ax for ax in range(y_pred.ndim)][1:])
     else:
-        mse = torch.nn.MSELoss(reduction="none")(y_pred, y_true)
+        raise ValueError("Unrecognized tensor type {}".format(type(y_pred)))
     return mse

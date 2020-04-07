@@ -146,7 +146,7 @@ class Timer(ContextDecorator):
         @Timer()
         def func(args)
     """
-    def __init__(self, name="Task"):
+    def __init__(self, name="Task") -> None:
         self.name = name
         self.start = None
         self.end = None
@@ -324,10 +324,14 @@ class DefaultKeyDict(dict):
     """
     Like collections.defaultdict but it passes the key argument to the default function
     """
-    def __init__(self, default: Callable, **kwargs):
+    def __init__(self, default: Callable, **kwargs) -> None:
         super().__init__(**kwargs)
         self.factory = default
 
     def __missing__(self, key):
         res = self[key] = self.factory(key)
         return res
+
+
+def get_num_devices():
+    return max(torch.cuda.device_count(), 1)

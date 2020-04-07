@@ -21,25 +21,38 @@ from torch.nn.init import kaiming_normal_ as he_normal
 
 
 class UNetEncoderBlock(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    """A UNet encoder block. 
+    
+    Args:
+        in_channels: How many channels enter the encoder.
+        out_channels: How many channels leave the encoder.
+    """
+    def __init__(self, in_channels: int, out_channels: int) -> None:
         super().__init__()
         self.layers = nn.Sequential(nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
                                     nn.ReLU(inplace=True),
                                     nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
                                     nn.ReLU(inplace=True))
 
-        for l in self.layers:
-            if isinstance(l, nn.Conv2d):
-                he_normal(l.weight.data)
-                l.bias.data.zero_()
+        for layer in self.layers:
+            if isinstance(layer, nn.Conv2d):
+                he_normal(layer.weight.data)
+                layer.bias.data.zero_()
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         out = self.layers(x)
         return out, F.max_pool2d(out, 2)
 
 
 class UNetDecoderBlock(nn.Module):
-    def __init__(self, in_channels, mid_channels, out_channels):
+    """A UNet decoder block.
+    
+    Args:
+        in_channels: How many channels enter the decoder.
+        mid_channels: How many channels are used for the decoder's intermediate layer.
+        out_channels: How many channels leave the decoder.
+    """
+    def __init__(self, in_channels: int, mid_channels: int, out_channels: int) -> None:
         super().__init__()
         self.layers = nn.Sequential(nn.Conv2d(in_channels, mid_channels, 3, padding=1),
                                     nn.ReLU(inplace=True),
@@ -49,16 +62,21 @@ class UNetDecoderBlock(nn.Module):
                                     nn.Conv2d(mid_channels, out_channels, 3, padding=1),
                                     nn.ReLU(inplace=True))
 
-        for l in self.layers:
-            if isinstance(l, nn.Conv2d):
-                he_normal(l.weight.data)
-                l.bias.data.zero_()
+        for layer in self.layers:
+            if isinstance(layer, nn.Conv2d):
+                he_normal(layer.weight.data)
+                layer.bias.data.zero_()
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.layers(x)
 
 
 class UNet(nn.Module):
+    """A standard UNet implementation in PyTorch.
+    
+    Args:
+        input_size: The size of the input tensor (channels, height, width).
+    """
     def __init__(self, input_size: Tuple[int, int, int] = (1, 128, 128)) -> None:
         super().__init__()
         self.input_size = input_size
@@ -77,12 +95,12 @@ class UNet(nn.Module):
                                   nn.Conv2d(64, 1, 1),
                                   nn.Sigmoid())
 
-        for l in self.dec1:
-            if isinstance(l, nn.Conv2d):
-                he_normal(l.weight.data)
-                l.bias.data.zero_()
+        for layer in self.dec1:
+            if isinstance(layer, nn.Conv2d):
+                he_normal(layer.weight.data)
+                layer.bias.data.zero_()
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x1, x_e1 = self.enc1(x)
         x2, x_e2 = self.enc2(x_e1)
         x3, x_e3 = self.enc3(x_e2)

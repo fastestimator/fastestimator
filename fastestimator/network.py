@@ -29,7 +29,7 @@ from fastestimator.util.util import NonContext, lcms, per_replica_to_global, to_
 
 
 class BaseNetwork:
-    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]):
+    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> None:
         self.ops = to_list(ops)
         self.models = to_list(_collect_models(ops))
         self._verify_inputs()
@@ -170,7 +170,7 @@ def Network(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> BaseNetwork:
 
 
 class TorchNetwork(BaseNetwork):
-    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]):
+    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> None:
         super().__init__(ops)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 

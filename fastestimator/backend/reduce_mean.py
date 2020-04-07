@@ -13,47 +13,26 @@
 # limitations under the License.
 # ==============================================================================
 
-from typing import TypeVar
+from typing import TypeVar, Union, List
 
-import numpy as np
 import tensorflow as tf
 import torch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+from fastestimator.util.util import to_list
+
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, torch.autograd.Variable)
 
 
-def abs(tensor: Tensor) -> Tensor:
-    """Compute the absolute value of a tensor.
-    
-    This method can be used with Numpy data:
-    ```python
-    n = np.array([-2, 7, -19])
-    b = fe.backend.abs(n)  # [2, 7, 19]
-    ```
-    
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.constant([-2, 7, -19])
-    b = fe.backend.abs(t)  # [2, 7, 19]
-    ```
-    
-    This method can be used with PyTorch tensors:
-    ```python
-    p = torch.tensor([-2, 7, -19])
-    b = fe.backend.abs(p)  # [2, 7, 19]
-    ```
-    
-    Args:
-        tensor: The input value. 
-
-    Returns:
-        The absolute value of `tensor`. 
-    """
+def reduce_mean(tensor: Tensor, axis: Union[None, int, List[int]] = None, keepdims: bool = False) -> Tensor:
     if isinstance(tensor, tf.Tensor):
-        return tf.abs(tensor)
+        return tf.reduce_mean(tensor, axis=axis, keepdims=keepdims)
     elif isinstance(tensor, torch.Tensor):
-        return torch.abs(tensor)
-    elif isinstance(tensor, np.ndarray):
-        return np.abs(tensor)
+        if axis is None:
+            axis = list(range(len(tensor.shape)))
+        axis = to_list(axis)
+        axis = reversed(sorted(axis))
+        for ax in axis:
+            tensor = tensor.mean(dim=ax, keepdim=keepdims)
+        return tensor
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(tensor)))

@@ -21,7 +21,7 @@ from fastestimator.util.util import get_shape, get_type
 
 
 class GeneratorDataset(FEDataset):
-    def __init__(self, generator: Generator[Dict[str, Any], int, None], samples_per_epoch: int):
+    def __init__(self, generator: Generator[Dict[str, Any], int, None], samples_per_epoch: int) -> None:
         self.generator = generator
         self.samples_per_epoch = samples_per_epoch
         next(self.generator)  # Can't send non-none values to a new generator, so need to run a 'warm-up' first

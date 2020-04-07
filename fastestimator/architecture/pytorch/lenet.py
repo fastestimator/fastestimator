@@ -20,7 +20,15 @@ import torch.nn.functional as fn
 
 
 class LeNet(torch.nn.Module):
-    def __init__(self, input_shape: Tuple[int, int, int] = (1, 28, 28), classes: int = 10):
+    """A standard LeNet implementation in pytorch.
+    
+    The LeNet model has 3 convolution layers and 2 dense layers.
+    
+    Args:
+        input_shape: The shape of the model input (channels, height, width).
+        classes: The number of outputs the model should generate.
+    """
+    def __init__(self, input_shape: Tuple[int, int, int] = (1, 28, 28), classes: int = 10) -> None:
         super().__init__()
         conv_kernel = 3
         self.pool_kernel = 2
@@ -34,7 +42,7 @@ class LeNet(torch.nn.Module):
         self.fc1 = nn.Linear(flat_x * flat_y * 64, 64)
         self.fc2 = nn.Linear(64, classes)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = fn.relu(self.conv1(x))
         x = fn.max_pool2d(x, self.pool_kernel)
         x = fn.relu(self.conv2(x))

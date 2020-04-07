@@ -18,7 +18,7 @@ from typing import Any, ChainMap, Dict, List, MutableMapping, Optional, Set
 class Data(ChainMap[str, Any]):
     maps: List[MutableMapping[str, Any]]
 
-    def __init__(self, batch_data: Optional[MutableMapping[str, Any]] = None):
+    def __init__(self, batch_data: Optional[MutableMapping[str, Any]] = None) -> None:
         super().__init__({}, batch_data or {})
 
     def write_with_log(self, key: str, value: Any):

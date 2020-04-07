@@ -22,13 +22,51 @@ import torch
 
 from fastestimator.util.util import to_list
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, torch.autograd.Variable)
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
 
 def percentile(tensor: Tensor,
                percentiles: Union[int, List[int]],
                axis: Union[None, int, List[int]] = None,
                keepdims: bool = True) -> Tensor:
+    """ Compute the `percentiles` of a `tensor`.
+    
+    The n-th percentile of `tensor` is the value n/100 of the way from the minimum to the maximum in a sorted copy of 
+    `tensor`. If the percentile falls in between two values, the nearest of the two values will be used.
+    
+    This method can be used with Numpy data:
+    ```python
+    n = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    b = fe.backend.percentile(n, percentiles=[66])  # [[[6]]]
+    b = fe.backend.percentile(n, percentiles=[66], axis=0)  # [[[4, 5, 6]]]
+    b = fe.backend.percentile(n, percentiles=[66], axis=1)  # [[[2], [5], [8]]]
+    ```
+    
+    This method can be used with TensorFlow tensors:
+    ```python
+    t = tf.constant([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    b = fe.backend.percentile(t, percentiles=[66])  # [[[6]]]
+    b = fe.backend.percentile(t, percentiles=[66], axis=0)  # [[[4, 5, 6]]]
+    b = fe.backend.percentile(t, percentiles=[66], axis=1)  # [[[2], [5], [8]]]
+    ```
+    
+    This method can be used with PyTorch tensors:
+    ```python
+    p = tf.constant([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    b = fe.backend.percentile(p, percentiles=[66])  # [[[6]]]
+    b = fe.backend.percentile(p, percentiles=[66], axis=0)  # [[[4, 5, 6]]]
+    b = fe.backend.percentile(p, percentiles=[66], axis=1)  # [[[2], [5], [8]]]
+    ```
+    
+    Args:
+        tensor: The tensor from which to extract percentiles.
+        percentiles: One or more percentile values to be computed. 
+        axis: Along which axes to compute the percentile (None to compute over all axes).
+        keepdims: Whether to maintain the number of dimensions from `tensor`. 
+
+    Returns:
+        The `percentiles` of the given `tensor`. 
+    """
     if isinstance(tensor, tf.Tensor):
         if isinstance(percentiles, List):
             percentiles = tf.convert_to_tensor(percentiles)
@@ -39,6 +77,8 @@ def percentile(tensor: Tensor,
             # Default behavior in tf without axis is to compress all dimensions
             axis = list(range(n_dims))
         # Convert negative axis values to their positive counterparts
+        if isinstance(axis, int):
+            axis = [axis]
         for idx, elem in enumerate(axis):
             axis[idx] = elem % n_dims
         # Extract dims which are not being considered
@@ -51,7 +91,7 @@ def percentile(tensor: Tensor,
         permuted = torch.reshape(permuted, other_shape)
         results = []
         for tile in to_list(percentiles):
-            target = min(round(tile / 100.0 * permuted.shape[-1]) + 1, permuted.shape[-1])
+            target = min(round(tile / 100.0 * permuted.shape[-1]), permuted.shape[-1])
             kth_val = torch.kthvalue(permuted, k=target, dim=-1, keepdim=True)[0]
             for dim in range(n_dims - len(kth_val.shape)):
                 kth_val = torch.unsqueeze(kth_val, dim=-1)
@@ -65,5 +105,7 @@ def percentile(tensor: Tensor,
             return results[0]
         else:
             return torch.stack(results, dim=0)
+    elif isinstance(tensor, np.ndarray):
+        return np.percentile(tensor, percentiles, axis=axis, keepdims=keepdims, interpolation='nearest')
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(tensor)))
