@@ -26,7 +26,7 @@ class OneOf(NumpyOp):
         Args:
             numpy_ops: A list of ops to choose between
     """
-    def __init__(self, *numpy_ops: NumpyOp):
+    def __init__(self, *numpy_ops: NumpyOp) -> None:
         inputs = numpy_ops[0].inputs
         outputs = numpy_ops[0].outputs
         mode = numpy_ops[0].mode

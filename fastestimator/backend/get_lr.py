@@ -19,15 +19,36 @@ import torch
 
 
 def get_lr(model: Union[tf.keras.Model, torch.nn.Module]) -> float:
-    """get the learning rate of a given model
+    """Get the learning rate of a given model.
+
+    This method can be used with TensorFlow models:
+    ```python
+    m = fe.build(fe.architecture.tensorflow.LeNet, optimizer_fn="adam")
+    b = fe.backend.get_lr(model=m)  # 0.001
+    ```
+
+    This method can be used with PyTorch models:
+    ```python
+    m = fe.build(fe.architecture.pytorch.LeNet, optimizer_fn="adam")
+    b = fe.backend.get_lr(model=m)  # 0.001
+    ```
 
     Args:
-        model: model instance
-    Return:
-        lr: learning rate
+        model: A neural network instance to inspect.
+
+    Returns:
+        The learning rate of `model`. 
     """
     if isinstance(model, tf.keras.Model):
-        lr = tf.keras.backend.get_value(model.current_optimizer.lr)
+        if hasattr(model, 'current_optimizer'):
+            lr = tf.keras.backend.get_value(model.current_optimizer.lr)
+        else:
+            lr = tf.keras.backend.get_value(model.optimizer.lr)
+    elif isinstance(model, torch.nn.Module):
+        if hasattr(model, 'current_optimizer'):
+            lr = model.current_optimizer.param_groups[0]['lr']
+        else:
+            lr = model.optimizer.param_groups[0]['lr']
     else:
-        lr = model.current_optimizer.param_groups[0]['lr']
+        raise ValueError("Unrecognized model instance {}".format(type(model)))
     return lr

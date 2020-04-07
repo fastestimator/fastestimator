@@ -20,16 +20,30 @@ import torch
 
 
 def load_model(model: Union[tf.keras.Model, torch.nn.Module], weights_path: str):
-    """Load weights to tensorflow or pytorch model instance
+    """Load saved weights for a given model.
+
+    This method can be used with TensorFlow models:
+    ```python
+    m = fe.build(fe.architecture.tensorflow.LeNet, optimizer_fn="adam")
+    fe.backend.save_model(m, save_dir="tmp")
+    fe.backend.load_model(m, weights_path="tmp/saved_model.h5")
+    ```
+
+    This method can be used with PyTorch models:
+    ```python
+    m = fe.build(fe.architecture.pytorch.LeNet, optimizer_fn="adam")
+    fe.backend.save_model(m, save_dir="tmp")
+    fe.backend.load_model(m, weights_path="tmp/saved_model.pt")
+    ```
 
     Args:
-        model : model instance
-        weights_path : path of the weights file
+        model: A neural network instance to load.
+        weights_path: Path to the `model` weights. 
     """
-    assert isinstance(model, (tf.keras.Model, torch.nn.Module)), "unsupported model instance type"
-
     if isinstance(model, tf.keras.Model):
         model.load_weights(weights_path)
-    else:
+    elif isinstance(model, torch.nn.Module):
         model.load_state_dict(torch.load(weights_path))
+    else:
+        raise ValueError("Unrecognized model instance {}".format(type(model)))
     print("Loaded model weights from {}".format(weights_path))

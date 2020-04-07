@@ -21,7 +21,7 @@ class Summary:
     Args:
         name: Name of the experiment. If None then experiment results will be ignored
     """
-    def __init__(self, name: Optional[str]):
+    def __init__(self, name: Optional[str]) -> None:
         self.name = name
         self.history = defaultdict(lambda: defaultdict(dict))  # {mode: {key: {step: value}}}
 

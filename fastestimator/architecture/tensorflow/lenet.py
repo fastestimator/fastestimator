@@ -18,15 +18,18 @@ import tensorflow as tf
 from tensorflow.python.keras import Sequential, layers
 
 
+# noinspection PyPep8Naming
 def LeNet(input_shape: Tuple[int, int, int] = (28, 28, 1), classes: int = 10) -> tf.keras.Model:
-    """Creates a LeNet model with 3 convolutional and 2 dense layers.
+    """A standard LeNet implementation in TensorFlow.
+    
+    The LeNet model has 3 convolution layers and 2 dense layers.
 
     Args:
-        input_shape: shape of the input data. Defaults to (28, 28, 1).
-        classes: number of classes. Defaults to 10.
+        input_shape: shape of the input data (height, width, channels).
+        classes: The number of outputs the model should generate.
 
     Returns:
-        'Model' object: LeNet model.
+        A TensorFlow LeNet model. 
     """
     model = Sequential()
     model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=input_shape))
