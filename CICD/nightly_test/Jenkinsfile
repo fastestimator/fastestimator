@@ -28,8 +28,7 @@ pipeline{
                                     pip install pytest ipython ipykernel papermill
                                     ipython kernel install --user --name nightly_build
 
-                                    rm -rf $LOCAL_DATASET_PATH
-                                    aws s3 cp $S3_DATASET_PATH $LOCAL_DATASET_PATH --recursive
+                                    aws s3 sync $S3_DATASET_PATH $LOCAL_DATASET_PATH --delete
                                 '''
                             }
                         }
@@ -62,8 +61,7 @@ pipeline{
                                     pip install pytest ipython ipykernel papermill
                                     ipython kernel install --user --name nightly_build
 
-                                    rm -rf $LOCAL_DATASET_PATH
-                                    aws s3 cp $S3_DATASET_PATH $LOCAL_DATASET_PATH --recursive
+                                    aws s3 sync $S3_DATASET_PATH $LOCAL_DATASET_PATH --delete
                                 '''
                             }
                         }
