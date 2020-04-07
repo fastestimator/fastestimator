@@ -4,6 +4,8 @@ pipeline{
     environment {
         JENKINS_ANACONDA_DIR='/home/ubuntu/anaconda3'
         JENKINS_PYTHON_ENV='nightly_env'
+        LOCAL_DATASET_PATH='/home/ubuntu/fastestimator_data'
+        S3_DATASET_PATH='s3://fastestimator-public/nightly_test'
     }
 
     stages {
@@ -25,6 +27,8 @@ pipeline{
                                     pip install -e .
                                     pip install pytest ipython ipykernel papermill
                                     ipython kernel install --user --name nightly_build
+
+                                    aws s3 sync $S3_DATASET_PATH $LOCAL_DATASET_PATH --delete
                                 '''
                             }
                         }
@@ -56,6 +60,8 @@ pipeline{
                                     pip install -e .
                                     pip install pytest ipython ipykernel papermill
                                     ipython kernel install --user --name nightly_build
+
+                                    aws s3 sync $S3_DATASET_PATH $LOCAL_DATASET_PATH --delete
                                 '''
                             }
                         }
