@@ -1,17 +1,34 @@
+# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+"""RetinaNet Example."""
+import cv2
 import numpy as np
 import tensorflow as tf
+from albumentations import BboxParams
 from tensorflow.python.keras import layers, models, regularizers
 
 import fastestimator as fe
-from albumentations import BboxParams
 from fastestimator.dataset.data import mscoco
 from fastestimator.op.numpyop import NumpyOp
 from fastestimator.op.numpyop.meta import Sometimes
-from fastestimator.op.numpyop.multivariate import HorizontalFlip, Resize
+from fastestimator.op.numpyop.multivariate import HorizontalFlip, LongestMaxSize, PadIfNeeded
 from fastestimator.op.numpyop.univariate import Normalize, ReadImage, ToArray
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.adapt import LRScheduler
+from fastestimator.trace.io import BestModelSaver
 
 
 def _classification_sub_net(num_classes, num_anchor=9):
@@ -335,19 +352,41 @@ def lr_fn(step):
     return lr / 2  # original batch_size 16, for 512 we have batch_size 8
 
 
-def get_estimator():
-    train_ds, eval_ds = mscoco.load_data("/data/data")
+def get_estimator(batch_size=8, epochs=12):
+    train_ds, eval_ds = mscoco.load_data()
     pipeline = fe.Pipeline(
         train_data=train_ds,
-        batch_size=8,
+        batch_size=batch_size,
         ops=[
             ReadImage(inputs="image", outputs="image"),
-            Resize(512, 512, image_in="image", image_out="image", bbox_in="bbox", bbox_out="bbox", bbox_params='coco'),
-            Sometimes(HorizontalFlip(mode="train", image_in="image", image_out="image", bbox_in="bbox", bbox_out="bbox", bbox_params='coco')),
-            Normalize(inputs="image", outputs="image", mean=1.0, std=1.0, max_pixel_value=127.5), #transform [0,255] -> [-1, 1]
+            LongestMaxSize(512,
+                           image_in="image",
+                           image_out="image",
+                           bbox_in="bbox",
+                           bbox_out="bbox",
+                           bbox_params=BboxParams("coco", min_area=1.0)),
+            PadIfNeeded(
+                512,
+                512,
+                border_mode=cv2.BORDER_CONSTANT,
+                image_in="image",
+                image_out="image",
+                bbox_in="bbox",
+                bbox_out="bbox",
+                bbox_params=BboxParams("coco", min_area=1.0),
+            ),
+            Sometimes(
+                HorizontalFlip(mode="train",
+                               image_in="image",
+                               image_out="image",
+                               bbox_in="bbox",
+                               bbox_out="bbox",
+                               bbox_params='coco')),
+            # normalize from uint8 to [-1, 1]
+            Normalize(inputs="image", outputs="image", mean=1.0, std=1.0, max_pixel_value=127.5),
             ToArray(inputs="bbox", outputs="bbox", dtype="float32"),
             AnchorBox(inputs="bbox", outputs="anchorbox", width=512, height=512, mode="train")
-            ],
+        ],
         pad_value=0)
     model = fe.build(model_fn=lambda: RetinaNet(input_shape=(512, 512, 3), num_classes=90),
                      optimizer_fn=lambda: tf.optimizers.SGD(momentum=0.9))
@@ -356,11 +395,15 @@ def get_estimator():
         RetinaLoss(inputs=["anchorbox", "cls_pred", "loc_pred"], outputs=["total_loss", "focal_loss", "l1_loss"]),
         UpdateOp(model=model, loss_name="total_loss")
     ])
-    estimator = fe.Estimator(pipeline=pipeline,
-                             network=network,
-                             epochs=7,
-                             traces=LRScheduler(model=model, lr_fn=lr_fn),
-                             monitor_names=["l1_loss", "focal_loss"])
+    estimator = fe.Estimator(
+        pipeline=pipeline,
+        network=network,
+        epochs=epochs,
+        traces=[
+            LRScheduler(model=model, lr_fn=lr_fn),
+            BestModelSaver(model=model, save_dir='./', metric='total_loss', save_best_mode="min")
+        ],
+        monitor_names=["l1_loss", "focal_loss"])
     return estimator
 
 
