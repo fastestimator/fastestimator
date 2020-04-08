@@ -33,6 +33,9 @@ def get_name():
 
 
 setup(
+    entry_points={
+        "console_scripts": ["fastestimator = fastestimator.main:run"]
+    },
     name=get_name(),
     version=get_version(),
     description="Deep learning framework",
@@ -71,5 +74,5 @@ setup(
         'tensorflow_probability==0.8.0'
     ],
     # Declare extra set for installation
-    extras_require={},
-    scripts=['bin/fastestimator'])
+    extras_require={}
+    )
