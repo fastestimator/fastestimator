@@ -382,8 +382,10 @@ class ImageSaving(Trace):
         if self.system.epoch_idx in self.epoch_model_map:
             model = self.epoch_model_map[self.system.epoch_idx]
             for i in range(self.num_sample):
-                random_vectors = torch.rand(1, self.latent_dim)
+                random_vectors = torch.rand(1, self.latent_dim).to("cuda:0" if torch.cuda.is_available() else "cpu")
                 pred = feed_forward(model, random_vectors, training=False)
+                if torch.cuda.is_available():
+                    pred = pred.to("cpu")
                 disp_img = np.transpose(pred.data.numpy(), (0, 2, 3, 1))  #BCHW -> BHWC
                 disp_img = np.squeeze(disp_img)
                 disp_img -= disp_img.min()
@@ -418,13 +420,14 @@ def get_estimator(target_size=128, epochs=55, save_dir=tempfile.mkdtemp(), max_s
         for (epoch, size) in zip(event_epoch, event_size)
     }
     batch_size_map = {
-        epoch: 512 // size * get_num_devices() if size <= 128 else 4 * get_num_devices()
+        epoch: max(512 // size, 4) * get_num_devices() if size <= 512 else 2 * get_num_devices()
         for (epoch, size) in zip(event_epoch, event_size)
     }
     batch_scheduler = EpochScheduler(epoch_dict=batch_size_map)
     pipeline = fe.Pipeline(
         batch_size=batch_scheduler,
         train_data=dataset,
+        drop_last=True,
         ops=[
             ReadImage(inputs="x", outputs="x", grey_scale=True),
             EpochScheduler(epoch_dict=resize_map),

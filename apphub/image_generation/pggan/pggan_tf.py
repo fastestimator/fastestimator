@@ -402,6 +402,7 @@ def get_estimator(target_size=128, epochs=55, save_dir=tempfile.mkdtemp(), max_s
     pipeline = fe.Pipeline(
         batch_size=batch_scheduler,
         train_data=dataset,
+        drop_last=True,
         ops=[
             ReadImage(inputs="x", outputs="x", grey_scale=True),
             EpochScheduler(epoch_dict=resize_map),
