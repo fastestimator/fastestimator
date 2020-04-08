@@ -22,14 +22,13 @@ from ast import literal_eval
 from contextlib import ContextDecorator
 from functools import reduce
 from math import gcd
-from typing import Any, Callable, List, Mapping, Optional, Set, Tuple, TypeVar, Union
+from typing import Any, Callable, List, MutableMapping, Optional, Set, Tuple, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
 import torch
 from pyfiglet import Figlet
 from tensorflow.python.distribute.values import DistributedValues
-from torch.utils.data.dataloader import default_collate
 
 STRING_TO_TORCH_DTYPE = {
     None: None,
@@ -147,7 +146,7 @@ class Timer(ContextDecorator):
         @Timer()
         def func(args)
     """
-    def __init__(self, name="Task"):
+    def __init__(self, name="Task") -> None:
         self.name = name
         self.start = None
         self.end = None
@@ -235,17 +234,19 @@ def per_replica_to_global(data: T) -> T:
             return tf.reduce_mean(data.values)
         else:
             return tf.concat(data.values, axis=0)
-    if isinstance(data, dict):
+    elif isinstance(data, dict):
         result = {}
         for key, val in data.items():
             result[key] = per_replica_to_global(val)
         return result
-    if isinstance(data, list):
+    elif isinstance(data, list):
         return [per_replica_to_global(val) for val in data]
-    if isinstance(data, tuple):
+    elif isinstance(data, tuple):
         return tuple([per_replica_to_global(val) for val in data])
-    if isinstance(data, set):
+    elif isinstance(data, set):
         return set([per_replica_to_global(val) for val in data])
+    else:
+        return data
 
 
 def get_type(obj: Any) -> str:
@@ -289,7 +290,7 @@ def parse_modes(modes: Set[str]) -> Set[str]:
     return modes
 
 
-def pad_batch(batch: List[Mapping[str, Any]], pad_value: Union[float, int]) -> Mapping[str, Any]:
+def pad_batch(batch: List[MutableMapping[str, Any]], pad_value: Union[float, int]):
     for key in batch[0].keys():
         shapes = [data[key].shape for data in batch if hasattr(data[key], "shape")]
         if len(set(shapes)) > 1:
@@ -297,7 +298,6 @@ def pad_batch(batch: List[Mapping[str, Any]], pad_value: Union[float, int]) -> M
             max_shapes = tuple(np.max(np.array(shapes), axis=0))
             for data in batch:
                 data[key] = pad_data(data[key], max_shapes, pad_value)
-    return default_collate(batch)
 
 
 def pad_data(data: np.ndarray, target_shape: Tuple[int], pad_value: Union[float, int]) -> np.ndarray:
@@ -324,10 +324,14 @@ class DefaultKeyDict(dict):
     """
     Like collections.defaultdict but it passes the key argument to the default function
     """
-    def __init__(self, default: Callable, **kwargs):
+    def __init__(self, default: Callable, **kwargs) -> None:
         super().__init__(**kwargs)
         self.factory = default
 
     def __missing__(self, key):
         res = self[key] = self.factory(key)
         return res
+
+
+def get_num_devices():
+    return max(torch.cuda.device_count(), 1)

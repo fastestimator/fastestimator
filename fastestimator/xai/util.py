@@ -77,7 +77,7 @@ def show_image(im: Union[np.ndarray, Tensor],
         if np.issubdtype(im.dtype, np.integer):
             # im is already in int format
             im = im.astype(np.uint8)
-        if np.max(im) <= 1 and np.min(im) >= 0:  # im is [0,1]
+        elif np.max(im) <= 1 and np.min(im) >= 0:  # im is [0,1]
             im = (im * 255).astype(np.uint8)
         elif np.min(im) >= -1 and np.max(im) <= 1:  # im is [-1, 1]
             im = ((im + 1) * 127.5).astype(np.uint8)
@@ -129,7 +129,7 @@ class XaiData(OrderedDict):
     """
     n_elements: Dict[int, List[str]]
 
-    def __init__(self, **kwargs: Tensor):
+    def __init__(self, **kwargs: Tensor) -> None:
         self.n_elements = {}  # Not a default dict b/c that complicates the computations later
         # TODO - grouping text keys into single box (true value, predicted value, confidence, etc.)
         super().__init__(**kwargs)

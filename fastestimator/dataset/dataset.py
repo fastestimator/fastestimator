@@ -39,7 +39,7 @@ class KeySummary:
     shape: List[Optional[int]]
     dtype: str
 
-    def __init__(self, dtype: str, num_unique_values: Optional[int] = None, shape: List[Optional[int]] = ()):
+    def __init__(self, dtype: str, num_unique_values: Optional[int] = None, shape: List[Optional[int]] = ()) -> None:
         self.num_unique_values = num_unique_values
         self.shape = shape
         self.dtype = dtype
@@ -164,7 +164,7 @@ class InMemoryDataset(FEDataset):
     data: Dict[int, Dict[str, Any]]  # Index-based data dictionary
     summary: lru_cache
 
-    def __init__(self, data: Dict[int, Dict[str, Any]]):
+    def __init__(self, data: Dict[int, Dict[str, Any]]) -> None:
         self.data = data
         # Normally lru cache annotation is shared over all class instances, so calling cache_clear would reset all
         # caches (for example when calling .split()). Instead we make the lru cache per-instance

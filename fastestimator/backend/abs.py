@@ -19,10 +19,36 @@ import numpy as np
 import tensorflow as tf
 import torch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, torch.autograd.Variable, np.ndarray)
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
 
 def abs(tensor: Tensor) -> Tensor:
+    """Compute the absolute value of a tensor.
+    
+    This method can be used with Numpy data:
+    ```python
+    n = np.array([-2, 7, -19])
+    b = fe.backend.abs(n)  # [2, 7, 19]
+    ```
+    
+    This method can be used with TensorFlow tensors:
+    ```python
+    t = tf.constant([-2, 7, -19])
+    b = fe.backend.abs(t)  # [2, 7, 19]
+    ```
+    
+    This method can be used with PyTorch tensors:
+    ```python
+    p = torch.tensor([-2, 7, -19])
+    b = fe.backend.abs(p)  # [2, 7, 19]
+    ```
+    
+    Args:
+        tensor: The input value. 
+
+    Returns:
+        The absolute value of `tensor`. 
+    """
     if isinstance(tensor, tf.Tensor):
         return tf.abs(tensor)
     elif isinstance(tensor, torch.Tensor):

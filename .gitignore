@@ -113,3 +113,7 @@ ENV/
 
 # for sphinx website develop
 /docs
+
+# nightly-build test artifact
+/test/apphub_scripts/**/*.txt
+/test/apphub_scripts/**/*.ipynb

@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 # FEDataset and OpDataset intentionally not imported here to reduce user confusion with auto-complete
+from fastestimator.dataset import data
 from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.csv_dataset import CSVDataset
 from fastestimator.dataset.dir_dataset import DirDataset

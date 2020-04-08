@@ -48,21 +48,26 @@ class Trace:
     def on_begin(self, data: Data):
         """Runs once at the beginning of training
         """
+
     def on_epoch_begin(self, data: Data):
         """Runs at the beginning of each epoch
         """
+
     def on_batch_begin(self, data: Data):
         """Runs at the beginning of each batch
         """
+
     def on_batch_end(self, data: Data):
         """Runs at the end of each batch
 
         Args:
             data: value fetched by the inputs
         """
+
     def on_epoch_end(self, data: Data):
         """Runs at the end of each epoch
         """
+
     def on_end(self, data: Data):
         """Runs once at the end training.
         """
@@ -72,7 +77,7 @@ class TrainEssential(Trace):
     """Essential training information for logging during training. Please don't add this trace into an estimator
     manually. An estimator will add it automatically.
     """
-    def __init__(self, loss_keys: Set[str]):
+    def __init__(self, loss_keys: Set[str]) -> None:
         super().__init__(inputs=loss_keys, mode="train", outputs=["steps/sec", "epoch_time", "total_time"])
         self.elapse_times = []
         self.train_start = None
@@ -114,17 +119,19 @@ class TrainEssential(Trace):
 
 
 class EvalEssential(Trace):
-    def __init__(self, loss_keys: Set[str]):
-        super().__init__(mode="eval", inputs=loss_keys, outputs=self._configure_outputs(loss_keys))
+    def __init__(self, loss_keys: Set[str], monitor_names: Set[str]) -> None:
+        super().__init__(mode="eval",
+                         inputs=list(loss_keys) + list(monitor_names),
+                         outputs=self._configure_outputs(loss_keys, monitor_names))
         self.eval_results = None
         self.best_loss = None
         self.since_best = 0
 
     @staticmethod
-    def _configure_outputs(inputs: Set[str]) -> List[str]:
-        outputs = [elem for elem in inputs]
-        if len(inputs) == 1:
-            outputs.append("min_" + next(iter(inputs)))
+    def _configure_outputs(loss_keys: Set[str], monitor_names: Set[str]) -> List[str]:
+        outputs = list(loss_keys) + list(monitor_names)
+        if len(loss_keys) == 1:
+            outputs.append("min_" + next(iter(loss_keys)))
             outputs.append("since_best")
         return outputs
 
@@ -141,7 +148,7 @@ class EvalEssential(Trace):
     def on_epoch_end(self, data: Data):
         for key, value_list in self.eval_results.items():
             data.write_with_log(key, np.mean(np.array(value_list), axis=0))
-        if len(self.inputs) == 1:
+        if len(self.outputs) > len(self.inputs):  # There was exactly 1 loss key, so add the extra outputs
             loss_name = self.inputs[0]
             current_loss = data[loss_name]
             if self.best_loss is None or current_loss < self.best_loss:
@@ -159,7 +166,7 @@ class Logger(Trace):
     Args:
         extra_log_keys (set): set of keys to print from system buffer
     """
-    def __init__(self, extra_log_keys: Set[str]):
+    def __init__(self, extra_log_keys: Set[str]) -> None:
         super().__init__(inputs=extra_log_keys | {"*"})
 
     def on_begin(self, data: Data):

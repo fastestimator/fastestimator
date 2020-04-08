@@ -171,7 +171,10 @@ class SiameseNetwork(nn.Module):
         return x
 
 
-def get_estimator(epochs=200, batch_size=128, save_dir=tempfile.mkdtemp()):
+def get_estimator(epochs=200,
+                  batch_size=128,
+                  max_steps_per_epoch=None,
+                  save_dir=tempfile.mkdtemp()):
     # step 1. prepare pipeline
     train_data, eval_data = omniglot.load_data()
     test_data = eval_data.split(0.5)
@@ -244,7 +247,8 @@ def get_estimator(epochs=200, batch_size=128, save_dir=tempfile.mkdtemp()):
     estimator = fe.Estimator(network=network,
                              pipeline=pipeline,
                              epochs=epochs,
-                             traces=traces)
+                             traces=traces,
+                             max_steps_per_epoch=max_steps_per_epoch)
 
     return estimator
 

@@ -29,7 +29,7 @@ from fastestimator.util.util import NonContext, lcms, per_replica_to_global, to_
 
 
 class BaseNetwork:
-    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]):
+    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> None:
         self.ops = to_list(ops)
         self.models = to_list(_collect_models(ops))
         self._verify_inputs()
@@ -121,14 +121,13 @@ class BaseNetwork:
 
     @staticmethod
     def _forward_batch(batch: MutableMapping[str, Any], state: Dict[str, Any], ops: List[TensorOp]):
-        data = None
         for op in ops:
-            data = get_inputs_by_op(op, batch, data)
+            data = get_inputs_by_op(op, batch)
             data = op.forward(data, state)
             if op.outputs:
                 write_outputs_by_op(op, batch, data)
 
-    def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:  # Batch, Prediction
         raise NotImplementedError
 
     def transform(self, data: Dict[str, Any], mode: str, epoch: int = 1) -> Dict[str, Any]:
@@ -171,7 +170,7 @@ def Network(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> BaseNetwork:
 
 
 class TorchNetwork(BaseNetwork):
-    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]):
+    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> None:
         super().__init__(ops)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -244,8 +243,8 @@ class TFNetwork(BaseNetwork):
                 prediction = strategy.experimental_run_v2(
                     self._forward_step_static,
                     args=(batch_in, self.epoch_state, self.epoch_ops, to_list(self.effective_outputs[mode])))
-                batch = per_replica_to_global(batch)
-                prediction = per_replica_to_global(prediction)
+            batch = per_replica_to_global(batch)
+            prediction = per_replica_to_global(prediction)
         else:
             if self.epoch_state["warmup"]:
                 prediction = self._forward_step_eager(batch_in,
@@ -317,6 +316,13 @@ class TFNetwork(BaseNetwork):
         data, prediction = self.run_step(data)
         self.unload_epoch()
         data.update(prediction)
+        # handle multi-gpu
+        batch_sizes = set(data[key].shape[0] for key in data if len(data[key].shape) > 0)
+        if len(batch_sizes) > 1:
+            min_batch = min(batch_sizes)
+            for key, val in data.items():
+                if len(val.shape) > 0:
+                    data[key] = val[0:min_batch]
         return data
 
 

@@ -46,7 +46,7 @@ class MeanSquaredError(TensorOp):
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
         y_pred, y_true = data
-        loss = mean_squared_error(y_pred, y_true)
+        loss = mean_squared_error(y_true=y_true, y_pred=y_pred)
         if self.average_loss:
             loss = reduce_loss(loss)
         return loss

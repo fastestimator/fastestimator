@@ -17,7 +17,7 @@ from typing import Any, Callable, Dict, Iterable, List, Union
 
 import numpy as np
 
-from fastestimator.op.numpyop import NumpyOp
+from fastestimator.op.numpyop.numpyop import NumpyOp
 
 
 class Binarize(NumpyOp):
@@ -29,7 +29,6 @@ class Binarize(NumpyOp):
         outputs: Output key(s) of binarized data
         mode: What execution mode (train, eval, None) to apply this operation
     """
-
     def __init__(self,
                  threshold: float,
                  inputs: Union[None, str, Iterable[str], Callable] = None,
@@ -39,7 +38,6 @@ class Binarize(NumpyOp):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.threshold = threshold
         self.in_list, self.out_list = True, True
-
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
         return [(dat >= self.threshold).astype(np.float32) for dat in data]

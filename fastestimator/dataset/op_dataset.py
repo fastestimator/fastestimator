@@ -20,10 +20,11 @@ from torch.utils.data import Dataset
 
 from fastestimator.dataset import BatchDataset
 from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
+from fastestimator.util.util import pad_batch
 
 
 class OpDataset(Dataset):
-    def __init__(self, dataset: Dataset, ops: List[NumpyOp], mode: str):
+    def __init__(self, dataset: Dataset, ops: List[NumpyOp], mode: str) -> None:
         self.dataset = dataset
         if isinstance(self.dataset, BatchDataset):
             self.dataset.shuffle()
@@ -35,6 +36,8 @@ class OpDataset(Dataset):
         if isinstance(self.dataset, BatchDataset):
             for item in items:
                 forward_numpyop(self.ops, item, self.mode)
+            if self.dataset.pad_value is not None:
+                pad_batch(items, self.dataset.pad_value)
             items = {key: np.array([item[key] for item in items]) for key in items[0]}
         else:
             forward_numpyop(self.ops, items, self.mode)
