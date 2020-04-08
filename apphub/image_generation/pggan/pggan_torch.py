@@ -66,7 +66,7 @@ class EqualizedLRConv2D(torch.nn.Conv2d):
     def __init__(self, in_channels, out_channels, kernel_size=3, padding=1, padding_mode='zeros', gain=np.sqrt(2)):
         super().__init__(in_channels, out_channels, kernel_size, padding=padding, padding_mode=padding_mode, bias=False)
         torch.nn.init.normal_(self.weight.data, mean=0.0, std=1.0)
-        fan_in = np.float32(np.prod(self.weight.data.shape[:-1]))
+        fan_in = np.float32(np.prod(self.weight.data.shape[1:]))
         self.wscale = np.float32(gain / np.sqrt(fan_in))
 
     def forward(self, x):
@@ -344,6 +344,7 @@ class AlphaController(Trace):
         self.change_alpha = False
         self.nimg_total = self.duration * self.num_examples
         self._idx = 0
+        self.nimg_so_far = 0
         self.current_batch_size = None
 
     def on_epoch_begin(self, state):
