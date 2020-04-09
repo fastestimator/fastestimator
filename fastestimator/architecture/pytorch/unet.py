@@ -21,8 +21,8 @@ from torch.nn.init import kaiming_normal_ as he_normal
 
 
 class UNetEncoderBlock(nn.Module):
-    """A UNet encoder block. 
-    
+    """A UNet encoder block.
+
     Args:
         in_channels: How many channels enter the encoder.
         out_channels: How many channels leave the encoder.
@@ -46,7 +46,7 @@ class UNetEncoderBlock(nn.Module):
 
 class UNetDecoderBlock(nn.Module):
     """A UNet decoder block.
-    
+
     Args:
         in_channels: How many channels enter the decoder.
         mid_channels: How many channels are used for the decoder's intermediate layer.
@@ -73,7 +73,7 @@ class UNetDecoderBlock(nn.Module):
 
 class UNet(nn.Module):
     """A standard UNet implementation in PyTorch.
-    
+
     Args:
         input_size: The size of the input tensor (channels, height, width).
     """

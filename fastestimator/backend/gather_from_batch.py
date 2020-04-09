@@ -65,6 +65,9 @@ def gather_from_batch(tensor: Tensor, indices: Tensor) -> Tensor:
 
     Returns:
         A tensor of shape (batch, d2, ..., dn) containing the elements from `tensor` at the given `indices`.
+
+    Raises:
+        ValueError: If `tensor` is an unacceptable data type.
     """
     if isinstance(tensor, tf.Tensor):
         indices = to_tensor(indices, 'tf')

@@ -34,10 +34,10 @@ def get_gradient(target: Tensor,
     x = tf.Variable([1.0, 2.0, 3.0])
     with tf.GradientTape(persistent=True) as tape:
         y = x * x
-        
+
         b = fe.backend.get_gradient(target=y, sources=x, tape=tape)  # [2.0, 4.0, 6.0]
         b = fe.backend.get_gradient(target=b, sources=x, tape=tape)  # None
-        
+
         b = fe.backend.get_gradient(target=y, sources=x, tape=tape, higher_order=True)  # [2.0, 4.0, 6.0]
         b = fe.backend.get_gradient(target=b, sources=x, tape=tape)  # [2.0, 2.0, 2.0]
     ```
@@ -46,10 +46,10 @@ def get_gradient(target: Tensor,
     ```python
     x = torch.tensor([1.0, 2.0, 3.0], requires_grad=True)
     y = x * x
-    
+
     b = fe.backend.get_gradient(target=y, sources=x)  # [2.0, 4.0, 6.0]
     b = fe.backend.get_gradient(target=b, sources=x)  # Error - b does not have a backwards function
-    
+
     b = fe.backend.get_gradient(target=y, sources=x, higher_order=True)  # [2.0, 4.0, 6.0]
     b = fe.backend.get_gradient(target=b, sources=x)  # [2.0, 2.0, 2.0]
     ```
@@ -63,6 +63,9 @@ def get_gradient(target: Tensor,
 
     Returns:
         Gradient(s) of the `target` with respect to the `sources`.
+
+    Raises:
+        ValueError: If `target` is an unacceptable data type.
     """
     if isinstance(target, tf.Tensor):
         with NonContext() if higher_order else tape.stop_recording():

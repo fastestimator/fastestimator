@@ -24,7 +24,7 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 def binary_crossentropy(y_pred: Tensor, y_true: Tensor, from_logits: bool = False, average_loss: bool = True) -> Tensor:
     """Compute binary crossentropy. 
-    
+
     This method is applicable when there are only two label classes (zero and one). There should be a single floating 
     point prediction per example. 
 
@@ -35,7 +35,7 @@ def binary_crossentropy(y_pred: Tensor, y_true: Tensor, from_logits: bool = Fals
     b = fe.backend.binary_crossentropy(y_pred=pred, y_true=true)  # 0.197
     b = fe.backend.binary_crossentropy(y_pred=pred, y_true=true, average_loss=False)  # [0.105, 0.356, 0.223, 0.105]
     ```
-    
+
     This method can be used with PyTorch tensors:
     ```python
     true = torch.tensor([[1], [0], [1], [0]])
@@ -52,7 +52,10 @@ def binary_crossentropy(y_pred: Tensor, y_true: Tensor, from_logits: bool = Fals
 
     Returns:
         The binary crossentropy between `y_pred` and `y_true`. A scalar if `average_loss` is True, else a tensor with 
-        the same shape as `y_true`. 
+        the same shape as `y_true`.
+
+    Raises:
+        AssertionError: If `y_true` or `y_pred` are unacceptable data types.
     """
     assert type(y_pred) is type(y_true), "y_pred and y_true must be same tensor type"
     assert isinstance(y_pred, (tf.Tensor, torch.Tensor)), "only support tf.Tensor or torch.Tensor as y_pred"
