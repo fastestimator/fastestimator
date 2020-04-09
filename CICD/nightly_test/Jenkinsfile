@@ -25,7 +25,7 @@ pipeline{
                                     conda activate $JENKINS_PYTHON_ENV
                                     pip install torch torchvision tensorflow-gpu==2.1.0
                                     pip install -e .
-                                    pip install pytest ipython ipykernel papermill
+                                    pip install pytest ipython ipykernel ipywidgets papermill
                                     ipython kernel install --user --name nightly_build
 
                                     aws s3 sync $S3_DATASET_PATH $LOCAL_DATASET_PATH --delete
@@ -58,7 +58,7 @@ pipeline{
                                     conda activate $JENKINS_PYTHON_ENV
                                     pip install torch torchvision tensorflow==2.1.0
                                     pip install -e .
-                                    pip install pytest ipython ipykernel papermill
+                                    pip install pytest ipython ipykernel ipywidgets papermill
                                     ipython kernel install --user --name nightly_build
 
                                     aws s3 sync $S3_DATASET_PATH $LOCAL_DATASET_PATH --delete
