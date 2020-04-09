@@ -30,19 +30,19 @@ def clip_by_value(tensor: Tensor, min_value: Union[int, float, Tensor], max_valu
     This method can be used with Numpy data:
     ```python
     n = np.array([-5, 4, 2, 0, 9, -2])
-    b = fe.backend.clip_by_value(n, min_value=-2, max_value=3)  # [-2,  3,  2,  0,  3, -2]
+    b = fe.backend.clip_by_value(n, min_value=-2, max_value=3)  # [-2, 3, 2, 0, 3, -2]
     ```
 
     This method can be used with TensorFlow tensors:
     ```python
     t = tf.constant([-5, 4, 2, 0, 9, -2])
-    b = fe.backend.clip_by_value(t, min_value=-2, max_value=3)  # [-2,  3,  2,  0,  3, -2]
+    b = fe.backend.clip_by_value(t, min_value=-2, max_value=3)  # [-2, 3, 2, 0, 3, -2]
     ```
 
     This method can be used with PyTorch tensors:
     ```python
     p = torch.tensor([-5, 4, 2, 0, 9, -2])
-    b = fe.backend.clip_by_value(p, min_value=-2, max_value=3)  # [-2,  3,  2,  0,  3, -2]
+    b = fe.backend.clip_by_value(p, min_value=-2, max_value=3)  # [-2, 3, 2, 0, 3, -2]
     ```
 
     Args:
@@ -52,6 +52,9 @@ def clip_by_value(tensor: Tensor, min_value: Union[int, float, Tensor], max_valu
 
     Returns:
         The `tensor`, with it's values clipped.
+
+    Raises:
+        ValueError: If `tensor` is an unacceptable data type.
     """
     if isinstance(tensor, tf.Tensor):
         return tf.clip_by_value(tensor, clip_value_min=min_value, clip_value_max=max_value)

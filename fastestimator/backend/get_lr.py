@@ -37,7 +37,10 @@ def get_lr(model: Union[tf.keras.Model, torch.nn.Module]) -> float:
         model: A neural network instance to inspect.
 
     Returns:
-        The learning rate of `model`. 
+        The learning rate of `model`.
+
+    Raises:
+        ValueError: If `model` is an unacceptable data type.
     """
     if isinstance(model, tf.keras.Model):
         if hasattr(model, 'current_optimizer'):

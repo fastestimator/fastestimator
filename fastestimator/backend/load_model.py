@@ -38,7 +38,10 @@ def load_model(model: Union[tf.keras.Model, torch.nn.Module], weights_path: str)
 
     Args:
         model: A neural network instance to load.
-        weights_path: Path to the `model` weights. 
+        weights_path: Path to the `model` weights.
+
+    Raises:
+        ValueError: If `model` is an unacceptable data type.
     """
     if isinstance(model, tf.keras.Model):
         model.load_weights(weights_path)
