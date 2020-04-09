@@ -67,7 +67,7 @@ class Pipeline:
         self.data = {x: y for (x, y) in zip(["train", "eval", "test"], [train_data, eval_data, test_data]) if y}
         self.batch_size = batch_size
         self.ops = to_list(ops)
-        self.num_process = num_process if num_process is not None else os.cpu_count()
+        self.num_process = num_process if num_process is not None else os.cpu_count() if os.name != 'nt' else 0
         self.drop_last = drop_last
         self.pad_value = pad_value
         self._verify_inputs(**{k: v for k, v in locals().items() if k != 'self'})
