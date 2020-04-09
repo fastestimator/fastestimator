@@ -34,7 +34,7 @@ def get_name():
 
 setup(
     entry_points={
-        "console_scripts": ["fastestimator = fastestimator.main:run"]
+        "console_scripts": ["fastestimator = fastestimator.cli.main:run"]
     },
     name=get_name(),
     version=get_version(),
