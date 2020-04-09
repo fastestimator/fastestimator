@@ -23,10 +23,10 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 def binary_crossentropy(y_pred: Tensor, y_true: Tensor, from_logits: bool = False, average_loss: bool = True) -> Tensor:
-    """Compute binary crossentropy. 
+    """Compute binary crossentropy.
 
-    This method is applicable when there are only two label classes (zero and one). There should be a single floating 
-    point prediction per example. 
+    This method is applicable when there are only two label classes (zero and one). There should be a single floating
+    point prediction per example.
 
     This method can be used with TensorFlow tensors:
     ```python
@@ -51,7 +51,7 @@ def binary_crossentropy(y_pred: Tensor, y_true: Tensor, from_logits: bool = Fals
         average_loss: Whether to average the element-wise loss.
 
     Returns:
-        The binary crossentropy between `y_pred` and `y_true`. A scalar if `average_loss` is True, else a tensor with 
+        The binary crossentropy between `y_pred` and `y_true`. A scalar if `average_loss` is True, else a tensor with
         the same shape as `y_true`.
 
     Raises:
