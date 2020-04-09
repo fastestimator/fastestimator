@@ -33,9 +33,7 @@ def get_name():
 
 
 setup(
-    entry_points={
-        "console_scripts": ["fastestimator = fastestimator.cli.main:run"]
-    },
+    entry_points={"console_scripts": ["fastestimator = fastestimator.cli.main:run"]},
     name=get_name(),
     version=get_version(),
     description="Deep learning framework",
@@ -67,12 +65,10 @@ setup(
         'requests',
         'tqdm',
         'h5py',
-        'pycocotools-fix',
         'jsonpickle',
         'python-docx',
         'tensorboard',
         'tensorflow_probability==0.8.0'
     ],
     # Declare extra set for installation
-    extras_require={}
-    )
+    extras_require={})
