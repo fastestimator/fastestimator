@@ -19,14 +19,38 @@ import torch
 
 
 def set_lr(model: Union[tf.keras.Model, torch.nn.Module], lr: float):
-    """set the learning rate of a given model
+    """Set the learning rate of a given `model`.
+
+    This method can be used with TensorFlow models:
+    ```python
+    m = fe.build(fe.architecture.tensorflow.LeNet, optimizer_fn="adam")  # m.optimizer.lr == 0.001
+    fe.backend.set_lr(m, lr=0.8)  # m.optimizer.lr == 0.8
+    ```
+
+    This method can be used with PyTorch models:
+    ```python
+    m = fe.build(fe.architecture.pytorch.LeNet, optimizer_fn="adam")  # m.optimizer.param_groups[-1]['lr'] == 0.001
+    fe.backend.set_lr(m, lr=0.8)  # m.optimizer.param_groups[-1]['lr'] == 0.8
+    ```
 
     Args:
-        model: model instance
-        lr: learning rate to set
+        model: A neural network instance to modify.
+        lr: The learning rate to assign to the `model`.
+
+    Raises:
+        ValueError: If `model` is an unacceptable data type.
     """
     if isinstance(model, tf.keras.Model):
-        tf.keras.backend.set_value(model.current_optimizer.lr, lr)
+        if hasattr(model, 'current_optimizer'):
+            tf.keras.backend.set_value(model.current_optimizer.lr, lr)
+        else:
+            tf.keras.backend.set_value(model.optimizer.lr, lr)
+    elif isinstance(model, torch.nn.Module):
+        if hasattr(model, 'current_optimizer'):
+            for param_group in model.current_optimizer.param_groups:
+                param_group['lr'] = lr
+        else:
+            for param_group in model.optimizer.param_groups:
+                param_group['lr'] = lr
     else:
-        for param_group in model.current_optimizer.param_groups:
-            param_group['lr'] = lr
+        raise ValueError("Unrecognized model instance {}".format(type(model)))

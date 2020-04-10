@@ -49,6 +49,7 @@ class Pipeline:
         ops: preprocessing numpy ops, only used when fe.dataset is available. Defaults to None.
         num_process: number of processes, only used whenfe.dataset is available. Defaults to None, which will be the
                     system cpu count. use num_process=0 for debugging.
+        drop_last: whether to drop the last batch if last batch is incomplete.
         pad_value: the padding value if batch padding is needed. Defaults to None, which indicates no padding. only used
                     when fe.dataset is available.
     """
@@ -61,11 +62,13 @@ class Pipeline:
                  batch_size: Union[None, int, Scheduler[int]] = None,
                  ops: Union[None, NumpyOp, Scheduler[NumpyOp], List[Union[NumpyOp, Scheduler[NumpyOp]]]] = None,
                  num_process: Optional[int] = None,
+                 drop_last: bool = False,
                  pad_value: Optional[Union[int, float]] = None):
         self.data = {x: y for (x, y) in zip(["train", "eval", "test"], [train_data, eval_data, test_data]) if y}
         self.batch_size = batch_size
         self.ops = to_list(ops)
-        self.num_process = num_process if num_process is not None else os.cpu_count()
+        self.num_process = num_process if num_process is not None else os.cpu_count() if os.name != 'nt' else 0
+        self.drop_last = drop_last
         self.pad_value = pad_value
         self._verify_inputs(**{k: v for k, v in locals().items() if k != 'self'})
 
@@ -224,6 +227,7 @@ class Pipeline:
                               shuffle=False if isinstance(data, BatchDataset) else shuffle,
                               sampler=RandomSampler(op_dataset) if isinstance(data, BatchDataset) and shuffle else None,
                               num_workers=self.num_process,
+                              drop_last=self.drop_last,
                               worker_init_fn=lambda _: np.random.seed(),
                               collate_fn=collate_fn)
         return data

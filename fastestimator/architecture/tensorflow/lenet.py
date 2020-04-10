@@ -21,7 +21,7 @@ from tensorflow.python.keras import Sequential, layers
 # noinspection PyPep8Naming
 def LeNet(input_shape: Tuple[int, int, int] = (28, 28, 1), classes: int = 10) -> tf.keras.Model:
     """A standard LeNet implementation in TensorFlow.
-    
+
     The LeNet model has 3 convolution layers and 2 dense layers.
 
     Args:
@@ -29,7 +29,7 @@ def LeNet(input_shape: Tuple[int, int, int] = (28, 28, 1), classes: int = 10) ->
         classes: The number of outputs the model should generate.
 
     Returns:
-        A TensorFlow LeNet model. 
+        A TensorFlow LeNet model.
     """
     model = Sequential()
     model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=input_shape))

@@ -22,8 +22,9 @@ from tensorflow.keras import Model, backend, layers
 from tensorflow.keras.optimizers import Adam
 
 import fastestimator as fe
-from fastestimator.backend import get_gradient
+from fastestimator.backend import feed_forward, get_gradient
 from fastestimator.dataset.data import nih_chestxray
+from fastestimator.op.numpyop import NumpyOp
 from fastestimator.op.numpyop.multivariate import Resize
 from fastestimator.op.numpyop.univariate import Normalize, ReadImage
 from fastestimator.op.tensorop import TensorOp
@@ -156,7 +157,7 @@ class FadeIn(layers.Add):
 
     def _merge_function(self, inputs):
         assert len(inputs) == 2, "FadeIn only supports two layers"
-        output = ((1.0 - self.fade_in_alpha) * inputs[0]) + (self.fade_in_alpha * inputs[1])
+        output = (1.0 - self.fade_in_alpha) * inputs[0] + self.fade_in_alpha * inputs[1]
         return output
 
 
@@ -285,17 +286,10 @@ class GradientPenalty(TensorOp):
 
     def forward(self, data, state):
         x_interp, interp_score = data
-        interp_score = tf.reshape(interp_score, [-1])
         gradient_x_interp = get_gradient(tf.reduce_sum(interp_score), x_interp, higher_order=True, tape=state['tape'])
         grad_l2 = tf.math.sqrt(tf.reduce_sum(tf.math.square(gradient_x_interp), axis=[1, 2, 3]))
         gp = tf.math.square(grad_l2 - 1.0)
         return gp
-
-
-class RandomVector(TensorOp):
-    def forward(self, data, state):
-        batch_size = data.shape[0]
-        return tf.random.normal([batch_size, 512])
 
 
 class GLoss(TensorOp):
@@ -366,7 +360,7 @@ class ImageSaving(Trace):
             model = self.epoch_model_map[self.system.epoch_idx]
             for i in range(self.num_sample):
                 random_vectors = tf.random.normal([1, self.latent_dim])
-                pred = model(random_vectors)
+                pred = feed_forward(model, random_vectors, training=False)
                 disp_img = pred.numpy()
                 disp_img = np.squeeze(disp_img)
                 disp_img -= disp_img.min()
@@ -408,12 +402,14 @@ def get_estimator(target_size=128, epochs=55, save_dir=tempfile.mkdtemp(), max_s
     pipeline = fe.Pipeline(
         batch_size=batch_scheduler,
         train_data=dataset,
+        drop_last=True,
         ops=[
             ReadImage(inputs="x", outputs="x", grey_scale=True),
             EpochScheduler(epoch_dict=resize_map),
             EpochScheduler(epoch_dict=resize_low_res_map1),
             EpochScheduler(epoch_dict=resize_low_res_map2),
-            Normalize(inputs=["x", "x_low_res"], outputs=["x", "x_low_res"], mean=1.0, std=1.0, max_pixel_value=127.5)
+            Normalize(inputs=["x", "x_low_res"], outputs=["x", "x_low_res"], mean=1.0, std=1.0, max_pixel_value=127.5),
+            NumpyOp(inputs=lambda: np.random.normal(size=[512]).astype('float32'), outputs="z")
         ])
     #now model schedule
     fade_in_alpha = tf.Variable(initial_value=1.0, dtype='float32', trainable=False)
@@ -421,12 +417,10 @@ def get_estimator(target_size=128, epochs=55, save_dir=tempfile.mkdtemp(), max_s
         model_fn=lambda: build_D(fade_in_alpha, target_resolution=int(np.log2(target_size)), num_channels=1),
         optimizer_fn=[lambda: Adam(0.001, beta_1=0.0, beta_2=0.99, epsilon=1e-8)] * len(event_size),
         model_names=["d_{}".format(size) for size in event_size])
-
     g_models = fe.build(
         model_fn=lambda: build_G(fade_in_alpha, target_resolution=int(np.log2(target_size)), num_channels=1),
         optimizer_fn=[lambda: Adam(0.001, beta_1=0.0, beta_2=0.99, epsilon=1e-8)] * len(event_size) + [None],
         model_names=["g_{}".format(size) for size in event_size] + ["G"])
-    z_vector_map = {epoch: RandomVector(inputs="x", outputs="z") for epoch in event_epoch}
     fake_img_map = {
         epoch: ModelOp(inputs="z", outputs="x_fake", model=model)
         for (epoch, model) in zip(event_epoch, g_models[:-1])
@@ -449,7 +443,6 @@ def get_estimator(target_size=128, epochs=55, save_dir=tempfile.mkdtemp(), max_s
     }
     d_update_map = {epoch: UpdateOp(loss_name="dloss", model=model) for (epoch, model) in zip(event_epoch, d_models)}
     network = fe.Network(ops=[
-        EpochScheduler(z_vector_map),
         EpochScheduler(fake_img_map),
         EpochScheduler(fake_score_map),
         ImageBlender(alpha=fade_in_alpha, inputs=("x", "x_low_res"), outputs="x_blend"),
