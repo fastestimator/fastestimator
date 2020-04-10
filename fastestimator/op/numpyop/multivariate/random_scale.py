@@ -18,7 +18,7 @@ import cv2
 from albumentations import BboxParams, KeypointParams
 from albumentations.augmentations.transforms import RandomScale as RandomScaleAlb
 
-from fastestimator.op.numpyop.base_augmentations import MultiVariateAlbumentation
+from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 
 
 class RandomScale(MultiVariateAlbumentation):
@@ -38,7 +38,7 @@ class RandomScale(MultiVariateAlbumentation):
             keypoints_out: The key to write the modified keypoints (defaults to keypoints_in)
             bbox_params: Parameters defining the type of bounding box ('coco', 'pascal_voc', 'albumentations' or 'yolo')
             keypoint_params: Parameters defining the type of keypoints ('xy', 'yx', 'xya', 'xys', 'xyas', 'xysa')
-            scale_limit: scaling factor range. If scale_limit is a single float value, the range will be 
+            scale_limit: scaling factor range. If scale_limit is a single float value, the range will be
                 (1 - scale_limit, 1 + scale_limit). Default: (0.9, 1.1).
             interpolation: flag that is used to specify the interpolation algorithm. Should be one of:
                 cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_CUBIC, cv2.INTER_AREA, cv2.INTER_LANCZOS4.

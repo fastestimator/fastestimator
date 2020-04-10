@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Optional, Union
+from typing import Union
 
 import tensorflow as tf
-
 import torch
+
 from fastestimator.backend.save_model import save_model
 from fastestimator.trace.trace import Trace
-from fastestimator.util import Data
+from fastestimator.util.data import Data
 
 
 class ModelSaver(Trace):
@@ -30,7 +30,7 @@ class ModelSaver(Trace):
         save_dir: folder path to save model
         frequency: model saving frequency in epoch(s). Defaults to 1.
     """
-    def __init__(self, model: Union[tf.keras.Model, torch.nn.Module], save_dir: str, frequency: int = 1):
+    def __init__(self, model: Union[tf.keras.Model, torch.nn.Module], save_dir: str, frequency: int = 1) -> None:
         super().__init__(mode="train")
         self.model = model
         self.save_dir = save_dir

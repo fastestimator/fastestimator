@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Dict, Any, List, Union
+from typing import Any, Dict, List, Union
 
 import numpy as np
 
-from fastestimator.op import NumpyOp
+from fastestimator.op.numpyop.numpyop import NumpyOp
 
 
 class Sometimes(NumpyOp):
@@ -26,7 +26,7 @@ class Sometimes(NumpyOp):
             numpy_op: The target op instance
             prob: The probability of execution [0-1)
     """
-    def __init__(self, numpy_op: NumpyOp, prob: float = 0.5):
+    def __init__(self, numpy_op: NumpyOp, prob: float = 0.5) -> None:
         super().__init__(inputs=numpy_op.inputs, outputs=numpy_op.outputs, mode=numpy_op.mode)
         self.numpy_op = numpy_op
         self.prob = prob

@@ -12,25 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import datetime
 from typing import Any, Optional
 
 import torch
+
 from fastestimator.network import BaseNetwork
 from fastestimator.summary.summary import Summary
 
 
 class System:
     mode: Optional[str]  # What is the current execution mode of the estimator ('train', 'eval', 'test'), None if warmup
-    global_step: int  # How many training steps have elapsed
+    global_step: Optional[int]  # How many training steps have elapsed
     num_devices: int  # How many GPUs are available for training
     log_steps: Optional[int]  # Log every n steps (0 to disable train logging, None to disable all logging)
     total_epochs: int  # How many epochs training is expected to run for
-    epoch_idx: int  # The current epoch index for the training (starting from 0)
-    batch_idx: int  # The current batch index within an epoch (starting from 0)
+    epoch_idx: Optional[int]  # The current epoch index for the training (starting from 1)
+    batch_idx: Optional[int]  # The current batch index within an epoch (starting from 1)
     stop_training: bool  # A flag to signal that training should abort
     network: BaseNetwork  # A reference to the network being used this epoch
     max_steps_per_epoch: Optional[int]  # Training epoch will complete after n steps even if loader is not yet exhausted
     summary: Summary  # An object to write experiment results to
+    experiment_time: str  # A timestamp indicating when this model was trained
 
     def __init__(self,
                  network: BaseNetwork,
@@ -42,31 +45,43 @@ class System:
 
         self.network = network
         self.mode = mode
-        self.global_step = 0
+        self.global_step = None
         self.num_devices = num_devices
         self.log_steps = log_steps
         self.total_epochs = total_epochs
-        self.epoch_idx = 0
-        self.batch_idx = 0
+        self.epoch_idx = None
+        self.batch_idx = None
         self.max_steps_per_epoch = max_steps_per_epoch
         self.stop_training = False
         self.summary = Summary(None)
+        self.experiment_time = ""
 
     def update_global_step(self):
-        self.global_step += 1
+        if self.global_step is None:
+            self.global_step = 1
+        else:
+            self.global_step += 1
+
+    def update_batch_idx(self):
+        if self.batch_idx is None:
+            self.batch_idx = 1
+        else:
+            self.batch_idx += 1
 
     def reset(self, summary_name: Optional[str] = None):
+        self.experiment_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         self.mode = "train"
-        self.global_step = 0
-        self.epoch_idx = 0
-        self.batch_idx = 0
+        self.global_step = None
+        self.epoch_idx = None
+        self.batch_idx = None
         self.stop_training = False
         self.summary = Summary(summary_name)
 
     def reset_for_test(self, summary_name: Optional[str] = None):
+        self.experiment_time = self.experiment_time or datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         self.mode = "test"
         if not self.stop_training:
-            self.epoch_idx = self.total_epochs - 1
+            self.epoch_idx = self.total_epochs
         self.stop_training = False
         self.summary.name = summary_name or self.summary.name  # Keep old experiment name if new one not provided
         self.summary.history.pop('test', None)

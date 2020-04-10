@@ -19,7 +19,7 @@ import torch
 from tensorflow.python.framework import ops as tfops
 
 from fastestimator.backend.update_model import update_model
-from fastestimator.op import TensorOp
+from fastestimator.op.tensorop.tensorop import TensorOp
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
@@ -39,6 +39,7 @@ class UpdateOp(TensorOp):
         super().__init__(inputs=loss_name, outputs=None, mode=mode)
         self.model = model
         self.retain_graph = False
+        self.weight_decay = isinstance(self.model, tf.keras.Model) and self.model.losses
         if not hasattr(self.model, "loss_name"):
             self.model.loss_name = {loss_name}
         else:
@@ -52,4 +53,6 @@ class UpdateOp(TensorOp):
                     self.model.current_optimizer._create_hypers()
                     self.model.current_optimizer._create_slots(self.model.trainable_variables)
         else:
+            if self.weight_decay:
+                data = data + tf.reduce_sum(self.model.losses)
             update_model(self.model, data, tape=state['tape'], retain_graph=self.retain_graph)

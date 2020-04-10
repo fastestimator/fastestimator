@@ -19,7 +19,7 @@ import tensorflow as tf
 import torch
 
 
-def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray]) -> np.ndarray:
+def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray, int, float]) -> np.ndarray:
     """convert tensor values to python values
 
     Args:
@@ -31,5 +31,8 @@ def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray]) -> np.ndarray:
     if isinstance(data, tf.Tensor):
         data = data.numpy()
     elif isinstance(data, torch.Tensor):
-        data = data.data.numpy()
+        if data.requires_grad:
+            data = data.detach().numpy()
+        else:
+            data = data.numpy()
     return np.array(data)

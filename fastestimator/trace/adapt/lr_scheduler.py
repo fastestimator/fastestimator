@@ -19,8 +19,9 @@ import numpy as np
 import tensorflow as tf
 import torch
 
-from fastestimator.backend import get_lr, set_lr
-from fastestimator.summary import System
+from fastestimator.backend.get_lr import get_lr
+from fastestimator.backend.set_lr import set_lr
+from fastestimator.summary.system import System
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 
@@ -35,7 +36,7 @@ class LRScheduler(Trace):
     """
     system: System
 
-    def __init__(self, model: Union[tf.keras.Model, torch.nn.Module], lr_fn: Callable):
+    def __init__(self, model: Union[tf.keras.Model, torch.nn.Module], lr_fn: Callable) -> None:
         self.model = model
         self.lr_fn = lr_fn
         assert hasattr(lr_fn, "__call__"), "lr_fn must be a function"
@@ -55,6 +56,7 @@ class LRScheduler(Trace):
             set_lr(self.model, new_lr)
 
     def on_batch_end(self, data: Data):
-        if self.system.log_steps and self.system.global_step % self.system.log_steps == 0:
+        if self.system.log_steps and (self.system.global_step % self.system.log_steps == 0
+                                      or self.system.global_step == 1):
             current_lr = np.float32(get_lr(self.model))
             data.write_with_log(self.outputs[0], current_lr)

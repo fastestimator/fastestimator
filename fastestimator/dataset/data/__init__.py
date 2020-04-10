@@ -1,3 +1,4 @@
+  
 # Copyright 2019 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,5 +13,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.dataset.data import breast_cancer, cifar10, cub200, horse2zebra, mendeley, mnist, montgomery, \
-    mscoco, nih_chestxray, omniglot, svhn, usps
+from fastestimator.dataset.data import breast_cancer, cifar10, cub200, horse2zebra, imdb_review, mendeley, mnist, \
+    montgomery, mscoco, nih_chestxray, omniglot, svhn, usps

@@ -17,8 +17,10 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, TypeVar, Union
 import tensorflow as tf
 import torch
 
-from fastestimator.backend import binary_crossentropy, categorical_crossentropy, sparse_categorical_crossentropy
-from fastestimator.op.op import TensorOp
+from fastestimator.backend.binary_crossentropy import binary_crossentropy
+from fastestimator.backend.categorical_crossentropy import categorical_crossentropy
+from fastestimator.backend.sparse_categorical_crossentropy import sparse_categorical_crossentropy
+from fastestimator.op.tensorop.tensorop import TensorOp
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 

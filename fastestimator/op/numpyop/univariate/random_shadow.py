@@ -16,7 +16,8 @@ from typing import Union, Iterable, Callable, Tuple
 
 from albumentations.augmentations.transforms import RandomShadow as RandomShadowAlb
 
-from fastestimator.op.numpyop.base_augmentations import ImageOnlyAlbumentation
+from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+
 
 
 class RandomShadow(ImageOnlyAlbumentation):
@@ -26,7 +27,7 @@ class RandomShadow(ImageOnlyAlbumentation):
             inputs: Key(s) of images to be normalized
             outputs: Key(s) of images to be normalized
             mode: What execution mode (train, eval, None) to apply this operation
-            shadow_roi: region of the image where shadows will appear (x_min, y_min, x_max, y_max). 
+            shadow_roi: region of the image where shadows will appear (x_min, y_min, x_max, y_max).
                 All values should be in range [0, 1].
             num_shadows_lower: Lower limit for the possible number of shadows.
                 Should be in range [0, `num_shadows_upper`].

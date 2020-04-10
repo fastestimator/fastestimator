@@ -15,22 +15,44 @@
 import os
 import time
 import warnings
+from copy import deepcopy
 from functools import lru_cache
 from typing import Any, Dict, List, Optional, Set, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, RandomSampler
+from torch.utils.data.dataloader import default_collate
 
+from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.op_dataset import OpDataset
-from fastestimator.op import NumpyOp, get_current_ops, get_inputs_by_op, write_outputs_by_op
-from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
-from fastestimator.util.util import lcms, to_list
+from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
+from fastestimator.op.op import get_current_ops
+from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler
+from fastestimator.util.util import lcms, pad_batch, to_list
 
 DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
 
 
 class Pipeline:
+    """Data pipeline class that takes care of the data preprocessing.
+
+    Args:
+        train_data: training data, can be a tf.data.Dataset, fe.dataset or torch.data.DataLoader or a scheduler of them.
+                    Defaults to None, which means no training data available.
+        eval_data: evaludation data, can be a tf.data.Dataset, fe.dataset or torch.data.DataLoader or a scheduler of them.
+                    Defaults to None, which means no evaluation data available.
+        test_data: testing data, can be a tf.data.Dataset, fe.dataset or torch.data.DataLoader or a scheduler of them.
+                    Defaults to None, which means no testing data available.
+        batch_size: batch size, can be an integer or a scheduelr of integer, only used when fe.dataset is available.
+                    Defaults to None.
+        ops: preprocessing numpy ops, only used when fe.dataset is available. Defaults to None.
+        num_process: number of processes, only used whenfe.dataset is available. Defaults to None, which will be the
+                    system cpu count. use num_process=0 for debugging.
+        drop_last: whether to drop the last batch if last batch is incomplete.
+        pad_value: the padding value if batch padding is needed. Defaults to None, which indicates no padding. only used
+                    when fe.dataset is available.
+    """
     ops: List[Union[NumpyOp, Scheduler[NumpyOp]]]
 
     def __init__(self,
@@ -39,11 +61,15 @@ class Pipeline:
                  test_data: Union[None, DataSource, Scheduler[DataSource]] = None,
                  batch_size: Union[None, int, Scheduler[int]] = None,
                  ops: Union[None, NumpyOp, Scheduler[NumpyOp], List[Union[NumpyOp, Scheduler[NumpyOp]]]] = None,
-                 num_process: Optional[int] = None):
+                 num_process: Optional[int] = None,
+                 drop_last: bool = False,
+                 pad_value: Optional[Union[int, float]] = None):
         self.data = {x: y for (x, y) in zip(["train", "eval", "test"], [train_data, eval_data, test_data]) if y}
         self.batch_size = batch_size
         self.ops = to_list(ops)
         self.num_process = num_process if num_process is not None else os.cpu_count()
+        self.drop_last = drop_last
+        self.pad_value = pad_value
         self._verify_inputs(**{k: v for k, v in locals().items() if k != 'self'})
 
     def _verify_inputs(self, **kwargs):
@@ -62,11 +88,12 @@ class Pipeline:
     def _verify_dataset(self, mode: str, dataset: DataSource, **kwargs) -> bool:
         if isinstance(dataset, Dataset):
             # batch_size check
-            assert isinstance(self.batch_size, (Scheduler, int)), \
+            assert isinstance(self.batch_size, (Scheduler, int, type(None))), \
                 "unsupported batch_size format: {}".format(self.batch_size)
             if isinstance(self.batch_size, Scheduler):
                 for batch_size in self.batch_size.get_all_values():
-                    assert isinstance(batch_size, int), "unsupported batch_size format: {}".format(self.batch_size)
+                    assert isinstance(batch_size, (int, type(None))), \
+                        "unsupported batch_size format: {}".format(self.batch_size)
             # ops check
             for op in self.ops:
                 if isinstance(op, Scheduler):
@@ -96,12 +123,12 @@ class Pipeline:
         """
         return set(self.data.keys())
 
-    def benchmark(self, mode: str = "train", epoch: int = 0, num_steps: int = 1000, log_interval: int = 100):
+    def benchmark(self, mode: str = "train", epoch: int = 1, num_steps: int = 1000, log_interval: int = 100):
         """benchmark the pipeline processing speed
 
         Args:
             mode: Current mode, can be 'train', 'eval' or 'test'.
-            epoch: Current epoch index. Defaults to 0.
+            epoch: Current epoch index. Defaults to 1.
             num_steps: Maximum number of steps to do benchmark on. Defaults to 1000.
             log_interval: Logging interval. Defaults to 100.
         """
@@ -109,51 +136,47 @@ class Pipeline:
         if isinstance(loader, tf.data.Dataset):
             loader = loader.take(num_steps)
         start = time.perf_counter()
-        for idx, _ in enumerate(loader):
-            if idx == num_steps:
-                break
-            if idx % log_interval == 0 and idx > 0:
+        for idx, _ in enumerate(loader, start=1):
+            if idx % log_interval == 0:
                 duration = time.perf_counter() - start
                 iters_per_sec = log_interval / duration
                 print("FastEstimator: Step: {}, Epoch: {}, Steps/sec: {}".format(idx, epoch, iters_per_sec))
                 start = time.perf_counter()
+            if idx == num_steps:
+                break
 
-    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 0) -> Dict[str, Any]:
+    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 1) -> Dict[str, Any]:
         """apply all pipeline operations on given data for certain mode and epoch.
 
         Args:
             data: Input data in dictionary format
             mode: Current mode, can be "train", "eval", "test" or "infer"
-            epoch: Current epoch index. Defaults to 0.
+            epoch: Current epoch index. Defaults to 1.
 
         Returns:
             transformed data
         """
+        data = deepcopy(data)
         ops = get_current_ops(self.ops, mode, epoch)
-        op_data = None
-        for op in ops:
-            op_data = get_inputs_by_op(op, data, op_data)
-            op_data = op.forward(op_data, {"mode": mode})
-            if op.outputs:
-                write_outputs_by_op(op, data, op_data)
+        forward_numpyop(ops, data, mode)
         for key, value in data.items():
             data[key] = np.expand_dims(value, 0)
         return data
 
-    def get_results(self, mode: str = "train", epoch: int = 0,
-                    num_steps: int = 1) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
+    def get_results(self, mode: str = "train", epoch: int = 1, num_steps: int = 1,
+                    shuffle: bool = False) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
         """get the pipeline outputs after all ops
 
         Args:
             mode: Current mode, can be 'train', 'eval' or 'test'.
-            epoch: Current epoch index. Defaults to 0.
+            epoch: Current epoch index. Defaults to 1.
             num_steps: number of steps(batches) to get. Defaults to 1.
-
+            shuffle: whether to use shuffling
         Returns:
             pipeline outputs
         """
         results = []
-        loader = self.get_loader(mode=mode, epoch=epoch, shuffle=False)
+        loader = self.get_loader(mode=mode, epoch=epoch, shuffle=shuffle)
         if isinstance(loader, tf.data.Dataset):
             loader = loader.take(num_steps)
         for idx, batch in enumerate(loader):
@@ -164,13 +187,13 @@ class Pipeline:
             results = results[0]
         return results
 
-    def get_loader(self, mode: str, epoch: int = 0,
+    def get_loader(self, mode: str, epoch: int = 1,
                    shuffle: Optional[bool] = None) -> Union[DataLoader, tf.data.Dataset]:
         """get the data loader given mode and epoch
 
         Args:
             mode: Current mode, can be 'train', 'eval' or 'test'.
-            epoch: Current epoch index. Defaults to 0.
+            epoch: Current epoch index. Defaults to 1.
             shuffle: Whether to shuffle, only used with FE dataset. If None, shuffle is based on mode. Defaults to None.
 
         Returns:
@@ -180,18 +203,38 @@ class Pipeline:
         if isinstance(data, Scheduler):
             data = data.get_current_value(epoch)
         if isinstance(data, Dataset):
-            op_dataset = OpDataset(data, get_current_ops(self.ops, mode, epoch), mode)
+            # batch size
             batch_size = self.batch_size
             if isinstance(batch_size, Scheduler):
                 batch_size = batch_size.get_current_value(epoch)
+            # batch dataset
+            if isinstance(data, BatchDataset):
+                assert batch_size is None, "batch_size must be None when using BatchDataset"
+                data.pad_value = self.pad_value
+            else:
+                assert batch_size is not None, "batch_size should not be None"
+            # shuffle
             if shuffle is None:
                 shuffle = mode == "train"
+            # collate_fn
+            if self.pad_value is None or isinstance(data, BatchDataset):
+                collate_fn = None
+            else:
+                collate_fn = self._pad_batch_collate
+            op_dataset = OpDataset(data, get_current_ops(self.ops, mode, epoch), mode)
             data = DataLoader(op_dataset,
                               batch_size=batch_size,
-                              shuffle=shuffle,
+                              shuffle=False if isinstance(data, BatchDataset) else shuffle,
+                              sampler=RandomSampler(op_dataset) if isinstance(data, BatchDataset) and shuffle else None,
                               num_workers=self.num_process,
-                              worker_init_fn=lambda _: np.random.seed())
+                              drop_last=self.drop_last,
+                              worker_init_fn=lambda _: np.random.seed(),
+                              collate_fn=collate_fn)
         return data
+
+    def _pad_batch_collate(self, batch):
+        pad_batch(batch, self.pad_value)
+        return default_collate(batch)
 
     def get_signature_epochs(self, total_epochs: int):
         """get the signature epochs that scheduler will be effective on.
@@ -202,8 +245,8 @@ class Pipeline:
         Returns:
             set: set of epoch index
         """
-        signature_epochs = {0}
-        epoch_keys = {0}
+        signature_epochs = {1}
+        epoch_keys = {1}
         repeat_cycles = {1}
         for x in self.ops + list(self.data.values()) + [self.batch_size]:
             if isinstance(x, EpochScheduler):
@@ -217,7 +260,7 @@ class Pipeline:
                 signature_epochs.update(range(epoch, epoch + min(epoch_keys[idx + 1] - epoch, least_common_cycle)))
             else:
                 signature_epochs.update(range(epoch, epoch + least_common_cycle))
-        signature_epochs = set(epoch for epoch in signature_epochs if epoch < total_epochs)
+        signature_epochs = set(epoch for epoch in signature_epochs if epoch <= total_epochs)
         return signature_epochs
 
     @lru_cache(maxsize=None, typed=True)
@@ -235,7 +278,7 @@ class Pipeline:
         for epoch in self.get_signature_epochs(total_epochs):
             loader = self.get_loader(mode=mode, epoch=epoch)
             if isinstance(loader, DataLoader):
-                if isinstance(loader.dataset, OpDataset):
+                if isinstance(loader.dataset, OpDataset) and not isinstance(loader.dataset.dataset, BatchDataset):
                     data = loader.dataset.dataset[0]
                     for op in loader.dataset.ops:
                         output_keys.update(op.outputs)

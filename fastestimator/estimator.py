@@ -20,13 +20,17 @@ import tensorflow as tf
 from tensorflow.python.distribute.input_lib import DistributedDataset
 from torch.utils.data import DataLoader
 
-from fastestimator.backend import to_shape, to_tensor, to_type
+from fastestimator.backend.to_shape import to_shape
+from fastestimator.backend.to_tensor import to_tensor
+from fastestimator.backend.to_type import to_type
+from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
 from fastestimator.pipeline import Pipeline
-from fastestimator.summary import System
-from fastestimator.trace import EvalEssential, Logger, Trace, TrainEssential
-from fastestimator.trace.io import BestModelSaver, ModelSaver
-from fastestimator.util import Data
+from fastestimator.summary.system import System
+from fastestimator.trace.io.best_model_saver import BestModelSaver
+from fastestimator.trace.io.model_saver import ModelSaver
+from fastestimator.trace.trace import EvalEssential, Logger, Trace, TrainEssential
+from fastestimator.util.data import Data
 from fastestimator.util.util import Suppressor, draw, to_list, to_set
 
 
@@ -148,11 +152,11 @@ class Estimator:
         modes = self.pipeline.get_modes()
         loss_keys = self.network.get_loss_keys()
         if "train" in modes:
-            self.traces.insert(0, TrainEssential())
-        if "eval" in modes:
-            self.traces.insert(1, EvalEssential(loss_keys=loss_keys))
+            self.traces.insert(0, TrainEssential(loss_keys=loss_keys))
+        if "eval" in modes and loss_keys.issubset(self.network.get_all_output_keys("eval", self.system.total_epochs)):
+            self.traces.insert(1, EvalEssential(loss_keys=loss_keys, monitor_names=self.monitor_names))
         if self.system.log_steps is not None:
-            self.traces.append(Logger(extra_log_keys=self.monitor_names | loss_keys))
+            self.traces.append(Logger(extra_log_keys=self.monitor_names))
         for mode in modes:
             trace_inputs = set()
             # '*' is a reserved key for traces to indicate that they want to receive all available output
@@ -200,7 +204,7 @@ class Estimator:
     def _start_train(self):
         self._run_traces_on_begin({"train", "eval"})
         try:
-            for self.system.epoch_idx in range(self.system.total_epochs):
+            for self.system.epoch_idx in range(1, self.system.total_epochs + 1):
                 if "train" in self.pipeline.get_modes():
                     self.system.mode = "train"
                     self._run_epoch()
@@ -217,36 +221,41 @@ class Estimator:
         self._run_traces_on_end({"test"})
 
     def _run_epoch(self):
-        self._run_traces_on_epoch_begin()
+
         loader = iter(self._configure_loader(self.pipeline.get_loader(self.system.mode, self.system.epoch_idx)))
         self.network.load_epoch(mode=self.system.mode,
                                 epoch=self.system.epoch_idx,
                                 output_keys=self.trace_inputs[self.system.mode])
-        self.system.batch_idx = 0
+        self.system.batch_idx = None
+        self._run_traces_on_epoch_begin()
         while True:
             try:
                 with Suppressor():
                     batch = next(loader)
-                if self.system.batch_idx == self.system.max_steps_per_epoch and self.system.mode == "train":
-                    break
+                if self.system.mode == "train":
+                    self.system.update_global_step()
+                self.system.update_batch_idx()
                 self._run_traces_on_batch_begin()
                 batch = self._configure_tensor(loader, batch)
                 batch, prediction = self.network.run_step(batch)
                 self._run_traces_on_batch_end(batch, prediction)
-                if self.system.mode == "train":
-                    self.system.update_global_step()
-                self.system.batch_idx += 1
+                if self.system.batch_idx == self.system.max_steps_per_epoch and self.system.mode == "train":
+                    break
             except StopIteration:
                 break
-        self.network.unload_epoch()
         self._run_traces_on_epoch_end()
+        self.network.unload_epoch()
+
 
     def _configure_loader(self, loader):
         new_loader = loader
         if isinstance(new_loader, DataLoader) and isinstance(self.network, TFNetwork):
+            add_batch = True
+            if hasattr(loader.dataset, "dataset") and isinstance(loader.dataset.dataset, BatchDataset):
+                add_batch = False
             batch = to_tensor(loader.dataset[0], target_type="tf")
             data_type = to_type(batch)
-            data_shape = to_shape(batch, add_batch=True, exact_shape=False)
+            data_shape = to_shape(batch, add_batch=add_batch, exact_shape=False)
             new_loader = tf.data.Dataset.from_generator(lambda: loader, data_type, output_shapes=data_shape)
             new_loader = new_loader.prefetch(1)
         if isinstance(new_loader, tf.data.Dataset):

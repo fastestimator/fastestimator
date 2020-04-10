@@ -16,9 +16,9 @@ import os
 import re
 from typing import List, Optional, Set
 
-from fastestimator.dataset import UnlabeledDirDataset
-from fastestimator.summary import Summary
+from fastestimator.dataset.dir_dataset import DirDataset
 from fastestimator.summary.logs import visualize_logs
+from fastestimator.summary.summary import Summary
 from fastestimator.util.util import strip_suffix
 
 
@@ -110,7 +110,7 @@ def parse_log_dir(dir_path: str,
         share_legend: Whether to have one legend across all graphs (true) or one legend per graph (false)
         pretty_names: Whether to modify the metric names in graph titles (true) or leave them alone (false)
     """
-    loader = UnlabeledDirDataset(root_dir=dir_path, file_extension=log_extension, recursive_search=recursive_search)
+    loader = DirDataset(root_dir=dir_path, file_extension=log_extension, recursive_search=recursive_search)
     file_paths = list(map(lambda d: d['x'], loader.data.values()))
 
     parse_log_files(file_paths,

@@ -22,11 +22,34 @@ from ast import literal_eval
 from contextlib import ContextDecorator
 from functools import reduce
 from math import gcd
-from typing import Any, List, Optional, Set, Tuple
+from typing import Any, Callable, List, MutableMapping, Optional, Set, Tuple, TypeVar, Union
 
+import numpy as np
 import tensorflow as tf
+import torch
 from pyfiglet import Figlet
 from tensorflow.python.distribute.values import DistributedValues
+
+STRING_TO_TORCH_DTYPE = {
+    None: None,
+    'float32': torch.float32,
+    'float': torch.float,
+    'float64': torch.float64,
+    'double': torch.double,
+    'float16': torch.float16,
+    'half': torch.half,
+    'uint8': torch.uint8,
+    'int8': torch.int8,
+    'int16': torch.int16,
+    'short': torch.short,
+    'int32': torch.int32,
+    'int': torch.int,
+    'int64': torch.int64,
+    'long': torch.long,
+    'bool': torch.bool
+}
+
+T = TypeVar('T')
 
 
 def parse_string_to_python(val: str) -> Any:
@@ -123,7 +146,7 @@ class Timer(ContextDecorator):
         @Timer()
         def func(args)
     """
-    def __init__(self, name="Task"):
+    def __init__(self, name="Task") -> None:
         self.name = name
         self.start = None
         self.end = None
@@ -197,7 +220,7 @@ def strip_prefix(target: Optional[str], prefix: Optional[str]) -> Optional[str]:
     return target
 
 
-def per_replica_to_global(data: Any) -> Any:
+def per_replica_to_global(data: T) -> T:
     """Combine data from "per-replica" values.
     For multi-GPU training, data are distributed using `tf.distribute.Strategy.experimental_distribute_dataset`. This
     method collects data from all replicas and combine them into one.
@@ -211,17 +234,19 @@ def per_replica_to_global(data: Any) -> Any:
             return tf.reduce_mean(data.values)
         else:
             return tf.concat(data.values, axis=0)
-    if isinstance(data, dict):
+    elif isinstance(data, dict):
         result = {}
         for key, val in data.items():
             result[key] = per_replica_to_global(val)
         return result
-    if isinstance(data, list):
+    elif isinstance(data, list):
         return [per_replica_to_global(val) for val in data]
-    if isinstance(data, tuple):
+    elif isinstance(data, tuple):
         return tuple([per_replica_to_global(val) for val in data])
-    if isinstance(data, set):
+    elif isinstance(data, set):
         return set([per_replica_to_global(val) for val in data])
+    else:
+        return data
 
 
 def get_type(obj: Any) -> str:
@@ -263,3 +288,50 @@ def parse_modes(modes: Set[str]) -> Set[str]:
             new_modes.discard(mode.strip("!"))
         modes = new_modes
     return modes
+
+
+def pad_batch(batch: List[MutableMapping[str, Any]], pad_value: Union[float, int]):
+    for key in batch[0].keys():
+        shapes = [data[key].shape for data in batch if hasattr(data[key], "shape")]
+        if len(set(shapes)) > 1:
+            assert len(set(len(shape) for shape in shapes)) == 1, "data within batch must have same rank"
+            max_shapes = tuple(np.max(np.array(shapes), axis=0))
+            for data in batch:
+                data[key] = pad_data(data[key], max_shapes, pad_value)
+
+
+def pad_data(data: np.ndarray, target_shape: Tuple[int], pad_value: Union[float, int]) -> np.ndarray:
+    shape_difference = np.array(target_shape) - np.array(data.shape)
+    padded_shape = np.array([np.zeros_like(shape_difference), shape_difference]).T
+    return np.pad(data, padded_shape, 'constant', constant_values=pad_value)
+
+
+def is_number(arg: Any) -> bool:
+    """Check if a given string can be converted into a number.
+    Args:
+        arg: an input value
+    Returns:
+        True iff the string represents a number
+    """
+    try:
+        float(arg)
+        return True
+    except (ValueError, TypeError):
+        return False
+
+
+class DefaultKeyDict(dict):
+    """
+    Like collections.defaultdict but it passes the key argument to the default function
+    """
+    def __init__(self, default: Callable, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.factory = default
+
+    def __missing__(self, key):
+        res = self[key] = self.factory(key)
+        return res
+
+
+def get_num_devices():
+    return max(torch.cuda.device_count(), 1)

@@ -16,18 +16,19 @@ import math
 import random
 from collections import defaultdict
 from functools import lru_cache
-from typing import Dict, Any, Union, Sequence, Iterable, List, Optional, Hashable
+from typing import Any, Dict, Hashable, Iterable, List, Optional, Sequence, Union
+
 import numpy as np
-import jsonpickle
 from torch.utils.data import Dataset
 
-from fastestimator.util.util import get_type, get_shape
+import jsonpickle
+from fastestimator.util.util import get_shape, get_type
 
 
 class KeySummary:
     """
     A summary of the dataset attributes corresponding to a particular key
-    
+
     Args:
         num_unique_values: The number of unique values corresponding to a particular key (if known)
         shape: The shape of the vectors corresponding to the key. None is used in a list to indicate that a dimension is
@@ -38,7 +39,7 @@ class KeySummary:
     shape: List[Optional[int]]
     dtype: str
 
-    def __init__(self, dtype: str, num_unique_values: Optional[int] = None, shape: List[Optional[int]] = ()):
+    def __init__(self, dtype: str, num_unique_values: Optional[int] = None, shape: List[Optional[int]] = ()) -> None:
         self.num_unique_values = num_unique_values
         self.shape = shape
         self.dtype = dtype
@@ -163,7 +164,7 @@ class InMemoryDataset(FEDataset):
     data: Dict[int, Dict[str, Any]]  # Index-based data dictionary
     summary: lru_cache
 
-    def __init__(self, data: Dict[int, Dict[str, Any]]):
+    def __init__(self, data: Dict[int, Dict[str, Any]]) -> None:
         self.data = data
         # Normally lru cache annotation is shared over all class instances, so calling cache_clear would reset all
         # caches (for example when calling .split()). Instead we make the lru cache per-instance

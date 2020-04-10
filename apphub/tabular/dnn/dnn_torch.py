@@ -20,7 +20,7 @@ import torch.nn.functional as fn
 from sklearn.preprocessing import StandardScaler
 
 import fastestimator as fe
-from fastestimator.dataset import breast_cancer
+from fastestimator.dataset.data import breast_cancer
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver

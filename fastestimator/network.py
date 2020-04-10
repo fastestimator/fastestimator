@@ -18,15 +18,18 @@ from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional
 import tensorflow as tf
 import torch
 
-from fastestimator.backend import load_model, to_tensor
-from fastestimator.op import TensorOp, get_current_ops, get_inputs_by_op, write_outputs_by_op
-from fastestimator.op.tensorop.model import ModelOp, UpdateOp
-from fastestimator.schedule import EpochScheduler, RepeatScheduler, Scheduler
+from fastestimator.backend.load_model import load_model
+from fastestimator.backend.to_tensor import to_tensor
+from fastestimator.op.op import get_current_ops, get_inputs_by_op, write_outputs_by_op
+from fastestimator.op.tensorop import TensorOp
+from fastestimator.op.tensorop.model.model import ModelOp
+from fastestimator.op.tensorop.model.update import UpdateOp
+from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler
 from fastestimator.util.util import NonContext, lcms, per_replica_to_global, to_list
 
 
 class BaseNetwork:
-    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]):
+    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> None:
         self.ops = to_list(ops)
         self.models = to_list(_collect_models(ops))
         self._verify_inputs()
@@ -98,8 +101,8 @@ class BaseNetwork:
         return output_keys
 
     def get_signature_epochs(self, total_epochs: int) -> Set[int]:
-        signature_epochs = {0}
-        epoch_keys = {0}
+        signature_epochs = {1}
+        epoch_keys = {1}
         repeat_cycles = {1}
         for x in self.ops + [model.optimizer for model in self.models]:
             if isinstance(x, EpochScheduler):
@@ -113,22 +116,21 @@ class BaseNetwork:
                 signature_epochs.update(range(epoch, epoch + min(epoch_keys[idx + 1] - epoch, least_common_cycle)))
             else:
                 signature_epochs.update(range(epoch, epoch + least_common_cycle))
-        signature_epochs = set(epoch for epoch in signature_epochs if epoch < total_epochs)
+        signature_epochs = set(epoch for epoch in signature_epochs if epoch <= total_epochs)
         return signature_epochs
 
     @staticmethod
     def _forward_batch(batch: MutableMapping[str, Any], state: Dict[str, Any], ops: List[TensorOp]):
-        data = None
         for op in ops:
-            data = get_inputs_by_op(op, batch, data)
+            data = get_inputs_by_op(op, batch)
             data = op.forward(data, state)
             if op.outputs:
                 write_outputs_by_op(op, batch, data)
 
-    def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:  # Batch, Prediction
         raise NotImplementedError
 
-    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 0) -> Dict[str, Any]:
+    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 1) -> Dict[str, Any]:
         raise NotImplementedError
 
 
@@ -168,7 +170,7 @@ def Network(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> BaseNetwork:
 
 
 class TorchNetwork(BaseNetwork):
-    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]):
+    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> None:
         super().__init__(ops)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -191,7 +193,7 @@ class TorchNetwork(BaseNetwork):
             new_batch = {key: batch[key] for key in self.effective_inputs[mode] if key in batch}
         return new_batch
 
-    def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any]]:
+    def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         mode = self.epoch_state["mode"]
         batch_in = self._get_effective_batch_input(batch, mode)
         self.epoch_state["tape"] = NonContext()
@@ -208,13 +210,13 @@ class TorchNetwork(BaseNetwork):
             prediction = {key: batch_in[key].detach() for key in self.effective_outputs[mode] if key in batch_in}
         return batch, prediction
 
-    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 0) -> Dict[str, Any]:
+    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 1) -> Dict[str, Any]:
         """apply all network operations on given data for certain mode and epoch.
 
         Args:
             data: Input data in dictionary format
             mode: Current mode, can be "train", "eval", "test" or "infer"
-            epoch: Current epoch index. Defaults to 0.
+            epoch: Current epoch index. Defaults to 1.
 
         Returns:
             transformed data
@@ -228,7 +230,7 @@ class TorchNetwork(BaseNetwork):
 
 
 class TFNetwork(BaseNetwork):
-    def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any]]:
+    def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         mode = self.epoch_state["mode"]
         batch_in = self._get_effective_batch_input(batch, mode)
         strategy = tf.distribute.get_strategy()
@@ -241,8 +243,8 @@ class TFNetwork(BaseNetwork):
                 prediction = strategy.experimental_run_v2(
                     self._forward_step_static,
                     args=(batch_in, self.epoch_state, self.epoch_ops, to_list(self.effective_outputs[mode])))
-                batch = per_replica_to_global(batch)
-                prediction = per_replica_to_global(prediction)
+            batch = per_replica_to_global(batch)
+            prediction = per_replica_to_global(prediction)
         else:
             if self.epoch_state["warmup"]:
                 prediction = self._forward_step_eager(batch_in,
@@ -298,13 +300,13 @@ class TFNetwork(BaseNetwork):
                 prediction[key] = batch[key]
         return prediction
 
-    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 0) -> Dict[str, Any]:
+    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 1) -> Dict[str, Any]:
         """apply all network operations on given data for certain mode and epoch.
 
         Args:
             data: Input data in dictionary format
             mode: Current mode, can be "train", "eval", "test" or "infer"
-            epoch: Current epoch index. Defaults to 0.
+            epoch: Current epoch index. Defaults to 1.
 
         Returns:
             transformed data
@@ -314,14 +316,22 @@ class TFNetwork(BaseNetwork):
         data, prediction = self.run_step(data)
         self.unload_epoch()
         data.update(prediction)
+        # handle multi-gpu
+        batch_sizes = set(data[key].shape[0] for key in data if len(data[key].shape) > 0)
+        if len(batch_sizes) > 1:
+            min_batch = min(batch_sizes)
+            for key, val in data.items():
+                if len(val.shape) > 0:
+                    data[key] = val[0:min_batch]
         return data
 
 
-def build(model_fn: Callable,
-          optimizer_fn: Union[str, Scheduler, Callable, List[str], List[Callable], List[Scheduler], None],
-          weights_path: Union[str, None, List[Union[str, None]]] = None,
-          model_names: Union[str, List[str], None] = None
-          ) -> Union[tf.keras.Model, torch.nn.Module, List[tf.keras.Model], List[torch.nn.Module]]:
+def build(
+    model_fn: Callable,
+    optimizer_fn: Union[str, Scheduler, Callable, List[str], List[Callable], List[Scheduler], None],
+    weights_path: Union[str, None, List[Union[str, None]]] = None,
+    model_names: Union[str, List[str], None] = None
+) -> Union[tf.keras.Model, torch.nn.Module, List[tf.keras.Model], List[torch.nn.Module]]:
     """Build model instances and associate them with optimizers
     Args:
         model_fn: function that define model(s)
@@ -341,6 +351,9 @@ def build(model_fn: Callable,
     if not hasattr(build, "count"):
         build.count = 0
     models, optimizer_fn = to_list(model_fn()), to_list(optimizer_fn)
+    # fill optimizer
+    if not optimizer_fn:
+        optimizer_fn = [None]
     # check framework
     if isinstance(models[0], tf.keras.Model):
         framework = "tf"
@@ -375,11 +388,10 @@ def build(model_fn: Callable,
 
 
 def _fe_compile(model: Union[tf.keras.Model, torch.nn.Module],
-                optimizer_fn: Union[str, Scheduler, Callable],
+                optimizer_fn: Union[str, Scheduler, Callable, None],
                 weight: Union[str, None],
                 name: str,
                 framework: str) -> Union[tf.keras.Model, torch.nn.Module]:
-
     if isinstance(optimizer_fn, EpochScheduler):
         for epoch, optimizer_def in optimizer_fn.epoch_dict.items():
             optimizer_fn.epoch_dict[epoch] = _build_optimizer(optimizer_def, model, framework)
@@ -396,7 +408,8 @@ def _fe_compile(model: Union[tf.keras.Model, torch.nn.Module],
     return model
 
 
-def _build_optimizer(optimizer_fn: Union[str, Callable], model: Union[tf.keras.Model, torch.nn.Module],
+def _build_optimizer(optimizer_fn: Union[str, Callable, None],
+                     model: Union[tf.keras.Model, torch.nn.Module],
                      framework: str) -> Union[tf.optimizers.Optimizer, torch.optim.Optimizer]:
     if isinstance(optimizer_fn, str):
         optimizer_fn = _optimizer_fn_from_string(optimizer_fn, framework)
@@ -428,7 +441,8 @@ def _optimizer_fn_from_string(name: str, framework: str) -> Callable:
     return optimizer_fn
 
 
-def _optimizer_fn_to_optimizer(optimizer_fn: Callable, model: Union[tf.keras.Model, torch.nn.Module],
+def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None],
+                               model: Union[tf.keras.Model, torch.nn.Module],
                                framework: str) -> Union[tf.optimizers.Optimizer, torch.optim.Optimizer]:
     optimizer = None
     if optimizer_fn:

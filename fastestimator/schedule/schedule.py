@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Dict, TypeVar, Generic, List
+from typing import Dict, Generic, List, TypeVar
 
 T = TypeVar('T')
 
@@ -26,7 +26,7 @@ class Scheduler(Generic[T]):
 
 
 class RepeatScheduler(Scheduler[T]):
-    def __init__(self, repeat_list: List[T]):
+    def __init__(self, repeat_list: List[T]) -> None:
         assert isinstance(repeat_list, List), "must provide a list as input of RepeatSchedule"
         self.repeat_list = repeat_list
         self.cycle_length = len(repeat_list)
@@ -40,14 +40,14 @@ class RepeatScheduler(Scheduler[T]):
 
 
 class EpochScheduler(Scheduler[T]):
-    def __init__(self, epoch_dict: Dict[int, T]):
+    def __init__(self, epoch_dict: Dict[int, T]) -> None:
         assert isinstance(epoch_dict, dict), "must provide dictionary as epoch_dict"
         self.epoch_dict = epoch_dict
         self.keys = sorted(self.epoch_dict)
-        assert 0 in self.epoch_dict, "epoch 0 is missing in dictionary, use None if no op is needed"
+        assert 1 in self.epoch_dict, "epoch 1 is missing in dictionary, use None if no op is needed"
         for key in self.keys:
             assert isinstance(key, int), "found non-integer key: {}".format(key)
-            assert key >= 0, "found negative key: {}".format(key)
+            assert key >= 1, "found non-positive key: {}".format(key)
 
     def get_current_value(self, epoch: int) -> T:
         if epoch in self.keys:
@@ -60,7 +60,7 @@ class EpochScheduler(Scheduler[T]):
         return list(self.epoch_dict.values())
 
     def _get_last_key(self, epoch: int) -> int:
-        last_key = 0
+        last_key = 1
         for key in self.keys:
             if key > epoch:
                 break

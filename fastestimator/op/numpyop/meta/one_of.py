@@ -13,11 +13,11 @@
 # limitations under the License.
 # ==============================================================================
 import random
-from typing import Dict, Any, List, Union
+from typing import Any, Dict, List, Union
 
 import numpy as np
 
-from fastestimator.op import NumpyOp
+from fastestimator.op.numpyop.numpyop import NumpyOp
 
 
 class OneOf(NumpyOp):
@@ -26,7 +26,7 @@ class OneOf(NumpyOp):
         Args:
             numpy_ops: A list of ops to choose between
     """
-    def __init__(self, *numpy_ops: NumpyOp):
+    def __init__(self, *numpy_ops: NumpyOp) -> None:
         inputs = numpy_ops[0].inputs
         outputs = numpy_ops[0].outputs
         mode = numpy_ops[0].mode

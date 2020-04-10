@@ -19,7 +19,7 @@ from tensorflow.python.keras import layers
 
 import fastestimator as fe
 from fastestimator.dataset.data import imdb_review
-from fastestimator.op.numpyop.univariate.reshape import Reshape
+from fastestimator.op.numpyop.univariate import Reshape
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver
@@ -41,8 +41,8 @@ def get_estimator(max_words=10000,
                   max_len=500,
                   epochs=10,
                   batch_size=64,
-                  steps_per_epoch=None,
-                  model_dir=tempfile.mkdtemp()):
+                  max_steps_per_epoch=None,
+                  save_dir=tempfile.mkdtemp()):
 
     # step 1. prepare data
     train_data, eval_data = imdb_review.load_data(max_len, max_words)
@@ -59,13 +59,13 @@ def get_estimator(max_words=10000,
         UpdateOp(model=model, loss_name="loss")
     ])
 
-    traces = [Accuracy(true_key="y", pred_key="y_pred"), BestModelSaver(model=model, save_dir=model_dir)]
+    traces = [Accuracy(true_key="y", pred_key="y_pred"), BestModelSaver(model=model, save_dir=save_dir)]
     # step 3.prepare estimator
     estimator = fe.Estimator(network=network,
                              pipeline=pipeline,
                              epochs=epochs,
                              traces=traces,
-                             max_steps_per_epoch=steps_per_epoch)
+                             max_steps_per_epoch=max_steps_per_epoch)
     return estimator
 
 

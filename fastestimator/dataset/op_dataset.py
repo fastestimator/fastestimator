@@ -13,31 +13,35 @@
 # limitations under the License.
 # ==============================================================================
 from copy import deepcopy
-from typing import List
+from typing import Any, List, Mapping
 
+import numpy as np
 from torch.utils.data import Dataset
 
-from fastestimator.dataset.unpaired_dataset import UnpairedDataset
-from fastestimator.op import NumpyOp, get_inputs_by_op, write_outputs_by_op
+from fastestimator.dataset import BatchDataset
+from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
+from fastestimator.util.util import pad_batch
 
 
 class OpDataset(Dataset):
-    def __init__(self, dataset: Dataset, ops: List[NumpyOp], mode: str):
+    def __init__(self, dataset: Dataset, ops: List[NumpyOp], mode: str) -> None:
         self.dataset = dataset
-        if isinstance(self.dataset, UnpairedDataset):
+        if isinstance(self.dataset, BatchDataset):
             self.dataset.shuffle()
         self.ops = ops
         self.mode = mode
 
-    def __getitem__(self, index):
-        item = deepcopy(self.dataset[index])  # Deepcopy to prevent ops from overwriting values in datasets
-        op_data = None
-        for op in self.ops:
-            op_data = get_inputs_by_op(op, item, op_data)
-            op_data = op.forward(op_data, {"mode": self.mode})
-            if op.outputs:
-                write_outputs_by_op(op, item, op_data)
-        return item
+    def __getitem__(self, index: int) -> Mapping[str, Any]:
+        items = deepcopy(self.dataset[index])  # Deepcopy to prevent ops from overwriting values in datasets
+        if isinstance(self.dataset, BatchDataset):
+            for item in items:
+                forward_numpyop(self.ops, item, self.mode)
+            if self.dataset.pad_value is not None:
+                pad_batch(items, self.dataset.pad_value)
+            items = {key: np.array([item[key] for item in items]) for key in items[0]}
+        else:
+            forward_numpyop(self.ops, items, self.mode)
+        return items
 
     def __len__(self):
         return len(self.dataset)

@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, Iterable, Callable, TypeVar, List, Dict, Any
+from typing import Any, Callable, Dict, Iterable, List, TypeVar, Union
 
 import tensorflow as tf
 import torch
 
 from fastestimator.backend.feed_forward import feed_forward
-from fastestimator.op.op import TensorOp
+from fastestimator.op.tensorop.tensorop import TensorOp
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
@@ -31,7 +31,7 @@ class ModelOp(TensorOp):
         inputs : String key of input training data. Defaults to None.
         outputs : String key of predictions. Defaults to None.
         mode : 'train' or 'eval'. Defaults to None.
-        track_input : If 'true' it tracks the gradients with respect to inputs. Defaults to False.  # TODO - bring back
+        trainable: Indicates whether the model should have weights tracked for update
     """
     def __init__(self,
                  model: Union[tf.keras.Model, torch.nn.Module],

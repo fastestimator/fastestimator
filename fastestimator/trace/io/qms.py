@@ -19,8 +19,7 @@ from typing import Callable, List, Union
 
 from docx import Document
 from docx.shared import Pt
-
-from fastestimator.trace import Trace
+from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.util import to_list
 
@@ -41,7 +40,6 @@ class QMSTest(Trace):
                  test_title: str = "QMSTest",
                  json_output: str = "",
                  doc_output: str = ""):
-
 
         self.json_output = json_output
         self.doc_output = doc_output
@@ -93,8 +91,8 @@ class QMSTest(Trace):
         print("Saved QMS summary report to {}".format(doc_path))
 
 
-class QMSDocx():
-    def __init__(self, total_pass, total_fail):
+class QMSDocx:
+    def __init__(self, total_pass, total_fail) -> None:
         self.doc = Document()
         self._write_static_p1()
         self._write_test_result(total_pass, total_fail)

@@ -16,7 +16,8 @@ from typing import Union, Iterable, Callable, Tuple
 
 from albumentations.augmentations.transforms import GaussNoise as GaussNoiseAlb
 
-from fastestimator.op.numpyop.base_augmentations import ImageOnlyAlbumentation
+from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+
 
 
 class GaussianNoise(ImageOnlyAlbumentation):
@@ -26,9 +27,9 @@ class GaussianNoise(ImageOnlyAlbumentation):
             inputs: Key(s) of images to be normalized
             outputs: Key(s) of images to be normalized
             mode: What execution mode (train, eval, None) to apply this operation
-            var_limit: variance range for noise. If var_limit is a single float, the range will be (0, var_limit). 
+            var_limit: variance range for noise. If var_limit is a single float, the range will be (0, var_limit).
                 Default: (10.0, 50.0).
-            mean: mean of the noise. Default: 0 
+            mean: mean of the noise. Default: 0
         Image types:
             uint8, float32
     """
