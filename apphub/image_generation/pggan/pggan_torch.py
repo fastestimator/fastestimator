@@ -90,7 +90,7 @@ def mini_batch_std(x, group_size=4, eps=1e-8):
 
 
 def fade_in(x, y, alpha):
-    return (1 - alpha) * x + alpha * y
+    return (1.0 - alpha) * x + alpha * y
 
 
 class ToRGB(torch.nn.Module):
@@ -149,10 +149,11 @@ class BlockG2D(torch.nn.Module):
         self.bias1 = ApplyBias(in_features=_nf(res - 1))
         self.elr_conv2d2 = EqualizedLRConv2D(in_channels=_nf(res - 1), out_channels=_nf(res - 1))
         self.bias2 = ApplyBias(in_features=_nf(res - 1))
+        self.upsample = torch.nn.Upsample(scale_factor=2)
 
     def forward(self, x):
         # x: [batch, _nf(res - 2), 2**(res - 1), 2**(res - 1)]
-        x = torch.nn.functional.interpolate(x, scale_factor=(2, 2))  # [batch, _nf(res - 2), 2**res , 2**res)]
+        x = self.upsample(x)
         x = self.elr_conv2d1(x)  # [batch, _nf(res - 1), 2**res , 2**res)]
         x = self.bias1(x)  # [batch, _nf(res - 1), 2**res , 2**res)]
         x = torch.nn.functional.leaky_relu(x, negative_slope=0.2)  # [batch, _nf(res - 1), 2**res , 2**res)]
@@ -178,12 +179,13 @@ class Gen(torch.nn.Module):
         self.g_blocks = torch.nn.ModuleList(g_blocks)
         self.rgb_blocks = torch.nn.ModuleList(rgb_blocks)
         self.fade_in_alpha = fade_in_alpha
+        self.upsample = torch.nn.Upsample(scale_factor=2)
 
     def forward(self, x):
         for g in self.g_blocks[:-1]:
             x = g(x)
         previous_img = self.rgb_blocks[0](x)
-        previous_img = torch.nn.functional.interpolate(previous_img, scale_factor=(2, 2))
+        previous_img = self.upsample(previous_img)
         x = self.g_blocks[-1](x)
         new_img = self.rgb_blocks[1](x)
         return fade_in(previous_img, new_img, self.fade_in_alpha)
@@ -382,7 +384,8 @@ class ImageSaving(Trace):
         if self.system.epoch_idx in self.epoch_model_map:
             model = self.epoch_model_map[self.system.epoch_idx]
             for i in range(self.num_sample):
-                random_vectors = torch.rand(1, self.latent_dim).to("cuda:0" if torch.cuda.is_available() else "cpu")
+                random_vectors = torch.normal(
+                    mean=0.0, std=1.0, size=(1, self.latent_dim)).to("cuda:0" if torch.cuda.is_available() else "cpu")
                 pred = feed_forward(model, random_vectors, training=False)
                 if torch.cuda.is_available():
                     pred = pred.to("cpu")
