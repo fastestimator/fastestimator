@@ -24,6 +24,7 @@ import wget
 from fastestimator.dataset.dir_dataset import DirDataset
 from fastestimator.util.util import Suppressor
 from fastestimator.util.wget_util import bar_custom, callback_progress
+from pycocotools.coco import COCO
 
 wget.callback_progress = callback_progress
 
@@ -37,7 +38,6 @@ class MSCOCODataset(DirDataset):
                  include_masks: bool = False,
                  include_captions: bool = False,
                  min_bbox_area=1.0):
-        from pycocotools.coco import COCO
         super().__init__(root_dir=image_dir, data_key="image", recursive_search=False)
         if include_masks:
             assert include_bboxes, "must include bboxes with mask data"

@@ -32,25 +32,8 @@ def get_name():
         return "fastestimator"
 
 
-setup(
-    entry_points={"console_scripts": ["fastestimator = fastestimator.cli.main:run"]},
-    name=get_name(),
-    version=get_version(),
-    description="Deep learning framework",
-    packages=find_packages(),
-    package_dir={'': '.'},
-    long_description="FastEstimator is a high-level deep learning API. With the help of FastEstimator, you can easily \
-                    build a high-performance deep learning model and run it anywhere.",
-    author="FastEstimator Dev",
-    url='https://github.com/fastestimator/fastestimator',
-    license="Apache License 2.0",
-    keywords="fastestimator tensorflow",
-    classifiers=[
-        "License :: OSI Approved :: Apache Software License",
-        "Programming Language :: Python :: 3", ],
-
-    # Declare minimal set for installation
-    install_requires=[
+def get_dependency():
+    dependencies = [
         'numpy',
         'albumentations',
         'pyfiglet',
@@ -69,6 +52,32 @@ setup(
         'python-docx',
         'tensorboard',
         'tensorflow_probability==0.8.0'
-    ],
+    ]
+    if os.name == "nt":
+        dependencies.append("git+https://github.com/philferriere/cocoapi.git#egg=pycocotools&subdirectory=PythonAPI")
+    else:
+        dependencies.append('pycocotools-fix')
+    return dependencies
+
+
+setup(
+    entry_points={"console_scripts": ["fastestimator = fastestimator.cli.main:run"]},
+    name=get_name(),
+    version=get_version(),
+    description="Deep learning framework",
+    packages=find_packages(),
+    package_dir={'': '.'},
+    long_description="FastEstimator is a high-level deep learning API. With the help of FastEstimator, you can easily \
+                    build a high-performance deep learning model and run it anywhere.",
+    author="FastEstimator Dev",
+    url='https://github.com/fastestimator/fastestimator',
+    license="Apache License 2.0",
+    keywords="fastestimator tensorflow",
+    classifiers=[
+        "License :: OSI Approved :: Apache Software License",
+        "Programming Language :: Python :: 3", ],
+
+    # Declare minimal set for installation
+    install_requires=get_dependency(),
     # Declare extra set for installation
     extras_require={})
