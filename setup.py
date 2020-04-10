@@ -54,7 +54,8 @@ def get_dependency():
         'tensorflow_probability==0.8.0'
     ]
     if os.name == "nt":
-        dependencies.append("git+https://github.com/philferriere/cocoapi.git#egg=pycocotools&subdirectory=PythonAPI")
+        dependencies.append(
+            "pycocotools @ git+https://github.com/philferriere/cocoapi.git#egg=pycocotools&subdirectory=PythonAPI")
     else:
         dependencies.append('pycocotools-fix')
     return dependencies
