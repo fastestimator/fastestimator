@@ -28,7 +28,6 @@ from fastestimator.backend.mean_squared_error import mean_squared_error
 from fastestimator.backend.percentile import percentile
 from fastestimator.backend.permute import permute
 from fastestimator.backend.random_normal_like import random_normal_like
-from fastestimator.backend.reduce_loss import reduce_loss
 from fastestimator.backend.reduce_max import reduce_max
 from fastestimator.backend.reduce_mean import reduce_mean
 from fastestimator.backend.reduce_min import reduce_min

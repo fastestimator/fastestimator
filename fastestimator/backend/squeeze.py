@@ -19,10 +19,46 @@ import numpy as np
 import tensorflow as tf
 import torch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray, torch.autograd.Variable)
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
 
 def squeeze(tensor: Tensor, axis: Optional[int] = None) -> Tensor:
+    """Remove an `axis` from a `tensor` if that axis has length 1.
+
+    This method can be used with Numpy data:
+    ```python
+    n = np.array([[[[1],[2]]],[[[3],[4]]],[[[5],[6]]]])  # shape == (3, 1, 2, 1)
+    b = fe.backend.squeeze(n)  # [[1, 2], [3, 4], [5, 6]]
+    b = fe.backend.squeeze(n, axis=1)  # [[[1], [2]], [[3], [4]], [[5], [6]]]
+    b = fe.backend.squeeze(n, axis=3)  # [[[1, 2]], [[3, 4]], [[5, 6]]]
+    ```
+
+    This method can be used with TensorFlow tensors:
+    ```python
+    t = tf.constant([[[[1],[2]]],[[[3],[4]]],[[[5],[6]]]])  # shape == (3, 1, 2, 1)
+    b = fe.backend.squeeze(t)  # [[1, 2], [3, 4], [5, 6]]
+    b = fe.backend.squeeze(t, axis=1)  # [[[1], [2]], [[3], [4]], [[5], [6]]]
+    b = fe.backend.squeeze(t, axis=3)  # [[[1, 2]], [[3, 4]], [[5, 6]]]
+    ```
+
+    This method can be used with PyTorch tensors:
+    ```python
+    p = torch.tensor([[[[1],[2]]],[[[3],[4]]],[[[5],[6]]]])  # shape == (3, 1, 2, 1)
+    b = fe.backend.squeeze(p)  # [[1, 2], [3, 4], [5, 6]]
+    b = fe.backend.squeeze(p, axis=1)  # [[[1], [2]], [[3], [4]], [[5], [6]]]
+    b = fe.backend.squeeze(p, axis=3)  # [[[1, 2]], [[3, 4]], [[5, 6]]]
+    ```
+
+    Args:
+        tensor: The input value.
+        axis: Which axis to squeeze along, which must have length==1 (or pass None to squeeze all length 1 axes).
+
+    Returns:
+        The reshaped `tensor`.
+
+    Raises:
+        ValueError: If `tensor` is an unacceptable data type.
+    """
     if isinstance(tensor, tf.Tensor):
         return tf.squeeze(tensor, axis=axis)
     elif isinstance(tensor, torch.Tensor):

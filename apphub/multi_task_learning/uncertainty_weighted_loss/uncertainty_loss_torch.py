@@ -22,7 +22,7 @@ from torch.nn.init import kaiming_normal_ as he_normal
 from torchvision import models
 
 import fastestimator as fe
-from fastestimator.backend import reduce_loss
+from fastestimator.backend import reduce_mean
 from fastestimator.dataset.data import cub200
 from fastestimator.op.numpyop import Delete
 from fastestimator.op.numpyop.meta import Sometimes
@@ -40,7 +40,7 @@ from fastestimator.trace.metric import Accuracy, Dice
 class ReduceLoss(TensorOp):
     """TensorOp to average loss for a batch"""
     def forward(self, data, state):
-        return reduce_loss(data)
+        return reduce_mean(data)
 
 
 class UncertaintyLossNet(nn.Module):
@@ -52,8 +52,7 @@ class UncertaintyLossNet(nn.Module):
         self.w2 = nn.Parameter(torch.zeros(1))
 
     def forward(self, x):
-        loss = torch.exp(-self.w1) * x[0] + self.w1 + torch.exp(
-            -self.w2) * x[1] + self.w2
+        loss = torch.exp(-self.w1) * x[0] + self.w1 + torch.exp(-self.w2) * x[1] + self.w2
         return loss
 
 
@@ -61,10 +60,9 @@ class Upsample2D(nn.Module):
     """Upsampling Block"""
     def __init__(self, in_channels, out_channels):
         super().__init__()
-        self.upsample = nn.Sequential(
-            nn.Upsample(mode="bilinear", scale_factor=2, align_corners=True),
-            nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True))
+        self.upsample = nn.Sequential(nn.Upsample(mode="bilinear", scale_factor=2, align_corners=True),
+                                      nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
+                                      nn.ReLU(inplace=True))
 
         for l in self.upsample:
             if isinstance(l, nn.Conv2d):
@@ -79,11 +77,10 @@ class DecBlock(nn.Module):
     def __init__(self, upsample_in_ch, conv_in_ch, out_ch):
         super().__init__()
         self.upsample = Upsample2D(upsample_in_ch, out_ch)
-        self.conv_layers = nn.Sequential(
-            nn.Conv2d(conv_in_ch, out_ch, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(out_ch, out_ch, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True))
+        self.conv_layers = nn.Sequential(nn.Conv2d(conv_in_ch, out_ch, kernel_size=3, padding=1),
+                                         nn.ReLU(inplace=True),
+                                         nn.Conv2d(out_ch, out_ch, kernel_size=3, padding=1),
+                                         nn.ReLU(inplace=True))
 
         for l in self.conv_layers:
             if isinstance(l, nn.Conv2d):
@@ -140,71 +137,48 @@ class ResUnet50(nn.Module):
         return x_label, x_mask
 
 
-def get_estimator(batch_size=8,
-                  epochs=25,
-                  max_steps_per_epoch=None,
-                  save_dir=tempfile.mkdtemp()):
+def get_estimator(batch_size=8, epochs=25, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
     # load CUB200 dataset.
     train_data = cub200.load_data()
     eval_data = train_data.split(0.3)
     test_data = eval_data.split(0.5)
 
     #step 1, pipeline
-    pipeline = fe.Pipeline(batch_size=batch_size,
-                           train_data=train_data,
-                           eval_data=eval_data,
-                           test_data=test_data,
-                           ops=[
-                               ReadImage(inputs="image",
-                                         outputs="image",
-                                         parent_path=train_data.parent_path),
-                               Normalize(inputs="image",
-                                         outputs="image",
-                                         mean=1.0,
-                                         std=1.0,
-                                         max_pixel_value=127.5),
-                               ReadMat(file='annotation',
-                                       keys="seg",
-                                       parent_path=train_data.parent_path),
-                               Delete(keys="annotation"),
-                               LongestMaxSize(max_size=512,
-                                              image_in="image",
-                                              image_out="image",
-                                              mask_in="seg",
-                                              mask_out="seg"),
-                               PadIfNeeded(min_height=512,
-                                           min_width=512,
-                                           image_in="image",
-                                           image_out="image",
-                                           mask_in="seg",
-                                           mask_out="seg",
-                                           border_mode=cv2.BORDER_CONSTANT,
-                                           value=0,
-                                           mask_value=0),
-                               ShiftScaleRotate(
-                                   image_in="image",
-                                   mask_in="seg",
-                                   image_out="image",
-                                   mask_out="seg",
-                                   mode="train",
-                                   shift_limit=0.2,
-                                   rotate_limit=15.0,
-                                   scale_limit=0.2,
-                                   border_mode=cv2.BORDER_CONSTANT,
-                                   value=0,
-                                   mask_value=0),
-                               Sometimes(
-                                   HorizontalFlip(image_in="image",
-                                                  mask_in="seg",
-                                                  image_out="image",
-                                                  mask_out="seg",
-                                                  mode="train")),
-                               ChannelTranspose(inputs="image",
-                                                outputs="image"),
-                               Reshape(shape=(1, 512, 512),
-                                       inputs="seg",
-                                       outputs="seg")
-                           ])
+    pipeline = fe.Pipeline(
+        batch_size=batch_size,
+        train_data=train_data,
+        eval_data=eval_data,
+        test_data=test_data,
+        ops=[
+            ReadImage(inputs="image", outputs="image", parent_path=train_data.parent_path),
+            Normalize(inputs="image", outputs="image", mean=1.0, std=1.0, max_pixel_value=127.5),
+            ReadMat(file='annotation', keys="seg", parent_path=train_data.parent_path),
+            Delete(keys="annotation"),
+            LongestMaxSize(max_size=512, image_in="image", image_out="image", mask_in="seg", mask_out="seg"),
+            PadIfNeeded(min_height=512,
+                        min_width=512,
+                        image_in="image",
+                        image_out="image",
+                        mask_in="seg",
+                        mask_out="seg",
+                        border_mode=cv2.BORDER_CONSTANT,
+                        value=0,
+                        mask_value=0),
+            ShiftScaleRotate(image_in="image",
+                             mask_in="seg",
+                             image_out="image",
+                             mask_out="seg",
+                             mode="train",
+                             shift_limit=0.2,
+                             rotate_limit=15.0,
+                             scale_limit=0.2,
+                             border_mode=cv2.BORDER_CONSTANT,
+                             value=0,
+                             mask_value=0),
+            Sometimes(HorizontalFlip(image_in="image", mask_in="seg", image_out="image", mask_out="seg", mode="train")),
+            ChannelTranspose(inputs="image", outputs="image"),
+            Reshape(shape=(1, 512, 512), inputs="seg", outputs="seg")
+        ])
 
     #step 2, network
     resunet50 = fe.build(model_fn=ResUnet50,
@@ -215,20 +189,10 @@ def get_estimator(batch_size=8,
                            optimizer_fn=lambda x: torch.optim.Adam(x, lr=1e-5))
 
     network = fe.Network(ops=[
-        ModelOp(inputs='image',
-                model=resunet50,
-                outputs=["label_pred", "mask_pred"]),
-        CrossEntropy(inputs=["label_pred", "label"],
-                     outputs="cls_loss",
-                     form="sparse",
-                     average_loss=False),
-        CrossEntropy(inputs=["mask_pred", "seg"],
-                     outputs="seg_loss",
-                     form="binary",
-                     average_loss=False),
-        ModelOp(inputs=["cls_loss", "seg_loss"],
-                model=uncertainty,
-                outputs="total_loss"),
+        ModelOp(inputs='image', model=resunet50, outputs=["label_pred", "mask_pred"]),
+        CrossEntropy(inputs=["label_pred", "label"], outputs="cls_loss", form="sparse", average_loss=False),
+        CrossEntropy(inputs=["mask_pred", "seg"], outputs="seg_loss", form="binary", average_loss=False),
+        ModelOp(inputs=["cls_loss", "seg_loss"], model=uncertainty, outputs="total_loss"),
         ReduceLoss(inputs="total_loss", outputs="total_loss"),
         UpdateOp(model=resunet50, loss_name="total_loss"),
         UpdateOp(model=uncertainty, loss_name="total_loss")
@@ -238,13 +202,8 @@ def get_estimator(batch_size=8,
     traces = [
         Accuracy(true_key="label", pred_key="label_pred"),
         Dice(true_key="seg", pred_key='mask_pred'),
-        BestModelSaver(model=resunet50,
-                       save_dir=save_dir,
-                       metric="total_loss",
-                       save_best_mode="min"),
-        LRScheduler(model=resunet50,
-                    lr_fn=lambda step: cosine_decay(
-                        step, cycle_length=13200, init_lr=1e-4))
+        BestModelSaver(model=resunet50, save_dir=save_dir, metric="total_loss", save_best_mode="min"),
+        LRScheduler(model=resunet50, lr_fn=lambda step: cosine_decay(step, cycle_length=13200, init_lr=1e-4))
     ]
     estimator = fe.Estimator(network=network,
                              pipeline=pipeline,

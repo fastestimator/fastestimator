@@ -51,7 +51,10 @@ def concat(tensors: List[Tensor], axis: int = 0) -> Optional[Tensor]:
         axis: The axis along which to concatenate the input.
 
     Returns:
-        A concatenated representation of the `tensors`, or None if the list of `tensors` was empty. 
+        A concatenated representation of the `tensors`, or None if the list of `tensors` was empty.
+
+    Raises:
+        ValueError: If `tensors` is an unacceptable data type.
     """
     if len(tensors) == 0:
         return None
