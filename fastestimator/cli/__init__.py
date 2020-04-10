@@ -14,3 +14,4 @@
 # ==============================================================================
 from fastestimator.cli.train import configure_train_parser, configure_test_parser
 from fastestimator.cli.visualize import configure_visualization_parser
+from fastestimator.cli.main import run

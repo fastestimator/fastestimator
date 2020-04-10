@@ -20,13 +20,33 @@ import torch
 
 
 def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray, int, float]) -> np.ndarray:
-    """convert tensor values to python values
+    """Convert an input value into a Numpy ndarray.
+
+    This method can be used with Python and Numpy data:
+    ```python
+    b = fe.backend.to_number(5)  # 5 (type==np.ndarray)
+    b = fe.backend.to_number(4.0)  # 4.0 (type==np.ndarray)
+    n = np.array([1, 2, 3])
+    b = fe.backend.to_number(n)  # [1, 2, 3] (type==np.ndarray)
+    ```
+
+    This method can be used with TensorFlow tensors:
+    ```python
+    t = tf.constant([1, 2, 3])
+    b = fe.backend.to_number(t)  # [1, 2, 3] (type==np.ndarray)
+    ```
+
+    This method can be used with PyTorch tensors:
+    ```python
+    p = torch.tensor([1, 2, 3])
+    b = fe.backend.to_number(p)  # [1, 2, 3] (type==np.ndarray)
+    ```
 
     Args:
-        data: any tensor value
+        data: The value to be converted into a np.ndarray.
 
     Returns:
-        np.ndarray: python value of the tensor
+        An ndarray corresponding to the given `data`.
     """
     if isinstance(data, tf.Tensor):
         data = data.numpy()

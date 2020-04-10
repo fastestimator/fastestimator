@@ -21,9 +21,9 @@ import torch.nn.functional as fn
 
 class LeNet(torch.nn.Module):
     """A standard LeNet implementation in pytorch.
-    
+
     The LeNet model has 3 convolution layers and 2 dense layers.
-    
+
     Args:
         input_shape: The shape of the model input (channels, height, width).
         classes: The number of outputs the model should generate.
