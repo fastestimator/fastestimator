@@ -23,24 +23,41 @@ from fastestimator.util.util import to_list
 
 
 class BatchDataset(FEDataset):
-    """BatchDataset can create list of batch data from single dataset or multiple datasets.
+    """BatchDataset extracts a list (batch) of data from a single dataset or multiple datasets.
+
+    This dataset helps to enable several use-cases:
+        1. Creating an unpaired dataset from two or more completely disjoint (no common keys) datasets.
+            ```python
+            ds1 = fe.dataset.DirDataset(...)  # {"a": <32x32>}
+            ds2 = fe.dataset.DirDataset(...)  # {"b": <28x28>}
+            unpaired_ds = fe.dataset.BatchDataset(datasets=[ds1, ds2], num_samples=[4, 4])
+            # {"a": <4x32x32>, "b": <4x28x28>}
+            ```
+        2. Deterministic class balanced sampling from two or more similar (all keys in common) datasets.
+            ```python
+            class1_ds = fe.dataset.DirDataset(...)  # {"x": <32x32>, "y": <>}
+            class2_ds = fe.dataset.DirDataset(...)  # {"x": <32x32>, "y": <>}
+            ds = fe.dataset.BatchDataset(datasets=[ds1, ds2], num_samples=[3, 5])
+            # {"x": <8x32x32>, "y": <8>}  (3 of the samples are from class1_ds, 5 of the samples from class2_ds)
+            ```
+        3. Probabilistic class balanced sampling from two or more similar (all keys in common) datasets.
+            ```python
+            class1_ds = fe.dataset.DirDataset(...)  # {"x": <32x32>, "y": <>}
+            class2_ds = fe.dataset.DirDataset(...)  # {"x": <32x32>, "y": <>}
+            ds = fe.dataset.BatchDataset(datasets=[ds1, ds2], num_samples=8, probability=[0.7, 0.3])
+            # {"x": <8x32x32>, "y": <8>}  (~70% of the samples are from class1_ds, ~30% of the samples from class2_ds)
+            ```
 
     Args:
-        datasets: FEDataset instance or list of FEDataset instances.
-        num_samples: Number of samples to draw from dataset(s).
-        probability: Probability to draw from each dataset. Defaults to None.
-
-        Example:
-        Given two datasets if the batch size is 8 and we want to randomly draw 5 from first dataset and remaining 3 from
-         the second: num_samples = [5, 3].
-
-        Given two datasets if the batch size is 8 and we want to draw with 0.7 probability from first dataset and 0.3
-        from the second: num_samples = 8, probability = [0.7, 0.3].
+        datasets: The dataset(s) to use for batch sampling.
+        num_samples: Number of samples to draw from the `datasets`. May be a single int if used in conjunction with
+            `probability`, otherwise a list of ints of len(`datasets`) is required.
+        probability: Probability to draw from each dataset. Only allowed if `num_samples` is an integer.
     """
     def __init__(self,
                  datasets: Union[FEDataset, Iterable[FEDataset]],
                  num_samples: Union[int, Iterable[int]],
-                 probability: Optional[Iterable[float]] = None):
+                 probability: Optional[Iterable[float]] = None) -> None:
         self.datasets = to_list(datasets)
         self.num_samples = to_list(num_samples)
         self.probability = to_list(probability)
@@ -49,7 +66,12 @@ class BatchDataset(FEDataset):
         self.index_maps = [list(range(max((len(dataset) for dataset in self.datasets)))) for _ in self.datasets]
         self.pad_value = None
 
-    def _check_input(self):
+    def _check_input(self) -> None:
+        """Verify that the given input values are valid.
+
+        Raises:
+            AssertionError: If any of the parameters are found to by unacceptable for a variety of reasons.
+        """
         for num_sample in self.num_samples:
             assert isinstance(num_sample, int) and num_sample > 0, "only accept positive integer type as num_sample"
         # check dataset keys
@@ -74,11 +96,51 @@ class BatchDataset(FEDataset):
         if not self.same_feature:
             assert len(set(self.num_samples)) == 1, "the number of samples must be the same for disjoint features"
 
-    def _do_split(self, splits: Sequence[Iterable[int]]):
-        # Overwriting the split() method instead of _do_split
+    def _do_split(self, splits: Sequence[Iterable[int]]) -> List['UnpairedDataset']:
+        """This class overwrites the .split() method instead of _do_split().
+
+        Args:
+            splits: Which indices to remove from the current dataset in order to create new dataset(s). One dataset will
+                be generated for every element of the `splits` sequence.
+
+        Raises:
+            AssertionError: This method should never by invoked.
+        """
         raise AssertionError("This method should not have been invoked. Please file a bug report")
 
     def split(self, *fractions: Union[float, int, Iterable[int]]) -> Union['UnpairedDataset', List['UnpairedDataset']]:
+        """Split this dataset into multiple smaller datasets.
+
+        This function enables several types of splitting:
+            1. Splitting by fractions.
+                ```python
+                ds = fe.dataset.FEDataset(...)  # len(ds) == 1000
+                ds2 = ds.split(0.1)  # len(ds) == 900, len(ds2) == 100
+                ds3, ds4 = ds.split(0.1, 0.2)  # len(ds) == 630, len(ds3) == 90, len(ds4) == 180
+                ```
+            2. Splitting by counts.
+                ```python
+                ds = fe.dataset.FEDataset(...)  # len(ds) == 1000
+                ds2 = ds.split(100)  # len(ds) == 900, len(ds2) == 100
+                ds3, ds4 = ds.split(90, 180)  # len(ds) == 630, len(ds3) == 90, len(ds4) == 180
+                ```
+            3. Splitting by indices.
+                ``python
+                ds = fe.dataset.FEDataset(...)  # len(ds) == 1000
+                ds2 = ds.split([87,2,3,100,121,158])  # len(ds) == 994, len(ds2) == 6
+                ds3 = ds.split(range(100))  # len(ds) == 894, len(ds3) == 100
+                ```
+
+        Args:
+            *fractions: Floating point values will be interpreted as percentages, integers as an absolute number of
+                datapoints, and an iterable of integers as the exact indices of the data that should be removed in order
+                to create the new dataset.
+
+        Returns:
+            One or more new datasets which are created by removing elements from the current dataset. The number of
+            datasets returned will be equal to the number of `fractions` provided. If only a single value is provided
+            then the return will be a single dataset rather than a list of datasets.
+        """
         new_datasets = [to_list(ds.split(*fractions)) for ds in self.datasets]
         num_splits = len(new_datasets[0])
         new_datasets = [[ds[i] for ds in new_datasets] for i in range(num_splits)]
@@ -90,20 +152,29 @@ class BatchDataset(FEDataset):
             results = results[0]
         return results
 
-    def shuffle(self):
-        """
+    def shuffle(self) -> None:
+        """Rearrange the index maps of this BatchDataset.
+
         This method is invoked every epoch by OpDataset which allows each epoch to have different random pairings of the
-         basis datasets.
+        basis datasets.
         """
         for mapping in self.index_maps:
             random.shuffle(mapping)
 
     def summary(self) -> DatasetSummary:
+        """Generate a summary representation of this dataset.
+        Returns:
+            A summary representation of this dataset.
+        """
         summaries = [ds.summary() for ds in self.datasets]
         keys = {k: v for summary in summaries for k, v in summary.keys.items()}
         return DatasetSummary(num_instances=len(self), keys=keys)
 
     def __len__(self) -> int:
+        """Compute the length of this dataset.
+        Returns:
+            How many batches of data can this dataset serve per epoch.
+        """
         if self.same_feature:
             length = math.ceil(sum([len(dataset) for dataset in self.datasets]) / sum(self.num_samples))
         else:
@@ -112,6 +183,14 @@ class BatchDataset(FEDataset):
         return length
 
     def __getitem__(self, batch_idx: int) -> List[Dict[str, Any]]:
+        """Extract items from the underlying datasets based on the given `batch_idx`.
+
+        Args:
+            batch_idx: Which batch is it.
+
+        Returns:
+            A list of data instance dictionaries corresponding to the current `batch_idx`.
+        """
         items = []
         if self.same_feature:
             if self.probability:

@@ -20,6 +20,14 @@ from fastestimator.dataset.dataset import InMemoryDataset
 
 
 class NumpyDataset(InMemoryDataset):
+    """A dataset constructed from a dictionary of Numpy data.
+
+    Args:
+        data: A dictionary of data like {"key": <numpy array>}.
+
+    Raises:
+        AssertionError: If any of the Numpy arrays have differing numbers of elements.
+    """
     def __init__(self, data: Dict[str, np.ndarray]) -> None:
         size = None
         for key, val in data.items():

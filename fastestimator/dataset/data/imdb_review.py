@@ -21,18 +21,30 @@ from fastestimator.dataset.numpy_dataset import NumpyDataset
 
 
 def pad(input_list: List[int], padding_size: int, padding_value: int) -> List[int]:
+    """Pad an input_list to a given size.
+
+    Args:
+        input_list: The list to be padded.
+        padding_size: The desired length of the returned list.
+        padding_value: The value to be inserted for padding.
+
+    Returns:
+        `input_list` with `padding_value`s appended until the `padding_size` is reached.
+    """
     return input_list + [padding_value] * abs((len(input_list) - padding_size))
 
 
 def load_data(max_len: int, vocab_size: int) -> Tuple[NumpyDataset, NumpyDataset]:
-    """Loads the IMDB Movie review dataset containing 25,000 reviews labeled by sentiments positive or negative.
+    """Load and return the IMDB Movie review dataset.
+
+    This dataset contains 25,000 reviews labeled by sentiments (either positive or negative).
 
     Args:
-        max_len : maximum length of input sequence
-        vocab_size : vocabulary size to learn word embeddings
+        max_len: Maximum desired length of an input sequence.
+        vocab_size: Vocabulary size to learn word embeddings.
 
     Returns:
-        TrainData, EvalData
+        (train_data, eval_data)
     """
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.imdb.load_data(maxlen=max_len, num_words=vocab_size)
     # pad the sequences to max length

@@ -23,7 +23,7 @@ from tqdm import tqdm
 
 
 def load_data(root_dir: Optional[str] = None) -> Tuple[LabeledDirDataset, LabeledDirDataset]:
-    """Download the Mendeley dataset to local storage, if not already downloaded.
+    """Load and return the Mendeley dataset.
 
     Kermany, Daniel; Zhang, Kang; Goldbaum, Michael (2018), "Labeled Optical Coherence Tomography (OCT) and Chest X-Ray
     Images for Classification", Mendeley Data, v2 http://dx.doi.org/10.17632/rscbjbr9sj.2
@@ -32,11 +32,11 @@ def load_data(root_dir: Optional[str] = None) -> Tuple[LabeledDirDataset, Labele
     https://creativecommons.org/licenses/by/4.0/
 
     Args:
-        root_dir: The path to store the Mendeley data. When `path` is not provided, will save at
-            `fastestimator_data` under user's home directory.
+        root_dir: The path to store the downloaded data. When `path` is not provided, the data will be saved into
+            `fastestimator_data` under the user's home directory.
 
     Returns:
-        (TrainData, TestData)
+        (train_data, test_data)
     """
     url = 'https://data.mendeley.com/datasets/rscbjbr9sj/2/files/41d542e7-7f91-47f6-9ff2-dd8e5a5a7861/' \
           'ChestXRay2017.zip?dl=1'

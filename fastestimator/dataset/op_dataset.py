@@ -24,6 +24,16 @@ from fastestimator.util.util import pad_batch
 
 
 class OpDataset(Dataset):
+    """A wrapper for datasets which allows operators to be applied to them in a pipeline.
+
+    This class should not be directly instantiated by the end user. The fe.Pipeline will automatically wrap datasets
+    within an Op dataset as needed.
+
+    Args:
+        dataset: The base dataset to wrap.
+        ops: A list of ops to be applied after the base `dataset` __getitem__ is invoked.
+        mode: What mode the system is currently running in ('train', 'eval', 'test', or 'infer').
+    """
     def __init__(self, dataset: Dataset, ops: List[NumpyOp], mode: str) -> None:
         self.dataset = dataset
         if isinstance(self.dataset, BatchDataset):
@@ -32,6 +42,14 @@ class OpDataset(Dataset):
         self.mode = mode
 
     def __getitem__(self, index: int) -> Mapping[str, Any]:
+        """Fetch a data instance at a specified index, and apply transformations to it.
+
+        Args:
+            index: Which datapoint to retrieve.
+
+        Returns:
+            The data dictionary from the specified index, with transformations applied.
+        """
         items = deepcopy(self.dataset[index])  # Deepcopy to prevent ops from overwriting values in datasets
         if isinstance(self.dataset, BatchDataset):
             for item in items:
