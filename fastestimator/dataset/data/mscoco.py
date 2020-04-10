@@ -30,6 +30,9 @@ wget.callback_progress = callback_progress
 
 
 class MSCOCODataset(DirDataset):
+    instances: Optional[COCO]
+    captions: Optional[COCO]
+
     def __init__(self,
                  image_dir: str,
                  annotation_file: str,
