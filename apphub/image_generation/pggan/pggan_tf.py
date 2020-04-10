@@ -157,7 +157,7 @@ class FadeIn(layers.Add):
 
     def _merge_function(self, inputs):
         assert len(inputs) == 2, "FadeIn only supports two layers"
-        output = ((1.0 - self.fade_in_alpha) * inputs[0]) + (self.fade_in_alpha * inputs[1])
+        output = (1.0 - self.fade_in_alpha) * inputs[0] + self.fade_in_alpha * inputs[1]
         return output
 
 
