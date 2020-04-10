@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.cli.train import configure_train_parser, configure_test_parser
-from fastestimator.cli.visualize import configure_visualization_parser
+from fastestimator.cli.logs import configure_log_parser
 from fastestimator.cli.main import run
+from fastestimator.cli.train import configure_test_parser, configure_train_parser

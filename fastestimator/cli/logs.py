@@ -20,7 +20,16 @@ from fastestimator.cli.cli_util import SaveAction
 from fastestimator.summary.logs import parse_log_dir
 
 
-def logs(args: Dict[str, Any], unknown: List[Any]):
+def logs(args: Dict[str, Any], unknown: List[str]) -> None:
+    """A method to invoke the FE logging function using CLI-provided arguments.
+
+    Args:
+        args: The arguments to be fed to the parse_log_dir() method.
+        unknown: Any cli arguments not matching known inputs for the parse_log_dir() method.
+
+    Raises:
+        SystemExit: If `unknown` arguments were provided by the user.
+    """
     if len(unknown) > 0:
         print("error: unrecognized arguments: ", str.join(", ", unknown))
         sys.exit(-1)
@@ -35,7 +44,12 @@ def logs(args: Dict[str, Any], unknown: List[Any]):
                   args['pretty_names'])
 
 
-def configure_log_parser(subparsers: argparse._SubParsersAction):
+def configure_log_parser(subparsers: argparse.PARSER) -> None:
+    """Add a logging parser to an existing argparser.
+
+    Args:
+        subparsers: The parser object to be appended to.
+    """
     parser = subparsers.add_parser('logs',
                                    description='Generates comparison graphs amongst one or more log files',
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -94,15 +108,3 @@ def configure_log_parser(subparsers: argparse._SubParsersAction):
                               default=True)
     save_x_group.set_defaults(save_dir=None)
     parser.set_defaults(func=logs)
-
-
-def configure_visualization_parser(subparsers: argparse._SubParsersAction):
-    visualization_parser = subparsers.add_parser('visualize',
-                                                 description='Generates various types of visualizations',
-                                                 allow_abbrev=False)
-    visualization_subparsers = visualization_parser.add_subparsers()
-    # In python 3.7 the following 2 lines could be put into the .add_subparsers() call
-    visualization_subparsers.required = True
-    visualization_subparsers.dest = 'mode'
-
-    configure_log_parser(visualization_subparsers)
