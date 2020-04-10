@@ -17,7 +17,7 @@ from typing import TypeVar
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.reduce_loss import reduce_loss
+from fastestimator.backend.reduce_mean import reduce_mean
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
@@ -73,5 +73,5 @@ def sparse_categorical_crossentropy(y_pred: Tensor,
         else:
             ce = torch.nn.NLLLoss(reduction="none")(input=torch.log(y_pred), target=y_true.long())
     if average_loss:
-        ce = reduce_loss(ce)
+        ce = reduce_mean(ce)
     return ce

@@ -17,7 +17,7 @@ from typing import TypeVar
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.reduce_loss import reduce_loss
+from fastestimator.backend.reduce_mean import reduce_mean
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
@@ -68,7 +68,7 @@ def categorical_crossentropy(y_pred: Tensor, y_true: Tensor, from_logits: bool =
         y_true = y_true.to(torch.float)
         ce = _categorical_crossentropy_torch(y_pred=y_pred, y_true=y_true, from_logits=from_logits)
     if average_loss:
-        ce = reduce_loss(ce)
+        ce = reduce_mean(ce)
     return ce
 
 

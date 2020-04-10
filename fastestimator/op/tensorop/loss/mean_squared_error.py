@@ -18,7 +18,7 @@ import tensorflow as tf
 import torch
 
 from fastestimator.backend.mean_squared_error import mean_squared_error
-from fastestimator.backend.reduce_loss import reduce_loss
+from fastestimator.backend.reduce_mean import reduce_mean
 from fastestimator.op.tensorop.tensorop import TensorOp
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
@@ -48,5 +48,5 @@ class MeanSquaredError(TensorOp):
         y_pred, y_true = data
         loss = mean_squared_error(y_true=y_true, y_pred=y_pred)
         if self.average_loss:
-            loss = reduce_loss(loss)
+            loss = reduce_mean(loss)
         return loss

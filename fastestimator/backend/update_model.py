@@ -18,7 +18,7 @@ import tensorflow as tf
 import torch
 
 from fastestimator.backend.get_gradient import get_gradient
-from fastestimator.backend.reduce_loss import reduce_loss
+from fastestimator.backend.reduce_mean import reduce_mean
 
 
 def update_model(model: Union[tf.keras.Model, torch.nn.Module],
@@ -57,7 +57,7 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
     Raises:
         ValueError: If `model` is an unacceptable data type.
     """
-    loss = reduce_loss(loss)
+    loss = reduce_mean(loss)
     if isinstance(model, tf.keras.Model):
         strategy = tf.distribute.get_strategy()
         if isinstance(strategy, tf.distribute.MirroredStrategy):
