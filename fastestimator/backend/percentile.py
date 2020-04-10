@@ -29,9 +29,9 @@ def percentile(tensor: Tensor,
                percentiles: Union[int, List[int]],
                axis: Union[None, int, List[int]] = None,
                keepdims: bool = True) -> Tensor:
-    """ Compute the `percentiles` of a `tensor`.
+    """Compute the `percentiles` of a `tensor`.
 
-    The n-th percentile of `tensor` is the value n/100 of the way from the minimum to the maximum in a sorted copy of 
+    The n-th percentile of `tensor` is the value n/100 of the way from the minimum to the maximum in a sorted copy of
     `tensor`. If the percentile falls in between two values, the nearest of the two values will be used.
 
     This method can be used with Numpy data:

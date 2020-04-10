@@ -29,8 +29,8 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 def gather_from_batch(tensor: Tensor, indices: Tensor) -> Tensor:
     """Gather specific indices from a batch of data.
 
-    This method can be useful if you need to compute gradients based on a specific subset of a tensor's output values. 
-    The `indices` will automatically be cast to the correct type (tf, torch, np) based on the type of the `tensor`. 
+    This method can be useful if you need to compute gradients based on a specific subset of a tensor's output values.
+    The `indices` will automatically be cast to the correct type (tf, torch, np) based on the type of the `tensor`.
 
     This method can be used with Numpy data:
     ```python

@@ -13,16 +13,56 @@
 # limitations under the License.
 # ==============================================================================
 
-from typing import TypeVar, Union, List
+from typing import TypeVar, Union, Sequence
 
 import numpy as np
 import tensorflow as tf
 import torch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, torch.autograd.Variable, np.ndarray)
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
 
-def reduce_sum(tensor: Tensor, axis: Union[None, int, List[int]] = None, keepdims: bool = False) -> Tensor:
+def reduce_sum(tensor: Tensor, axis: Union[None, int, Sequence[int]] = None, keepdims: bool = False) -> Tensor:
+    """Compute the sum along a given `axis` of a `tensor`.
+
+    This method can be used with Numpy data:
+    ```python
+    n = np.array([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
+    b = fe.backend.reduce_sum(n)  # 36
+    b = fe.backend.reduce_sum(n, axis=0)  # [[6, 8], [10, 12]]
+    b = fe.backend.reduce_sum(n, axis=1)  # [[4, 6], [12, 14]]
+    b = fe.backend.reduce_sum(n, axis=[0,2])  # [14, 22]
+    ```
+
+    This method can be used with TensorFlow tensors:
+    ```python
+    t = tf.constant([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
+    b = fe.backend.reduce_sum(t)  # 36
+    b = fe.backend.reduce_sum(t, axis=0)  # [[6, 8], [10, 12]]
+    b = fe.backend.reduce_sum(t, axis=1)  # [[4, 6], [12, 14]]
+    b = fe.backend.reduce_sum(t, axis=[0,2])  # [14, 22]
+    ```
+
+    This method can be used with PyTorch tensors:
+    ```python
+    p = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
+    b = fe.backend.reduce_sum(p)  # 36
+    b = fe.backend.reduce_sum(p, axis=0)  # [[6, 8], [10, 12]]
+    b = fe.backend.reduce_sum(p, axis=1)  # [[4, 6], [12, 14]]
+    b = fe.backend.reduce_sum(p, axis=[0,2])  # [14, 22]
+    ```
+
+    Args:
+        tensor: The input value.
+        axis: Which axis or collection of axes to compute the sum along.
+        keepdims: Whether to preserve the number of dimensions during the reduction.
+
+    Returns:
+        The sum of `tensor` along `axis`.
+
+    Raises:
+        ValueError: If `tensor` is an unacceptable data type.
+    """
     if isinstance(tensor, tf.Tensor):
         return tf.reduce_sum(tensor, axis=axis, keepdims=keepdims)
     elif isinstance(tensor, torch.Tensor):
@@ -30,6 +70,8 @@ def reduce_sum(tensor: Tensor, axis: Union[None, int, List[int]] = None, keepdim
             axis = list(range(len(tensor.shape)))
         return tensor.sum(dim=axis, keepdim=keepdims)
     elif isinstance(tensor, np.ndarray):
+        if isinstance(axis, list):
+            axis = tuple(axis)
         return np.sum(tensor, axis=axis, keepdims=keepdims)
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(tensor)))

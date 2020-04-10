@@ -13,17 +13,58 @@
 # limitations under the License.
 # ==============================================================================
 
-from typing import TypeVar, Union, List
+from typing import TypeVar, Union, Sequence
 
+import numpy as np
 import tensorflow as tf
 import torch
 
 from fastestimator.util.util import to_list
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, torch.autograd.Variable)
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
 
-def reduce_min(tensor: Tensor, axis: Union[None, int, List[int]] = None, keepdims: bool = False) -> Tensor:
+def reduce_min(tensor: Tensor, axis: Union[None, int, Sequence[int]] = None, keepdims: bool = False) -> Tensor:
+    """Compute the min value along a given `axis` of a `tensor`.
+
+    This method can be used with Numpy data:
+    ```python
+    n = np.array([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
+    b = fe.backend.reduce_min(n)  # 1
+    b = fe.backend.reduce_min(n, axis=0)  # [[1, 2], [3, 4]]
+    b = fe.backend.reduce_min(n, axis=1)  # [[1, 2], [5, 6]]
+    b = fe.backend.reduce_min(n, axis=[0,2])  # [1, 3]
+    ```
+
+    This method can be used with TensorFlow tensors:
+    ```python
+    t = tf.constant([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
+    b = fe.backend.reduce_min(t)  # 1
+    b = fe.backend.reduce_min(t, axis=0)  # [[1, 2], [3, 4]]
+    b = fe.backend.reduce_min(t, axis=1)  # [[1, 2], [5, 6]]
+    b = fe.backend.reduce_min(t, axis=[0,2])  # [1, 3]
+    ```
+
+    This method can be used with PyTorch tensors:
+    ```python
+    p = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
+    b = fe.backend.reduce_min(p)  # 1
+    b = fe.backend.reduce_min(p, axis=0)  # [[1, 2], [3, 4]]
+    b = fe.backend.reduce_min(p, axis=1)  # [[1, 2], [5, 6]]
+    b = fe.backend.reduce_min(p, axis=[0,2])  # [1, 3]
+    ```
+
+    Args:
+        tensor: The input value.
+        axis: Which axis or collection of axes to compute the min along.
+        keepdims: Whether to preserve the number of dimensions during the reduction.
+
+    Returns:
+        The min values of `tensor` along `axis`.
+
+    Raises:
+        ValueError: If `tensor` is an unacceptable data type.
+    """
     if isinstance(tensor, tf.Tensor):
         return tf.reduce_min(tensor, axis=axis, keepdims=keepdims)
     elif isinstance(tensor, torch.Tensor):
@@ -34,5 +75,9 @@ def reduce_min(tensor: Tensor, axis: Union[None, int, List[int]] = None, keepdim
         for ax in axis:
             tensor = tensor.min(dim=ax, keepdim=keepdims)[0]
         return tensor
+    elif isinstance(tensor, np.ndarray):
+        if isinstance(axis, list):
+            axis = tuple(axis)
+        return np.min(tensor, axis=axis, keepdims=keepdims)
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(tensor)))

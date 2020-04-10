@@ -43,9 +43,9 @@ def feed_forward(model: Union[tf.keras.Model, torch.nn.Module], x: Union[Tensor,
 
     Args:
         model: A neural network to run the forward step through.
-        x: An input tensor for the `model`. This value will be auto-cast to either a tf.Tensor or torch.Tensor as 
+        x: An input tensor for the `model`. This value will be auto-cast to either a tf.Tensor or torch.Tensor as
             applicable for the `model`.
-        training: Whether this forward step is part of training or not. This may impact the behavior of `model` layers 
+        training: Whether this forward step is part of training or not. This may impact the behavior of `model` layers
             such as dropout.
 
     Returns:

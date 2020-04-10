@@ -57,7 +57,7 @@ def get_gradient(target: Tensor,
     Args:
         target: The target (final) tensor.
         sources: A sequence of source (initial) tensors.
-        higher_order: Whether the gradient will be used for higher order gradients. 
+        higher_order: Whether the gradient will be used for higher order gradients.
         tape: TensorFlow gradient tape. Only needed when using the TensorFlow backend.
         retain_graph: Whether to retain PyTorch graph. Only valid when using the PyTorch backend.
 

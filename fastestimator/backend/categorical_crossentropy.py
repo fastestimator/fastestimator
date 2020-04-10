@@ -17,7 +17,7 @@ from typing import TypeVar
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.reduce_loss import reduce_loss
+from fastestimator.backend.reduce_mean import reduce_mean
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
@@ -26,8 +26,8 @@ def categorical_crossentropy(y_pred: Tensor, y_true: Tensor, from_logits: bool =
                              average_loss: bool = True) -> Tensor:
     """Compute categorical crossentropy.
 
-    Note that if any of the `y_pred` values are exactly 0, this will result in a NaN output. If `from_logits` is 
-    False, then each entry of `y_pred` should sum to 1. If they don't sum to 1 then tf and torch backends will 
+    Note that if any of the `y_pred` values are exactly 0, this will result in a NaN output. If `from_logits` is
+    False, then each entry of `y_pred` should sum to 1. If they don't sum to 1 then tf and torch backends will
     result in different numerical values.
 
     This method can be used with TensorFlow tensors:
@@ -53,7 +53,7 @@ def categorical_crossentropy(y_pred: Tensor, y_true: Tensor, from_logits: bool =
         average_loss: Whether to average the element-wise loss.
 
     Returns:
-        The categorical crossentropy between `y_pred` and `y_true`. A scalar if `average_loss` is True, else a 
+        The categorical crossentropy between `y_pred` and `y_true`. A scalar if `average_loss` is True, else a
         tensor with the shape (Batch).
 
     Raises:
@@ -68,7 +68,7 @@ def categorical_crossentropy(y_pred: Tensor, y_true: Tensor, from_logits: bool =
         y_true = y_true.to(torch.float)
         ce = _categorical_crossentropy_torch(y_pred=y_pred, y_true=y_true, from_logits=from_logits)
     if average_loss:
-        ce = reduce_loss(ce)
+        ce = reduce_mean(ce)
     return ce
 
 
