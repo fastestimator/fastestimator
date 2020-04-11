@@ -374,14 +374,14 @@ class ImageSaving(Trace):
 def get_estimator(target_size=128, epochs=55, save_dir=tempfile.mkdtemp(), max_steps_per_epoch=None):
     # assert growth parameters
     num_grow = np.log2(target_size) - 2
-    assert num_grow > 1 and num_grow % 1 == 0, "need exponential of 2 and greater than 8 as target size"
+    assert num_grow >= 1 and num_grow % 1 == 0, "need exponential of 2 and greater than 8 as target size"
     num_phases = int(2 * num_grow + 1)
     assert epochs % num_phases == 0, "epoch must be multiple of {} for size {}".format(num_phases, target_size)
     num_grow, phase_length = int(num_grow), int(epochs / num_phases)
     event_epoch = [1, 1 + phase_length] + [phase_length * (2 * i + 1) + 1 for i in range(1, num_grow)]
     event_size = [4] + [2**(i + 3) for i in range(num_grow)]
     # set up data schedules
-    dataset = nih_chestxray.load_data("/data/data")
+    dataset = nih_chestxray.load_data()
     resize_map = {
         epoch: Resize(image_in="x", image_out="x", height=size, width=size)
         for (epoch, size) in zip(event_epoch, event_size)
