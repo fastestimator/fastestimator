@@ -22,8 +22,15 @@ from fastestimator.dataset.numpy_dataset import NumpyDataset
 
 
 def load_data() -> Tuple[NumpyDataset, NumpyDataset]:
-    (X, y) = load_breast_cancer(True)
-    x_train, x_eval, y_train, y_eval = train_test_split(X, y, test_size=0.2, random_state=42)
+    """Load and return the UCI ML Breast Cancer Wisconsin (Diagnostic) dataset.
+
+    For more information about this dataset and the meaning of the features it contains, see the sklearn documentation.
+
+    Returns:
+        (train_data, eval_data)
+    """
+    (x, y) = load_breast_cancer(return_X_y=True)
+    x_train, x_eval, y_train, y_eval = train_test_split(x, y, test_size=0.2, random_state=42)
     x_train, x_eval = np.float32(x_train), np.float32(x_eval)
     train_data = NumpyDataset({"x": x_train, "y": y_train})
     eval_data = NumpyDataset({"x": x_eval, "y": y_eval})

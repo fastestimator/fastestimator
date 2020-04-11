@@ -27,13 +27,15 @@ wget.callback_progress = callback_progress
 
 
 def load_data(batch_size: int, root_dir: Optional[str] = None) -> Tuple[BatchDataset, BatchDataset]:
-    """Download the horse2zebra dataset to local storage, if not already downloaded.
-        Sourced from: https://people.eecs.berkeley.edu/~taesung_park/CycleGAN/datasets/horse2zebra.zip
+    """Load and return the horse2zebra dataset.
+
+    Sourced from https://people.eecs.berkeley.edu/~taesung_park/CycleGAN/datasets/horse2zebra.zip. This method will
+        download the data to local storage if the data has not been previously downloaded.
 
     Args:
-        batch_size: Batch size.
-        root_dir: The path to store the data. When `path` is not provided, will save at
-            `fastestimator_data` under user's home directory.
+        batch_size: The desired batch size.
+        root_dir: The path to store the downloaded data. When `path` is not provided, the data will be saved into
+            `fastestimator_data` under the user's home directory.
 
     Returns:
         (train_data, eval_data)

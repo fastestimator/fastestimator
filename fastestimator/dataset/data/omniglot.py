@@ -27,12 +27,14 @@ wget.callback_progress = callback_progress
 
 
 def load_data(root_dir: Optional[str] = None) -> Tuple[SiameseDirDataset, SiameseDirDataset]:
-    """Download the Omniglot dataset to local storage.
+    """Load and return the Omniglot dataset.
+
     Args:
-        root_dir: The path to store the  data. When `path` is not provided, will save at
-            `fastestimator_data` under user's home directory.
+        root_dir: The path to store the downloaded data. When `path` is not provided, the data will be saved into
+            `fastestimator_data` under the user's home directory.
+
     Returns:
-        TrainData, EvalData
+        (train_data, eval_data)
     """
     if root_dir is None:
         root_dir = os.path.join(str(Path.home()), 'fastestimator_data', 'Omniglot')

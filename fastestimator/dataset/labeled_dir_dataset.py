@@ -21,14 +21,14 @@ from fastestimator.dataset.dataset import InMemoryDataset, DatasetSummary
 
 
 class LabeledDirDataset(InMemoryDataset):
-    """ A dataset which reads files from a folder hierarchy like root/class(/es)/data.file
+    """A dataset which reads files from a folder hierarchy like root/class(/es)/data.file.
 
     Args:
-        root_dir: The path to the directory containing data sorted by folders
-        data_key: What key to assign to the data values in the data dictionary
-        label_key: What key to assign to the label values in the data dictionary
-        label_mapping: A dictionary defining the mapping to use. If not provided will map classes to int labels
-        file_extension: If provided then only files ending with the file_extension will be included
+        root_dir: The path to the directory containing data sorted by folders.
+        data_key: What key to assign to the data values in the data dictionary.
+        label_key: What key to assign to the label values in the data dictionary.
+        label_mapping: A dictionary defining the mapping to use. If not provided will map classes to int labels.
+        file_extension: If provided then only files ending with the file_extension will be included.
     """
     data: Dict[int, Dict[str, Any]]
     mapping: Dict[str, Any]
@@ -39,7 +39,7 @@ class LabeledDirDataset(InMemoryDataset):
                  data_key: str = "x",
                  label_key: str = "y",
                  label_mapping: Optional[Dict[str, Any]] = None,
-                 file_extension: Optional[str] = None):
+                 file_extension: Optional[str] = None) -> None:
         # Recursively find all the data
         root_dir = os.path.normpath(root_dir)
         data = {}
@@ -71,6 +71,10 @@ class LabeledDirDataset(InMemoryDataset):
         super().__init__(parsed_data)
 
     def summary(self) -> DatasetSummary:
+        """Generate a summary representation of this dataset.
+        Returns:
+            A summary representation of this dataset.
+        """
         summary = super().summary()
         summary.class_key = self.label_key
         summary.class_key_mapping = self.mapping

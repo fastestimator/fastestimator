@@ -25,21 +25,29 @@ from fastestimator.util.wget_util import bar_custom, callback_progress
 wget.callback_progress = callback_progress
 
 
-def _download_data(link: str, data_path: str, idx: int, total_idx: int):
+def _download_data(link: str, data_path: str, idx: int, total_idx: int) -> None:
+    """A helper function to run wget.
+
+    Args:
+        link: The download link.
+        data_path: Where to save the downloaded data.
+        idx: The current download index.
+        total_idx: How many files total will be downloaded.
+    """
     if not os.path.exists(data_path):
         print("Downloading data to {}, file: {} / {}".format(data_path, idx + 1, total_idx))
         wget.download(link, data_path, bar=bar_custom)
 
 
 def load_data(root_dir: Optional[str] = None) -> DirDataset:
-    """Download the NIH dataset to local storage.
+    """Load and return the NIH Chest X-ray dataset.
 
     Args:
-        root_dir: The path to store the data. When `path` is not provided, will save at
-            `fastestimator_data` under user's home directory.
+        root_dir: The path to store the downloaded data. When `path` is not provided, the data will be saved into
+            `fastestimator_data` under the user's home directory.
 
     Returns:
-        TrainData
+        train_data
     """
     if root_dir is None:
         root_dir = os.path.join(str(Path.home()), 'fastestimator_data', 'NIH_Chestxray')

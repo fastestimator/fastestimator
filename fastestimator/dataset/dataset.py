@@ -18,22 +18,21 @@ from collections import defaultdict
 from functools import lru_cache
 from typing import Any, Dict, Hashable, Iterable, List, Optional, Sequence, Union
 
+import jsonpickle
 import numpy as np
 from torch.utils.data import Dataset
 
-import jsonpickle
 from fastestimator.util.util import get_shape, get_type
 
 
 class KeySummary:
-    """
-    A summary of the dataset attributes corresponding to a particular key
+    """A summary of the dataset attributes corresponding to a particular key.
 
     Args:
-        num_unique_values: The number of unique values corresponding to a particular key (if known)
+        num_unique_values: The number of unique values corresponding to a particular key (if known).
         shape: The shape of the vectors corresponding to the key. None is used in a list to indicate that a dimension is
             ragged.
-        dtype: The data type of instances corresponding to the given key
+        dtype: The data type of instances corresponding to the given key.
     """
     num_unique_values: Optional[int]
     shape: List[Optional[int]]
@@ -52,15 +51,14 @@ class KeySummary:
 
 
 class DatasetSummary:
-    """
-    This class contains information summarizing a dataset object
+    """This class contains information summarizing a dataset object.
 
     Args:
-        num_instances: The number of data instances within the dataset (influences the size of an epoch)
-        num_classes: How many different classes are there
-        keys: What keys does the dataset provide, along with summary information about each key
-        class_key: Which key corresponds to class information (if known)
-        class_key_mapping: A mapping of the original class string values to the values which are output to the pipeline
+        num_instances: The number of data instances within the dataset (influences the size of an epoch).
+        num_classes: How many different classes are present.
+        keys: What keys does the dataset provide, along with summary information about each key.
+        class_key: Which key corresponds to class information (if known).
+        class_key_mapping: A mapping of the original class string values to the values which are output to the pipeline.
     """
     num_instances: int
     num_classes: Optional[int]
@@ -92,12 +90,59 @@ class DatasetSummary:
 
 class FEDataset(Dataset):
     def __len__(self) -> int:
+        """Defines how many datapoints the dataset contains.
+
+        This is used for computing the number of datapoints available per epoch.
+
+        Returns:
+            The number of datapoints within the dataset.
+        """
         raise NotImplementedError
 
     def __getitem__(self, index: int) -> Dict[str, Any]:
+        """Fetch a data instance at a specified index.
+
+        Args:
+            index: Which datapoint to retrieve.
+
+        Returns:
+            The data dictionary from the specified index.
+        """
         raise NotImplementedError
 
     def split(self, *fractions: Union[float, int, Iterable[int]]) -> Union['FEDataset', List['FEDataset']]:
+        """Split this dataset into multiple smaller datasets.
+
+        This function enables several types of splitting:
+            1. Splitting by fractions.
+                ```python
+                ds = fe.dataset.FEDataset(...)  # len(ds) == 1000
+                ds2 = ds.split(0.1)  # len(ds) == 900, len(ds2) == 100
+                ds3, ds4 = ds.split(0.1, 0.2)  # len(ds) == 630, len(ds3) == 90, len(ds4) == 180
+                ```
+            2. Splitting by counts.
+                ```python
+                ds = fe.dataset.FEDataset(...)  # len(ds) == 1000
+                ds2 = ds.split(100)  # len(ds) == 900, len(ds2) == 100
+                ds3, ds4 = ds.split(90, 180)  # len(ds) == 630, len(ds3) == 90, len(ds4) == 180
+                ```
+            3. Splitting by indices.
+                ``python
+                ds = fe.dataset.FEDataset(...)  # len(ds) == 1000
+                ds2 = ds.split([87,2,3,100,121,158])  # len(ds) == 994, len(ds2) == 6
+                ds3 = ds.split(range(100))  # len(ds) == 894, len(ds3) == 100
+                ```
+
+        Args:
+            *fractions: Floating point values will be interpreted as percentages, integers as an absolute number of
+                datapoints, and an iterable of integers as the exact indices of the data that should be removed in order
+                to create the new dataset.
+
+        Returns:
+            One or more new datasets which are created by removing elements from the current dataset. The number of
+            datasets returned will be equal to the number of `fractions` provided. If only a single value is provided
+            then the return will be a single dataset rather than a list of datasets.
+        """
         assert len(fractions) > 0, "split requires at least one fraction argument"
         original_size = self._split_length()
         method = None
@@ -147,13 +192,32 @@ class FEDataset(Dataset):
         return splits
 
     def _split_length(self) -> int:
-        # Useful if sub-classes want to split by something other than indices (see SiameseDirDataset for example)
+        """The length of a dataset to be used for the purpose of computing splits.
+
+        Useful if sub-classes want to split by something other than indices (see SiameseDirDataset for example).
+
+        Returns:
+            The apparent length of the dataset for the purpose of the .split() function
+        """
         return len(self)
 
     def _do_split(self, splits: Sequence[Iterable[int]]) -> List['FEDataset']:
+        """Split the current dataset apart into several smaller datasets.
+
+        Args:
+            splits: Which indices to remove from the current dataset in order to create new dataset(s). One dataset will
+                be generated for every iterable within the `splits` sequence.
+
+        Returns:
+            New datasets generated by removing data at the indices specified by `splits` from the current dataset.
+        """
         raise NotImplementedError
 
     def summary(self) -> DatasetSummary:
+        """Generate a summary representation of this dataset.
+        Returns:
+            A summary representation of this dataset.
+        """
         raise NotImplementedError
 
     def __str__(self):
@@ -161,6 +225,11 @@ class FEDataset(Dataset):
 
 
 class InMemoryDataset(FEDataset):
+    """A dataset abstraction to simplify the implementation of datasets which hold their data in memory.
+
+    Args:
+        data: A dictionary like {data_index: {<instance dictionary>}}.
+    """
     data: Dict[int, Dict[str, Any]]  # Index-based data dictionary
     summary: lru_cache
 
@@ -174,6 +243,21 @@ class InMemoryDataset(FEDataset):
         return len(self.data)
 
     def __getitem__(self, index: Union[int, str]) -> Union[Dict[str, Any], np.ndarray, List[Any]]:
+        """Look up data from the dataset.
+
+        ```python
+        data = fe.dataset.InMemoryDataset(...)  # {"x": <100>}, len(data) == 1000
+        element = data[0]  # {"x": <100>}
+        column = data["x"]  # <1000x100>
+        ```
+
+        Args:
+            index: Either an int corresponding to a particular element of data, or a string in which case the
+                corresponding column of data will be returned.
+
+        Returns:
+            A data dictionary if the index was an int, otherwise a column of data in list format.
+        """
         if isinstance(index, int):
             return self.data[index]
         else:
@@ -182,7 +266,25 @@ class InMemoryDataset(FEDataset):
                 return np.array(result)
             return result
 
-    def __setitem__(self, key: Union[int, str], value: Union[Dict[str, Any], Sequence[Any]]):
+    def __setitem__(self, key: Union[int, str], value: Union[Dict[str, Any], Sequence[Any]]) -> None:
+        """Modify data in the dataset.
+
+        ```python
+        data = fe.dataset.InMemoryDataset(...)  # {"x": <100>}, len(data) == 1000
+        column = data["x"]  # <1000x100>
+        column = column - np.mean(column)
+        data["x"] = column
+        ```
+
+        Args:
+            key: Either an int corresponding to a particular element of data, or a string in which case the
+                corresponding column of data will be updated.
+            value: The value to be inserted for the given `key`. Must be a dictionary if `key` is an integer. Otherwise
+                must be a sequence with the same length as the current length of the dataset.
+
+        Raises:
+            AssertionError: If the `value` is inappropriate given the type of the `key`.
+        """
         if isinstance(key, int):
             assert isinstance(value, Dict), "if setting a value using an integer index, must provide a dictionary"
             self.data[key] = value
@@ -194,6 +296,15 @@ class InMemoryDataset(FEDataset):
         self.summary.cache_clear()
 
     def _skip_init(self, data: Dict[int, Dict[str, Any]], **kwargs) -> 'InMemoryDataset':
+        """A helper method to create new dataset instances without invoking their __init__ methods.
+
+        Args:
+            data: The data dictionary to be used in the new dataset.
+            **kwargs: Any other member variables to be assigned in the new dataset.
+
+        Returns:
+            A new dataset based on the given inputs.
+        """
         obj = self.__class__.__new__(self.__class__)
         obj.data = data
         for k, v in kwargs.items():
@@ -205,6 +316,15 @@ class InMemoryDataset(FEDataset):
         return obj
 
     def _do_split(self, splits: Sequence[Iterable[int]]) -> List['InMemoryDataset']:
+        """Split the current dataset apart into several smaller datasets.
+
+        Args:
+            splits: Which indices to remove from the current dataset in order to create new dataset(s). One dataset will
+                be generated for every iterable within the `splits` sequence.
+
+        Returns:
+            New Datasets generated by removing data at the indices specified by `splits` from the current dataset.
+        """
         results = []
         for split in splits:
             data = {new_idx: self.data.pop(old_idx) for new_idx, old_idx in enumerate(split)}
@@ -215,6 +335,10 @@ class InMemoryDataset(FEDataset):
         return results
 
     def summary(self) -> DatasetSummary:
+        """Generate a summary representation of this dataset.
+        Returns:
+            A summary representation of this dataset.
+        """
         # We will check whether the dataset is doing additional pre-processing on top of the self.data keys. If not we
         # can extract extra information about the data without incurring a large computational time cost
         final_example = self[0]
