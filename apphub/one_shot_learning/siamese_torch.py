@@ -57,20 +57,13 @@ class L2Regularization(TensorOp):
                 l2_loss += 0.01 * torch.sum(torch.mul(m.weight, m.weight))
             elif isinstance(m, nn.Linear):
                 if name == "fc1":
-                    l2_loss += 0.0001 * torch.sum(torch.mul(
-                        m.weight, m.weight))
+                    l2_loss += 0.0001 * torch.sum(torch.mul(m.weight, m.weight))
         return loss + l2_loss
 
 
 class OneShotAccuracy(Trace):
     """Trace for calculating one shot accuracy"""
-    def __init__(self,
-                 dataset,
-                 model,
-                 N=20,
-                 trials=400,
-                 mode=["eval", "test"],
-                 output_name="one_shot_accuracy"):
+    def __init__(self, dataset, model, N=20, trials=400, mode=["eval", "test"], output_name="one_shot_accuracy"):
 
         super().__init__(mode=mode, outputs=output_name)
         self.dataset = dataset
@@ -86,35 +79,25 @@ class OneShotAccuracy(Trace):
         self.correct = 0
 
     def on_epoch_end(self, data: Data):
-        if torch.cuda.is_available():
-            self.model.cuda()
-            device = "cuda"
-        else:
-            device = "cpu"
         for _ in range(self.trials):
             img_path = self.dataset.one_shot_trial(self.N)
-            input_img = (
-                np.array([
-                    np.expand_dims(cv2.imread(i, cv2.IMREAD_GRAYSCALE),
-                                   -1).reshape((1, 105, 105)) / 255.
-                    for i in img_path[0]
-                ],
-                         dtype=np.float32),
-                np.array([
-                    np.expand_dims(cv2.imread(i, cv2.IMREAD_GRAYSCALE),
-                                   -1).reshape((1, 105, 105)) / 255.
-                    for i in img_path[1]
-                ],
-                         dtype=np.float32))
+            input_img = (np.array([
+                np.expand_dims(cv2.imread(i, cv2.IMREAD_GRAYSCALE), -1).reshape((1, 105, 105)) / 255.
+                for i in img_path[0]
+            ],
+                                  dtype=np.float32),
+                         np.array([
+                             np.expand_dims(cv2.imread(i, cv2.IMREAD_GRAYSCALE), -1).reshape((1, 105, 105)) / 255.
+                             for i in img_path[1]
+                         ],
+                                  dtype=np.float32))
 
-            input_img = (to_tensor(input_img[0], "torch").to(device),
-                         to_tensor(input_img[1], "torch").to(device))
+            input_img = (to_tensor(input_img[0], "torch").to(self.model.device),
+                         to_tensor(input_img[1], "torch").to(self.model.device))
 
-            prediction_score = feed_forward(
-                self.model, input_img, training=False).cpu().detach().numpy()
+            prediction_score = feed_forward(self.model, input_img, training=False).cpu().detach().numpy()
 
-            if np.argmax(
-                    prediction_score) == 0 and prediction_score.std() > 0.01:
+            if np.argmax(prediction_score) == 0 and prediction_score.std() > 0.01:
                 self.correct += 1
 
             self.total += 1
@@ -171,59 +154,48 @@ class SiameseNetwork(nn.Module):
         return x
 
 
-def get_estimator(epochs=200,
-                  batch_size=128,
-                  max_steps_per_epoch=None,
-                  save_dir=tempfile.mkdtemp()):
+def get_estimator(epochs=200, batch_size=128, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
     # step 1. prepare pipeline
     train_data, eval_data = omniglot.load_data()
     test_data = eval_data.split(0.5)
 
-    pipeline = fe.Pipeline(train_data=train_data,
-                           eval_data=eval_data,
-                           test_data=test_data,
-                           batch_size=batch_size,
-                           ops=[
-                               ReadImage(inputs="x_a",
-                                         outputs="x_a",
-                                         grey_scale=True),
-                               ReadImage(inputs="x_b",
-                                         outputs="x_b",
-                                         grey_scale=True),
-                               Sometimes(ShiftScaleRotate(image_in="x_a",
-                                                          image_out="x_a",
-                                                          shift_limit=0.05,
-                                                          scale_limit=0.2,
-                                                          rotate_limit=10.0,
-                                                          mode="train"),
-                                         prob=0.89),
-                               Sometimes(ShiftScaleRotate(image_in="x_b",
-                                                          image_out="x_b",
-                                                          shift_limit=0.05,
-                                                          scale_limit=0.2,
-                                                          rotate_limit=10.0,
-                                                          mode="train"),
-                                         prob=0.89),
-                               Minmax(inputs="x_a", outputs="x_a"),
-                               Minmax(inputs="x_b", outputs="x_b"),
-                               Reshape(shape=(1, 105, 105),
-                                       inputs="x_a",
-                                       outputs="x_a"),
-                               Reshape(shape=(1, 105, 105),
-                                       inputs="x_b",
-                                       outputs="x_b")
-                           ])
+    pipeline = fe.Pipeline(
+        train_data=train_data,
+        eval_data=eval_data,
+        test_data=test_data,
+        batch_size=batch_size,
+        ops=[
+            ReadImage(inputs="x_a", outputs="x_a", grey_scale=True),
+            ReadImage(inputs="x_b", outputs="x_b", grey_scale=True),
+            Sometimes(
+                ShiftScaleRotate(image_in="x_a",
+                                 image_out="x_a",
+                                 shift_limit=0.05,
+                                 scale_limit=0.2,
+                                 rotate_limit=10.0,
+                                 mode="train"),
+                prob=0.89),
+            Sometimes(
+                ShiftScaleRotate(image_in="x_b",
+                                 image_out="x_b",
+                                 shift_limit=0.05,
+                                 scale_limit=0.2,
+                                 rotate_limit=10.0,
+                                 mode="train"),
+                prob=0.89),
+            Minmax(inputs="x_a", outputs="x_a"),
+            Minmax(inputs="x_b", outputs="x_b"),
+            Reshape(shape=(1, 105, 105), inputs="x_a", outputs="x_a"),
+            Reshape(shape=(1, 105, 105), inputs="x_b", outputs="x_b")
+        ])
 
     # step 2. prepare model
-    model = fe.build(model_fn=SiameseNetwork,
-                     model_names="siamese_net",
-                     optimizer_fn="adam")
+    model = fe.build(model_fn=SiameseNetwork, model_names="siamese_net", optimizer_fn="adam")
 
     network = fe.Network(ops=[
         ModelOp(inputs=["x_a", "x_b"], model=model, outputs="y_pred"),
         CrossEntropy(inputs=("y_pred", "y"), outputs="loss", form="binary"),
-        L2Regularization(
-            inputs="loss", model=model, outputs="loss", mode="train"),
+        L2Regularization(inputs="loss", model=model, outputs="loss", mode="train"),
         UpdateOp(model=model, loss_name="loss")
     ])
 
@@ -231,17 +203,9 @@ def get_estimator(epochs=200,
     traces = [
         LRScheduler(model=model, lr_fn=lr_schedule),
         Accuracy(true_key="y", pred_key="y_pred"),
-        OneShotAccuracy(dataset=eval_data,
-                        model=model,
-                        output_name='one_shot_accuracy'),
-        BestModelSaver(model=model,
-                       save_dir=save_dir,
-                       metric="one_shot_accuracy",
-                       save_best_mode="max"),
-        EarlyStopping(monitor="one_shot_accuracy",
-                      patience=20,
-                      compare='max',
-                      mode="eval")
+        OneShotAccuracy(dataset=eval_data, model=model, output_name='one_shot_accuracy'),
+        BestModelSaver(model=model, save_dir=save_dir, metric="one_shot_accuracy", save_best_mode="max"),
+        EarlyStopping(monitor="one_shot_accuracy", patience=20, compare='max', mode="eval")
     ]
 
     estimator = fe.Estimator(network=network,

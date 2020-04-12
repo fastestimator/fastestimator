@@ -20,6 +20,11 @@ from fastestimator.dataset.numpy_dataset import NumpyDataset
 
 
 def load_data() -> Tuple[NumpyDataset, NumpyDataset]:
+    """Load and return the CIFAR10 dataset.
+
+    Returns:
+        (train_data, eval_data)
+    """
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.cifar10.load_data()
     train_data = NumpyDataset({"x": x_train, "y": y_train})
     eval_data = NumpyDataset({"x": x_eval, "y": y_eval})

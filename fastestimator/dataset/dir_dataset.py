@@ -20,13 +20,13 @@ from fastestimator.dataset.dataset import InMemoryDataset
 
 
 class DirDataset(InMemoryDataset):
-    """ A dataset which reads files from a folder hierarchy
+    """A dataset which reads files from a folder hierarchy like root/data.file.
 
     Args:
-        root_dir: The path to the directory containing data
-        data_key: What key to assign to the data values in the data dictionary
-        file_extension: If provided then only files ending with the file_extension will be included
-        recursive_search: Whether to search within subdirectories for files
+        root_dir: The path to the directory containing data.
+        data_key: What key to assign to the data values in the data dictionary.
+        file_extension: If provided then only files ending with the file_extension will be included.
+        recursive_search: Whether to search within subdirectories for files.
     """
     data: Dict[int, Dict[str, str]]
 
@@ -34,7 +34,7 @@ class DirDataset(InMemoryDataset):
                  root_dir: str,
                  data_key: str = "x",
                  file_extension: Optional[str] = None,
-                 recursive_search: bool = True):
+                 recursive_search: bool = True) -> None:
         data = []
         root_dir = os.path.normpath(root_dir)
         if not os.path.isdir(root_dir):

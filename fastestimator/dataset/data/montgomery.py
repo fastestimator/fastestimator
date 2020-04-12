@@ -28,14 +28,17 @@ wget.callback_progress = callback_progress
 
 
 def load_data(root_dir: Optional[str] = None) -> CSVDataset:
-    """
-    Download the montgomery dataset to local storage if not already downloaded.
-    Sourced from: http://openi.nlm.nih.gov/imgs/collections/NLM-MontgomeryCXRSet.zip
+    """Load and return the montgomery dataset.
+
+    Sourced from http://openi.nlm.nih.gov/imgs/collections/NLM-MontgomeryCXRSet.zip. This method will download the data
+        to local storage if the data has not been previously downloaded.
+
     Args:
-        root_dir: The path to store the USPS data. If not provided then data is saved to `fastestimator_data` in the
-                  users home directory
+        root_dir: The path to store the downloaded data. When `path` is not provided, the data will be saved into
+            `fastestimator_data` under the user's home directory.
+
     Returns:
-        TrainData
+        train_data
     """
     home = str(Path.home())
 

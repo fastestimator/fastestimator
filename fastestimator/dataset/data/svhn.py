@@ -19,9 +19,9 @@ from typing import Dict, List, Optional, Tuple
 
 import h5py
 import pandas as pd
+import tqdm
 import wget
 
-import tqdm
 from fastestimator.dataset.pickle_dataset import PickleDataset
 from fastestimator.util.wget_util import bar_custom, callback_progress
 
@@ -32,12 +32,11 @@ def _get_name(index: int, hdf5_data: h5py.File) -> str:
     """Retrieves the image file name from hdf5 data for a specific index.
 
     Args:
-        index: Index of image.
+        index: Index of the image.
         hdf5_data: h5py file containing bounding box information.
 
     Returns:
         Image file name.
-
     """
     ref = hdf5_data['/digitStruct/name'][index, 0]
     file_name = ''.join([chr(item) for item in hdf5_data[ref][:]])
@@ -53,7 +52,6 @@ def _get_bbox(index: int, hdf5_data: h5py.File) -> Dict[str, List[int]]:
 
     Returns:
         Label and bounding box information including left, top, width, and height.
-
     """
     meta_data = {'height': [], 'label': [], 'left': [], 'top': [], 'width': []}
 
@@ -72,13 +70,14 @@ def _get_bbox(index: int, hdf5_data: h5py.File) -> Dict[str, List[int]]:
     return meta_data
 
 
-def _extract_metadata(data_folder: str, mode: str, save_path: str):
-    """Creates bounding boxes for all images. This will generate a file indicating for each image the label and
-    bounding box coordinates.
+def _extract_metadata(data_folder: str, mode: str, save_path: str) -> None:
+    """Creates bounding boxes for all images.
+
+    This will generate a file indicating for each image the label and bounding box coordinates.
 
     Args:
         data_folder: Path to data directory containing digitStruct.mat file.
-        mode: Training or testing.
+        mode: "train" or "test".
         save_path: Path to save the file containing the bounding box information.
     """
     mat_path = os.path.join(data_folder, 'digitStruct.mat')
@@ -109,13 +108,14 @@ def _extract_metadata(data_folder: str, mode: str, save_path: str):
 
 
 def load_data(root_dir: Optional[str] = None) -> Tuple[PickleDataset, PickleDataset]:
-    """Download the Street View House Numbers (SVHN) dataset to local storage, if not already downloaded.
+    """Load and return the Street View House Numbers (SVHN) dataset.
+
     Args:
-        root_dir: The path to store the SVHN data. When `path` is not provided, will save at
-            `fastestimator_data` under user's home directory.
+        root_dir: The path to store the downloaded data. When `path` is not provided, the data will be saved into
+            `fastestimator_data` under the user's home directory.
 
     Returns:
-        TrainData, TestData
+        (train_data, test_data)
     """
     home = str(Path.home())
 

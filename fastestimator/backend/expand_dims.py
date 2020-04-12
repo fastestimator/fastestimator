@@ -31,14 +31,14 @@ def expand_dims(tensor: Tensor, axis: int = 1) -> Tensor:
     b = fe.backend.expand_dims(n, axis=0)  # [[2, 5, 7]]
     b = fe.backend.expand_dims(n, axis=1)  # [[2], [5], [7]]
     ```
-    
+
     This method can be used with TensorFlow tensors:
     ```python
     t = tf.constant([2,7,5])
     b = fe.backend.expand_dims(t, axis=0)  # [[2, 5, 7]]
     b = fe.backend.expand_dims(t, axis=1)  # [[2], [5], [7]]
     ```
-    
+
     This method can be used with PyTorch tensors:
     ```python
     p = torch.tensor([2,7,5])
@@ -51,7 +51,10 @@ def expand_dims(tensor: Tensor, axis: int = 1) -> Tensor:
         axis: Which axis should the new axis be inserted along. Must be in the range [-n-1, n].
 
     Returns:
-        A concatenated representation of the `tensors`, or None if the list of `tensors` was empty. 
+        A concatenated representation of the `tensors`, or None if the list of `tensors` was empty.
+
+    Raises:
+        ValueError: If `tensor` is an unacceptable data type.
     """
     if isinstance(tensor, tf.Tensor):
         return tf.expand_dims(tensor, axis=axis)

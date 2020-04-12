@@ -28,15 +28,17 @@ wget.callback_progress = callback_progress
 
 
 def load_data(root_dir: Optional[str] = None) -> CSVDataset:
-    """Download the Caltech-UCSD Birds 200 (CUB200) dataset to local storage, if not already downloaded.
-        Sourced from http://www.vision.caltech.edu/visipedia/CUB-200.html
+    """Load and return the Caltech-UCSD Birds 200 (CUB200) dataset.
+
+    Sourced from http://www.vision.caltech.edu/visipedia/CUB-200.html. This method will download the data to local
+        storage if the data has not been previously downloaded.
 
     Args:
-        root_dir: The path to store the CUB200 data. When `path` is not provided, will save at
-            `fastestimator_data` under user's home directory.
+        root_dir: The path to store the downloaded data. When `path` is not provided, the data will be saved into
+            `fastestimator_data` under the user's home directory.
 
     Returns:
-        TrainData
+        train_data
     """
     home = str(Path.home())
 

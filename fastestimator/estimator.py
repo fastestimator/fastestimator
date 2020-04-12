@@ -221,12 +221,13 @@ class Estimator:
         self._run_traces_on_end({"test"})
 
     def _run_epoch(self):
-        self._run_traces_on_epoch_begin()
+
         loader = iter(self._configure_loader(self.pipeline.get_loader(self.system.mode, self.system.epoch_idx)))
         self.network.load_epoch(mode=self.system.mode,
                                 epoch=self.system.epoch_idx,
                                 output_keys=self.trace_inputs[self.system.mode])
         self.system.batch_idx = None
+        self._run_traces_on_epoch_begin()
         while True:
             try:
                 with Suppressor():
@@ -242,8 +243,9 @@ class Estimator:
                     break
             except StopIteration:
                 break
-        self.network.unload_epoch()
         self._run_traces_on_epoch_end()
+        self.network.unload_epoch()
+
 
     def _configure_loader(self, loader):
         new_loader = loader
