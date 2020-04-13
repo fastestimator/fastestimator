@@ -20,6 +20,17 @@ from fastestimator.op.numpyop.numpyop import NumpyOp
 
 
 class Tokenize(NumpyOp):
+    """Tokenize split the document/sequence into tokens and at the same time perform additional operations
+    on tokens if defined in the passed function object. By default, tokenize only splits the sequences into
+    tokens.
+
+    Args:
+        inputs: Key(s) of sequences to be tokenized. Defaults to None.
+        outputs: Key(s) of sequences that are tokenized. Defaults to None.
+        mode: What execution mode (train, eval, None) to apply this operation. Defaults to None.
+        tokenize_fn: Tokenization function object. Defaults to None.
+        do_lower_case: Whether to convert tokens to lowercase. Defaults to False.
+    """
 
     def __init__(self,
                  inputs: Union[None, str, Iterable[str], Callable] = None,
@@ -37,7 +48,15 @@ class Tokenize(NumpyOp):
             return [self.tokenize_fn(seq) for seq in data]
         return [self._apply_tokenization(seq) for seq in data]
 
-    def _apply_tokenization(self, data):
+    def _apply_tokenization(self, data: np.ndarray) -> List[str]:
+        """Split the sequence into tokens and apply lowercase if flag is set
+
+        Args:
+            data: Input sequence
+
+        Returns:
+            List of tokens
+        """
         data = data.split()
         if self.do_lower_case:
             return data.lower()

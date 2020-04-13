@@ -14,7 +14,7 @@
 # ==============================================================================
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple, Set, List
 
 import numpy as np
 import requests
@@ -24,7 +24,16 @@ from tqdm import tqdm
 from fastestimator.dataset.numpy_dataset import NumpyDataset
 
 
-def get_sentences_and_labels(path: str):
+def get_sentences_and_labels(path: str) -> Tuple[List[str], List[str], Set[str], Set[str]]:
+    """Combines tokens into sentences and create vocab set for train data and labels. For simplicity tokens with 'O'
+    entity are omitted.
+
+    Args:
+        path: Path to the downloaded dataset file
+
+    Returns:
+        (sentences, labels, train_vocab, label_vocab)
+    """
     words, tags = [], []
     word_vocab, label_vocab = set(), set()
     sentences, labels = [], []
@@ -47,7 +56,18 @@ def get_sentences_and_labels(path: str):
     return sentences[:10000], labels[:10000], word_vocab, label_vocab
 
 
-def load_data(root_dir: Optional[str] = None):
+def load_data(root_dir: Optional[str] = None) -> Tuple[NumpyDataset, NumpyDataset, Set[str], Set[str]]:
+    """Dataset from GermEval 2014 contains 31,000 sentences corresponding to over 590,000 tokens from German wikipedia
+    and News corpora. The sentence is encoded as one token per line with information provided in tab-seprated columns.
+    Sourced from https://sites.google.com/site/germeval2014ner/data
+
+    Args:
+        root_dir: The path to store the downloaded data. When `path` is not provided, the data will be saved into
+            `fastestimator_data` under the user's home directory.. Defaults to None.
+
+    Returns:
+        (train_data, eval_data, train_vocab, label_vocab)
+    """
     url = 'https://sites.google.com/site/germeval2014ner/data/NER-de-train.tsv?attredirects=0&d=1'
     home = str(Path.home())
 
@@ -57,24 +77,24 @@ def load_data(root_dir: Optional[str] = None):
         root_dir = os.path.join(os.path.abspath(root_dir), 'GermEval')
     os.makedirs(root_dir, exist_ok=True)
 
-    data_compressed_path = os.path.join(root_dir, 'de_ner.tsv')
+    data_path = os.path.join(root_dir, 'de_ner.tsv')
     data_folder_path = os.path.join(root_dir, 'germeval')
 
     if not os.path.exists(data_folder_path):
         # download
-        if not os.path.exists(data_compressed_path):
+        if not os.path.exists(data_path):
             print("Downloading data to {}".format(root_dir))
             stream = requests.get(url, stream=True)  # python wget does not work
             total_size = int(stream.headers.get('content-length', 0))
             block_size = 128  # 1 MB
             progress = tqdm(total=total_size, unit='B', unit_scale=True)
-            with open(data_compressed_path, 'wb') as outfile:
+            with open(data_path, 'wb') as outfile:
                 for data in stream.iter_content(block_size):
                     progress.update(len(data))
                     outfile.write(data)
             progress.close()
 
-    x, y, x_vocab, y_vocab = get_sentences_and_labels(data_compressed_path)
+    x, y, x_vocab, y_vocab = get_sentences_and_labels(data_path)
 
     x_train, x_eval, y_train, y_eval = train_test_split(x, y, test_size=0.2, random_state=42)
     x_train = np.array(x_train)

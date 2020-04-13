@@ -17,12 +17,18 @@ import types
 from typing import Any, Callable, Dict, Iterable, List, Union
 
 import numpy as np
-
 from fastestimator.op.numpyop.numpyop import NumpyOp
 
 
 class WordtoId(NumpyOp):
+    """Converts words to their corresponding id using mapper function or dictionary
 
+    Args:
+        mapping: Mapper function or dictionary
+        inputs: Key(s) of sequences to be converted to ids. Defaults to None.
+        outputs: Key(s) of sequences are converted to ids. Defaults to None.
+        mode: What execution mode (train, eval, None) to apply this operation. Defaults to None.
+    """
     def __init__(self,
                  mapping: Union[None, dict, Callable],
                  inputs: Union[None, str, Iterable[str], Callable] = None,
@@ -37,7 +43,18 @@ class WordtoId(NumpyOp):
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
         return [self._convert_to_id(elem) for elem in data]
 
-    def _convert_to_id(self, data):
+    def _convert_to_id(self, data: np.ndarray) -> np.ndarray:
+        """Flatten the input list and map the token to ids using mapper function or lookup table.
+
+        Args:
+            data: Input array of tokens
+
+        Raises:
+            Exception: If neither of the mapper function or dictionary object is passed
+
+        Returns:
+            Array of token ids
+        """
         data = self._flatten_list(data)
         if callable(self.mapping):
             data = self.mapping(data)
@@ -47,7 +64,15 @@ class WordtoId(NumpyOp):
             raise Exception('Must pass a function type or dictionary object for mapping')
         return np.array(data)
 
-    def _flatten_list(self, data):
+    def _flatten_list(self, data: List[List[str]]) -> str:
+        """Flatten the nested list
+
+        Args:
+            data: Nested list of tokens
+
+        Yields:
+            Token string
+        """
         for el in data:
             if isinstance(el, collections.Iterable) and not isinstance(el, (str, bytes)):
                 yield from self._flatten_list(el)
