@@ -12,9 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator import architecture, backend, dataset, layers, op, schedule, summary, trace, util, xai
-from fastestimator.estimator import Estimator
-from fastestimator.network import Network, build
-from fastestimator.pipeline import Pipeline
-
-__version__ = '1.0'
+from fastestimator.layers import pytorch, tensorflow
