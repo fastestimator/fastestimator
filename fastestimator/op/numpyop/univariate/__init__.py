@@ -52,3 +52,6 @@ from fastestimator.op.numpyop.univariate.to_float import ToFloat
 from fastestimator.op.numpyop.univariate.binarize import Binarize
 from fastestimator.op.numpyop.univariate.to_gray import ToGray
 from fastestimator.op.numpyop.univariate.to_sepia import ToSepia
+from fastestimator.op.numpyop.univariate.tokenize import Tokenize
+from fastestimator.op.numpyop.univariate.pad_sequence import PadSequence
+from fastestimator.op.numpyop.univariate.word_to_id import WordtoId

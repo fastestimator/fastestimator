@@ -203,7 +203,7 @@ class TorchNetwork(BaseNetwork):
         # copy data to cpu
         if self.device.type == "cuda":
             prediction = {
-                key: batch_in[key].detach_().to("cpu")
+                key: batch_in[key].detach().to("cpu")
                 for key in self.effective_outputs[mode] if key in batch_in
             }
         else:
