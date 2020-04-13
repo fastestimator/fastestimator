@@ -16,6 +16,7 @@ import tempfile
 import numpy as np
 from typing import Callable, Iterable, List, Union
 
+import torch
 import torch.nn as nn
 import torch.nn.functional as fn
 from transformers import BertTokenizer, BertModel
@@ -28,7 +29,7 @@ from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.metric import Accuracy
-
+from fastestimator.trace.io import BestModelSaver
 
 def char2idx(data):
     tag2idx = {t: i for i, t in enumerate(data)}
@@ -49,28 +50,34 @@ class ReshapeOp(TensorOp):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
 
     def forward(self, data, state):
-        inp_shape = data.get_shape()
-        if tf.keras.backend.ndim(data) < 3:
-            return tf.reshape(data, [
-                inp_shape[0] * inp_shape[1],
-            ])
+        inp_shape = data.size()
+        if len(inp_shape) < 3:
+            data = data.view(-1,)
         else:
-            return tf.reshape(data, [inp_shape[0] * inp_shape[1], inp_shape[2]])
-
+            data = data.view(-1, inp_shape[2])
+        return data
+bert_model = BertModel.from_pretrained("bert-base-uncased")
 
 class NERModel(nn.Module):
-    def __init__(self, max_len):
+    def __init__(self, head_masks):
         super().__init__()
-        self.bert_model = BertModel.from_pretrained("bert-base-uncased")
-        self.fc1 = nn.Linear(in_features=768, out_features=100)
-        self.fc2 = nn.Linear(in_features=100, out_features=24)
+        self.head_masks = head_masks
+        self.bert_embed = list(bert_model.children())[0]
+        self.bert_encode = list(bert_model.children())[1]
+        self.fc = nn.Linear(in_features=768, out_features=24)
 
-    def forward(self, x, x_masks):
-        seq_output, _ = self.bert_model([x, x_masks])
-        return model
+    def forward(self, inp):
+        x, x_masks = inp
+        x_masks = x_masks[:, None, None, :]
+        x_masks = x_masks.to(dtype=torch.float)
+        seq_output = self.bert_embed(x)
+        out = self.bert_encode(seq_output, attention_mask=x_masks, head_mask=self.head_masks)
+        out = self.fc(out[0])
+        out = fn.softmax(out, dim=-1)
+        return out
 
 
-def get_estimator(max_len=500, epochs=10, batch_size=64, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
+def get_estimator(max_len=20, epochs=10, batch_size=64, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
 
     # step 1 prepare data
     train_data, eval_data, data_vocab, label_vocab = german_ner.load_data()
@@ -85,12 +92,13 @@ def get_estimator(max_len=500, epochs=10, batch_size=64, max_steps_per_epoch=Non
             WordtoId(inputs="x", outputs="x", mapping=tokenizer.convert_tokens_to_ids),
             WordtoId(inputs="y", outputs="y", mapping=tag2idx),
             PadSequence(max_len=max_len, inputs="x", outputs="x"),
-            PadSequence(max_len=max_len, value=tag2idx["O"], inputs="y", outputs="y"),
+            PadSequence(max_len=max_len, value=23, inputs="y", outputs="y"),
             AttentionMask(inputs="x", outputs="x_masks")
         ])
 
     # step 2. prepare model
-    model = fe.build(model_fn=ner_model, optimizer_fn=lambda: tf.optimizers.Adam(1e-5))
+    head_masks = [None] * 12
+    model = fe.build(model_fn=lambda: NERModel(head_masks=head_masks), optimizer_fn=lambda x: torch.optim.Adam(x, lr=1e-5))
     network = fe.Network(ops=[
         ModelOp(model=model, inputs=["x", "x_masks"], outputs="y_pred"),
         ReshapeOp(inputs="y", outputs="y"),
@@ -99,7 +107,7 @@ def get_estimator(max_len=500, epochs=10, batch_size=64, max_steps_per_epoch=Non
         UpdateOp(model=model, loss_name="loss")
     ])
 
-    traces = [Accuracy(true_key="y", pred_key="y_pred")]
+    traces = [Accuracy(true_key="y", pred_key="y_pred"), BestModelSaver(model=model, save_dir=save_dir)]
 
     # step 3 prepare estimator
     estimator = fe.Estimator(network=network,
