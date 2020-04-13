@@ -19,6 +19,8 @@ from typing import Callable, List, Union
 
 from docx import Document
 from docx.shared import Pt
+from docx.table import Table
+from docx.text.paragraph import Paragraph
 
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
@@ -93,16 +95,16 @@ class QMSTest(Trace):
 
 
 class _QMSDocx:
-    def __init__(self, total_pass:int, total_fail:int) -> None:
+    def __init__(self, total_pass: int, total_fail: int) -> None:
         self.doc = Document()
         self._write_static_p1()
         self._write_test_result(total_pass, total_fail)
         self._write_static_p2()
 
-    def save(self, output_path:str):
+    def save(self, output_path: str):
         self.doc.save(output_path)
 
-    def _write_test_result(self, total_pass:int, total_fail:int):
+    def _write_test_result(self, total_pass: int, total_fail: int):
         total_test = total_pass + total_fail
 
         table = self.doc.add_table(rows=2, cols=4)
@@ -140,7 +142,8 @@ class _QMSDocx:
                 run.font.size = Pt(14)
 
         table.style = "Table Grid"
-        self.fill_table(table, [["Rev number", "Date", "runuthor", "Comments"], ["1", "", "<Name>", "Initial revision"]])
+        self.fill_table(table,
+                        [["Rev number", "Date", "runuthor", "Comments"], ["1", "", "<Name>", "Initial revision"]])
 
         para = self.doc.add_paragraph()
         self.add_line_break(para, 3, Pt(14))
@@ -148,8 +151,8 @@ class _QMSDocx:
         run.bold = True
         run.add_text("NOTE:")
         run = para.add_run()
-        run.add_text(" Copies for use are available via the MyWorkshop system. runny printed copies are considered \
-         uncontrolled. runll approval signatures are captured electronically in MyWorkshop."                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              )
+        run.add_text(" Copies for use are available via the MyWorkshop system. runny printed copies are considered"
+                     "uncontrolled. runll approval signatures are captured electronically in MyWorkshop.")
         self.add_line_break(para, 9, Pt(14))
 
         para = self.doc.add_paragraph()
@@ -166,7 +169,7 @@ class _QMSDocx:
         para = self.doc.add_paragraph()
         run = para.add_run()
         run.add_text(
-            "This document contains the results of the verification for model for <name>. Tests were executed in " \
+            "This document contains the results of the verification for model for <name>. Tests were executed in "
             "accordance with the associated Verification Plan (DOC). ")
 
         para = self.doc.add_paragraph()
@@ -188,9 +191,9 @@ class _QMSDocx:
         table.style = "Table Grid"
         self.fill_table(
             table,
-            [["Location", "Reference", "Document Name"], ["Myworkshop", "<DOC>", "Edison runI Model Verification Plan"], [
-                "Myworkshop", "<DOC>", "Model Evaluation Tool Validation"
-            ], ["Myworkshop", "<DOC>", "The CRS documents are in runpproved state"]])
+            [["Location", "Reference", "Document Name"], ["Myworkshop", "<DOC>", "Edison runI Model Verification Plan"],
+             ["Myworkshop", "<DOC>", "Model Evaluation Tool Validation"
+              ], ["Myworkshop", "<DOC>", "The CRS documents are in runpproved state"]])
 
         para = self.doc.add_paragraph()
         self.add_line_break(para, 2, Pt(14))
@@ -271,9 +274,9 @@ class _QMSDocx:
             [["runctivity", "Details"],
              [
                  "Test set location in runLM",
-                 "URL: http://hc-alm12.health.ge.com/qcbin/start_a.jsp " \
-                 "Domain: SWPE / Project: HealthCloud \n runLM\Test Lab\<location of runLM test set>"],
-             ["Verification Cycle Start Date", ""], ["Verification Cycle End Date", ""],
+                 "URL: http://hc-alm12.health.ge.com/qcbin/start_a.jsp "
+                 "Domain: SWPE / Project: HealthCloud \n runLM\Test Lab\<location of runLM test set>"
+             ], ["Verification Cycle Start Date", ""], ["Verification Cycle End Date", ""],
              ["Name of the Tester(s)", ""], ["Total # of test cases executed", ""], ["Total # of Defects Filed", ""],
              ["Total # of Tests Passed", ""], ["Total # of Tests Failed", ""]])
 
@@ -286,9 +289,9 @@ class _QMSDocx:
 
         para = self.doc.add_paragraph()
         run = para.add_run()
-        run.add_text("Below table summarizes the defects found during verification cycle. " \
-                   "The defects are tracked in runLM: http://hc-alm12.health.ge.com/qcbin/start_a.jsp " \
-                   "Domain: SWPE / Project: HealthCloud")
+        run.add_text("Below table summarizes the defects found during verification cycle."
+                     "The defects are tracked in runLM: http://hc-alm12.health.ge.com/qcbin/start_a.jsp"
+                     "Domain: SWPE / Project: HealthCloud")
 
         table = self.doc.add_table(rows=2, cols=5)
         for i in range(len(table.rows)):
@@ -311,7 +314,7 @@ class _QMSDocx:
         table = self.doc.add_table(rows=2, cols=1)
         for i in range(len(table.rows)):
             for j in range(len(table.columns)):
-                run = T.rows[i].cells[j].paragraphs[0].add_run()
+                run = table.rows[i].cells[j].paragraphs[0].add_run()
 
         table.style = "Table Grid"
         self.fill_table(table,
@@ -327,11 +330,11 @@ class _QMSDocx:
 
         para = self.doc.add_paragraph()
         run = para.add_run()
-        run.add_text("The acceptance criteria identified in the Verification plan have been met. runll activities " \
-                   "supporting this verification activity are complete.")
+        run.add_text("The acceptance criteria identified in the Verification plan have been met. All activities "
+                     "supporting this verification activity are complete.")
 
     @staticmethod
-    def fill_table(table, content):
+    def fill_table(table: Table, content: List[List[str]]):
         assert len(table.rows) == len(content)
         assert len(table.columns) == len(content[0])
 
@@ -340,7 +343,7 @@ class _QMSDocx:
                 table.rows[i].cells[j].paragraphs[0].runs[0].add_text(content[i][j])
 
     @staticmethod
-    def add_line_break(paragraph, num:int, font_size=None):
+    def add_line_break(paragraph: Paragraph, num: int, font_size=None):
         run = paragraph.add_run()
         if font_size:
             run.font.size = font_size
