@@ -13,13 +13,13 @@
 # limitations under the License.
 # ==============================================================================
 import tempfile
-import numpy as np
-from typing import Callable, Iterable, List, Union
+from typing import Callable, Iterable, Union
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as fn
-from transformers import BertTokenizer, BertModel
+from transformers import BertConfig, BertModel, BertTokenizer
 
 import fastestimator as fe
 from fastestimator.dataset.data import german_ner
@@ -28,21 +28,28 @@ from fastestimator.op.numpyop.univariate import PadSequence, Tokenize, WordtoId
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
-from fastestimator.trace.metric import Accuracy
 from fastestimator.trace.io import BestModelSaver
+from fastestimator.trace.metric import Accuracy
+
 
 def char2idx(data):
+    """char2idx function creates look-up table for the corresponding ids for the labels"""
     tag2idx = {t: i for i, t in enumerate(data)}
     return tag2idx
 
 
 class AttentionMask(NumpyOp):
+    """Custom NumpyOp that constructs attention masks for input sequences"""
     def forward(self, data, state):
         masks = [float(i > 0) for i in data]
         return np.array(masks)
 
 
 class ReshapeOp(TensorOp):
+    """ReshapeOp defines the reshape operation that is performed on prediction and ground truth before passing them to
+    loss calculation. For example, prediction shape [batch_size, sequence_length, num_classes] ->
+    [batch_size * sequence_length, num_classes]
+    ground truth shape [batch_size, sequence_length] -> [batch_size * sequence_length,]"""
     def __init__(self,
                  inputs: Union[None, str, Iterable[str], Callable] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
@@ -52,15 +59,16 @@ class ReshapeOp(TensorOp):
     def forward(self, data, state):
         inp_shape = data.size()
         if len(inp_shape) < 3:
-            data = data.view(-1,)
+            data = data.view(-1, )
         else:
             data = data.view(-1, inp_shape[2])
         return data
-bert_model = BertModel.from_pretrained("bert-base-uncased")
+
 
 class NERModel(nn.Module):
-    def __init__(self, head_masks):
+    def __init__(self, head_masks, pretrained_model):
         super().__init__()
+        bert_model = BertModel.from_pretrained(pretrained_model)
         self.head_masks = head_masks
         self.bert_embed = list(bert_model.children())[0]
         self.bert_encode = list(bert_model.children())[1]
@@ -77,11 +85,15 @@ class NERModel(nn.Module):
         return out
 
 
-def get_estimator(max_len=20, epochs=10, batch_size=64, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
-
+def get_estimator(max_len=20,
+                  epochs=10,
+                  batch_size=64,
+                  max_steps_per_epoch=None,
+                  pretrained_model='bert-base-uncased',
+                  save_dir=tempfile.mkdtemp()):
     # step 1 prepare data
     train_data, eval_data, data_vocab, label_vocab = german_ner.load_data()
-    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
+    tokenizer = BertTokenizer.from_pretrained(pretrained_model, do_lower_case=True)
     tag2idx = char2idx(label_vocab)
     pipeline = fe.Pipeline(
         train_data=train_data,
@@ -92,13 +104,16 @@ def get_estimator(max_len=20, epochs=10, batch_size=64, max_steps_per_epoch=None
             WordtoId(inputs="x", outputs="x", mapping=tokenizer.convert_tokens_to_ids),
             WordtoId(inputs="y", outputs="y", mapping=tag2idx),
             PadSequence(max_len=max_len, inputs="x", outputs="x"),
-            PadSequence(max_len=max_len, value=23, inputs="y", outputs="y"),
+            PadSequence(max_len=max_len, value=len(tag2idx), inputs="y", outputs="y"),
             AttentionMask(inputs="x", outputs="x_masks")
         ])
 
     # step 2. prepare model
-    head_masks = [None] * 12
-    model = fe.build(model_fn=lambda: NERModel(head_masks=head_masks), optimizer_fn=lambda x: torch.optim.Adam(x, lr=1e-5))
+    bert_config = BertConfig.from_pretrained(pretrained_model)
+    num_hidden_layers = bert_config.to_dict()['num_hidden_layers']
+    head_masks = [None] * num_hidden_layers
+    model = fe.build(model_fn=lambda: NERModel(head_masks=head_masks, pretrained_model=pretrained_model),
+                     optimizer_fn=lambda x: torch.optim.Adam(x, lr=1e-5))
     network = fe.Network(ops=[
         ModelOp(model=model, inputs=["x", "x_masks"], outputs="y_pred"),
         ReshapeOp(inputs="y", outputs="y"),
