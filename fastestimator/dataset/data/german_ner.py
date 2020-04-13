@@ -32,12 +32,11 @@ def get_sentences_and_labels(path: str):
     for line in data:
         if line[0] != '#':
             line = line.split()
-            if len(line) > 2:
-                if line[2] != 'O':
-                    words.append(line[1])
-                    tags.append(line[2])
-                    word_vocab.add(line[1])
-                    label_vocab.add(line[2])
+            if len(line) > 2 and line[2] != 'O':
+                words.append(line[1])
+                tags.append(line[2])
+                word_vocab.add(line[1])
+                label_vocab.add(line[2])
             else:
                 sentences.append(" ".join([s for s in words]))
                 labels.append([t for t in tags])
