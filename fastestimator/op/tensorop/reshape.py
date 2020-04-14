@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Iterable, List, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Tuple, TypeVar, Union
 
 import tensorflow as tf
 import torch
@@ -29,13 +29,13 @@ class Reshape(TensorOp):
     Args:
         inputs: Key of input tensor that is to be reshaped.
         outputs: Key of output tensor that are reshaped.
-        shape: Shape value
+        shape: Target shape
         mode: 'train', 'eval', 'test', or None.
     """
     def __init__(self,
                  inputs: Union[str, List[str]],
                  outputs: Union[str, List[str]],
-                 shape,
+                 shape: Union[int, Tuple[int, ...]],
                  mode: Union[None, str, Iterable[str]] = "!infer"):
 
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
