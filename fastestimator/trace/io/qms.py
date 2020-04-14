@@ -211,7 +211,7 @@ class _QMSDocx:
         table.style = "Table Grid"
         self.fill_table(
             table,
-            [["Location", "Reference", "Document Name"], ["Myworkshop", "<DOC>", "Edison runI Model Verification Plan"],
+            [["Location", "Reference", "Document Name"], ["Myworkshop", "<DOC>", "Edison AI Model Verification Plan"],
              ["Myworkshop", "<DOC>", "Model Evaluation Tool Validation"
               ], ["Myworkshop", "<DOC>", "The CRS documents are in Approved state"]])
 
