@@ -27,7 +27,7 @@ if __name__ == "__main__":
     nb_in_file = os.path.join(source_dir, example_name + ".ipynb")
     nb_out_file = os.path.abspath(os.path.join(__file__, "..", example_name + "_out.ipynb"))
 
-    result = os.system("papermill {} {} {} -k nightly_build 2>> {}".format(nb_in_file,
+    result = os.system("papermill {} {} {} -k fe 2>> {}".format(nb_in_file,
                                                                            nb_out_file,
                                                                            train_info,
                                                                            stderr_file))
