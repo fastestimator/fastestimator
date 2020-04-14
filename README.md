@@ -7,7 +7,7 @@ FastEstimator is a high-level deep learning API. With the help of FastEstimator,
 
 
 ## Prerequisites:
-* Python >= 3.5
+* Python >= 3.6
 * TensorFlow2
 
     * GPU:  `pip install tensorflow-gpu==2.0.0`
