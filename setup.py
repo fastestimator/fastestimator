@@ -51,7 +51,8 @@ def get_dependency():
         'jsonpickle',
         'python-docx',
         'tensorboard',
-        'tensorflow_probability==0.8.0'
+        'tensorflow_probability==0.8.0',
+        'transformers'
     ]
     if os.name == "nt":
         dependencies.append(
