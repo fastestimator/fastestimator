@@ -21,13 +21,13 @@ from fastestimator.op.numpyop.numpyop import NumpyOp
 
 
 class WordtoId(NumpyOp):
-    """Converts words to their corresponding id using mapper function or dictionary
+    """Converts words to their corresponding id using mapper function or dictionary.
 
     Args:
         mapping: Mapper function or dictionary
-        inputs: Key(s) of sequences to be converted to ids. Defaults to None.
-        outputs: Key(s) of sequences are converted to ids. Defaults to None.
-        mode: What execution mode (train, eval, None) to apply this operation. Defaults to None.
+        inputs: Key(s) of sequences to be converted to ids.
+        outputs: Key(s) of sequences are converted to ids.
+        mode: What execution mode (train, eval, None) to apply this operation.
     """
     def __init__(self,
                  mapping: Union[None, dict, Callable],

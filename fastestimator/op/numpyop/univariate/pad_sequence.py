@@ -20,15 +20,15 @@ from fastestimator.op.numpyop.numpyop import NumpyOp
 
 
 class PadSequence(NumpyOp):
-    """Pad sequences to the same length with provided value
+    """Pad sequences to the same length with provided value.
 
     Args:
-        max_len: Maximum length of all sequences
-        value: Padding value. Defaults to 0.
-        padding: Pad before or after the sequences. Defaults to "post".
-        inputs: Key(s) of sequences to be padded. Defaults to None.
-        outputs: Key(s) of sequences that are padded. Defaults to None.
-        mode: What execution mode (train, eval, None) to apply this operation. Defaults to None.
+        max_len: Maximum length of all sequences.
+        value: Padding value.
+        padding: Pad before or after the sequences.
+        inputs: Key(s) of sequences to be padded.
+        outputs: Key(s) of sequences that are padded.
+        mode: What execution mode (train, eval, None) to apply this operation.
     """
     def __init__(self,
                  max_len: int,
@@ -48,10 +48,10 @@ class PadSequence(NumpyOp):
         return [self._pad_sequence(elem) for elem in data]
 
     def _pad_sequence(self, data: np.ndarray) -> np.ndarray:
-        """Pad the input sequence to the maximum length. Sequences longer than maximum length are truncated
+        """Pad the input sequence to the maximum length. Sequences longer than maximum length are truncated.
 
         Args:
-            data: input sequence in the data
+            data: input sequence in the data.
 
         Returns:
             Padded sequence

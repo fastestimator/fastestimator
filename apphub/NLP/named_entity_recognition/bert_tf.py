@@ -16,20 +16,20 @@ import tempfile
 from typing import Callable, Iterable, List, Union
 
 import numpy as np
+import tensorflow as tf
+from tensorflow.keras.layers import Dense, Input
+from tensorflow.keras.models import Model
 from transformers import BertTokenizer, TFBertModel
 
 import fastestimator as fe
-import tensorflow as tf
 from fastestimator.dataset.data import german_ner
 from fastestimator.op.numpyop.numpyop import NumpyOp
 from fastestimator.op.numpyop.univariate import PadSequence, Tokenize, WordtoId
-from fastestimator.op.tensorop import TensorOp
+from fastestimator.op.tensorop import Reshape, TensorOp
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
-from fastestimator.trace.metric import Accuracy
 from fastestimator.trace.io import BestModelSaver
-from tensorflow.keras.layers import Dense, Input
-from tensorflow.keras.models import Model
+from fastestimator.trace.metric import Accuracy
 
 
 def char2idx(data):
@@ -41,23 +41,6 @@ class AttentionMask(NumpyOp):
     def forward(self, data, state):
         masks = [float(i > 0) for i in data]
         return np.array(masks)
-
-
-class ReshapeOp(TensorOp):
-    def __init__(self,
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
-                 outputs: Union[None, str, Iterable[str]] = None,
-                 mode: Union[None, str, Iterable[str]] = "!infer"):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-
-    def forward(self, data, state):
-        inp_shape = data.get_shape()
-        if tf.keras.backend.ndim(data) < 3:
-            return tf.reshape(data, [
-                inp_shape[0] * inp_shape[1],
-            ])
-        else:
-            return tf.reshape(data, [inp_shape[0] * inp_shape[1], inp_shape[2]])
 
 
 def ner_model(max_len, pretrained_model):
@@ -99,8 +82,8 @@ def get_estimator(max_len=20,
                      optimizer_fn=lambda: tf.optimizers.Adam(1e-5))
     network = fe.Network(ops=[
         ModelOp(model=model, inputs=["x", "x_masks"], outputs="y_pred"),
-        ReshapeOp(inputs="y", outputs="y"),
-        ReshapeOp(inputs="y_pred", outputs="y_pred"),
+        Reshape(inputs="y", outputs="y", shape=(-1, )),
+        Reshape(inputs="y_pred", outputs="y_pred", shape=(-1, 24)),
         CrossEntropy(inputs=("y_pred", "y"), outputs="loss"),
         UpdateOp(model=model, loss_name="loss")
     ])

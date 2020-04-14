@@ -63,7 +63,7 @@ def load_data(root_dir: Optional[str] = None) -> Tuple[NumpyDataset, NumpyDatase
 
     Args:
         root_dir: The path to store the downloaded data. When `path` is not provided, the data will be saved into
-            `fastestimator_data` under the user's home directory.. Defaults to None.
+            `fastestimator_data` under the user's home directory.
 
     Returns:
         (train_data, eval_data, train_vocab, label_vocab)

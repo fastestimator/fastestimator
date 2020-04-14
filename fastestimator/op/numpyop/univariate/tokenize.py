@@ -25,11 +25,11 @@ class Tokenize(NumpyOp):
     tokens.
 
     Args:
-        inputs: Key(s) of sequences to be tokenized. Defaults to None.
-        outputs: Key(s) of sequences that are tokenized. Defaults to None.
-        mode: What execution mode (train, eval, None) to apply this operation. Defaults to None.
-        tokenize_fn: Tokenization function object. Defaults to None.
-        do_lower_case: Whether to convert tokens to lowercase. Defaults to False.
+        inputs: Key(s) of sequences to be tokenized.
+        outputs: Key(s) of sequences that are tokenized.
+        mode: What execution mode (train, eval, None) to apply this operation.
+        tokenize_fn: Tokenization function object.
+        do_lower_case: Whether to convert tokens to lowercase.
     """
 
     def __init__(self,
@@ -49,7 +49,7 @@ class Tokenize(NumpyOp):
         return [self._apply_tokenization(seq) for seq in data]
 
     def _apply_tokenization(self, data: np.ndarray) -> List[str]:
-        """Split the sequence into tokens and apply lowercase if flag is set
+        """Split the sequence into tokens and apply lowercase if flag is set.
 
         Args:
             data: Input sequence

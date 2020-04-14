@@ -25,7 +25,7 @@ import fastestimator as fe
 from fastestimator.dataset.data import german_ner
 from fastestimator.op.numpyop.numpyop import NumpyOp
 from fastestimator.op.numpyop.univariate import PadSequence, Tokenize, WordtoId
-from fastestimator.op.tensorop import TensorOp
+from fastestimator.op.tensorop import TensorOp, Reshape
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver
@@ -43,26 +43,6 @@ class AttentionMask(NumpyOp):
     def forward(self, data, state):
         masks = [float(i > 0) for i in data]
         return np.array(masks)
-
-
-class ReshapeOp(TensorOp):
-    """ReshapeOp defines the reshape operation that is performed on prediction and ground truth before passing them to
-    loss calculation. For example, prediction shape [batch_size, sequence_length, num_classes] ->
-    [batch_size * sequence_length, num_classes]
-    ground truth shape [batch_size, sequence_length] -> [batch_size * sequence_length,]"""
-    def __init__(self,
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
-                 outputs: Union[None, str, Iterable[str]] = None,
-                 mode: Union[None, str, Iterable[str]] = "!infer"):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-
-    def forward(self, data, state):
-        inp_shape = data.size()
-        if len(inp_shape) < 3:
-            data = data.view(-1, )
-        else:
-            data = data.view(-1, inp_shape[2])
-        return data
 
 
 class NERModel(nn.Module):
@@ -116,8 +96,8 @@ def get_estimator(max_len=20,
                      optimizer_fn=lambda x: torch.optim.Adam(x, lr=1e-5))
     network = fe.Network(ops=[
         ModelOp(model=model, inputs=["x", "x_masks"], outputs="y_pred"),
-        ReshapeOp(inputs="y", outputs="y"),
-        ReshapeOp(inputs="y_pred", outputs="y_pred"),
+        Reshape(inputs="y", outputs="y", shape=(-1, )),
+        Reshape(inputs="y_pred", outputs="y_pred", shape=(-1, 24)),
         CrossEntropy(inputs=("y_pred", "y"), outputs="loss"),
         UpdateOp(model=model, loss_name="loss")
     ])
