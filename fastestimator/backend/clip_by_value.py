@@ -19,8 +19,6 @@ import numpy as np
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.to_number import to_number
-
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
 
@@ -59,7 +57,11 @@ def clip_by_value(tensor: Tensor, min_value: Union[int, float, Tensor], max_valu
     if isinstance(tensor, tf.Tensor):
         return tf.clip_by_value(tensor, clip_value_min=min_value, clip_value_max=max_value)
     elif isinstance(tensor, torch.Tensor):
-        return tensor.clamp(min=to_number(min_value).item(), max=to_number(max_value).item())
+        if isinstance(min_value, torch.Tensor):
+            min_value = min_value.item()
+        if isinstance(max_value, torch.Tensor):
+            max_value = max_value.item()
+        return tensor.clamp(min=min_value, max=max_value)
     elif isinstance(tensor, np.ndarray):
         return np.clip(tensor, a_min=min_value, a_max=max_value)
     else:
