@@ -19,6 +19,9 @@ from typing import Callable, List, Union
 
 from docx import Document
 from docx.shared import Pt
+from docx.table import Table
+from docx.text.paragraph import Paragraph
+
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.util import to_list
@@ -53,6 +56,8 @@ class QMSTest(Trace):
         super().__init__(inputs=all_inputs, mode="test")
 
     def _initialize_json_summary(self):
+        """Initialize json summary
+        """
         self.json_summary = {"title": self.test_title, "stories": []}
 
     def on_begin(self, data: Data):
@@ -86,251 +91,278 @@ class QMSTest(Trace):
         else:
             doc_path = os.path.join(self.doc_output, "QMS_summary.docx")
 
-        doc_summary = QMSDocx(self.total_pass, self.total_fail)
+        doc_summary = _QMSDocx(self.total_pass, self.total_fail)
         doc_summary.save(doc_path)
         print("Saved QMS summary report to {}".format(doc_path))
 
 
-class QMSDocx:
-    def __init__(self, total_pass, total_fail) -> None:
+class _QMSDocx:
+    """ The class to generate QMS summary report template by given total pass and fail case number.
+
+    Args:
+        total_pass: Total QMS test passing case number.
+        total_fail: Total QMS test failing case number.
+    """
+    def __init__(self, total_pass: int, total_fail: int) -> None:
         self.doc = Document()
         self._write_static_p1()
         self._write_test_result(total_pass, total_fail)
         self._write_static_p2()
 
-    def save(self, output_path):
+    def save(self, output_path: str) -> None:
+        """Save document object to disk.
+
+        Args:
+            output_path: Saving path.
+        """
         self.doc.save(output_path)
 
-    def _write_test_result(self, total_pass, total_fail):
+    def _write_test_result(self, total_pass: int, total_fail: int) -> None:
+        """Write the test result table.
+
+        Args:
+            total_pass: Total QMS test passing case number.
+            total_fail: Total QMS test failing case number.
+        """
         total_test = total_pass + total_fail
 
-        T = self.doc.add_table(rows=2, cols=4)
-        for i in range(len(T.rows)):
-            for j in range(len(T.columns)):
-                A = T.rows[i].cells[j].paragraphs[0].add_run()
+        table = self.doc.add_table(rows=2, cols=4)
+        for i in range(len(table.rows)):
+            for j in range(len(table.columns)):
+                run = table.rows[i].cells[j].paragraphs[0].add_run()
                 if i == 0:
-                    A.bold = True
-        T.style = "Table Grid"
-        self.fill_table(T,
+                    run.bold = True
+        table.style = "Table Grid"
+        self.fill_table(table,
                         [["Model", "Total Tests", "Tests Passed", "Tests Failed"],
                          ["Model#1", str(total_test), str(total_pass), str(total_fail)]])
 
-    def _write_static_p1(self):
-        P = self.doc.add_paragraph()
-        self.add_line_break(P, 9, font_size=Pt(14))
-        A = P.add_run()
-        A.bold = True
-        A.font.size = Pt(22)
-        A.add_text("Verification Summary report for Model")
-        self.add_line_break(P, 4, font_size=Pt(14))
+    def _write_static_p1(self) -> None:
+        """Write the first part of the report before test result table.
+        """
+        para = self.doc.add_paragraph()
+        self.add_line_break(para, 9, font_size=Pt(14))
+        run = para.add_run()
+        run.bold = True
+        run.font.size = Pt(22)
+        run.add_text("Verification Summary report for Model")
+        self.add_line_break(para, 4, font_size=Pt(14))
 
-        P = self.doc.add_paragraph()
-        A = P.add_run()
-        A.bold = True
-        A.font.size = Pt(14)
-        A.add_text("Record of changes")
-        A.add_break()
+        para = self.doc.add_paragraph()
+        run = para.add_run()
+        run.bold = True
+        run.font.size = Pt(14)
+        run.add_text("Record of changes")
+        run.add_break()
 
-        T = self.doc.add_table(rows=2, cols=4)
-        for i in range(len(T.rows)):
-            for j in range(len(T.columns)):
-                A = T.rows[i].cells[j].paragraphs[0].add_run()
-                A.bold = True
-                A.font.size = Pt(14)
+        table = self.doc.add_table(rows=2, cols=4)
+        for i in range(len(table.rows)):
+            for j in range(len(table.columns)):
+                run = table.rows[i].cells[j].paragraphs[0].add_run()
+                run.bold = True
+                run.font.size = Pt(14)
 
-        T.style = "Table Grid"
-        self.fill_table(T, [["Rev number", "Date", "Author", "Comments"], ["1", "", "<Name>", "Initial revision"]])
+        table.style = "Table Grid"
+        self.fill_table(table, [["Rev number", "Date", "Author", "Comments"], ["1", "", "<Name>", "Initial revision"]])
 
-        P = self.doc.add_paragraph()
-        self.add_line_break(P, 3, Pt(14))
-        A = P.add_run()
-        A.bold = True
-        A.add_text("NOTE:")
-        A = P.add_run()
-        A.add_text(" Copies for use are available via the MyWorkshop system. Any printed copies are considered" \
-        " uncontrolled. All approval signatures are captured electronically in MyWorkshop.")
-        self.add_line_break(P, 9, Pt(14))
+        para = self.doc.add_paragraph()
+        self.add_line_break(para, 3, Pt(14))
+        run = para.add_run()
+        run.bold = True
+        run.add_text("NOTE:")
+        run = para.add_run()
+        run.add_text(" Copies for use are available via the MyWorkshop system. Any printed copies are considered"
+                     "uncontrolled. All approval signatures are captured electronically in MyWorkshop.")
+        self.add_line_break(para, 9, Pt(14))
 
-        P = self.doc.add_paragraph()
-        A = P.add_run()
-        A.bold = True
-        A.font.size = Pt(14)
-        A.add_text("1   Introdction")
+        para = self.doc.add_paragraph()
+        run = para.add_run()
+        run.bold = True
+        run.font.size = Pt(14)
+        run.add_text("1   Introdction")
 
-        P = self.doc.add_paragraph()
-        A = P.add_run()
-        A.bold = True
-        A.add_text("1.1 Purpose & Scope")
+        para = self.doc.add_paragraph()
+        run = para.add_run()
+        run.bold = True
+        run.add_text("1.1 Purpose & Scope")
 
-        P = self.doc.add_paragraph()
-        A = P.add_run()
-        A.add_text(
-            "This document contains the results of the verification for model for <name>. Tests were executed in " \
+        para = self.doc.add_paragraph()
+        run = para.add_run()
+        run.add_text(
+            "This document contains the results of the verification for model for <name>. Tests were executed in "
             "accordance with the associated Verification Plan (DOC). ")
 
-        P = self.doc.add_paragraph()
-        A = P.add_run()
-        A.bold = True
-        A.add_text("1.2 References")
+        para = self.doc.add_paragraph()
+        run = para.add_run()
+        run.bold = True
+        run.add_text("1.2 References")
 
-        P = self.doc.add_paragraph()
-        A = P.add_run()
-        A.add_text("Find below all the relevant documents related to any tools used during verification. ")
+        para = self.doc.add_paragraph()
+        run = para.add_run()
+        run.add_text("Find below all the relevant documents related to any tools used during verification. ")
 
-        T = self.doc.add_table(rows=4, cols=3)
-        for i in range(len(T.rows)):
-            for j in range(len(T.columns)):
-                A = T.rows[i].cells[j].paragraphs[0].add_run()
+        table = self.doc.add_table(rows=4, cols=3)
+        for i in range(len(table.rows)):
+            for j in range(len(table.columns)):
+                run = table.rows[i].cells[j].paragraphs[0].add_run()
                 if i == 0:
-                    A.bold = True
+                    run.bold = True
 
-        T.style = "Table Grid"
+        table.style = "Table Grid"
         self.fill_table(
-            T,
-            [["Location", "Reference", "Document Name"], ["Myworkshop", "<DOC>", "Edison AI Model Verification Plan"], [
-                "Myworkshop", "<DOC>", "Model Evaluation Tool Validation"
-            ], ["Myworkshop", "<DOC>", "The CRS documents are in Approved state"]])
+            table,
+            [["Location", "Reference", "Document Name"], ["Myworkshop", "<DOC>", "Edison runI Model Verification Plan"],
+             ["Myworkshop", "<DOC>", "Model Evaluation Tool Validation"
+              ], ["Myworkshop", "<DOC>", "The CRS documents are in Approved state"]])
 
-        P = self.doc.add_paragraph()
-        self.add_line_break(P, 2, Pt(14))
-        A = P.add_run()
-        A.bold = True
-        A.font.size = Pt(14)
-        A.add_text("2   Infrastructure Details")
+        para = self.doc.add_paragraph()
+        self.add_line_break(para, 2, Pt(14))
+        run = para.add_run()
+        run.bold = True
+        run.font.size = Pt(14)
+        run.add_text("2   Infrastructure Details")
 
-        T = self.doc.add_table(rows=6, cols=2)
-        for i in range(len(T.rows)):
-            for j in range(len(T.columns)):
-                A = T.rows[i].cells[j].paragraphs[0].add_run()
+        table = self.doc.add_table(rows=6, cols=2)
+        for i in range(len(table.rows)):
+            for j in range(len(table.columns)):
+                run = table.rows[i].cells[j].paragraphs[0].add_run()
                 if i == 0:
-                    A.bold = True
-        T.style = "Table Grid"
-        self.fill_table(T,
+                    run.bold = True
+        table.style = "Table Grid"
+        self.fill_table(table,
                         [["", "Details"], ["GPU Architecture", ""], ["OS environment", ""], [
                             "Collection ID of test data set in Edison AI Workbench", ""
                         ], ["Model Artifact ID (s)", ""], ["Location of model test scripts", ""]])
 
-        P = self.doc.add_paragraph()
-        self.add_line_break(P, 2, Pt(14))
-        A = P.add_run()
-        A.bold = True
-        A.font.size = Pt(14)
-        A.add_text("3   Verification Tools")
+        para = self.doc.add_paragraph()
+        self.add_line_break(para, 2, Pt(14))
+        run = para.add_run()
+        run.bold = True
+        run.font.size = Pt(14)
+        run.add_text("3   Verification Tools")
 
-        P = self.doc.add_paragraph()
-        A = P.add_run()
-        A.add_text("Tools used for verification are listed in Model Evaluation Tool Validation <DOC>")
+        para = self.doc.add_paragraph()
+        run = para.add_run()
+        run.add_text("Tools used for verification are listed in Model Evaluation Tool Validation <DOC>")
 
-        P = self.doc.add_paragraph()
-        self.add_line_break(P, 2, Pt(14))
-        A = P.add_run()
-        A.bold = True
-        A.font.size = Pt(14)
-        A.add_text("4   Results of Verification")
+        para = self.doc.add_paragraph()
+        self.add_line_break(para, 2, Pt(14))
+        run = para.add_run()
+        run.bold = True
+        run.font.size = Pt(14)
+        run.add_text("4   Results of Verification")
 
-        T = self.doc.add_table(rows=2, cols=3)
-        for i in range(len(T.rows)):
-            for j in range(len(T.columns)):
-                A = T.rows[i].cells[j].paragraphs[0].add_run()
+        table = self.doc.add_table(rows=2, cols=3)
+        for i in range(len(table.rows)):
+            for j in range(len(table.columns)):
+                run = table.rows[i].cells[j].paragraphs[0].add_run()
 
-        T.style = "Table Grid"
-        self.fill_table(T,
+        table.style = "Table Grid"
+        self.fill_table(table,
                         [["Document", "Location", "Comments"],
                          ["<DOC>", "Myworkshop", "Verification Procedure is in Approved state"]])
 
-        P = self.doc.add_paragraph()
-        self.add_line_break(P, 1, Pt(14))
-        A = P.add_run()
-        A.bold = True
-        A.add_text("4.1 Functional and Performance Tests")
+        para = self.doc.add_paragraph()
+        self.add_line_break(para, 1, Pt(14))
+        run = para.add_run()
+        run.bold = True
+        run.add_text("4.1 Functional and Performance Tests")
 
-    def _write_static_p2(self):
-        P = self.doc.add_paragraph()
-        self.add_line_break(P, 2, Pt(14))
-        A = P.add_run()
-        A.bold = True
-        A.font.size = Pt(14)
-        A.add_text("5   Verification Details")
+    def _write_static_p2(self) -> None:
+        """Write the second part of the report after test result table.
+        """
+        para = self.doc.add_paragraph()
+        self.add_line_break(para, 2, Pt(14))
+        run = para.add_run()
+        run.bold = True
+        run.font.size = Pt(14)
+        run.add_text("5   Verification Details")
 
-        P = self.doc.add_paragraph()
-        A = P.add_run()
-        A.add_text("Below table details the summary of the completion of verification cycle. ")
+        para = self.doc.add_paragraph()
+        run = para.add_run()
+        run.add_text("Below table details the summary of the completion of verification cycle. ")
 
-        T = self.doc.add_table(rows=9, cols=2)
-        for i in range(len(T.rows)):
-            for j in range(len(T.columns)):
-                A = T.rows[i].cells[j].paragraphs[0].add_run()
+        table = self.doc.add_table(rows=9, cols=2)
+        for i in range(len(table.rows)):
+            for j in range(len(table.columns)):
+                run = table.rows[i].cells[j].paragraphs[0].add_run()
 
                 if i == 0 or j == 0:
-                    A.bold = True
+                    run.bold = True
 
-        T.style = "Table Grid"
+        table.style = "Table Grid"
         self.fill_table(
-            T,
+            table,
             [["Activity", "Details"],
              [
                  "Test set location in ALM",
-                 "URL: http://hc-alm12.health.ge.com/qcbin/start_a.jsp " \
-                 "Domain: SWPE / Project: HealthCloud \n ALM\Test Lab\<location of ALM test set>"],
-             ["Verification Cycle Start Date", ""], ["Verification Cycle End Date", ""],
+                 "URL: http://hc-alm12.health.ge.com/qcbin/start_a.jsp "
+                 "Domain: SWPE / Project: HealthCloud \n ALM\Test Lab\<location of ALM test set>"
+             ], ["Verification Cycle Start Date", ""], ["Verification Cycle End Date", ""],
              ["Name of the Tester(s)", ""], ["Total # of test cases executed", ""], ["Total # of Defects Filed", ""],
              ["Total # of Tests Passed", ""], ["Total # of Tests Failed", ""]])
 
-        P = self.doc.add_paragraph()
-        self.add_line_break(P, 2, Pt(14))
-        A = P.add_run()
-        A.bold = True
-        A.font.size = Pt(14)
-        A.add_text("6   Defect Summary List")
+        para = self.doc.add_paragraph()
+        self.add_line_break(para, 2, Pt(14))
+        run = para.add_run()
+        run.bold = True
+        run.font.size = Pt(14)
+        run.add_text("6   Defect Summary List")
 
-        P = self.doc.add_paragraph()
-        A = P.add_run()
-        A.add_text("Below table summarizes the defects found during verification cycle. " \
-                   "The defects are tracked in ALM: http://hc-alm12.health.ge.com/qcbin/start_a.jsp " \
-                   "Domain: SWPE / Project: HealthCloud")
+        para = self.doc.add_paragraph()
+        run = para.add_run()
+        run.add_text("Below table summarizes the defects found during verification cycle."
+                     "The defects are tracked in ALM: http://hc-alm12.health.ge.com/qcbin/start_a.jsp"
+                     "Domain: SWPE / Project: HealthCloud")
 
-        T = self.doc.add_table(rows=2, cols=5)
-        for i in range(len(T.rows)):
-            for j in range(len(T.columns)):
-                A = T.rows[i].cells[j].paragraphs[0].add_run()
+        table = self.doc.add_table(rows=2, cols=5)
+        for i in range(len(table.rows)):
+            for j in range(len(table.columns)):
+                run = table.rows[i].cells[j].paragraphs[0].add_run()
                 if i == 0:
-                    A.bold = True
+                    run.bold = True
 
-        T.style = "Table Grid"
-        self.fill_table(T,
+        table.style = "Table Grid"
+        self.fill_table(table,
                         [["Defect ID", "Summary", "Classification", "Status", "Justification"], ["", "", "", "", ""]])
 
-        P = self.doc.add_paragraph()
-        self.add_line_break(P, 2, Pt(14))
-        A = P.add_run()
-        A.bold = True
-        A.font.size = Pt(14)
-        A.add_text("7   Verification Deviations")
+        para = self.doc.add_paragraph()
+        self.add_line_break(para, 2, Pt(14))
+        run = para.add_run()
+        run.bold = True
+        run.font.size = Pt(14)
+        run.add_text("7   Verification Deviations")
 
-        T = self.doc.add_table(rows=2, cols=1)
-        for i in range(len(T.rows)):
-            for j in range(len(T.columns)):
-                A = T.rows[i].cells[j].paragraphs[0].add_run()
+        table = self.doc.add_table(rows=2, cols=1)
+        for i in range(len(table.rows)):
+            for j in range(len(table.columns)):
+                run = table.rows[i].cells[j].paragraphs[0].add_run()
 
-        T.style = "Table Grid"
-        self.fill_table(T,
+        table.style = "Table Grid"
+        self.fill_table(table,
                         [["There were no deviations from the verification plan."],
                          ["There were deviations from the verification plan as follows"]])
 
-        P = self.doc.add_paragraph()
-        self.add_line_break(P, 2, Pt(14))
-        A = P.add_run()
-        A.bold = True
-        A.font.size = Pt(14)
-        A.add_text("8   Conclusion")
+        para = self.doc.add_paragraph()
+        self.add_line_break(para, 2, Pt(14))
+        run = para.add_run()
+        run.bold = True
+        run.font.size = Pt(14)
+        run.add_text("8   Conclusion")
 
-        P = self.doc.add_paragraph()
-        A = P.add_run()
-        A.add_text("The acceptance criteria identified in the Verification plan have been met. All activities " \
-                   "supporting this verification activity are complete.")
+        para = self.doc.add_paragraph()
+        run = para.add_run()
+        run.add_text("The acceptance criteria identified in the Verification plan have been met. All activities "
+                     "supporting this verification activity are complete.")
 
     @staticmethod
-    def fill_table(table, content):
+    def fill_table(table: Table, content: List[List[str]]) -> None:
+        """Fill input table object with given content.
+
+        Args:
+            table: 2-D table object to be filled.
+            content: 2-D content to fill the table.
+        """
         assert len(table.rows) == len(content)
         assert len(table.columns) == len(content[0])
 
@@ -339,7 +371,14 @@ class QMSDocx:
                 table.rows[i].cells[j].paragraphs[0].runs[0].add_text(content[i][j])
 
     @staticmethod
-    def add_line_break(paragraph, num, font_size=None):
+    def add_line_break(paragraph: Paragraph, num: int, font_size=None) -> None:
+        """Add input number of line break in target paragraph object.
+
+        Args:
+            paragraph: Target paragraph.
+            num: Number of line break.
+            font_size: Font size of the line break.
+        """
         run = paragraph.add_run()
         if font_size:
             run.font.size = font_size
