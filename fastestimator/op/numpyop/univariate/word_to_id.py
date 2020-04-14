@@ -17,6 +17,7 @@ import types
 from typing import Any, Callable, Dict, Iterable, List, Union
 
 import numpy as np
+
 from fastestimator.op.numpyop.numpyop import NumpyOp
 
 
@@ -27,14 +28,16 @@ class WordtoId(NumpyOp):
         mapping: Mapper function or dictionary
         inputs: Key(s) of sequences to be converted to ids.
         outputs: Key(s) of sequences are converted to ids.
-        mode: What execution mode (train, eval, None) to apply this operation.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+        regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+        like "!infer" or "!train".
     """
     def __init__(self,
                  mapping: Union[None, dict, Callable],
                  inputs: Union[None, str, Iterable[str], Callable] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
                  mode: Union[None, str, Iterable[str]] = None,
-                 ):
+                 ) -> None:
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.in_list, self.out_list = True, True
         self.mapping = mapping

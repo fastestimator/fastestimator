@@ -30,13 +30,15 @@ class Reshape(TensorOp):
         inputs: Key of input tensor that is to be reshaped.
         outputs: Key of output tensor that are reshaped.
         shape: Target shape
-        mode: 'train', 'eval', 'test', or None.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+        regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+        like "!infer" or "!train".
     """
     def __init__(self,
                  inputs: Union[str, List[str]],
                  outputs: Union[str, List[str]],
                  shape: Union[int, Tuple[int, ...]],
-                 mode: Union[None, str, Iterable[str]] = "!infer"):
+                 mode: Union[None, str, Iterable[str]] = "!infer") -> None:
 
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.shape = shape

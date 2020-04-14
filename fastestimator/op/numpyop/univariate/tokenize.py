@@ -27,7 +27,9 @@ class Tokenize(NumpyOp):
     Args:
         inputs: Key(s) of sequences to be tokenized.
         outputs: Key(s) of sequences that are tokenized.
-        mode: What execution mode (train, eval, None) to apply this operation.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+        regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+        like "!infer" or "!train".
         tokenize_fn: Tokenization function object.
         do_lower_case: Whether to convert tokens to lowercase.
     """
@@ -37,7 +39,7 @@ class Tokenize(NumpyOp):
                  outputs: Union[None, str, Iterable[str]] = None,
                  mode: Union[None, str, Iterable[str]] = None,
                  tokenize_fn: Union[None, Callable] = None,
-                 do_lower_case: bool = False):
+                 do_lower_case: bool = False) -> None:
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.in_list, self.out_list = True, True
         self.tokenize_fn = tokenize_fn
