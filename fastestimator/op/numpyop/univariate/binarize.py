@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-
 from typing import Any, Callable, Dict, Iterable, List, Union
 
 import numpy as np
@@ -21,20 +20,21 @@ from fastestimator.op.numpyop.numpyop import NumpyOp
 
 
 class Binarize(NumpyOp):
-    """ Binarize the input data such that all elemements not less than threshold become 1 otherwise 0.
+    """ Binarize the input data such that all elements >= threshold become 1 otherwise 0.
 
     Args:
-        threshold: Binarize threshold.
-        inputs: Input key(s) of data to be binarized
-        outputs: Output key(s) of binarized data
-        mode: What execution mode (train, eval, None) to apply this operation
+        threshold: Binarization threshold.
+        inputs: Key(s) of images to be modified.
+        outputs: Key(s) into which to write the modified images.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
     """
     def __init__(self,
                  threshold: float,
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
-                 outputs: Union[None, str, Iterable[str]] = None,
+                 inputs: Union[str, Iterable[str], Callable],
+                 outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None):
-
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.threshold = threshold
         self.in_list, self.out_list = True, True

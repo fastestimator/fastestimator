@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, List, Iterable, Callable, Optional
+from typing import Callable, Iterable, List, Optional, Union
 
 from albumentations.augmentations.transforms import CoarseDropout as CoarseDropoutAlb
 
@@ -20,28 +20,28 @@ from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentatio
 
 
 class CoarseDropout(ImageOnlyAlbumentation):
-    """Drop rectangular regions from an image
+    """Drop rectangular regions from an image.
 
-        Args:
-            inputs: Key(s) of images to be normalized
-            outputs: Key(s) of images to be normalized
-            mode: What execution mode (train, eval, None) to apply this operation
-            max_holes: Maximum number of regions to zero out.
-            max_height: Maximum height of the hole.
-            max_width: Maximum width of the hole.
-            min_holes: Minimum number of regions to zero out. If `None`,
-                `min_holes` is be set to `max_holes`. Default: `None`.
-            min_height: Minimum height of the hole. Default: None. If `None`,
-                `min_height` is set to `max_height`. Default: `None`.
-            min_width: Minimum width of the hole. If `None`, `min_height` is
-                set to `max_width`. Default: `None`.
-            fill_value: value for dropped pixels.
-        Image types:
-            uint8, float32
+    Args:
+        inputs: Key(s) of images to be modified.
+        outputs: Key(s) into which to write the modified images.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+        max_holes: Maximum number of regions to zero out.
+        max_height: Maximum height of the hole.
+        max_width: Maximum width of the hole.
+        min_holes: Minimum number of regions to zero out. If `None`, `min_holes` is set to `max_holes`.
+        min_height: Minimum height of the hole. If `None`, `min_height` is set to `max_height`.
+        min_width: Minimum width of the hole. If `None`, `min_height` is set to `max_width`.
+        fill_value: value for dropped pixels.
+
+    Image types:
+        uint8, float32
     """
     def __init__(self,
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
-                 outputs: Union[None, str, Iterable[str]] = None,
+                 inputs: Union[str, Iterable[str], Callable],
+                 outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  max_holes: int = 8,
                  max_height: int = 8,

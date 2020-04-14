@@ -23,14 +23,16 @@ class ExpandDims(NumpyOp):
     """Transpose the data (for example to make it channel-width-height instead of width-height-channel)
 
     Args:
-            inputs: Key(s) of array to be expanded
-            outputs: Key(s) of array to be expanded
-            mode: What execution mode (train, eval, None) to apply this operation
-            axis: The axis to expand
+        inputs: Key(s) of inputs to be modified.
+        outputs: Key(s) into which to write the modified inputs.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+        axis: The axis to expand.
     """
     def __init__(self,
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
-                 outputs: Union[None, str, Iterable[str]] = None,
+                 inputs: Union[str, Iterable[str], Callable],
+                 outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  axis: int = -1):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)

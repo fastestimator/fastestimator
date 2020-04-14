@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import collections
 from typing import Any, Callable, Dict, Iterable, List, Union
 
 import numpy as np
@@ -31,21 +30,23 @@ class WordtoId(NumpyOp):
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
     """
-    def __init__(self,
-                 mapping: Union[None, dict, Callable],
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
-                 outputs: Union[None, str, Iterable[str]] = None,
-                 mode: Union[None, str, Iterable[str]] = None,
-                 ) -> None:
+    def __init__(
+            self,
+            mapping: Union[Dict[str, int], Callable[[List[str]], List[int]]],
+            inputs: Union[str, Iterable[str], Callable],
+            outputs: Union[str, Iterable[str]],
+            mode: Union[None, str, Iterable[str]] = None,
+    ) -> None:
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.in_list, self.out_list = True, True
+        assert callable(mapping) or isinstance(mapping, dict), \
+            "Incorrect data type provided for `mapping`. Please provide a function or a dictionary."
         self.mapping = mapping
 
-
-    def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
+    def forward(self, data: List[List[str]], state: Dict[str, Any]) -> List[np.ndarray]:
         return [self._convert_to_id(elem) for elem in data]
 
-    def _convert_to_id(self, data: np.ndarray) -> np.ndarray:
+    def _convert_to_id(self, data: List[str]) -> np.ndarray:
         """Flatten the input list and map the token to ids using mapper function or lookup table.
 
         Args:
@@ -57,26 +58,8 @@ class WordtoId(NumpyOp):
         Returns:
             Array of token ids
         """
-        data = self._flatten_list(data)
         if callable(self.mapping):
             data = self.mapping(data)
-        elif isinstance(self.mapping, dict):
-            data = [self.mapping.get(token) for token in data]
         else:
-            raise Exception('Must pass a function type or dictionary object for mapping')
+            data = [self.mapping.get(token) for token in data]
         return np.array(data)
-
-    def _flatten_list(self, data: List[List[str]]) -> str:
-        """Flatten the nested list
-
-        Args:
-            data: Nested list of tokens
-
-        Yields:
-            Token string
-        """
-        for el in data:
-            if isinstance(el, collections.Iterable) and not isinstance(el, (str, bytes)):
-                yield from self._flatten_list(el)
-            else:
-                yield el

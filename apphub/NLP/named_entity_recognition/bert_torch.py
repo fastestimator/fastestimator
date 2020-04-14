@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 import tempfile
-from typing import Callable, Iterable, Union
 
 import numpy as np
 import torch
@@ -25,7 +24,7 @@ import fastestimator as fe
 from fastestimator.dataset.data import german_ner
 from fastestimator.op.numpyop.numpyop import NumpyOp
 from fastestimator.op.numpyop.univariate import PadSequence, Tokenize, WordtoId
-from fastestimator.op.tensorop import TensorOp, Reshape
+from fastestimator.op.tensorop import Reshape
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver

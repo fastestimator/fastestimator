@@ -32,35 +32,35 @@ class Tokenize(NumpyOp):
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
         tokenize_fn: Tokenization function object.
-        do_lower_case: Whether to convert tokens to lowercase.
+        to_lower_case: Whether to convert tokens to lowercase.
     """
-
     def __init__(self,
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
-                 outputs: Union[None, str, Iterable[str]] = None,
+                 inputs: Union[str, Iterable[str], Callable],
+                 outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
-                 tokenize_fn: Union[None, Callable] = None,
-                 do_lower_case: bool = False) -> None:
+                 tokenize_fn: Union[None, Callable[[str], List[str]]] = None,
+                 to_lower_case: bool = False) -> None:
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.in_list, self.out_list = True, True
         self.tokenize_fn = tokenize_fn
-        self.do_lower_case = do_lower_case
+        self.to_lower_case = to_lower_case
 
-    def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
-        if self.tokenize_fn:
-            return [self.tokenize_fn(seq) for seq in data]
+    def forward(self, data: List[str], state: Dict[str, Any]) -> List[List[str]]:
         return [self._apply_tokenization(seq) for seq in data]
 
-    def _apply_tokenization(self, data: np.ndarray) -> List[str]:
+    def _apply_tokenization(self, data: str) -> List[str]:
         """Split the sequence into tokens and apply lowercase if `do_lower_case` is set.
 
         Args:
-            data: Input sequence
+            data: Input sequence.
 
         Returns:
-            List of tokens
+            A list of tokens.
         """
-        data = data.split()
-        if self.do_lower_case:
-            return data.lower()
+        if self.tokenize_fn:
+            data = self.tokenize_fn(data)
+        else:
+            data = data.split()
+        if self.to_lower_case:
+            data = list(map(lambda x: x.lower(), data))
         return data
