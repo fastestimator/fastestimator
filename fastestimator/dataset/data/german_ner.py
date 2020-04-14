@@ -25,8 +25,9 @@ from fastestimator.dataset.numpy_dataset import NumpyDataset
 
 
 def get_sentences_and_labels(path: str) -> Tuple[List[str], List[str], Set[str], Set[str]]:
-    """Combines tokens into sentences and create vocab set for train data and labels. For simplicity tokens with 'O'
-    entity are omitted.
+    """Combines tokens into sentences and create vocab set for train data and labels.
+
+    For simplicity tokens with 'O' entity are omitted.
 
     Args:
         path: Path to the downloaded dataset file
@@ -57,13 +58,15 @@ def get_sentences_and_labels(path: str) -> Tuple[List[str], List[str], Set[str],
 
 
 def load_data(root_dir: Optional[str] = None) -> Tuple[NumpyDataset, NumpyDataset, Set[str], Set[str]]:
-    """Dataset from GermEval 2014 contains 31,000 sentences corresponding to over 590,000 tokens from German wikipedia
+    """Load and return the GermEval dataset.
+
+    Dataset from GermEval 2014 contains 31,000 sentences corresponding to over 590,000 tokens from German wikipedia
     and News corpora. The sentence is encoded as one token per line with information provided in tab-seprated columns.
     Sourced from https://sites.google.com/site/germeval2014ner/data
 
     Args:
         root_dir: The path to store the downloaded data. When `path` is not provided, the data will be saved into
-        `fastestimator_data` under the user's home directory.
+            `fastestimator_data` under the user's home directory.
 
     Returns:
         (train_data, eval_data, train_vocab, label_vocab)

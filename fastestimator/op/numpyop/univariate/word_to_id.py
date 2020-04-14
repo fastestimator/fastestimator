@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 import collections
-import types
 from typing import Any, Callable, Dict, Iterable, List, Union
 
 import numpy as np
@@ -29,8 +28,8 @@ class WordtoId(NumpyOp):
         inputs: Key(s) of sequences to be converted to ids.
         outputs: Key(s) of sequences are converted to ids.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
-        regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
-        like "!infer" or "!train".
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
     """
     def __init__(self,
                  mapping: Union[None, dict, Callable],

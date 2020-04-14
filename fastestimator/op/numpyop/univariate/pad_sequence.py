@@ -29,8 +29,8 @@ class PadSequence(NumpyOp):
         inputs: Key(s) of sequences to be padded.
         outputs: Key(s) of sequences that are padded.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
-        regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
-        like "!infer" or "!train".
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
     """
     def __init__(self,
                  max_len: int,
@@ -50,7 +50,7 @@ class PadSequence(NumpyOp):
         return [self._pad_sequence(elem) for elem in data]
 
     def _pad_sequence(self, data: np.ndarray) -> np.ndarray:
-        """Pad the input sequence to the maximum length. Sequences longer than maximum length are truncated.
+        """Pad the input sequence to the maximum length. Sequences longer than `max_len` are truncated.
 
         Args:
             data: input sequence in the data.
