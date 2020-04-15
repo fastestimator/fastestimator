@@ -23,23 +23,22 @@ class PadSequence(NumpyOp):
     """Pad sequences to the same length with provided value.
 
     Args:
+        inputs: Key(s) of sequences to be padded.
+        outputs: Key(s) of sequences that are padded.
         max_len: Maximum length of all sequences.
         value: Padding value.
         append: Pad before or after the sequences. True for padding the values after the sequence, False otherwise.
-        inputs: Key(s) of sequences to be padded.
-        outputs: Key(s) of sequences that are padded.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
     """
     def __init__(self,
+                 inputs: Union[str, Iterable[str], Callable],
+                 outputs: Union[str, Iterable[str]],
                  max_len: int,
                  value: Union[str, int] = 0,
                  append: bool = True,
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
-                 outputs: Union[None, str, Iterable[str]] = None,
-                 mode: Union[None, str, Iterable[str]] = None
-                 ) -> None:
+                 mode: Union[None, str, Iterable[str]] = None) -> None:
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.in_list, self.out_list = True, True
         self.max_len = max_len

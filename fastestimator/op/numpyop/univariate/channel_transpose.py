@@ -20,17 +20,19 @@ from fastestimator.op.numpyop.numpyop import NumpyOp
 
 
 class ChannelTranspose(NumpyOp):
-    """Transpose the data (for example to make it channel-width-height instead of width-height-channel)
+    """Transpose the data (for example to make it channel-width-height instead of width-height-channel).
 
     Args:
-            inputs: Key(s) of arrays to be transposed
-            outputs: Key(s) of arrays to be transposed
-            mode: What execution mode (train, eval, None) to apply this operation
-            axes: The permutation axes
+        inputs: Key(s) of images to be modified.
+        outputs: Key(s) into which to write the modified images.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+        axes: The permutation order.
     """
     def __init__(self,
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
-                 outputs: Union[None, str, Iterable[str]] = None,
+                 inputs: Union[str, Iterable[str], Callable],
+                 outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  axes: List[int] = (2, 0, 1)):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)

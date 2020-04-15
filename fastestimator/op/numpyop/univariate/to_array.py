@@ -20,17 +20,19 @@ from fastestimator.op.numpyop.numpyop import NumpyOp
 
 
 class ToArray(NumpyOp):
-    """convert data to numpy array
+    """Convert data to a numpy array.
 
     Args:
-            inputs: Key(s) of images to be normalized
-            outputs: Key(s) of images to be normalized
-            mode: What execution mode (train, eval, None) to apply this operation
-            epsilon: A small value to prevent numeric instability in the division
+        inputs: Key(s) of the data to be converted.
+        outputs: Key(s) into which to write the converted data.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+        dtype: The dtype to apply to the output array, or None to infer the type.
     """
     def __init__(self,
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
-                 outputs: Union[None, str, Iterable[str]] = None,
+                 inputs: Union[str, Iterable[str], Callable],
+                 outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  dtype: Optional[str] = None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
@@ -40,5 +42,5 @@ class ToArray(NumpyOp):
     def forward(self, data: List[Any], state: Dict[str, Any]) -> List[np.ndarray]:
         return [self._apply_transform(elem) for elem in data]
 
-    def _apply_transform(self, data):
+    def _apply_transform(self, data: Any) -> np.ndarray:
         return np.array(data, dtype=self.dtype)

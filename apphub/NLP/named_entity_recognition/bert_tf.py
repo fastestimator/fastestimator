@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 import tempfile
-from typing import Callable, Iterable, List, Union
 
 import numpy as np
 import tensorflow as tf
@@ -25,7 +24,7 @@ import fastestimator as fe
 from fastestimator.dataset.data import german_ner
 from fastestimator.op.numpyop.numpyop import NumpyOp
 from fastestimator.op.numpyop.univariate import PadSequence, Tokenize, WordtoId
-from fastestimator.op.tensorop import Reshape, TensorOp
+from fastestimator.op.tensorop import Reshape
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver
@@ -59,7 +58,6 @@ def get_estimator(max_len=20,
                   max_steps_per_epoch=None,
                   save_dir=tempfile.mkdtemp(),
                   pretrained_model='bert-base-uncased'):
-
     # step 1 prepare data
     train_data, eval_data, data_vocab, label_vocab = german_ner.load_data()
     tokenizer = BertTokenizer.from_pretrained(pretrained_model, do_lower_case=True)

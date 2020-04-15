@@ -20,15 +20,20 @@ from fastestimator.op.numpyop.numpyop import NumpyOp
 
 
 class Reshape(NumpyOp):
-    """Preprocessing class for reshaping the data
+    """An Op which re-shapes data to a target shape.
 
     Args:
-        shape: target shape
+        shape: The desired output shape. At most one value may be -1 to put all of the leftover elements into that axis.
+        inputs: Key(s) of the data to be reshaped.
+        outputs: Key(s) into which to write the converted data.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
     """
     def __init__(self,
                  shape: Union[int, Tuple[int, ...]],
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
-                 outputs: Union[None, str, Iterable[str]] = None,
+                 inputs: Union[str, Iterable[str], Callable],
+                 outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.shape = shape

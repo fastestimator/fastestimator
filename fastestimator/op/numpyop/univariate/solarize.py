@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, Iterable, Callable, Tuple
+from typing import Callable, Iterable, Tuple, Union
 
 from albumentations.augmentations.transforms import Solarize as SolarizeAlb
 
@@ -20,20 +20,22 @@ from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentatio
 
 
 class Solarize(ImageOnlyAlbumentation):
-    """Invert all pixel values above a threshold
+    """Invert all pixel values above a threshold.
 
-        Args:
-            inputs: Key(s) of images to be normalized
-            outputs: Key(s) of images to be normalized
-            mode: What execution mode (train, eval, None) to apply this operation
-            threshold ((int, int) or int, or (float, float) or float): range for solarizing threshold.
-                If threshold is a single value, the range will be [threshold, threshold]. Default: 128.
-        Image types:
-            uint8, float32
+    Args:
+        inputs: Key(s) of images to be solarized.
+        outputs: Key(s) into which to write the solarized images.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+        threshold: Range for the solarizing threshold. If threshold is a single value 't', the range will be [t, t].
+
+    Image types:
+        uint8, float32
     """
     def __init__(self,
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
-                 outputs: Union[None, str, Iterable[str]] = None,
+                 inputs: Union[str, Iterable[str], Callable],
+                 outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
-                 threshold: Union[int, Tuple[int, int], float, Tuple[float, float]] = 20):
+                 threshold: Union[int, Tuple[int, int], float, Tuple[float, float]] = 128):
         super().__init__(SolarizeAlb(threshold=threshold, always_apply=True), inputs=inputs, outputs=outputs, mode=mode)
