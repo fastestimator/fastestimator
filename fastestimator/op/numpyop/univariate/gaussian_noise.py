@@ -12,30 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, Iterable, Callable, Tuple
+from typing import Callable, Iterable, Tuple, Union
 
 from albumentations.augmentations.transforms import GaussNoise as GaussNoiseAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
 
 
-
 class GaussianNoise(ImageOnlyAlbumentation):
     """Apply gaussian noise to the image
 
-        Args:
-            inputs: Key(s) of images to be normalized
-            outputs: Key(s) of images to be normalized
-            mode: What execution mode (train, eval, None) to apply this operation
-            var_limit: variance range for noise. If var_limit is a single float, the range will be (0, var_limit).
-                Default: (10.0, 50.0).
-            mean: mean of the noise. Default: 0
-        Image types:
-            uint8, float32
+    Args:
+        inputs: Key(s) of images to be modified.
+        outputs: Key(s) into which to write the modified images.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+        var_limit: Variance range for noise. If var_limit is a single float, the range will be (0, var_limit).
+        mean: Mean of the noise.
+
+    Image types:
+        uint8, float32
     """
     def __init__(self,
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
-                 outputs: Union[None, str, Iterable[str]] = None,
+                 inputs: Union[str, Iterable[str], Callable],
+                 outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  var_limit: Union[float, Tuple[float, float]] = (10.0, 50.0),
                  mean: float = 0.0):

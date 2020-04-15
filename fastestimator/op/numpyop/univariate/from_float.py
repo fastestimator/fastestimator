@@ -12,30 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, Iterable, Callable, Optional
+from typing import Callable, Iterable, Optional, Union
 
+import numpy as np
 from albumentations.augmentations.transforms import FromFloat as FromFloatAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
 
-import numpy as np
-
 
 class FromFloat(ImageOnlyAlbumentation):
-    """Takes an input float image in range [0, 1.0] and then multiplies by max_value to get an int image
+    """Takes an input float image in range [0, 1.0] and then multiplies by `max_value` to get an int image.
 
-        Args:
-            inputs: Key(s) of images to be normalized
-            outputs: Key(s) of images to be normalized
-            mode: What execution mode (train, eval, None) to apply this operation
-            max_value: The maximum value to serve as the divisor. If None it will be inferred by dtype.
-            dtype: the data type to cast the output
-        Image types:
-            float32
+    Args:
+        inputs: Key(s) of images to be modified.
+        outputs: Key(s) into which to write the modified images.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+        max_value: The maximum value to serve as the multiplier. If None it will be inferred by dtype.
+        dtype: The data type to cast the output as.
+
+    Image types:
+        float32
     """
     def __init__(self,
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
-                 outputs: Union[None, str, Iterable[str]] = None,
+                 inputs: Union[str, Iterable[str], Callable],
+                 outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  max_value: Optional[float] = None,
                  dtype: Union[str, np.dtype] = "uint16"):

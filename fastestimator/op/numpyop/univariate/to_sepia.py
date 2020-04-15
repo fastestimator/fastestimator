@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, Iterable, Callable
+from typing import Callable, Iterable, Union
 
 from albumentations.augmentations.transforms import ToSepia as ToSepiaAlb
 
@@ -20,17 +20,20 @@ from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentatio
 
 
 class ToSepia(ImageOnlyAlbumentation):
-    """Convert an RGB image to sepia
+    """Convert an RGB image to sepia.
 
-        Args:
-            inputs: Key(s) of images to be normalized
-            outputs: Key(s) of images to be normalized
-            mode: What execution mode (train, eval, None) to apply this operation
-        Image types:
-            uint8, float32
+    Args:
+        inputs: Key(s) of images to be converted to sepia.
+        outputs: Key(s) into which to write the sepia images.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+
+    Image types:
+        uint8, float32
     """
     def __init__(self,
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
-                 outputs: Union[None, str, Iterable[str]] = None,
+                 inputs: Union[str, Iterable[str], Callable],
+                 outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None):
         super().__init__(ToSepiaAlb(always_apply=True), inputs=inputs, outputs=outputs, mode=mode)

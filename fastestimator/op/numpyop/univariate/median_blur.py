@@ -12,29 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, Iterable, Callable, Tuple
+from typing import Callable, Iterable, Tuple, Union
 
 from albumentations.augmentations.transforms import MedianBlur as MedianBlurAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
 
 
-
 class MedianBlur(ImageOnlyAlbumentation):
-    """Blur the image with median filter of random aperture size
+    """Blur the image with median filter of random aperture size.
 
-        Args:
-            inputs: Key(s) of images to be normalized
-            outputs: Key(s) of images to be normalized
-            mode: What execution mode (train, eval, None) to apply this operation
-            blur_limit: maximum aperture linear size for blurring the input image. Should be odd and in range [3, inf).
-                Default: (3, 5). If image is a float type then only 3 and 5 are valid sizes.
-        Image types:
-            uint8, float32
+    Args:
+        inputs: Key(s) of images to be modified.
+        outputs: Key(s) into which to write the modified images.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+        blur_limit: maximum aperture linear size for blurring the input image. Should be odd and in range [3, inf).
+            If image is a float type then only 3 and 5 are valid sizes.
+
+    Image types:
+        uint8, float32
     """
     def __init__(self,
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
-                 outputs: Union[None, str, Iterable[str]] = None,
+                 inputs: Union[str, Iterable[str], Callable],
+                 outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  blur_limit: Union[int, Tuple[int, int]] = 5):
         super().__init__(MedianBlurAlb(blur_limit=blur_limit, always_apply=True),

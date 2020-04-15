@@ -19,25 +19,51 @@ import numpy as np
 from fastestimator.op.numpyop.numpyop import NumpyOp
 
 
-class ExpandDims(NumpyOp):
-    """Transpose the data (for example to make it channel-width-height instead of width-height-channel)
+class PadSequence(NumpyOp):
+    """Pad sequences to the same length with provided value.
 
     Args:
-        inputs: Key(s) of inputs to be modified.
-        outputs: Key(s) into which to write the modified inputs.
+        inputs: Key(s) of sequences to be padded.
+        outputs: Key(s) of sequences that are padded.
+        max_len: Maximum length of all sequences.
+        value: Padding value.
+        append: Pad before or after the sequences. True for padding the values after the sequence, False otherwise.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        axis: The axis to expand.
     """
     def __init__(self,
                  inputs: Union[str, Iterable[str], Callable],
                  outputs: Union[str, Iterable[str]],
-                 mode: Union[None, str, Iterable[str]] = None,
-                 axis: int = -1):
+                 max_len: int,
+                 value: Union[str, int] = 0,
+                 append: bool = True,
+                 mode: Union[None, str, Iterable[str]] = None) -> None:
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        self.axis = axis
         self.in_list, self.out_list = True, True
+        self.max_len = max_len
+        self.value = value
+        self.append = append
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
-        return [np.expand_dims(elem, self.axis) for elem in data]
+        return [self._pad_sequence(elem) for elem in data]
+
+    def _pad_sequence(self, data: np.ndarray) -> np.ndarray:
+        """Pad the input sequence to the maximum length. Sequences longer than `max_len` are truncated.
+
+        Args:
+            data: input sequence in the data.
+
+        Returns:
+            Padded sequence
+        """
+        if len(data) < self.max_len:
+            pad_len = self.max_len - len(data)
+            pad_arr = np.full(pad_len, self.value)
+            if self.append:
+                data = np.append(data, pad_arr)
+            else:
+                data = np.append(pad_arr, data)
+        else:
+            data = data[:self.max_len]
+        return data

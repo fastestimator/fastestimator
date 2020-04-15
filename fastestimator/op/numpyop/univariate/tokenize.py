@@ -19,25 +19,48 @@ import numpy as np
 from fastestimator.op.numpyop.numpyop import NumpyOp
 
 
-class ExpandDims(NumpyOp):
-    """Transpose the data (for example to make it channel-width-height instead of width-height-channel)
+class Tokenize(NumpyOp):
+    """Split the sequences into tokens.
+
+    Tokenize split the document/sequence into tokens and at the same time perform additional operations on tokens if
+    defined in the passed function object. By default, tokenize only splits the sequences into tokens.
 
     Args:
-        inputs: Key(s) of inputs to be modified.
-        outputs: Key(s) into which to write the modified inputs.
+        inputs: Key(s) of sequences to be tokenized.
+        outputs: Key(s) of sequences that are tokenized.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        axis: The axis to expand.
+        tokenize_fn: Tokenization function object.
+        to_lower_case: Whether to convert tokens to lowercase.
     """
     def __init__(self,
                  inputs: Union[str, Iterable[str], Callable],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
-                 axis: int = -1):
+                 tokenize_fn: Union[None, Callable[[str], List[str]]] = None,
+                 to_lower_case: bool = False) -> None:
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        self.axis = axis
         self.in_list, self.out_list = True, True
+        self.tokenize_fn = tokenize_fn
+        self.to_lower_case = to_lower_case
 
-    def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
-        return [np.expand_dims(elem, self.axis) for elem in data]
+    def forward(self, data: List[str], state: Dict[str, Any]) -> List[List[str]]:
+        return [self._apply_tokenization(seq) for seq in data]
+
+    def _apply_tokenization(self, data: str) -> List[str]:
+        """Split the sequence into tokens and apply lowercase if `do_lower_case` is set.
+
+        Args:
+            data: Input sequence.
+
+        Returns:
+            A list of tokens.
+        """
+        if self.tokenize_fn:
+            data = self.tokenize_fn(data)
+        else:
+            data = data.split()
+        if self.to_lower_case:
+            data = list(map(lambda x: x.lower(), data))
+        return data

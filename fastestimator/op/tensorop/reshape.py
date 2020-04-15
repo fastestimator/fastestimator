@@ -12,36 +12,41 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Callable, Dict, Iterable, List, Tuple, Union
+from typing import Any, Dict, Iterable, List, Tuple, TypeVar, Union
 
-import numpy as np
+import tensorflow as tf
+import torch
 
-from fastestimator.op.numpyop.numpyop import NumpyOp
+from fastestimator.op.tensorop.tensorop import TensorOp
+
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
-class Reshape(NumpyOp):
-    """An Op which re-shapes data to a target shape.
+class Reshape(TensorOp):
+    """Reshape a input tensor to conform to a given shape.
 
     Args:
-        shape: The desired output shape. At most one value may be -1 to put all of the leftover elements into that axis.
-        inputs: Key(s) of the data to be reshaped.
-        outputs: Key(s) into which to write the converted data.
+        inputs: Key of input tensor that is to be reshaped.
+        outputs: Key of output tensor that are reshaped.
+        shape: Target shape
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
     """
     def __init__(self,
+                 inputs: Union[str, List[str]],
+                 outputs: Union[str, List[str]],
                  shape: Union[int, Tuple[int, ...]],
-                 inputs: Union[str, Iterable[str], Callable],
-                 outputs: Union[str, Iterable[str]],
-                 mode: Union[None, str, Iterable[str]] = None):
+                 mode: Union[None, str, Iterable[str]] = "!infer") -> None:
+
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.shape = shape
-        self.in_list, self.out_list = True, True
+        self.in_list, self.out_list = False, False
 
-    def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
-        return [self._apply_reshape(elem) for elem in data]
-
-    def _apply_reshape(self, data):
-        data = np.reshape(data, self.shape)
-        return data
+    def forward(self, data: Tensor, state: Dict[str, Any]) -> Tensor:
+        if isinstance(data, tf.Tensor):
+            return tf.reshape(data, self.shape)
+        elif isinstance(data, torch.Tensor):
+            return data.view(self.shape)
+        else:
+            raise ValueError("unrecognized data format: {}".format(type(data)))

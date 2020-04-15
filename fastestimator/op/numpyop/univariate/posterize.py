@@ -12,31 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, Iterable, Callable, Tuple
+from typing import Callable, Iterable, Tuple, Union
 
 from albumentations.augmentations.transforms import Posterize as PosterizeAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
 
 
-
 class Posterize(ImageOnlyAlbumentation):
     """Reduce the number of bits for each color channel
 
-        Args:
-            inputs: Key(s) of images to be normalized
-            outputs: Key(s) of images to be normalized
-            mode: What execution mode (train, eval, None) to apply this operation
-            num_bits ((int, int) or int, or list of ints [r, g, b],
-                      or list of ints [[r1, r1], [g1, g2], [b1, b2]]): number of high bits.
-                If num_bits is a single value, the range will be [num_bits, num_bits].
-                Must be in range [0, 8]. Default: 4.
-        Image types:
-            uint8
+    Args:
+        inputs: Key(s) of images to be modified.
+        outputs: Key(s) into which to write the modified images.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+        num_bits: Number of high bits. If num_bits is a single value, the range will be [num_bits, num_bits]. A triplet
+            of ints will be interpreted as [r, g, b], and a triplet of pairs as [[r1, r1], [g1, g2], [b1, b2]]. Must be
+            in the range [0, 8].
+
+    Image types:
+        uint8
     """
     def __init__(self,
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
-                 outputs: Union[None, str, Iterable[str]] = None,
+                 inputs: Union[str, Iterable[str], Callable],
+                 outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  num_bits: Union[int,
                                  Tuple[int, int],
