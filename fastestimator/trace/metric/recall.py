@@ -23,14 +23,15 @@ from fastestimator.util.data import Data
 
 
 class Recall(Trace):
-    """Compute recall for classification task and report it back to logger.
+    """Compute recall for a classification task and report it back to the logger.
 
     Args:
-        true_key: Name of the keys in the ground truth label in data pipeline.
-        pred_key: Name of the keys in predicted label. Defaults to None.
-        mode: Restrict the trace to run only on given modes {'train', 'eval', 'test'}. None will always
-                    execute. Defaults to 'eval'.
-        output_name: Name of the key to store to the state. Defaults to "recall".
+        true_key: Name of the key that corresponds to ground truth in the batch dictionary.
+        pred_key: Name of the key that corresponds to predicted score in the batch dictionary.
+        mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+        output_name: Name of the key to store to the state.
     """
     def __init__(self,
                  true_key: str,
