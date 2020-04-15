@@ -33,17 +33,18 @@ def plot_logs(experiments: List[Summary],
               ignore_metrics: Optional[Set[str]] = None,
               pretty_names: bool = False,
               include_metrics: Optional[Set[str]] = None) -> plt.Figure:
-    """A function which will plot experiment histories for comparison viewing / analysis
+    """A function which will plot experiment histories for comparison viewing / analysis.
 
     Args:
-        experiments: Experiment(s) to plot
-        smooth_factor: A non-negative float representing the magnitude of gaussian smoothing to apply (zero for none)
-        share_legend: Whether to have one legend across all graphs (true) or one legend per graph (false)
-        pretty_names: Whether to modify the metric names in graph titles (true) or leave them alone (false)
-        ignore_metrics: Any keys to ignore during plotting
+        experiments: Experiment(s) to plot.
+        smooth_factor: A non-negative float representing the magnitude of gaussian smoothing to apply (zero for none).
+        share_legend: Whether to have one legend across all graphs (True) or one legend per graph (False).
+        pretty_names: Whether to modify the metric names in graph titles (True) or leave them alone (False).
+        ignore_metrics: Any keys to ignore during plotting.
         include_metrics: A whitelist of keys to include during plotting. If None then all will be included.
+
     Returns:
-        The handle of the pyplot figure
+        The handle of the pyplot figure.
     """
     experiments = to_list(experiments)
 
@@ -172,16 +173,16 @@ def visualize_logs(experiments: List[Summary],
                    pretty_names: bool = False,
                    ignore_metrics: Optional[Set[str]] = None,
                    include_metrics: Optional[Set[str]] = None):
-    """A function which will save or display experiment histories for comparison viewing / analysis
+    """A function which will save or display experiment histories for comparison viewing / analysis.
 
     Args:
-        experiments: Experiment(s) to plot
-        save_path: The path where the figure should be saved, or None to display the figure to the screen
-        smooth_factor: A non-negative float representing the magnitude of gaussian smoothing to apply (zero for none)
-        share_legend: Whether to have one legend across all graphs (true) or one legend per graph (false)
-        pretty_names: Whether to modify the metric names in graph titles (true) or leave them alone (false)
-        ignore_metrics: Any metrics to ignore during plotting
-        include_metrics: A whitelist of metric keys (None whitelists all keys)
+        experiments: Experiment(s) to plot.
+        save_path: The path where the figure should be saved, or None to display the figure to the screen.
+        smooth_factor: A non-negative float representing the magnitude of gaussian smoothing to apply (zero for none).
+        share_legend: Whether to have one legend across all graphs (True) or one legend per graph (False).
+        pretty_names: Whether to modify the metric names in graph titles (True) or leave them alone (False).
+        ignore_metrics: Any metrics to ignore during plotting.
+        include_metrics: A whitelist of metric keys (None whitelists all keys).
     """
     plot_logs(experiments,
               smooth_factor=smooth_factor,
