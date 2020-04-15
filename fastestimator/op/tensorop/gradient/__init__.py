@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from fastestimator.op.tensorop.gradient.fgsm import FGSM
 from fastestimator.op.tensorop.gradient.gradient import GradientOp
 from fastestimator.op.tensorop.gradient.watch import Watch
-from fastestimator.op.tensorop.gradient.fgsm import FGSM

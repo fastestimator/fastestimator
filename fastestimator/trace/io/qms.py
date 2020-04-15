@@ -28,7 +28,7 @@ from fastestimator.util.util import to_list
 
 
 class QMSTest(Trace):
-    """ Automate test running and generate QMS report
+    """Automate test running and generate QMS report
 
     Args:
         test_descriptions: List of text-based description
@@ -97,7 +97,7 @@ class QMSTest(Trace):
 
 
 class _QMSDocx:
-    """ The class to generate QMS summary report template by given total pass and fail case number.
+    """The class to generate QMS summary report template by given total pass and fail case number.
 
     Args:
         total_pass: Total QMS test passing case number.
@@ -211,9 +211,9 @@ class _QMSDocx:
         table.style = "Table Grid"
         self.fill_table(
             table,
-            [["Location", "Reference", "Document Name"], ["Myworkshop", "<DOC>", "Edison AI Model Verification Plan"],
-             ["Myworkshop", "<DOC>", "Model Evaluation Tool Validation"
-              ], ["Myworkshop", "<DOC>", "The CRS documents are in Approved state"]])
+            [["Location", "Reference", "Document Name"], ["Myworkshop", "<DOC>", "Edison AI Model Verification Plan"], [
+                "Myworkshop", "<DOC>", "Model Evaluation Tool Validation"
+            ], ["Myworkshop", "<DOC>", "The CRS documents are in Approved state"]])
 
         para = self.doc.add_paragraph()
         self.add_line_break(para, 2, Pt(14))

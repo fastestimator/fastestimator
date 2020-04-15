@@ -24,14 +24,16 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 class ModelOp(TensorOp):
-    """This class represents the Model operator that defines String keys for storing batch data and predictions
+    """This class performs forward passes of a neural network over batch data to generate predictions.
 
     Args:
-        model : keras model compiled by fe.build
-        inputs : String key of input training data. Defaults to None.
-        outputs : String key of predictions. Defaults to None.
-        mode : 'train' or 'eval'. Defaults to None.
-        trainable: Indicates whether the model should have weights tracked for update
+        model: A model compiled by fe.build.
+        inputs: String key of input training data.
+        outputs: String key under which to store predictions.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+        trainable: Indicates whether the model should have its weights tracked for update.
     """
     def __init__(self,
                  model: Union[tf.keras.Model, torch.nn.Module],

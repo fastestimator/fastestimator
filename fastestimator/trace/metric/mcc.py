@@ -24,7 +24,7 @@ from fastestimator.util.data import Data
 
 
 class MCC(Trace):
-    """ A trace which computes the Matthews Correlation Coefficient for a given set of predictions. This is a preferable
+    """A trace which computes the Matthews Correlation Coefficient for a given set of predictions. This is a preferable
         metric to accuracy or F1 score since it automatically corrects for class imbalances and does not depend on the
         choice of target class (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6941312/). Ideal value is 1, a value of 0
         means your predictions are completely uncorrelated with the true data. A value less than zero implies

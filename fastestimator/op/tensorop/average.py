@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, Iterable, TypeVar, Dict, Any, List
+from typing import Any, Dict, Iterable, List, TypeVar, Union
 
 import tensorflow as tf
 import torch
@@ -24,12 +24,14 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 class Average(TensorOp):
-    """ Compute the average across tensors
+    """Compute the average across tensors.
 
     Args:
-        inputs: Keys of tensors to be averaged
-        outputs: The key under which to save the output
-        mode: Some combination of 'train', 'eval', 'test', 'infer', or None
+        inputs: Keys of tensors to be averaged.
+        outputs: The key under which to save the output.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
     """
     def __init__(self, inputs: Union[str, Iterable[str]], outputs: str, mode: Union[None, str,
                                                                                     Iterable[str]] = None) -> None:

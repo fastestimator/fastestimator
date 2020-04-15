@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, Optional, Tuple, List
+from typing import List, Optional, Tuple, Union
 
 import cv2
 from albumentations import BboxParams, KeypointParams
@@ -22,39 +22,39 @@ from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbum
 
 
 class ShiftScaleRotate(MultiVariateAlbumentation):
-    """Randomly apply affine transforms: translate, scale and rotate the input
+    """Randomly apply affine transforms: translate, scale and rotate the input.
 
-        Args:
-            mode: What execution mode (train, eval, None) to apply this operation
-            image_in: The key of an image to be modified
-            mask_in: The key of a mask to be modified (with the same random factors as the image)
-            masks_in: The key of masks to be modified (with the same random factors as the image)
-            bbox_in: The key of a bounding box(es) to be modified (with the same random factors as the image)
-            keypoints_in: The key of keypoints to be modified (with the same random factors as the image)
-            image_out: The key to write the modified image (defaults to image_in)
-            mask_out: The key to write the modified mask (defaults to mask_in)
-            masks_out: The key to write the modified masks (defaults to masks_in)
-            bbox_out: The key to write the modified bounding box(es) (defaults to bbox_in)
-            keypoints_out: The key to write the modified keypoints (defaults to keypoints_in)
-            bbox_params: Parameters defining the type of bounding box ('coco', 'pascal_voc', 'albumentations' or 'yolo')
-            keypoint_params: Parameters defining the type of keypoints ('xy', 'yx', 'xya', 'xys', 'xyas', 'xysa')
-            shift_limit: shift factor range for both height and width. If shift_limit is a single float value, the range
-                will be (-shift_limit, shift_limit). Absolute values for lower and upper bounds should lie in range
-                [0, 1]. Default: (-0.0625, 0.0625).
-            scale_limit: scaling factor range. If scale_limit is a single float value, the range will be
-                (-scale_limit, scale_limit). Default: (-0.1, 0.1).
-            rotate_limit: rotation range. If rotate_limit is a single int value, the range will be
-                (-rotate_limit, rotate_limit). Default: (-45, 45).
-            interpolation: flag that is used to specify the interpolation algorithm. Should be one of:
-                cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_CUBIC, cv2.INTER_AREA, cv2.INTER_LANCZOS4.
-                Default: cv2.INTER_LINEAR.
-            border_mode: flag that is used to specify the pixel extrapolation method. Should be one of:
-                cv2.BORDER_CONSTANT, cv2.BORDER_REPLICATE, cv2.BORDER_REFLECT, cv2.BORDER_WRAP, cv2.BORDER_REFLECT_101.
-                Default: cv2.BORDER_REFLECT_101
-            value: padding value if border_mode is cv2.BORDER_CONSTANT.
-            mask_value: padding value if border_mode is cv2.BORDER_CONSTANT applied for masks.
-        Image types:
-            uint8, float32
+    Args:
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+        image_in: The key of an image to be modified.
+        mask_in: The key of a mask to be modified (with the same random factors as the image).
+        masks_in: The key of masks to be modified (with the same random factors as the image).
+        bbox_in: The key of a bounding box(es) to be modified (with the same random factors as the image).
+        keypoints_in: The key of keypoints to be modified (with the same random factors as the image).
+        image_out: The key to write the modified image (defaults to `image_in` if None).
+        mask_out: The key to write the modified mask (defaults to `mask_in` if None).
+        masks_out: The key to write the modified masks (defaults to `masks_in` if None).
+        bbox_out: The key to write the modified bounding box(es) (defaults to `bbox_in` if None).
+        keypoints_out: The key to write the modified keypoints (defaults to `keypoints_in` if None).
+        bbox_params: Parameters defining the type of bounding box ('coco', 'pascal_voc', 'albumentations' or 'yolo').
+        keypoint_params: Parameters defining the type of keypoints ('xy', 'yx', 'xya', 'xys', 'xyas', 'xysa').
+        shift_limit: Shift factor range for both height and width. If shift_limit is a single float value, the range
+            will be (-shift_limit, shift_limit). Absolute values for lower and upper bounds should lie in range [0, 1].
+        scale_limit: Scaling factor range. If scale_limit is a single float value, the range will be
+            (-scale_limit, scale_limit).
+        rotate_limit: Rotation range. If rotate_limit is a single int value, the range will be
+            (-rotate_limit, rotate_limit).
+        interpolation: Flag that is used to specify the interpolation algorithm. Should be one of:
+            cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_CUBIC, cv2.INTER_AREA, cv2.INTER_LANCZOS4.
+        border_mode: Flag that is used to specify the pixel extrapolation method. Should be one of:
+            cv2.BORDER_CONSTANT, cv2.BORDER_REPLICATE, cv2.BORDER_REFLECT, cv2.BORDER_WRAP, cv2.BORDER_REFLECT_101.
+        value: Padding value if border_mode is cv2.BORDER_CONSTANT.
+        mask_value: Padding value if border_mode is cv2.BORDER_CONSTANT applied for masks.
+
+    Image types:
+        uint8, float32
     """
     def __init__(self,
                  shift_limit: Union[float, Tuple[float, float]] = 0.0625,

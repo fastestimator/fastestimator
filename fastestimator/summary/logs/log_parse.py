@@ -23,7 +23,7 @@ from fastestimator.util.util import strip_suffix
 
 
 def _parse_file(file_path: str, file_extension: str) -> Summary:
-    """ A function which will parse log files into a dictionary of metrics
+    """A function which will parse log files into a dictionary of metrics
 
     Args:
         file_path: The path to a log file
@@ -97,7 +97,7 @@ def parse_log_dir(dir_path: str,
                   ignore_metrics: Optional[Set[str]] = None,
                   share_legend: bool = True,
                   pretty_names: bool = False):
-    """ A function which will gather all log files within a given folder and pass them along for visualization
+    """A function which will gather all log files within a given folder and pass them along for visualization
 
     Args:
         dir_path: The path to a directory containing log files

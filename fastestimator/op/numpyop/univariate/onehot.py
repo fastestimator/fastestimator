@@ -20,7 +20,7 @@ from fastestimator.op.numpyop.numpyop import NumpyOp
 
 
 class Onehot(NumpyOp):
-    """ Transform an integer label to one-hot-encoding.
+    """Transform an integer label to one-hot-encoding.
 
     This can be desirable for increasing robustness against incorrect labels:
     https://towardsdatascience.com/label-smoothing-making-model-robust-to-incorrect-labels-2fae037ffbd0

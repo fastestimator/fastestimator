@@ -104,7 +104,7 @@ class _BaseWriter:
 
     @staticmethod
     def _weight_to_image(weight: Tensor, kernel_channels_last: bool = False) -> Optional[Tensor]:
-        """ Logs a weight as a TensorBoard image.
+        """Logs a weight as a TensorBoard image.
             Implementation from tensorflow codebase, would have invoked theirs directly but they didn't make it a static
             method
         """
