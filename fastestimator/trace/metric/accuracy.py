@@ -22,7 +22,7 @@ from fastestimator.util.data import Data
 
 
 class Accuracy(Trace):
-    """ A trace which computes the accuracy for a given set of predictions. Consider using MCC instead
+    """A trace which computes the accuracy for a given set of predictions. Consider using MCC instead
         (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6941312/)
 
     Args:

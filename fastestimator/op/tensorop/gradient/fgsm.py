@@ -12,34 +12,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import TypeVar, Union, List, Iterable, Dict, Any, Optional
+from typing import Any, Dict, Iterable, List, Optional, TypeVar, Union
 
 import tensorflow as tf
 import torch
 
+from fastestimator.backend.clip_by_value import clip_by_value
+from fastestimator.backend.get_gradient import get_gradient
 from fastestimator.backend.reduce_max import reduce_max
 from fastestimator.backend.reduce_min import reduce_min
 from fastestimator.backend.sign import sign
-from fastestimator.backend.clip_by_value import clip_by_value
-from fastestimator.backend.get_gradient import get_gradient
 from fastestimator.op.tensorop.tensorop import TensorOp
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 class FGSM(TensorOp):
-    """ Create an adversarial sample from input data using the Fast Gradient Sign Method
-    
-    See https://arxiv.org/abs/1412.6572 for an explanation of adversarial attacks
+    """Create an adversarial sample from input data using the Fast Gradient Sign Method.
+
+    See https://arxiv.org/abs/1412.6572 for an explanation of adversarial attacks.
 
     Args:
-        data: Key of the input to be attacked
-        loss: Key of the loss value to use for gradient computation
-        outputs: The key under which to save the output
-        epsilon: The strength of the perturbation to use in the attack
-        clip_low: a minimum value to clip the output by (defaults to min value of data when set to None)
-        clip_high: a maximum value to clip the output by (defaults to max value of data when set to None)
-        mode: Some combination of 'train', 'eval', 'test', 'infer', or None
+        data: Key of the input to be attacked.
+        loss: Key of the loss value to use for gradient computation.
+        outputs: The key under which to save the output.
+        epsilon: The strength of the perturbation to use in the attack.
+        clip_low: a minimum value to clip the output by (defaults to min value of data when set to None).
+        clip_high: a maximum value to clip the output by (defaults to max value of data when set to None).
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
     """
     def __init__(self,
                  data: str,

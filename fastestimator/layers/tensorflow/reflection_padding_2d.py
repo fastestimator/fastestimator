@@ -45,7 +45,7 @@ class ReflectionPadding2D(layers.Layer):
         return {'padding': self.padding}
 
     def compute_output_shape(self, s: Tuple[int, int, int, int]) -> Tuple[int, int, int, int]:
-        """ If you are using "channels_last" configuration"""
+        """If you are using "channels_last" configuration"""
         return s[0], s[1] + 2 * self.padding[0], s[2] + 2 * self.padding[1], s[3]
 
     def call(self, x: tf.Tensor) -> tf.Tensor:

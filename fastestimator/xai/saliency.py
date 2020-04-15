@@ -204,7 +204,7 @@ class SaliencyNet:
         return response
 
     def get_integrated_masks(self, batch: Dict[str, Any], nsamples: int = 25) -> Dict[str, Union[Tensor, np.ndarray]]:
-        """ Generate masks using the integrated gradients method (https://arxiv.org/abs/1703.01365)
+        """Generate masks using the integrated gradients method (https://arxiv.org/abs/1703.01365)
         
         Args:
             batch: An input batch of data

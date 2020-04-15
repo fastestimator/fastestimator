@@ -22,7 +22,7 @@ from fastestimator.util import Data
 
 
 class Dice(Trace):
-    """ Dice score for binary classification between y_true and y_predict.
+    """Dice score for binary classification between y_true and y_predict.
 
     Args:
         true_key: The key of the ground truth mask.
