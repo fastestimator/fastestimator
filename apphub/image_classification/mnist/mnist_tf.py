@@ -17,24 +17,29 @@ import tempfile
 import fastestimator as fe
 from fastestimator.architecture.tensorflow import LeNet
 from fastestimator.dataset.data import mnist
-from fastestimator.op.numpyop.univariate import ExpandDims, Minmax
+from fastestimator.op.numpyop.univariate import ExpandDims, Minmax, Blur
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
-from fastestimator.schedule import cosine_decay
+from fastestimator.schedule import cosine_decay, RepeatScheduler, EpochScheduler
 from fastestimator.trace.adapt import LRScheduler
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
 
 
-def get_estimator(epochs=2, batch_size=32, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
+def get_estimator(epochs=10, batch_size=32, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
     # step 1
     train_data, eval_data = mnist.load_data()
     test_data = eval_data.split(0.5)
-    pipeline = fe.Pipeline(train_data=train_data,
-                           eval_data=eval_data,
-                           test_data=test_data,
-                           batch_size=batch_size,
-                           ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")])
+    pipeline = fe.Pipeline(
+        train_data=train_data,
+        eval_data=eval_data,
+        test_data=test_data,
+        batch_size=batch_size,
+        ops=[
+            ExpandDims(inputs="x", outputs="x"),
+            Minmax(inputs="x", outputs="x"),
+            RepeatScheduler([None, Blur(inputs="x", outputs="x", mode="train")])
+        ])
 
     # step 2
     model = fe.build(model_fn=LeNet, optimizer_fn="adam")
