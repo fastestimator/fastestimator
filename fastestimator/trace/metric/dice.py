@@ -45,17 +45,17 @@ class Dice(Trace):
         self.dice = np.array([])
 
     @property
-    def true_key(self):
+    def true_key(self) -> str:
         return self.inputs[0]
 
     @property
-    def pred_key(self):
+    def pred_key(self) -> str:
         return self.inputs[1]
 
-    def on_epoch_begin(self, data: Data) -> np.ndarray:
+    def on_epoch_begin(self, data: Data) -> None:
         self.dice = np.array([])
 
-    def on_batch_end(self, data: Data) -> np.ndarray:
+    def on_batch_end(self, data: Data) -> None:
         y_true, y_pred = to_number(data[self.true_key]), to_number(data[self.pred_key])
         batch_size = y_true.shape[0]
         y_true, y_pred = y_true.reshape((batch_size, -1)), y_pred.reshape((batch_size, -1))

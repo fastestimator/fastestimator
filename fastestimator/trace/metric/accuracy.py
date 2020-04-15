@@ -38,24 +38,24 @@ class Accuracy(Trace):
                  true_key: str,
                  pred_key: str,
                  mode: Union[str, Set[str]] = ("eval", "test"),
-                 output_name: str = "accuracy"):
+                 output_name: str = "accuracy") -> None:
         super().__init__(inputs=(true_key, pred_key), mode=mode, outputs=output_name)
         self.total = 0
         self.correct = 0
 
     @property
-    def true_key(self):
+    def true_key(self) -> str:
         return self.inputs[0]
 
     @property
-    def pred_key(self):
+    def pred_key(self) -> str:
         return self.inputs[1]
 
-    def on_epoch_begin(self, data: Data):
+    def on_epoch_begin(self, data: Data) -> None:
         self.total = 0
         self.correct = 0
 
-    def on_batch_end(self, data: Data):
+    def on_batch_end(self, data: Data) -> None:
         y_true, y_pred = to_number(data[self.true_key]), to_number(data[self.pred_key])
         if y_true.shape[-1] > 1 and y_true.ndim > 1:
             y_true = np.argmax(y_true, axis=-1)
@@ -67,5 +67,5 @@ class Accuracy(Trace):
         self.correct += np.sum(y_pred.ravel() == y_true.ravel())
         self.total += len(y_pred.ravel())
 
-    def on_epoch_end(self, data: Data):
+    def on_epoch_end(self, data: Data) -> None:
         data.write_with_log(self.outputs[0], self.correct / self.total)

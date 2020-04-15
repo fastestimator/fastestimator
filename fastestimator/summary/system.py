@@ -67,7 +67,7 @@ class System:
                  num_devices: int = torch.cuda.device_count(),
                  log_steps: Optional[int] = None,
                  total_epochs: int = 0,
-                 max_steps_per_epoch: Optional[int] = None):
+                 max_steps_per_epoch: Optional[int] = None) -> None:
 
         self.network = network
         self.mode = mode

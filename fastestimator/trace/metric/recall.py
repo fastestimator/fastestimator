@@ -37,25 +37,25 @@ class Recall(Trace):
                  true_key: str,
                  pred_key: str,
                  mode: Union[str, Set[str]] = ("eval", "test"),
-                 output_name: str = "recall"):
+                 output_name: str = "recall") -> None:
         super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode)
         self.binary_classification = None
         self.y_true = []
         self.y_pred = []
 
     @property
-    def true_key(self):
+    def true_key(self) -> str:
         return self.inputs[0]
 
     @property
-    def pred_key(self):
+    def pred_key(self) -> str:
         return self.inputs[1]
 
-    def on_epoch_begin(self, data: Data):
+    def on_epoch_begin(self, data: Data) -> None:
         self.y_true = []
         self.y_pred = []
 
-    def on_batch_end(self, data: Data):
+    def on_batch_end(self, data: Data) -> None:
         y_true, y_pred = to_number(data[self.true_key]), to_number(data[self.pred_key])
         self.binary_classification = y_pred.shape[-1] == 1
         if y_true.shape[-1] > 1 and y_true.ndim > 1:
@@ -68,7 +68,7 @@ class Recall(Trace):
         self.y_pred.extend(y_pred.ravel())
         self.y_true.extend(y_true.ravel())
 
-    def on_epoch_end(self, data: Data):
+    def on_epoch_end(self, data: Data) -> None:
         if self.binary_classification:
             score = recall_score(self.y_true, self.y_pred, average='binary')
         else:

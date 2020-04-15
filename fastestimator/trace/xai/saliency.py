@@ -66,7 +66,7 @@ class Saliency(Trace):
                  samples: Union[None, int, Dict[str, Any]] = None,
                  mode: Union[str, Set[str]] = ("eval", "test"),
                  smoothing: int = 25,
-                 integrating: Union[int, Tuple[int, int]] = (25, 7)):
+                 integrating: Union[int, Tuple[int, int]] = (25, 7)) -> None:
         # Model outputs are required due to inability to statically determine the number of outputs from a pytorch model
         self.class_key = class_key
         self.model_outputs = to_list(model_outputs)
@@ -91,7 +91,7 @@ class Saliency(Trace):
                 self.samples[mode] = defaultdict(list)
         self.salnet = SaliencyNet(model=model, model_inputs=model_inputs, model_outputs=model_outputs, outputs=outputs)
 
-    def on_batch_end(self, data: Data):
+    def on_batch_end(self, data: Data) -> None:
         mode = self.system.mode
         if not self.samples[mode] or self.n_found[mode] < self.n_required[mode]:
             n_samples = 0
@@ -100,7 +100,7 @@ class Saliency(Trace):
                 n_samples = len(data[key])
             self.n_found[mode] += n_samples
 
-    def on_epoch_end(self, data: Data):
+    def on_epoch_end(self, data: Data) -> None:
         mode = self.system.mode
         if self.n_found[mode] > 0:
             if self.n_required[mode] > 0:

@@ -43,24 +43,24 @@ class MCC(Trace):
                  true_key: str,
                  pred_key: str,
                  mode: Union[str, Set[str]] = ("eval", "test"),
-                 output_name: str = "mcc"):
+                 output_name: str = "mcc") -> None:
         super().__init__(inputs=(true_key, pred_key), mode=mode, outputs=output_name)
         self.y_true = []
         self.y_pred = []
 
     @property
-    def true_key(self):
+    def true_key(self) -> str:
         return self.inputs[0]
 
     @property
-    def pred_key(self):
+    def pred_key(self) -> str:
         return self.inputs[1]
 
-    def on_epoch_begin(self, data: Data):
+    def on_epoch_begin(self, data: Data) -> None:
         self.y_true = []
         self.y_pred = []
 
-    def on_batch_end(self, data: Data):
+    def on_batch_end(self, data: Data) -> None:
         y_true, y_pred = to_number(data[self.true_key]), to_number(data[self.pred_key])
         if y_true.shape[-1] > 1 and y_true.ndim > 1:
             y_true = np.argmax(y_true, axis=-1)
@@ -72,5 +72,5 @@ class MCC(Trace):
         self.y_true.extend(y_true)
         self.y_pred.extend(y_pred)
 
-    def on_epoch_end(self, data: Data):
+    def on_epoch_end(self, data: Data) -> None:
         data.write_with_log(self.outputs[0], matthews_corrcoef(y_true=self.y_true, y_pred=self.y_pred))
