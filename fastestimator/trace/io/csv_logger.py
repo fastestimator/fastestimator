@@ -23,24 +23,29 @@ from fastestimator.util.data import Data
 
 
 class CSVLogger(Trace):
-    """Log monitored quantity in CSV file
+    """Log monitored quantities in a CSV file.
+
     Args:
         filename: Output filename.
-        monitor_names: List of key names to monitor, if None then all metrics will be recorded.
-        mode: Restrict the trace to run only on given modes. None will always execute.
+        monitor_names: List of keys to monitor. If None then all metrics will be recorded.
+        mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
     """
-    def __init__(self,
-                 filename: str,
-                 monitor_names: Optional[Union[List[str], str]] = None,
-                 mode: Union[str, Set[str]] = ("eval", "test")):
+    def __init__(
+        self,
+        filename: str,
+        monitor_names: Optional[Union[List[str], str]] = None,
+        mode: Union[str, Set[str]] = ("eval", "test")
+    ) -> None:
         super().__init__(inputs="*" if monitor_names is None else monitor_names, mode=mode)
         self.filename = filename
         self.data = None
 
-    def on_begin(self, data: Data):
+    def on_begin(self, data: Data) -> None:
         self.data = defaultdict(list)
 
-    def on_epoch_end(self, data: Data):
+    def on_epoch_end(self, data: Data) -> None:
         self.data["mode"].append(self.system.mode)
         self.data["epoch"].append(self.system.epoch_idx)
         if "*" in self.inputs:
@@ -50,7 +55,7 @@ class CSVLogger(Trace):
             for key in self.inputs:
                 self.data[key].append(data[key])
 
-    def on_end(self, data: Data):
+    def on_end(self, data: Data) -> None:
         df = pd.DataFrame(data=self.data)
         if os.path.exists(self.filename):
             df.to_csv(self.filename, mode='a', index=False)

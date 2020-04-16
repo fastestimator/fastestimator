@@ -22,13 +22,15 @@ from fastestimator.util import Data
 
 
 class Dice(Trace):
-    """Dice score for binary classification between y_true and y_predict.
+    """Dice score for binary classification between y_true and y_predicted.
 
     Args:
         true_key: The key of the ground truth mask.
         pred_key: The key of the prediction values.
         threshold: The threshold for binarizing the prediction.
-        mode: What mode to execute in. Defaults to `["eval", "test"]`.
+        mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
         output_name: What to call the output from this trace (for example in the logger output).
     """
     def __init__(self,
@@ -43,17 +45,17 @@ class Dice(Trace):
         self.dice = np.array([])
 
     @property
-    def true_key(self):
+    def true_key(self) -> str:
         return self.inputs[0]
 
     @property
-    def pred_key(self):
+    def pred_key(self) -> str:
         return self.inputs[1]
 
-    def on_epoch_begin(self, data: Data) -> np.ndarray:
+    def on_epoch_begin(self, data: Data) -> None:
         self.dice = np.array([])
 
-    def on_batch_end(self, data: Data) -> np.ndarray:
+    def on_batch_end(self, data: Data) -> None:
         y_true, y_pred = to_number(data[self.true_key]), to_number(data[self.pred_key])
         batch_size = y_true.shape[0]
         y_true, y_pred = y_true.reshape((batch_size, -1)), y_pred.reshape((batch_size, -1))

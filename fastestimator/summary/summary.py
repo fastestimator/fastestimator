@@ -17,7 +17,8 @@ from typing import Optional
 
 
 class Summary:
-    """The summary object that record the training history
+    """A summary object that records training history.
+
     Args:
         name: Name of the experiment. If None then experiment results will be ignored
     """
@@ -26,13 +27,19 @@ class Summary:
         self.history = defaultdict(lambda: defaultdict(dict))  # {mode: {key: {step: value}}}
 
     def merge(self, other: 'Summary'):
-        """Merge other experiment
+        """Merge another `Summary` into this one.
+
         Args:
-            other: Other experiment object need to be merged
+            other: Other `summary` object to be merged.
         """
         for mode, sub in other.history.items():
             for key, val in sub.items():
                 self.history[mode][key].update(val)
 
     def __bool__(self) -> bool:
+        """Whether training history should be recorded.
+
+        Returns:
+            True iff this `Summary` has a non-None name.
+        """
         return bool(self.name)

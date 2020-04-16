@@ -26,15 +26,18 @@ from fastestimator.util.data import Data
 
 
 class ReduceLROnPlateau(Trace):
-    """Reduce learning rate based on evaluation results
+    """Reduce learning rate based on evaluation results.
 
     Args:
-        model: model instance
-        monitor: The monitor metric name, if None, model's validation loss will be used as metric.
+        model: A model instance compiled with fe.build.
+        metric: The metric name to be monitored. If None, the model's validation loss will be used as the metric.
         patience: Number of epochs to wait before reducing LR again.
-        factor: Reduce factor of learning rate. Defaults to 0.1.
-        best_mode: higher is better (max) or lower is better (min). Defaults to min
-        min_lr: minimum learning rate, defaults to 1e-6.
+        factor: Reduce factor for the learning rate.
+        best_mode: Higher is better ("max") or lower is better ("min").
+        min_lr: Minimum learning rate.
+
+    Raises:
+        AssertionError: If the loss cannot be inferred from the `model` and a `metric` was not provided.
     """
     system: System
 
@@ -44,7 +47,7 @@ class ReduceLROnPlateau(Trace):
                  patience: int = 10,
                  factor: float = 0.1,
                  best_mode: str = "min",
-                 min_lr: float = 1e-6):
+                 min_lr: float = 1e-6) -> None:
         if not metric:
             assert hasattr(model, "loss_name"), "cannot infer model loss name, please put the model to UpdateOp first"
             assert len(model.loss_name) == 1, "the model has more than one losses, please provide the metric explicitly"
@@ -65,7 +68,7 @@ class ReduceLROnPlateau(Trace):
         else:
             raise ValueError("best_mode must be either 'min' or 'max'")
 
-    def on_epoch_end(self, data: Data):
+    def on_epoch_end(self, data: Data) -> None:
         if self.monitor_op(data[self.inputs[0]], self.best):
             self.best = data[self.inputs[0]]
             self.wait = 0
