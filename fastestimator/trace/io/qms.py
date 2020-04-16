@@ -37,6 +37,9 @@ class QMSTest(Trace):
         test_title: Title of the test.
         json_output: Path into which to write the output results JSON.
         doc_output: Path into which to write the output QMS summary report (docx).
+
+    Raises:
+        AssertionError: If the number of `test_descriptions` and `test_criteria` do not match.
     """
     def __init__(self,
                  test_descriptions: Union[str, List[str]],
