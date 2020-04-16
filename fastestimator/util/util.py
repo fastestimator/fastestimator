@@ -22,7 +22,7 @@ from ast import literal_eval
 from contextlib import ContextDecorator
 from functools import reduce
 from math import gcd
-from typing import Any, Callable, List, MutableMapping, Optional, Set, Tuple, TypeVar, Union
+from typing import Any, Callable, List, MutableMapping, Optional, Set, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
@@ -53,11 +53,19 @@ T = TypeVar('T')
 
 
 def parse_string_to_python(val: str) -> Any:
-    """
+    """Convert a string into a python object.
+
+    ```python
+    x = fe.util.parse_string_to_python("5")  # 5
+    x = fe.util.parse_string_to_python("[5, 4, 0.3]")  # [5, 4, 0.3]
+    x = fe.util.parse_string_to_python("{'a':5, 'b':7}")  # {'a':5, 'b':7}
+    ```
+
     Args:
-        val: An input string
+        val: An input string.
+
     Returns:
-        A python object version of the input string
+        A python object version of the input string.
     """
     if val is None or not val:
         return ""
@@ -72,10 +80,22 @@ def parse_string_to_python(val: str) -> Any:
 
 def to_list(data: Any) -> List[Any]:
     """Convert data to a list. A single None value will be converted to the empty list.
+
+    ```python
+    x = fe.util.to_list(None)  # []
+    x = fe.util.to_list([None])  # [None]
+    x = fe.util.to_list(7)  # [7]
+    x = fe.util.to_list([7, 8])  # [7,8]
+    x = fe.util.to_list({7})  # [7]
+    x = fe.util.to_list((7))  # [7]
+    x = fe.util.to_list({'a': 7})  # [{'a': 7}]
+    ```
+
     Args:
-        data: Input data, with or without a python container.
+        data: Input data, within or without a python container.
+
     Returns:
-        list: Replace python container with list or make input a list.
+        The input `data` but inside a list instead of whatever other container type used to hold it.
     """
     if data is None:
         return []
@@ -89,10 +109,21 @@ def to_list(data: Any) -> List[Any]:
 
 def to_set(data: Any) -> Set[Any]:
     """Convert data to a set. A single None value will be converted to the empty set.
+
+    ```python
+    x = fe.util.to_set(None)  # {}
+    x = fe.util.to_set([None])  # {None}
+    x = fe.util.to_set(7)  # {7}
+    x = fe.util.to_set([7, 8])  # {7,8}
+    x = fe.util.to_set({7})  # {7}
+    x = fe.util.to_set((7))  # {7}
+    ```
+
     Args:
-        data: Input data, with or without a python container.
+        data: Input data, within or without a python container. The `data` must be hashable.
+
     Returns:
-        list: Replace python container with set or make input a set.
+        The input `data` but inside a set instead of whatever other container type used to hold it.
     """
     if data is None:
         return set()
@@ -105,22 +136,34 @@ def to_set(data: Any) -> Set[Any]:
 
 
 class NonContext(object):
-    """A class which is used for nothing.
+    """A class which is used to make nothing unusual happen.
+
+    ```python
+    a = 5
+    with fe.util.NonContext():
+        a = a + 37
+    print(a)  # 42
+    ```
     """
-    def __enter__(self):
+    def __enter__(self) -> None:
         pass
 
-    def __exit__(self, *exc):
+    def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
         pass
 
 
 class Suppressor(object):
     """A class which can be used to silence output of function calls.
-    Example: ::
-        with Suppressor():
-            func(args)
+
+    ```python
+    x = lambda: print("hello")
+    x()  # "hello"
+    with fe.util.Suppressor():
+        x()  #
+    x()  # "hello"
+    ```
     """
-    def __enter__(self):
+    def __enter__(self) -> None:
         # pylint: disable=attribute-defined-outside-init
         self.stdout = sys.stdout
         self.stderr = sys.stderr
@@ -128,23 +171,31 @@ class Suppressor(object):
         sys.stdout = self
         sys.stderr = self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
         sys.stdout = self.stdout
         sys.stderr = self.stderr
-        if exc_type is not None:
-            raise
 
-    def write(self, dummy):  # pylint: disable=missing-docstring
+    def write(self, dummy: str) -> None:
+        """A function which is invoked during print calls.
+
+        Args:
+            dummy: The string which wanted to be printed.
+        """
         pass
 
 
 class Timer(ContextDecorator):
-    """
-    A class that can be used to time things: ::
-        with Timer():
-            func(args)
-        @Timer()
-        def func(args)
+    """A class that can be used to time things.
+
+    ```python
+    x = lambda: list(map(lambda i: i + i/2, list(range(int(1e6)))))
+    with fe.util.Timer():
+        x()  # Task took 0.1639 seconds
+    @fe.util.Timer("T2")
+    def func():
+        return x()
+    func()  # T2 took 0.14819 seconds
+    ```
     """
     def __init__(self, name="Task") -> None:
         self.name = name
@@ -152,21 +203,36 @@ class Timer(ContextDecorator):
         self.end = None
         self.interval = None
 
-    def __enter__(self):
+    def __enter__(self) -> 'Timer':
         self.start = time.perf_counter()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
         self.end = time.perf_counter()
         self.interval = self.end - self.start
         tf.print("{} took {} seconds".format(self.name, self.interval))
 
 
-def draw():
+def draw() -> None:
+    """Print our name.
+    """
     print(Figlet(font="slant").renderText("FastEstimator"))
 
 
-def lcms(*numbers):
+def lcms(*numbers: int):
+    """Compute the least common multiple amongst a list of numbers.
+
+    ```python
+    x = fe.util.lcms(2, 3, 4)  # 12
+    x = fe.util.lcms(11, 13)  # 143
+    ```
+
+    Args:
+        *numbers: Some numbers to compare.
+
+    Returns:
+        The least common multiple between the `numbers`.
+    """
     def lcm(a, b):
         return int(a * b / gcd(a, b))
 
@@ -174,25 +240,35 @@ def lcms(*numbers):
 
 
 def prettify_metric_name(metric: str) -> str:
-    """Add spaces to camel case words, then swap _ for space, and capitalize each word
+    """Add spaces to camel case words, then swap _ for space, and capitalize each word.
+
+    ```python
+    x = fe.util.prettify_metric_name("myUgly_loss")  # "My Ugly Loss"
+    ```
 
     Args:
-        metric: A string to be formatted
+        metric: A string to be formatted.
+
     Returns:
-        The formatted version of 'metric'
+        The formatted version of 'metric'.
     """
     return string.capwords(re.sub("([a-z])([A-Z])", r"\g<1> \g<2>", metric).replace("_", " "))
 
 
 def strip_suffix(target: Optional[str], suffix: Optional[str]) -> Optional[str]:
-    """Remove the given suffix from the target if it is present there
+    """Remove the given `suffix` from the `target` if it is present there.
+
+    ```python
+    x = fe.util.strip_suffix("astring.json", ".json")  # "astring"
+    x = fe.util.strip_suffix("astring.json", ".yson")  # "astring.json"
+    ```
 
     Args:
-        target: A string to be formatted
-        suffix: A string to be removed from 'target'
+        target: A string to be formatted.
+        suffix: A string to be removed from `target`.
 
     Returns:
-        The formatted version of 'target'
+        The formatted version of `target`.
     """
     if suffix is None or target is None:
         return target
@@ -203,14 +279,19 @@ def strip_suffix(target: Optional[str], suffix: Optional[str]) -> Optional[str]:
 
 
 def strip_prefix(target: Optional[str], prefix: Optional[str]) -> Optional[str]:
-    """Remove the given preffix from the target if it is present there
+    """Remove the given `prefix` from the `target` if it is present there.
+
+    ```python
+    x = fe.util.strip_prefix("astring.json", "ast")  # "ring.json"
+    x = fe.util.strip_prefix("astring.json", "asa")  # "astring.json"
+    ```
 
     Args:
-        target: A string to be formatted
-        prefix: A string to be removed from 'target'
+        target: A string to be formatted.
+        prefix: A string to be removed from `target`.
 
     Returns:
-        The formatted version of 'target'
+        The formatted version of `target`.
     """
     if prefix is None or target is None:
         return target
@@ -222,12 +303,15 @@ def strip_prefix(target: Optional[str], prefix: Optional[str]) -> Optional[str]:
 
 def per_replica_to_global(data: T) -> T:
     """Combine data from "per-replica" values.
+
     For multi-GPU training, data are distributed using `tf.distribute.Strategy.experimental_distribute_dataset`. This
-    method collects data from all replicas and combine them into one.
+    method collects data from all replicas and combines them into one.
+
     Args:
         data: Distributed data.
+
     Returns:
-        obj: Combined data from all replicas.
+        Combined data from all replicas.
     """
     if isinstance(data, DistributedValues):
         if data.values[0].shape.rank == 0:
@@ -250,6 +334,22 @@ def per_replica_to_global(data: T) -> T:
 
 
 def get_type(obj: Any) -> str:
+    """A function to try and infer the types of data within containers.
+
+    ```python
+    x = fe.util.get_type(np.ones((10, 10), dtype='int32'))  # "int32"
+    x = fe.util.get_type(tf.ones((10, 10), dtype='float16'))  # "<dtype: 'float16'>"
+    x = fe.util.get_type(torch.ones((10, 10)).type(torch.float))  # "torch.float32"
+    x = fe.util.get_type([np.ones((10,10)) for i in range(4)])  # "List[float64]"
+    x = fe.util.get_type(27)  # "int"
+    ```
+
+    Args:
+        obj: Data which may be wrapped in some kind of container.
+
+    Returns:
+        A string representation of the data type of the `obj`.
+    """
     if hasattr(obj, "dtype"):
         result = str(obj.dtype)
     elif isinstance(obj, (List, Tuple)):
@@ -263,21 +363,64 @@ def get_type(obj: Any) -> str:
 
 
 def get_shape(obj: Any) -> List[Optional[int]]:
+    """A function to find the shapes of an object or sequence of objects.
+
+    Lists or Tuples will assume that the zeroth dimension is ragged (shape==None). If entries in the list have
+    mismatched ranks, then only the list dimension will be considered as part of the shape. If all ranks are equal, an
+    attempt will be made to determine which of the interior dimensions are ragged.
+
+    ```python
+    x = fe.util.get_shape(np.ones((12,22,11)))  # [12, 22, 11]
+    x = fe.util.get_shape([np.ones((12,22,11)), np.ones((18, 5))])  # [None]
+    x = fe.util.get_shape([np.ones((12,22,11)), np.ones((18, 5, 4))])  # [None, None, None, None]
+    x = fe.util.get_shape([np.ones((12,22,11)), np.ones((12, 22, 4))])  # [None, 12, 22, None]
+    x = fe.util.get_shape({"a": np.ones((12,22,11))})  # []
+    ```
+
+    Args:
+        obj: Data to infer the shape of.
+
+    Returns:
+        A list representing the shape of the data.
+    """
     if hasattr(obj, "shape"):
         result = list(obj.shape)
     elif isinstance(obj, (List, Tuple)):
+        shapes = [get_shape(ob) for ob in obj]
         result = [None]
-        if len(obj) > 0:
-            result.extend(get_shape(obj[0]))
-            # Converting shape inside ragged collection to None since likely changes between samples
-            for idx in range(len(result)):
-                result[idx] = None
+        if shapes:
+            rank = len(shapes[0])
+            if any((len(shape) != rank for shape in shapes)):
+                return result
+            result.extend(shapes[0])
+            for shape in shapes[1:]:
+                for idx, dim in enumerate(shape):
+                    if result[idx + 1] != dim:
+                        result[idx + 1] = None
     else:
         result = []
     return result
 
 
 def parse_modes(modes: Set[str]) -> Set[str]:
+    """A function to determine which modes to run on based on a set of modes potentially containing blacklist values.
+
+    ```python
+    m = fe.util.parse_modes({"train"})  # {"train"}
+    m = fe.util.parse_modes({"!train"})  # {"eval", "test", "infer"}
+    m = fe.util.parse_modes({"train", "eval"})  # {"train", "eval"}
+    m = fe.util.parse_modes({"!train", "!infer"})  # {"eval", "test"}
+    ```
+
+    Args:
+        modes: The desired modes to run on (possibly containing blacklisted modes).
+
+    Returns:
+        The modes to run on (converted to a whitelist).
+
+    Raises:
+        AssertionError: If invalid modes are detected, or if blacklisted modes and whitelisted modes are mixed.
+    """
     valid_fields = {"train", "eval", "test", "infer", "!train", "!eval", "!test", "!infer"}
     assert modes.issubset(valid_fields), "Invalid modes argument {}".format(modes - valid_fields)
     negation = set([mode.startswith("!") for mode in modes])
@@ -290,7 +433,22 @@ def parse_modes(modes: Set[str]) -> Set[str]:
     return modes
 
 
-def pad_batch(batch: List[MutableMapping[str, Any]], pad_value: Union[float, int]):
+def pad_batch(batch: List[MutableMapping[str, Any]], pad_value: Union[float, int]) -> None:
+    """A function to pad a batch of data in-place by appending to the ends of the tensors.
+
+    ```python
+    data = [{"x": np.ones((2, 2)), "y": 8}, {"x": np.ones((3, 1)), "y": 4}]
+    fe.util.pad_batch(data, pad_value=0)
+    print(data)  # [{'x': [[1., 1.], [1., 1.],[0., 0.]], 'y': 8}, {'x': [[1., 0.], [1., 0.], [1., 0.]]), 'y': 4}]
+    ```
+
+    Args:
+        batch: A list of data to be padded.
+        pad_value: The value to pad with.
+
+    Raises:
+        AssertionError: If the data within the batch do not have matching ranks.
+    """
     for key in batch[0].keys():
         shapes = [data[key].shape for data in batch if hasattr(data[key], "shape")]
         if len(set(shapes)) > 1:
@@ -300,18 +458,41 @@ def pad_batch(batch: List[MutableMapping[str, Any]], pad_value: Union[float, int
                 data[key] = pad_data(data[key], max_shapes, pad_value)
 
 
-def pad_data(data: np.ndarray, target_shape: Tuple[int], pad_value: Union[float, int]) -> np.ndarray:
+def pad_data(data: np.ndarray, target_shape: Tuple[int, ...], pad_value: Union[float, int]) -> np.ndarray:
+    """Pad `data` by appending `pad_value`s along it's dimensions until the `target_shape` is reached.
+
+    ```python
+    x = np.ones((1,2))
+    x = fe.util.pad_data(x, target_shape=(3, 3), pad_value = -2)  # [[1, 1, -2], [-2, -2, -2], [-2, -2, -2]]
+    ```
+
+    Args:
+        data: The data to be padded.
+        target_shape: The desired shape for `data`. Should have the same rank as `data`, with each dimension being >=
+            the size of the `data` dimension.
+        pad_value: The value to insert into `data` if padding is required to achieve the `target_shape`.
+
+    Returns:
+        The `data`, padded to the `target_shape`.
+    """
     shape_difference = np.array(target_shape) - np.array(data.shape)
     padded_shape = np.array([np.zeros_like(shape_difference), shape_difference]).T
     return np.pad(data, padded_shape, 'constant', constant_values=pad_value)
 
 
-def is_number(arg: Any) -> bool:
+def is_number(arg: str) -> bool:
     """Check if a given string can be converted into a number.
+
+    ```python
+    x = fe.util.is_number("13.7")  # True
+    x = fe.util.is_number("ae13.7")  # False
+    ```
+
     Args:
-        arg: an input value
+        arg: A potentially numeric input string.
+
     Returns:
-        True iff the string represents a number
+        True iff `arg` represents a number.
     """
     try:
         float(arg)
@@ -321,17 +502,31 @@ def is_number(arg: Any) -> bool:
 
 
 class DefaultKeyDict(dict):
+    """Like collections.defaultdict but it passes the key argument to the default function.
+
+    ```python
+    d = fe.util.DefaultKeyDict(default=lambda x: x+x, a=4, b=6)
+    print(d["a"])  # 4
+    print(d["c"])  # "cc"
+    ```
+
+    Args:
+        default: A function which takes a key and returns a default value based on the key.
+        **kwargs: Initial key/value pairs for the dictionary.
     """
-    Like collections.defaultdict but it passes the key argument to the default function
-    """
-    def __init__(self, default: Callable, **kwargs) -> None:
+    def __init__(self, default: Callable[[Any], Any], **kwargs) -> None:
         super().__init__(**kwargs)
         self.factory = default
 
-    def __missing__(self, key):
+    def __missing__(self, key: Any) -> Any:
         res = self[key] = self.factory(key)
         return res
 
 
 def get_num_devices():
+    """Determine the number of available GPUs.
+
+    Returns:
+        The number of available GPUs, or 1 if none are found.
+    """
     return max(torch.cuda.device_count(), 1)
