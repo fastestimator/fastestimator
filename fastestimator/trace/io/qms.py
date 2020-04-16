@@ -28,21 +28,22 @@ from fastestimator.util.util import to_list
 
 
 class QMSTest(Trace):
-    """Automate test running and generate QMS report
+    """Automate QMS testing and report generation.
 
     Args:
-        test_descriptions: List of text-based description
-        test_criterias: List of test function. function input argument name need to match some keys
-        test_title: Title of the test
-        json_output: Output test result storing path (json)
-        doc_output: Output QMS summary report storing path (docx)
+        test_descriptions: List of text-based descriptions.
+        test_criterias: List of test functions. Function input argument names needs to match keys from the data
+            dictionary.
+        test_title: Title of the test.
+        json_output: Path into which to write the output results JSON.
+        doc_output: Path into which to write the output QMS summary report (docx).
     """
     def __init__(self,
                  test_descriptions: Union[str, List[str]],
                  test_criterias: Union[List[Callable], Callable],
                  test_title: str = "QMSTest",
                  json_output: str = "",
-                 doc_output: str = ""):
+                 doc_output: str = "") -> None:
 
         self.json_output = json_output
         self.doc_output = doc_output
@@ -54,17 +55,18 @@ class QMSTest(Trace):
         for criteria in self.test_criterias:
             all_inputs.update(inspect.signature(criteria).parameters.keys())
         super().__init__(inputs=all_inputs, mode="test")
+        self.total_pass, self.total_fail = 0, 0
 
-    def _initialize_json_summary(self):
+    def _initialize_json_summary(self) -> None:
         """Initialize json summary
         """
         self.json_summary = {"title": self.test_title, "stories": []}
 
-    def on_begin(self, data: Data):
+    def on_begin(self, data: Data) -> None:
         self._initialize_json_summary()
         self.total_pass, self.total_fail = 0, 0
 
-    def on_epoch_end(self, data: Data):
+    def on_epoch_end(self, data: Data) -> None:
         for criteria, description in zip(self.test_criterias, self.test_descriptions):
             story = {"description": description}
             is_passed = criteria(*[data[var_name] for var_name in list(inspect.signature(criteria).parameters.keys())])
@@ -77,7 +79,7 @@ class QMSTest(Trace):
 
             self.json_summary["stories"].append(story)
 
-    def on_end(self, data: Data):
+    def on_end(self, data: Data) -> None:
         if self.json_output.endswith(".json"):
             json_path = self.json_output
         else:
@@ -97,11 +99,11 @@ class QMSTest(Trace):
 
 
 class _QMSDocx:
-    """The class to generate QMS summary report template by given total pass and fail case number.
+    """A class to generate QMS summary report templates given total pass and failure case numbers.
 
     Args:
-        total_pass: Total QMS test passing case number.
-        total_fail: Total QMS test failing case number.
+        total_pass: Total number of passing QMS tests.
+        total_fail: Total number of failing QMS tests.
     """
     def __init__(self, total_pass: int, total_fail: int) -> None:
         self.doc = Document()
@@ -121,8 +123,8 @@ class _QMSDocx:
         """Write the test result table.
 
         Args:
-            total_pass: Total QMS test passing case number.
-            total_fail: Total QMS test failing case number.
+            total_pass: Total number of passing QMS tests.
+            total_fail: Total number of failing QMS tests.
         """
         total_test = total_pass + total_fail
 
@@ -357,11 +359,14 @@ class _QMSDocx:
 
     @staticmethod
     def fill_table(table: Table, content: List[List[str]]) -> None:
-        """Fill input table object with given content.
+        """Fill input `table` object with given `content`.
 
         Args:
             table: 2-D table object to be filled.
             content: 2-D content to fill the table.
+
+        Raises:
+            AssertionError: If the table and content shapes are inconsistent.
         """
         assert len(table.rows) == len(content)
         assert len(table.columns) == len(content[0])
@@ -372,11 +377,11 @@ class _QMSDocx:
 
     @staticmethod
     def add_line_break(paragraph: Paragraph, num: int, font_size=None) -> None:
-        """Add input number of line break in target paragraph object.
+        """Add a number of line breaks into the target `paragraph` object.
 
         Args:
             paragraph: Target paragraph.
-            num: Number of line break.
+            num: Number of line breaks.
             font_size: Font size of the line break.
         """
         run = paragraph.add_run()
