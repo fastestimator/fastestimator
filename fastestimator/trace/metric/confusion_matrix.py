@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-
 from typing import Set, Union
 
 import numpy as np
@@ -24,38 +23,39 @@ from fastestimator.util.data import Data
 
 
 class ConfusionMatrix(Trace):
-    """Computes confusion matrix between y_true and y_predict.
+    """Computes the confusion matrix between y_true and y_predicted.
 
     Args:
-        true_key: Name of the key that corresponds to ground truth in batch dictionary
-        pred_key: Name of the key that corresponds to predicted score in batch dictionary
+        true_key: Name of the key that corresponds to ground truth in the batch dictionary.
+        pred_key: Name of the key that corresponds to predicted score in the batch dictionary.
         num_classes: Total number of classes of the confusion matrix.
-        mode: Restrict the trace to run only on given modes {'train', 'eval', 'test'}. None will always
-                    execute. Defaults to 'eval'.
-        output_name: Name of the key to store to the state. Defaults to "confusion_matrix".
+        mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+        output_name: Name of the key to store to the state.
     """
     def __init__(self,
                  true_key: str,
                  pred_key: str,
                  num_classes: int,
                  mode: Union[str, Set[str]] = ("eval", "test"),
-                 output_name: str = "confusion_matrix"):
+                 output_name: str = "confusion_matrix") -> None:
         super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode)
         self.num_classes = num_classes
         self.matrix = None
 
     @property
-    def true_key(self):
+    def true_key(self) -> str:
         return self.inputs[0]
 
     @property
-    def pred_key(self):
+    def pred_key(self) -> str:
         return self.inputs[1]
 
-    def on_epoch_begin(self, data: Data):
+    def on_epoch_begin(self, data: Data) -> None:
         self.matrix = None
 
-    def on_batch_end(self, data: Data):
+    def on_batch_end(self, data: Data) -> None:
         y_true, y_pred = to_number(data[self.true_key]), to_number(data[self.pred_key])
         if y_true.shape[-1] > 1 and y_true.ndim > 1:
             y_true = np.argmax(y_true, axis=-1)
@@ -72,5 +72,5 @@ class ConfusionMatrix(Trace):
         else:
             self.matrix += batch_confusion
 
-    def on_epoch_end(self, data: Data):
+    def on_epoch_end(self, data: Data) -> None:
         data.write_with_log(self.outputs[0], self.matrix)

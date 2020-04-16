@@ -20,7 +20,7 @@ from fastestimator.op.numpyop.numpyop import NumpyOp
 
 
 class Binarize(NumpyOp):
-    """ Binarize the input data such that all elements >= threshold become 1 otherwise 0.
+    """Binarize the input data such that all elements >= threshold become 1 otherwise 0.
 
     Args:
         threshold: Binarization threshold.

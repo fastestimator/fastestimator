@@ -20,7 +20,7 @@ from fastestimator.op.op import Op, get_inputs_by_op, write_outputs_by_op
 
 
 class NumpyOp(Op):
-    """ An Operator class which takes and returns numpy data.
+    """An Operator class which takes and returns numpy data.
 
     These Operators are used in fe.Pipeline to perform data pre-processing / augmentation.
     """
@@ -62,7 +62,7 @@ def forward_numpyop(ops: List[NumpyOp], data: MutableMapping[str, Any], mode: st
     Args:
         ops: A list of NumpyOps to execute.
         data: The data dictionary.
-        mode: The current execution mode ("train", "eval", "test", etc.).
+        mode: The current execution mode ("train", "eval", "test", or "infer").
     """
     for op in ops:
         op_data = get_inputs_by_op(op, data)

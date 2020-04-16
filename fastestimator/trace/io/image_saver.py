@@ -12,28 +12,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-
 import os
-from typing import Set, Union, Sequence
+from typing import Sequence, Set, Union
 
 import matplotlib.pyplot as plt
 
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
-from fastestimator.xai.util import show_image, XaiData
+from fastestimator.xai.util import XaiData, show_image
 
 
 class ImageSaver(Trace):
+    """A trace that saves images to the disk.
+
+    Args:
+        inputs: Key(s) of images to be saved.
+        save_dir: The directory into which to write the images.
+        dpi: How many dots per inch to save.
+        mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+    """
     def __init__(self,
                  inputs: Union[str, Sequence[str]],
                  save_dir: str = os.getcwd(),
                  dpi: int = 300,
-                 mode: Union[str, Set[str]] = ("eval", "test")):
+                 mode: Union[str, Set[str]] = ("eval", "test")) -> None:
         super().__init__(inputs=inputs, mode=mode)
         self.save_dir = save_dir
         self.dpi = dpi
 
-    def on_epoch_end(self, data: Data):
+    def on_epoch_end(self, data: Data) -> None:
         for key in self.inputs:
             if key in data:
                 imgs = data[key]

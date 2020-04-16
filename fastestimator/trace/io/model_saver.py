@@ -23,12 +23,12 @@ from fastestimator.util.data import Data
 
 
 class ModelSaver(Trace):
-    """save model weights based on epoch frequency during training
+    """Save model weights based on epoch frequency during training.
 
     Args:
-        model: model instance
-        save_dir: folder path to save model
-        frequency: model saving frequency in epoch(s). Defaults to 1.
+        model: A model instance compiled with fe.build.
+        save_dir: Folder path into which to save the `model`.
+        frequency: Model saving frequency in epoch(s).
     """
     def __init__(self, model: Union[tf.keras.Model, torch.nn.Module], save_dir: str, frequency: int = 1) -> None:
         super().__init__(mode="train")
@@ -36,7 +36,7 @@ class ModelSaver(Trace):
         self.save_dir = save_dir
         self.frequency = frequency
 
-    def on_epoch_end(self, data: Data):
+    def on_epoch_end(self, data: Data) -> None:
         # No model will be saved when save_dir is None, which makes smoke test easier.
         if self.save_dir and self.system.epoch_idx % self.frequency == 0:
             model_name = "{}_epoch_{}".format(self.model.model_name, self.system.epoch_idx)

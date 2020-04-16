@@ -24,19 +24,23 @@ from fastestimator.util.data import Data
 
 
 class BestModelSaver(Trace):
-    """save the weights of best model based on evaluation metric
+    """Save the weights of best model based on a given evaluation metric.
 
     Args:
-        model: model instance
-        save_dir: folder path to save model
-        metric: eval metric name to monitor, if None, the model's loss will be used
-        save_best_mode: can be 'min' or 'max'. Defaults to 'min'.
+        model: A model instance compiled with fe.build.
+        save_dir: Folder path into which to save the model.
+        metric: Eval metric name to monitor. If None, the model's loss will be used.
+        save_best_mode: Can be 'min' or 'max'.
+
+    Raises:
+        AssertionError: If a `metric` is not provided and it cannot be inferred from the `model`.
+        ValueError: If `save_best_mode` is an unacceptable string.
     """
     def __init__(self,
                  model: Union[tf.keras.Model, torch.nn.Module],
                  save_dir: str,
                  metric: Optional[str] = None,
-                 save_best_mode: str = "min"):
+                 save_best_mode: str = "min") -> None:
         if not metric:
             assert hasattr(model, "loss_name"), "cannot infer model loss name, please put the model to UpdateOp first"
             assert len(model.loss_name) == 1, "the model has more than one losses, please provide the metric explicitly"
@@ -55,10 +59,10 @@ class BestModelSaver(Trace):
             raise ValueError("save_best_mode must be either 'min' or 'max'")
 
     @property
-    def metric(self):
+    def metric(self) -> str:
         return self.inputs[0]
 
-    def on_epoch_end(self, data: Data):
+    def on_epoch_end(self, data: Data) -> None:
         # No model will be saved when save_dir is None, which makes smoke test easier.
         if self.save_dir and self.monitor_op(data[self.metric], self.best):
             self.best = data[self.metric]

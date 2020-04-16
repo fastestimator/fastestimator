@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-
 from copy import deepcopy
 from typing import Dict, Any, TypeVar, Union, List, Sequence, Optional
 
@@ -204,7 +203,7 @@ class SaliencyNet:
         return response
 
     def get_integrated_masks(self, batch: Dict[str, Any], nsamples: int = 25) -> Dict[str, Union[Tensor, np.ndarray]]:
-        """ Generate masks using the integrated gradients method (https://arxiv.org/abs/1703.01365)
+        """Generate masks using the integrated gradients method (https://arxiv.org/abs/1703.01365)
         
         Args:
             batch: An input batch of data

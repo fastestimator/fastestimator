@@ -22,18 +22,22 @@ from fastestimator.util.data import Data
 
 class EarlyStopping(Trace):
     """Stop training when a monitored quantity has stopped improving.
+
     Args:
-        monitor: Quantity to be monitored. Defaults to "loss".
+        monitor: Quantity to be monitored.
         min_delta: Minimum change in the monitored quantity to qualify as an improvement, i.e. an
-            absolute change of less than min_delta, will count as no improvement. Defaults to 0.
-        patience: Number of epochs with no improvement after which training will be stopped. Defaults to 0.
+            absolute change of less than min_delta will count as no improvement.
+        patience: Number of epochs with no improvement after which training will be stopped.
         compare: One of {"min", "max"}. In "min" mode, training will stop when the quantity monitored
             has stopped decreasing; in `max` mode it will stop when the quantity monitored has stopped increasing.
-            Defaults to 'min'.
         baseline: Baseline value for the monitored quantity. Training will stop if the model doesn't
-            show improvement over the baseline. Defaults to None.
-        mode: Restrict the trace to run only on given modes {'train', 'eval', 'test'}. None will always
-                    execute. Defaults to 'eval'.
+            show improvement over the baseline.
+        mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+
+    Raises:
+        ValueError: If `compare` is an invalid value or more than one `monitor` is provided.
     """
     def __init__(self,
                  monitor: str = "loss",
@@ -41,7 +45,7 @@ class EarlyStopping(Trace):
                  patience: int = 0,
                  compare: str = 'min',
                  baseline: Optional[float] = None,
-                 mode: str = 'eval'):
+                 mode: str = 'eval') -> None:
         super().__init__(inputs=monitor, mode=mode)
 
         if len(self.inputs) != 1:
@@ -61,14 +65,14 @@ class EarlyStopping(Trace):
         else:
             self.monitor_op = np.greater
 
-    def on_begin(self, data: Data):
+    def on_begin(self, data: Data) -> None:
         self.wait = 0
         if self.baseline is not None:
             self.best = self.baseline
         else:
             self.best = np.Inf if self.monitor_op == np.less else -np.Inf
 
-    def on_epoch_end(self, data: Data):
+    def on_epoch_end(self, data: Data) -> None:
         current = data[self.monitored_key]
         if current is None:
             return

@@ -25,12 +25,14 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 class UpdateOp(TensorOp):
-    """This class performs updates to a model's weights based on the loss
+    """This class performs updates to a model's weights based on the loss.
 
     Args:
-        model: model instance compiled by fe.build
-        loss_name: the name of loss
-        mode: The mode or modes for which to execute
+        model: Model instance compiled by fe.build.
+        loss_name: The name of loss.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
     """
     def __init__(self,
                  model: Union[tf.keras.Model, torch.nn.Module],
