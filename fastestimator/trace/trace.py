@@ -243,7 +243,7 @@ class Logger(Trace):
                 self.system.global_step % self.system.log_steps == 0 or self.system.global_step == 1):
             self._print_message("FastEstimator-Train: step: {}; ".format(self.system.global_step), data)
 
-    def on_epoch_end(self, data: Data):
+    def on_epoch_end(self, data: Data) -> None:
         if self.system.mode == "train" and self.system.log_steps:
             self._print_message("FastEstimator-Train: step: {}; ".format(self.system.global_step), data, True)
         elif self.system.mode == "eval":
