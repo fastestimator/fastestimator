@@ -150,9 +150,9 @@ def siamese_network(input_shape=(105, 105, 1), classes=1):
     return Model(inputs=[left_input, right_input], outputs=output)
 
 
-def get_estimator(epochs=200, batch_size=128, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
+def get_estimator(epochs=200, batch_size=128, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp(), data_dir=None):
     # step 1. prepare pipeline
-    train_data, eval_data = omniglot.load_data()
+    train_data, eval_data = omniglot.load_data(root_dir=data_dir)
     test_data = eval_data.split(0.5)
 
     pipeline = fe.Pipeline(

@@ -41,9 +41,14 @@ class CombineLeftRightMask(NumpyOp):
         return data
 
 
-def get_estimator(epochs=20, batch_size=4, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp(), log_steps=20):
+def get_estimator(epochs=20,
+                  batch_size=4,
+                  max_steps_per_epoch=None,
+                  save_dir=tempfile.mkdtemp(),
+                  log_steps=20,
+                  data_dir=None):
     # step 1
-    csv = montgomery.load_data()
+    csv = montgomery.load_data(root_dir=data_dir)
     pipeline = fe.Pipeline(
         train_data=csv,
         eval_data=csv.split(0.2),
