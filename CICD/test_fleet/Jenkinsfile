@@ -1,0 +1,10 @@
+pipeline{
+    agent {label 'ec2-fleet'}
+    stage('Test'){
+        steps{
+            sh '''
+            echo hello world
+            '''
+        }
+    }
+}
