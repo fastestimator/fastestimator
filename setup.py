@@ -52,7 +52,7 @@ def get_dependency():
         'python-docx',
         'tensorboard',
         'tensorflow_probability==0.8.0',
-        'transformers'
+        'transformers==2.4.1'
     ]
     if os.name == "nt":
         dependencies.append(
@@ -75,9 +75,7 @@ setup(
     url='https://github.com/fastestimator/fastestimator',
     license="Apache License 2.0",
     keywords="fastestimator tensorflow",
-    classifiers=[
-        "License :: OSI Approved :: Apache Software License",
-        "Programming Language :: Python :: 3", ],
+    classifiers=["License :: OSI Approved :: Apache Software License", "Programming Language :: Python :: 3"],
 
     # Declare minimal set for installation
     install_requires=get_dependency(),
