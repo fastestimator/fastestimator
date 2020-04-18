@@ -12,20 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Tuple
+from typing import Optional, Tuple
 
 import tensorflow as tf
 
 from fastestimator.dataset.numpy_dataset import NumpyDataset
 
 
-def load_data() -> Tuple[NumpyDataset, NumpyDataset]:
+def load_data(image_key: str = "x", label_key: str = "y") -> Tuple[NumpyDataset, NumpyDataset]:
     """Load and return the CIFAR10 dataset.
+
+    Args:
+        image_key: The key for image.
+        label_key: The key for label.
 
     Returns:
         (train_data, eval_data)
     """
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.cifar10.load_data()
-    train_data = NumpyDataset({"x": x_train, "y": y_train})
-    eval_data = NumpyDataset({"x": x_eval, "y": y_eval})
+    train_data = NumpyDataset({image_key: x_train, label_key: y_train})
+    eval_data = NumpyDataset({image_key: x_eval, label_key: y_eval})
     return train_data, eval_data
