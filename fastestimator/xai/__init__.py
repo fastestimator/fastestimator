@@ -12,5 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.xai.util import show_image, XaiData
 from fastestimator.xai.saliency import SaliencyNet
+from fastestimator.xai.util import XaiData, show_image
