@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, Iterable, Callable, Tuple
+from typing import Callable, Iterable, Tuple, Union
 
 from albumentations.augmentations.transforms import RandomSunFlare as RandomSunFlareAlb
 
@@ -20,28 +20,31 @@ from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentatio
 
 
 class RandomSunFlare(ImageOnlyAlbumentation):
-    """Add a sun flare to the image
+    """Add a sun flare to the image.
 
-        Args:
-            inputs: Key(s) of images to be normalized
-            outputs: Key(s) of images to be normalized
-            mode: What execution mode (train, eval, None) to apply this operation
-            flare_roi: region of the image where flare will appear (x_min, y_min, x_max, y_max). All values should be
-                in range [0, 1].
-            angle_lower: should be in range [0, `angle_upper`].
-            angle_upper: should be in range [`angle_lower`, 1].
-            num_flare_circles_lower (int): lower limit for the number of flare circles.
-                Should be in range [0, `num_flare_circles_upper`].
-            num_flare_circles_upper (int): upper limit for the number of flare circles.
-                Should be in range [`num_flare_circles_lower`, inf].
-            src_radius: radius of the flare
-            src_color ((int, int, int)): color of the flare
-        Image types:
-            uint8, float32
+    Args:
+        inputs: Key(s) of images to be normalized.
+        outputs: Key(s) into which to write the modified images.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+        flare_roi: region of the image where flare will appear (x_min, y_min, x_max, y_max). All values should be
+            in range [0, 1].
+        angle_lower: should be in range [0, `angle_upper`].
+        angle_upper: should be in range [`angle_lower`, 1].
+        num_flare_circles_lower: lower limit for the number of flare circles.
+            Should be in range [0, `num_flare_circles_upper`].
+        num_flare_circles_upper: upper limit for the number of flare circles.
+            Should be in range [`num_flare_circles_lower`, inf].
+        src_radius: Radius of the flare.
+        src_color: Color of the flare (R,G,B).
+
+    Image types:
+        uint8, float32
     """
     def __init__(self,
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
-                 outputs: Union[None, str, Iterable[str]] = None,
+                 inputs: Union[str, Iterable[str], Callable],
+                 outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  flare_roi: Tuple[float, float, float, float] = (0, 0, 1, 0.5),
                  angle_lower: float = 0.0,

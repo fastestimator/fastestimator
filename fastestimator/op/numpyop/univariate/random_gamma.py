@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, Iterable, Callable, Tuple
+from typing import Callable, Iterable, Tuple, Union
 
 from albumentations.augmentations.transforms import RandomGamma as RandomGammaAlb
 
@@ -20,21 +20,23 @@ from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentatio
 
 
 class RandomGamma(ImageOnlyAlbumentation):
-    """Apply a gamma transform to an image
+    """Apply a gamma transform to an image.
 
-        Args:
-            inputs: Key(s) of images to be normalized
-            outputs: Key(s) of images to be normalized
-            mode: What execution mode (train, eval, None) to apply this operation
-            gamma_limit: If gamma_limit is a single float value,
-                the range will be (-gamma_limit, gamma_limit). Default: (80, 120).
-            eps: value for exclude division by zero.
-        Image types:
-            uint8, float32
+    Args:
+        inputs: Key(s) of images to be modified.
+        outputs: Key(s) into which to write the modified images.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+        gamma_limit: If gamma_limit is a single float value, the range will be (-gamma_limit, gamma_limit).
+        eps: A numerical stability constant to avoid division by zero.
+
+    Image types:
+        uint8, float32
     """
     def __init__(self,
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
-                 outputs: Union[None, str, Iterable[str]] = None,
+                 inputs: Union[str, Iterable[str], Callable],
+                 outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  gamma_limit: Union[float, Tuple[float, float]] = (80, 120),
                  eps: float = 1e-7):

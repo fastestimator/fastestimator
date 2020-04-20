@@ -98,7 +98,8 @@ class Pipeline:
             for op in self.ops:
                 if isinstance(op, Scheduler):
                     for epoch_op in op.get_all_values():
-                        assert isinstance(epoch_op, NumpyOp), "unsupported op format, must provide NumpyOp in Pipeline"
+                        assert isinstance(epoch_op, (type(None), NumpyOp)),\
+                            "unsupported op format, must provide NumpyOp in Pipeline"
                 else:
                     assert isinstance(op, NumpyOp), "unsupported op format, must provide NumpyOp in Pipeline"
             # num_process check

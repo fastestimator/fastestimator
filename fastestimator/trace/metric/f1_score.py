@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-
 from typing import Set, Union
 
 import numpy as np
@@ -24,37 +23,41 @@ from fastestimator.util.data import Data
 
 
 class F1Score(Trace):
-    """Calculate F1 score for classification task and report it back to logger.
+    """Calculate the F1 score for a classification task and report it back to the logger.
+
+    Consider using MCC instead: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6941312/
+
     Args:
-        true_key: Name of the keys in the ground truth label in data pipeline.
-        pred_key: Name of the keys in predicted label. Default is `None`.
-        mode: Restrict the trace to run only on given modes {'train', 'eval', 'test'}. None will always
-                    execute. Defaults to 'eval'.
-        output_name: Name of the key to store back to the state. Defaults to "f1score".
+        true_key: Name of the key that corresponds to ground truth in the batch dictionary.
+        pred_key: Name of the key that corresponds to predicted score in the batch dictionary.
+        mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+        output_name: Name of the key to store back to the state.
     """
     def __init__(self,
                  true_key: str,
                  pred_key: str,
                  mode: Union[str, Set[str]] = ("eval", "test"),
-                 output_name: str = "f1_score"):
+                 output_name: str = "f1_score") -> None:
         super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode)
         self.binary_classification = None
         self.y_true = []
         self.y_pred = []
 
     @property
-    def true_key(self):
+    def true_key(self) -> str:
         return self.inputs[0]
 
     @property
-    def pred_key(self):
+    def pred_key(self) -> str:
         return self.inputs[1]
 
-    def on_epoch_begin(self, data: Data):
+    def on_epoch_begin(self, data: Data) -> None:
         self.y_true = []
         self.y_pred = []
 
-    def on_batch_end(self, data: Data):
+    def on_batch_end(self, data: Data) -> None:
         y_true, y_pred = to_number(data[self.true_key]), to_number(data[self.pred_key])
         self.binary_classification = y_pred.shape[-1] == 1
         if y_true.shape[-1] > 1 and y_true.ndim > 1:
@@ -67,7 +70,7 @@ class F1Score(Trace):
         self.y_pred.extend(y_pred.ravel())
         self.y_true.extend(y_true.ravel())
 
-    def on_epoch_end(self, data: Data):
+    def on_epoch_end(self, data: Data) -> None:
         if self.binary_classification:
             score = f1_score(self.y_true, self.y_pred, average='binary')
         else:

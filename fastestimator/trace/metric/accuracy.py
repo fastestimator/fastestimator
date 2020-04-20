@@ -22,37 +22,40 @@ from fastestimator.util.data import Data
 
 
 class Accuracy(Trace):
-    """ A trace which computes the accuracy for a given set of predictions. Consider using MCC instead
-        (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6941312/)
+    """A trace which computes the accuracy for a given set of predictions.
+
+    Consider using MCC instead: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6941312/
 
     Args:
-        true_key: The key of the true (known) class values
-        pred_key: The key of the predicted class values
-        mode: What mode to execute in (None to execute in all modes)
-        output_name: What to call the output from this trace (for example in the logger output)
+        true_key: Name of the key that corresponds to ground truth in the batch dictionary.
+        pred_key: Name of the key that corresponds to predicted score in the batch dictionary.
+        mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+        output_name: What to call the output from this trace (for example in the logger output).
     """
     def __init__(self,
                  true_key: str,
                  pred_key: str,
                  mode: Union[str, Set[str]] = ("eval", "test"),
-                 output_name: str = "accuracy"):
+                 output_name: str = "accuracy") -> None:
         super().__init__(inputs=(true_key, pred_key), mode=mode, outputs=output_name)
         self.total = 0
         self.correct = 0
 
     @property
-    def true_key(self):
+    def true_key(self) -> str:
         return self.inputs[0]
 
     @property
-    def pred_key(self):
+    def pred_key(self) -> str:
         return self.inputs[1]
 
-    def on_epoch_begin(self, data: Data):
+    def on_epoch_begin(self, data: Data) -> None:
         self.total = 0
         self.correct = 0
 
-    def on_batch_end(self, data: Data):
+    def on_batch_end(self, data: Data) -> None:
         y_true, y_pred = to_number(data[self.true_key]), to_number(data[self.pred_key])
         if y_true.shape[-1] > 1 and y_true.ndim > 1:
             y_true = np.argmax(y_true, axis=-1)
@@ -64,5 +67,5 @@ class Accuracy(Trace):
         self.correct += np.sum(y_pred.ravel() == y_true.ravel())
         self.total += len(y_pred.ravel())
 
-    def on_epoch_end(self, data: Data):
+    def on_epoch_end(self, data: Data) -> None:
         data.write_with_log(self.outputs[0], self.correct / self.total)

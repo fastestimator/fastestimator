@@ -15,7 +15,7 @@
 import os
 import re
 from collections import namedtuple
-from typing import Union, List, Dict, Tuple, TypeVar, Any, Iterable, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import matplotlib.pyplot as plt
 import tensorboard as tb
@@ -34,10 +34,10 @@ from fastestimator.backend.reshape import reshape
 from fastestimator.backend.squeeze import squeeze
 from fastestimator.backend.to_number import to_number
 from fastestimator.backend.to_tensor import to_tensor
-from fastestimator.network import TFNetwork, BaseNetwork
+from fastestimator.network import BaseNetwork, TFNetwork
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
-from fastestimator.util.util import is_number, DefaultKeyDict, to_set, to_list
+from fastestimator.util.util import DefaultKeyDict, is_number, to_list, to_set
 from fastestimator.xai.util import XaiData
 
 # https://github.com/pytorch/pytorch/issues/30966
@@ -48,6 +48,13 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 class _BaseWriter:
+    """A class to write various types of data into TensorBoard summary files.
+
+    Args:
+        root_log_dir: The directory into which to store a new directory corresponding to this experiment's summary data
+        time_stamp: The timestamp of this experiment (used as a folder name within `root_log_dir`).
+        network: The network associated with the current experiment.
+    """
     summary_writers: Dict[str, SummaryWriter]
     network: BaseNetwork
 
@@ -57,16 +64,45 @@ class _BaseWriter:
         self.network = network
 
     def write_epoch_models(self, mode: str, data: Data) -> None:
+        """Write summary graphs for all of the models in the current epoch.
+
+        Args:
+            mode: The current mode of execution ('train', 'eval', 'test', 'infer').
+            data: A set of batch data
+        """
         raise NotImplementedError
 
     def write_weights(self, mode: str, models: Iterable[Model], step: int, visualize: bool) -> None:
+        """Write summaries of all of the weights of a given collection of `models`.
+
+        Args:
+            mode: The current mode of execution ('train', 'eval', 'test', 'infer').
+            models: A list of models compiled with fe.build whose weights should be recorded.
+            step: The current training step.
+            visualize: Whether to attempt to paint graphical representations of the weights in addition to the default
+                histogram summaries.
+        """
         raise NotImplementedError
 
     def write_scalars(self, mode: str, scalars: Iterable[Tuple[str, Any]], step: int) -> None:
+        """Write summaries of scalars to TensorBoard.
+
+        Args:
+            mode: The current mode of execution ('train', 'eval', 'test', 'infer').
+            scalars: A collection of pairs like [("key", val), ("key2", val2), ...].
+            step: The current training step.
+        """
         for key, val in scalars:
             self.summary_writers[mode].add_scalar(tag=key, scalar_value=to_number(val), global_step=step)
 
     def write_images(self, mode: str, images: Iterable[Tuple[str, Any]], step: int) -> None:
+        """Write images to TensorBoard.
+
+        Args:
+            mode: The current mode of execution ('train', 'eval', 'test', 'infer').
+            images: A collection of pairs like [("key", image1), ("key2", image2), ...].
+            step: The current training step.
+        """
         for key, img in images:
             if isinstance(img, XaiData):
                 img = img.paint_figure()
@@ -84,6 +120,15 @@ class _BaseWriter:
         embeddings: Iterable[Tuple[str, Tensor, Optional[List[Any]], Optional[Tensor]]],
         step: int,
     ):
+        """Write embeddings (like UMAP) to TensorBoard.
+
+        Args:
+            mode: The current mode of execution ('train', 'eval', 'test', 'infer').
+            embeddings: A collection of quadruplets like [("key", <features>, [<label1>, ...], <label_images>)].
+                Features are expected to be batched, and if labels and/or label images are provided they should have the
+                same batch dimension as the features.
+            step: The current training step.
+        """
         for key, features, labels, label_imgs in embeddings:
             flat = to_number(reshape(features, [features.shape[0], -1]))
             if not isinstance(label_imgs, (torch.Tensor, type(None))):
@@ -97,6 +142,8 @@ class _BaseWriter:
                                                      global_step=step)
 
     def close(self) -> None:
+        """A method to flush and close all connections to the files on disk.
+        """
         modes = list(self.summary_writers.keys())  # break connection with dictionary so can delete in iteration
         for mode in modes:
             self.summary_writers[mode].close()
@@ -104,9 +151,10 @@ class _BaseWriter:
 
     @staticmethod
     def _weight_to_image(weight: Tensor, kernel_channels_last: bool = False) -> Optional[Tensor]:
-        """ Logs a weight as a TensorBoard image.
-            Implementation from tensorflow codebase, would have invoked theirs directly but they didn't make it a static
-            method
+        """Logs a weight as a TensorBoard image.
+
+        Implementation from TensorFlow codebase, would have invoked theirs directly but they didn't make it a static
+        method.
         """
         w_img = squeeze(weight)
         shape = backend.int_shape(w_img)
@@ -135,6 +183,13 @@ class _BaseWriter:
 
 
 class _TfWriter(_BaseWriter):
+    """A class to write various TensorFlow data into TensorBoard summary files.
+
+    Args:
+        root_log_dir: The directory into which to store a new directory corresponding to this experiment's summary data
+        time_stamp: The timestamp of this experiment (used as a folder name within `root_log_dir`).
+        network: The network associated with the current experiment.
+    """
     tf_summary_writers: Dict[str, tf.summary.SummaryWriter]
 
     def __init__(self, root_log_dir: str, time_stamp: str, network: TFNetwork) -> None:
@@ -176,6 +231,8 @@ class _TfWriter(_BaseWriter):
 
 
 class _TorchWriter(_BaseWriter):
+    """A class to write various Pytorch data into TensorBoard summary files.
+    """
     def write_epoch_models(self, mode: str, data: Data) -> None:
         for model in self.network.epoch_models:
             model_op = next(filter(lambda op: model is op.model, self.network.epoch_ops))
@@ -201,55 +258,34 @@ class _TorchWriter(_BaseWriter):
 
 
 class TensorBoard(Trace):
-    """Output data for use in TensorBoard. Note that if you plan to run a tensorboard server simultaneous to training, 
-        you may want to consider using the --reload_multifile=true flag until their multi-writer use case is finished
-        https://github.com/tensorflow/tensorboard/issues/1063
+    """Output data for use in TensorBoard.
+
+    Note that if you plan to run a tensorboard server simultaneous to training, you may want to consider using the
+    --reload_multifile=true flag until their multi-writer use case is finished:
+    https://github.com/tensorflow/tensorboard/issues/1063
 
     Args:
-        log_dir: Path of the directory where to save the log files to be parsed by TensorBoard.
-            Defaults to 'logs'.
+        log_dir: Path of the directory where the log files to be parsed by TensorBoard should be saved.
         update_freq: 'batch', 'epoch', integer, or strings like '10s', '15e'. When using 'batch', writes the losses and
             metrics to TensorBoard after each batch. The same applies for 'epoch'. If using an integer, let's say 1000,
-            the callback will write the metrics and losses to TensorBoard every 1000 samples. You can also use strings 
-            like '8s' to indicate every 8 steps or '5e' to indicate every 5 epochs. Note that writing too frequently to 
+            the callback will write the metrics and losses to TensorBoard every 1000 samples. You can also use strings
+            like '8s' to indicate every 8 steps or '5e' to indicate every 5 epochs. Note that writing too frequently to
             TensorBoard can slow down your training. You can use None to disable updating, but this will make the trace
             mostly useless.
-        write_graph: Whether to visualize the graph in TensorBoard. The log file can become quite large
-            when write_graph is set to True. Defaults to True.
-        write_images: If a string or list of strings is provided, the corresponding keys will be written to
-            Tensorboard images. 
-        weight_histogram_freq: Frequency (in epochs) at which to compute activation and weight histograms for
-            the layers of the model. Same argument format as update_freq
-        paint_weights: If True will write model weights to visualize as an image
-        write_embeddings: If a string or list of strings is provided, the corresponding keys will be written to 
-            Tensorboard embeddings. 
-        embedding_labels: Keys corresponding to label information for the 'write_embeddings'. 
-        embedding_images: Keys corresponding to raw images to be associated with the 'write_embeddings'
+        write_graph: Whether to visualize the graph in TensorBoard. The log file can become quite large when write_graph
+            is set to True.
+        write_images: If a string or list of strings is provided, the corresponding keys will be written to TensorBoard
+            images.
+        weight_histogram_freq: Frequency (in epochs) at which to compute activation and weight histograms for the layers
+            of the model. Same argument format as `update_freq`.
+        paint_weights: If True the system will attempt to visualize model weights as an image.
+        write_embeddings: If a string or list of strings is provided, the corresponding keys will be written to
+            TensorBoard embeddings.
+        embedding_labels: Keys corresponding to label information for the `write_embeddings`.
+        embedding_images: Keys corresponding to raw images to be associated with the `write_embeddings`.
     """
     Freq = namedtuple('Freq', ['is_step', 'freq'])
     writer: _BaseWriter
-
-    def _parse_freq(self, freq: Union[None, str, int]) -> Freq:
-        if freq is None:
-            return self.Freq(False, 0)
-        if isinstance(freq, int):
-            if freq < 1:
-                raise ValueError(f"Tensorboard frequency argument must be a positive integer but got {freq}")
-            return self.Freq(True, freq)
-        if isinstance(freq, str):
-            if freq in {'step', 's'}:
-                return self.Freq(True, 1)
-            if freq in {'epoch', 'e'}:
-                return self.Freq(False, 1)
-            parts = re.match(r"^([0-9]+)([se])$", freq)
-            if parts is None:
-                raise ValueError(f"Tensorboard frequency argument must be formatted like <int><s|e> but got {freq}")
-            freq = int(parts[1])
-            if freq < 1:
-                raise ValueError(f"Tensorboard frequency argument must be a positive integer but got {freq}")
-            return self.Freq(parts[2] == 's', freq)
-        else:
-            raise ValueError(f"Unrecognized type passed as Tensorboard frequency: {type(freq)}")
 
     def __init__(self,
                  log_dir: str = 'logs',
@@ -260,7 +296,7 @@ class TensorBoard(Trace):
                  paint_weights: bool = False,
                  write_embeddings: Union[None, str, List[str]] = None,
                  embedding_labels: Union[None, str, List[str]] = None,
-                 embedding_images: Union[None, str, List[str]] = None):
+                 embedding_images: Union[None, str, List[str]] = None) -> None:
         super().__init__(inputs="*")
         self.root_log_dir = log_dir
         self.update_freq = self._parse_freq(update_freq)
@@ -293,7 +329,38 @@ class TensorBoard(Trace):
                                  label,
                                  img_label in zip(write_embeddings, embedding_labels, embedding_images)]
 
-    def on_begin(self, data: Data):
+    def _parse_freq(self, freq: Union[None, str, int]) -> Freq:
+        """A helper function to convert string based frequency inputs into epochs or steps
+
+        Args:
+            freq: One of either None, "step", "epoch", "#s", "#e", or #, where # is an integer.
+
+        Returns:
+            A `Freq` object recording whether the trace should run on an epoch basis or a step basis, as well as the
+            frequency with which it should run.
+        """
+        if freq is None:
+            return self.Freq(False, 0)
+        if isinstance(freq, int):
+            if freq < 1:
+                raise ValueError(f"Tensorboard frequency argument must be a positive integer but got {freq}")
+            return self.Freq(True, freq)
+        if isinstance(freq, str):
+            if freq in {'step', 's'}:
+                return self.Freq(True, 1)
+            if freq in {'epoch', 'e'}:
+                return self.Freq(False, 1)
+            parts = re.match(r"^([0-9]+)([se])$", freq)
+            if parts is None:
+                raise ValueError(f"Tensorboard frequency argument must be formatted like <int><s|e> but got {freq}")
+            freq = int(parts[1])
+            if freq < 1:
+                raise ValueError(f"Tensorboard frequency argument must be a positive integer but got {freq}")
+            return self.Freq(parts[2] == 's', freq)
+        else:
+            raise ValueError(f"Unrecognized type passed as Tensorboard frequency: {type(freq)}")
+
+    def on_begin(self, data: Data) -> None:
         print("FastEstimator-Tensorboard: writing logs to {}".format(
             os.path.abspath(os.path.join(self.root_log_dir, self.system.experiment_time))))
         self.writer = _TfWriter(self.root_log_dir, self.system.experiment_time, self.system.network) if isinstance(
@@ -302,7 +369,7 @@ class TensorBoard(Trace):
         if self.write_graph and self.system.global_step == 1:
             self.painted_graphs = set()
 
-    def on_batch_end(self, data: Data):
+    def on_batch_end(self, data: Data) -> None:
         if self.write_graph and self.system.network.epoch_models.symmetric_difference(self.painted_graphs):
             self.writer.write_epoch_models(mode=self.system.mode, data=data)
             self.painted_graphs = self.system.network.epoch_models
@@ -329,7 +396,7 @@ class TensorBoard(Trace):
                     lambda x: x[1] is not None,
                     map(lambda t: (t[0], data.get(t[0]), data.get(t[1]), data.get(t[2])), self.write_embeddings)))
 
-    def on_epoch_end(self, data: Data):
+    def on_epoch_end(self, data: Data) -> None:
         if self.system.mode == 'train' and self.histogram_freq.freq and not self.histogram_freq.is_step and \
                 self.system.epoch_idx % self.histogram_freq.freq == 0:
             self.writer.write_weights(mode=self.system.mode,
@@ -351,5 +418,5 @@ class TensorBoard(Trace):
                     lambda x: x[1] is not None,
                     map(lambda t: (t[0], data.get(t[0]), data.get(t[1]), data.get(t[2])), self.write_embeddings)))
 
-    def on_end(self, data: Data):
+    def on_end(self, data: Data) -> None:
         self.writer.close()

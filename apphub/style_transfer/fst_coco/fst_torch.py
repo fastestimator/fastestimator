@@ -226,8 +226,9 @@ def get_estimator(batch_size=4,
                   content_weight=1.0,
                   tv_weight=1e-4,
                   save_dir=tempfile.mkdtemp(),
-                  style_img_path='Vassily_Kandinsky,_1913_-_Composition_7.jpg'):
-    train_data, _ = mscoco.load_data(load_bboxes=False, load_masks=False, load_captions=False)
+                  style_img_path='Vassily_Kandinsky,_1913_-_Composition_7.jpg',
+                  data_dir=None):
+    train_data, _ = mscoco.load_data(root_dir=data_dir, load_bboxes=False, load_masks=False, load_captions=False)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     style_img = cv2.imread(style_img_path)

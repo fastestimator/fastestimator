@@ -20,16 +20,34 @@ from fastestimator.op.op import Op, get_inputs_by_op, write_outputs_by_op
 
 
 class NumpyOp(Op):
+    """An Operator class which takes and returns numpy data.
+
+    These Operators are used in fe.Pipeline to perform data pre-processing / augmentation.
+    """
     def forward(self, data: Union[np.ndarray, List[np.ndarray]],
                 state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
+        """A method which will be invoked in order to transform data.
+
+        This method will be invoked on individual elements of data before any batching / axis expansion is performed.
+
+        Args:
+            data: The arrays from the data dictionary corresponding to whatever keys this Op declares as its `inputs`.
+            state: Information about the current execution context, for example {"mode": "train"}.
+
+        Returns:
+            The `data` after applying whatever transform this Op is responsible for. It will be written into the data
+            dictionary based on whatever keys this Op declares as its `outputs`.
+        """
         return data
 
 
 class Delete(NumpyOp):
-    """Delete the key, value pairs in data dict.
+    """Delete key(s) and their associated values from the data dictionary.
 
-        Args:
-            keys: Existing key(s) to be deleted in data dict.
+    The system has special logic to detect instances of this Op and delete its `inputs` from the data dictionary.
+
+    Args:
+        keys: Existing key(s) to be deleted from the data dictionary.
     """
     def __init__(self, keys: Union[str, List[str]], mode: Union[None, str, Iterable[str]] = None) -> None:
         super().__init__(inputs=keys, mode=mode)
@@ -38,13 +56,13 @@ class Delete(NumpyOp):
         pass
 
 
-def forward_numpyop(ops: List[NumpyOp], data: MutableMapping[str, Any], mode: str):
-    """call the forward for list of numpy Ops, modify the data in place
+def forward_numpyop(ops: List[NumpyOp], data: MutableMapping[str, Any], mode: str) -> None:
+    """Call the forward function for list of NumpyOps, and modify the data dictionary in place.
 
     Args:
-        ops: list of NumpyOps
-        data: data dictionary
-        mode: the current execution mode
+        ops: A list of NumpyOps to execute.
+        data: The data dictionary.
+        mode: The current execution mode ("train", "eval", "test", or "infer").
     """
     for op in ops:
         op_data = get_inputs_by_op(op, data)

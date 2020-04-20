@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, Iterable, TypeVar, Dict, Any, List
+from typing import Any, Dict, Iterable, List, TypeVar, Union
 
 import tensorflow as tf
 import torch
@@ -26,14 +26,17 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 class Gather(TensorOp):
-    """ Gather values from an input tensor. If indices are not provided, the maximum values along the batch dimension 
-    will be collected.
+    """Gather values from an input tensor.
 
+    If indices are not provided, the maximum values along the batch dimension will be collected.
+ 
     Args:
-        inputs: The tensor(s) to gather values from
-        indices: A tensor containing target indices to gather
-        outputs: The key(s) under which to save the output
-        mode: 'train', 'eval', 'test', or None
+        inputs: The tensor(s) to gather values from.
+        indices: A tensor containing target indices to gather.
+        outputs: The key(s) under which to save the output.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
     """
     def __init__(self,
                  inputs: Union[str, List[str]],

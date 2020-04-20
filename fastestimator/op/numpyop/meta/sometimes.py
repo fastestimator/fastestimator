@@ -20,11 +20,11 @@ from fastestimator.op.numpyop.numpyop import NumpyOp
 
 
 class Sometimes(NumpyOp):
-    """Perform a NumpyOp with a given probability
+    """Perform a NumpyOp with a given probability.
 
-        Args:
-            numpy_op: The target op instance
-            prob: The probability of execution [0-1)
+    Args:
+        numpy_op: The operator to be performed.
+        prob: The probability of execution, which should be in the range: [0-1).
     """
     def __init__(self, numpy_op: NumpyOp, prob: float = 0.5) -> None:
         super().__init__(inputs=numpy_op.inputs, outputs=numpy_op.outputs, mode=numpy_op.mode)
@@ -33,14 +33,14 @@ class Sometimes(NumpyOp):
 
     def forward(self, data: Union[np.ndarray, List[np.ndarray]],
                 state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
-        """Execute the operator with probability
+        """Execute the wrapped operator a certain fraction of the time.
 
         Args:
-            data: Tensor to be resized.
-            state: Information about the current execution context.
+            data: The information to be passed to the wrapped operator.
+            state: Information about the current execution context, for example {"mode": "train"}.
 
         Returns:
-            output tensor.
+            The original `data`, or the `data` after running it through the wrapped operator.
         """
         if self.prob > np.random.uniform():
             data = self.numpy_op.forward(data, state)

@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-
 from copy import deepcopy
-from typing import Dict, Any, TypeVar, Union, List, Sequence, Optional
+from typing import Any, Dict, List, Optional, Sequence, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
 import torch
-
 from fastestimator.backend.abs import abs
 from fastestimator.backend.argmax import argmax
 from fastestimator.backend.clip_by_value import clip_by_value
@@ -31,10 +29,10 @@ from fastestimator.backend.reduce_sum import reduce_sum
 from fastestimator.backend.to_number import to_number
 from fastestimator.backend.zeros_like import zeros_like
 from fastestimator.network import Network
-from fastestimator.op.tensorop.model.model import ModelOp
 from fastestimator.op.tensorop.gather import Gather
 from fastestimator.op.tensorop.gradient.gradient import GradientOp
 from fastestimator.op.tensorop.gradient.watch import Watch
+from fastestimator.op.tensorop.model.model import ModelOp
 from fastestimator.util.util import to_list
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
@@ -42,6 +40,14 @@ Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
 
 class SaliencyNet:
+    """A class to generate saliency masks from a given model.
+
+    Args:
+        model: The model, compiled with fe.build, which is to be inspected.
+        model_inputs: The key(s) corresponding to the model inputs within the data dictionary.
+        model_outputs: The key(s) corresponding to the model outputs which are written into the data dictionary.
+        outputs: The keys(s) under which to write the generated saliency images.
+    """
     def __init__(self,
                  model: Model,
                  model_inputs: Union[str, Sequence[str]],
@@ -75,12 +81,14 @@ class SaliencyNet:
 
     @staticmethod
     def _convert_for_visualization(tensor: Tensor, tile: int = 99) -> np.ndarray:
-        """
+        """Modify the range of data in a given input `tensor` to be appropriate for visualization.
+
         Args:
-            tensor: Input masks, channel values to be reduced by absolute value summation
-            tile: The percentile [0-100] used to set the max value of the image
+            tensor: Input masks, whose channel values are to be reduced by absolute value summation.
+            tile: The percentile [0-100] used to set the max value of the image.
+
         Returns:
-            A (batch X width X height) image after visualization clipping is applied
+            A (batch X width X height) image after visualization clipping is applied.
         """
         if isinstance(tensor, torch.Tensor):
             channel_axis = 1
@@ -96,6 +104,14 @@ class SaliencyNet:
         return clip_by_value((flattened_mask - vmin) / (vmax - vmin), 0, 1)
 
     def get_masks(self, batch: Dict[str, Any]) -> Dict[str, Union[Tensor, np.ndarray]]:
+        """Generates greyscale saliency mask(s) from a given `batch` of data.
+
+        Args:
+            batch: A batch of input data to be fed to the model.
+
+        Returns:
+            The model's classification decisions and greyscale saliency mask(s) for the given `batch` of data.
+        """
         # Shallow copy batch since we're going to modify its contents later
         batch = {key: val for key, val in batch.items()}
         self.network.load_epoch(mode=self.mode, epoch=0, warmup=False)
@@ -106,6 +122,17 @@ class SaliencyNet:
         return grads_and_preds
 
     def _get_mask(self, batch: Dict[str, Any]) -> Dict[str, Tensor]:
+        """Generates raw saliency mask(s) from a given `batch` of data.
+
+        This method assumes that the Network is already loaded.
+
+        Args:
+            batch: A batch of input data to be fed to the model.
+
+        Returns:
+            The model outputs and the raw saliency mask(s) for the given `batch` of data. Model predictions are reduced
+            via argmax.
+        """
         for key in self.gather_keys:
             # If there's no target key, use an empty array which will cause the max-likelihood class to be selected
             batch.setdefault(key, [])
@@ -115,6 +142,17 @@ class SaliencyNet:
         return prediction
 
     def _get_integrated_masks(self, batch: Dict[str, Any], nsamples: int = 25) -> Dict[str, Tensor]:
+        """Generates raw integrated saliency mask(s) from a given `batch` of data.
+
+        This method assumes that the Network is already loaded.
+
+        Args:
+            batch: A batch of input data to be fed to the model.
+            nsamples: How many samples to consider during integration.
+
+        Returns:
+            The raw integrated saliency mask(s) for the given `batch` of data.
+        """
         model_inputs = [batch[ins] for ins in self.model_inputs]
 
         input_baselines = [zeros_like(ins) + (reduce_max(ins) + reduce_min(ins)) / 2 for ins in model_inputs]
@@ -150,18 +188,17 @@ class SaliencyNet:
                            nsamples: int = 25,
                            nintegration: Optional[int] = None,
                            magnitude: bool = True) -> Dict[str, Union[Tensor, np.ndarray]]:
-        """
+        """Generates smoothed greyscale saliency mask(s) from a given `batch` of data.
+
         Args:
-            batch: An input batch of data
-            stdev_spread: Amount of noise to add to the input, as fraction of the
-                        total spread (x_max - x_min). Defaults to 15%.
+            batch: An input batch of data.
+            stdev_spread: Amount of noise to add to the input, as fraction of the total spread (x_max - x_min).
             nsamples: Number of samples to average across to get the smooth gradient.
-            nintegration: Number of samples to compute when integrating (None to disable)
-            magnitude: If true, computes the sum of squares of gradients instead of
-                     just the sum. Defaults to true.
+            nintegration: Number of samples to compute when integrating (None to disable).
+            magnitude: If true, computes the sum of squares of gradients instead of just the sum.
 
         Returns:
-            A saliency mask smoothed via the SmoothGrad method
+            Greyscale saliency mask(s) smoothed via the SmoothGrad method.
         """
         # Shallow copy batch since we're going to modify its contents later
         batch = {key: val for key, val in batch.items()}
@@ -204,13 +241,16 @@ class SaliencyNet:
         return response
 
     def get_integrated_masks(self, batch: Dict[str, Any], nsamples: int = 25) -> Dict[str, Union[Tensor, np.ndarray]]:
-        """ Generate masks using the integrated gradients method (https://arxiv.org/abs/1703.01365)
-        
+        """Generates integrated greyscale saliency mask(s) from a given `batch` of data.
+
+        See https://arxiv.org/abs/1703.01365 for background on the IntegratedGradient method.
+
         Args:
-            batch: An input batch of data
+            batch: An input batch of data.
             nsamples: Number of samples to average across to get the integrated gradient.
+
         Returns:
-            A saliency mask smoothed via the IntegratedGradient method
+            Greyscale saliency masks smoothed via the IntegratedGradient method.
         """
         # Shallow copy batch since we're going to modify its contents later
         batch = {key: val for key, val in batch.items()}

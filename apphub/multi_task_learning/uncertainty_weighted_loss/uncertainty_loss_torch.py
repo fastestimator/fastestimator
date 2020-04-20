@@ -137,9 +137,9 @@ class ResUnet50(nn.Module):
         return x_label, x_mask
 
 
-def get_estimator(batch_size=8, epochs=25, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
+def get_estimator(batch_size=8, epochs=25, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp(), data_dir=None):
     # load CUB200 dataset.
-    train_data = cub200.load_data()
+    train_data = cub200.load_data(root_dir=data_dir)
     eval_data = train_data.split(0.3)
     test_data = eval_data.split(0.5)
 

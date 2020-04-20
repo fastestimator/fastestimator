@@ -21,10 +21,10 @@ from fastestimator.op.numpyop.numpyop import NumpyOp
 
 
 class OneOf(NumpyOp):
-    """Perform one of several possible NumpyOps
+    """Perform one of several possible NumpyOps.
 
-        Args:
-            numpy_ops: A list of ops to choose between
+    Args:
+        numpy_ops: A list of ops to choose between with uniform probability.
     """
     def __init__(self, *numpy_ops: NumpyOp) -> None:
         inputs = numpy_ops[0].inputs
@@ -39,13 +39,13 @@ class OneOf(NumpyOp):
 
     def forward(self, data: Union[np.ndarray, List[np.ndarray]],
                 state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
-        """Execute the operator with probability
+        """Execute a randomly selected op from the list of `numpy_ops`.
 
         Args:
-            data: Tensor to be resized.
-            state: Information about the current execution context.
+            data: The information to be passed to one of the wrapped operators.
+            state: Information about the current execution context, for example {"mode": "train"}.
 
         Returns:
-            output tensor.
+            The `data` after application of one of the available numpyOps.
         """
         return random.choice(self.numpy_ops).forward(data, state)

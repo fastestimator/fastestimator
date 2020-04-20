@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 # see a complete list of effects in albumentation page: https://albumentations-demo.herokuapp.com
+from fastestimator.op.numpyop.univariate.binarize import Binarize
 from fastestimator.op.numpyop.univariate.blur import Blur
 from fastestimator.op.numpyop.univariate.channel_dropout import ChannelDropout
 from fastestimator.op.numpyop.univariate.channel_shuffle import ChannelShuffle
@@ -35,6 +36,7 @@ from fastestimator.op.numpyop.univariate.motion_blur import MotionBlur
 from fastestimator.op.numpyop.univariate.multiplicative_noise import MultiplicativeNoise
 from fastestimator.op.numpyop.univariate.normalize import Normalize
 from fastestimator.op.numpyop.univariate.onehot import Onehot
+from fastestimator.op.numpyop.univariate.pad_sequence import PadSequence
 from fastestimator.op.numpyop.univariate.posterize import Posterize
 from fastestimator.op.numpyop.univariate.random_brightness_contrast import RandomBrightnessContrast
 from fastestimator.op.numpyop.univariate.random_fog import RandomFog
@@ -49,6 +51,7 @@ from fastestimator.op.numpyop.univariate.rgb_shift import RGBShift
 from fastestimator.op.numpyop.univariate.solarize import Solarize
 from fastestimator.op.numpyop.univariate.to_array import ToArray
 from fastestimator.op.numpyop.univariate.to_float import ToFloat
-from fastestimator.op.numpyop.univariate.binarize import Binarize
 from fastestimator.op.numpyop.univariate.to_gray import ToGray
 from fastestimator.op.numpyop.univariate.to_sepia import ToSepia
+from fastestimator.op.numpyop.univariate.tokenize import Tokenize
+from fastestimator.op.numpyop.univariate.word_to_id import WordtoId

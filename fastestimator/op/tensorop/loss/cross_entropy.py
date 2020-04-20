@@ -26,16 +26,18 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 class CrossEntropy(TensorOp):
-    """Calculate Element-Wise CrossEntropy(binary, categorical or sparse categorical)
+    """Calculate Element-Wise CrossEntropy (binary, categorical or sparse categorical).
 
     Args:
-        inputs: A tuple or list like: [<y_pred>, <y_true>]
-        outputs: key to store the computed loss value
-        mode: 'train', 'eval' or None
-        from_logits: whether y_pred is logits (without softmax). Defaults to False.
-        average_loss: whether to average the element-wise loss after the Loss Op
-        form: form of cross entropy, can be 'binary', 'categorical', 'sparse'. None will automatically infer type based
-              on tensor shape.
+        inputs: A tuple or list like: [<y_pred>, <y_true>].
+        outputs: String key under which to store the computed loss value.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+        from_logits: Whether y_pred is logits (without softmax).
+        average_loss: Whether to average the element-wise loss after the Loss Op.
+        form: What form of cross entropy should be performed ('binary', 'categorical', 'sparse', or None). None will
+            automatically infer the correct form based on tensor shape.
     """
     def __init__(self,
                  inputs: Union[None, str, Iterable[str], Callable] = None,
