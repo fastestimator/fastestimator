@@ -61,16 +61,16 @@ def plot_logs(experiments: List[Summary],
         history = experiment.history
         for mode, metrics in history.items():
             for key, value in metrics.items():
-                if value.keys():
-                    max_time = max(max_time, max(value.keys()))
                 if key in ignore_keys:
                     continue
                 if include_keys and key not in include_keys:
                     ignore_keys.add(key)
                     continue
-                if any(map(lambda x: isinstance(x[1], np.ndarray), value.items())):
+                if any(map(lambda x: isinstance(x[1], np.ndarray) and x[1].ndim > 0, value.items())):
                     ignore_keys.add(key)
                     continue  # TODO: nd array not currently supported. maybe in future visualize as heat map?
+                if value.keys():
+                    max_time = max(max_time, max(value.keys()))
                 metric_keys.add("{}: {}".format(mode, key))
     metric_list = sorted(list(metric_keys))  # Sort the metrics alphabetically for consistency
     num_metrics = len(metric_list)
