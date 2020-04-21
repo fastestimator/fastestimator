@@ -30,7 +30,7 @@ def get_sentences_and_labels(path: str) -> Tuple[List[str], List[str], Set[str],
     For simplicity tokens with 'O' entity are omitted.
 
     Args:
-        path: Path to the downloaded dataset file
+        path: Path to the downloaded dataset file.
 
     Returns:
         (sentences, labels, train_vocab, label_vocab)
