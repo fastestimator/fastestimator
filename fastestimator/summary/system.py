@@ -134,4 +134,4 @@ class System:
             value: The value to write into the summary object.
         """
         if self.summary:
-            self.summary.history[self.mode][key][self.global_step] = value
+            self.summary.history[self.mode][key][self.global_step or 0] = value
