@@ -79,6 +79,7 @@ class OneShotAccuracy(Trace):
         self.correct = 0
 
     def on_epoch_end(self, data: Data):
+        device = "cuda" if torch.cuda.is_available() else "cpu"
         for _ in range(self.trials):
             img_path = self.dataset.one_shot_trial(self.N)
             input_img = (np.array([
@@ -92,8 +93,7 @@ class OneShotAccuracy(Trace):
                          ],
                                   dtype=np.float32))
 
-            input_img = (to_tensor(input_img[0], "torch").to(self.model.device),
-                         to_tensor(input_img[1], "torch").to(self.model.device))
+            input_img = (to_tensor(input_img[0], "torch").to(device), to_tensor(input_img[1], "torch").to(device))
 
             prediction_score = feed_forward(self.model, input_img, training=False).cpu().detach().numpy()
 
