@@ -12,9 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Custom progress bar for wget.
-Modified from wget source code at https://bitbucket.org/techtonik/python-wget/src/default/.
-"""
 import sys
 from typing import Callable
 
@@ -22,19 +19,35 @@ import wget
 
 
 def bar_custom(current: float, total: float, width: int = 80) -> str:
-    """Return progress bar string for given values in one of three styles depending on available width:
+    """Return progress bar string for given values in one of three styles depending on available width.
+
+    This function was modified from wget source code at https://bitbucket.org/techtonik/python-wget/src/default/.
+
+    The bar will be one of the following formats depending on available width:
         [..  ] downloaded / total
         downloaded / total
         [.. ]
 
-    If total value is unknown or <= 0, show bytes counter using two adaptive styles:
+    If total width is unknown or <= 0, the bar will show a bytes counter using two adaptive styles:
         %s / unknown
         %s
 
-    If there is not enough space on the screen, do not display anything returned string doesn't include control
+    If there is not enough space on the screen, do not display anything. The returned string doesn't include control
     characters like \r used to place cursor at the beginning of the line to erase previous content.
 
-    This function leaves one free character at the end of string to avoid automatic linefeed on Windows.
+    This function leaves one free character at the end of the string to avoid automatic linefeed on Windows.
+
+    ```python
+    wget.download('http://url.com', '/save/dir', bar=fe.util.bar_custom)
+    ```
+
+    Args:
+        current: The current amount of progress.
+        total: The total amount of progress required by the task.
+        width: The available width.
+
+    Returns:
+        A formatted string to display the current progress.
     """
     # process special case when total size is unknown and return immediately
     if not total or total < 0:
@@ -94,19 +107,26 @@ def bar_custom(current: float, total: float, width: int = 80) -> str:
     return output
 
 
-def callback_progress(blocks: int, block_size: int, total_size: int, bar_function: Callable[[int, int, int], str]):
-    """Callback function for urlretrieve that is called when connection is created and when once for each block.
+def callback_progress(blocks: int, block_size: int, total_size: int, bar_function: Callable[[int, int, int],
+                                                                                            str]) -> None:
+    """Callback function for urlretrieve that is called when a connection is created and then once for each block.
 
     Draws adaptive progress bar in terminal/console.
 
-    Use sys.stdout.write() instead of "print,", because it allows one more
-    symbol at the line end without linefeed on Windows
+    Use sys.stdout.write() instead of "print", because it allows one more symbols at the line end without triggering a
+    linefeed on Windows.
+
+    ```python
+    import wget
+    wget.callback_progress = fe.util.callback_progress
+    wget.download('http://url.com', '/save/dir', bar=fe.util.bar_custom)
+    ```
 
     Args:
-        blocks: number of blocks transferred so far
-        block_size: in bytes
-        total_size: in bytes, can be -1 if server doesn't return it
-        bar_function: another callback function to visualize progress
+        blocks: number of blocks transferred so far.
+        block_size: in bytes.
+        total_size: in bytes, can be -1 if server doesn't return it.
+        bar_function: another callback function to visualize progress.
     """
     width = min(100, wget.get_console_width())
     if width == 0:  # sys.stdout.fileno() in get_console_width() is not supported in jupyter notebook
