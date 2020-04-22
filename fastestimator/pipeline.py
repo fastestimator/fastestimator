@@ -305,6 +305,9 @@ class Pipeline:
 
         Returns:
             All of the output keys which the pipeline will generate for the given `mode`.
+
+        Raises:
+            AssertionError: If the Pipeline contains improperly formatted data.
         """
         output_keys = set()
         for epoch in self.get_signature_epochs(total_epochs):
