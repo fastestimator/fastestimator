@@ -1,44 +1,37 @@
 # Tutorial 10: How to use FastEstimator CLI
 
 ## Overview
-FastEstimator comes with a set of CLI tools that can help users train and test their models quickly. The FastEstimator CLI currently support the following commands:
+FastEstimator comes with a set of CLI tools that can help users train and test their models quickly. In this tutorial, we will go through the CLI usage and the arguments the CLI commands  take. This tutorial is divided into the following sections:
 
-* train
-* test
-* logs
+* How does the CLI work
+* CLI usage
+* Sending input args to `get_estimator`
 
-In this tutorial, we will go over each of those and the arguments they take.
 
-## fastestimator train
-We use the train command in the CLI to train the ML models. The following snippet shows how the command can be used:
+## How does the CLI work
+The CLI takes a command followed by the entry point and optional arguments. The entry point is a path to the python file that contains the estimator definition, which is declared in the `get_estimator()` function. This function returns the estimator which is later used to call either the `fit()` or `test()` functions used to train or test the model respectively.
 
-`fastestimator train [arguments] <entry_point>`
+## CLI usage
+In this section we will show the actual commands that we can use to train and test our models. The following snippet shows the command used to train our apphub MNIST example:
 
-The entry point here repersents the path to the python file that contains the estimator definition, using the `get_estimator()` function. The optional arguments for this command are the following:
-* hyperparameters: This is an optional argument which takes path to a json file containing all the training hyperparameters like epochs, batch_size, optimizer, etc. This is useful when you want to repeat the training more than once and the list of the hyperparameter is getting really long.
-* epochs: Instead of using a json configuration file you can also optionally pass in epochs using this argument.
-* batch_size: Optional batch size for training.
-* optimizer: Another optional argument that specifies which optimizer to use for the training.
+`fastestimator train apphub/image_classification/mnist/mnist_tf.py`
 
-## fastestimator test
-The test command is similar to the train command with the difference that it's used when we just want to test a model instead of train it. The following snippet shows how the command can be used:
+To evaluate our MNIST example we can use the followowing:
 
-`fastestimator test [options] <entry_point>`
+`fastestimator test apphub/image_classification/mnist/mnist_tf.py`
 
-All the details for the command are the same as the train command.
+## Sending input args to `get_estimator`
+As we mentioned above, we can also pass arguments using the CLI. The two main ways you can do that is either by explicitly specifying the arguments or by passing a json configuration containing the details about the arguments.
+* To pass the arguments directly we can use the `--arg` format. The following shows an example of how we can set the number of epochs in our MNIST example above to 3:
 
-## fastestimator logs
-This command is used to generate comparison graphs amongst one or more log file. The following shows the syntax for this command:
+    `fastestimator train apphub/image_classification/mnist/mnist_tf.py --epochs 3`
 
-`fastestimator logs [options] <log file(s) directory>`
-
-The log file directory is the path to a folder containing one or more log files. The optional arguments for this command are the following:
-* extension: The file type / extension of your logs. Defaults to `.txt`.
-* recursive: Recursively search sub-directories for log files.
-* ignore: The names of metrics to ignore though they may be present in the log files.
-* smooth: The amount of gaussian smoothing to apply (zero for no smoothing). Defaults to `1`.
-* pretty_names: Clean up the metric names for display.
-* common_legend: Generate one legend total. Defaults to `True` (belongs to `legend arguments` group).
-* split_legend: Generate one legend per graph. Defaults to `False` (belongs to `legend arguments` group).
-* save: Save the output image. May be accompanied by a directory into which the file is saved. If no output directory is specified, the log directory will be used. Defaults to `False` (belongs to `output arguments` group).
-* display: Render the image to the UI rather than saving it. Defaults to `True` (belongs to `output arguments` group).
+* The other way we talked about was by using the `--hyperparameters` argument and by passing it a json file containing all the training hyperparameters like epochs, batch_size, optimizer, etc. This option is really useful when you want to repeat the training job more than once and/or the list of the hyperparameter is getting really long. The following shows a json and how it can be used for our MNIST example:
+    ```
+    JSON:
+    {
+        "epochs": 1,
+        "batch_size": 64
+    }
+    ```
+    `fastestimator train apphub/image_classification/mnist/mnist_tf.py --hyperparameters hp.json`
