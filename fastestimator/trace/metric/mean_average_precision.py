@@ -14,7 +14,7 @@
 # ==============================================================================
 """COCO Mean average precisin (mAP) implementation."""
 from collections import defaultdict
-from typing import Dict
+from typing import Dict, List
 
 import numpy as np
 
@@ -38,7 +38,7 @@ class MeanAveragePrecision(Trace):
                  output_name=("mAP", "AP50", "AP75")) -> None:
         super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode)
 
-        #assert len(self.output_name) == 3, 'MeanAvgPrecision trace adds 3 fields mAP AP50 AP75 to state dict'
+        assert len(self.outputs) == 3, 'MeanAvgPrecision trace adds 3 fields mAP AP50 AP75 to state dict'
 
         self.iou_thres = np.linspace(.5, 0.95, np.round((0.95 - .5) / .05).astype(np.int) + 1, endpoint=True)
         self.recall_thres = np.linspace(.0, 1.00, np.round((1.00 - .0) / .01).astype(np.int) + 1, endpoint=True)
@@ -96,18 +96,68 @@ class MeanAveragePrecision(Trace):
     def on_batch_begin(self, data: Data):
         """Reset"""
         self.gt = defaultdict(list)  # gt for evaluation
-        self.det = defaultdict(list)  # dt for evaluation
+        self.det = defaultdict(list)  # det for evaluation
         self.batch_image_ids = []  # img_ids per batch
 
         self.ious = defaultdict(list)
         self.ids_unique = []
         self.ids_batch_to_epoch = {}
 
+    @staticmethod
+    def _reshape_gt(gt_array: np.ndarray) -> np.ndarray:
+        """Reshape ground truth and add local image id within batch.
+
+        The input ground truth array has shape (batch_size, num_bbox, 5). The 5 is [x1, y1, w, h, label] for each
+        bounding box.
+        For output we drop all padded bounding boxes (all zeros), and flatten the batch dimension. The output shape is
+        (batch_size * num_bbox, 6). The 6 is [id_in_batch, x1, y1, w, h, label].
+
+        Args:
+            gt_array: Ground truth with shape (batch_size, num_bbox, 5).
+
+        Returns:
+            Ground truth with shape (batch_size * num_bbox, 6).
+        """
+        local_ids = np.repeat(range(gt_array.shape[0]), gt_array.shape[1], axis=None)
+        local_ids = np.expand_dims(local_ids, axis=-1)
+
+        gt_with_id = np.concatenate([local_ids, gt_array.reshape(-1, 5)], axis=1)
+        keep = gt_with_id[..., -1] > 0
+
+        return gt_with_id[keep]
+
+    @staticmethod
+    def _reshape_pred(pred: List[np.ndarray]) -> np.ndarray:
+        """Reshape predicted bounding boxes and add local image id within batch.
+
+        The input prediction array is a list of batch_size elements. For each element inside the list, it
+        has shape (num_bbox, 6). The 6 is [x1, y1, w, h, label, score] for each bounding box.
+        For output we flatten the batch dimension. The output shape is (total_num_bbox_in_batch, 7). The 7 is
+        [id_in_batch, x1, y1, w, h, label, score].
+
+        Args:
+            pred: List of predected bounding boxes for each image. Each element in the list has shape (num_bbox, 6).
+
+        Returns:
+            Predected bounding boxes with shape (total_num_bbox_in_batch, 7).
+        """
+        pred_with_id = []
+        for index, item in enumerate(pred):
+            local_ids = np.repeat([index], item.shape[0], axis=None)
+            local_ids = np.expand_dims(local_ids, axis=-1)
+            pred_with_id.append(np.concatenate([local_ids, item], axis=1))
+
+        pred_with_id = np.concatenate(pred_with_id, axis=0)
+        return pred_with_id
+
     def on_batch_end(self, data: Data):
         #########read det, gt
 
         pred = list(map(to_number, data[self.pred_key]))  # pred is list (batch, ) of np.ndarray (?, 6)
+        pred = self._reshape_pred(pred)
+
         gt = to_number(data[self.true_key])  # gt is np.array (batch, box, 5), box dimension is padded
+        gt = self._reshape_gt(gt)
 
         ground_truth_bb = []
         for gt_item in gt:
@@ -135,7 +185,7 @@ class MeanAveragePrecision(Trace):
             self.det[dict_elem['idx'], dict_elem['label']].append(dict_elem)
         #########end of read det, gt
 
-        # compute iou
+        # compute iou matrix, matrix index is (img_id, cat_id), each element in matrix has shape (num_det, num_gt)
         self.ious = {(img_id, cat_id): self.compute_iou(self.det[img_id, cat_id], self.gt[img_id, cat_id])
                      for img_id in self.batch_image_ids for cat_id in self.categories}
 
@@ -150,14 +200,13 @@ class MeanAveragePrecision(Trace):
         ap50 = self.summarize(iou=0.5)
         ap75 = self.summarize(iou=0.75)
 
-        data[self.output_name[0]] = mean_ap
-        data[self.output_name[1]] = ap50
-        data[self.output_name[2]] = ap75
+        data[self.outputs[0]] = mean_ap
+        data[self.outputs[1]] = ap50
+        data[self.outputs[2]] = ap75
 
     def accumulate(self):
-        """Generate precision recall curve"""
-        key_list = self.evalimgs
-        key_list = sorted(key_list)
+        """Generate precision recall curve."""
+        key_list = sorted(self.evalimgs)  # key format (cat_id, img_id)
         eval_list = [self.evalimgs[key] for key in key_list]
 
         self.image_ids = np.unique(self.image_ids)
@@ -171,7 +220,7 @@ class MeanAveragePrecision(Trace):
         maxdets = self.max_detection
 
         precision_marix = -np.ones((num_iou_thresh, num_recall_thresh, num_categories))
-        recall = -np.ones((num_iou_thresh, num_categories))
+        recall_matrix = -np.ones((num_iou_thresh, num_categories))
         scores_matrix = -np.ones((num_iou_thresh, num_recall_thresh, num_categories))
 
         # loop through category
@@ -179,6 +228,7 @@ class MeanAveragePrecision(Trace):
             Nk = cat_index * num_imgs
             # each element is one image inside this category
             eval_by_category = [eval_list[Nk + img_idx] for img_idx in range(num_imgs)]
+            # drop None
             eval_by_category = [e for e in eval_by_category if not e is None]
 
             # no image inside this category
@@ -191,8 +241,8 @@ class MeanAveragePrecision(Trace):
             sorted_score_inds = np.argsort(-det_scores, kind='mergesort')
 
             det_scores_sorted = det_scores[sorted_score_inds]
-            det_matrix = np.concatenate([e['dtMatches'][:, 0:maxdets] for e in eval_by_category],
-                                        axis=1)[:, sorted_score_inds]
+            det_match = np.concatenate([e['dtMatches'][:, 0:maxdets] for e in eval_by_category],
+                                       axis=1)[:, sorted_score_inds]  # shape (num_iou_thresh, num_det_all_images)
 
             # number of all image gts in one category
             num_all_gt = np.sum([e['num_gt'] for e in eval_by_category])
@@ -200,50 +250,51 @@ class MeanAveragePrecision(Trace):
             if num_all_gt == 0:
                 continue
 
-            tps = det_matrix > 0
-            fps = det_matrix == 0
+            tps = det_match > 0
+            fps = det_match == 0
 
             tp_sum = np.cumsum(tps, axis=1).astype(dtype=np.float)
             fp_sum = np.cumsum(fps, axis=1).astype(dtype=np.float)
 
-            for t, (true_positives, false_positives) in enumerate(zip(tp_sum, fp_sum)):
+            for index, (true_positives, false_positives) in enumerate(zip(tp_sum, fp_sum)):
                 true_positives = np.array(true_positives)
                 false_positives = np.array(false_positives)
-                num_tps = len(true_positives)
+                nd = len(true_positives)
                 recall = true_positives / num_all_gt
                 precision = true_positives / (false_positives + true_positives + np.spacing(1))
 
                 q = np.zeros((num_recall_thresh, ))
                 score = np.zeros((num_recall_thresh, ))
 
-                if num_tps:
-                    recall[t, cat_index] = recall[-1]
+                if nd:
+                    recall_matrix[index, cat_index] = recall[-1]
                 else:
-                    recall[t, cat_index] = 0
+                    recall_matrix[index, cat_index] = 0
 
                 precision = precision.tolist()
                 q = q.tolist()
 
-                for i in range(num_tps - 1, 0, -1):
+                # smooth precision along the curve, remove zigzag
+                for i in range(nd - 1, 0, -1):
                     if precision[i] > precision[i - 1]:
                         precision[i - 1] = precision[i]
 
-                sorted_score_inds = np.searchsorted(recall, self.recall_thres, side='left')
+                inds = np.searchsorted(recall, self.recall_thres, side='left')
 
                 try:
-                    for recall_index, precision_index in enumerate(sorted_score_inds):
+                    for recall_index, precision_index in enumerate(inds):
                         q[recall_index] = precision[precision_index]
                         score[recall_index] = det_scores_sorted[precision_index]
                 except:
                     pass
 
-                precision_marix[t, :, cat_index] = np.array(q)
-                scores_matrix[t, :, cat_index] = np.array(score)
+                precision_marix[index, :, cat_index] = np.array(q)
+                scores_matrix[index, :, cat_index] = np.array(score)
 
         self.eval = {
             'counts': [num_iou_thresh, num_recall_thresh, num_categories],
             'precision': precision_marix,
-            'recall': recall,
+            'recall': recall_matrix,
             'scores': scores_matrix,
         }
 
@@ -263,7 +314,7 @@ class MeanAveragePrecision(Trace):
         return mean_s
 
     def evaluate_img(self, cat_id: int, img_id: int) -> Dict:
-        """Evaluate one image one category.
+        """Find gt matches for det given one image and one category.
 
         Args:
             cat_id:
@@ -274,9 +325,11 @@ class MeanAveragePrecision(Trace):
         """
         det = self.det[img_id, cat_id]
         gt = self.gt[img_id, cat_id]
-        num_dt = len(det)
+
+        num_det = len(det)
         num_gt = len(gt)
-        if num_gt == 0 and num_dt == 0:
+
+        if num_gt == 0 and num_det == 0:
             return None
 
         # sort detections, is ths necessary?
@@ -285,39 +338,39 @@ class MeanAveragePrecision(Trace):
         # cap to max_detection
         det = [det[i] for i in det_index[0:self.max_detection]]
 
-        # put iou into category matrix
+        # get iou matrix for given (img_id, cat_id), the output has shape (num_det, num_gt)
         iou_mat = self.ious[img_id, cat_id]
 
         num_iou_thresh = len(self.iou_thres)
 
-        det_matrix = np.zeros((num_iou_thresh, num_dt))
-        gt_matrix = np.zeros((num_iou_thresh, num_gt))
+        det_match = np.zeros((num_iou_thresh, num_det))
+        gt_match = np.zeros((num_iou_thresh, num_gt))
 
         if len(iou_mat) != 0:
             # loop through each iou thresh
             for thres_idx, thres_value in enumerate(self.iou_thres):
-                # loop through each detection
-                for det_idx, det_elem in enumerate(det):
+                # loop through each detection, for each detection, match only one gt
+                for det_idx, _ in enumerate(det):
                     m = -1
-                    iou = min([thres_value, 1 - 1e-10])
-
-                    for gt_idx, gt_elem in enumerate(gt):
-                        if gt_matrix[thres_idx, gt_idx] > 0:
+                    iou_threshold = min([thres_value, 1 - 1e-10])
+                    # loop through each gt, find the gt gives max iou
+                    for gt_idx, _ in enumerate(gt):
+                        if gt_match[thres_idx, gt_idx] > 0:
                             continue
-                        if iou_mat[det_idx, gt_idx] >= iou:
-                            iou = iou_mat[det_idx, gt_idx]
+                        if iou_mat[det_idx, gt_idx] >= iou_threshold:
+                            iou_threshold = iou_mat[det_idx, gt_idx]
                             m = gt_idx
 
                     if m != -1:
-                        det_matrix[thres_idx, det_idx] = gt[m]['idx']
-                        gt_matrix[thres_idx, m] = 1
+                        det_match[thres_idx, det_idx] = gt[m]['idx']
+                        gt_match[thres_idx, m] = 1
 
         return {
             'image_id': img_id,
             'category_id': cat_id,
             'gtIds': [g['idx'] for g in gt],
-            'dtMatches': det_matrix,
-            'gtMatches': gt_matrix,
+            'dtMatches': det_match,  # shape (num_iou_thresh, num_det), value is zero or GT index
+            'gtMatches': gt_match,  # shape (num_iou_thresh, num_gt), value 1 or zero
             'dtScores': [d['score'] for d in det],
             'num_gt': num_gt,
         }
