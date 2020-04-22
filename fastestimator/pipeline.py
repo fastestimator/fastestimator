@@ -17,7 +17,7 @@ import time
 import warnings
 from copy import deepcopy
 from functools import lru_cache
-from typing import Any, Dict, List, Optional, Set, TypeVar, Union
+from typing import Any, Dict, List, MutableMapping, Optional, Set, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
@@ -256,7 +256,7 @@ class Pipeline:
                               collate_fn=collate_fn)
         return data
 
-    def _pad_batch_collate(self, batch):
+    def _pad_batch_collate(self, batch: List[MutableMapping[str, Any]]) -> Dict[str, Any]:
         """A collate function which pads a batch of data.
 
         Args:
@@ -268,7 +268,7 @@ class Pipeline:
         pad_batch(batch, self.pad_value)
         return default_collate(batch)
 
-    def get_signature_epochs(self, total_epochs: int):
+    def get_signature_epochs(self, total_epochs: int) -> Set[int]:
         """Find the epochs on which the behavior of the Pipeline changes (due to Schedulers).
 
         Args:
@@ -305,6 +305,9 @@ class Pipeline:
 
         Returns:
             All of the output keys which the pipeline will generate for the given `mode`.
+
+        Raises:
+            AssertionError: If the Pipeline contains improperly formatted data.
         """
         output_keys = set()
         for epoch in self.get_signature_epochs(total_epochs):
