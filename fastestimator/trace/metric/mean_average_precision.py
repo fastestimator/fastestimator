@@ -219,7 +219,8 @@ class MeanAveragePrecision(Trace):
         num_imgs = len(self.image_ids)
         maxdets = self.max_detection
 
-        precision_marix = -np.ones((num_iou_thresh, num_recall_thresh, num_categories))
+        # initialize these at -1
+        precision_matrix = -np.ones((num_iou_thresh, num_recall_thresh, num_categories))
         recall_matrix = -np.ones((num_iou_thresh, num_categories))
         scores_matrix = -np.ones((num_iou_thresh, num_recall_thresh, num_categories))
 
@@ -262,6 +263,8 @@ class MeanAveragePrecision(Trace):
                 nd = len(true_positives)
                 recall = true_positives / num_all_gt
                 precision = true_positives / (false_positives + true_positives + np.spacing(1))
+                print(f'recall: {recall}')
+                print(f'precision: {precision}')
 
                 q = np.zeros((num_recall_thresh, ))
                 score = np.zeros((num_recall_thresh, ))
@@ -288,30 +291,30 @@ class MeanAveragePrecision(Trace):
                 except:
                     pass
 
-                precision_marix[index, :, cat_index] = np.array(q)
+                precision_matrix[index, :, cat_index] = np.array(q)
                 scores_matrix[index, :, cat_index] = np.array(score)
 
         self.eval = {
             'counts': [num_iou_thresh, num_recall_thresh, num_categories],
-            'precision': precision_marix,
+            'precision': precision_matrix,
             'recall': recall_matrix,
             'scores': scores_matrix,
         }
 
     def summarize(self, iou=None):
-        s = self.eval['precision']
+        precision_at_iou = self.eval['precision']  # shape (num_iou_thresh, num_recall_thresh, num_categories)
         if iou is not None:
-            t = np.where(iou == self.iou_thres)[0]
-            s = s[t]
+            iou_thresh_index = np.where(iou == self.iou_thres)[0]
+            precision_at_iou = precision_at_iou[iou_thresh_index]
 
-        s = s[:, :, :]
+        precision_at_iou = precision_at_iou[:, :, :]
 
-        if len(s[s > -1]) == 0:
-            mean_s = -1
+        if len(precision_at_iou[precision_at_iou > -1]) == 0:
+            mean_ap = -1
         else:
-            mean_s = np.mean(s[s > -1])
+            mean_ap = np.mean(precision_at_iou[precision_at_iou > -1])
 
-        return mean_s
+        return mean_ap
 
     def evaluate_img(self, cat_id: int, img_id: int) -> Dict:
         """Find gt matches for det given one image and one category.
