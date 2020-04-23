@@ -6,6 +6,8 @@ CLI is a command line program that accepts text input to execute the program's f
 * How does the CLI work
 * CLI usage
 * Sending input args to `get_estimator`
+    * Using --arg
+    * Using JSON file
 
 
 ## How does the CLI work
@@ -21,13 +23,13 @@ To test our trained model we use the following:
 `fastestimator test apphub/image_classification/mnist/mnist_tf.py`
 
 ## Sending input args to `get_estimator`
-We can also pass arguments that the `get_estimator()` takes to the CLI. The following code snippet shows which arguments our MNIST example takes:
+We can also pass arguments that the `get_estimator()` takes to the CLI. The following code snippet shows the `get_estimator()` for our MNIST example:
 ```python
 def get_estimator(epochs=2, batch_size=32, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
     ...
 ```
 
-Next, we try to change two of these arguments using the `--arg` and JSON file format.
+Next, we try to change two of these arguments:
 
 ### Using --arg
 To pass the arguments directly from the CLI we can use the `--arg` format. The following shows an example of how we can set the number of epochs to 3 and batch_size to 64:
@@ -35,7 +37,7 @@ To pass the arguments directly from the CLI we can use the `--arg` format. The f
 `fastestimator train apphub/image_classification/mnist/mnist_tf.py --epochs 3 --batch_size 64`
 
 ### Using JSON file
-The other way we can send arguments is by using the `--hyperparameters` argument and by passing it a json file containing all the training hyperparameters like epochs, batch_size, optimizer, etc. This option is really useful when you want to repeat the training job more than once and/or the list of the hyperparameter is getting really long. The following shows a json and how it can be used for our MNIST example:
+The other way we can send arguments is by using the `--hyperparameters` argument and by passing it a json file containing all the training hyperparameters like epochs, batch_size, optimizer, etc. This option is really useful when you want to repeat the training job more than once and/or the list of the hyperparameter is getting really long. The following shows an example JSON file and how it can be used for our MNIST example:
 ```
 JSON:
 {
