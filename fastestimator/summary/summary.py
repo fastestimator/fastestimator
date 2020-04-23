@@ -20,7 +20,7 @@ class Summary:
     """A summary object that records training history.
 
     Args:
-        name: Name of the experiment. If None then experiment results will be ignored
+        name: Name of the experiment. If None then experiment results will be ignored.
     """
     def __init__(self, name: Optional[str]) -> None:
         self.name = name
