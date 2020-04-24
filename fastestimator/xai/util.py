@@ -285,7 +285,8 @@ class XaiData(OrderedDict):
                      min_height: int = 200,
                      width_gap: int = 50,
                      min_width: int = 200,
-                     dpi: int = 96) -> plt.Figure:
+                     dpi: int = 96,
+                     save_path: Optional[str] = None) -> plt.Figure:
         """Visualize the current XaiData entries in a matplotlib figure.
 
         ```python
@@ -300,6 +301,7 @@ class XaiData(OrderedDict):
             width_gap: How much space to put between each column.
             min_width: The minimum width of a column.
             dpi: The resolution of the image to display.
+            save_path: If provided, the figure will be saved to the given path.
 
         Returns:
             The handle to the generated matplotlib figure.
@@ -330,7 +332,8 @@ class XaiData(OrderedDict):
                                axis=ax,
                                fig=fig,
                                title=row[col_idx][0] if batch_idx == 0 else None)
-
+        if save_path:
+            plt.savefig(save_path, dpi=dpi, bbox_inches="tight")
         return fig
 
     def paint_numpy(self,
