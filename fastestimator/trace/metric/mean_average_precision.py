@@ -49,7 +49,7 @@ class MeanAveragePrecision(Trace):
         # eval
         self.evalimgs = {}
         self.eval = {}
-        self.ids_in_epoch = -1  # reset per epoch
+        self.ids_in_epoch = 0  # reset per epoch
 
         # reset per batch
         self.gt = defaultdict(list)  # gt for evaluation
@@ -69,6 +69,8 @@ class MeanAveragePrecision(Trace):
 
     def _get_id_in_epoch(self, idx_in_batch):
         """Get unique image id in epoch.
+
+        Id starts from 1.
 
         Args:
             idx_in_batch:
@@ -91,7 +93,7 @@ class MeanAveragePrecision(Trace):
         self.image_ids = []  # append all the image ids coming from each iteration
         self.evalimgs = {}
         self.eval = {}
-        self.ids_in_epoch = -1
+        self.ids_in_epoch = 0
 
     def on_batch_begin(self, data: Data):
         """Reset"""
@@ -204,118 +206,6 @@ class MeanAveragePrecision(Trace):
         data[self.outputs[1]] = ap50
         data[self.outputs[2]] = ap75
 
-    def accumulate(self):
-        """Generate precision recall curve."""
-        key_list = sorted(self.evalimgs)  # key format (cat_id, img_id)
-        eval_list = [self.evalimgs[key] for key in key_list]
-
-        self.image_ids = np.unique(self.image_ids)
-
-        num_iou_thresh = len(self.iou_thres)
-        num_recall_thresh = len(self.recall_thres)
-        num_categories = len(self.categories)
-        cat_list_zeroidx = [n for n, cat in enumerate(self.categories)]
-
-        num_imgs = len(self.image_ids)
-        maxdets = self.max_detection
-
-        # initialize these at -1
-        precision_matrix = -np.ones((num_iou_thresh, num_recall_thresh, num_categories))
-        recall_matrix = -np.ones((num_iou_thresh, num_categories))
-        scores_matrix = -np.ones((num_iou_thresh, num_recall_thresh, num_categories))
-
-        # loop through category
-        for cat_index in cat_list_zeroidx:
-            Nk = cat_index * num_imgs
-            # each element is one image inside this category
-            eval_by_category = [eval_list[Nk + img_idx] for img_idx in range(num_imgs)]
-            # drop None
-            eval_by_category = [e for e in eval_by_category if not e is None]
-
-            # no image inside this category
-            if len(eval_by_category) == 0:
-                continue
-
-            det_scores = np.concatenate([e['dtScores'][0:maxdets] for e in eval_by_category])
-
-            # sort from high score to low score, is this necessary?
-            sorted_score_inds = np.argsort(-det_scores, kind='mergesort')
-
-            det_scores_sorted = det_scores[sorted_score_inds]
-            det_match = np.concatenate([e['dtMatches'][:, 0:maxdets] for e in eval_by_category],
-                                       axis=1)[:, sorted_score_inds]  # shape (num_iou_thresh, num_det_all_images)
-
-            # number of all image gts in one category
-            num_all_gt = np.sum([e['num_gt'] for e in eval_by_category])
-            # for all images no gt inside this category
-            if num_all_gt == 0:
-                continue
-
-            tps = det_match > 0
-            fps = det_match == 0
-
-            tp_sum = np.cumsum(tps, axis=1).astype(dtype=np.float)
-            fp_sum = np.cumsum(fps, axis=1).astype(dtype=np.float)
-
-            for index, (true_positives, false_positives) in enumerate(zip(tp_sum, fp_sum)):
-                true_positives = np.array(true_positives)
-                false_positives = np.array(false_positives)
-                nd = len(true_positives)
-                recall = true_positives / num_all_gt
-                precision = true_positives / (false_positives + true_positives + np.spacing(1))
-                print(f'recall: {recall}')
-                print(f'precision: {precision}')
-
-                q = np.zeros((num_recall_thresh, ))
-                score = np.zeros((num_recall_thresh, ))
-
-                if nd:
-                    recall_matrix[index, cat_index] = recall[-1]
-                else:
-                    recall_matrix[index, cat_index] = 0
-
-                precision = precision.tolist()
-                q = q.tolist()
-
-                # smooth precision along the curve, remove zigzag
-                for i in range(nd - 1, 0, -1):
-                    if precision[i] > precision[i - 1]:
-                        precision[i - 1] = precision[i]
-
-                inds = np.searchsorted(recall, self.recall_thres, side='left')
-
-                try:
-                    for recall_index, precision_index in enumerate(inds):
-                        q[recall_index] = precision[precision_index]
-                        score[recall_index] = det_scores_sorted[precision_index]
-                except:
-                    pass
-
-                precision_matrix[index, :, cat_index] = np.array(q)
-                scores_matrix[index, :, cat_index] = np.array(score)
-
-        self.eval = {
-            'counts': [num_iou_thresh, num_recall_thresh, num_categories],
-            'precision': precision_matrix,
-            'recall': recall_matrix,
-            'scores': scores_matrix,
-        }
-
-    def summarize(self, iou=None):
-        precision_at_iou = self.eval['precision']  # shape (num_iou_thresh, num_recall_thresh, num_categories)
-        if iou is not None:
-            iou_thresh_index = np.where(iou == self.iou_thres)[0]
-            precision_at_iou = precision_at_iou[iou_thresh_index]
-
-        precision_at_iou = precision_at_iou[:, :, :]
-
-        if len(precision_at_iou[precision_at_iou > -1]) == 0:
-            mean_ap = -1
-        else:
-            mean_ap = np.mean(precision_at_iou[precision_at_iou > -1])
-
-        return mean_ap
-
     def evaluate_img(self, cat_id: int, img_id: int) -> Dict:
         """Find gt matches for det given one image and one category.
 
@@ -377,6 +267,114 @@ class MeanAveragePrecision(Trace):
             'dtScores': [d['score'] for d in det],
             'num_gt': num_gt,
         }
+
+    def accumulate(self):
+        """Generate precision recall curve."""
+        key_list = sorted(self.evalimgs)  # key format (cat_id, img_id)
+        eval_list = [self.evalimgs[key] for key in key_list]
+
+        self.image_ids = np.unique(self.image_ids)
+
+        num_iou_thresh = len(self.iou_thres)
+        num_recall_thresh = len(self.recall_thres)
+        num_categories = len(self.categories)
+        cat_list_zeroidx = [n for n, cat in enumerate(self.categories)]
+
+        num_imgs = len(self.image_ids)
+        maxdets = self.max_detection
+
+        # initialize these at -1
+        precision_matrix = -np.ones((num_iou_thresh, num_recall_thresh, num_categories))
+        recall_matrix = -np.ones((num_iou_thresh, num_categories))
+        scores_matrix = -np.ones((num_iou_thresh, num_recall_thresh, num_categories))
+
+        # loop through category
+        for cat_index in cat_list_zeroidx:
+            Nk = cat_index * num_imgs
+            # each element is one image inside this category
+            eval_by_category = [eval_list[Nk + img_idx] for img_idx in range(num_imgs)]
+            # drop None
+            eval_by_category = [e for e in eval_by_category if not e is None]
+
+            # no image inside this category
+            if len(eval_by_category) == 0:
+                continue
+
+            det_scores = np.concatenate([e['dtScores'][0:maxdets] for e in eval_by_category])
+            # sort from high score to low score, is this necessary?
+            sorted_score_inds = np.argsort(-det_scores, kind='mergesort')
+
+            det_scores_sorted = det_scores[sorted_score_inds]
+            det_match = np.concatenate([e['dtMatches'][:, 0:maxdets] for e in eval_by_category],
+                                       axis=1)[:, sorted_score_inds]  # shape (num_iou_thresh, num_det_all_images)
+            # number of all image gts in one category
+            num_all_gt = np.sum([e['num_gt'] for e in eval_by_category])
+            # for all images no gt inside this category
+            if num_all_gt == 0:
+                continue
+
+            tps = det_match > 0
+            fps = det_match == 0
+
+            tp_sum = np.cumsum(tps, axis=1).astype(dtype=np.float)
+            fp_sum = np.cumsum(fps, axis=1).astype(dtype=np.float)
+
+            for index, (true_positives, false_positives) in enumerate(zip(tp_sum, fp_sum)):
+                true_positives = np.array(true_positives)
+                false_positives = np.array(false_positives)
+                nd = len(true_positives)
+                recall = true_positives / num_all_gt
+                precision = true_positives / (false_positives + true_positives + np.spacing(1))
+
+                q = np.zeros((num_recall_thresh, ))
+                score = np.zeros((num_recall_thresh, ))
+
+                if nd:
+                    recall_matrix[index, cat_index] = recall[-1]
+                else:
+                    recall_matrix[index, cat_index] = 0
+
+                precision = precision.tolist()
+                q = q.tolist()
+
+                # smooth precision along the curve, remove zigzag
+                for i in range(nd - 1, 0, -1):
+                    if precision[i] > precision[i - 1]:
+                        precision[i - 1] = precision[i]
+
+                inds = np.searchsorted(recall, self.recall_thres, side='left')
+
+                try:
+                    for recall_index, precision_index in enumerate(inds):
+                        q[recall_index] = precision[precision_index]
+                        score[recall_index] = det_scores_sorted[precision_index]
+                except:
+                    pass
+
+                precision_matrix[index, :, cat_index] = np.array(q)
+                scores_matrix[index, :, cat_index] = np.array(score)
+
+        self.eval = {
+            'counts': [num_iou_thresh, num_recall_thresh, num_categories],
+            'precision': precision_matrix,
+            'recall': recall_matrix,
+            'scores': scores_matrix,
+        }
+
+    def summarize(self, iou=None):
+        precision_at_iou = self.eval['precision']  # shape (num_iou_thresh, num_recall_thresh, num_categories)
+        if iou is not None:
+            iou_thresh_index = np.where(iou == self.iou_thres)[0]
+            precision_at_iou = precision_at_iou[iou_thresh_index]
+
+        precision_at_iou = precision_at_iou[:, :, :]
+
+        if len(precision_at_iou[precision_at_iou > -1]) == 0:
+            mean_ap = -1
+        else:
+            mean_ap = np.mean(precision_at_iou[precision_at_iou > -1])
+
+        return mean_ap
 
     def compute_iou(self, det: np.ndarray, gt: np.ndarray) -> np.ndarray:
         """Compute intersection over union.
