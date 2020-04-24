@@ -117,3 +117,4 @@ ENV/
 # nightly-build test artifact
 /test/apphub_scripts/**/*.txt
 /test/apphub_scripts/**/*.ipynb
+/test/tutorial_result
