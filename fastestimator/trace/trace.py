@@ -19,6 +19,7 @@ import numpy as np
 
 from fastestimator.backend.get_lr import get_lr
 from fastestimator.backend.to_number import to_number
+from fastestimator.schedule.schedule import Scheduler
 from fastestimator.summary.system import System
 from fastestimator.util.data import Data
 from fastestimator.util.util import parse_modes, to_list, to_set
@@ -78,35 +79,30 @@ class Trace:
         Args:
             data: A dictionary through which traces can communicate with each other or write values for logging.
         """
-
     def on_epoch_begin(self, data: Data) -> None:
         """Runs at the beginning of each epoch.
 
         Args:
             data: A dictionary through which traces can communicate with each other or write values for logging.
         """
-
     def on_batch_begin(self, data: Data) -> None:
         """Runs at the beginning of each batch.
 
         Args:
             data: A dictionary through which traces can communicate with each other or write values for logging.
         """
-
     def on_batch_end(self, data: Data) -> None:
         """Runs at the end of each batch.
 
         Args:
             data: The current batch and prediction data, as well as any information written by prior `Traces`.
         """
-
     def on_epoch_end(self, data: Data) -> None:
         """Runs at the end of each epoch.
 
         Args:
             data: A dictionary through which traces can communicate with each other or write values for logging.
         """
-
     def on_end(self, data: Data) -> None:
         """Runs once at the end training.
 
@@ -170,33 +166,11 @@ class EvalEssential(Trace):
     Please don't add this trace into an estimator manually. FastEstimator will add it automatically.
 
     Args:
-        loss_keys: Which keys from the data dictionary correspond to loss values.
-        monitor_names: Any other keys which should be collected over the course of an eval epoch.
+        monitor_names: Any keys which should be collected over the course of an eval epoch.
     """
-    def __init__(self, loss_keys: Set[str], monitor_names: Set[str]) -> None:
-        super().__init__(mode="eval",
-                         inputs=list(loss_keys) + list(monitor_names),
-                         outputs=self._configure_outputs(loss_keys, monitor_names))
+    def __init__(self, monitor_names: Set[str]) -> None:
+        super().__init__(mode="eval", inputs=monitor_names, outputs=monitor_names)
         self.eval_results = None
-        self.best_loss = None
-        self.since_best = 0
-
-    @staticmethod
-    def _configure_outputs(loss_keys: Set[str], monitor_names: Set[str]) -> List[str]:
-        """A function to determine the output keys of this Trace.
-
-        Args:
-            loss_keys: Which keys from the data dictionary correspond to loss values.
-            monitor_names: Any other keys which should be collected over the course of an eval epoch.
-
-        Returns:
-            A list of output keys. If there is exactly one `loss_key` then the system compute some extra outputs.
-        """
-        outputs = list(loss_keys) + list(monitor_names)
-        if len(loss_keys) == 1:
-            outputs.append("min_" + next(iter(loss_keys)))
-            outputs.append("since_best")
-        return outputs
 
     def on_epoch_begin(self, data: Data) -> None:
         self.eval_results = None
@@ -211,16 +185,6 @@ class EvalEssential(Trace):
     def on_epoch_end(self, data: Data) -> None:
         for key, value_list in self.eval_results.items():
             data.write_with_log(key, np.mean(np.array(value_list), axis=0))
-        if len(self.outputs) > len(self.inputs):  # There was exactly 1 loss key, so add the extra outputs
-            loss_name = self.inputs[0]
-            current_loss = data[loss_name]
-            if self.best_loss is None or current_loss < self.best_loss:
-                self.best_loss = current_loss
-                self.since_best = 0
-            else:
-                self.since_best += 1
-            data.write_with_log("min_" + loss_name, self.best_loss)
-            data.write_with_log("since_best", self.since_best)
 
 
 class Logger(Trace):
@@ -275,3 +239,23 @@ class Logger(Trace):
             else:
                 log_message += "{}: {}; ".format(key, str(val))
         print(log_message)
+
+
+def get_current_traces(traces: Iterable[Union[Trace, Scheduler[Trace]]], mode: str, epoch: int = 0) -> List[Trace]:
+    """Select traces which should be executed for given mode and epoch.
+
+    Args:
+        traces: A list of possible Traces or Schedulers of Traces to choose from.
+        mode: The desired execution mode. One of "train", "eval", "test", or "infer".
+        epoch: The desired execution epoch.
+
+    Returns:
+        The `Traces` which should be executed.
+    """
+    selected_traces = []
+    for trace in traces:
+        if isinstance(trace, Scheduler):
+            trace = trace.get_current_value(epoch)
+        if trace and (not trace.mode or mode in trace.mode):
+            selected_traces.append(trace)
+    return selected_traces

@@ -17,20 +17,22 @@ from collections import ChainMap, deque
 from typing import Any, Dict, Iterable, List, Optional, Set, Union
 
 import tensorflow as tf
+from tensorflow.python.distribute.input_lib import DistributedDataset
+from torch.utils.data import DataLoader
+
 from fastestimator.backend.to_shape import to_shape
 from fastestimator.backend.to_tensor import to_tensor
 from fastestimator.backend.to_type import to_type
 from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
 from fastestimator.pipeline import Pipeline
-from fastestimator.summary.system import System, Summary
+from fastestimator.schedule.schedule import Scheduler
+from fastestimator.summary.system import Summary, System
 from fastestimator.trace.io.best_model_saver import BestModelSaver
 from fastestimator.trace.io.model_saver import ModelSaver
-from fastestimator.trace.trace import EvalEssential, Logger, Trace, TrainEssential
+from fastestimator.trace.trace import EvalEssential, Logger, Trace, TrainEssential, get_current_traces
 from fastestimator.util.data import Data
 from fastestimator.util.util import Suppressor, draw, to_list, to_set
-from tensorflow.python.distribute.input_lib import DistributedDataset
-from torch.utils.data import DataLoader
 
 
 class Estimator:
@@ -61,7 +63,7 @@ class Estimator:
                  network: BaseNetwork,
                  epochs: int,
                  max_steps_per_epoch: Optional[int] = None,
-                 traces: Union[None, Trace, Iterable[Trace]] = None,
+                 traces: Union[None, Trace, Iterable[Union[Trace, Scheduler[Trace], Scheduler[Trace]]]] = None,
                  log_steps: Optional[int] = 100,
                  monitor_names: Union[None, str, Iterable[str]] = None):
         self.pipeline = pipeline
@@ -181,12 +183,13 @@ class Estimator:
         brought back from the GPU to CPU for use in traces. This also prints a warning if no model saver trace is
         detected.
         """
+        no_save_warning = True
         modes = self.pipeline.get_modes()
         loss_keys = self.network.get_loss_keys()
         if "train" in modes:
             self.traces.insert(0, TrainEssential(loss_keys=loss_keys))
         if "eval" in modes and loss_keys.issubset(self.network.get_all_output_keys("eval", self.system.total_epochs)):
-            self.traces.insert(1, EvalEssential(loss_keys=loss_keys, monitor_names=self.monitor_names))
+            self.traces.insert(1, EvalEssential(monitor_names=self.monitor_names | loss_keys))
         if self.system.log_steps is not None:
             self.traces.append(Logger(extra_log_keys=self.monitor_names))
         for mode in modes:
@@ -194,19 +197,27 @@ class Estimator:
             # '*' is a reserved key for traces to indicate that they want to receive all available output
             trace_outputs = {"*"}
             for trace in self.traces:
-                if not trace.mode or mode in trace.mode:
-                    trace_inputs.update(trace.inputs)
-                    trace_outputs.update(trace.outputs)
+                if isinstance(trace, Scheduler):
+                    for trace_ in trace.get_all_values():
+                        if trace_:
+                            trace_.system = self.system
+                            if isinstance(trace, (ModelSaver, BestModelSaver)):
+                                no_save_warning = False
+                            if not trace_.mode or mode in trace_.mode:
+                                trace_inputs.update(trace_.inputs)
+                                trace_outputs.update(trace_.outputs)
+                else:
+                    trace.system = self.system
+                    if isinstance(trace, (ModelSaver, BestModelSaver)):
+                        no_save_warning = False
+                    if not trace.mode or mode in trace.mode:
+                        trace_inputs.update(trace.inputs)
+                        trace_outputs.update(trace.outputs)
             self.trace_inputs[mode] = trace_inputs
             self.trace_outputs[mode] = trace_outputs
-        no_save_warning = True
-        for trace in self.traces:
-            trace.system = self.system
-            if isinstance(trace, (ModelSaver, BestModelSaver)):
-                no_save_warning = False
         if no_save_warning:
             print("FastEstimator-Warn: No ModelSaver Trace detected. Models will not be saved.")
-        self._sort_traces()
+        # self._sort_traces()
 
     def _warmup(self) -> None:
         """Perform a test run of each pipeline and network signature epoch to make sure that training won't fail later.
@@ -351,26 +362,31 @@ class Estimator:
         """
         data = Data()
         for trace in self.traces:
-            if not trace.mode or trace.mode & run_modes:
-                trace.on_begin(data)
+            if isinstance(trace, Scheduler):
+                for trace_ in trace.get_all_values():
+                    if trace_ and (not trace_.mode or trace_.mode & run_modes):
+                        trace_.on_begin(data)
+            else:
+                if not trace.mode or trace.mode & run_modes:
+                    trace.on_begin(data)
         self._check_early_exit()
 
     def _run_traces_on_epoch_begin(self) -> None:
         """Invoke the on_epoch_begin methods of all of the traces for the current mode.
         """
         data = Data()
-        for trace in self.traces:
-            if not trace.mode or self.system.mode in trace.mode:
-                trace.on_epoch_begin(data)
+        traces = get_current_traces(self.traces, self.system.mode, self.system.epoch_idx)
+        for trace in traces:
+            trace.on_epoch_begin(data)
         self._check_early_exit()
 
     def _run_traces_on_batch_begin(self) -> None:
         """Invoke the on_batch_begin methods of all of the traces for the current mode.
         """
         data = Data()
-        for trace in self.traces:
-            if not trace.mode or self.system.mode in trace.mode:
-                trace.on_batch_begin(data)
+        traces = get_current_traces(self.traces, self.system.mode, self.system.epoch_idx)
+        for trace in traces:
+            trace.on_batch_begin(data)
         self._check_early_exit()
 
     def _run_traces_on_batch_end(self, batch: Dict[str, Any], prediction: Dict[str, Any]) -> None:
@@ -381,18 +397,18 @@ class Estimator:
             prediction: The prediction data which was generated by the network.
         """
         data = Data(ChainMap(prediction, batch))
-        for trace in self.traces:
-            if not trace.mode or self.system.mode in trace.mode:
-                trace.on_batch_end(data)
+        traces = get_current_traces(self.traces, self.system.mode, self.system.epoch_idx)
+        for trace in traces:
+            trace.on_batch_end(data)
         self._check_early_exit()
 
     def _run_traces_on_epoch_end(self) -> None:
         """Invoke the on_epoch_end methods of all of the traces for the current mode.
         """
         data = Data()
-        for trace in self.traces:
-            if not trace.mode or self.system.mode in trace.mode:
-                trace.on_epoch_end(data)
+        traces = get_current_traces(self.traces, self.system.mode, self.system.epoch_idx)
+        for trace in traces:
+            trace.on_epoch_end(data)
         self._check_early_exit()
 
     def _run_traces_on_end(self, run_modes: Set[str]) -> None:
@@ -406,8 +422,13 @@ class Estimator:
         """
         data = Data()
         for trace in self.traces:
-            if not trace.mode or trace.mode & run_modes:
-                trace.on_end(data)
+            if isinstance(trace, Scheduler):
+                for trace_ in trace.get_all_values():
+                    if trace_ and (not trace_.mode or trace_.mode & run_modes):
+                        trace_.on_end(data)
+            else:
+                if not trace.mode or trace.mode & run_modes:
+                    trace.on_end(data)
 
     def _check_early_exit(self) -> None:
         """Determine whether training should be prematurely aborted.
@@ -422,4 +443,3 @@ class Estimator:
 class EarlyStop(Exception):
     """An exception raised when the system.stop_training flag is flipped by a Trace in order to abort the training.
     """
-    pass

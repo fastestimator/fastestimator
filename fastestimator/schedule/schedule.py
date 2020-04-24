@@ -105,7 +105,6 @@ class EpochScheduler(Scheduler[T]):
         assert isinstance(epoch_dict, dict), "must provide dictionary as epoch_dict"
         self.epoch_dict = epoch_dict
         self.keys = sorted(self.epoch_dict)
-        assert 1 in self.epoch_dict, "epoch 1 is missing in dictionary, use None if no op is needed"
         for key in self.keys:
             assert isinstance(key, int), "found non-integer key: {}".format(key)
             assert key >= 1, "found non-positive key: {}".format(key)
@@ -114,7 +113,11 @@ class EpochScheduler(Scheduler[T]):
         if epoch in self.keys:
             value = self.epoch_dict[epoch]
         else:
-            value = self.epoch_dict[self._get_last_key(epoch)]
+            last_key = self._get_last_key(epoch)
+            if last_key is None:
+                value = None
+            else:
+                value = self.epoch_dict[last_key]
         return value
 
     def get_all_values(self) -> List[Optional[T]]:
@@ -129,7 +132,7 @@ class EpochScheduler(Scheduler[T]):
         Returns:
             The largest epoch number <= the given `epoch` that is in the `epoch_dict`.
         """
-        last_key = 1
+        last_key = None
         for key in self.keys:
             if key > epoch:
                 break
