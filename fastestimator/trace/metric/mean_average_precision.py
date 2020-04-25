@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 """COCO Mean average precisin (mAP) implementation."""
+import json  # REMOVE
 from collections import defaultdict
 from typing import Dict, List
 
@@ -58,6 +59,7 @@ class MeanAveragePrecision(Trace):
         self.ious = defaultdict(list)
         self.ids_unique = []
         self.ids_batch_to_epoch = {}
+        self.counter = 0  # REMOVE
 
     @property
     def true_key(self) -> str:
