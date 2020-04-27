@@ -324,7 +324,7 @@ class AlphaController(Trace):
         self.current_batch_size = None
 
     def on_epoch_begin(self, state):
-        # check whetehr the current epoch is in smooth transition of resolutions
+        # check whether the current epoch is in smooth transition of resolutions
         fade_epoch = self.fade_start_epochs[self._idx]
         if self.system.epoch_idx == fade_epoch:
             self.change_alpha = True

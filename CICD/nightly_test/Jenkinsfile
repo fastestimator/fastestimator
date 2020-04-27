@@ -12,7 +12,7 @@ pipeline{
         stage('Build-and-test'){
             parallel{
                 stage('GPU'){
-                    agent {label 'jenkinsnightly_1.0dev_gpu'}
+                    agent {label 'nightly-gpu'}
                     stages{
                         stage('Build-GPU'){
                             steps{
@@ -45,7 +45,7 @@ pipeline{
                 }
 
                 stage('CPU'){
-                    agent {label 'jenkinsnightly_1.0dev_cpu'}
+                    agent {label 'nightly-cpu'}
                     stages{
                         stage('Build-CPU'){
                             steps{
@@ -80,7 +80,7 @@ pipeline{
         }
 
         stage('Deply-pypi'){
-            agent {label 'jenkinsnightly_1.0dev_gpu'}
+            agent {label 'nightly-gpu'}
             steps{
                 // withCredentials([string(credentialsId: 'pypi_password', variable: 'PYPI_PWD')]) {
 
@@ -100,7 +100,7 @@ pipeline{
         }
 
         stage('Deploy-docker'){
-            agent {label 'jenkinsnightly_1.0dev_gpu'}
+            agent {label 'nightly-gpu'}
             steps{
                 // sh '''
                 //     rm -rf ./fastestimator-misc
