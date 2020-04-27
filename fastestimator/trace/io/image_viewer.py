@@ -18,7 +18,8 @@ import matplotlib.pyplot as plt
 
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
-from fastestimator.xai.util import XaiData, show_image
+from fastestimator.util.img_data import ImgData
+from fastestimator.util.util import show_image
 
 
 class ImageViewer(Trace):
@@ -46,7 +47,7 @@ class ImageViewer(Trace):
         for key in self.inputs:
             if key in data:
                 imgs = data[key]
-                if isinstance(imgs, XaiData):
+                if isinstance(imgs, ImgData):
                     fig = imgs.paint_numpy(dpi=96)
                     plt.imshow(fig[0])
                     plt.axis('off')
