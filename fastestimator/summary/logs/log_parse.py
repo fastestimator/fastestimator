@@ -22,7 +22,7 @@ from fastestimator.summary.summary import Summary
 from fastestimator.util.util import strip_suffix
 
 
-def _parse_file(file_path: str, file_extension: str) -> Summary:
+def parse_log_file(file_path: str, file_extension: str) -> Summary:
     """A function which will parse log files into a dictionary of metrics.
 
     Args:
@@ -36,10 +36,12 @@ def _parse_file(file_path: str, file_extension: str) -> Summary:
     with open(file_path) as file:
         for line in file:
             mode = None
-            if line.startswith("FastEstimator-Train"):
+            if line.startswith("FastEstimator-Train") or line.startswith("FastEstimator-Finish"):
                 mode = "train"
             elif line.startswith("FastEstimator-Eval"):
                 mode = "eval"
+            elif line.startswith("FastEstimator-Test"):
+                mode = "test"
             if mode is None:
                 continue
             parsed_line = re.findall(r"([^:^;\s]+):[\s]*([-]?[0-9]+[.]?[0-9]*);", line)
@@ -84,7 +86,7 @@ def parse_log_files(file_paths: List[str],
 
     experiments = []
     for file_path in file_paths:
-        experiments.append(_parse_file(file_path, log_extension))
+        experiments.append(parse_log_file(file_path, log_extension))
     visualize_logs(experiments,
                    save_path=save_path,
                    smooth_factor=smooth_factor,

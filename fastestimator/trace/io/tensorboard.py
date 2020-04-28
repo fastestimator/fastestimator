@@ -38,7 +38,7 @@ from fastestimator.network import BaseNetwork, TFNetwork
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.util import DefaultKeyDict, is_number, to_list, to_set
-from fastestimator.xai.util import XaiData
+from fastestimator.util.img_data import ImgData
 
 # https://github.com/pytorch/pytorch/issues/30966
 tf.io.gfile = tb.compat.tensorflow_stub.io.gfile
@@ -104,7 +104,7 @@ class _BaseWriter:
             step: The current training step.
         """
         for key, img in images:
-            if isinstance(img, XaiData):
+            if isinstance(img, ImgData):
                 img = img.paint_figure()
             if isinstance(img, plt.Figure):
                 self.summary_writers[mode].add_figure(tag=key, figure=img, global_step=step)

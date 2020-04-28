@@ -1,6 +1,6 @@
 import os
 
-from fastestimator.test.nightly_util import get_source_dir_path
+from fastestimator.test.nightly_util import get_apphub_source_dir_path
 
 if __name__ == "__main__":
     """The template for running apphub Jupyter notebook sample.
@@ -20,19 +20,16 @@ if __name__ == "__main__":
     need_test = True
     # ==============================================================================================
 
-    stderr_file = os.path.abspath(
-        os.path.join(__file__, "..", "run_torch_stderr.txt"))
+    stderr_file = os.path.abspath(os.path.join(__file__, "..", "run_torch_stderr.txt"))
     if os.path.exists(stderr_file):
         os.remove(stderr_file)
 
-    source_dir = get_source_dir_path(__file__)
+    source_dir = get_apphub_source_dir_path(__file__)
     py_file = os.path.join(source_dir, example_name + "_torch.py")
-    result = os.system("fastestimator train {} {} 2>> {}".format(
-        py_file, train_info, stderr_file))
+    result = os.system("fastestimator train {} {} 2>> {}".format(py_file, train_info, stderr_file))
 
     if need_test:
-        result += os.system("fastestimator test {} {} 2>> {}".format(
-            py_file, train_info, stderr_file))
+        result += os.system("fastestimator test {} {} 2>> {}".format(py_file, train_info, stderr_file))
 
     if result:
         raise ValueError("{} fail".format(py_file))

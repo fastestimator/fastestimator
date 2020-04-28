@@ -19,7 +19,8 @@ import matplotlib.pyplot as plt
 
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
-from fastestimator.xai.util import XaiData, show_image
+from fastestimator.util.img_data import ImgData
+from fastestimator.util.util import show_image
 
 
 class ImageSaver(Trace):
@@ -46,7 +47,7 @@ class ImageSaver(Trace):
         for key in self.inputs:
             if key in data:
                 imgs = data[key]
-                if isinstance(imgs, XaiData):
+                if isinstance(imgs, ImgData):
                     f = imgs.paint_figure()
                     im_path = os.path.join(self.save_dir,
                                            "{}_{}_epoch_{}.png".format(key, self.system.mode, self.system.epoch_idx))

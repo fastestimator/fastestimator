@@ -212,7 +212,7 @@ class Logger(Trace):
         elif self.system.mode == "eval":
             self._print_message("FastEstimator-Eval: step: {}; ".format(self.system.global_step), data, True)
         elif self.system.mode == "test":
-            self._print_message("FastEstimator-Test: ", data, True)
+            self._print_message("FastEstimator-Test: step: {}; ".format(self.system.global_step), data, True)
 
     def on_end(self, data: Data) -> None:
         if not self.system.mode == "test":
