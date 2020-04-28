@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 from collections import ChainMap
-from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, Set, Tuple, TypeVar, Union
 
 import tensorflow as tf
 import torch
@@ -26,6 +26,8 @@ from fastestimator.op.tensorop.model.model import ModelOp
 from fastestimator.op.tensorop.model.update import UpdateOp
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_signature_epochs
 from fastestimator.util.util import NonContext, per_replica_to_global, to_list
+
+Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
 
 class BaseNetwork:
@@ -199,7 +201,7 @@ class BaseNetwork:
         raise NotImplementedError
 
 
-def _collect_models(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> Set[Union[tf.keras.Model, torch.nn.Module]]:
+def _collect_models(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> Set[Model]:
     """Collect all model instances from amongst a list of ops.
 
     Args:
@@ -501,11 +503,11 @@ class TFNetwork(BaseNetwork):
         return data
 
 
-def build(model_fn: Callable[[], Union[tf.keras.Model, torch.nn.Module]],
+def build(model_fn: Callable[[], Union[Model, List[Model]]],
           optimizer_fn: Union[str, Scheduler, Callable, List[str], List[Callable], List[Scheduler], None],
           weights_path: Union[str, None, List[Union[str, None]]] = None,
           model_names: Union[str, List[str], None] = None
-          ) -> Union[tf.keras.Model, torch.nn.Module, List[tf.keras.Model], List[torch.nn.Module]]:
+          ) -> Union[Model, List[Model]]:
     """Build model instances and associate them with optimizers.
 
     This method can be used with TensorFlow models / optimizers:
@@ -580,11 +582,11 @@ def build(model_fn: Callable[[], Union[tf.keras.Model, torch.nn.Module]],
     return models
 
 
-def _fe_compile(model: Union[tf.keras.Model, torch.nn.Module],
+def _fe_compile(model: Model,
                 optimizer_fn: Union[str, Scheduler, Callable, None],
                 weight: Union[str, None],
                 name: str,
-                framework: str) -> Union[tf.keras.Model, torch.nn.Module]:
+                framework: str) -> Model:
     """A function to bundle models with their optimizers.
 
     Args:
@@ -615,7 +617,7 @@ def _fe_compile(model: Union[tf.keras.Model, torch.nn.Module],
 
 
 def _build_optimizer(optimizer_fn: Union[str, Callable, None],
-                     model: Union[tf.keras.Model, torch.nn.Module],
+                     model: Model,
                      framework: str) -> Union[None, tf.optimizers.Optimizer, torch.optim.Optimizer]:
     """A helper method to instantiate an optimizer.
 
@@ -668,7 +670,7 @@ def _optimizer_fn_from_string(name: str, framework: str) -> Callable:
 
 
 def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None],
-                               model: Union[tf.keras.Model, torch.nn.Module],
+                               model: Model,
                                framework: str) -> Union[None, tf.optimizers.Optimizer, torch.optim.Optimizer]:
     """A helper function to invoke an optimizer function.
 
