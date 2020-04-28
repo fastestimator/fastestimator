@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Dict, Generic, List, Optional, TypeVar
+from typing import Any, Dict, Generic, List, Optional, Set, TypeVar, Union
+
+from fastestimator.util.util import lcms
 
 T = TypeVar('T')
 
@@ -98,8 +100,7 @@ class EpochScheduler(Scheduler[T]):
             particular epoch.
 
     Raises:
-        AssertionError: If the `epoch_dict` is of the wrong type, is missing information for the first epoch, or
-            contains invalid keys.
+        AssertionError: If the `epoch_dict` is of the wrong type, or contains invalid keys.
     """
     def __init__(self, epoch_dict: Dict[int, T]) -> None:
         assert isinstance(epoch_dict, dict), "must provide dictionary as epoch_dict"
@@ -123,7 +124,7 @@ class EpochScheduler(Scheduler[T]):
     def get_all_values(self) -> List[Optional[T]]:
         return list(self.epoch_dict.values())
 
-    def _get_last_key(self, epoch: int) -> int:
+    def _get_last_key(self, epoch: int) -> Union[int, None]:
         """Find the nearest prior key to the given epoch.
 
         Args:
@@ -138,3 +139,32 @@ class EpochScheduler(Scheduler[T]):
                 break
             last_key = key
         return last_key
+
+
+def get_signature_epochs(items: List[Any], total_epochs: int) -> Set[int]:
+    """Find all epochs of changes due to schedulers.
+
+    Args:
+        items: List of items to scan from.
+        total_epochs: The maximum epoch number to consider when searching for signature epochs.
+
+    Returns:
+        The epoch numbers of changes.
+    """
+    signature_epochs = {1}
+    epoch_keys = {1}
+    repeat_cycles = {1}
+    for item in items:
+        if isinstance(item, EpochScheduler):
+            epoch_keys.update(item.epoch_dict.keys())
+        elif isinstance(item, RepeatScheduler):
+            repeat_cycles.add(item.cycle_length)
+    least_common_cycle = lcms(*repeat_cycles)
+    epoch_keys = sorted(epoch_keys)
+    for idx, epoch in enumerate(epoch_keys):
+        if idx + 1 < len(epoch_keys):
+            signature_epochs.update(range(epoch, epoch + min(epoch_keys[idx + 1] - epoch, least_common_cycle)))
+        else:
+            signature_epochs.update(range(epoch, epoch + least_common_cycle))
+    signature_epochs = set(epoch for epoch in signature_epochs if epoch <= total_epochs)
+    return signature_epochs

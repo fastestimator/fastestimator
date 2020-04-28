@@ -16,19 +16,19 @@ import os
 import time
 import warnings
 from copy import deepcopy
-from functools import lru_cache
 from typing import Any, Dict, List, MutableMapping, Optional, Set, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
+from torch.utils.data import DataLoader, Dataset, RandomSampler
+from torch.utils.data.dataloader import default_collate
+
 from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.op_dataset import OpDataset
 from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
 from fastestimator.op.op import get_current_ops
-from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler
-from fastestimator.util.util import lcms, pad_batch, to_list
-from torch.utils.data import DataLoader, Dataset, RandomSampler
-from torch.utils.data.dataloader import default_collate
+from fastestimator.schedule.schedule import Scheduler, get_signature_epochs
+from fastestimator.util.util import pad_batch, to_list, to_set
 
 DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
 
@@ -137,13 +137,25 @@ class Pipeline:
         else:
             raise ValueError("Unsupported dataset type for {}".format(mode))
 
-    def get_modes(self) -> Set[str]:
+    def get_modes(self, epoch: Optional[int] = None) -> Set[str]:
         """Get the modes for which the Pipeline has data.
+
+        Args:
+            epoch: The current epoch index
 
         Returns:
             The modes for which the Pipeline has data.
         """
-        return set(self.data.keys())
+        if epoch is None:
+            all_modes = set(self.data.keys())
+        else:
+            all_modes = []
+            for mode, dataset in self.data.items():
+                if isinstance(dataset, Scheduler):
+                    dataset = dataset.get_current_value(epoch)
+                if dataset:
+                    all_modes.append(mode)
+        return to_set(all_modes)
 
     def benchmark(self, mode: str = "train", epoch: int = 1, num_steps: int = 1000, log_interval: int = 100) -> None:
         """Benchmark the pipeline processing speed.
@@ -277,50 +289,5 @@ class Pipeline:
         Returns:
             The epoch indices on which the behavior of the Pipeline changes.
         """
-        signature_epochs = {1}
-        epoch_keys = {1}
-        repeat_cycles = {1}
-        for x in self.ops + list(self.data.values()) + [self.batch_size]:
-            if isinstance(x, EpochScheduler):
-                epoch_keys.update(x.epoch_dict.keys())
-            elif isinstance(x, RepeatScheduler):
-                repeat_cycles.add(x.cycle_length)
-        least_common_cycle = lcms(*repeat_cycles)
-        epoch_keys = sorted(epoch_keys)
-        for idx, epoch in enumerate(epoch_keys):
-            if idx + 1 < len(epoch_keys):
-                signature_epochs.update(range(epoch, epoch + min(epoch_keys[idx + 1] - epoch, least_common_cycle)))
-            else:
-                signature_epochs.update(range(epoch, epoch + least_common_cycle))
-        signature_epochs = set(epoch for epoch in signature_epochs if epoch <= total_epochs)
+        signature_epochs = get_signature_epochs(self.ops + list(self.data.values()) + [self.batch_size], total_epochs)
         return signature_epochs
-
-    @lru_cache(maxsize=None, typed=True)
-    def get_all_output_keys(self, mode: str, total_epochs: int) -> Set[str]:
-        """Get the pipeline output keys for a given `mode`.
-
-        Args:
-            mode: The execution mode to be considered. This can be "train", "eval", "test", or "infer".
-            total_epochs: The maximum number of epochs to consider when searching for output keys.
-
-        Returns:
-            All of the output keys which the pipeline will generate for the given `mode`.
-
-        Raises:
-            AssertionError: If the Pipeline contains improperly formatted data.
-        """
-        output_keys = set()
-        for epoch in self.get_signature_epochs(total_epochs):
-            loader = self.get_loader(mode=mode, epoch=epoch)
-            if isinstance(loader, DataLoader):
-                if isinstance(loader.dataset, OpDataset) and not isinstance(loader.dataset.dataset, BatchDataset):
-                    data = loader.dataset.dataset[0]
-                    for op in loader.dataset.ops:
-                        output_keys.update(op.outputs)
-                else:
-                    data = loader.dataset[0]
-            else:
-                data = next(iter(loader))
-            assert isinstance(data, dict), "please make sure data output format is dictionary"
-            output_keys.update(data.keys())
-        return output_keys

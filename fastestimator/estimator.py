@@ -26,7 +26,7 @@ from fastestimator.backend.to_type import to_type
 from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
 from fastestimator.pipeline import Pipeline
-from fastestimator.schedule.schedule import Scheduler
+from fastestimator.schedule.schedule import Scheduler, get_signature_epochs
 from fastestimator.summary.system import Summary, System
 from fastestimator.trace.io.best_model_saver import BestModelSaver
 from fastestimator.trace.io.model_saver import ModelSaver
@@ -55,31 +55,26 @@ class Estimator:
     pipeline: Pipeline
     traces: List[Trace]
     monitor_names: Set[str]
-    trace_inputs: Dict[str, Set[str]]  # {mode: {keys}}
-    trace_outputs: Dict[str, Set[str]]  # {mode: {keys}}
 
     def __init__(self,
                  pipeline: Pipeline,
                  network: BaseNetwork,
                  epochs: int,
                  max_steps_per_epoch: Optional[int] = None,
-                 traces: Union[None, Trace, Iterable[Union[Trace, Scheduler[Trace], Scheduler[Trace]]]] = None,
+                 traces: Union[None, Trace, Scheduler[Trace], Iterable[Union[Trace, Scheduler[Trace]]]] = None,
                  log_steps: Optional[int] = 100,
                  monitor_names: Union[None, str, Iterable[str]] = None):
         self.pipeline = pipeline
         self.network = network
-        self.traces = [trace for trace in to_list(traces)]
+        self.traces = to_list(traces)
+        self.traces_in_use = None
         assert log_steps is None or log_steps >= 0, \
             "log_steps must be None or positive (or 0 to disable only train logging)"
-        self.monitor_names = to_set(monitor_names)
+        self.monitor_names = to_set(monitor_names) | self.network.get_loss_keys()
         self.system = System(network=network,
                              log_steps=log_steps,
                              total_epochs=epochs,
                              max_steps_per_epoch=max_steps_per_epoch)
-        self.trace_inputs = dict()
-        self.trace_outputs = dict()
-        self._prepare_traces()
-        self._check_keys()
 
     def fit(self, summary: Optional[str] = None) -> Optional[Summary]:
         """Train the network for the number of epochs specified by the estimator's constructor.
@@ -93,9 +88,33 @@ class Estimator:
         """
         draw()
         self.system.reset(summary)
+        self._prepare_traces(run_modes={"train", "eval"})
         self._warmup()
         self._start_train()
         return self.system.summary or None
+
+    def _prepare_traces(self, run_modes: Set[str]):
+        """Prepare information about the traces for training.
+
+        Add default traces into the traces_in_use list, also prints a warning if no model saver trace is detected.
+
+        Args:
+            run_modes: The current execution modes.
+        """
+        self.traces_in_use = [trace for trace in self.traces]
+        if self.system.log_steps is not None:
+            self.traces_in_use.append(Logger())
+        if "train" in run_modes:
+            self.traces_in_use.insert(0, TrainEssential(monitor_names=self.monitor_names))
+            no_save_warning = True
+            for trace in get_current_traces(self.traces_in_use, run_modes=run_modes):
+                trace.system = self.system
+                if isinstance(trace, (ModelSaver, BestModelSaver)):
+                    no_save_warning = False
+            if no_save_warning:
+                print("FastEstimator-Warn: No ModelSaver Trace detected. Models will not be saved.")
+        if "eval" in run_modes and "eval" in self.pipeline.get_modes():
+            self.traces_in_use.insert(1, EvalEssential(monitor_names=self.monitor_names))
 
     def test(self, summary: Optional[str] = None) -> Optional[Summary]:
         """Run the pipeline / network in test mode for one epoch.
@@ -110,6 +129,7 @@ class Estimator:
             considering the default behavior above).
         """
         self.system.reset_for_test(summary)
+        self._prepare_traces(run_modes={"test"})
         self._start_test()
         return self.system.summary or None
 
@@ -176,83 +196,45 @@ class Estimator:
         sorted_traces.extend(list(end_traces))
         self.traces = sorted_traces
 
-    def _prepare_traces(self) -> None:
-        """Prepare information about the traces for training.
-
-        Add default traces into the trace list, determine which keys from the data dictionary must be retained and
-        brought back from the GPU to CPU for use in traces. This also prints a warning if no model saver trace is
-        detected.
-        """
-        no_save_warning = True
-        modes = self.pipeline.get_modes()
-        loss_keys = self.network.get_loss_keys()
-        if "train" in modes:
-            self.traces.insert(0, TrainEssential(loss_keys=loss_keys))
-        if "eval" in modes and loss_keys.issubset(self.network.get_all_output_keys("eval", self.system.total_epochs)):
-            self.traces.insert(1, EvalEssential(monitor_names=self.monitor_names | loss_keys))
-        if self.system.log_steps is not None:
-            self.traces.append(Logger(extra_log_keys=self.monitor_names))
-        for mode in modes:
-            trace_inputs = set()
-            # '*' is a reserved key for traces to indicate that they want to receive all available output
-            trace_outputs = {"*"}
-            for trace in self.traces:
-                if isinstance(trace, Scheduler):
-                    for trace_ in trace.get_all_values():
-                        if trace_:
-                            trace_.system = self.system
-                            if isinstance(trace, (ModelSaver, BestModelSaver)):
-                                no_save_warning = False
-                            if not trace_.mode or mode in trace_.mode:
-                                trace_inputs.update(trace_.inputs)
-                                trace_outputs.update(trace_.outputs)
-                else:
-                    trace.system = self.system
-                    if isinstance(trace, (ModelSaver, BestModelSaver)):
-                        no_save_warning = False
-                    if not trace.mode or mode in trace.mode:
-                        trace_inputs.update(trace.inputs)
-                        trace_outputs.update(trace.outputs)
-            self.trace_inputs[mode] = trace_inputs
-            self.trace_outputs[mode] = trace_outputs
-        if no_save_warning:
-            print("FastEstimator-Warn: No ModelSaver Trace detected. Models will not be saved.")
-        # self._sort_traces()
-
     def _warmup(self) -> None:
         """Perform a test run of each pipeline and network signature epoch to make sure that training won't fail later.
 
         Traces are not included in the warmup since they are likely to contain state variables which could become
         corrupted by running extra steps.
         """
+        all_traces = get_current_traces(self.traces_in_use, run_modes={"train", "eval"})
+        # sort all_traces
         pipeline_signature_epochs = self.pipeline.get_signature_epochs(self.system.total_epochs)
         network_signature_epochs = self.network.get_signature_epochs(self.system.total_epochs)
-        signature_epochs = pipeline_signature_epochs | network_signature_epochs
+        trace_signature_epochs = get_signature_epochs(self.traces_in_use, self.system.total_epochs)
+        signature_epochs = pipeline_signature_epochs | network_signature_epochs | trace_signature_epochs
         for epoch in signature_epochs:
-            for mode in self.pipeline.get_modes():
+            for mode in self.pipeline.get_modes(epoch) - {"test"}:
+                traces = get_current_traces(self.traces_in_use, run_modes=mode, epoch=epoch)
+                # sort traces
+                # key checking
                 loader = self._configure_loader(self.pipeline.get_loader(mode, epoch))
-                self.network.load_epoch(mode, epoch, output_keys=self.trace_inputs[mode], warmup=True)
                 with Suppressor():
                     if isinstance(loader, tf.data.Dataset):
                         batch = list(loader.take(1))[0]
                     else:
                         batch = next(iter(loader))
                 batch = self._configure_tensor(loader, batch)
+                assert isinstance(batch, dict), "please make sure data output format is dictionary"
+                pipeline_output_keys = set(batch.keys())
+                network_output_keys = self.network.get_all_output_keys(mode, epoch)
+                trace_input_keys = set()
+                trace_output_keys = {"*"}
+                for idx, trace in enumerate(traces):
+                    if idx > 0:  # ignore TrainEssential and EvalEssential's inputs for unmet requirement checking
+                        trace_input_keys.update(trace.inputs)
+                    trace_output_keys.update(trace.outputs)
+                unmet_requirements = trace_input_keys - (pipeline_output_keys | network_output_keys | trace_output_keys)
+                assert not unmet_requirements, \
+                    "found missing key(s) during epoch {} mode {}: {}".format(epoch, mode, unmet_requirements)
+                self.network.load_epoch(mode, epoch, output_keys=trace_input_keys.update(traces[0].inputs), warmup=True)
                 self.network.run_step(batch)
                 self.network.unload_epoch()
-
-    def _check_keys(self) -> None:
-        """Ensure that all keys required as inputs for traces actually exist in the data dictionary.
-
-        Raises:
-            AssertionError: If traces require inputs which are not available in the data dictionary.
-        """
-        for mode in self.pipeline.get_modes():
-            pipeline_all_outputs = self.pipeline.get_all_output_keys(mode, self.system.total_epochs)
-            network_all_outputs = self.network.get_all_output_keys(mode, self.system.total_epochs)
-            unmet_requirements = self.trace_inputs[mode] - (pipeline_all_outputs
-                                                            | network_all_outputs | self.trace_outputs[mode])
-            assert not unmet_requirements, "found missing key(s) during {}: {}".format(mode, unmet_requirements)
 
     def _start_train(self) -> None:
         """The outer training loop.
@@ -260,18 +242,20 @@ class Estimator:
         This method invokes the trace on_begin method, runs the necessary 'train' and 'eval' epochs, and then invokes
         the trace on_end method.
         """
-        self._run_traces_on_begin({"train", "eval"})
+        all_traces = get_current_traces(self.traces_in_use, run_modes={"train", "eval"})
+        # sort all_traces
+        self._run_traces_on_begin(traces=all_traces)
         try:
             for self.system.epoch_idx in range(1, self.system.total_epochs + 1):
-                if "train" in self.pipeline.get_modes():
+                if "train" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
                     self.system.mode = "train"
                     self._run_epoch()
-                if "eval" in self.pipeline.get_modes():
+                if "eval" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
                     self.system.mode = "eval"
                     self._run_epoch()
         except EarlyStop:
             pass  # On early stopping we still want to run the final traces and return results
-        self._run_traces_on_end({"train", "eval"})
+        self._run_traces_on_end(traces=all_traces)
 
     def _start_test(self) -> None:
         """The outer testing loop.
@@ -287,12 +271,16 @@ class Estimator:
 
         This method requires that the current mode and epoch already be specified within the self.system object.
         """
+        traces = get_current_traces(self.traces_in_use, run_modes=self.system.mode, epoch=self.system.epoch_idx)
+        # sort traces
+        trace_input_keys = set()
+        for trace in traces:
+            trace_input_keys.update(trace.inputs)
+
         loader = iter(self._configure_loader(self.pipeline.get_loader(self.system.mode, self.system.epoch_idx)))
-        self.network.load_epoch(mode=self.system.mode,
-                                epoch=self.system.epoch_idx,
-                                output_keys=self.trace_inputs[self.system.mode])
+        self.network.load_epoch(mode=self.system.mode, epoch=self.system.epoch_idx, output_keys=trace_input_keys)
         self.system.batch_idx = None
-        self._run_traces_on_epoch_begin()
+        self._run_traces_on_epoch_begin(traces=traces)
         while True:
             try:
                 with Suppressor():
@@ -300,15 +288,15 @@ class Estimator:
                 if self.system.mode == "train":
                     self.system.update_global_step()
                 self.system.update_batch_idx()
-                self._run_traces_on_batch_begin()
+                self._run_traces_on_batch_begin(traces=traces)
                 batch = self._configure_tensor(loader, batch)
                 batch, prediction = self.network.run_step(batch)
-                self._run_traces_on_batch_end(batch, prediction)
+                self._run_traces_on_batch_end(batch, prediction, traces=traces)
                 if self.system.batch_idx == self.system.max_steps_per_epoch and self.system.mode == "train":
                     break
             except StopIteration:
                 break
-        self._run_traces_on_epoch_end()
+        self._run_traces_on_epoch_end(traces=traces)
         self.network.unload_epoch()
 
     def _configure_loader(self, loader: Union[DataLoader, tf.data.Dataset]) -> Union[DataLoader, tf.data.Dataset]:
@@ -351,84 +339,73 @@ class Estimator:
             batch = to_tensor(batch, target_type="torch")
         return batch
 
-    def _run_traces_on_begin(self, run_modes: Set[str]) -> None:
-        """Invoke the on_begin methods of all of the traces.
+    def _run_traces_on_begin(self, traces: Iterable[Trace]) -> None:
+        """Invoke the on_begin methods of given traces.
 
         Args:
-            run_modes: Which types of traces to run. Traces with mode==None will always run, but if a trace is mode
-                restricted then this argument will determine whether it should be run or not. This is required since
-                on_begin should be invoked a total of one time during .fit() even though both 'train' and 'eval' loops
-                will take place.
+            traces: List of traces.
         """
         data = Data()
-        for trace in self.traces:
-            if isinstance(trace, Scheduler):
-                for trace_ in trace.get_all_values():
-                    if trace_ and (not trace_.mode or trace_.mode & run_modes):
-                        trace_.on_begin(data)
-            else:
-                if not trace.mode or trace.mode & run_modes:
-                    trace.on_begin(data)
+        for trace in traces:
+            trace.on_begin(data)
         self._check_early_exit()
 
-    def _run_traces_on_epoch_begin(self) -> None:
-        """Invoke the on_epoch_begin methods of all of the traces for the current mode.
+    def _run_traces_on_epoch_begin(self, traces: Iterable[Trace]) -> None:
+        """Invoke the on_epoch_begin methods of given traces.
+
+        Args:
+            traces: List of traces.
         """
         data = Data()
-        traces = get_current_traces(self.traces, self.system.mode, self.system.epoch_idx)
         for trace in traces:
             trace.on_epoch_begin(data)
         self._check_early_exit()
 
-    def _run_traces_on_batch_begin(self) -> None:
-        """Invoke the on_batch_begin methods of all of the traces for the current mode.
+    def _run_traces_on_batch_begin(self, traces: Iterable[Trace]) -> None:
+        """Invoke the on_batch_begin methods of given traces.
+
+        Args:
+            traces: List of traces.
         """
         data = Data()
-        traces = get_current_traces(self.traces, self.system.mode, self.system.epoch_idx)
         for trace in traces:
             trace.on_batch_begin(data)
         self._check_early_exit()
 
-    def _run_traces_on_batch_end(self, batch: Dict[str, Any], prediction: Dict[str, Any]) -> None:
-        """Invoke the on_batch_end methods of all of the traces for the current mode.
+    def _run_traces_on_batch_end(self, batch: Dict[str, Any], prediction: Dict[str, Any],
+                                 traces: Iterable[Trace]) -> None:
+        """Invoke the on_batch_end methods of given traces.
 
         Args:
             batch: The batch data which was provided by the pipeline.
             prediction: The prediction data which was generated by the network.
+            traces: List of traces.
         """
         data = Data(ChainMap(prediction, batch))
-        traces = get_current_traces(self.traces, self.system.mode, self.system.epoch_idx)
         for trace in traces:
             trace.on_batch_end(data)
         self._check_early_exit()
 
-    def _run_traces_on_epoch_end(self) -> None:
-        """Invoke the on_epoch_end methods of all of the traces for the current mode.
+    def _run_traces_on_epoch_end(self, traces: Iterable[Trace]) -> None:
+        """Invoke the on_epoch_end methods of of given traces.
+
+        Args:
+            traces: List of traces.
         """
         data = Data()
-        traces = get_current_traces(self.traces, self.system.mode, self.system.epoch_idx)
         for trace in traces:
             trace.on_epoch_end(data)
         self._check_early_exit()
 
-    def _run_traces_on_end(self, run_modes: Set[str]) -> None:
-        """Invoke the on_end methods of all of the traces.
+    def _run_traces_on_end(self, traces: Iterable[Trace]) -> None:
+        """Invoke the on_end methods of given traces.
 
         Args:
-            run_modes: Which types of traces to run. Traces with mode==None will always run, but if a trace is mode
-                restricted then this argument will determine whether it should be run or not. This is required since
-                on_end should be invoked a total of one time during .fit() even though both 'train' and 'eval' loops
-                will take place.
+            traces: List of traces.
         """
         data = Data()
-        for trace in self.traces:
-            if isinstance(trace, Scheduler):
-                for trace_ in trace.get_all_values():
-                    if trace_ and (not trace_.mode or trace_.mode & run_modes):
-                        trace_.on_end(data)
-            else:
-                if not trace.mode or trace.mode & run_modes:
-                    trace.on_end(data)
+        for trace in traces:
+            trace.on_end(data)
 
     def _check_early_exit(self) -> None:
         """Determine whether training should be prematurely aborted.

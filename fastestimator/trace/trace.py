@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import time
-from typing import Iterable, List, Set, Union
+from typing import Iterable, List, Optional, Set, Union
 
 import numpy as np
 
@@ -117,10 +117,10 @@ class TrainEssential(Trace):
     Please don't add this trace into an estimator manually. FastEstimator will add it automatically.
 
     Args:
-        loss_keys: Which keys from the data dictionary correspond to loss values.
+        monitor_names: Which keys from the data dictionary to monitor during training.
     """
-    def __init__(self, loss_keys: Set[str]) -> None:
-        super().__init__(inputs=loss_keys, mode="train", outputs=["steps/sec", "epoch_time", "total_time"])
+    def __init__(self, monitor_names: Set[str]) -> None:
+        super().__init__(inputs=monitor_names, mode="train", outputs=["steps/sec", "epoch_time", "total_time"])
         self.elapse_times = []
         self.train_start = None
         self.epoch_start = None
@@ -138,10 +138,11 @@ class TrainEssential(Trace):
             self.step_start = time.perf_counter()
 
     def on_batch_end(self, data: Data) -> None:
-        for key in self.inputs:
-            data.write_with_log(key, data[key])
         if self.system.log_steps and (self.system.global_step % self.system.log_steps == 0
                                       or self.system.global_step == 1):
+            for key in self.inputs:
+                if key in data:
+                    data.write_with_log(key, data[key])
             if self.system.global_step > 1:
                 self.elapse_times.append(time.perf_counter() - self.step_start)
                 data.write_with_log("steps/sec", round(self.system.log_steps / np.sum(self.elapse_times), 2))
@@ -169,7 +170,7 @@ class EvalEssential(Trace):
         monitor_names: Any keys which should be collected over the course of an eval epoch.
     """
     def __init__(self, monitor_names: Set[str]) -> None:
-        super().__init__(mode="eval", inputs=monitor_names, outputs=monitor_names)
+        super().__init__(mode="eval", inputs=monitor_names)
         self.eval_results = None
 
     def on_epoch_begin(self, data: Data) -> None:
@@ -177,10 +178,11 @@ class EvalEssential(Trace):
 
     def on_batch_end(self, data: Data) -> None:
         if self.eval_results is None:
-            self.eval_results = {k: [data[k]] for k in self.inputs}
+            self.eval_results = {key: [data[key]] for key in self.inputs if key in data}
         else:
             for key in self.inputs:
-                self.eval_results[key].append(data[key])
+                if key in data:
+                    self.eval_results[key].append(data[key])
 
     def on_epoch_end(self, data: Data) -> None:
         for key, value_list in self.eval_results.items():
@@ -191,12 +193,9 @@ class Logger(Trace):
     """A Trace that prints log messages.
 
     Please don't add this trace into an estimator manually. FastEstimator will add it automatically.
-
-    Args:
-        extra_log_keys: A set of keys to print from the system buffer besides those it would normally print.
     """
-    def __init__(self, extra_log_keys: Set[str]) -> None:
-        super().__init__(inputs=extra_log_keys | {"*"})
+    def __init__(self) -> None:
+        super().__init__(inputs="*")
 
     def on_begin(self, data: Data) -> None:
         if not self.system.mode == "test":
@@ -241,12 +240,14 @@ class Logger(Trace):
         print(log_message)
 
 
-def get_current_traces(traces: Iterable[Union[Trace, Scheduler[Trace]]], mode: str, epoch: int = 0) -> List[Trace]:
+def get_current_traces(traces: Iterable[Union[Trace, Scheduler[Trace]]],
+                       run_modes: Union[str, Iterable[str]],
+                       epoch: Optional[int] = None) -> List[Trace]:
     """Select traces which should be executed for given mode and epoch.
 
     Args:
         traces: A list of possible Traces or Schedulers of Traces to choose from.
-        mode: The desired execution mode. One of "train", "eval", "test", or "infer".
+        run_modes: The desired execution mode. One or more of "train", "eval", "test", or "infer".
         epoch: The desired execution epoch.
 
     Returns:
@@ -255,7 +256,13 @@ def get_current_traces(traces: Iterable[Union[Trace, Scheduler[Trace]]], mode: s
     selected_traces = []
     for trace in traces:
         if isinstance(trace, Scheduler):
-            trace = trace.get_current_value(epoch)
-        if trace and (not trace.mode or mode in trace.mode):
-            selected_traces.append(trace)
+            if epoch is None:
+                trace = trace.get_all_values()
+            else:
+                trace = [trace.get_current_value(epoch)]
+        else:
+            trace = [trace]
+        for trace_ in trace:
+            if trace_ and (not trace_.mode or trace_.mode.intersection(to_set(run_modes))):
+                selected_traces.append(trace_)
     return selected_traces
