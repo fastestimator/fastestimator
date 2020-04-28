@@ -13,140 +13,27 @@
 # limitations under the License.
 # ==============================================================================
 from collections import OrderedDict
-from typing import Dict, List, Optional, Tuple, TypeVar, Union
+from typing import Dict, List, Optional, Tuple, TypeVar
 
 import matplotlib.backends.backend_agg as plt_backend_agg
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 import torch
-from fastestimator.backend.to_number import to_number
 from matplotlib.gridspec import GridSpec
+
+from fastestimator.util.util import show_image
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
-def show_image(im: Union[np.ndarray, Tensor],
-               axis: plt.Axes = None,
-               fig: plt.Figure = None,
-               title: Optional[str] = None,
-               color_map: str = "inferno") -> Optional[plt.Figure]:
-    """Plots a given image onto an axis.
-
-    Args:
-        axis: The matplotlib axis to plot on, or None for a new plot.
-        fig: A reference to the figure to plot on, or None if new plot.
-        im: The image to display (width X height).
-        title: A title for the image.
-        color_map: Which colormap to use for greyscale images.
-    """
-    if axis is None:
-        fig, axis = plt.subplots(1, 1)
-    axis.axis('off')
-    # Compute width of axis for text font size
-    bbox = axis.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-    width, height = bbox.width * fig.dpi, bbox.height * fig.dpi
-    space = min(width, height)
-    if not hasattr(im, 'shape') or len(im.shape) < 2:
-        # text data
-        im = to_number(im)
-        if hasattr(im, 'shape') and len(im.shape) == 1:
-            im = im[0]
-        im = im.item()
-        if isinstance(im, bytes):
-            im = im.decode('utf8')
-        text = "{}".format(im)
-        axis.text(0.5,
-                  0.5,
-                  im,
-                  ha='center',
-                  transform=axis.transAxes,
-                  va='center',
-                  wrap=False,
-                  family='monospace',
-                  fontsize=min(45, space // len(text)))
-    else:
-        if isinstance(im, torch.Tensor) and len(im.shape) > 2:
-            # Move channel first to channel last
-            channels = list(range(len(im.shape)))
-            channels.append(channels.pop(0))
-            im = im.permute(*channels)
-        # image data
-        im = to_number(im)
-        if np.issubdtype(im.dtype, np.integer):
-            # im is already in int format
-            im = im.astype(np.uint8)
-        elif np.max(im) <= 1 and np.min(im) >= 0:  # im is [0,1]
-            im = (im * 255).astype(np.uint8)
-        elif np.min(im) >= -1 and np.max(im) <= 1:  # im is [-1, 1]
-            im = ((im + 1) * 127.5).astype(np.uint8)
-        else:  # im is in some arbitrary range, probably due to the Normalize Op
-            ma = abs(np.max(im, axis=tuple([i for i in range(len(im.shape) - 1)]) if len(im.shape) > 2 else None))
-            mi = abs(np.min(im, axis=tuple([i for i in range(len(im.shape) - 1)]) if len(im.shape) > 2 else None))
-            im = (((im + mi) / (ma + mi)) * 255).astype(np.uint8)
-        # matplotlib doesn't support (x,y,1) images, so convert them to (x,y)
-        if len(im.shape) == 3 and im.shape[2] == 1:
-            im = np.reshape(im, (im.shape[0], im.shape[1]))
-        if len(im.shape) == 2:
-            axis.imshow(im, cmap=plt.get_cmap(name=color_map))
-        else:
-            axis.imshow(im)
-    if title is not None:
-        axis.set_title(title, fontsize=min(20, 1 + width // len(title)), family='monospace')
-    return fig
-
-
-def _shape_to_width(shape: Tuple[int], min_width=200) -> int:
-    """Decide the width of an image for visualization.
-
-    Args:
-        shape: The shape of the image.
-        min_width: The minimum desired width for visualization.
-
-    Returns:
-        The maximum between the width specified by `shape` and the given `min_width` value.
-    """
-    if len(shape) < 2:
-        # text field, use default width
-        pass
-    elif len(shape) == 2:
-        # image field: width x height
-        min_width = max(shape[0], min_width)
-    else:
-        # image field: batch x width x height
-        min_width = max(shape[1], min_width)
-    return min_width
-
-
-def _shape_to_height(shape: Tuple[int], min_height=200) -> int:
-    """Decide the height of an image for visualization.
-
-    Args:
-        shape: The shape of the image.
-        min_height: The minimum desired width for visualization.
-
-    Returns:
-        The maximum between the height specified by `shape` and the given `min_height` value.
-    """
-    if len(shape) < 2:
-        # text field, use default width
-        pass
-    elif len(shape) == 2:
-        # image field: width x height
-        min_height = max(shape[0], min_height)
-    else:
-        # image field: batch x width x height
-        min_height = max(shape[1], min_height) * shape[0]
-    return min_height
-
-
-class XaiData(OrderedDict):
-    """A container for xai related data.
+class ImgData(OrderedDict):
+    """A container for image related data.
 
     This class is useful for automatically laying out collections of images for comparison and visualization.
 
     ```python
-    d = fe.xai.XaiData(y=tf.ones((4,)), x=0.5*tf.ones((4, 32, 32, 3)))
+    d = fe.util.ImgData(y=tf.ones((4,)), x=0.5*tf.ones((4, 32, 32, 3)))
     fig = d.paint_figure()
     plt.show()
     ```
@@ -174,33 +61,77 @@ class XaiData(OrderedDict):
                 del self.n_elements[k]
 
     def _to_grid(self) -> List[List[Tuple[str, np.ndarray]]]:
-        """Convert the elements of XaiData into a grid view.
+        """Convert the elements of ImgData into a grid view.
 
-        One row in the grid is generated for each unique batch dimension present within the XaiData. Each column in the
+        One row in the grid is generated for each unique batch dimension present within the ImgData. Each column in the
         grid is a tensor with batch dimension matching the current row. Columns are given in the order they were input
-        into the XaiData constructor.
+        into the ImgData constructor.
 
         Returns:
-            The XaiData arranged as a grid, with entries in the grid as (key, value) pairs.
+            The ImgData arranged as a grid, with entries in the grid as (key, value) pairs.
         """
         sorted_sections = sorted(self.n_elements.keys())
         return [[(key, self[key]) for key in self.n_elements[n_rows]] for n_rows in sorted_sections]
 
     def _n_rows(self) -> int:
-        """Computes how many rows are present in the XaiData grid.
+        """Computes how many rows are present in the ImgData grid.
 
         Returns:
-            The number of rows in the XaiData grid.
+            The number of rows in the ImgData grid.
         """
         return len(self.n_elements)
 
     def _n_cols(self) -> int:
-        """Computes how many columns are present in the XaiData grid.
+        """Computes how many columns are present in the ImgData grid.
 
         Returns:
-            The number of columns in the XaiData grid.
+            The number of columns in the ImgData grid.
         """
         return max((len(elem) for elem in self.n_elements.values()))
+
+    @staticmethod
+    def _shape_to_width(shape: Tuple[int], min_width=200) -> int:
+        """Decide the width of an image for visualization.
+
+        Args:
+            shape: The shape of the image.
+            min_width: The minimum desired width for visualization.
+
+        Returns:
+            The maximum between the width specified by `shape` and the given `min_width` value.
+        """
+        if len(shape) < 2:
+            # text field, use default width
+            pass
+        elif len(shape) == 2:
+            # image field: width x height
+            min_width = max(shape[0], min_width)
+        else:
+            # image field: batch x width x height
+            min_width = max(shape[1], min_width)
+        return min_width
+
+    @staticmethod
+    def _shape_to_height(shape: Tuple[int], min_height=200) -> int:
+        """Decide the height of an image for visualization.
+
+        Args:
+            shape: The shape of the image.
+            min_height: The minimum desired width for visualization.
+
+        Returns:
+            The maximum between the height specified by `shape` and the given `min_height` value.
+        """
+        if len(shape) < 2:
+            # text field, use default width
+            pass
+        elif len(shape) == 2:
+            # image field: width x height
+            min_height = max(shape[0], min_height)
+        else:
+            # image field: batch x width x height
+            min_height = max(shape[1], min_height) * shape[0]
+        return min_height
 
     def _widths(self, row: int, gap: int = 50, min_width: int = 200) -> List[Tuple[int, int]]:
         """Get the display widths of a particular row.
@@ -215,9 +146,10 @@ class XaiData(OrderedDict):
         """
         keys = list(sorted(self.n_elements.keys()))
         row = [self[key] for key in self.n_elements[keys[row]]]
-        widths = [(0, _shape_to_width(row[0].shape, min_width=min_width))]
+        widths = [(0, ImgData._shape_to_width(row[0].shape, min_width=min_width))]
         for img in row[1:]:
-            widths.append((widths[-1][1] + gap, widths[-1][1] + gap + _shape_to_width(img.shape, min_width=min_width)))
+            widths.append(
+                (widths[-1][1] + gap, widths[-1][1] + gap + ImgData._shape_to_width(img.shape, min_width=min_width)))
         return widths
 
     def _total_width(self, gap: int = 50, min_width: int = 200) -> int:
@@ -246,7 +178,7 @@ class XaiData(OrderedDict):
         keys = list(sorted(self.n_elements.keys()))
         rows = [[self[key] for key in self.n_elements[keys[row]]] for row in range(self._n_rows())]
         heights = [
-            max((_shape_to_height(elem.shape, min_height=min_height) for elem in rows[i]))
+            max((ImgData._shape_to_height(elem.shape, min_height=min_height) for elem in rows[i]))
             for i in range(self._n_rows())
         ]
         offset = 10
@@ -287,10 +219,10 @@ class XaiData(OrderedDict):
                      min_width: int = 200,
                      dpi: int = 96,
                      save_path: Optional[str] = None) -> plt.Figure:
-        """Visualize the current XaiData entries in a matplotlib figure.
+        """Visualize the current ImgData entries in a matplotlib figure.
 
         ```python
-        d = fe.xai.XaiData(y=tf.ones((4,)), x=0.5*tf.ones((4, 32, 32, 3)))
+        d = fe.util.ImgData(y=tf.ones((4,)), x=0.5*tf.ones((4, 32, 32, 3)))
         fig = d.paint_figure()
         plt.show()
         ```
@@ -342,10 +274,10 @@ class XaiData(OrderedDict):
                     width_gap: int = 50,
                     min_width: int = 200,
                     dpi: int = 96) -> np.ndarray:
-        """Visualize the current XaiData entries into an image stored in a numpy array.
+        """Visualize the current ImgData entries into an image stored in a numpy array.
 
         ```python
-        d = fe.xai.XaiData(y=tf.ones((4,)), x=0.5*tf.ones((4, 32, 32, 3)))
+        d = fe.util.ImgData(y=tf.ones((4,)), x=0.5*tf.ones((4, 32, 32, 3)))
         img = d.paint_numpy()
         plt.imshow(img[0])
         plt.show()
@@ -359,7 +291,7 @@ class XaiData(OrderedDict):
             dpi: The resolution of the image to display.
 
         Returns:
-            A numpy array with dimensions (1, height, width, 3) containing an image representation of this XaiData.
+            A numpy array with dimensions (1, height, width, 3) containing an image representation of this ImgData.
         """
         fig = self.paint_figure(height_gap=height_gap,
                                 min_height=min_height,
