@@ -276,7 +276,8 @@ class Estimator:
 
         This method requires that the current mode and epoch already be specified within the self.system object.
         """
-        loader = iter(self._configure_loader(self.pipeline.get_loader(self.system.mode, self.system.epoch_idx)))
+        loader = self._configure_loader(self.pipeline.get_loader(self.system.mode, self.system.epoch_idx))
+        iterator = iter(loader)
         self.network.load_epoch(mode=self.system.mode,
                                 epoch=self.system.epoch_idx,
                                 output_keys=self.trace_inputs[self.system.mode])
@@ -285,7 +286,7 @@ class Estimator:
         while True:
             try:
                 with Suppressor():
-                    batch = next(loader)
+                    batch = next(iterator)
                 if self.system.mode == "train":
                     self.system.update_global_step()
                 self.system.update_batch_idx()
