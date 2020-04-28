@@ -1,34 +1,35 @@
 pipeline {
-  agent {label 'jenkins-pr'}
-  environment {
-      JENKINS_ANACONDA_DIR='/home/ubuntu/anaconda3'
-      JENKINS_PYTHON_ENV='pr_env'
-  }
-  stages {
-    stage('Build') {
-      steps {
-        sh '''
-            . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
-            if [ -d "$JENKINS_ANACONDA_DIR/envs/$JENKINS_PYTHON_ENV" ]; then
-                conda remove --name $JENKINS_PYTHON_ENV --all -y
-            fi
-            conda create --name $JENKINS_PYTHON_ENV python=3.6 -y
-            conda activate $JENKINS_PYTHON_ENV
-            pip install pytest numpy nibabel pydicom twine ipython ipykernel
-            conda install tensorflow-gpu=2.0.0
-            pip install -e .
-            pip freeze | tee requirement.txt
-        '''
-      }
+    agent {label 'master'}
+    environment {
+        JENKINS_ANACONDA_DIR='/var/jenkins_home/anaconda3'
+        JENKINS_PYTHON_ENV='pr_env_conda'
     }
-    stage('Test') {
-        steps {
-            sh '''
-                . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
-                conda activate $JENKINS_PYTHON_ENV
-                python3 -m pytest
-            '''
+    stages {
+        stage('Build') {
+            steps {
+                sh '''#!/bin/bash
+                    source ~/.bashrc
+                    . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
+                    if [ ! -d "$JENKINS_ANACONDA_DIR/envs/$JENKINS_PYTHON_ENV" ]; then
+                        conda create --name $JENKINS_PYTHON_ENV python=3.6 -y
+                    fi
+                    conda activate $JENKINS_PYTHON_ENV
+                    pip install pytest numpy nibabel pydicom twine ipython ipykernel
+                    conda install tensorflow=2.0.0
+                    pip install -e .
+                    pip freeze | tee requirement.txt
+                '''
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh '''#!/bin/bash
+                    . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
+                    conda activate $JENKINS_PYTHON_ENV
+                    python -m pytest
+                '''
+            }
         }
     }
-  }
 }
