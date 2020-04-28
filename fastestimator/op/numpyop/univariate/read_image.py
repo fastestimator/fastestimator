@@ -31,24 +31,24 @@ class ReadImage(NumpyOp):
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
         parent_path: Parent path that will be prepended to a given path.
-        read_flag: Whether to read the image as 'color', 'grey', or one of the cv2.IMREAD flags.
+        color_flag: Whether to read the image as 'color', 'grey', or one of the cv2.IMREAD flags.
 
     Raises:
-        AssertionError: If `inputs` and `outputs` have mismatched lengths, or the `read_flag` is unacceptable.
+        AssertionError: If `inputs` and `outputs` have mismatched lengths, or the `color_flag` is unacceptable.
     """
     def __init__(self,
                  inputs: Union[str, Iterable[str], Callable],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  parent_path: str = "",
-                 read_flag: Union[str, int] = cv2.IMREAD_COLOR):
+                 color_flag: Union[str, int] = cv2.IMREAD_COLOR):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         if isinstance(self.inputs, List) and isinstance(self.outputs, List):
             assert len(self.inputs) == len(self.outputs), "Input and Output lengths must match"
         self.parent_path = parent_path
-        assert isinstance(read_flag, int) or read_flag in {'color', 'gray', 'grey'}, \
-            f"Unacceptable read_flag value: {read_flag}"
-        self.color_flag = read_flag
+        assert isinstance(color_flag, int) or color_flag in {'color', 'gray', 'grey'}, \
+            f"Unacceptable color_flag value: {color_flag}"
+        self.color_flag = color_flag
         if self.color_flag == "color":
             self.color_flag = cv2.IMREAD_COLOR
         elif self.color_flag in {"gray", "grey"}:

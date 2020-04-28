@@ -404,7 +404,7 @@ def get_estimator(target_size=128, epochs=55, save_dir=tempfile.mkdtemp(), max_s
         train_data=dataset,
         drop_last=True,
         ops=[
-            ReadImage(inputs="x", outputs="x", read_flag='gray'),
+            ReadImage(inputs="x", outputs="x", color_flag='gray'),
             EpochScheduler(epoch_dict=resize_map),
             EpochScheduler(epoch_dict=resize_low_res_map1),
             EpochScheduler(epoch_dict=resize_low_res_map2),

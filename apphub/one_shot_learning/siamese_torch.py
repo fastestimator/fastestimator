@@ -165,8 +165,8 @@ def get_estimator(epochs=200, batch_size=128, max_steps_per_epoch=None, save_dir
         test_data=test_data,
         batch_size=batch_size,
         ops=[
-            ReadImage(inputs="x_a", outputs="x_a", read_flag='gray'),
-            ReadImage(inputs="x_b", outputs="x_b", read_flag='gray'),
+            ReadImage(inputs="x_a", outputs="x_a", color_flag='gray'),
+            ReadImage(inputs="x_b", outputs="x_b", color_flag='gray'),
             Sometimes(
                 ShiftScaleRotate(image_in="x_a",
                                  image_out="x_a",
