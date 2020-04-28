@@ -22,7 +22,7 @@ from ast import literal_eval
 from contextlib import ContextDecorator
 from functools import reduce
 from math import gcd
-from typing import Any, Callable, List, MutableMapping, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, KeysView, List, MutableMapping, Optional, Set, Tuple, Type, TypeVar, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -132,7 +132,7 @@ def to_set(data: Any) -> Set[Any]:
     if data is None:
         return set()
     if not isinstance(data, set):
-        if isinstance(data, (tuple, list)):
+        if isinstance(data, (tuple, list, KeysView)):
             data = set(data)
         else:
             data = {data}
