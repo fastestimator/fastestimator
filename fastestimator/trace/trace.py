@@ -79,36 +79,47 @@ class Trace:
         Args:
             data: A dictionary through which traces can communicate with each other or write values for logging.
         """
+        pass
+
     def on_epoch_begin(self, data: Data) -> None:
         """Runs at the beginning of each epoch.
 
         Args:
             data: A dictionary through which traces can communicate with each other or write values for logging.
         """
+        pass
+
     def on_batch_begin(self, data: Data) -> None:
         """Runs at the beginning of each batch.
 
         Args:
             data: A dictionary through which traces can communicate with each other or write values for logging.
         """
+        pass
+
     def on_batch_end(self, data: Data) -> None:
         """Runs at the end of each batch.
 
         Args:
             data: The current batch and prediction data, as well as any information written by prior `Traces`.
         """
+        pass
+
     def on_epoch_end(self, data: Data) -> None:
         """Runs at the end of each epoch.
 
         Args:
             data: A dictionary through which traces can communicate with each other or write values for logging.
         """
+        pass
+
     def on_end(self, data: Data) -> None:
         """Runs once at the end training.
 
         Args:
             data: A dictionary through which traces can communicate with each other or write values for logging.
         """
+        pass
 
 
 class TrainEssential(Trace):
@@ -248,12 +259,13 @@ def get_current_traces(traces: Iterable[Union[Trace, Scheduler[Trace]]],
     Args:
         traces: A list of possible Traces or Schedulers of Traces to choose from.
         run_modes: The desired execution mode. One or more of "train", "eval", "test", or "infer".
-        epoch: The desired execution epoch.
+        epoch: The desired execution epoch. If None, traces across all epochs will be returned.
 
     Returns:
         The `Traces` which should be executed.
     """
     selected_traces = []
+    run_modes = to_set(run_modes)
     for trace in traces:
         if isinstance(trace, Scheduler):
             if epoch is None:
@@ -263,6 +275,6 @@ def get_current_traces(traces: Iterable[Union[Trace, Scheduler[Trace]]],
         else:
             trace = [trace]
         for trace_ in trace:
-            if trace_ and (not trace_.mode or trace_.mode.intersection(to_set(run_modes))):
+            if trace_ and (not trace_.mode or trace_.mode.intersection(run_modes)):
                 selected_traces.append(trace_)
     return selected_traces

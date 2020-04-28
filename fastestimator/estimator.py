@@ -93,7 +93,7 @@ class Estimator:
         self._start(run_modes={"train", "eval"})
         return self.system.summary or None
 
-    def _prepare_traces(self, run_modes: Set[str]):
+    def _prepare_traces(self, run_modes: Set[str]) -> None:
         """Prepare information about the traces for training.
 
         Add default traces into the traces_in_use list, also prints a warning if no model saver trace is detected.
@@ -210,6 +210,7 @@ class Estimator:
         network_signature_epochs = self.network.get_signature_epochs(self.system.total_epochs)
         trace_signature_epochs = get_signature_epochs(self.traces_in_use, self.system.total_epochs)
         signature_epochs = pipeline_signature_epochs | network_signature_epochs | trace_signature_epochs
+        monitor_names = self.monitor_names
         for epoch in signature_epochs:
             for mode in self.pipeline.get_modes(epoch) - {"test"}:
                 traces = get_current_traces(self.traces_in_use, run_modes=mode, epoch=epoch)
@@ -231,12 +232,14 @@ class Estimator:
                     if idx > 0:  # ignore TrainEssential and EvalEssential's inputs for unmet requirement checking
                         trace_input_keys.update(trace.inputs)
                     trace_output_keys.update(trace.outputs)
+                monitor_names = monitor_names - (pipeline_output_keys | network_output_keys)
                 unmet_requirements = trace_input_keys - (pipeline_output_keys | network_output_keys | trace_output_keys)
                 assert not unmet_requirements, \
                     "found missing key(s) during epoch {} mode {}: {}".format(epoch, mode, unmet_requirements)
                 self.network.load_epoch(mode, epoch, output_keys=trace_input_keys.update(traces[0].inputs), warmup=True)
                 self.network.run_step(batch)
                 self.network.unload_epoch()
+        assert not monitor_names, "found missing key(s): {}".format(monitor_names)
 
     def _start(self, run_modes: Set[str]) -> None:
         """The outer training loop.
@@ -275,7 +278,6 @@ class Estimator:
         trace_input_keys = set()
         for trace in traces:
             trace_input_keys.update(trace.inputs)
-
         loader = iter(self._configure_loader(self.pipeline.get_loader(self.system.mode, self.system.epoch_idx)))
         self.network.load_epoch(mode=self.system.mode, epoch=self.system.epoch_idx, output_keys=trace_input_keys)
         self.system.batch_idx = None

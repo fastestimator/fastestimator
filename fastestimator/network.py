@@ -69,7 +69,7 @@ class BaseNetwork:
         Args:
             mode: The mode to prepare to execute. One of 'train', 'eval', 'test', or 'infer'.
             epoch: The epoch to prepare to execute.
-            output_keys: What keys are considered to move from the GPU back to the CPU after executing a step.
+            output_keys: What keys must be moved from the GPU back to the CPU after executing a step.
             warmup: Whether to prepare to execute it warmup mode or not (end users can likely ignore this argument).
         """
         self.effective_inputs[mode] = self.get_effective_input_keys(mode, epoch)
