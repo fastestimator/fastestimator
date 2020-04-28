@@ -90,7 +90,7 @@ class Estimator:
         self.system.reset(summary)
         self._prepare_traces(run_modes={"train", "eval"})
         self._warmup()
-        self._start_train()
+        self._start(run_modes={"train", "eval"})
         return self.system.summary or None
 
     def _prepare_traces(self, run_modes: Set[str]):
@@ -108,13 +108,15 @@ class Estimator:
             self.traces_in_use.insert(0, TrainEssential(monitor_names=self.monitor_names))
             no_save_warning = True
             for trace in get_current_traces(self.traces_in_use, run_modes=run_modes):
-                trace.system = self.system
                 if isinstance(trace, (ModelSaver, BestModelSaver)):
                     no_save_warning = False
             if no_save_warning:
                 print("FastEstimator-Warn: No ModelSaver Trace detected. Models will not be saved.")
         if "eval" in run_modes and "eval" in self.pipeline.get_modes():
             self.traces_in_use.insert(1, EvalEssential(monitor_names=self.monitor_names))
+        # insert system instance to trace
+        for trace in get_current_traces(self.traces_in_use, run_modes=run_modes):
+            trace.system = self.system
 
     def test(self, summary: Optional[str] = None) -> Optional[Summary]:
         """Run the pipeline / network in test mode for one epoch.
@@ -130,7 +132,7 @@ class Estimator:
         """
         self.system.reset_for_test(summary)
         self._prepare_traces(run_modes={"test"})
-        self._start_test()
+        self._start(run_modes={"test"})
         return self.system.summary or None
 
     def _sort_traces(self) -> None:
@@ -236,35 +238,32 @@ class Estimator:
                 self.network.run_step(batch)
                 self.network.unload_epoch()
 
-    def _start_train(self) -> None:
+    def _start(self, run_modes: Set[str]) -> None:
         """The outer training loop.
 
         This method invokes the trace on_begin method, runs the necessary 'train' and 'eval' epochs, and then invokes
         the trace on_end method.
+
+        Args:
+            run_modes: The current execution modes.
         """
-        all_traces = get_current_traces(self.traces_in_use, run_modes={"train", "eval"})
+        all_traces = get_current_traces(self.traces_in_use, run_modes=run_modes)
         # sort all_traces
         self._run_traces_on_begin(traces=all_traces)
-        try:
-            for self.system.epoch_idx in range(1, self.system.total_epochs + 1):
-                if "train" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
-                    self.system.mode = "train"
-                    self._run_epoch()
-                if "eval" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
-                    self.system.mode = "eval"
-                    self._run_epoch()
-        except EarlyStop:
-            pass  # On early stopping we still want to run the final traces and return results
+        if "train" in run_modes or "eval" in run_modes:
+            try:
+                for self.system.epoch_idx in range(1, self.system.total_epochs + 1):
+                    if "train" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
+                        self.system.mode = "train"
+                        self._run_epoch()
+                    if "eval" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
+                        self.system.mode = "eval"
+                        self._run_epoch()
+            except EarlyStop:
+                pass  # On early stopping we still want to run the final traces and return results
+        else:
+            self._run_epoch()
         self._run_traces_on_end(traces=all_traces)
-
-    def _start_test(self) -> None:
-        """The outer testing loop.
-
-        This method invokes the trace on_begin method, runs a 'test' epoch, and then invokes the trace on_end method.
-        """
-        self._run_traces_on_begin({"test"})
-        self._run_epoch()
-        self._run_traces_on_end({"test"})
 
     def _run_epoch(self) -> None:
         """A method to perform an epoch of activity.
