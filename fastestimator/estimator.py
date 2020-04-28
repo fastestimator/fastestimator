@@ -26,11 +26,11 @@ from fastestimator.backend.to_type import to_type
 from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
 from fastestimator.pipeline import Pipeline
-from fastestimator.schedule.schedule import Scheduler, get_signature_epochs
+from fastestimator.schedule.schedule import Scheduler, get_current_items, get_signature_epochs
 from fastestimator.summary.system import Summary, System
 from fastestimator.trace.io.best_model_saver import BestModelSaver
 from fastestimator.trace.io.model_saver import ModelSaver
-from fastestimator.trace.trace import EvalEssential, Logger, Trace, TrainEssential, get_current_traces
+from fastestimator.trace.trace import EvalEssential, Logger, Trace, TrainEssential
 from fastestimator.util.data import Data
 from fastestimator.util.util import Suppressor, draw, to_list, to_set
 
@@ -107,7 +107,7 @@ class Estimator:
         if "train" in run_modes:
             self.traces_in_use.insert(0, TrainEssential(monitor_names=self.monitor_names))
             no_save_warning = True
-            for trace in get_current_traces(self.traces_in_use, run_modes=run_modes):
+            for trace in get_current_items(self.traces_in_use, run_modes=run_modes):
                 if isinstance(trace, (ModelSaver, BestModelSaver)):
                     no_save_warning = False
             if no_save_warning:
@@ -115,7 +115,7 @@ class Estimator:
         if "eval" in run_modes and "eval" in self.pipeline.get_modes():
             self.traces_in_use.insert(1, EvalEssential(monitor_names=self.monitor_names))
         # insert system instance to trace
-        for trace in get_current_traces(self.traces_in_use, run_modes=run_modes):
+        for trace in get_current_items(self.traces_in_use, run_modes=run_modes):
             trace.system = self.system
 
     def test(self, summary: Optional[str] = None) -> Optional[Summary]:
@@ -204,7 +204,7 @@ class Estimator:
         Traces are not included in the warmup since they are likely to contain state variables which could become
         corrupted by running extra steps.
         """
-        all_traces = get_current_traces(self.traces_in_use, run_modes={"train", "eval"})
+        all_traces = get_current_items(self.traces_in_use, run_modes={"train", "eval"})
         # sort all_traces
         pipeline_signature_epochs = self.pipeline.get_signature_epochs(self.system.total_epochs)
         network_signature_epochs = self.network.get_signature_epochs(self.system.total_epochs)
@@ -213,7 +213,7 @@ class Estimator:
         monitor_names = self.monitor_names
         for epoch in signature_epochs:
             for mode in self.pipeline.get_modes(epoch) - {"test"}:
-                traces = get_current_traces(self.traces_in_use, run_modes=mode, epoch=epoch)
+                traces = get_current_items(self.traces_in_use, run_modes=mode, epoch=epoch)
                 # sort traces
                 # key checking
                 loader = self._configure_loader(self.pipeline.get_loader(mode, epoch))
@@ -250,7 +250,7 @@ class Estimator:
         Args:
             run_modes: The current execution modes.
         """
-        all_traces = get_current_traces(self.traces_in_use, run_modes=run_modes)
+        all_traces = get_current_items(self.traces_in_use, run_modes=run_modes)
         # sort all_traces
         self._run_traces_on_begin(traces=all_traces)
         if "train" in run_modes or "eval" in run_modes:
@@ -273,19 +273,20 @@ class Estimator:
 
         This method requires that the current mode and epoch already be specified within the self.system object.
         """
-        traces = get_current_traces(self.traces_in_use, run_modes=self.system.mode, epoch=self.system.epoch_idx)
+        traces = get_current_items(self.traces_in_use, run_modes=self.system.mode, epoch=self.system.epoch_idx)
         # sort traces
         trace_input_keys = set()
         for trace in traces:
             trace_input_keys.update(trace.inputs)
-        loader = iter(self._configure_loader(self.pipeline.get_loader(self.system.mode, self.system.epoch_idx)))
+        loader = self._configure_loader(self.pipeline.get_loader(self.system.mode, self.system.epoch_idx))
+        iterator = iter(loader)
         self.network.load_epoch(mode=self.system.mode, epoch=self.system.epoch_idx, output_keys=trace_input_keys)
         self.system.batch_idx = None
         self._run_traces_on_epoch_begin(traces=traces)
         while True:
             try:
                 with Suppressor():
-                    batch = next(loader)
+                    batch = next(iterator)
                 if self.system.mode == "train":
                     self.system.update_global_step()
                 self.system.update_batch_idx()

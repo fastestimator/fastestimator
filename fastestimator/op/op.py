@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Callable, Iterable, List, Mapping, MutableMapping, Set, TypeVar, Union
+from typing import Any, Callable, Iterable, List, Mapping, MutableMapping, Set, Union
 
-from fastestimator.schedule.schedule import Scheduler
 from fastestimator.util.util import parse_modes, to_list, to_set
 
 
@@ -71,29 +70,6 @@ class Op:
         self.mode = parse_modes(to_set(mode))
         self.in_list = not isinstance(inputs, (str, Callable))
         self.out_list = not isinstance(outputs, str)
-
-
-OpType = TypeVar('OpType', bound=Op)
-
-
-def get_current_ops(ops: Iterable[Union[OpType, Scheduler[OpType]]], mode: str, epoch: int = 0) -> List[OpType]:
-    """Select ops which should be executed for given mode and epoch.
-
-    Args:
-        ops: A list of possible Ops or Schedulers of Ops to choose from.
-        mode: The desired execution mode. One of "train", "eval", "test", or "infer".
-        epoch: The desired execution epoch.
-
-    Returns:
-        The `Ops` which should be executed.
-    """
-    selected_ops = []
-    for op in ops:
-        if isinstance(op, Scheduler):
-            op = op.get_current_value(epoch)
-        if op and (not op.mode or mode in op.mode):
-            selected_ops.append(op)
-    return selected_ops
 
 
 def get_inputs_by_op(op: Op, store: Mapping[str, Any]) -> Any:

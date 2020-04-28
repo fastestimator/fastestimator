@@ -26,8 +26,7 @@ from torch.utils.data.dataloader import default_collate
 from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.op_dataset import OpDataset
 from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
-from fastestimator.op.op import get_current_ops
-from fastestimator.schedule.schedule import Scheduler, get_signature_epochs
+from fastestimator.schedule.schedule import Scheduler, get_current_items, get_signature_epochs
 from fastestimator.util.util import pad_batch, to_list, to_set
 
 DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
@@ -81,22 +80,17 @@ class Pipeline:
                 Dataset.
         """
         fe_dataset = False
-        for mode, dataset in self.data.items():
-            if isinstance(dataset, Scheduler):
-                for ds in dataset.get_all_values():
-                    fe_dataset = self._verify_dataset(mode, ds, **kwargs) or fe_dataset
-            else:
-                fe_dataset = self._verify_dataset(mode, dataset, **kwargs) or fe_dataset
+        for dataset in get_current_items(self.data.values()):
+            fe_dataset = self._verify_dataset(dataset, **kwargs) or fe_dataset
         if not fe_dataset:
             assert kwargs['batch_size'] is None, "Pipeline only supports batch_size with built-in (FE) datasets"
             assert kwargs['ops'] is None, "Pipeline only supports ops with built-in (FE) datasets"
             assert kwargs['num_process'] is None, "Pipeline only support num_process with built-in (FE) datasets"
 
-    def _verify_dataset(self, mode: str, dataset: DataSource, **kwargs) -> bool:
+    def _verify_dataset(self, dataset: DataSource, **kwargs) -> bool:
         """A helper function to ensure that all of a dataset's arguments are correct.
 
         Args:
-            mode: The mode for which to verify the dataset. One of 'train', 'eval', or 'test'.
             dataset: The dataset to validate against.
             **kwargs: A selection of variables and their values which must be validated.
 
@@ -109,20 +103,11 @@ class Pipeline:
         """
         if isinstance(dataset, Dataset):
             # batch_size check
-            assert isinstance(self.batch_size, (Scheduler, int, type(None))), \
-                "unsupported batch_size format: {}".format(self.batch_size)
-            if isinstance(self.batch_size, Scheduler):
-                for batch_size in self.batch_size.get_all_values():
-                    assert isinstance(batch_size, (int, type(None))), \
-                        "unsupported batch_size format: {}".format(self.batch_size)
+            for batch_size in get_current_items(to_list(self.batch_size)):
+                assert isinstance(batch_size, int), "unsupported batch_size format: {}".format(type(batch_size))
             # ops check
-            for op in self.ops:
-                if isinstance(op, Scheduler):
-                    for epoch_op in op.get_all_values():
-                        assert isinstance(epoch_op, (type(None), NumpyOp)), \
-                            "unsupported op format, must provide NumpyOp in Pipeline"
-                else:
-                    assert isinstance(op, NumpyOp), "unsupported op format, must provide NumpyOp in Pipeline"
+            for op in get_current_items(self.ops):
+                assert isinstance(op, NumpyOp), "unsupported op format, must provide NumpyOp in Pipeline"
             # num_process check
             assert isinstance(self.num_process, int), "number of processes must be an integer"
             return True
@@ -135,7 +120,7 @@ class Pipeline:
                 warnings.warn("num_process will only be used for built-in dataset")
             return False
         else:
-            raise ValueError("Unsupported dataset type for {}".format(mode))
+            raise ValueError("Unsupported dataset type: {}".format(type(dataset)))
 
     def get_modes(self, epoch: Optional[int] = None) -> Set[str]:
         """Get the modes for which the Pipeline has data.
@@ -191,7 +176,7 @@ class Pipeline:
             The transformed data.
         """
         data = deepcopy(data)
-        ops = get_current_ops(self.ops, mode, epoch)
+        ops = get_current_items(self.ops, mode, epoch)
         forward_numpyop(ops, data, mode)
         for key, value in data.items():
             data[key] = np.expand_dims(value, 0)
@@ -257,7 +242,7 @@ class Pipeline:
                 collate_fn = None
             else:
                 collate_fn = self._pad_batch_collate
-            op_dataset = OpDataset(data, get_current_ops(self.ops, mode, epoch), mode)
+            op_dataset = OpDataset(data, get_current_items(self.ops, mode, epoch), mode)
             data = DataLoader(op_dataset,
                               batch_size=batch_size,
                               shuffle=False if isinstance(data, BatchDataset) else shuffle,

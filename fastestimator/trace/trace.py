@@ -13,13 +13,12 @@
 # limitations under the License.
 # ==============================================================================
 import time
-from typing import Iterable, List, Optional, Set, Union
+from typing import Iterable, List, Set, Union
 
 import numpy as np
 
 from fastestimator.backend.get_lr import get_lr
 from fastestimator.backend.to_number import to_number
-from fastestimator.schedule.schedule import Scheduler
 from fastestimator.summary.system import System
 from fastestimator.util.data import Data
 from fastestimator.util.util import parse_modes, to_list, to_set
@@ -249,32 +248,3 @@ class Logger(Trace):
             else:
                 log_message += "{}: {}; ".format(key, str(val))
         print(log_message)
-
-
-def get_current_traces(traces: Iterable[Union[Trace, Scheduler[Trace]]],
-                       run_modes: Union[str, Iterable[str]],
-                       epoch: Optional[int] = None) -> List[Trace]:
-    """Select traces which should be executed for given mode and epoch.
-
-    Args:
-        traces: A list of possible Traces or Schedulers of Traces to choose from.
-        run_modes: The desired execution mode. One or more of "train", "eval", "test", or "infer".
-        epoch: The desired execution epoch. If None, traces across all epochs will be returned.
-
-    Returns:
-        The `Traces` which should be executed.
-    """
-    selected_traces = []
-    run_modes = to_set(run_modes)
-    for trace in traces:
-        if isinstance(trace, Scheduler):
-            if epoch is None:
-                trace = trace.get_all_values()
-            else:
-                trace = [trace.get_current_value(epoch)]
-        else:
-            trace = [trace]
-        for trace_ in trace:
-            if trace_ and (not trace_.mode or trace_.mode.intersection(run_modes)):
-                selected_traces.append(trace_)
-    return selected_traces

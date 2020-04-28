@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Generic, List, Optional, Set, TypeVar, Union
+from typing import Any, Dict, Generic, Iterable, List, Optional, Set, TypeVar, Union
 
-from fastestimator.util.util import lcms
+from fastestimator.util.util import lcms, to_set
 
 T = TypeVar('T')
 
@@ -168,3 +168,33 @@ def get_signature_epochs(items: List[Any], total_epochs: int) -> Set[int]:
             signature_epochs.update(range(epoch, epoch + least_common_cycle))
     signature_epochs = set(epoch for epoch in signature_epochs if epoch <= total_epochs)
     return signature_epochs
+
+
+def get_current_items(items: Iterable[Union[T, Scheduler[T]]],
+                      run_modes: Optional[Union[str, Iterable[str]]] = None,
+                      epoch: Optional[int] = None) -> List[T]:
+    """Select items which should be executed for given mode and epoch.
+
+    Args:
+        items: A list of possible items or Schedulers of items to choose from.
+        run_modes: The desired execution mode. One or more of "train", "eval", "test", or "infer". If None, items of
+            all modes will be returned.
+        epoch: The desired execution epoch. If None, items across all epochs will be returned.
+
+    Returns:
+        The items which should be executed.
+    """
+    selected_items = []
+    run_modes = to_set(run_modes)
+    for item in items:
+        if isinstance(item, Scheduler):
+            if epoch is None:
+                item = item.get_all_values()
+            else:
+                item = [item.get_current_value(epoch)]
+        else:
+            item = [item]
+        for item_ in item:
+            if item_ and (not run_modes or not item_.mode or item_.mode.intersection(run_modes)):
+                selected_items.append(item_)
+    return selected_items
