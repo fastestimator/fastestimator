@@ -26,23 +26,23 @@ def get_uncle_path(uncle_dir: str, working_file: str) -> str:
     return uncle_path
 
 
-def get_relative_path(parant_dir: str, working_file: str) -> str:
-    """Convert an absolute path into a relative path within the parant folder.
+def get_relative_path(parent_dir: str, working_file: str) -> str:
+    """Convert an absolute path into a relative path within the parent folder.
 
     Args:
-        parant_dir: A parent folder
+        parent_dir: A parent folder
         working_file: The absolute path to a test file.
 
     Returns:
-        The relative path to the test file within the parant_dir folder.
+        The relative path to the test file within the parent_dir folder.
 
     Raises:
-        OSError: If the `working_file` is not located within the parant_dir folder.
+        OSError: If the `working_file` is not located within the parent_dir folder.
     """
     current_dir = os.path.abspath(os.path.join(working_file, ".."))
-    split = current_dir.split("{}/".format(parant_dir))
+    split = current_dir.split("{}/".format(parent_dir))
     if len(split) == 1:
-        raise OSError("This file need to be put inside {} directory".format(parant_dir))
+        raise OSError("This file need to be put inside {} directory".format(parent_dir))
     return split[-1]
 
 
