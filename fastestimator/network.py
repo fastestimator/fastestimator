@@ -58,7 +58,7 @@ class BaseNetwork:
         for op in get_current_items(self.ops):
             assert isinstance(op, TensorOp), "unsupported op format, must provide TensorOp in Network"
 
-    def get_schedule_items(self, mode: [str]) -> List[Any]:
+    def get_scheduled_items(self, mode: str) -> List[Any]:
         """Get a list of items considered for scheduling.
 
         Args:

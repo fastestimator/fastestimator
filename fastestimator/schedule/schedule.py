@@ -147,7 +147,7 @@ def get_signature_epochs(items: List[Any], total_epochs: int, mode: Optional[str
     Args:
         items: List of items to scan from.
         total_epochs: The maximum epoch number to consider when searching for signature epochs.
-        mode: Current execution mode, if None, all execution modes will be considered.
+        mode: Current execution mode. if None, all execution modes will be considered.
 
     Returns:
         The epoch numbers of changes.

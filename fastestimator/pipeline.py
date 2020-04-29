@@ -164,7 +164,7 @@ class Pipeline:
             if idx == num_steps:
                 break
 
-    def get_schedule_items(self, mode: [str]) -> List[Any]:
+    def get_scheduled_items(self, mode: str) -> List[Any]:
         """Get a list of items considered for scheduling.
 
         Args:
@@ -176,7 +176,7 @@ class Pipeline:
         all_items = self.ops + [self.batch_size] + [self.data[mode]]
         return all_items
 
-    def get_epochs_with_data(self, total_epochs: int, mode: [str]) -> Set[int]:
+    def get_epochs_with_data(self, total_epochs: int, mode: str) -> Set[int]:
         """Get a set of epoch indices that contains data given mode.
 
         Args:
