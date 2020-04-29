@@ -22,7 +22,7 @@ from ast import literal_eval
 from contextlib import ContextDecorator
 from functools import reduce
 from math import gcd
-from typing import Any, Callable, List, MutableMapping, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, KeysView, List, MutableMapping, Optional, Set, Tuple, Type, TypeVar, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -132,7 +132,7 @@ def to_set(data: Any) -> Set[Any]:
     if data is None:
         return set()
     if not isinstance(data, set):
-        if isinstance(data, (tuple, list)):
+        if isinstance(data, (tuple, list, KeysView)):
             data = set(data)
         else:
             data = {data}
@@ -221,26 +221,6 @@ def draw() -> None:
     """Print our name.
     """
     print(Figlet(font="slant").renderText("FastEstimator"))
-
-
-def lcms(*numbers: int):
-    """Compute the least common multiple amongst a list of numbers.
-
-    ```python
-    x = fe.util.lcms(2, 3, 4)  # 12
-    x = fe.util.lcms(11, 13)  # 143
-    ```
-
-    Args:
-        *numbers: Some numbers to compare.
-
-    Returns:
-        The least common multiple between the `numbers`.
-    """
-    def lcm(a, b):
-        return int(a * b / gcd(a, b))
-
-    return reduce(lcm, numbers)
 
 
 def prettify_metric_name(metric: str) -> str:

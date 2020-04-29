@@ -13,18 +13,21 @@
 # limitations under the License.
 # ==============================================================================
 from collections import ChainMap
-from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, Set, Tuple, TypeVar, Union
 
 import tensorflow as tf
 import torch
+
 from fastestimator.backend.load_model import load_model
 from fastestimator.backend.to_tensor import to_tensor
-from fastestimator.op.op import get_current_ops, get_inputs_by_op, write_outputs_by_op
+from fastestimator.op.op import get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model.model import ModelOp
 from fastestimator.op.tensorop.model.update import UpdateOp
-from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler
-from fastestimator.util.util import NonContext, lcms, per_replica_to_global, to_list
+from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
+from fastestimator.util.util import NonContext, per_replica_to_global, to_list
+
+Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
 
 class BaseNetwork:
@@ -52,12 +55,23 @@ class BaseNetwork:
         Raises:
             AssertionError: If any of the ops are not TensorOps.
         """
-        for op in self.ops:
-            if isinstance(op, Scheduler):
-                for epoch_op in op.get_all_values():
-                    assert isinstance(epoch_op, TensorOp), "unsupported op format, must provide TensorOp in Network"
-            else:
-                assert isinstance(op, TensorOp), "unsupported op format, must provide TensorOp in Network"
+        for op in get_current_items(self.ops):
+            assert isinstance(op, TensorOp), "unsupported op format, must provide TensorOp in Network"
+
+    def get_scheduled_items(self, mode: str) -> List[Any]:
+        """Get a list of items considered for scheduling.
+
+        Args:
+            mode: Current execution mode.
+
+        Returns:
+            List of schedulable items in Network.
+        """
+        if mode == "train":
+            all_items = self.ops + [model.optimizer for model in self.models]
+        else:
+            all_items = self.ops
+        return all_items
 
     def load_epoch(self, mode: str, epoch: int, output_keys: Optional[Set[str]] = None, warmup: bool = False) -> None:
         """Prepare the network to run a given epoch and mode.
@@ -71,11 +85,11 @@ class BaseNetwork:
             output_keys: What keys must be moved from the GPU back to the CPU after executing a step.
             warmup: Whether to prepare to execute it warmup mode or not (end users can likely ignore this argument).
         """
-        self.effective_inputs[mode] = self._get_effective_input_keys_epoch(mode, epoch)
-        self.effective_outputs[mode] = self._get_all_output_keys_epoch(mode, epoch)
+        self.effective_inputs[mode] = self.get_effective_input_keys(mode, epoch)
+        self.effective_outputs[mode] = self.get_all_output_keys(mode, epoch)
         if output_keys:
             self.effective_outputs[mode] = self.effective_outputs[mode].intersection(output_keys)
-        self.epoch_ops = get_current_ops(self.ops, mode, epoch)
+        self.epoch_ops = get_current_items(self.ops, mode, epoch)
         self.epoch_models = set(op.model for op in self.epoch_ops if isinstance(op, (UpdateOp, ModelOp)))
         gradient_ops = [op for op in self.epoch_ops if hasattr(op, "retain_graph")]
         for idx, gradient_op in enumerate(gradient_ops):
@@ -100,17 +114,12 @@ class BaseNetwork:
             All of the keys associated with model losses in this network.
         """
         loss_keys = set()
-        for op in self.ops:
-            if isinstance(op, Scheduler):
-                for epoch_op in op.get_all_values():
-                    if isinstance(epoch_op, UpdateOp):
-                        loss_keys.update(epoch_op.inputs)
-            else:
-                if isinstance(op, UpdateOp):
-                    loss_keys.update(op.inputs)
+        for op in get_current_items(self.ops):
+            if isinstance(op, UpdateOp):
+                loss_keys.update(op.inputs)
         return loss_keys
 
-    def _get_effective_input_keys_epoch(self, mode: str, epoch: int) -> Set[str]:
+    def get_effective_input_keys(self, mode: str, epoch: int) -> Set[str]:
         """Determine which keys need to be provided as input to the network during the given `epoch`.
 
         Args:
@@ -122,28 +131,13 @@ class BaseNetwork:
         """
         input_keys = set()
         produced_keys = set()
-        for op in get_current_ops(self.ops, mode, epoch):
+        for op in get_current_items(self.ops, mode, epoch):
             input_keys.update(set(key for key in op.inputs if key not in produced_keys))
             produced_keys.update(op.outputs)
         return input_keys
 
-    def get_all_output_keys(self, mode: str, total_epochs: int) -> Set[str]:
-        """Get all of the keys that will be generated by the network between epoch 1 and `total_epochs`.
-
-        Args:
-            mode: The execution mode to consider. One of 'train', 'eval', 'test', or 'infer'.
-            total_epochs: The maximum epoch number to consider when searching for outputs.
-
-        Returns:
-            The keys that will be generated by the network's Ops from epoch 1 to `total_epochs` for the given `mode`.
-        """
-        output_keys = set()
-        for epoch in self.get_signature_epochs(total_epochs):
-            output_keys.update(self._get_all_output_keys_epoch(mode, epoch))
-        return output_keys
-
-    def _get_all_output_keys_epoch(self, mode: str, epoch: int) -> Set[str]:
-        """Get all of the keys that will be generated by the network during the given `epoch`.
+    def get_all_output_keys(self, mode: str, epoch: int) -> Set[str]:
+        """Get all of the keys that will be generated by the network during the given `epoch` and `mode`.
 
         Args:
             mode: The execution mode to consider. One of 'train', 'eval', 'test', or 'infer'.
@@ -153,36 +147,9 @@ class BaseNetwork:
             The keys that will be generated by the network's Ops during the `epoch` for the given `mode`.
         """
         output_keys = set()
-        for op in get_current_ops(self.ops, mode, epoch):
+        for op in get_current_items(self.ops, mode, epoch):
             output_keys.update(op.outputs)
         return output_keys
-
-    def get_signature_epochs(self, total_epochs: int) -> Set[int]:
-        """Find all epochs where the network changes due to schedulers.
-
-        Args:
-            total_epochs: The maximum epoch number to consider when searching for signature epochs.
-
-        Returns:
-            The epoch numbers which correspond to changes in the Network.
-        """
-        signature_epochs = {1}
-        epoch_keys = {1}
-        repeat_cycles = {1}
-        for x in self.ops + [model.optimizer for model in self.models]:
-            if isinstance(x, EpochScheduler):
-                epoch_keys.update(x.epoch_dict.keys())
-            elif isinstance(x, RepeatScheduler):
-                repeat_cycles.add(x.cycle_length)
-        least_common_cycle = lcms(*repeat_cycles)
-        epoch_keys = sorted(epoch_keys)
-        for idx, epoch in enumerate(epoch_keys):
-            if idx + 1 < len(epoch_keys):
-                signature_epochs.update(range(epoch, epoch + min(epoch_keys[idx + 1] - epoch, least_common_cycle)))
-            else:
-                signature_epochs.update(range(epoch, epoch + least_common_cycle))
-        signature_epochs = set(epoch for epoch in signature_epochs if epoch <= total_epochs)
-        return signature_epochs
 
     @staticmethod
     def _forward_batch(batch: MutableMapping[str, Any], state: Dict[str, Any], ops: List[TensorOp]) -> None:
@@ -228,7 +195,7 @@ class BaseNetwork:
         raise NotImplementedError
 
 
-def _collect_models(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> Set[Union[tf.keras.Model, torch.nn.Module]]:
+def _collect_models(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> Set[Model]:
     """Collect all model instances from amongst a list of ops.
 
     Args:
@@ -238,11 +205,8 @@ def _collect_models(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> Set[
         All of the model instances contained within the `ops`.
     """
     models = set()
-    for op in ops:
-        if isinstance(op, Scheduler):
-            models_in_schedule = set(x.model for x in op.get_all_values() if isinstance(x, (ModelOp, UpdateOp)))
-            models.update(models_in_schedule)
-        elif isinstance(op, (ModelOp, UpdateOp)):
+    for op in get_current_items(ops):
+        if isinstance(op, (ModelOp, UpdateOp)):
             models.add(op.model)
     return models
 
@@ -530,12 +494,10 @@ class TFNetwork(BaseNetwork):
         return data
 
 
-def build(
-    model_fn: Callable[[], Union[tf.keras.Model, torch.nn.Module]],
-    optimizer_fn: Union[str, Scheduler, Callable, List[str], List[Callable], List[Scheduler], None],
-    weights_path: Union[str, None, List[Union[str, None]]] = None,
-    model_names: Union[str, List[str], None] = None
-) -> Union[tf.keras.Model, torch.nn.Module, List[tf.keras.Model], List[torch.nn.Module]]:
+def build(model_fn: Callable[[], Union[Model, List[Model]]],
+          optimizer_fn: Union[str, Scheduler, Callable, List[str], List[Callable], List[Scheduler], None],
+          weights_path: Union[str, None, List[Union[str, None]]] = None,
+          model_names: Union[str, List[str], None] = None) -> Union[Model, List[Model]]:
     """Build model instances and associate them with optimizers.
 
     This method can be used with TensorFlow models / optimizers:
@@ -610,11 +572,11 @@ def build(
     return models
 
 
-def _fe_compile(model: Union[tf.keras.Model, torch.nn.Module],
+def _fe_compile(model: Model,
                 optimizer_fn: Union[str, Scheduler, Callable, None],
                 weight: Union[str, None],
                 name: str,
-                framework: str) -> Union[tf.keras.Model, torch.nn.Module]:
+                framework: str) -> Model:
     """A function to bundle models with their optimizers.
 
     Args:
@@ -644,8 +606,7 @@ def _fe_compile(model: Union[tf.keras.Model, torch.nn.Module],
     return model
 
 
-def _build_optimizer(optimizer_fn: Union[str, Callable, None],
-                     model: Union[tf.keras.Model, torch.nn.Module],
+def _build_optimizer(optimizer_fn: Union[str, Callable, None], model: Model,
                      framework: str) -> Union[None, tf.optimizers.Optimizer, torch.optim.Optimizer]:
     """A helper method to instantiate an optimizer.
 
@@ -697,8 +658,7 @@ def _optimizer_fn_from_string(name: str, framework: str) -> Callable:
     return optimizer_fn
 
 
-def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None],
-                               model: Union[tf.keras.Model, torch.nn.Module],
+def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None], model: Model,
                                framework: str) -> Union[None, tf.optimizers.Optimizer, torch.optim.Optimizer]:
     """A helper function to invoke an optimizer function.
 

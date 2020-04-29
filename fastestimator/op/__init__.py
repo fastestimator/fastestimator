@@ -13,4 +13,4 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.op import numpyop, tensorop
-from fastestimator.op.op import Op, get_current_ops, get_inputs_by_op, write_outputs_by_op
+from fastestimator.op.op import Op, get_inputs_by_op, write_outputs_by_op

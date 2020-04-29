@@ -45,10 +45,13 @@ class BestModelSaver(Trace):
             assert hasattr(model, "loss_name"), "cannot infer model loss name, please put the model to UpdateOp first"
             assert len(model.loss_name) == 1, "the model has more than one losses, please provide the metric explicitly"
             metric = next(iter(model.loss_name))
-        super().__init__(mode="eval", inputs=metric)
+        super().__init__(mode="eval",
+                         inputs=metric,
+                         outputs=["since_best_{}".format(metric), "{}_{}".format(save_best_mode, metric)])
         self.model = model
         self.save_dir = save_dir
         self.save_best_mode = save_best_mode
+        self.since_best = 0
         if self.save_best_mode == "min":
             self.best = np.Inf
             self.monitor_op = np.less
@@ -63,8 +66,13 @@ class BestModelSaver(Trace):
         return self.inputs[0]
 
     def on_epoch_end(self, data: Data) -> None:
-        # No model will be saved when save_dir is None, which makes smoke test easier.
-        if self.save_dir and self.monitor_op(data[self.metric], self.best):
+        if self.monitor_op(data[self.metric], self.best):
             self.best = data[self.metric]
-            model_name = "{}_best_{}".format(self.model.model_name, self.metric)
-            save_model(self.model, self.save_dir, model_name)
+            self.since_best = 0
+            if self.save_dir:
+                model_name = "{}_best_{}".format(self.model.model_name, self.metric)
+                save_model(self.model, self.save_dir, model_name)
+        else:
+            self.since_best += 1
+        data.write_with_log(self.outputs[0], self.since_best)
+        data.write_with_log(self.outputs[1], self.best)

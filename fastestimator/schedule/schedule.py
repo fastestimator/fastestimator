@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Dict, Generic, List, Optional, TypeVar
+from typing import Any, Dict, Generic, Iterable, List, Optional, TypeVar, Union
+
+from fastestimator.util.util import to_set
 
 T = TypeVar('T')
 
@@ -98,14 +100,12 @@ class EpochScheduler(Scheduler[T]):
             particular epoch.
 
     Raises:
-        AssertionError: If the `epoch_dict` is of the wrong type, is missing information for the first epoch, or
-            contains invalid keys.
+        AssertionError: If the `epoch_dict` is of the wrong type, or contains invalid keys.
     """
     def __init__(self, epoch_dict: Dict[int, T]) -> None:
         assert isinstance(epoch_dict, dict), "must provide dictionary as epoch_dict"
         self.epoch_dict = epoch_dict
         self.keys = sorted(self.epoch_dict)
-        assert 1 in self.epoch_dict, "epoch 1 is missing in dictionary, use None if no op is needed"
         for key in self.keys:
             assert isinstance(key, int), "found non-integer key: {}".format(key)
             assert key >= 1, "found non-positive key: {}".format(key)
@@ -114,13 +114,17 @@ class EpochScheduler(Scheduler[T]):
         if epoch in self.keys:
             value = self.epoch_dict[epoch]
         else:
-            value = self.epoch_dict[self._get_last_key(epoch)]
+            last_key = self._get_last_key(epoch)
+            if last_key is None:
+                value = None
+            else:
+                value = self.epoch_dict[last_key]
         return value
 
     def get_all_values(self) -> List[Optional[T]]:
         return list(self.epoch_dict.values())
 
-    def _get_last_key(self, epoch: int) -> int:
+    def _get_last_key(self, epoch: int) -> Union[int, None]:
         """Find the nearest prior key to the given epoch.
 
         Args:
@@ -129,9 +133,61 @@ class EpochScheduler(Scheduler[T]):
         Returns:
             The largest epoch number <= the given `epoch` that is in the `epoch_dict`.
         """
-        last_key = 1
+        last_key = None
         for key in self.keys:
             if key > epoch:
                 break
             last_key = key
         return last_key
+
+
+def get_signature_epochs(items: List[Any], total_epochs: int, mode: Optional[str] = None) -> List[int]:
+    """Find all epochs of changes due to schedulers.
+
+    Args:
+        items: List of items to scan from.
+        total_epochs: The maximum epoch number to consider when searching for signature epochs.
+        mode: Current execution mode. If None, all execution modes will be considered.
+
+    Returns:
+        The epoch numbers of changes.
+    """
+    unique_configs = []
+    signature_epochs = []
+    for epoch in range(1, total_epochs + 1):
+        epoch_config = get_current_items(items, run_modes=mode, epoch=epoch)
+        if epoch_config not in unique_configs:
+            unique_configs.append(epoch_config)
+            signature_epochs.append(epoch)
+    return signature_epochs
+
+
+def get_current_items(items: Iterable[Union[T, Scheduler[T]]],
+                      run_modes: Optional[Union[str, Iterable[str]]] = None,
+                      epoch: Optional[int] = None) -> List[T]:
+    """Select items which should be executed for given mode and epoch.
+
+    Args:
+        items: A list of possible items or Schedulers of items to choose from.
+        run_modes: The desired execution mode. One or more of "train", "eval", "test", or "infer". If None, items of
+            all modes will be returned.
+        epoch: The desired execution epoch. If None, items across all epochs will be returned.
+
+    Returns:
+        The items which should be executed.
+    """
+    selected_items = []
+    run_modes = to_set(run_modes)
+    for item in items:
+        if isinstance(item, Scheduler):
+            if epoch is None:
+                item = item.get_all_values()
+            else:
+                item = [item.get_current_value(epoch)]
+        else:
+            item = [item]
+        for item_ in item:
+            if item_ and (not run_modes or not hasattr(item_, "mode") or not item_.mode
+                          or item_.mode.intersection(run_modes)):
+                selected_items.append(item_)
+    return selected_items
