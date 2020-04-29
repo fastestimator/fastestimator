@@ -15,7 +15,7 @@ if __name__ == "__main__":
     # 2. The expression for the following setup is "--epochs 2 --batch_size 2 --max_steps_per_epoch 10"
     # 3. The syntax of this expression is different from run_notebook.py
     style_img_path = os.path.abspath(os.path.join(__file__, "..", "Vassily_Kandinsky,_1913_-_Composition_7.jpg"))
-    train_info = "--epochs 2 --batch_size 2 --max_steps_per_epoch 10 --style_img_path {}".format(style_img_path)
+    train_info = "--epochs 2 --batch_size 4 --max_steps_per_epoch 10 --style_img_path {}".format(style_img_path)
 
     # Do you want to run "fastestimator test"? (bool)
     need_test = False
