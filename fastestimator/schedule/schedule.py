@@ -141,32 +141,25 @@ class EpochScheduler(Scheduler[T]):
         return last_key
 
 
-def get_signature_epochs(items: List[Any], total_epochs: int) -> Set[int]:
+def get_signature_epochs(items: List[Any], total_epochs: int, mode: Optional[str] = None) -> List[int]:
     """Find all epochs of changes due to schedulers.
 
     Args:
         items: List of items to scan from.
         total_epochs: The maximum epoch number to consider when searching for signature epochs.
+        mode: Current execution mode, if None, all execution modes will be considered.
 
     Returns:
         The epoch numbers of changes.
     """
-    signature_epochs = {1}
-    epoch_keys = {1}
-    repeat_cycles = {1}
-    for item in items:
-        if isinstance(item, EpochScheduler):
-            epoch_keys.update(item.epoch_dict.keys())
-        elif isinstance(item, RepeatScheduler):
-            repeat_cycles.add(item.cycle_length)
-    least_common_cycle = lcms(*repeat_cycles)
-    epoch_keys = sorted(epoch_keys)
-    for idx, epoch in enumerate(epoch_keys):
-        if idx + 1 < len(epoch_keys):
-            signature_epochs.update(range(epoch, epoch + min(epoch_keys[idx + 1] - epoch, least_common_cycle)))
-        else:
-            signature_epochs.update(range(epoch, epoch + least_common_cycle))
-    signature_epochs = set(epoch for epoch in signature_epochs if epoch <= total_epochs)
+    signature_epochs = [1]
+    unique_configs = []
+    for epoch in range(2, total_epochs+1):
+        
+
+    # possible_combinations = []
+    # for epoch in range(1, total_epochs+1):
+
     return signature_epochs
 
 

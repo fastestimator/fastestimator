@@ -206,13 +206,14 @@ class Estimator:
         """
         all_traces = get_current_items(self.traces_in_use, run_modes={"train", "eval"})
         # sort all_traces
-        all_schedules = self.network.ops + [
-            model.optimizer for model in self.network.models
-        ] + self.pipeline.ops + list(self.pipeline.data.values()) + [self.pipeline.batch_size] + self.traces_in_use
-        signature_epochs = get_signature_epochs(all_schedules, self.system.total_epochs)
         monitor_names = self.monitor_names
-        for epoch in signature_epochs:
-            for mode in self.pipeline.get_modes(epoch) - {"test"}:
+        for mode in self.pipeline.get_modes() - {"test"}:
+            scheduled_items = self.pipeline.get_items(mode) + self.network.get_items(mode) + self.get_items(mode)
+            signature_epochs = get_signature_epochs(scheduled_items, self.system.total_epochs, mode=mode)
+            has_data_epochs = self.pipeline.has_data_epochs(mode=mode)
+            for epoch in signature_epochs:
+                if epoch not in has_data_epochs:
+                    continue
                 # key checking
                 loader = self._configure_loader(self.pipeline.get_loader(mode, epoch))
                 with Suppressor():
@@ -240,6 +241,17 @@ class Estimator:
                 self.network.run_step(batch)
                 self.network.unload_epoch()
         assert not monitor_names, "found missing key(s): {}".format(monitor_names)
+
+    def get_items(self, mode: [str]) -> List[Any]:
+        """Get a list of items considered for scheduling.
+
+        Args:
+            mode: Current execution mode.
+
+        Returns:
+            List of schedulable items in estimator.
+        """
+        return self.traces_in_use
 
     def _start(self, run_modes: Set[str]) -> None:
         """The outer training loop.
@@ -283,8 +295,10 @@ class Estimator:
         self.system.batch_idx = None
         with Suppressor():
             batch = next(iterator)
-        traces = self._sort_traces(traces, available_outputs=to_set(batch.keys()) |
-                                   self.network.get_all_output_keys(self.system.mode, self.system.epoch_idx))
+        traces = self._sort_traces(
+            traces,
+            available_outputs=to_set(batch.keys())
+            | self.network.get_all_output_keys(self.system.mode, self.system.epoch_idx))
         self._run_traces_on_epoch_begin(traces=traces)
         while True:
             try:
