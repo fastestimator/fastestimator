@@ -24,8 +24,7 @@ from fastestimator.op.op import get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model.model import ModelOp
 from fastestimator.op.tensorop.model.update import UpdateOp
-from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items, \
-    get_signature_epochs
+from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
 from fastestimator.util.util import NonContext, per_replica_to_global, to_list
 
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
@@ -136,18 +135,6 @@ class BaseNetwork:
         for op in get_current_items(self.ops, mode, epoch):
             output_keys.update(op.outputs)
         return output_keys
-
-    def get_signature_epochs(self, total_epochs: int) -> Set[int]:
-        """Find all epochs where the network changes due to schedulers.
-
-        Args:
-            total_epochs: The maximum epoch number to consider when searching for signature epochs.
-
-        Returns:
-            The epoch numbers which correspond to changes in the Network.
-        """
-        signature_epochs = get_signature_epochs(self.ops + [model.optimizer for model in self.models], total_epochs)
-        return signature_epochs
 
     @staticmethod
     def _forward_batch(batch: MutableMapping[str, Any], state: Dict[str, Any], ops: List[TensorOp]) -> None:
@@ -495,8 +482,7 @@ class TFNetwork(BaseNetwork):
 def build(model_fn: Callable[[], Union[Model, List[Model]]],
           optimizer_fn: Union[str, Scheduler, Callable, List[str], List[Callable], List[Scheduler], None],
           weights_path: Union[str, None, List[Union[str, None]]] = None,
-          model_names: Union[str, List[str], None] = None
-          ) -> Union[Model, List[Model]]:
+          model_names: Union[str, List[str], None] = None) -> Union[Model, List[Model]]:
     """Build model instances and associate them with optimizers.
 
     This method can be used with TensorFlow models / optimizers:
@@ -605,8 +591,7 @@ def _fe_compile(model: Model,
     return model
 
 
-def _build_optimizer(optimizer_fn: Union[str, Callable, None],
-                     model: Model,
+def _build_optimizer(optimizer_fn: Union[str, Callable, None], model: Model,
                      framework: str) -> Union[None, tf.optimizers.Optimizer, torch.optim.Optimizer]:
     """A helper method to instantiate an optimizer.
 
@@ -658,8 +643,7 @@ def _optimizer_fn_from_string(name: str, framework: str) -> Callable:
     return optimizer_fn
 
 
-def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None],
-                               model: Model,
+def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None], model: Model,
                                framework: str) -> Union[None, tf.optimizers.Optimizer, torch.optim.Optimizer]:
     """A helper function to invoke an optimizer function.
 

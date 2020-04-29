@@ -26,7 +26,7 @@ from torch.utils.data.dataloader import default_collate
 from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.op_dataset import OpDataset
 from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
-from fastestimator.schedule.schedule import Scheduler, get_current_items, get_signature_epochs
+from fastestimator.schedule.schedule import Scheduler, get_current_items
 from fastestimator.util.util import pad_batch, to_list, to_set
 
 DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
@@ -264,15 +264,3 @@ class Pipeline:
         """
         pad_batch(batch, self.pad_value)
         return default_collate(batch)
-
-    def get_signature_epochs(self, total_epochs: int) -> Set[int]:
-        """Find the epochs on which the behavior of the Pipeline changes (due to Schedulers).
-
-        Args:
-            total_epochs: The maximum epoch number to consider when searching for signature epochs.
-
-        Returns:
-            The epoch indices on which the behavior of the Pipeline changes.
-        """
-        signature_epochs = get_signature_epochs(self.ops + list(self.data.values()) + [self.batch_size], total_epochs)
-        return signature_epochs

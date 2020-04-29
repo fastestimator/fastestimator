@@ -206,10 +206,10 @@ class Estimator:
         """
         all_traces = get_current_items(self.traces_in_use, run_modes={"train", "eval"})
         # sort all_traces
-        pipeline_signature_epochs = self.pipeline.get_signature_epochs(self.system.total_epochs)
-        network_signature_epochs = self.network.get_signature_epochs(self.system.total_epochs)
-        trace_signature_epochs = get_signature_epochs(self.traces_in_use, self.system.total_epochs)
-        signature_epochs = pipeline_signature_epochs | network_signature_epochs | trace_signature_epochs
+        all_schedules = self.network.ops + [
+            model.optimizer for model in self.network.models
+        ] + self.pipeline.ops + list(self.pipeline.data.values()) + [self.pipeline.batch_size] + self.traces_in_use
+        signature_epochs = get_signature_epochs(all_schedules, self.system.total_epochs)
         monitor_names = self.monitor_names
         for epoch in signature_epochs:
             for mode in self.pipeline.get_modes(epoch) - {"test"}:
