@@ -60,7 +60,7 @@ class Data(ChainMap[str, Any]):
         """
         self.maps[1][key] = value
 
-    def read_logs(self, extra_keys: Set[str]) -> Dict[str, Any]:
+    def read_logs(self, extra_keys: Set[str] = set()) -> Dict[str, Any]:
         """Read all values from the `Data` dictionary which were intended to be logged.
 
         Args:

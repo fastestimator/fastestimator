@@ -275,8 +275,8 @@ class Estimator:
         all_traces = get_current_items(self.traces_in_use, run_modes=run_modes)
         self._sort_traces(all_traces)
         self._run_traces_on_begin(traces=all_traces)
-        if "train" in run_modes or "eval" in run_modes:
-            try:
+        try:
+            if "train" in run_modes or "eval" in run_modes:
                 for self.system.epoch_idx in range(1, self.system.total_epochs + 1):
                     if "train" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
                         self.system.mode = "train"
@@ -284,10 +284,10 @@ class Estimator:
                     if "eval" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
                         self.system.mode = "eval"
                         self._run_epoch()
-            except EarlyStop:
-                pass  # On early stopping we still want to run the final traces and return results
-        else:
-            self._run_epoch()
+            else:
+                self._run_epoch()
+        except EarlyStop:
+            pass  # On early stopping we still want to run the final traces and return results
         self._run_traces_on_end(traces=all_traces)
 
     def _run_epoch(self) -> None:
