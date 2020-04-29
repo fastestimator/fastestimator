@@ -36,7 +36,6 @@ def test_apphub(report: Dict[str, Dict[str, float]], fail_list: List[str]) -> No
         for f in filenames:
             if not f.endswith(".py"):
                 continue
-
             print(os.path.abspath(os.path.join(dirpath, f)))
             test_name = os.path.join(os.path.relpath(dirpath, apphub_scripts_dir), f)
 
@@ -65,6 +64,8 @@ def test_tutorial(report: Dict[str, Dict[str, float]], fail_list: List[str]) -> 
         for f in filenames:
             if not f.endswith(".ipynb"):
                 continue
+            if f != "t06_summary.ipynb":
+                continue
 
             print(os.path.join(dirpath, f))
             rel_path = os.path.relpath(dirpath, src_tutorial)
@@ -76,7 +77,8 @@ def test_tutorial(report: Dict[str, Dict[str, float]], fail_list: List[str]) -> 
             stderr_file = os.path.join(dis_dir, "stderr.txt")
 
             start_time = time.time()
-            result = os.system("papermill {} {} 2>> {} -k nightly_build".format(nb_in_file, nb_out_file, stderr_file))
+            result = os.system("papermill {} {} 2>> {} -k nightly_build --cwd {}".format(
+                nb_in_file, nb_out_file, stderr_file, dirpath))
             exec_time = (time.time() - start_time) / 60
             time.sleep(10)
 
@@ -95,7 +97,7 @@ if __name__ == "__main__":
     report = {}
     fail_list = []
 
-    test_apphub(report, fail_list)
+    # test_apphub(report, fail_list)
     test_tutorial(report, fail_list)
 
     print_report(report)
