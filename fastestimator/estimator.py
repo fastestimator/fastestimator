@@ -52,7 +52,7 @@ class Estimator:
         monitor_names: Additional keys from the data dictionary to be written into the logs.
     """
     pipeline: Pipeline
-    traces: List[Trace]
+    traces: List[Union[Trace, Scheduler[Trace]]]
     monitor_names: Set[str]
 
     def __init__(self,
