@@ -60,14 +60,10 @@ class Data(ChainMap[str, Any]):
         """
         self.maps[1][key] = value
 
-    def read_logs(self, extra_keys: Set[str] = set()) -> Dict[str, Any]:
+    def read_logs(self) -> Dict[str, Any]:
         """Read all values from the `Data` dictionary which were intended to be logged.
-
-        Args:
-            extra_keys: Any keys which should be logged, but which were not put into the `Data` dictionary via the
-                write_with_log function.
 
         Returns:
             A dictionary of all of the keys and values to be logged.
         """
-        return {**{k: v for k, v in self.maps[1].items() if k in extra_keys}, **self.maps[0]}
+        return self.maps[0]
