@@ -32,12 +32,10 @@ class CSVLogger(Trace):
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
     """
-    def __init__(
-        self,
-        filename: str,
-        monitor_names: Optional[Union[List[str], str]] = None,
-        mode: Union[str, Set[str]] = ("eval", "test")
-    ) -> None:
+    def __init__(self,
+                 filename: str,
+                 monitor_names: Optional[Union[List[str], str]] = None,
+                 mode: Union[str, Set[str]] = ("eval", "test")) -> None:
         super().__init__(inputs="*" if monitor_names is None else monitor_names, mode=mode)
         self.filename = filename
         self.data = None
@@ -49,7 +47,7 @@ class CSVLogger(Trace):
         self.data["mode"].append(self.system.mode)
         self.data["epoch"].append(self.system.epoch_idx)
         if "*" in self.inputs:
-            for key, value in data.read_logs(set()).items():
+            for key, value in data.read_logs().items():
                 self.data[key].append(value)
         else:
             for key in self.inputs:
