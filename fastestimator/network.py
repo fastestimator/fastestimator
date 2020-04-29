@@ -58,7 +58,7 @@ class BaseNetwork:
         for op in get_current_items(self.ops):
             assert isinstance(op, TensorOp), "unsupported op format, must provide TensorOp in Network"
 
-    def get_scheduled_items(self, mode: [str]) -> List[Any]:
+    def get_schedule_items(self, mode: [str]) -> List[Any]:
         """Get a list of items considered for scheduling.
 
         Args:
@@ -67,9 +67,10 @@ class BaseNetwork:
         Returns:
             List of schedulable items in Network.
         """
-        all_items = self.ops
         if mode == "train":
-            all_items += [model.optimizer for model in self.models]
+            all_items = self.ops + [model.optimizer for model in self.models]
+        else:
+            all_items = self.ops
         return all_items
 
     def load_epoch(self, mode: str, epoch: int, output_keys: Optional[Set[str]] = None, warmup: bool = False) -> None:

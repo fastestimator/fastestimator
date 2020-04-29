@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Generic, Iterable, List, Optional, Set, TypeVar, Union
+from typing import Any, Dict, Generic, Iterable, List, Optional, TypeVar, Union
 
-from fastestimator.util.util import lcms, to_set
+from fastestimator.util.util import to_set
 
 T = TypeVar('T')
 
@@ -152,14 +152,13 @@ def get_signature_epochs(items: List[Any], total_epochs: int, mode: Optional[str
     Returns:
         The epoch numbers of changes.
     """
-    signature_epochs = [1]
     unique_configs = []
-    for epoch in range(2, total_epochs+1):
-        
-
-    # possible_combinations = []
-    # for epoch in range(1, total_epochs+1):
-
+    signature_epochs = []
+    for epoch in range(1, total_epochs + 1):
+        epoch_config = get_current_items(items, run_modes=mode, epoch=epoch)
+        if epoch_config not in unique_configs:
+            unique_configs.append(epoch_config)
+            signature_epochs.append(epoch)
     return signature_epochs
 
 
@@ -188,6 +187,7 @@ def get_current_items(items: Iterable[Union[T, Scheduler[T]]],
         else:
             item = [item]
         for item_ in item:
-            if item_ and (not run_modes or not item_.mode or item_.mode.intersection(run_modes)):
+            if item_ and (not run_modes or not hasattr(item_, "mode") or not item_.mode
+                          or item_.mode.intersection(run_modes)):
                 selected_items.append(item_)
     return selected_items

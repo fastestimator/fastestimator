@@ -223,26 +223,6 @@ def draw() -> None:
     print(Figlet(font="slant").renderText("FastEstimator"))
 
 
-def lcms(*numbers: int):
-    """Compute the least common multiple amongst a list of numbers.
-
-    ```python
-    x = fe.util.lcms(2, 3, 4)  # 12
-    x = fe.util.lcms(11, 13)  # 143
-    ```
-
-    Args:
-        *numbers: Some numbers to compare.
-
-    Returns:
-        The least common multiple between the `numbers`.
-    """
-    def lcm(a, b):
-        return int(a * b / gcd(a, b))
-
-    return reduce(lcm, numbers)
-
-
 def prettify_metric_name(metric: str) -> str:
     """Add spaces to camel case words, then swap _ for space, and capitalize each word.
 

@@ -217,11 +217,12 @@ class Estimator:
         self._sort_traces(all_traces)
         monitor_names = self.monitor_names
         for mode in self.pipeline.get_modes() - {"test"}:
-            scheduled_items = self.pipeline.get_items(mode) + self.network.get_items(mode) + self.get_items(mode)
+            scheduled_items = self.pipeline.get_schedule_items(mode) + self.network.get_schedule_items(
+                mode) + self.get_schedule_items(mode)
             signature_epochs = get_signature_epochs(scheduled_items, self.system.total_epochs, mode=mode)
-            has_data_epochs = self.pipeline.has_data_epochs(mode=mode)
+            epochs_with_data = self.pipeline.get_epochs_with_data(total_epochs=self.system.total_epochs, mode=mode)
             for epoch in signature_epochs:
-                if epoch not in has_data_epochs:
+                if epoch not in epochs_with_data:
                     continue
                 # key checking
                 loader = self._configure_loader(self.pipeline.get_loader(mode, epoch))
@@ -251,7 +252,7 @@ class Estimator:
                 self.network.unload_epoch()
         assert not monitor_names, "found missing key(s): {}".format(monitor_names)
 
-    def get_items(self, mode: [str]) -> List[Any]:
+    def get_schedule_items(self, mode: [str]) -> List[Any]:
         """Get a list of items considered for scheduling.
 
         Args:

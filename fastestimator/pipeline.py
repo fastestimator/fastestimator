@@ -164,18 +164,35 @@ class Pipeline:
             if idx == num_steps:
                 break
 
-    def get_scheduled_items(self, mode: [str]) -> List[Any]:
-        """Get a list of scheduled items.
+    def get_schedule_items(self, mode: [str]) -> List[Any]:
+        """Get a list of items considered for scheduling.
 
         Args:
             mode: Current execution mode.
 
         Returns:
-            List of scheduled items in Pipeline.
+            List of schedulable items in Pipeline.
         """
         all_items = self.ops + [self.batch_size] + [self.data[mode]]
-        scheduled_items = [item for item in all_items if isinstance(item, Scheduler)]
-        return scheduled_items
+        return all_items
+
+    def get_epochs_with_data(self, total_epochs: int, mode: [str]) -> Set[int]:
+        """Get a set of epoch indices that contains data given mode.
+
+        Args:
+            total_epochs: Total number of epochs.
+            mode: Current execution mode.
+
+        Returns:
+            Set of epoch indices.
+        """
+        epochs_with_data = set()
+        dataset = self.data[mode]
+        if isinstance(dataset, Scheduler):
+            epochs_with_data = set(epoch for epoch in range(1, total_epochs + 1) if dataset.get_current_value(epoch))
+        elif dataset:
+            epochs_with_data = set(range(1, total_epochs + 1))
+        return epochs_with_data
 
     def transform(self, data: Dict[str, Any], mode: str, epoch: int = 1) -> Dict[str, Any]:
         """Apply all pipeline operations on a given data instance for the specified `mode` and `epoch`.
