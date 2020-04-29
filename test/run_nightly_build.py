@@ -64,8 +64,6 @@ def test_tutorial(report: Dict[str, Dict[str, float]], fail_list: List[str]) -> 
         for f in filenames:
             if not f.endswith(".ipynb"):
                 continue
-            if f != "t06_summary.ipynb":
-                continue
 
             print(os.path.join(dirpath, f))
             rel_path = os.path.relpath(dirpath, src_tutorial)
@@ -97,7 +95,7 @@ if __name__ == "__main__":
     report = {}
     fail_list = []
 
-    # test_apphub(report, fail_list)
+    test_apphub(report, fail_list)
     test_tutorial(report, fail_list)
 
     print_report(report)
