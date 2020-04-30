@@ -175,7 +175,7 @@ class Estimator:
             trace = trace_deque.popleft()
             ins = set(trace.inputs)
             outs = set(trace.outputs)
-            if not ins:
+            if not ins or isinstance(trace, (TrainEssential, EvalEssential)):
                 sorted_traces.append(trace)
                 available_outputs |= outs
             elif "*" in ins:
@@ -252,7 +252,8 @@ class Estimator:
                 assert not unmet_requirements, \
                     "found missing key(s) during epoch {} mode {}: {}".format(epoch, mode, unmet_requirements)
                 self._sort_traces(traces, available_outputs=pipeline_output_keys | network_output_keys)
-                self.network.load_epoch(mode, epoch, output_keys=trace_input_keys.update(traces[0].inputs), warmup=True)
+                trace_input_keys.update(traces[0].inputs)
+                self.network.load_epoch(mode, epoch, output_keys=trace_input_keys, warmup=True)
                 self.network.run_step(batch)
                 self.network.unload_epoch()
         assert not monitor_names, "found missing key(s): {}".format(monitor_names)
