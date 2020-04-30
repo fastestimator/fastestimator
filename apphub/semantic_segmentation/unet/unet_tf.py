@@ -43,7 +43,8 @@ class CombineLeftRightMask(NumpyOp):
 
 def get_estimator(epochs=20,
                   batch_size=4,
-                  max_steps_per_epoch=None,
+                  max_train_steps_per_epoch=None,
+                  max_eval_steps_per_epoch=None,
                   save_dir=tempfile.mkdtemp(),
                   log_steps=20,
                   data_dir=None):
@@ -54,16 +55,16 @@ def get_estimator(epochs=20,
         eval_data=csv.split(0.2),
         batch_size=batch_size,
         ops=[
-            ReadImage(inputs="image", parent_path=csv.parent_path, outputs="image", grey_scale=True),
+            ReadImage(inputs="image", parent_path=csv.parent_path, outputs="image", color_flag='gray'),
             ReadImage(inputs="mask_left",
                       parent_path=csv.parent_path,
                       outputs="mask_left",
-                      grey_scale=True,
+                      color_flag='gray',
                       mode='!infer'),
             ReadImage(inputs="mask_right",
                       parent_path=csv.parent_path,
                       outputs="mask_right",
-                      grey_scale=True,
+                      color_flag='gray',
                       mode='!infer'),
             CombineLeftRightMask(inputs=("mask_left", "mask_right"), outputs="mask", mode='!infer'),
             Delete(keys=["mask_left", "mask_right"], mode='!infer'),
@@ -96,7 +97,8 @@ def get_estimator(epochs=20,
                              epochs=epochs,
                              log_steps=log_steps,
                              traces=traces,
-                             max_steps_per_epoch=max_steps_per_epoch)
+                             max_train_steps_per_epoch=max_train_steps_per_epoch,
+                             max_eval_steps_per_epoch=max_eval_steps_per_epoch)
 
     return estimator
 

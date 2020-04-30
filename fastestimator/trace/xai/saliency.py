@@ -26,9 +26,9 @@ from fastestimator.backend.squeeze import squeeze
 from fastestimator.backend.to_number import to_number
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
+from fastestimator.util.img_data import ImgData
 from fastestimator.util.util import to_list
 from fastestimator.xai.saliency import SaliencyNet
-from fastestimator.xai.util import XaiData
 
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
@@ -163,6 +163,6 @@ class Saliency(Trace):
                 args["Integrated {}".format(key)] = integrated[key]
             if smint:
                 args["SmInt {}".format(key)] = smint[key]
-        result = XaiData(**args)
+        result = ImgData(**args)
 
         data.write_without_log(self.outputs[0], result)

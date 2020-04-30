@@ -16,19 +16,18 @@ import os
 import time
 import warnings
 from copy import deepcopy
-from functools import lru_cache
 from typing import Any, Dict, List, MutableMapping, Optional, Set, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
+from torch.utils.data import DataLoader, Dataset, RandomSampler
+from torch.utils.data.dataloader import default_collate
+
 from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.op_dataset import OpDataset
 from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
-from fastestimator.op.op import get_current_ops
-from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler
-from fastestimator.util.util import lcms, pad_batch, to_list
-from torch.utils.data import DataLoader, Dataset, RandomSampler
-from torch.utils.data.dataloader import default_collate
+from fastestimator.schedule.schedule import Scheduler, get_current_items
+from fastestimator.util.util import pad_batch, to_list, to_set
 
 DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
 
@@ -81,22 +80,17 @@ class Pipeline:
                 Dataset.
         """
         fe_dataset = False
-        for mode, dataset in self.data.items():
-            if isinstance(dataset, Scheduler):
-                for ds in dataset.get_all_values():
-                    fe_dataset = self._verify_dataset(mode, ds, **kwargs) or fe_dataset
-            else:
-                fe_dataset = self._verify_dataset(mode, dataset, **kwargs) or fe_dataset
+        for dataset in get_current_items(self.data.values()):
+            fe_dataset = self._verify_dataset(dataset, **kwargs) or fe_dataset
         if not fe_dataset:
             assert kwargs['batch_size'] is None, "Pipeline only supports batch_size with built-in (FE) datasets"
             assert kwargs['ops'] is None, "Pipeline only supports ops with built-in (FE) datasets"
             assert kwargs['num_process'] is None, "Pipeline only support num_process with built-in (FE) datasets"
 
-    def _verify_dataset(self, mode: str, dataset: DataSource, **kwargs) -> bool:
+    def _verify_dataset(self, dataset: DataSource, **kwargs) -> bool:
         """A helper function to ensure that all of a dataset's arguments are correct.
 
         Args:
-            mode: The mode for which to verify the dataset. One of 'train', 'eval', or 'test'.
             dataset: The dataset to validate against.
             **kwargs: A selection of variables and their values which must be validated.
 
@@ -109,20 +103,11 @@ class Pipeline:
         """
         if isinstance(dataset, Dataset):
             # batch_size check
-            assert isinstance(self.batch_size, (Scheduler, int, type(None))), \
-                "unsupported batch_size format: {}".format(self.batch_size)
-            if isinstance(self.batch_size, Scheduler):
-                for batch_size in self.batch_size.get_all_values():
-                    assert isinstance(batch_size, (int, type(None))), \
-                        "unsupported batch_size format: {}".format(self.batch_size)
+            for batch_size in get_current_items(to_list(self.batch_size)):
+                assert isinstance(batch_size, int), "unsupported batch_size format: {}".format(type(batch_size))
             # ops check
-            for op in self.ops:
-                if isinstance(op, Scheduler):
-                    for epoch_op in op.get_all_values():
-                        assert isinstance(epoch_op, (type(None), NumpyOp)), \
-                            "unsupported op format, must provide NumpyOp in Pipeline"
-                else:
-                    assert isinstance(op, NumpyOp), "unsupported op format, must provide NumpyOp in Pipeline"
+            for op in get_current_items(self.ops):
+                assert isinstance(op, NumpyOp), "unsupported op format, must provide NumpyOp in Pipeline"
             # num_process check
             assert isinstance(self.num_process, int), "number of processes must be an integer"
             return True
@@ -135,15 +120,27 @@ class Pipeline:
                 warnings.warn("num_process will only be used for built-in dataset")
             return False
         else:
-            raise ValueError("Unsupported dataset type for {}".format(mode))
+            raise ValueError("Unsupported dataset type: {}".format(type(dataset)))
 
-    def get_modes(self) -> Set[str]:
+    def get_modes(self, epoch: Optional[int] = None) -> Set[str]:
         """Get the modes for which the Pipeline has data.
+
+        Args:
+            epoch: The current epoch index
 
         Returns:
             The modes for which the Pipeline has data.
         """
-        return set(self.data.keys())
+        if epoch is None:
+            all_modes = set(self.data.keys())
+        else:
+            all_modes = []
+            for mode, dataset in self.data.items():
+                if isinstance(dataset, Scheduler):
+                    dataset = dataset.get_current_value(epoch)
+                if dataset:
+                    all_modes.append(mode)
+        return to_set(all_modes)
 
     def benchmark(self, mode: str = "train", epoch: int = 1, num_steps: int = 1000, log_interval: int = 100) -> None:
         """Benchmark the pipeline processing speed.
@@ -167,6 +164,36 @@ class Pipeline:
             if idx == num_steps:
                 break
 
+    def get_scheduled_items(self, mode: str) -> List[Any]:
+        """Get a list of items considered for scheduling.
+
+        Args:
+            mode: Current execution mode.
+
+        Returns:
+            List of schedulable items in Pipeline.
+        """
+        all_items = self.ops + [self.batch_size] + [self.data[mode]]
+        return all_items
+
+    def get_epochs_with_data(self, total_epochs: int, mode: str) -> Set[int]:
+        """Get a set of epoch indices that contains data given mode.
+
+        Args:
+            total_epochs: Total number of epochs.
+            mode: Current execution mode.
+
+        Returns:
+            Set of epoch indices.
+        """
+        epochs_with_data = set()
+        dataset = self.data[mode]
+        if isinstance(dataset, Scheduler):
+            epochs_with_data = set(epoch for epoch in range(1, total_epochs + 1) if dataset.get_current_value(epoch))
+        elif dataset:
+            epochs_with_data = set(range(1, total_epochs + 1))
+        return epochs_with_data
+
     def transform(self, data: Dict[str, Any], mode: str, epoch: int = 1) -> Dict[str, Any]:
         """Apply all pipeline operations on a given data instance for the specified `mode` and `epoch`.
 
@@ -179,7 +206,7 @@ class Pipeline:
             The transformed data.
         """
         data = deepcopy(data)
-        ops = get_current_ops(self.ops, mode, epoch)
+        ops = get_current_items(self.ops, mode, epoch)
         forward_numpyop(ops, data, mode)
         for key, value in data.items():
             data[key] = np.expand_dims(value, 0)
@@ -245,7 +272,7 @@ class Pipeline:
                 collate_fn = None
             else:
                 collate_fn = self._pad_batch_collate
-            op_dataset = OpDataset(data, get_current_ops(self.ops, mode, epoch), mode)
+            op_dataset = OpDataset(data, get_current_items(self.ops, mode, epoch), mode)
             data = DataLoader(op_dataset,
                               batch_size=batch_size,
                               shuffle=False if isinstance(data, BatchDataset) else shuffle,
@@ -267,60 +294,3 @@ class Pipeline:
         """
         pad_batch(batch, self.pad_value)
         return default_collate(batch)
-
-    def get_signature_epochs(self, total_epochs: int) -> Set[int]:
-        """Find the epochs on which the behavior of the Pipeline changes (due to Schedulers).
-
-        Args:
-            total_epochs: The maximum epoch number to consider when searching for signature epochs.
-
-        Returns:
-            The epoch indices on which the behavior of the Pipeline changes.
-        """
-        signature_epochs = {1}
-        epoch_keys = {1}
-        repeat_cycles = {1}
-        for x in self.ops + list(self.data.values()) + [self.batch_size]:
-            if isinstance(x, EpochScheduler):
-                epoch_keys.update(x.epoch_dict.keys())
-            elif isinstance(x, RepeatScheduler):
-                repeat_cycles.add(x.cycle_length)
-        least_common_cycle = lcms(*repeat_cycles)
-        epoch_keys = sorted(epoch_keys)
-        for idx, epoch in enumerate(epoch_keys):
-            if idx + 1 < len(epoch_keys):
-                signature_epochs.update(range(epoch, epoch + min(epoch_keys[idx + 1] - epoch, least_common_cycle)))
-            else:
-                signature_epochs.update(range(epoch, epoch + least_common_cycle))
-        signature_epochs = set(epoch for epoch in signature_epochs if epoch <= total_epochs)
-        return signature_epochs
-
-    @lru_cache(maxsize=None, typed=True)
-    def get_all_output_keys(self, mode: str, total_epochs: int) -> Set[str]:
-        """Get the pipeline output keys for a given `mode`.
-
-        Args:
-            mode: The execution mode to be considered. This can be "train", "eval", "test", or "infer".
-            total_epochs: The maximum number of epochs to consider when searching for output keys.
-
-        Returns:
-            All of the output keys which the pipeline will generate for the given `mode`.
-
-        Raises:
-            AssertionError: If the Pipeline contains improperly formatted data.
-        """
-        output_keys = set()
-        for epoch in self.get_signature_epochs(total_epochs):
-            loader = self.get_loader(mode=mode, epoch=epoch)
-            if isinstance(loader, DataLoader):
-                if isinstance(loader.dataset, OpDataset) and not isinstance(loader.dataset.dataset, BatchDataset):
-                    data = loader.dataset.dataset[0]
-                    for op in loader.dataset.ops:
-                        output_keys.update(op.outputs)
-                else:
-                    data = loader.dataset[0]
-            else:
-                data = next(iter(loader))
-            assert isinstance(data, dict), "please make sure data output format is dictionary"
-            output_keys.update(data.keys())
-        return output_keys

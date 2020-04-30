@@ -22,13 +22,16 @@ from ast import literal_eval
 from contextlib import ContextDecorator
 from functools import reduce
 from math import gcd
-from typing import Any, Callable, List, MutableMapping, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, KeysView, List, MutableMapping, Optional, Set, Tuple, Type, TypeVar, Union
 
+import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 import torch
 from pyfiglet import Figlet
 from tensorflow.python.distribute.values import DistributedValues
+
+from fastestimator.backend.to_number import to_number
 
 STRING_TO_TORCH_DTYPE = {
     None: None,
@@ -50,6 +53,7 @@ STRING_TO_TORCH_DTYPE = {
 }
 
 T = TypeVar('T')
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 def parse_string_to_python(val: str) -> Any:
@@ -128,7 +132,7 @@ def to_set(data: Any) -> Set[Any]:
     if data is None:
         return set()
     if not isinstance(data, set):
-        if isinstance(data, (tuple, list)):
+        if isinstance(data, (tuple, list, KeysView)):
             data = set(data)
         else:
             data = {data}
@@ -217,26 +221,6 @@ def draw() -> None:
     """Print our name.
     """
     print(Figlet(font="slant").renderText("FastEstimator"))
-
-
-def lcms(*numbers: int):
-    """Compute the least common multiple amongst a list of numbers.
-
-    ```python
-    x = fe.util.lcms(2, 3, 4)  # 12
-    x = fe.util.lcms(11, 13)  # 143
-    ```
-
-    Args:
-        *numbers: Some numbers to compare.
-
-    Returns:
-        The least common multiple between the `numbers`.
-    """
-    def lcm(a, b):
-        return int(a * b / gcd(a, b))
-
-    return reduce(lcm, numbers)
 
 
 def prettify_metric_name(metric: str) -> str:
@@ -530,3 +514,73 @@ def get_num_devices():
         The number of available GPUs, or 1 if none are found.
     """
     return max(torch.cuda.device_count(), 1)
+
+
+def show_image(im: Union[np.ndarray, Tensor],
+               axis: plt.Axes = None,
+               fig: plt.Figure = None,
+               title: Optional[str] = None,
+               color_map: str = "inferno") -> Optional[plt.Figure]:
+    """Plots a given image onto an axis.
+
+    Args:
+        axis: The matplotlib axis to plot on, or None for a new plot.
+        fig: A reference to the figure to plot on, or None if new plot.
+        im: The image to display (width X height).
+        title: A title for the image.
+        color_map: Which colormap to use for greyscale images.
+    """
+    if axis is None:
+        fig, axis = plt.subplots(1, 1)
+    axis.axis('off')
+    # Compute width of axis for text font size
+    bbox = axis.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+    width, height = bbox.width * fig.dpi, bbox.height * fig.dpi
+    space = min(width, height)
+    if not hasattr(im, 'shape') or len(im.shape) < 2:
+        # text data
+        im = to_number(im)
+        if hasattr(im, 'shape') and len(im.shape) == 1:
+            im = im[0]
+        im = im.item()
+        if isinstance(im, bytes):
+            im = im.decode('utf8')
+        text = "{}".format(im)
+        axis.text(0.5,
+                  0.5,
+                  im,
+                  ha='center',
+                  transform=axis.transAxes,
+                  va='center',
+                  wrap=False,
+                  family='monospace',
+                  fontsize=min(45, space // len(text)))
+    else:
+        if isinstance(im, torch.Tensor) and len(im.shape) > 2:
+            # Move channel first to channel last
+            channels = list(range(len(im.shape)))
+            channels.append(channels.pop(0))
+            im = im.permute(*channels)
+        # image data
+        im = to_number(im)
+        if np.issubdtype(im.dtype, np.integer):
+            # im is already in int format
+            im = im.astype(np.uint8)
+        elif np.max(im) <= 1 and np.min(im) >= 0:  # im is [0,1]
+            im = (im * 255).astype(np.uint8)
+        elif np.min(im) >= -1 and np.max(im) <= 1:  # im is [-1, 1]
+            im = ((im + 1) * 127.5).astype(np.uint8)
+        else:  # im is in some arbitrary range, probably due to the Normalize Op
+            ma = abs(np.max(im, axis=tuple([i for i in range(len(im.shape) - 1)]) if len(im.shape) > 2 else None))
+            mi = abs(np.min(im, axis=tuple([i for i in range(len(im.shape) - 1)]) if len(im.shape) > 2 else None))
+            im = (((im + mi) / (ma + mi)) * 255).astype(np.uint8)
+        # matplotlib doesn't support (x,y,1) images, so convert them to (x,y)
+        if len(im.shape) == 3 and im.shape[2] == 1:
+            im = np.reshape(im, (im.shape[0], im.shape[1]))
+        if len(im.shape) == 2:
+            axis.imshow(im, cmap=plt.get_cmap(name=color_map))
+        else:
+            axis.imshow(im)
+    if title is not None:
+        axis.set_title(title, fontsize=min(20, 1 + width // len(title)), family='monospace')
+    return fig

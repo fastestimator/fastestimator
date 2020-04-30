@@ -220,7 +220,7 @@ class LossNet(nn.Module):
 
 def get_estimator(batch_size=4,
                   epochs=2,
-                  max_steps_per_epoch=None,
+                  max_train_steps_per_epoch=None,
                   log_steps=100,
                   style_weight=5.0,
                   content_weight=1.0,
@@ -232,6 +232,7 @@ def get_estimator(batch_size=4,
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     style_img = cv2.imread(style_img_path)
+    assert style_img is not None, "cannot load the style image, please go to the folder with style image"
     style_img = cv2.resize(style_img, (256, 256))
     style_img = (style_img.astype(np.float32) - 127.5) / 127.5
     style_img_t = np.expand_dims(style_img, axis=0)
@@ -269,7 +270,7 @@ def get_estimator(batch_size=4,
                              pipeline=pipeline,
                              traces=ModelSaver(model=model, save_dir=save_dir, frequency=1),
                              epochs=epochs,
-                             max_steps_per_epoch=max_steps_per_epoch,
+                             max_train_steps_per_epoch=max_train_steps_per_epoch,
                              log_steps=log_steps)
 
     return estimator

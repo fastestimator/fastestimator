@@ -13,4 +13,5 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.schedule.lr_shedule import cosine_decay
-from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler
+from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items, \
+    get_signature_epochs

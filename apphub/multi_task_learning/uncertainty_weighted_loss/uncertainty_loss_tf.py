@@ -106,7 +106,12 @@ def ResUnet50(input_shape=(512, 512, 3), num_classes=200):
     return model
 
 
-def get_estimator(batch_size=8, epochs=50, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp(), data_dir=None):
+def get_estimator(batch_size=8,
+                  epochs=50,
+                  max_train_steps_per_epoch=None,
+                  max_eval_steps_per_epoch=None,
+                  save_dir=tempfile.mkdtemp(),
+                  data_dir=None):
     # load CUB200 dataset.
     train_data = cub200.load_data(root_dir=data_dir)
     eval_data = train_data.split(0.3)
@@ -175,7 +180,8 @@ def get_estimator(batch_size=8, epochs=50, max_steps_per_epoch=None, save_dir=te
                              pipeline=pipeline,
                              traces=traces,
                              epochs=epochs,
-                             max_steps_per_epoch=max_steps_per_epoch,
+                             max_train_steps_per_epoch=max_train_steps_per_epoch,
+                             max_eval_steps_per_epoch=max_eval_steps_per_epoch,
                              log_steps=500)
 
     return estimator

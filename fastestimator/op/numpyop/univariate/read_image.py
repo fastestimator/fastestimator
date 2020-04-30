@@ -31,21 +31,27 @@ class ReadImage(NumpyOp):
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
         parent_path: Parent path that will be prepended to a given path.
-        grey_scale: Whether or not to read the image as grayscale.
+        color_flag: Whether to read the image as 'color', 'grey', or one of the cv2.IMREAD flags.
+
+    Raises:
+        AssertionError: If `inputs` and `outputs` have mismatched lengths, or the `color_flag` is unacceptable.
     """
     def __init__(self,
                  inputs: Union[str, Iterable[str], Callable],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  parent_path: str = "",
-                 grey_scale: bool = False):
+                 color_flag: Union[str, int] = cv2.IMREAD_COLOR):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         if isinstance(self.inputs, List) and isinstance(self.outputs, List):
             assert len(self.inputs) == len(self.outputs), "Input and Output lengths must match"
         self.parent_path = parent_path
-        self.color_flag = cv2.IMREAD_COLOR
-        self.grey_scale = grey_scale
-        if grey_scale:
+        assert isinstance(color_flag, int) or color_flag in {'color', 'gray', 'grey'}, \
+            f"Unacceptable color_flag value: {color_flag}"
+        self.color_flag = color_flag
+        if self.color_flag == "color":
+            self.color_flag = cv2.IMREAD_COLOR
+        elif self.color_flag in {"gray", "grey"}:
             self.color_flag = cv2.IMREAD_GRAYSCALE
         self.in_list, self.out_list = True, True
 
@@ -54,11 +60,13 @@ class ReadImage(NumpyOp):
         for path in data:
             path = os.path.normpath(os.path.join(self.parent_path, path))
             img = cv2.imread(path, self.color_flag)
-            if not self.grey_scale:
+            if self.color_flag in {cv2.IMREAD_COLOR, cv2.IMREAD_REDUCED_COLOR_2, cv2.IMREAD_REDUCED_COLOR_4,
+                                   cv2.IMREAD_REDUCED_COLOR_8}:
                 img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             if not isinstance(img, np.ndarray):
                 raise ValueError('cv2 did not read correctly for file "{}"'.format(path))
-            if self.grey_scale:
+            if self.color_flag in {cv2.IMREAD_GRAYSCALE, cv2.IMREAD_REDUCED_GRAYSCALE_2, cv2.IMREAD_REDUCED_GRAYSCALE_4,
+                                   cv2.IMREAD_REDUCED_GRAYSCALE_8}:
                 img = np.expand_dims(img, -1)
             results.append(img)
         return results

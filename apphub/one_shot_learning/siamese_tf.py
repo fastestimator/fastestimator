@@ -150,7 +150,12 @@ def siamese_network(input_shape=(105, 105, 1), classes=1):
     return Model(inputs=[left_input, right_input], outputs=output)
 
 
-def get_estimator(epochs=200, batch_size=128, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp(), data_dir=None):
+def get_estimator(epochs=200,
+                  batch_size=128,
+                  max_train_steps_per_epoch=None,
+                  max_eval_steps_per_epoch=None,
+                  save_dir=tempfile.mkdtemp(),
+                  data_dir=None):
     # step 1. prepare pipeline
     train_data, eval_data = omniglot.load_data(root_dir=data_dir)
     test_data = eval_data.split(0.5)
@@ -161,14 +166,14 @@ def get_estimator(epochs=200, batch_size=128, max_steps_per_epoch=None, save_dir
         test_data=test_data,
         batch_size=batch_size,
         ops=[
-            ReadImage(inputs="x_a", outputs="x_a", grey_scale=True),
-            ReadImage(inputs="x_b", outputs="x_b", grey_scale=True),
+            ReadImage(inputs="x_a", outputs="x_a", color_flag='gray'),
+            ReadImage(inputs="x_b", outputs="x_b", color_flag='gray'),
             Sometimes(
                 ShiftScaleRotate(image_in="x_a",
                                  image_out="x_a",
                                  shift_limit=0.05,
                                  scale_limit=0.2,
-                                 rotate_limit=10.0,
+                                 rotate_limit=10,
                                  mode="train"),
                 prob=0.89),
             Sometimes(
@@ -176,7 +181,7 @@ def get_estimator(epochs=200, batch_size=128, max_steps_per_epoch=None, save_dir
                                  image_out="x_b",
                                  shift_limit=0.05,
                                  scale_limit=0.2,
-                                 rotate_limit=10.0,
+                                 rotate_limit=10,
                                  mode="train"),
                 prob=0.89),
             Minmax(inputs="x_a", outputs="x_a"),
@@ -205,7 +210,8 @@ def get_estimator(epochs=200, batch_size=128, max_steps_per_epoch=None, save_dir
                              pipeline=pipeline,
                              epochs=epochs,
                              traces=traces,
-                             max_steps_per_epoch=max_steps_per_epoch)
+                             max_train_steps_per_epoch=max_train_steps_per_epoch,
+                             max_eval_steps_per_epoch=max_eval_steps_per_epoch)
     return estimator
 
 
