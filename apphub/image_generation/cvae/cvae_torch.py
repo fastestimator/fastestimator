@@ -110,13 +110,10 @@ class DecoderNet(nn.Module):
         return x
 
 
-def get_estimator(batch_size=100, epochs=20, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
-    train_data, test_data = load_data()
-
+def get_estimator(batch_size=100, epochs=20, max_train_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
+    train_data, _ = load_data()
     pipeline = fe.Pipeline(
         train_data=train_data,
-        test_data=test_data,
-        eval_data=test_data,
         batch_size=batch_size,
         ops=[
             ExpandDims(inputs="x", outputs="x", axis=0),
@@ -146,7 +143,7 @@ def get_estimator(batch_size=100, epochs=20, max_steps_per_epoch=None, save_dir=
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             max_steps_per_epoch=max_steps_per_epoch)
+                             max_train_steps_per_epoch=max_train_steps_per_epoch)
 
     return estimator
 

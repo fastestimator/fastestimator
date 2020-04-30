@@ -18,6 +18,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras.models import Model
+from transformers import BertTokenizer, TFBertModel
 
 import fastestimator as fe
 from fastestimator.dataset.data import german_ner
@@ -28,7 +29,6 @@ from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
-from transformers import BertTokenizer, TFBertModel
 
 
 def char2idx(data):
@@ -55,7 +55,8 @@ def ner_model(max_len, pretrained_model):
 def get_estimator(max_len=20,
                   epochs=10,
                   batch_size=64,
-                  max_steps_per_epoch=None,
+                  max_train_steps_per_epoch=None,
+                  max_eval_steps_per_epoch=None,
                   save_dir=tempfile.mkdtemp(),
                   pretrained_model='bert-base-uncased',
                   data_dir=None):
@@ -94,7 +95,8 @@ def get_estimator(max_len=20,
                              pipeline=pipeline,
                              epochs=epochs,
                              traces=traces,
-                             max_steps_per_epoch=max_steps_per_epoch)
+                             max_train_steps_per_epoch=max_train_steps_per_epoch,
+                             max_eval_steps_per_epoch=max_eval_steps_per_epoch)
 
     return estimator
 

@@ -19,14 +19,19 @@ from fastestimator.architecture.tensorflow import LeNet
 from fastestimator.dataset.data import cifar10
 from fastestimator.op.numpyop.univariate import Normalize
 from fastestimator.op.tensorop import Average
-from fastestimator.op.tensorop.gradient import Watch, FGSM
+from fastestimator.op.tensorop.gradient import FGSM, Watch
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
 
 
-def get_estimator(epsilon=0.04, epochs=10, batch_size=32, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
+def get_estimator(epsilon=0.04,
+                  epochs=10,
+                  batch_size=32,
+                  max_train_steps_per_epoch=None,
+                  max_eval_steps_per_epoch=None,
+                  save_dir=tempfile.mkdtemp()):
     # step 1
     train_data, eval_data = cifar10.load_data()
     test_data = eval_data.split(0.5)
@@ -36,8 +41,7 @@ def get_estimator(epsilon=0.04, epochs=10, batch_size=32, max_steps_per_epoch=No
         test_data=test_data,
         batch_size=batch_size,
         ops=[
-            Normalize(inputs="x", outputs="x", mean=(0.4914, 0.4822, 0.4465), std=(0.2471, 0.2435, 0.2616)),
-        ])
+            Normalize(inputs="x", outputs="x", mean=(0.4914, 0.4822, 0.4465), std=(0.2471, 0.2435, 0.2616)), ])
 
     # step 2
     model = fe.build(model_fn=lambda: LeNet(input_shape=(32, 32, 3)), optimizer_fn="adam")
@@ -61,7 +65,8 @@ def get_estimator(epsilon=0.04, epochs=10, batch_size=32, max_steps_per_epoch=No
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             max_steps_per_epoch=max_steps_per_epoch,
+                             max_train_steps_per_epoch=max_train_steps_per_epoch,
+                             max_eval_steps_per_epoch=max_eval_steps_per_epoch,
                              monitor_names=["base_ce", "adv_ce"])
     return estimator
 

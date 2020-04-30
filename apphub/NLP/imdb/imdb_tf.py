@@ -41,7 +41,8 @@ def get_estimator(max_words=10000,
                   max_len=500,
                   epochs=10,
                   batch_size=64,
-                  max_steps_per_epoch=None,
+                  max_train_steps_per_epoch=None,
+                  max_eval_steps_per_epoch=None,
                   save_dir=tempfile.mkdtemp()):
 
     # step 1. prepare data
@@ -65,7 +66,8 @@ def get_estimator(max_words=10000,
                              pipeline=pipeline,
                              epochs=epochs,
                              traces=traces,
-                             max_steps_per_epoch=max_steps_per_epoch)
+                             max_train_steps_per_epoch=max_train_steps_per_epoch,
+                             max_eval_steps_per_epoch=max_eval_steps_per_epoch)
     return estimator
 
 

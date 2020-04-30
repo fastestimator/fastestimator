@@ -12,13 +12,13 @@ if __name__ == "__main__":
     example_name = "fst"
 
     # The training arguments
-    # 1. Usually we set the epochs:2, batch_size:2, max_steps_per_epoch:10
-    # 2. The expression for the above setup is "-p epochs 2 -p batch_size 2 -p max_steps_per_epoch 10"
+    # 1. Usually we set the epochs:2, batch_size:2, max_train_steps_per_epoch:10
+    # 2. The expression for the above setup is "-p epochs 2 -p batch_size 8 -p max_train_steps_per_epoch 10"
     # 3. The arguement will re-declare the variable right after the jupyter notebook cell with "parameters" tag (there \
     # must be one and only cell with "parameters" tag)
     style_img_path = os.path.abspath(os.path.join(__file__, "..", "Vassily_Kandinsky,_1913_-_Composition_7.jpg"))
     test_img_path = os.path.abspath(os.path.join(__file__, "..", "panda.jpeg"))
-    train_info = "-p epochs 2 -p batch_size 4 -p max_steps_per_epoch 10 -p style_img_path {} -p test_img_path {}".format(
+    train_info = "-p epochs 2 -p batch_size 4 -p max_train_steps_per_epoch 10 -p style_img_path {} -p test_img_path {}".format(
         style_img_path, test_img_path)
     # ==============================================================================================
 

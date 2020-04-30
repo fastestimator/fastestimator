@@ -30,7 +30,7 @@ class System:
         num_devices: How many GPUs are available for training.
         log_steps: Log every n steps (0 to disable train logging, None to disable all logging).
         total_epochs: How many epochs training is expected to run for.
-        max_steps_per_epoch: Whether training epochs will be cut short after N steps (or use None if they will run to
+        max_train_steps_per_epoch: Whether training epochs will be cut short after N steps (or use None if they will run to
             completion)
 
     Attributes:
@@ -43,7 +43,8 @@ class System:
         batch_idx: The current batch index within an epoch (starting from 1).
         stop_training: A flag to signal that training should abort.
         network: A reference to the network being used this epoch
-        max_steps_per_epoch: Training epoch will complete after n steps even if loader is not yet exhausted.
+        max_train_steps_per_epoch: Training will complete after n steps even if loader is not yet exhausted.
+        max_eval_steps_per_epoch: Evaluation will complete after n steps even if loader is not yet exhausted.
         summary: An object to write experiment results to.
         experiment_time: A timestamp indicating when this model was trained.
     """
@@ -57,7 +58,8 @@ class System:
     batch_idx: Optional[int]
     stop_training: bool
     network: BaseNetwork
-    max_steps_per_epoch: Optional[int]
+    max_train_steps_per_epoch: Optional[int]
+    max_eval_steps_per_epoch: Optional[int]
     summary: Summary
     experiment_time: str
 
@@ -67,7 +69,8 @@ class System:
                  num_devices: int = torch.cuda.device_count(),
                  log_steps: Optional[int] = None,
                  total_epochs: int = 0,
-                 max_steps_per_epoch: Optional[int] = None) -> None:
+                 max_train_steps_per_epoch: Optional[int] = None,
+                 max_eval_steps_per_epoch: Optional[int] = None) -> None:
 
         self.network = network
         self.mode = mode
@@ -77,7 +80,8 @@ class System:
         self.total_epochs = total_epochs
         self.epoch_idx = None
         self.batch_idx = None
-        self.max_steps_per_epoch = max_steps_per_epoch
+        self.max_train_steps_per_epoch = max_train_steps_per_epoch
+        self.max_eval_steps_per_epoch = max_eval_steps_per_epoch
         self.stop_training = False
         self.summary = Summary(None)
         self.experiment_time = ""
