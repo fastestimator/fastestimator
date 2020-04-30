@@ -25,7 +25,7 @@ To test our trained model we use the following:
 ## Sending input args to `get_estimator`
 We can also pass arguments that the `get_estimator()` takes to the CLI. The following code snippet shows the `get_estimator()` for our MNIST example:
 ```python
-def get_estimator(epochs=2, batch_size=32, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
+def get_estimator(epochs=2, batch_size=32, ...):
     ...
 ```
 

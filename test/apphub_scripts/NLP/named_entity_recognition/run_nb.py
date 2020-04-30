@@ -12,11 +12,11 @@ if __name__ == "__main__":
     example_name = "bert"
 
     # The training arguments
-    # 1. Usually we set the epochs:2, batch_size:2, max_steps_per_epoch:10
-    # 2. The expression for the above setup is "-p epochs 2 -p batch_size 2 -p max_steps_per_epoch 10"
+    # 1. Usually we set the epochs:2, batch_size:2, max_train_steps_per_epoch:10
+    # 2. The expression for the above setup is "-p epochs 2 -p batch_size 8 -p max_train_steps_per_epoch 10"
     # 3. The arguement will re-declare the variable right after the jupyter notebook cell with "parameters" tag (there \
     # must be one and only cell with "parameters" tag)
-    train_info = "-p epochs 2 -p batch_size 4 -p max_steps_per_epoch 10"
+    train_info = "-p epochs 2 -p batch_size 4 -p max_train_steps_per_epoch 10 -p max_eval_steps_per_epoch 10"
     # ==============================================================================================
 
     stderr_file = os.path.abspath(os.path.join(__file__, "..", "run_nb_stderr.txt"))

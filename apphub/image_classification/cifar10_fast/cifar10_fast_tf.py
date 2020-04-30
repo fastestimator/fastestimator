@@ -84,7 +84,7 @@ def my_model():
     return model
 
 
-def get_estimator(epochs=24, batch_size=512, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
+def get_estimator(epochs=24, batch_size=512, max_train_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
     # step 1: prepare dataset
     train_data, test_data = load_data()
     pipeline = fe.Pipeline(
@@ -118,8 +118,7 @@ def get_estimator(epochs=24, batch_size=512, max_steps_per_epoch=None, save_dir=
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             max_steps_per_epoch=max_steps_per_epoch)
-
+                             max_train_steps_per_epoch=max_train_steps_per_epoch)
     return estimator
 
 

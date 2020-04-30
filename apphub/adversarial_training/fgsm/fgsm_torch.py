@@ -17,16 +17,21 @@ import tempfile
 import fastestimator as fe
 from fastestimator.architecture.pytorch import LeNet
 from fastestimator.dataset.data import cifar10
-from fastestimator.op.numpyop.univariate import Normalize, ChannelTranspose
+from fastestimator.op.numpyop.univariate import ChannelTranspose, Normalize
 from fastestimator.op.tensorop import Average
-from fastestimator.op.tensorop.gradient import Watch, FGSM
+from fastestimator.op.tensorop.gradient import FGSM, Watch
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
 
 
-def get_estimator(epsilon=0.04, epochs=10, batch_size=32, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
+def get_estimator(epsilon=0.04,
+                  epochs=10,
+                  batch_size=32,
+                  max_train_steps_per_epoch=None,
+                  max_eval_steps_per_epoch=None,
+                  save_dir=tempfile.mkdtemp()):
     # step 1
     train_data, eval_data = cifar10.load_data()
     test_data = eval_data.split(0.5)
@@ -62,7 +67,8 @@ def get_estimator(epsilon=0.04, epochs=10, batch_size=32, max_steps_per_epoch=No
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             max_steps_per_epoch=max_steps_per_epoch,
+                             max_train_steps_per_epoch=max_train_steps_per_epoch,
+                             max_eval_steps_per_epoch=max_eval_steps_per_epoch,
                              monitor_names=["base_ce", "adv_ce"])
     return estimator
 

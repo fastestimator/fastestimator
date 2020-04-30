@@ -371,7 +371,11 @@ class ImageSaving(Trace):
             print("on epoch {}, saving image to {}".format(self.system.epoch_idx, self.save_dir))
 
 
-def get_estimator(target_size=128, epochs=55, save_dir=tempfile.mkdtemp(), max_steps_per_epoch=None, data_dir=None):
+def get_estimator(target_size=128,
+                  epochs=55,
+                  save_dir=tempfile.mkdtemp(),
+                  max_train_steps_per_epoch=None,
+                  data_dir=None):
     # assert growth parameters
     num_grow = np.log2(target_size) - 2
     assert num_grow >= 1 and num_grow % 1 == 0, "need exponential of 2 and greater than 8 as target size"
@@ -471,7 +475,7 @@ def get_estimator(target_size=128, epochs=55, save_dir=tempfile.mkdtemp(), max_s
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             max_steps_per_epoch=max_steps_per_epoch)
+                             max_train_steps_per_epoch=max_train_steps_per_epoch)
     return estimator
 
 
