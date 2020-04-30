@@ -45,7 +45,10 @@ class Estimator:
         pipeline: An fe.Pipeline object that defines the data processing workflow.
         network: An fe.Network object that contains models and other training graph definitions.
         epochs: The number of epochs to run.
-        max_steps_per_epoch: Maximum steps to run for each epoch. If None, all data will be used.
+        max_train_steps_per_epoch: Training will complete after n steps even if loader is not yet exhausted. If None,
+            all data will be used.
+        max_eval_steps_per_epoch: Evaluation will complete after n steps even if loader is not yet exhausted. If None,
+            all data will be used.
         traces: What Traces to run during training. If None, only the system's default Traces will be included.
         log_steps: Frequency (in steps) for printing log messages. 0 to disable all step-based printing (though epoch
             information will still print). None to completely disable printing.
@@ -59,7 +62,8 @@ class Estimator:
                  pipeline: Pipeline,
                  network: BaseNetwork,
                  epochs: int,
-                 max_steps_per_epoch: Optional[int] = None,
+                 max_train_steps_per_epoch: Optional[int] = None,
+                 max_eval_steps_per_epoch: Optional[int] = None,
                  traces: Union[None, Trace, Scheduler[Trace], Iterable[Union[Trace, Scheduler[Trace]]]] = None,
                  log_steps: Optional[int] = 100,
                  monitor_names: Union[None, str, Iterable[str]] = None):
@@ -73,7 +77,8 @@ class Estimator:
         self.system = System(network=network,
                              log_steps=log_steps,
                              total_epochs=epochs,
-                             max_steps_per_epoch=max_steps_per_epoch)
+                             max_train_steps_per_epoch=max_train_steps_per_epoch,
+                             max_eval_steps_per_epoch=max_eval_steps_per_epoch)
 
     def fit(self, summary: Optional[str] = None) -> Optional[Summary]:
         """Train the network for the number of epochs specified by the estimator's constructor.
@@ -319,7 +324,8 @@ class Estimator:
                 batch = self._configure_tensor(loader, batch)
                 batch, prediction = self.network.run_step(batch)
                 self._run_traces_on_batch_end(batch, prediction, traces=traces)
-                if self.system.batch_idx == self.system.max_steps_per_epoch and self.system.mode == "train":
+                if (self.system.batch_idx == self.system.max_train_steps_per_epoch and self.system.mode == "train") or (
+                        self.system.batch_idx == self.system.max_eval_steps_per_epoch and self.system.mode == "eval"):
                     break
                 with Suppressor():
                     batch = next(iterator)
@@ -351,8 +357,10 @@ class Estimator:
             new_loader = tf.data.Dataset.from_generator(lambda: loader, data_type, output_shapes=data_shape)
             new_loader = new_loader.prefetch(1)
         if isinstance(new_loader, tf.data.Dataset):
-            if self.system.max_steps_per_epoch and self.system.mode == "train":
-                new_loader = new_loader.take(self.system.max_steps_per_epoch)
+            if self.system.max_train_steps_per_epoch and self.system.mode == "train":
+                new_loader = new_loader.take(self.system.max_train_steps_per_epoch)
+            if self.system.max_eval_steps_per_epoch and self.system.mode == "eval":
+                new_loader = new_loader.take(self.system.max_eval_steps_per_epoch)
             if isinstance(tf.distribute.get_strategy(),
                           tf.distribute.MirroredStrategy) and not isinstance(new_loader, DistributedDataset):
                 new_loader = tf.distribute.get_strategy().experimental_distribute_dataset(new_loader)

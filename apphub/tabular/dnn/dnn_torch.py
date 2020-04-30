@@ -53,7 +53,11 @@ class DNN(torch.nn.Module):
         return x
 
 
-def get_estimator(epochs=20, batch_size=32, max_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
+def get_estimator(epochs=20,
+                  batch_size=32,
+                  max_train_steps_per_epoch=None,
+                  max_eval_steps_per_epoch=None,
+                  save_dir=tempfile.mkdtemp()):
     # step 1. prepare data
     train_data, eval_data = breast_cancer.load_data()
     test_data = eval_data.split(0.5)
@@ -84,7 +88,8 @@ def get_estimator(epochs=20, batch_size=32, max_steps_per_epoch=None, save_dir=t
                              epochs=epochs,
                              log_steps=10,
                              traces=traces,
-                             max_steps_per_epoch=max_steps_per_epoch)
+                             max_train_steps_per_epoch=max_train_steps_per_epoch,
+                             max_eval_steps_per_epoch=max_eval_steps_per_epoch)
     return estimator
 
 

@@ -18,6 +18,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as fn
+from transformers import BertConfig, BertModel, BertTokenizer
 
 import fastestimator as fe
 from fastestimator.dataset.data import german_ner
@@ -28,7 +29,6 @@ from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
-from transformers import BertConfig, BertModel, BertTokenizer
 
 
 def char2idx(data):
@@ -67,7 +67,8 @@ class NERModel(nn.Module):
 def get_estimator(max_len=20,
                   epochs=10,
                   batch_size=64,
-                  max_steps_per_epoch=None,
+                  max_train_steps_per_epoch=None,
+                  max_eval_steps_per_epoch=None,
                   pretrained_model='bert-base-uncased',
                   save_dir=tempfile.mkdtemp(),
                   data_dir=None):
@@ -109,7 +110,8 @@ def get_estimator(max_len=20,
                              pipeline=pipeline,
                              epochs=epochs,
                              traces=traces,
-                             max_steps_per_epoch=max_steps_per_epoch)
+                             max_train_steps_per_epoch=max_train_steps_per_epoch,
+                             max_eval_steps_per_epoch=max_eval_steps_per_epoch)
 
     return estimator
 
