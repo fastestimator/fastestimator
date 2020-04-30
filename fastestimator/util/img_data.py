@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 from collections import OrderedDict
-from typing import Dict, List, Optional, Tuple, TypeVar
+from typing import Dict, List, Optional, Tuple, TypeVar, Union
 
 import matplotlib.backends.backend_agg as plt_backend_agg
 import matplotlib.pyplot as plt
@@ -22,7 +22,7 @@ import tensorflow as tf
 import torch
 from matplotlib.gridspec import GridSpec
 
-from fastestimator.util.util import show_image
+from fastestimator.util.util import show_image, to_list
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
@@ -36,22 +36,42 @@ class ImgData(OrderedDict):
     d = fe.util.ImgData(y=tf.ones((4,)), x=0.5*tf.ones((4, 32, 32, 3)))
     fig = d.paint_figure()
     plt.show()
+
+    img = 0.5*np.ones((4, 32, 32, 3))
+    mask = np.zeros_like(img)
+    mask[0, 10:20, 10:30, :] = [1, 0, 0]
+    mask[1, 5:15, 5:20, :] = [0, 1, 0]
+    bbox = np.array([[[3,7,10,6,'box1'], [20,20,8,8,'box2']]]*4)
+    d = fe.util.ImgData(y=tf.ones((4,)), x=[img, mask, bbox])
+    fig = d.paint_figure()
+    plt.show()
     ```
 
     Args:
         **kwargs: image_title / image pairs for visualization. Images with the same batch dimensions will be laid out
-            side-by-side, with earlier kwargs entries displayed further to the left.
+            side-by-side, with earlier kwargs entries displayed further to the left. The value part of the key/value
+            pair can be a list of tensors, in which case the elements of the list are overlaid. This can be useful for
+            displaying masks and bounding boxes on top of images. In such cases, the largest image should be put as the
+            first entry in the list. Bounding boxes should be shaped like (batch, n_boxes, box), where each box is
+            formatted like (x0, y0, width, height[, label]).
+
+    Raises:
+        AssertionError: If a list of Tensors is provided as an input, but that list has an inconsistent batch dimension.
     """
     n_elements: Dict[int, List[str]]
 
-    def __init__(self, **kwargs: Tensor) -> None:
+    def __init__(self, **kwargs: Union[Tensor, List[Tensor]]) -> None:
         self.n_elements = {}  # Not a default dict b/c that complicates the computations later
-        # TODO - grouping text keys into single box (true value, predicted value, confidence, etc.)
         super().__init__(**kwargs)
 
-    def __setitem__(self, key: str, value: Tensor):
+    def __setitem__(self, key: str, value: Union[Tensor, List[Tensor]]):
+        # Convert all values into a list for consistency
+        value = to_list(value)
+        batch_size = value[0].shape[0]
+        for elem in value[1:]:
+            assert elem.shape[0] == batch_size, "Provided item has an inconsistent batch size"
         super().__setitem__(key, value)
-        self.n_elements.setdefault(value.shape[0], []).append(key)
+        self.n_elements.setdefault(batch_size, []).append(key)
 
     def __delitem__(self, key: str):
         super().__delitem__(key)
@@ -145,7 +165,8 @@ class ImgData(OrderedDict):
             A list of (x1, x2) coordinates marking the beginning and end coordinates of each column in the `row`.
         """
         keys = list(sorted(self.n_elements.keys()))
-        row = [self[key] for key in self.n_elements[keys[row]]]
+        # For overlay values consider the zeroth element for the shape
+        row = [self[key][0] for key in self.n_elements[keys[row]]]
         widths = [(0, ImgData._shape_to_width(row[0].shape, min_width=min_width))]
         for img in row[1:]:
             widths.append(
@@ -176,7 +197,8 @@ class ImgData(OrderedDict):
             A list of (y1, y2) coordinates marking the top and bottom coordinates of each row in the grid.
         """
         keys = list(sorted(self.n_elements.keys()))
-        rows = [[self[key] for key in self.n_elements[keys[row]]] for row in range(self._n_rows())]
+        # For overlay values consider the zeroth element for the shape
+        rows = [[self[key][0] for key in self.n_elements[keys[row]]] for row in range(self._n_rows())]
         heights = [
             max((ImgData._shape_to_height(elem.shape, min_height=min_height) for elem in rows[i]))
             for i in range(self._n_rows())
@@ -260,10 +282,13 @@ class ImgData(OrderedDict):
             for batch_idx in range(batch_size):
                 for col_idx, width in enumerate(self._widths(row=row_idx, gap=width_gap, min_width=min_width)):
                     ax = fig.add_subplot(gs[batch_idx, width[0]:width[1]])
-                    show_image(row[col_idx][1][batch_idx],
-                               axis=ax,
-                               fig=fig,
-                               title=row[col_idx][0] if batch_idx == 0 else None)
+                    img_stack = [elem[batch_idx] for elem in row[col_idx][1]]
+                    for idx, img in enumerate(img_stack):
+                        show_image(img,
+                                   axis=ax,
+                                   fig=fig,
+                                   title=row[col_idx][0] if batch_idx == 0 else None,
+                                   stack_depth=idx)
         if save_path:
             plt.savefig(save_path, dpi=dpi, bbox_inches="tight")
         return fig
@@ -298,7 +323,6 @@ class ImgData(OrderedDict):
                                 width_gap=width_gap,
                                 min_width=min_width,
                                 dpi=dpi)
-        # TODO - verify in jupyter notebook
         canvas = plt_backend_agg.FigureCanvasAgg(fig)
         canvas.draw()
         data = np.frombuffer(canvas.buffer_rgba(), dtype=np.uint8)

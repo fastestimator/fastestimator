@@ -26,6 +26,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 import torch
+from matplotlib.collections import PatchCollection
+from matplotlib.patches import Rectangle
 from pyfiglet import Figlet
 from tensorflow.python.distribute.values import DistributedValues
 
@@ -518,7 +520,8 @@ def show_image(im: Union[np.ndarray, Tensor],
                axis: plt.Axes = None,
                fig: plt.Figure = None,
                title: Optional[str] = None,
-               color_map: str = "inferno") -> Optional[plt.Figure]:
+               color_map: str = "inferno",
+               stack_depth: int = 0) -> Optional[plt.Figure]:
     """Plots a given image onto an axis.
 
     Args:
@@ -527,6 +530,8 @@ def show_image(im: Union[np.ndarray, Tensor],
         im: The image to display (width X height).
         title: A title for the image.
         color_map: Which colormap to use for greyscale images.
+        stack_depth: Multiple images can be drawn onto the same axis. When stack depth is greater than zero, the `im`
+            will be alpha blended on top of a given axis.
     """
     if axis is None:
         fig, axis = plt.subplots(1, 1)
@@ -553,6 +558,36 @@ def show_image(im: Union[np.ndarray, Tensor],
                   wrap=False,
                   family='monospace',
                   fontsize=min(45, space // len(text)))
+    elif len(im.shape) == 2 and (im.shape[1] == 4 or im.shape[1] == 5):
+        # Bounding Box Data. Should be (x0, y0, w, h, <label>)
+        boxes = []
+        im = to_number(im)
+        color = ["m", "r", "c", "g", "y", "b"][stack_depth % 6]
+        for box in im:
+            # Unpack the box, which may or may not have a label
+            x0 = int(box[0])
+            y0 = int(box[1])
+            width = int(box[2])
+            height = int(box[3])
+            label = None if len(box) < 5 else str(box[4])
+
+            # Don't draw empty boxes
+            if width == 0 and height == 0:
+                continue
+            r = Rectangle((x0, y0), width=width, height=height, fill=False, edgecolor=color, linewidth=3)
+            boxes.append(r)
+            if label:
+                axis.text(r.get_x() + 3,
+                          r.get_y() + 3,
+                          label,
+                          ha='left',
+                          va='top',
+                          color=color,
+                          fontsize=min(14, width // len(label)),
+                          fontweight='bold',
+                          family='monospace')
+        pc = PatchCollection(boxes, match_original=True)
+        axis.add_collection(pc)
     else:
         if isinstance(im, torch.Tensor) and len(im.shape) > 2:
             # Move channel first to channel last
@@ -575,10 +610,11 @@ def show_image(im: Union[np.ndarray, Tensor],
         # matplotlib doesn't support (x,y,1) images, so convert them to (x,y)
         if len(im.shape) == 3 and im.shape[2] == 1:
             im = np.reshape(im, (im.shape[0], im.shape[1]))
+        alpha = 1 if stack_depth == 0 else 0.3
         if len(im.shape) == 2:
-            axis.imshow(im, cmap=plt.get_cmap(name=color_map))
+            axis.imshow(im, cmap=plt.get_cmap(name=color_map), alpha=alpha)
         else:
-            axis.imshow(im)
+            axis.imshow(im, alpha=alpha)
     if title is not None:
         axis.set_title(title, fontsize=min(20, 1 + width // len(title)), family='monospace')
     return fig
