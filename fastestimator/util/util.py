@@ -20,9 +20,7 @@ import sys
 import time
 from ast import literal_eval
 from contextlib import ContextDecorator
-from functools import reduce
-from math import gcd
-from typing import Any, Callable, KeysView, List, MutableMapping, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Dict, KeysView, List, MutableMapping, Optional, Set, Tuple, Type, TypeVar, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -584,3 +582,18 @@ def show_image(im: Union[np.ndarray, Tensor],
     if title is not None:
         axis.set_title(title, fontsize=min(20, 1 + width // len(title)), family='monospace')
     return fig
+
+
+def get_batch_size(data: Dict[str, Any]) -> int:
+    """Infer batch size from a batch dictionary.
+
+    Args:
+        data: The batch dictionary.
+
+    Returns:
+        batch size.
+    """
+    assert isinstance(data, dict), "data input must be a dictionary"
+    batch_size = set(data[key].shape[0] for key in data if hasattr(data[key], "shape") and list(data[key].shape))
+    assert len(batch_size) == 1, "invalid batch size: {}".format(batch_size)
+    return batch_size.pop()

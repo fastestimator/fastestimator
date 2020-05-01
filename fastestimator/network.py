@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import pdb
 from collections import ChainMap
 from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, Set, Tuple, TypeVar, Union
 
@@ -25,7 +26,7 @@ from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model.model import ModelOp
 from fastestimator.op.tensorop.model.update import UpdateOp
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
-from fastestimator.util.util import NonContext, per_replica_to_global, to_list
+from fastestimator.util.util import NonContext, get_batch_size, per_replica_to_global, to_list
 
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
@@ -499,14 +500,13 @@ class TFNetwork(BaseNetwork):
         data = to_tensor(data, target_type="tf")
         data, prediction = self.run_step(data)
         self.unload_epoch()
+        batch_size = get_batch_size(data)
+        # handle tensorflow multi-gpu inferencing issue, it will replicate data on each device
+        if isinstance(tf.distribute.get_strategy(), tf.distribute.MirroredStrategy):
+            for key, val in prediction.items():
+                if hasattr(val, "shape") and list(val.shape) and val.shape[0] > batch_size:
+                    prediction[key] = val[0:batch_size]
         data.update(prediction)
-        # handle multi-gpu
-        batch_sizes = set(data[key].shape[0] for key in data if len(data[key].shape) > 0)
-        if len(batch_sizes) > 1:
-            min_batch = min(batch_sizes)
-            for key, val in data.items():
-                if len(val.shape) > 0:
-                    data[key] = val[0:min_batch]
         return data
 
 

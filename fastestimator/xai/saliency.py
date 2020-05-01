@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional, Sequence, TypeVar, Union
 import numpy as np
 import tensorflow as tf
 import torch
+
 from fastestimator.backend.abs import abs
 from fastestimator.backend.argmax import argmax
 from fastestimator.backend.clip_by_value import clip_by_value
@@ -114,11 +115,9 @@ class SaliencyNet:
         """
         # Shallow copy batch since we're going to modify its contents later
         batch = {key: val for key, val in batch.items()}
-        self.network.load_epoch(mode=self.mode, epoch=0, warmup=False)
         grads_and_preds = self._get_mask(batch)
         for key in self.outputs:
             grads_and_preds[key] = self._convert_for_visualization(grads_and_preds[key])
-        self.network.unload_epoch()
         return grads_and_preds
 
     def _get_mask(self, batch: Dict[str, Any]) -> Dict[str, Tensor]:
@@ -136,7 +135,7 @@ class SaliencyNet:
         for key in self.gather_keys:
             # If there's no target key, use an empty array which will cause the max-likelihood class to be selected
             batch.setdefault(key, [])
-        batch, prediction = self.network.run_step(batch=batch)
+        prediction = self.network.transform(data=batch, mode=self.mode)
         for key in self.model_outputs:
             prediction[key] = argmax(prediction[key], axis=1)
         return prediction
@@ -202,8 +201,6 @@ class SaliencyNet:
         """
         # Shallow copy batch since we're going to modify its contents later
         batch = {key: val for key, val in batch.items()}
-
-        self.network.load_epoch(mode=self.mode, epoch=0, warmup=False)
         model_inputs = [batch[ins] for ins in self.model_inputs]
         stdevs = [to_number(stdev_spread * (reduce_max(ins) - reduce_min(ins))).item() for ins in model_inputs]
 
@@ -231,13 +228,9 @@ class SaliencyNet:
                     response[name] += grad * grad
                 else:
                     response[name] += grad
-
         for key in self.outputs:
             grad = response[key]
             response[key] = self._convert_for_visualization(grad / nsamples)
-
-        self.network.unload_epoch()
-
         return response
 
     def get_integrated_masks(self, batch: Dict[str, Any], nsamples: int = 25) -> Dict[str, Union[Tensor, np.ndarray]]:
@@ -255,8 +248,6 @@ class SaliencyNet:
         # Shallow copy batch since we're going to modify its contents later
         batch = {key: val for key, val in batch.items()}
 
-        self.network.load_epoch(mode=self.mode, epoch=0, warmup=False)
-
         # Performing integration might cause the max likelihood class value to change, so need to keep track of
         # which class we're comparing to
         response = self._get_mask(batch)
@@ -266,7 +257,5 @@ class SaliencyNet:
         response.update(self._get_integrated_masks(batch, nsamples=nsamples))
         for key in self.outputs:
             response[key] = self._convert_for_visualization(response[key])
-
-        self.network.unload_epoch()
 
         return response
