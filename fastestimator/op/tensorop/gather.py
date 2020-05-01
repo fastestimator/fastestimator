@@ -29,7 +29,7 @@ class Gather(TensorOp):
     """Gather values from an input tensor.
 
     If indices are not provided, the maximum values along the batch dimension will be collected.
- 
+
     Args:
         inputs: The tensor(s) to gather values from.
         indices: A tensor containing target indices to gather.
@@ -57,9 +57,13 @@ class Gather(TensorOp):
         results = []
         for idx, tensor in enumerate(inputs):
             # Check len(indices[0]) since an empty indices element is used to trigger the else
-            if len(indices) > idx and len(indices[0]) > 0:
+            if isinstance(indices[0], tf.Tensor) or isinstance(indices[0], torch.Tensor):
+                elem_len = indices[0].shape[0]
+            else:
+                elem_len = len(indices[0])
+            if len(indices) > idx and elem_len > 0:
                 results.append(gather_from_batch(tensor, indices=indices[idx]))
-            elif len(indices) == 1 and len(indices[0]) > 0:
+            elif len(indices) == 1 and elem_len > 0:
                 # One set of indices for all outputs
                 results.append(gather_from_batch(tensor, indices=indices[0]))
             else:
