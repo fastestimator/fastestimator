@@ -55,7 +55,6 @@ def load_model(model: Union[tf.keras.Model, torch.nn.Module], weights_path: str,
             with open(optimizer_path, 'rb') as f:
                 weight_values = pickle.load(f)
             model.current_optimizer.set_weights(weight_values)
-            print("Loaded optimizer from {}".format(optimizer_path))
     elif isinstance(model, torch.nn.Module):
         model.load_state_dict(torch.load(weights_path))
         if load_optimizer:
@@ -63,7 +62,5 @@ def load_model(model: Union[tf.keras.Model, torch.nn.Module], weights_path: str,
             optimizer_path = "{}_opt.pt".format(os.path.splitext(weights_path)[0])
             assert os.path.exists(optimizer_path), "cannot find optimizer path: {}".format(optimizer_path)
             model.current_optimizer.load_state_dict(torch.load(optimizer_path))
-            print("Loaded optimizer from {}".format(optimizer_path))
     else:
         raise ValueError("Unrecognized model instance {}".format(type(model)))
-    print("Loaded model weights from {}".format(weights_path))
