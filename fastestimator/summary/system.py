@@ -92,7 +92,7 @@ class System:
         self.global_step = None
         self.epoch_idx = 0
 
-    def load_state(self, json_path):
+    def load_state(self, json_path) -> None:
         """Load training state.
 
         Args:
@@ -103,12 +103,13 @@ class System:
         self.epoch_idx = state["epoch_idx"]
         self.global_step = state["global_step"]
 
-    def save_state(self, json_path):
+    def save_state(self, json_path) -> None:
         """Load training state.
 
         Args:
             json_path: The json file path to save to.
         """
+        # TODO "summary" and "experiment_time" needs to be saved in the future
         state = {"epoch_idx": self.epoch_idx, "global_step": self.global_step}
         with open(json_path, 'w') as fp:
             json.dump(state, fp, indent=4)

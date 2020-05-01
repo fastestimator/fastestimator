@@ -30,7 +30,7 @@ class RestoreWizard(Trace):
 
     Args:
         directory: Directory to save and load system.
-        frequency: Milestone saving frequency in epoch(s).
+        frequency: Saving frequency in epoch(s).
     """
     def __init__(self, directory: str, frequency: int = 1) -> None:
         super().__init__(mode="train")
@@ -44,11 +44,13 @@ class RestoreWizard(Trace):
         if not os.path.exists(self.directory) or not os.listdir(self.directory):
             print("FastEstimator-RestoreWizard: Backing up in {}".format(self.directory))
         else:
-            self._scan_milestone_files()
-            self._load_milestone()
-            print("FastEstimator-RestoreWizard:  Restoring from {}, resume training".format(self.directory))
+            self._scan_files()
+            self._load_files()
+            print("FastEstimator-RestoreWizard: Restoring from {}, resume training".format(self.directory))
 
-    def _load_milestone(self) -> None:
+    def _load_files(self) -> None:
+        """Restore from files.
+        """
         system_path = os.path.join(self.directory, self.system_file)
         self.system.load_state(json_path=system_path)
         for model in self.system.network.models:
@@ -62,7 +64,9 @@ class RestoreWizard(Trace):
                                         "{}.{}".format(model.model_name, self.model_extension[framework]))
             load_model(model, weights_path=weights_path, load_optimizer=True)
 
-    def _scan_milestone_files(self) -> None:
+    def _scan_files(self) -> None:
+        """Scan necessary files to load.
+        """
         system_path = os.path.join(self.directory, self.system_file)
         assert os.path.exists(system_path), "cannot find system file at {}".format(system_path)
         for model in self.system.network.models:
@@ -86,4 +90,4 @@ class RestoreWizard(Trace):
                 save_model(model, save_dir=self.directory, save_optimizer=True)
             # Save system state
             self.system.save_state(json_path=os.path.join(self.directory, self.system_file))
-            print("FastEstimator-MileStone: Saved milestones to {}".format(self.directory))
+            print("FastEstimator-RestoreWizard: Saved milestones to {}".format(self.directory))

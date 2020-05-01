@@ -500,6 +500,7 @@ class TFNetwork(BaseNetwork):
         data, prediction = self.run_step(data)
         self.unload_epoch()
         batch_size = get_batch_size(data)
+        # TODO need to handle nested structure
         # handle tensorflow multi-gpu inferencing issue, it will replicate data on each device
         if isinstance(tf.distribute.get_strategy(), tf.distribute.MirroredStrategy):
             for key, val in prediction.items():
