@@ -80,7 +80,7 @@ def get_estimator(epochs=20,
     # step 2
     model = fe.build(model_fn=lambda: UNet(input_size=(512, 512, 1)),
                      optimizer_fn=lambda: tf.keras.optimizers.Adam(learning_rate=0.0001),
-                     model_names="lung_segmentation")
+                     model_name="lung_segmentation")
     network = fe.Network(ops=[
         ModelOp(inputs="image", model=model, outputs="pred_segment"),
         CrossEntropy(inputs=("pred_segment", "mask"), outputs="loss", form="binary"),

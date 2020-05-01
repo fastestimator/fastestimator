@@ -154,9 +154,9 @@ def get_estimator(batch_size=8,
         ])
 
     # step 2, network
-    resunet50 = fe.build(model_fn=ResUnet50, model_names="resunet50", optimizer_fn=lambda: tf.optimizers.Adam(1e-4))
+    resunet50 = fe.build(model_fn=ResUnet50, model_name="resunet50", optimizer_fn=lambda: tf.optimizers.Adam(1e-4))
     uncertainty = fe.build(model_fn=UncertaintyLossNet,
-                           model_names="uncertainty",
+                           model_name="uncertainty",
                            optimizer_fn=lambda: tf.optimizers.Adam(2e-5))
 
     network = fe.Network(ops=[

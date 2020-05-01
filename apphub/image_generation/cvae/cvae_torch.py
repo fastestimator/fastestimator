@@ -121,8 +121,8 @@ def get_estimator(batch_size=100, epochs=20, max_train_steps_per_epoch=None, sav
             Binarize(inputs="x", outputs="x", threshold=0.5),
         ])
 
-    encode_model = fe.build(model_fn=EncoderNet, optimizer_fn="adam", model_names="encoder")
-    decode_model = fe.build(model_fn=DecoderNet, optimizer_fn="adam", model_names="decoder")
+    encode_model = fe.build(model_fn=EncoderNet, optimizer_fn="adam", model_name="encoder")
+    decode_model = fe.build(model_fn=DecoderNet, optimizer_fn="adam", model_name="decoder")
 
     network = fe.Network(ops=[
         ModelOp(model=encode_model, inputs="x", outputs="meanlogvar"),

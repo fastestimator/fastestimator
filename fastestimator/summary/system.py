@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import datetime
+import json
 from typing import Any, Optional
 
 import torch
@@ -74,17 +75,44 @@ class System:
 
         self.network = network
         self.mode = mode
-        self.global_step = None
         self.num_devices = num_devices
         self.log_steps = log_steps
         self.total_epochs = total_epochs
-        self.epoch_idx = None
         self.batch_idx = None
         self.max_train_steps_per_epoch = max_train_steps_per_epoch
         self.max_eval_steps_per_epoch = max_eval_steps_per_epoch
         self.stop_training = False
         self.summary = Summary(None)
         self.experiment_time = ""
+        self._initialize_state()
+
+    def _initialize_state(self) -> None:
+        """Initialize the training state.
+        """
+        self.global_step = None
+        self.epoch_idx = 0
+
+    def load_state(self, json_path) -> None:
+        """Load training state.
+
+        Args:
+            json_path: The json file path to load from.
+        """
+        with open(json_path, 'r') as fp:
+            state = json.load(fp)
+        self.epoch_idx = state["epoch_idx"]
+        self.global_step = state["global_step"]
+
+    def save_state(self, json_path) -> None:
+        """Load training state.
+
+        Args:
+            json_path: The json file path to save to.
+        """
+        # TODO "summary" and "experiment_time" needs to be saved in the future
+        state = {"epoch_idx": self.epoch_idx, "global_step": self.global_step}
+        with open(json_path, 'w') as fp:
+            json.dump(state, fp, indent=4)
 
     def update_global_step(self) -> None:
         """Increment the current `global_step`.
@@ -110,8 +138,7 @@ class System:
         """
         self.experiment_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         self.mode = "train"
-        self.global_step = None
-        self.epoch_idx = None
+        self._initialize_state()
         self.batch_idx = None
         self.stop_training = False
         self.summary = Summary(summary_name)

@@ -64,17 +64,11 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
             loss = loss / strategy.num_replicas_in_sync
         gradients = get_gradient(loss, model.trainable_variables, tape=tape)
         with tape.stop_recording():
-            if hasattr(model, "current_optimizer"):
-                model.current_optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-            else:
-                model.optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+            model.current_optimizer.apply_gradients(zip(gradients, model.trainable_variables))
     elif isinstance(model, torch.nn.Module):
         gradients = get_gradient(loss, model.parameters(), retain_graph=retain_graph)
         for gradient, parameter in zip(gradients, model.parameters()):
             parameter.grad = gradient
-        if hasattr(model, "current_optimizer"):
-            model.current_optimizer.step()
-        else:
-            model.optimizer.step()
+        model.current_optimizer.step()
     else:
         raise ValueError("Unrecognized model instance {}".format(type(model)))

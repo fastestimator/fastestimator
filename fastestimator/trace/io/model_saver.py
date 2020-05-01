@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import os
 from typing import Union
 
 import tensorflow as tf
@@ -41,3 +42,4 @@ class ModelSaver(Trace):
         if self.save_dir and self.system.epoch_idx % self.frequency == 0:
             model_name = "{}_epoch_{}".format(self.model.model_name, self.system.epoch_idx)
             save_model(self.model, self.save_dir, model_name)
+            print("FastEstimator-ModelSaver: Saved model to {}".format(os.path.join(self.save_dir, model_name)))

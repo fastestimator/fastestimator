@@ -138,9 +138,8 @@ class TrainEssential(Trace):
 
     def on_begin(self, data: Data) -> None:
         self.train_start = time.perf_counter()
-        for model in self.system.network.models:
-            if hasattr(model, "current_optimizer"):
-                data.write_with_log(model.model_name + "_lr", get_lr(model))
+        data.write_with_log("num_device", self.system.num_devices)
+        data.write_with_log("logging_interval", self.system.log_steps)
 
     def on_epoch_begin(self, data: Data) -> None:
         if self.system.log_steps:
@@ -209,7 +208,8 @@ class Logger(Trace):
 
     def on_begin(self, data: Data) -> None:
         if not self.system.mode == "test":
-            self._print_message("FastEstimator-Start: step: 1; ", data)
+            start_step = 1 if not self.system.global_step else self.system.global_step
+            self._print_message("FastEstimator-Start: step: {}; ".format(start_step), data)
 
     def on_batch_end(self, data: Data) -> None:
         if self.system.mode == "train" and self.system.log_steps and (

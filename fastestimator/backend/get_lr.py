@@ -43,15 +43,9 @@ def get_lr(model: Union[tf.keras.Model, torch.nn.Module]) -> float:
         ValueError: If `model` is an unacceptable data type.
     """
     if isinstance(model, tf.keras.Model):
-        if hasattr(model, 'current_optimizer'):
-            lr = tf.keras.backend.get_value(model.current_optimizer.lr)
-        else:
-            lr = tf.keras.backend.get_value(model.optimizer.lr)
+        lr = tf.keras.backend.get_value(model.current_optimizer.lr)
     elif isinstance(model, torch.nn.Module):
-        if hasattr(model, 'current_optimizer'):
-            lr = model.current_optimizer.param_groups[0]['lr']
-        else:
-            lr = model.optimizer.param_groups[0]['lr']
+        lr = model.current_optimizer.param_groups[0]['lr']
     else:
         raise ValueError("Unrecognized model instance {}".format(type(model)))
     return lr
