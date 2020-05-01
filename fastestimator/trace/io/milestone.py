@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 import os
-import pdb
 
 import tensorflow as tf
 import torch
@@ -50,7 +49,6 @@ class MileStone(Trace):
             self._scan_milestone_files()
             self._load_milestone()
             print("FastEstimator-MileStone: Loaded milestones from {}, resume training".format(self.directory))
-        # pdb.set_trace()
 
     def _load_milestone(self):
         system_path = os.path.join(self.directory, self.system_file)
