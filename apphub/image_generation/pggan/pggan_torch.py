@@ -1,4 +1,3 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,16 +16,15 @@ import tempfile
 
 import cv2
 import numpy as np
-import tensorflow as tf
-from tensorflow.keras import Model, backend, layers
-from tensorflow.keras.optimizers import Adam
+import torch
+from torch.optim import Adam
 
 import fastestimator as fe
 from fastestimator.backend import feed_forward, get_gradient
 from fastestimator.dataset.data import nih_chestxray
 from fastestimator.op.numpyop import NumpyOp
 from fastestimator.op.numpyop.multivariate import Resize
-from fastestimator.op.numpyop.univariate import Normalize, ReadImage
+from fastestimator.op.numpyop.univariate import ChannelTranspose, Normalize, ReadImage
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.schedule import EpochScheduler
@@ -39,226 +37,253 @@ def _nf(stage, fmap_base=8192, fmap_decay=1.0, fmap_max=512):
     return min(int(fmap_base / (2.0**(stage * fmap_decay))), fmap_max)
 
 
-class EqualizedLRDense(layers.Layer):
-    def __init__(self, units, gain=np.sqrt(2)):
+class EqualizedLRDense(torch.nn.Linear):
+    def __init__(self, in_features, out_features, gain=np.sqrt(2)):
+        super().__init__(in_features, out_features, bias=False)
+        torch.nn.init.normal_(self.weight.data, mean=0.0, std=1.0)
+        self.wscale = np.float32(gain / np.sqrt(in_features))
+
+    def forward(self, x):
+        return super().forward(x) * self.wscale
+
+
+class ApplyBias(torch.nn.Module):
+    def __init__(self, in_features):
         super().__init__()
-        self.units = units
-        self.gain = gain
+        self.in_features = in_features
+        self.bias = torch.nn.Parameter(torch.Tensor(in_features))
+        torch.nn.init.constant_(self.bias.data, val=0.0)
 
-    def get_config(self):
-        return {'units': self.units, 'gain': self.gain}
-
-    def build(self, input_shape):
-        self.w = self.add_weight(shape=[int(input_shape[-1]), self.units],
-                                 initializer=tf.random_normal_initializer(mean=0.0, stddev=1.0),
-                                 trainable=True)
-        fan_in = input_shape[-1]
-        self.wscale = tf.constant(np.float32(self.gain / np.sqrt(fan_in)))
-
-    def call(self, x):
-        return tf.matmul(x, self.w) * self.wscale
+    def forward(self, x):
+        if len(x.shape) == 4:
+            x = x + self.bias.view(1, -1, 1, 1).expand_as(x)
+        else:
+            x = x + self.bias
+        return x
 
 
-class ApplyBias(layers.Layer):
-    def build(self, input_shape):
-        self.b = self.add_weight(shape=input_shape[-1], initializer='zeros', trainable=True)
+class EqualizedLRConv2D(torch.nn.Conv2d):
+    def __init__(self, in_channels, out_channels, kernel_size=3, padding=1, padding_mode='zeros', gain=np.sqrt(2)):
+        super().__init__(in_channels, out_channels, kernel_size, padding=padding, padding_mode=padding_mode, bias=False)
+        torch.nn.init.normal_(self.weight.data, mean=0.0, std=1.0)
+        fan_in = np.float32(np.prod(self.weight.data.shape[1:]))
+        self.wscale = np.float32(gain / np.sqrt(fan_in))
 
-    def call(self, x):
-        return x + self.b
-
-
-class EqualizedLRConv2D(layers.Conv2D):
-    def __init__(self, filters, gain=np.sqrt(2), kernel_size=3, strides=(1, 1), padding="same"):
-        super().__init__(filters=filters,
-                         kernel_size=kernel_size,
-                         strides=strides,
-                         padding=padding,
-                         use_bias=False,
-                         kernel_initializer=tf.random_normal_initializer(mean=0.0, stddev=1.0))
-        self.gain = gain
-
-    def build(self, input_shape):
-        super().build(input_shape)
-        fan_in = np.float32(np.prod(self.kernel.shape[:-1]))
-        self.wscale = tf.constant(np.float32(self.gain / np.sqrt(fan_in)))
-
-    def get_config(self):
-        return {'filters': self.filters, 'gain': self.gain, "kernel_size": self.kernel_size}
-
-    def call(self, x):
-        return super().call(x) * self.wscale
+    def forward(self, x):
+        return super().forward(x) * self.wscale
 
 
-class PixelNormalization(layers.Layer):
-    def __init__(self, eps=1e-8):
+def pixel_normalization(x, eps=1e-8):
+    return x * torch.rsqrt(torch.mean(x**2, dim=1, keepdims=True) + eps)
+
+
+def mini_batch_std(x, group_size=4, eps=1e-8):
+    b, c, h, w = x.shape
+    group_size = min(group_size, b)
+    y = x.reshape((group_size, -1, c, h, w))  # [G, M, C, H, W]
+    y -= torch.mean(y, dim=0, keepdim=True)  # [G, M, C, H, W]
+    y = torch.mean(y**2, axis=0)  # [M, C, H, W]
+    y = torch.sqrt(y + eps)  # [M, C, H, W]
+    y = torch.mean(y, dim=(1, 2, 3), keepdim=True)  # [M, 1, 1, 1]
+    y = y.repeat(group_size, 1, h, w)  # [B, 1, H, W]
+    return torch.cat((x, y), 1)
+
+
+def fade_in(x, y, alpha):
+    return (1.0 - alpha) * x + alpha * y
+
+
+class ToRGB(torch.nn.Module):
+    def __init__(self, in_channels, num_channels=3):
         super().__init__()
-        self.eps = eps
+        self.elr_conv2d = EqualizedLRConv2D(in_channels, num_channels, kernel_size=1, padding=0, gain=1.0)
+        self.bias = ApplyBias(in_features=num_channels)
 
-    def get_config(self):
-        return {'eps': self.eps}
+    def forward(self, x):
+        x = self.elr_conv2d(x)
+        x = self.bias(x)
+        return x
 
-    def call(self, inputs):
-        return inputs * tf.math.rsqrt(tf.reduce_mean(tf.square(inputs), axis=-1, keepdims=True) + self.eps)
+
+class FromRGB(torch.nn.Module):
+    def __init__(self, res, num_channels=3):
+        super().__init__()
+        self.elr_conv2d = EqualizedLRConv2D(num_channels, _nf(res - 1), kernel_size=1, padding=0)
+        self.bias = ApplyBias(in_features=_nf(res - 1))
+
+    def forward(self, x):
+        x = self.elr_conv2d(x)
+        x = self.bias(x)
+        x = torch.nn.functional.leaky_relu(x, negative_slope=0.2)
+        return x
+
+
+class BlockG1D(torch.nn.Module):
+    def __init__(self, res=2, latent_dim=512):
+        super().__init__()
+        self.elr_dense = EqualizedLRDense(in_features=latent_dim, out_features=_nf(res - 1) * 16, gain=np.sqrt(2) / 4)
+        self.bias1 = ApplyBias(in_features=_nf(res - 1))
+        self.elr_conv2d = EqualizedLRConv2D(in_channels=_nf(res - 1), out_channels=_nf(res - 1))
+        self.bias2 = ApplyBias(in_features=_nf(res - 1))
+        self.res = res
+
+    def forward(self, x):
+        # x: [batch, 512]
+        x = pixel_normalization(x)  # [batch, 512]
+        x = self.elr_dense(x)  # [batch, _nf(res - 1) * 16]
+        x = x.view(-1, _nf(self.res - 1), 4, 4)  # [batch, _nf(res - 1), 4, 4]
+        x = self.bias1(x)  # [batch, _nf(res - 1), 4, 4]
+        x = torch.nn.functional.leaky_relu(x, negative_slope=0.2)  # [batch, _nf(res - 1), 4, 4]
+        x = pixel_normalization(x)  # [batch, _nf(res - 1), 4, 4]
+        x = self.elr_conv2d(x)  # [batch, _nf(res - 1), 4, 4]
+        x = self.bias2(x)  # [batch, _nf(res - 1), 4, 4]
+        x = torch.nn.functional.leaky_relu(x, negative_slope=0.2)  # [batch, _nf(res - 1), 4, 4]
+        x = pixel_normalization(x)
+        return x
+
+
+class BlockG2D(torch.nn.Module):
+    def __init__(self, res):
+        super().__init__()
+        self.elr_conv2d1 = EqualizedLRConv2D(in_channels=_nf(res - 2), out_channels=_nf(res - 1))
+        self.bias1 = ApplyBias(in_features=_nf(res - 1))
+        self.elr_conv2d2 = EqualizedLRConv2D(in_channels=_nf(res - 1), out_channels=_nf(res - 1))
+        self.bias2 = ApplyBias(in_features=_nf(res - 1))
+        self.upsample = torch.nn.Upsample(scale_factor=2)
+
+    def forward(self, x):
+        # x: [batch, _nf(res - 2), 2**(res - 1), 2**(res - 1)]
+        x = self.upsample(x)
+        x = self.elr_conv2d1(x)  # [batch, _nf(res - 1), 2**res , 2**res)]
+        x = self.bias1(x)  # [batch, _nf(res - 1), 2**res , 2**res)]
+        x = torch.nn.functional.leaky_relu(x, negative_slope=0.2)  # [batch, _nf(res - 1), 2**res , 2**res)]
+        x = pixel_normalization(x)  # [batch, _nf(res - 1), 2**res , 2**res)]
+        x = self.elr_conv2d2(x)  # [batch, _nf(res - 1), 2**res , 2**res)]
+        x = self.bias2(x)  # [batch, _nf(res - 1), 2**res , 2**res)]
+        x = torch.nn.functional.leaky_relu(x, negative_slope=0.2)  # [batch, _nf(res - 1), 2**res , 2**res)]
+        x = pixel_normalization(x)  # [batch, _nf(res - 1), 2**res , 2**res)]
+        return x
 
 
 def _block_G(res, latent_dim=512, initial_resolution=2):
     if res == initial_resolution:
-        x0 = layers.Input(shape=latent_dim)
-        x = PixelNormalization()(x0)
-
-        x = EqualizedLRDense(units=_nf(res - 1) * 16, gain=np.sqrt(2) / 4)(x)
-        x = tf.reshape(x, [-1, 4, 4, _nf(res - 1)])
-        x = ApplyBias()(x)
-        x = layers.LeakyReLU(alpha=0.2)(x)
-        x = PixelNormalization()(x)
-
-        x = EqualizedLRConv2D(filters=_nf(res - 1))(x)
-        x = ApplyBias()(x)
-        x = layers.LeakyReLU(alpha=0.2)(x)
-        x = PixelNormalization()(x)
+        model = BlockG1D(res=res, latent_dim=latent_dim)
     else:
-        x0 = layers.Input(shape=(2**(res - 1), 2**(res - 1), _nf(res - 2)))
-        x = layers.UpSampling2D()(x0)
-        for _ in range(2):
-            x = EqualizedLRConv2D(filters=_nf(res - 1))(x)
-            x = ApplyBias()(x)
-            x = layers.LeakyReLU(alpha=0.2)(x)
-            x = PixelNormalization()(x)
-    return Model(inputs=x0, outputs=x, name="g_block_%dx%d" % (2**res, 2**res))
+        model = BlockG2D(res=res)
+    return model
 
 
-class MiniBatchStd(layers.Layer):
-    def __init__(self, group_size=4):
+class Gen(torch.nn.Module):
+    def __init__(self, g_blocks, rgb_blocks, fade_in_alpha):
         super().__init__()
-        self.group_size = group_size
-
-    def get_config(self):
-        return {'group_size': self.group_size}
-
-    def call(self, x):
-        group_size = tf.minimum(self.group_size, tf.shape(x)[0])
-        s = x.shape  # [NHWC]
-        y = tf.reshape(x, [group_size, -1, s[1], s[2], s[3]])  # [GMHWC]
-        y -= tf.reduce_mean(y, axis=0, keepdims=True)  # [GMHWC]
-        y = tf.reduce_mean(tf.square(y), axis=0)  #[MHWC]
-        y = tf.sqrt(y + 1e-8)  # [MHWC]
-        y = tf.reduce_mean(y, axis=[1, 2, 3], keepdims=True)  # [M111]
-        y = tf.tile(y, [group_size, s[1], s[2], 1])  # [NHW1]
-        return tf.concat([x, y], axis=-1)
-
-
-class FadeIn(layers.Add):
-    def __init__(self, fade_in_alpha, **kwargs):
-        super().__init__(**kwargs)
+        self.g_blocks = torch.nn.ModuleList(g_blocks)
+        self.rgb_blocks = torch.nn.ModuleList(rgb_blocks)
         self.fade_in_alpha = fade_in_alpha
+        self.upsample = torch.nn.Upsample(scale_factor=2)
 
-    def get_config(self):
-        return {'fade_in_alpha': self.fade_in_alpha}
-
-    def _merge_function(self, inputs):
-        assert len(inputs) == 2, "FadeIn only supports two layers"
-        output = (1.0 - self.fade_in_alpha) * inputs[0] + self.fade_in_alpha * inputs[1]
-        return output
-
-
-def _torgb(res, num_channels=3):
-    x0 = layers.Input(shape=(2**res, 2**res, _nf(res - 1)))
-    x = EqualizedLRConv2D(filters=num_channels, kernel_size=1, gain=1.0)(x0)
-    x = ApplyBias()(x)
-    return Model(inputs=x0, outputs=x, name="to_rgb_%dx%d" % (2**res, 2**res))
+    def forward(self, x):
+        for g in self.g_blocks[:-1]:
+            x = g(x)
+        previous_img = self.rgb_blocks[0](x)
+        previous_img = self.upsample(previous_img)
+        x = self.g_blocks[-1](x)
+        new_img = self.rgb_blocks[1](x)
+        return fade_in(previous_img, new_img, self.fade_in_alpha)
 
 
 def build_G(fade_in_alpha, latent_dim=512, initial_resolution=2, target_resolution=10, num_channels=3):
-    x0 = layers.Input(shape=latent_dim)
-    curr_g_block = _block_G(initial_resolution, latent_dim, initial_resolution)
-    curr_to_rgb_block = _torgb(initial_resolution, num_channels)
-    images_out = curr_g_block(x0)
-    images_out = curr_to_rgb_block(images_out)
-    model_list = list()
-    gen_block_list = list()
-    mdl = Model(inputs=x0, outputs=images_out)
-    model_list.append(mdl)
-    gen_block_list.append(curr_g_block)
-    prev_to_rgb_block = curr_to_rgb_block
-    for res in range(initial_resolution + 1, target_resolution + 1):
-        curr_g_block = _block_G(res, latent_dim, initial_resolution)
-        curr_to_rgb_block = _torgb(res, num_channels)
-        prev_images = x0
-        for g in gen_block_list:
-            prev_images = g(prev_images)
-        curr_images = curr_g_block(prev_images)
-        curr_images = curr_to_rgb_block(curr_images)
-        prev_images = prev_to_rgb_block(prev_images)
-        prev_images = layers.UpSampling2D(name="upsample_%dx%d" % (2**res, 2**res))(prev_images)
-        images_out = FadeIn(fade_in_alpha=fade_in_alpha,
-                            name="fade_in_%dx%d" % (2**res, 2**res))([prev_images, curr_images])
-        mdl = Model(inputs=x0, outputs=images_out)
-        model_list.append(mdl)
-        gen_block_list.append(curr_g_block)
-        prev_to_rgb_block = curr_to_rgb_block
-    # build final model
-    x = x0
-    for g in gen_block_list:
-        x = g(x)
-    x = curr_to_rgb_block(x)
-    final_mdl = Model(inputs=x0, outputs=x)
-    model_list.append(final_mdl)
-    return model_list
+    g_blocks = [
+        _block_G(res, latent_dim, initial_resolution) for res in range(initial_resolution, target_resolution + 1)
+    ]
+    rgb_blocks = [ToRGB(_nf(res - 1), num_channels) for res in range(initial_resolution, target_resolution + 1)]
+    generators = [torch.nn.Sequential(g_blocks[0], rgb_blocks[0])]
+    for idx in range(2, len(g_blocks) + 1):
+        generators.append(Gen(g_blocks[0:idx], rgb_blocks[idx - 2:idx], fade_in_alpha))
+    final_model_list = g_blocks + [rgb_blocks[-1]]
+    generators.append(torch.nn.Sequential(*final_model_list))
+    return generators
 
 
-def _fromrgb(res, num_channels=3):
-    x0 = layers.Input(shape=(2**res, 2**res, num_channels))
-    x = EqualizedLRConv2D(filters=_nf(res - 1), kernel_size=1)(x0)
-    x = ApplyBias()(x)
-    x = layers.LeakyReLU(alpha=0.2)(x)
-    return Model(inputs=x0, outputs=x, name="from_rgb_%dx%d" % (2**res, 2**res))
+class BlockD1D(torch.nn.Module):
+    def __init__(self, res=2):
+        super().__init__()
+        self.elr_conv2d = EqualizedLRConv2D(in_channels=_nf(res - 1) + 1, out_channels=_nf(res - 1))
+        self.bias1 = ApplyBias(in_features=_nf(res - 1))
+        self.elr_dense1 = EqualizedLRDense(in_features=_nf(res - 1) * 16, out_features=_nf(res - 2))
+        self.bias2 = ApplyBias(in_features=_nf(res - 2))
+        self.elr_dense2 = EqualizedLRDense(in_features=_nf(res - 2), out_features=1, gain=1.0)
+        self.bias3 = ApplyBias(in_features=1)
+        self.res = res
+
+    def forward(self, x):
+        # x: [batch, 512, 4, 4]
+        x = mini_batch_std(x)  # [batch, 513, 4, 4]
+        x = self.elr_conv2d(x)  # [batch, 512, 4, 4]
+        x = self.bias1(x)  # [batch, 512, 4, 4]
+        x = torch.nn.functional.leaky_relu(x, negative_slope=0.2)  # [batch, 512, 4, 4]
+        x = x.view(-1, _nf(self.res - 1) * 16)  # [batch, 512*4*4]
+        x = self.elr_dense1(x)  # [batch, 512]
+        x = self.bias2(x)  # [batch, 512]
+        x = torch.nn.functional.leaky_relu(x, negative_slope=0.2)  # [batch, 512]
+        x = self.elr_dense2(x)  # [batch, 1]
+        x = self.bias3(x)  # [batch, 1]
+        return x
 
 
-def _block_D(res, initial_resolution, mbstd_group_size=4):
-    x0 = layers.Input(shape=(2**res, 2**res, _nf(res - 1)))
-    if res > initial_resolution:
-        x = x0
-        for i in range(2):
-            x = EqualizedLRConv2D(filters=_nf(res - (i + 1)))(x)
-            x = ApplyBias()(x)
-            x = layers.LeakyReLU(alpha=0.2)(x)
-        x = layers.AveragePooling2D()(x)
+class BlockD2D(torch.nn.Module):
+    def __init__(self, res):
+        super().__init__()
+        self.elr_conv2d1 = EqualizedLRConv2D(in_channels=_nf(res - 1), out_channels=_nf(res - 1))
+        self.bias1 = ApplyBias(in_features=_nf(res - 1))
+        self.elr_conv2d2 = EqualizedLRConv2D(in_channels=_nf(res - 1), out_channels=_nf(res - 2))
+        self.bias2 = ApplyBias(in_features=_nf(res - 2))
+        self.pool = torch.nn.AvgPool2d(kernel_size=2)
+
+    def forward(self, x):
+        x = self.elr_conv2d1(x)
+        x = self.bias1(x)
+        x = torch.nn.functional.leaky_relu(x, negative_slope=0.2)
+        x = self.elr_conv2d2(x)
+        x = self.bias2(x)
+        x = torch.nn.functional.leaky_relu(x, negative_slope=0.2)
+        x = self.pool(x)
+        return x
+
+
+def _block_D(res, initial_resolution=2):
+    if res == initial_resolution:
+        model = BlockD1D(res)
     else:
-        if mbstd_group_size > 1:
-            x = MiniBatchStd(mbstd_group_size)(x0)
-            x = EqualizedLRConv2D(filters=_nf(res - 1))(x)
-            x = ApplyBias()(x)
-            x = layers.LeakyReLU(alpha=0.2)(x)
-
-            x = layers.Flatten()(x)
-            x = EqualizedLRDense(units=_nf(res - 2))(x)
-            x = ApplyBias()(x)
-            x = layers.LeakyReLU(alpha=0.2)(x)
-            x = EqualizedLRDense(units=1, gain=1.0)(x)
-            x = ApplyBias()(x)
-    return Model(inputs=x0, outputs=x, name="d_block_%dx%d" % (2**res, 2**res))
+        model = BlockD2D(res)
+    return model
 
 
-def build_D(fade_in_alpha, mbstd_group_size=4, initial_resolution=2, target_resolution=10, num_channels=3):
-    model_list = list()
-    disc_block_list = list()
-    for res in range(initial_resolution, target_resolution + 1):
-        x0 = layers.Input(shape=(2**res, 2**res, num_channels))
-        curr_from_rgb = _fromrgb(res, num_channels)
-        curr_D_block = _block_D(res, initial_resolution, mbstd_group_size)
-        x = curr_from_rgb(x0)
-        x = curr_D_block(x)
-        if res > initial_resolution:
-            x_ds = layers.AveragePooling2D(name="downsample_%dx%d" % (2**res, 2**res))(x0)
-            x_ds = prev_from_rgb(x_ds)
-            x = FadeIn(fade_in_alpha=fade_in_alpha, name="fade_in_%dx%d" % (2**res, 2**res))([x_ds, x])
-            for prev_d in disc_block_list[::-1]:
-                x = prev_d(x)
-        disc_block_list.append(curr_D_block)
-        prev_from_rgb = curr_from_rgb
-        mdl = Model(inputs=x0, outputs=x)
-        model_list.append(mdl)
-    return model_list
+class Disc(torch.nn.Module):
+    def __init__(self, d_blocks, rgb_blocks, fade_in_alpha):
+        super().__init__()
+        self.d_blocks = torch.nn.ModuleList(d_blocks)
+        self.rgb_blocks = torch.nn.ModuleList(rgb_blocks)
+        self.fade_in_alpha = fade_in_alpha
+        self.pool = torch.nn.AvgPool2d(kernel_size=2)
+
+    def forward(self, x):
+        new_x = self.rgb_blocks[1](x)
+        new_x = self.d_blocks[-1](new_x)
+        downscale_x = self.pool(x)
+        downscale_x = self.rgb_blocks[0](downscale_x)
+        x = fade_in(downscale_x, new_x, self.fade_in_alpha)
+        for d in self.d_blocks[:-1][::-1]:
+            x = d(x)
+        return x
+
+
+def build_D(fade_in_alpha, initial_resolution=2, target_resolution=10, num_channels=3):
+    d_blocks = [_block_D(res, initial_resolution) for res in range(initial_resolution, target_resolution + 1)]
+    rgb_blocks = [FromRGB(res, num_channels) for res in range(initial_resolution, target_resolution + 1)]
+    discriminators = [torch.nn.Sequential(rgb_blocks[0], d_blocks[0])]
+    for idx in range(2, len(d_blocks) + 1):
+        discriminators.append(Disc(d_blocks[0:idx], rgb_blocks[idx - 2:idx], fade_in_alpha))
+    return discriminators
 
 
 class ImageBlender(TensorOp):
@@ -276,7 +301,7 @@ class Interpolate(TensorOp):
     def forward(self, data, state):
         fake, real = data
         batch_size = real.shape[0]
-        coeff = tf.random.uniform(shape=[batch_size, 1, 1, 1], minval=0.0, maxval=1.0, dtype=tf.float32)
+        coeff = torch.rand(batch_size, 1, 1, 1).to(fake.device)
         return real + (fake - real) * coeff
 
 
@@ -286,15 +311,15 @@ class GradientPenalty(TensorOp):
 
     def forward(self, data, state):
         x_interp, interp_score = data
-        gradient_x_interp = get_gradient(tf.reduce_sum(interp_score), x_interp, higher_order=True, tape=state['tape'])
-        grad_l2 = tf.math.sqrt(tf.reduce_sum(tf.math.square(gradient_x_interp), axis=[1, 2, 3]))
-        gp = tf.math.square(grad_l2 - 1.0)
+        gradient_x_interp = get_gradient(torch.sum(interp_score), x_interp, higher_order=True)
+        grad_l2 = torch.sqrt(torch.sum(gradient_x_interp**2, dim=(1, 2, 3)))
+        gp = (grad_l2 - 1.0)**2
         return gp
 
 
 class GLoss(TensorOp):
     def forward(self, data, state):
-        return -tf.reduce_mean(data)
+        return -torch.mean(data)
 
 
 class DLoss(TensorOp):
@@ -306,8 +331,8 @@ class DLoss(TensorOp):
 
     def forward(self, data, state):
         real_score, fake_score, gp = data
-        loss = fake_score - real_score + self.wgan_lambda * gp + tf.math.square(real_score) * self.wgan_epsilon
-        return tf.reduce_mean(loss)
+        loss = fake_score - real_score + self.wgan_lambda * gp + real_score**2 * self.wgan_epsilon
+        return torch.mean(loss)
 
 
 class AlphaController(Trace):
@@ -321,10 +346,11 @@ class AlphaController(Trace):
         self.change_alpha = False
         self.nimg_total = self.duration * self.num_examples
         self._idx = 0
+        self.nimg_so_far = 0
         self.current_batch_size = None
 
     def on_epoch_begin(self, state):
-        # check whether the current epoch is in smooth transition of resolutions
+        # check whetehr the current epoch is in smooth transition of resolutions
         fade_epoch = self.fade_start_epochs[self._idx]
         if self.system.epoch_idx == fade_epoch:
             self.change_alpha = True
@@ -336,14 +362,13 @@ class AlphaController(Trace):
             self.change_alpha = False
             if self._idx + 1 < len(self.fade_start_epochs):
                 self._idx += 1
-            backend.set_value(self.alpha, 1.0)
+            self.alpha.data = torch.tensor(1.0)
 
     def on_batch_begin(self, state):
         # if in resolution transition, smoothly change the alpha from 0 to 1
         if self.change_alpha:
             self.nimg_so_far += self.current_batch_size
-            current_alpha = np.float32(self.nimg_so_far / self.nimg_total)
-            backend.set_value(self.alpha, current_alpha)
+            self.alpha.data = torch.tensor(self.nimg_so_far / self.nimg_total, dtype=torch.float32)
 
 
 class ImageSaving(Trace):
@@ -359,9 +384,12 @@ class ImageSaving(Trace):
         if self.system.epoch_idx in self.epoch_model_map:
             model = self.epoch_model_map[self.system.epoch_idx]
             for i in range(self.num_sample):
-                random_vectors = tf.random.normal([1, self.latent_dim])
+                random_vectors = torch.normal(
+                    mean=0.0, std=1.0, size=(1, self.latent_dim)).to("cuda:0" if torch.cuda.is_available() else "cpu")
                 pred = feed_forward(model, random_vectors, training=False)
-                disp_img = pred.numpy()
+                if torch.cuda.is_available():
+                    pred = pred.to("cpu")
+                disp_img = np.transpose(pred.data.numpy(), (0, 2, 3, 1))  #BCHW -> BHWC
                 disp_img = np.squeeze(disp_img)
                 disp_img -= disp_img.min()
                 disp_img /= (disp_img.max() + self.eps)
@@ -399,7 +427,7 @@ def get_estimator(target_size=128,
         for (epoch, size) in zip(event_epoch, event_size)
     }
     batch_size_map = {
-        epoch: 512 // size * get_num_devices() if size <= 128 else 4 * get_num_devices()
+        epoch: max(512 // size, 4) * get_num_devices() if size <= 512 else 2 * get_num_devices()
         for (epoch, size) in zip(event_epoch, event_size)
     }
     batch_scheduler = EpochScheduler(epoch_dict=batch_size_map)
@@ -413,18 +441,19 @@ def get_estimator(target_size=128,
             EpochScheduler(epoch_dict=resize_low_res_map1),
             EpochScheduler(epoch_dict=resize_low_res_map2),
             Normalize(inputs=["x", "x_low_res"], outputs=["x", "x_low_res"], mean=1.0, std=1.0, max_pixel_value=127.5),
+            ChannelTranspose(inputs=["x", "x_low_res"], outputs=["x", "x_low_res"]),
             NumpyOp(inputs=lambda: np.random.normal(size=[512]).astype('float32'), outputs="z")
         ])
-    # now model schedule
-    fade_in_alpha = tf.Variable(initial_value=1.0, dtype='float32', trainable=False)
+    fade_in_alpha = torch.tensor(1.0)
     d_models = fe.build(
         model_fn=lambda: build_D(fade_in_alpha, target_resolution=int(np.log2(target_size)), num_channels=1),
-        optimizer_fn=[lambda: Adam(0.001, beta_1=0.0, beta_2=0.99, epsilon=1e-8)] * len(event_size),
-        model_name=["d_{}".format(size) for size in event_size])
+        optimizer_fn=[lambda x: Adam(x, lr=0.001, betas=(0.0, 0.99), eps=1e-8)] * len(event_size),
+        model_names=["d_{}".format(size) for size in event_size])
+
     g_models = fe.build(
         model_fn=lambda: build_G(fade_in_alpha, target_resolution=int(np.log2(target_size)), num_channels=1),
-        optimizer_fn=[lambda: Adam(0.001, beta_1=0.0, beta_2=0.99, epsilon=1e-8)] * len(event_size) + [None],
-        model_name=["g_{}".format(size) for size in event_size] + ["G"])
+        optimizer_fn=[lambda x: Adam(x, lr=0.001, betas=(0.0, 0.99), eps=1e-8)] * len(event_size) + [None],
+        model_names=["g_{}".format(size) for size in event_size] + ["G"])
     fake_img_map = {
         epoch: ModelOp(inputs="z", outputs="x_fake", model=model)
         for (epoch, model) in zip(event_epoch, g_models[:-1])
