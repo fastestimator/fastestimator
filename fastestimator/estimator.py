@@ -80,7 +80,7 @@ class Estimator:
                              max_train_steps_per_epoch=max_train_steps_per_epoch,
                              max_eval_steps_per_epoch=max_eval_steps_per_epoch)
 
-    def fit(self, summary: Optional[str] = None) -> Optional[Summary]:
+    def fit(self, summary: Optional[str] = None, warmup=True) -> Optional[Summary]:
         """Train the network for the number of epochs specified by the estimator's constructor.
 
         Args:
@@ -93,7 +93,8 @@ class Estimator:
         draw()
         self.system.reset(summary)
         self._prepare_traces(run_modes={"train", "eval"})
-        self._warmup()
+        if warmup:
+            self._warmup()
         self._start(run_modes={"train", "eval"})
         return self.system.summary or None
 
@@ -283,7 +284,7 @@ class Estimator:
         self._run_traces_on_begin(traces=all_traces)
         try:
             if "train" in run_modes or "eval" in run_modes:
-                for self.system.epoch_idx in range(1, self.system.total_epochs + 1):
+                for self.system.epoch_idx in range(self.system.epoch_idx + 1, self.system.total_epochs + 1):
                     if "train" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
                         self.system.mode = "train"
                         self._run_epoch()

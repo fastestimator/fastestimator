@@ -216,7 +216,7 @@ def get_estimator(batch_size=4,
         ])
 
     model = fe.build(model_fn=StyleTransferNet,
-                     model_names="style_transfer_net",
+                     model_name="style_transfer_net",
                      optimizer_fn=lambda: tf.optimizers.Adam(1e-3))
 
     network = fe.Network(ops=[

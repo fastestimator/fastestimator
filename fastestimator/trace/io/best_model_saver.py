@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import os
 from typing import Optional, Union
 
 import numpy as np
@@ -72,6 +73,7 @@ class BestModelSaver(Trace):
             if self.save_dir:
                 model_name = "{}_best_{}".format(self.model.model_name, self.metric)
                 save_model(self.model, self.save_dir, model_name)
+                print("FastEstimator-BestModelSaver: Saved model to {}".format(os.path.join(self.save_dir, model_name)))
         else:
             self.since_best += 1
         data.write_with_log(self.outputs[0], self.since_best)

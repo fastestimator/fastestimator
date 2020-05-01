@@ -48,13 +48,7 @@ class UpdateOp(TensorOp):
             self.model.loss_name.add(loss_name)
 
     def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]):
-        if state["warmup"]:
-            if isinstance(self.model, tf.keras.Model):
-                with tfops.init_scope():
-                    _ = self.model.current_optimizer.iterations
-                    self.model.current_optimizer._create_hypers()
-                    self.model.current_optimizer._create_slots(self.model.trainable_variables)
-        else:
+        if not state["warmup"]:
             if self.weight_decay:
                 data = data + tf.reduce_sum(self.model.losses)
             update_model(self.model, data, tape=state['tape'], retain_graph=self.retain_graph)

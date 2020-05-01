@@ -189,7 +189,7 @@ def get_estimator(epochs=200,
         ])
 
     # step 2. prepare model
-    model = fe.build(model_fn=siamese_network, model_names="siamese_net", optimizer_fn="adam")
+    model = fe.build(model_fn=siamese_network, model_name="siamese_net", optimizer_fn="adam")
 
     network = fe.Network(ops=[
         ModelOp(inputs=["x_a", "x_b"], model=model, outputs="y_pred"),

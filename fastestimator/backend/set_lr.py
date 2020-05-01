@@ -41,16 +41,9 @@ def set_lr(model: Union[tf.keras.Model, torch.nn.Module], lr: float):
         ValueError: If `model` is an unacceptable data type.
     """
     if isinstance(model, tf.keras.Model):
-        if hasattr(model, 'current_optimizer'):
-            tf.keras.backend.set_value(model.current_optimizer.lr, lr)
-        else:
-            tf.keras.backend.set_value(model.optimizer.lr, lr)
+        tf.keras.backend.set_value(model.current_optimizer.lr, lr)
     elif isinstance(model, torch.nn.Module):
-        if hasattr(model, 'current_optimizer'):
-            for param_group in model.current_optimizer.param_groups:
-                param_group['lr'] = lr
-        else:
-            for param_group in model.optimizer.param_groups:
-                param_group['lr'] = lr
+        for param_group in model.current_optimizer.param_groups:
+            param_group['lr'] = lr
     else:
         raise ValueError("Unrecognized model instance {}".format(type(model)))

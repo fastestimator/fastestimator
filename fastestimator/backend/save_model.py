@@ -13,13 +13,17 @@
 # limitations under the License.
 # ==============================================================================
 import os
-from typing import Union
+import pickle
+from typing import Optional, Union
 
 import tensorflow as tf
 import torch
 
 
-def save_model(model: Union[tf.keras.Model, torch.nn.Module], save_dir: str, model_name: str = "saved_model"):
+def save_model(model: Union[tf.keras.Model, torch.nn.Module],
+               save_dir: str,
+               model_name: Optional[str] = None,
+               save_optimizer: bool = False):
     """Save `model` weights to a specific directory.
 
     This method can be used with TensorFlow models:
@@ -37,19 +41,31 @@ def save_model(model: Union[tf.keras.Model, torch.nn.Module], save_dir: str, mod
     Args:
         model: A neural network instance to save.
         save_dir: Directory into which to write the `model` weights.
-        model_name: The name of the model (used for naming the weights file).
+        model_name: The name of the model (used for naming the weights file). If None, model.model_name will be used.
+        save_optimizer: Whether to save optimizer. If True, optimizer will be saved in a separate file at same folder.
 
     Raises:
         ValueError: If `model` is an unacceptable data type.
     """
+    assert hasattr(model, "fe_compiled") and model.fe_compiled, "model must be built by fe.build"
+    if model_name is None:
+        model_name = model.model_name
     save_dir = os.path.normpath(save_dir)
     os.makedirs(save_dir, exist_ok=True)
     if isinstance(model, tf.keras.Model):
         model_path = os.path.join(save_dir, "{}.h5".format(model_name))
         model.save_weights(model_path)
+        if save_optimizer:
+            assert model.current_optimizer, "optimizer does not exist"
+            optimizer_path = os.path.join(save_dir, "{}_opt.pkl".format(model_name))
+            with open(optimizer_path, 'wb') as f:
+                pickle.dump(model.current_optimizer.get_weights(), f)
     elif isinstance(model, torch.nn.Module):
         model_path = os.path.join(save_dir, "{}.pt".format(model_name))
         torch.save(model.state_dict(), model_path)
+        if save_optimizer:
+            assert model.current_optimizer, "optimizer does not exist"
+            optimizer_path = os.path.join(save_dir, "{}_opt.pt".format(model_name))
+            torch.save(model.current_optimizer.state_dict(), optimizer_path)
     else:
         raise ValueError("Unrecognized model instance {}".format(type(model)))
-    print("FastEstimator-ModelSaver: saved model to {}".format(model_path))

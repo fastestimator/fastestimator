@@ -420,11 +420,11 @@ def get_estimator(target_size=128,
     d_models = fe.build(
         model_fn=lambda: build_D(fade_in_alpha, target_resolution=int(np.log2(target_size)), num_channels=1),
         optimizer_fn=[lambda: Adam(0.001, beta_1=0.0, beta_2=0.99, epsilon=1e-8)] * len(event_size),
-        model_names=["d_{}".format(size) for size in event_size])
+        model_name=["d_{}".format(size) for size in event_size])
     g_models = fe.build(
         model_fn=lambda: build_G(fade_in_alpha, target_resolution=int(np.log2(target_size)), num_channels=1),
         optimizer_fn=[lambda: Adam(0.001, beta_1=0.0, beta_2=0.99, epsilon=1e-8)] * len(event_size) + [None],
-        model_names=["g_{}".format(size) for size in event_size] + ["G"])
+        model_name=["g_{}".format(size) for size in event_size] + ["G"])
     fake_img_map = {
         epoch: ModelOp(inputs="z", outputs="x_fake", model=model)
         for (epoch, model) in zip(event_epoch, g_models[:-1])
