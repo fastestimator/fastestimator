@@ -23,7 +23,7 @@ from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 
 
-class MileStone(Trace):
+class SpotRecovery(Trace):
     """A trace that can backup and load your entire training system so your training can resume from the last milestone.
         It will automatically save and load the following:
             * Weights of all models

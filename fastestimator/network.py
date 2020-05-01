@@ -48,7 +48,6 @@ class BaseNetwork:
         self.epoch_ops = []
         self.epoch_models = set()
         self.epoch_state = dict()
-        self.framework = None
 
     def _verify_inputs(self) -> None:
         """Ensure that all ops are TensorOps.

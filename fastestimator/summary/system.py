@@ -78,6 +78,7 @@ class System:
         self.num_devices = num_devices
         self.log_steps = log_steps
         self.total_epochs = total_epochs
+        self.batch_idx = None
         self.max_train_steps_per_epoch = max_train_steps_per_epoch
         self.max_eval_steps_per_epoch = max_eval_steps_per_epoch
         self.stop_training = False
