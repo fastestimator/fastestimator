@@ -618,10 +618,10 @@ def _fe_compile(model: Model,
         optimizer_fn = _build_optimizer(optimizer_fn, model, framework)
         model.current_optimizer = optimizer_fn
     model.optimizer = optimizer_fn
+    model.fe_compiled = True
     if weight:
         load_model(model, weight)
     model.model_name = name
-    model.fe_compiled = True
     return model
 
 
