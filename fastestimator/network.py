@@ -17,6 +17,7 @@ from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional
 
 import tensorflow as tf
 import torch
+from tensorflow.python.distribute.values import DistributedValues
 
 from fastestimator.backend.load_model import load_model
 from fastestimator.backend.to_tensor import to_tensor
@@ -25,9 +26,10 @@ from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model.model import ModelOp
 from fastestimator.op.tensorop.model.update import UpdateOp
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
-from fastestimator.util.util import NonContext, get_batch_size, per_replica_to_global, to_list
+from fastestimator.util.util import NonContext, get_batch_size, to_list
 
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
+T = TypeVar('T')
 
 
 class BaseNetwork:
@@ -277,15 +279,21 @@ class TorchNetwork(BaseNetwork):
                 # move model variables to gpu
                 model.to(self.device)
                 # move optimizer variables to gpu
-                self._move_between_device(model.current_optimizer.state, self.device)
+                self._move_optimizer_between_device(model.current_optimizer.state, self.device)
 
-    def _move_between_device(self, var, device):
-        for key in var:
-            if isinstance(var[key], dict):
-                self._move_between_device(var[key], device)
+    def _move_optimizer_between_device(self, data: Dict[str, Any], device: str) -> None:
+        """Move optimizer state between gpu and cpu recursively.
+
+        Args:
+            data: Optimizer state.
+            device: The target device.
+        """
+        for key in data:
+            if isinstance(data[key], dict):
+                self._move_optimizer_between_device(data[key], device)
             else:
                 try:
-                    var[key] = var[key].to(device)
+                    data[key] = data[key].to(device)
                 except:
                     pass
 
@@ -299,7 +307,7 @@ class TorchNetwork(BaseNetwork):
                 # move model variables to cpu
                 model.to("cpu")
                 # move optimizer variables to cpu
-                self._move_between_device(model.current_optimizer.state, "cpu")
+                self._move_optimizer_between_device(model.current_optimizer.state, "cpu")
 
     def _get_effective_batch_input(self, batch: MutableMapping[str, Any], mode: str) -> Dict[str, Any]:
         """Copy input data from the the CPU onto the GPU(s).
@@ -315,7 +323,10 @@ class TorchNetwork(BaseNetwork):
             The input data ready for use on GPU(s).
         """
         if self.device.type == "cuda":
-            new_batch = {key: batch[key].to(self.device) for key in self.effective_inputs[mode] if key in batch}
+            new_batch = {
+                key: self._move_tensor_between_device(batch[key], self.device)
+                for key in self.effective_inputs[mode] if key in batch
+            }
         else:
             new_batch = {key: batch[key] for key in self.effective_inputs[mode] if key in batch}
         return new_batch
@@ -341,12 +352,58 @@ class TorchNetwork(BaseNetwork):
         # copy data to cpu
         if self.device.type == "cuda":
             prediction = {
-                key: batch_in[key].detach().to("cpu")
+                key: self._move_tensor_between_device(self._detach_tensor(batch_in[key]), "cpu")
                 for key in self.effective_outputs[mode] if key in batch_in
             }
         else:
-            prediction = {key: batch_in[key].detach() for key in self.effective_outputs[mode] if key in batch_in}
+            prediction = {
+                key: self._detach_tensor(batch_in[key])
+                for key in self.effective_outputs[mode] if key in batch_in
+            }
         return batch, prediction
+
+    def _move_tensor_between_device(self, data: T, device: str) -> T:
+        """Move tensor between gpu and cpu recursively.
+
+        Args:
+            data: The input data to be moved.
+            device: The target device.
+
+        Returns:
+            Output data.
+        """
+        if isinstance(data, dict):
+            return {key: self._move_tensor_between_device(value, device) for (key, value) in data.items()}
+        elif isinstance(data, list):
+            return [self._move_tensor_between_device(val, device) for val in data]
+        elif isinstance(data, tuple):
+            return tuple([self._move_tensor_between_device(val, device) for val in data])
+        elif isinstance(data, set):
+            return set([self._move_tensor_between_device(val, device) for val in data])
+        elif isinstance(data, torch.Tensor):
+            return data.to(device)
+        else:
+            return data
+
+    def _detach_tensor(self, data: T) -> T:
+        """Detach tensor from current graph recursively.
+
+        Args:
+            data: The data to be detached.
+
+        Returns:
+            Output data.
+        """
+        if isinstance(data, dict):
+            return {key: self._detach_tensor(value) for (key, value) in data.items()}
+        elif isinstance(data, list):
+            return [self._detach_tensor(val) for val in data]
+        elif isinstance(data, tuple):
+            return tuple([self._detach_tensor(val) for val in data])
+        elif isinstance(data, set):
+            return set([self._detach_tensor(val) for val in data])
+        elif isinstance(data, torch.Tensor):
+            return data.detach()
 
     def transform(self, data: Dict[str, Any], mode: str, epoch: int = 1) -> Dict[str, Any]:
         """Run a forward step through the Network on an element of data.
@@ -394,8 +451,8 @@ class TFNetwork(BaseNetwork):
                 prediction = strategy.experimental_run_v2(
                     self._forward_step_static,
                     args=(batch_in, self.epoch_state, self.epoch_ops, to_list(self.effective_outputs[mode])))
-            batch = per_replica_to_global(batch)
-            prediction = per_replica_to_global(prediction)
+            batch = self._per_replica_to_global(batch)
+            prediction = self._per_replica_to_global(prediction)
         else:
             if self.epoch_state["warmup"]:
                 prediction = self._forward_step_eager(batch_in,
@@ -408,6 +465,37 @@ class TFNetwork(BaseNetwork):
                                                        self.epoch_ops,
                                                        to_list(self.effective_outputs[mode]))
         return batch, prediction
+
+    def _per_replica_to_global(self, data: T) -> T:
+        """Combine data from "per-replica" values recursively.
+
+        For multi-GPU training, data are distributed using `tf.distribute.Strategy.experimental_distribute_dataset`.
+        This method collects data from all replicas and combines them into one.
+
+        Args:
+            data: Distributed data.
+
+        Returns:
+            Combined data from all replicas.
+        """
+        if isinstance(data, DistributedValues):
+            if data.values[0].shape.rank == 0:
+                return tf.reduce_mean(data.values)
+            else:
+                return tf.concat(data.values, axis=0)
+        elif isinstance(data, dict):
+            result = {}
+            for key, val in data.items():
+                result[key] = self._per_replica_to_global(val)
+            return result
+        elif isinstance(data, list):
+            return [self._per_replica_to_global(val) for val in data]
+        elif isinstance(data, tuple):
+            return tuple([self._per_replica_to_global(val) for val in data])
+        elif isinstance(data, set):
+            return set([self._per_replica_to_global(val) for val in data])
+        else:
+            return data
 
     def _get_effective_batch_input(self, batch: MutableMapping[str, Any], mode: str) -> Dict[str, Any]:
         """Filter input data so that only the data required by the Network is moved onto the GPU.
@@ -499,15 +587,33 @@ class TFNetwork(BaseNetwork):
         data = to_tensor(data, target_type="tf")
         data, prediction = self.run_step(data)
         self.unload_epoch()
-        batch_size = get_batch_size(data)
-        # TODO need to handle nested structure
         # handle tensorflow multi-gpu inferencing issue, it will replicate data on each device
         if isinstance(tf.distribute.get_strategy(), tf.distribute.MirroredStrategy):
-            for key, val in prediction.items():
-                if hasattr(val, "shape") and list(val.shape) and val.shape[0] > batch_size:
-                    prediction[key] = val[0:batch_size]
+            prediction = self._subsample_data(prediction, get_batch_size(data))
         data.update(prediction)
         return data
+
+    def _subsample_data(self, data: T, n: int) -> T:
+        """Subsample data by selecting the first n indices recursively.
+
+        Args:
+            data: The data to be subsampled.
+
+        Returns:
+            Subsampled data.
+        """
+        if isinstance(data, dict):
+            return {key: self._subsample_data(val, n) for (key, val) in data.items()}
+        elif isinstance(data, list):
+            return [self._subsample_data(val, n) for val in data]
+        elif isinstance(data, tuple):
+            return tuple([self._subsample_data(val, n) for val in data])
+        elif isinstance(data, set):
+            return set([self._subsample_data(val, n) for val in data])
+        elif hasattr(data, "shape") and list(data.shape) and data.shape[0] > n:
+            return data[0:n]
+        else:
+            return data
 
 
 def build(model_fn: Callable[[], Union[Model, List[Model]]],

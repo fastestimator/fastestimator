@@ -46,6 +46,7 @@ class RestoreWizard(Trace):
         else:
             self._scan_files()
             self._load_files()
+            data.write_with_log("epoch", self.system.epoch_idx)
             print("FastEstimator-RestoreWizard: Restoring from {}, resume training".format(self.directory))
 
     def _load_files(self) -> None:

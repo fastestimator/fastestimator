@@ -27,7 +27,6 @@ import numpy as np
 import tensorflow as tf
 import torch
 from pyfiglet import Figlet
-from tensorflow.python.distribute.values import DistributedValues
 
 from fastestimator.backend.to_number import to_number
 
@@ -50,7 +49,6 @@ STRING_TO_TORCH_DTYPE = {
     'bool': torch.bool
 }
 
-T = TypeVar('T')
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
@@ -281,38 +279,6 @@ def strip_prefix(target: Optional[str], prefix: Optional[str]) -> Optional[str]:
     if target[:s_len] == prefix:
         return target[s_len:]
     return target
-
-
-def per_replica_to_global(data: T) -> T:
-    """Combine data from "per-replica" values.
-
-    For multi-GPU training, data are distributed using `tf.distribute.Strategy.experimental_distribute_dataset`. This
-    method collects data from all replicas and combines them into one.
-
-    Args:
-        data: Distributed data.
-
-    Returns:
-        Combined data from all replicas.
-    """
-    if isinstance(data, DistributedValues):
-        if data.values[0].shape.rank == 0:
-            return tf.reduce_mean(data.values)
-        else:
-            return tf.concat(data.values, axis=0)
-    elif isinstance(data, dict):
-        result = {}
-        for key, val in data.items():
-            result[key] = per_replica_to_global(val)
-        return result
-    elif isinstance(data, list):
-        return [per_replica_to_global(val) for val in data]
-    elif isinstance(data, tuple):
-        return tuple([per_replica_to_global(val) for val in data])
-    elif isinstance(data, set):
-        return set([per_replica_to_global(val) for val in data])
-    else:
-        return data
 
 
 def get_type(obj: Any) -> str:

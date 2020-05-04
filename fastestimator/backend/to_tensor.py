@@ -22,7 +22,7 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
 
 def to_tensor(data: Union[Collection, Tensor], target_type: str) -> Union[Collection, Tensor]:
-    """Convert tensors within a collection of `data` to a given `target_type`.
+    """Convert tensors within a collection of `data` to a given `target_type` recursively.
 
     This method can be used with Numpy data:
     ```python
