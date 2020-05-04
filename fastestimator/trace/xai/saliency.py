@@ -163,6 +163,6 @@ class Saliency(Trace):
                 args["Integrated {}".format(key)] = integrated[key]
             if smint:
                 args["SmInt {}".format(key)] = smint[key]
-        result = ImgData(**args)
+        result = ImgData(colormap="inferno", **args)
 
         data.write_without_log(self.outputs[0], result)

@@ -48,6 +48,7 @@ class ImgData(OrderedDict):
     ```
 
     Args:
+        colormap: What colormap to use when rendering greyscale images. A good colorization option is 'inferno'.
         **kwargs: image_title / image pairs for visualization. Images with the same batch dimensions will be laid out
             side-by-side, with earlier kwargs entries displayed further to the left. The value part of the key/value
             pair can be a list of tensors, in which case the elements of the list are overlaid. This can be useful for
@@ -60,8 +61,9 @@ class ImgData(OrderedDict):
     """
     n_elements: Dict[int, List[str]]
 
-    def __init__(self, **kwargs: Union[Tensor, List[Tensor]]) -> None:
+    def __init__(self, colormap: str = "Greys", **kwargs: Union[Tensor, List[Tensor]]) -> None:
         self.n_elements = {}  # Not a default dict b/c that complicates the computations later
+        self.colormap = colormap
         super().__init__(**kwargs)
 
     def __setitem__(self, key: str, value: Union[Tensor, List[Tensor]]):
@@ -288,7 +290,8 @@ class ImgData(OrderedDict):
                                    axis=ax,
                                    fig=fig,
                                    title=row[col_idx][0] if batch_idx == 0 else None,
-                                   stack_depth=idx)
+                                   stack_depth=idx,
+                                   color_map=self.colormap)
         if save_path:
             plt.savefig(save_path, dpi=dpi, bbox_inches="tight")
         return fig
