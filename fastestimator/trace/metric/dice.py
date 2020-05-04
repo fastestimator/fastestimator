@@ -53,7 +53,7 @@ class Dice(Trace):
         return self.inputs[1]
 
     def on_epoch_begin(self, data: Data) -> None:
-        self.dice = np.array([])
+        self.dice = []
 
     def on_batch_end(self, data: Data) -> None:
         y_true, y_pred = to_number(data[self.true_key]), to_number(data[self.pred_key])
@@ -65,7 +65,7 @@ class Dice(Trace):
         intersection = np.sum(y_true * prediction_label, axis=-1)
         area_sum = np.sum(y_true, axis=-1) + np.sum(prediction_label, axis=-1)
         dice = (2. * intersection + self.smooth) / (area_sum + self.smooth)
-        self.dice = np.append(self.dice, dice, axis=0)
+        self.dice.extend(list(dice))
 
     def on_epoch_end(self, data: Data) -> None:
-        data.write_with_log(self.outputs[0], self.dice.mean())
+        data.write_with_log(self.outputs[0], np.mean(self.dice))
