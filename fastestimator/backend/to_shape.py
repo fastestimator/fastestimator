@@ -22,7 +22,7 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
 
 def to_shape(data: Union[Collection, Tensor], add_batch=False, exact_shape=True) -> Union[Collection, Tensor]:
-    """Compute the shape of tensors within a collection of `data`.
+    """Compute the shape of tensors within a collection of `data`recursively.
 
     This method can be used with Numpy data:
     ```python

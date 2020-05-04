@@ -44,6 +44,9 @@ def save_model(model: Union[tf.keras.Model, torch.nn.Module],
         model_name: The name of the model (used for naming the weights file). If None, model.model_name will be used.
         save_optimizer: Whether to save optimizer. If True, optimizer will be saved in a separate file at same folder.
 
+    Returns:
+        The saved model path.
+
     Raises:
         ValueError: If `model` is an unacceptable data type.
     """
@@ -60,6 +63,7 @@ def save_model(model: Union[tf.keras.Model, torch.nn.Module],
             optimizer_path = os.path.join(save_dir, "{}_opt.pkl".format(model_name))
             with open(optimizer_path, 'wb') as f:
                 pickle.dump(model.current_optimizer.get_weights(), f)
+        return model_path
     elif isinstance(model, torch.nn.Module):
         model_path = os.path.join(save_dir, "{}.pt".format(model_name))
         torch.save(model.state_dict(), model_path)
@@ -67,5 +71,6 @@ def save_model(model: Union[tf.keras.Model, torch.nn.Module],
             assert model.current_optimizer, "optimizer does not exist"
             optimizer_path = os.path.join(save_dir, "{}_opt.pt".format(model_name))
             torch.save(model.current_optimizer.state_dict(), optimizer_path)
+        return model_path
     else:
         raise ValueError("Unrecognized model instance {}".format(type(model)))
