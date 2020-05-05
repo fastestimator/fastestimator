@@ -80,12 +80,16 @@ class Estimator:
                              max_train_steps_per_epoch=max_train_steps_per_epoch,
                              max_eval_steps_per_epoch=max_eval_steps_per_epoch)
 
-    def fit(self, summary: Optional[str] = None, warmup=True) -> Optional[Summary]:
+    def fit(self, summary: Optional[str] = None, warmup: bool = True) -> Optional[Summary]:
         """Train the network for the number of epochs specified by the estimator's constructor.
 
         Args:
             summary: A name for the experiment. If provided, the log history will be recorded in-memory and returned as
                 a summary object at the end of training.
+            warmup: Whether to perform warmup before training begins. The warmup procedure will test one step at every
+                epoch where schedulers cause the execution graph to change. This can take some time up front, but can
+                also save significant heartache on epoch 300 when the training unexpectedly fails due to a tensor size
+                mismatch.
 
         Returns:
             A summary object containing the training history for this session iff a `summary` name was provided.
