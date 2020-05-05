@@ -3,7 +3,7 @@
 [![Build Status](http://jenkins.fastestimator.org:8080/buildStatus/icon?subject=PR-test&job=Pull+Requests)](http://jenkins.fastestimator.org:8080/job/Pull%20Requests/)
 [![Build Status](http://jenkins.fastestimator.org:8080/buildStatus/icon?subject=nightly-build&job=nightly)](http://jenkins.fastestimator.org:8080/job/nightly/)
 
-FastEstimator is a high-level deep learning API. With the help of FastEstimator, you can easily build a high-performance deep learning model and run it anywhere. :wink:
+FastEstimator is a high-level deep learning library built on tensorflow 2 and pytorch. With the help of FastEstimator, you can easily build a high-performance deep learning model and run it anywhere. :wink:
 
 
 ## Prerequisites:
