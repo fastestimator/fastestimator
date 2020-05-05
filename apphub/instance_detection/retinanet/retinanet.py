@@ -20,7 +20,7 @@ from fastestimator.trace.metric import MeanAveragePrecision
 def get_estimator():
     batch_size = 8
     epochs = 12
-    max_steps_per_epoch = None
+    max_train_steps_per_epoch = None
     train_ds, eval_ds = mscoco.load_data()
 
     def _get_fpn_anchor_box(width: int, height: int):
@@ -122,7 +122,7 @@ def get_estimator():
 
     pipeline = fe.Pipeline(
         train_data=train_ds,
-        eval_data=eval_ds.split(0.01),
+        eval_data=eval_ds,
         batch_size=batch_size,
         ops=[
             ReadImage(inputs="image", outputs="image"),
@@ -497,7 +497,7 @@ def get_estimator():
         pipeline=pipeline,
         network=network,
         epochs=epochs,
-        max_steps_per_epoch=max_steps_per_epoch,
+        max_train_steps_per_epoch=max_train_steps_per_epoch,
         traces=[
             LRScheduler(model=model, lr_fn=lr_fn),
             BestModelSaver(model=model, save_dir='./', metric='mAP', save_best_mode="max"),
