@@ -17,4 +17,4 @@ from fastestimator.estimator import Estimator
 from fastestimator.network import Network, build
 from fastestimator.pipeline import Pipeline
 
-__version__ = '1.0'
+__version__ = '1.0.0'

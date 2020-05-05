@@ -22,13 +22,14 @@ FastEstimator is a high-level deep learning API. With the help of FastEstimator,
     ```
 
 * Mac (CPU):
-
-    No dependency needed.
+    ```
+    echo No dependency needed ":)"
+    ```
 
 ### 2. Install FastEstimator:
 * Stable:
     ```
-    pip install fastestimator==1.0
+    pip install fastestimator==1.0.0
     ```
 * Most Recent:
     ```
@@ -39,8 +40,8 @@ FastEstimator is a high-level deep learning API. With the help of FastEstimator,
 ## Docker Hub
 Docker container creates isolated virtual environment that shares resources with host machine. Docker provides an easy way to set up FastEstimator environment, users can pull image from [Docker Hub](https://hub.docker.com/r/fastestimator/fastestimator/tags).
 
-* GPU: `docker pull fastestimator/fastestimator:1.0-gpu`
-* CPU: `docker pull fastestimator/fastestimator:1.0-cpu`
+* GPU: `docker pull fastestimator/fastestimator:1.0.0-gpu`
+* CPU: `docker pull fastestimator/fastestimator:1.0.0-cpu`
 
 
 
