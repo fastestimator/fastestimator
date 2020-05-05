@@ -84,4 +84,4 @@ $ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 * **Uncertainty Weighted Loss:** Train Uncertainty Network that learns to dynamically adjust the task-related weighted loss from uncertainty. [[paper](https://arxiv.org/abs/1705.07115)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/multi_task_learning/uncertainty_weighted_loss/uncertainty_loss_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/multi_task_learning/uncertainty_weighted_loss/uncertainty_loss_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/multi_task_learning/uncertainty_weighted_loss/uncertainty_loss.ipynb)]
 
 ## Contributions
-If you have implementations that we haven't done yet and want to join our efforts of making state-of-the-art AI easier, please consider contribute to us. We would really appreciate it! :smiley:
+If you have implementations that we haven't done yet and want to join our efforts of making state-of-the-art AI easier, please consider contribute to us. We would really appreciate it!
