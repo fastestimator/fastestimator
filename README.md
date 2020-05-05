@@ -26,11 +26,11 @@ FastEstimator is a high-level deep learning API. With the help of FastEstimator,
     No dependency needed.
 
 ### 2. Install FastEstimator:
-* Stable release:
+* Stable:
     ```
     pip install fastestimator==1.0
     ```
-* Most recent:
+* Most Recent:
     ```
     pip install fastestimator-nightly
     ```
