@@ -29,7 +29,7 @@ FastEstimator is a high-level deep learning library built on TensorFlow2 and PyT
 ### 2. Install FastEstimator:
 * Stable:
     ```
-    pip install fastestimator==1.0.0
+    pip install fastestimator
     ```
 * Most Recent:
     ```
@@ -40,8 +40,8 @@ FastEstimator is a high-level deep learning library built on TensorFlow2 and PyT
 ## Docker Hub
 Docker containers create isolated virtual environments that share resources with a host machine. Docker provides an easy way to set up a FastEstimator environment. You can simply pull our image from [Docker Hub](https://hub.docker.com/r/fastestimator/fastestimator/tags) and get started:
 
-* GPU: `docker pull fastestimator/fastestimator:1.0.0-gpu`
-* CPU: `docker pull fastestimator/fastestimator:1.0.0-cpu`
+* GPU: `docker pull fastestimator/fastestimator:latest-gpu`
+* CPU: `docker pull fastestimator/fastestimator:latest-cpu`
 
 
 
