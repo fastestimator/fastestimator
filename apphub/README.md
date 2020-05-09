@@ -68,7 +68,7 @@ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 * **UNet:** Lung segmentation with UNet using a chest X-ray dataset. [[paper](https://arxiv.org/abs/1505.04597)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/semantic_segmentation/unet/unet_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/semantic_segmentation/unet/unet_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/semantic_segmentation/unet/unet.ipynb)]
 
 ### Instance Detection
-* **RetinaNet:** Object detection with RetinaNet on the COCO2017 dataset. [[paper](https://arxiv.org/abs/1708.02002)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/instance_detection/retinanet/retinanet_tf.py)]
+* **RetinaNet:** Object detection with RetinaNet on the COCO2017 dataset. [[paper](https://arxiv.org/abs/1708.02002)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/instance_detection/retinanet/retinanet.ipynb)]
 
 ### Image Style Transfer
 * **Fast Style Transfer:** Altering the source image style to a target art style using the MSCOCO 2017 dataset. [[paper](https://cs.stanford.edu/people/jcjohns/papers/eccv16/JohnsonECCV16.pdf)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/style_transfer/fst_coco/fst_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/style_transfer/fst_coco/fst_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/style_transfer/fst_coco/fst.ipynb)]
