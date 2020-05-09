@@ -20,13 +20,13 @@ In this section we will show the actual commands that we can use to train and te
   To call `estimator.fit()` and start the training on terminal:
 
 ```
-$ fastestimator train mnist_tf.py
+fastestimator train mnist_tf.py
 ```
 
 To call `estimator.test()` and start testing on terminal:
 
 ```
-$ fastestimator test mnist_tf.py
+fastestimator test mnist_tf.py
 ```
 
 <a id='t10args'></a>
@@ -44,7 +44,7 @@ Next, we try to change these arguments in two ways:
 To pass the arguments directly from the CLI we can use the `--arg` format. The following shows an example of how we can set the number of epochs to 3 and batch_size to 64:
 
 ```
-$ fastestimator train mnist_tf.py --epochs 3 --batch_size 64
+fastestimator train mnist_tf.py --epochs 3 --batch_size 64
 ```
 
 <a id='t10json'></a>
@@ -58,5 +58,5 @@ JSON:
 }
 ```
 ```
-$ fastestimator train mnist_tf.py --hyperparameters hp.json
+fastestimator train mnist_tf.py --hyperparameters hp.json
 ```

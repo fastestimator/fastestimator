@@ -30,6 +30,8 @@ class Trace:
     Traces are invoked by the fe.Estimator periodically as it runs. In addition to the current data dictionary, they are
     also given a pointer to the current `System` instance which allows access to more information as well as giving the
     ability to modify or even cancel training. The order of function invocations is as follows:
+
+    ``` plot
             Training:                                       Testing:
 
         on_begin                                            on_begin
@@ -51,6 +53,7 @@ class Trace:
         on_epoch_end (eval) >----------^
             |
         on_end
+    ```
 
     Args:
         inputs: A set of keys that this trace intends to read from the state dictionary as inputs.

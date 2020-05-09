@@ -28,19 +28,19 @@ Each example contains three files:
 
 One can simply execute the python file of any example:
 ```
-$ python mnist_tf.py
+python mnist_tf.py
 ```
 
 Or use our Command-Line Interface (CLI):
 
 ```
-$ fastestimator train mnist_torch.py
+fastestimator train mnist_torch.py
 ```
 
 One benefit of the CLI is that it allows users to configure the input args of `get_estimator`:
 
 ```
-$ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
+fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 ```
 
 ## Table of Contents:
