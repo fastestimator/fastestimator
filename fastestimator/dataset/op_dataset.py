@@ -52,8 +52,11 @@ class OpDataset(Dataset):
         """
         items = deepcopy(self.dataset[index])  # Deepcopy to prevent ops from overwriting values in datasets
         if isinstance(self.dataset, BatchDataset):
+            unique_list = []
             for item in items:
-                forward_numpyop(self.ops, item, self.mode)
+                if id(item) not in unique_list:
+                    forward_numpyop(self.ops, item, self.mode)
+                    unique_list.append(id(item))
             if self.dataset.pad_value is not None:
                 pad_batch(items, self.dataset.pad_value)
             items = {key: np.array([item[key] for item in items]) for key in items[0]}
