@@ -408,6 +408,7 @@ class Estimator:
         """Invoke the on_batch_begin methods of given traces.
 
         Args:
+            batch: The batch data which was provided by the pipeline.
             traces: List of traces.
         """
         data = Data(batch)
