@@ -50,9 +50,9 @@ def get_dependency():
         'h5py',
         'jsonpickle',
         'python-docx',
-        'tensorflow_probability==0.8.0',
+        'tensorflow_probability==0.9.0',
         'transformers==2.4.1',
-        'tensorflow==2.1.0'
+        'tensorflow==2.2.0'
     ]
     if os.name == "nt":
         dependencies.append(
@@ -76,7 +76,7 @@ setup(
     author="FastEstimator Dev",
     url='https://github.com/fastestimator/fastestimator',
     license="Apache License 2.0",
-    keywords="fastestimator tensorflow",
+    keywords="fastestimator tensorflow pytorch",
     classifiers=["License :: OSI Approved :: Apache Software License", "Programming Language :: Python :: 3"],
 
     # Declare minimal set for installation

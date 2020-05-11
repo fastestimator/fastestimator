@@ -326,8 +326,8 @@ class Estimator:
                 if self.system.mode == "train":
                     self.system.update_global_step()
                 self.system.update_batch_idx()
-                self._run_traces_on_batch_begin(traces=traces)
                 batch = self._configure_tensor(loader, batch)
+                self._run_traces_on_batch_begin(batch, traces=traces)
                 batch, prediction = self.network.run_step(batch)
                 self._run_traces_on_batch_end(batch, prediction, traces=traces)
                 if (self.system.batch_idx == self.system.max_train_steps_per_epoch and self.system.mode == "train") or (
@@ -404,13 +404,13 @@ class Estimator:
             trace.on_epoch_begin(data)
         self._check_early_exit()
 
-    def _run_traces_on_batch_begin(self, traces: Iterable[Trace]) -> None:
+    def _run_traces_on_batch_begin(self, batch: Dict[str, Any], traces: Iterable[Trace]) -> None:
         """Invoke the on_batch_begin methods of given traces.
 
         Args:
             traces: List of traces.
         """
-        data = Data()
+        data = Data(batch)
         for trace in traces:
             trace.on_batch_begin(data)
         self._check_early_exit()
