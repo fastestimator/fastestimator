@@ -63,7 +63,7 @@ class BatchDataset(FEDataset):
         self.probability = to_list(probability)
         self.same_feature = False
         self._check_input()
-        self.index_maps = [list(range(sum((len(dataset) for dataset in self.datasets)))) for _ in self.datasets]
+        self.index_maps = [list(range(max((len(dataset) for dataset in self.datasets)))) for _ in self.datasets]
         self.pad_value = None
 
     def _check_input(self) -> None:
