@@ -14,9 +14,8 @@ pipeline {
                         conda create --name $JENKINS_PYTHON_ENV python=3.6 -y
                     fi
                     conda activate $JENKINS_PYTHON_ENV
-                    pip install pytest numpy nibabel pydicom twine ipython ipykernel
-                    conda install tensorflow=2.0.0
                     pip install -e .
+                    pip install pytest numpy nibabel pydicom twine ipython ipykernel
                     pip freeze | tee requirement.txt
                 '''
             }
