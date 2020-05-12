@@ -260,7 +260,6 @@ class Pipeline:
                 batch_size = batch_size.get_current_value(epoch)
             # batch dataset
             if isinstance(data, BatchDataset):
-                assert batch_size is None, "batch_size must be None when using BatchDataset"
                 data.pad_value = self.pad_value
             else:
                 assert batch_size is not None, "batch_size should not be None"
@@ -274,7 +273,7 @@ class Pipeline:
                 collate_fn = self._pad_batch_collate
             op_dataset = OpDataset(data, get_current_items(self.ops, mode, epoch), mode)
             data = DataLoader(op_dataset,
-                              batch_size=batch_size,
+                              batch_size=None if isinstance(data, BatchDataset) else batch_size,
                               shuffle=False if isinstance(data, BatchDataset) else shuffle,
                               sampler=RandomSampler(op_dataset) if isinstance(data, BatchDataset) and shuffle else None,
                               num_workers=self.num_process,
