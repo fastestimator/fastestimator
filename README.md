@@ -41,13 +41,13 @@ FastEstimator is a high-level deep learning library built on TensorFlow2 and PyT
 Docker containers create isolated virtual environments that share resources with a host machine. Docker provides an easy way to set up a FastEstimator environment. You can simply pull our image from [Docker Hub](https://hub.docker.com/r/fastestimator/fastestimator/tags) and get started:
 
 * GPU:
-``` bash
-docker pull fastestimator/fastestimator:latest-gpu
-```
+    ``` bash
+    docker pull fastestimator/fastestimator:latest-gpu
+    ```
 * CPU:
-``` bash
-docker pull fastestimator/fastestimator:latest-cpu
-```
+    ``` bash
+    docker pull fastestimator/fastestimator:latest-cpu
+    ```
 
 
 
