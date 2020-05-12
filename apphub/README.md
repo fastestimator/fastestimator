@@ -27,19 +27,19 @@ Each example contains three files:
 ## How do I run each example
 
 One can simply execute the python file of any example:
-```
+``` bash
 $ python mnist_tf.py
 ```
 
 Or use our Command-Line Interface (CLI):
 
-```
+``` bash
 $ fastestimator train mnist_torch.py
 ```
 
 One benefit of the CLI is that it allows users to configure the input args of `get_estimator`:
 
-```
+``` bash
 $ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 ```
 
