@@ -36,8 +36,6 @@ class OpDataset(Dataset):
     """
     def __init__(self, dataset: Dataset, ops: List[NumpyOp], mode: str) -> None:
         self.dataset = dataset
-        if isinstance(self.dataset, BatchDataset):
-            self.dataset.shuffle()
         self.ops = ops
         self.mode = mode
 

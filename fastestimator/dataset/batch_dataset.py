@@ -63,7 +63,7 @@ class BatchDataset(FEDataset):
         self.probability = to_list(probability)
         self.same_feature = False
         self._check_input()
-        self.index_maps = [list(range(sum((len(dataset) for dataset in self.datasets)))) for _ in self.datasets]
+        self.index_maps = [list(range(len(ds))) for ds in self.datasets]
         self.pad_value = None
 
     def _check_input(self) -> None:
@@ -72,6 +72,7 @@ class BatchDataset(FEDataset):
         Raises:
             AssertionError: If any of the parameters are found to by unacceptable for a variety of reasons.
         """
+        assert len(self.datasets) > 1, "must provide multiple datasets as input"
         for num_sample in self.num_samples:
             assert isinstance(num_sample, int) and num_sample > 0, "only accept positive integer type as num_sample"
         # check dataset keys
@@ -146,20 +147,11 @@ class BatchDataset(FEDataset):
         new_datasets = [[ds[i] for ds in new_datasets] for i in range(num_splits)]
         results = [BatchDataset(ds, self.num_samples, self.probability) for ds in new_datasets]
         # Re-compute personal variables
-        self.index_maps = [list(range(max((len(dataset) for dataset in self.datasets)))) for _ in self.datasets]
+        self.index_maps = [list(range(len(ds))) for ds in self.datasets]
         # Unpack response if only a single split
         if len(results) == 1:
             results = results[0]
         return results
-
-    def shuffle(self) -> None:
-        """Rearrange the index maps of this BatchDataset.
-
-        This method is invoked every epoch by OpDataset which allows each epoch to have different random pairings of the
-        basis datasets.
-        """
-        for mapping in self.index_maps:
-            random.shuffle(mapping)
 
     def summary(self) -> DatasetSummary:
         """Generate a summary representation of this dataset.
@@ -175,11 +167,11 @@ class BatchDataset(FEDataset):
         Returns:
             How many batches of data can this dataset serve per epoch.
         """
-        if self.same_feature:
-            length = math.ceil(sum([len(dataset) for dataset in self.datasets]) / sum(self.num_samples))
+        if len(self.num_samples) > 1:
+            length = max([math.ceil(len(ds) / num_sample) for ds, num_sample in zip(self.datasets, self.num_samples)])
         else:
             num_sample = self.num_samples[0]
-            length = max([math.ceil(len(ds) / num_sample) for ds in self.datasets])
+            length = max([math.ceil(len(ds) / num_sample / p) for ds, p in zip(self.datasets, self.probability)])
         return length
 
     def __getitem__(self, batch_idx: int) -> List[Dict[str, Any]]:
@@ -199,14 +191,30 @@ class BatchDataset(FEDataset):
             else:
                 num_samples = self.num_samples
             for dataset, num_sample, index_map in zip(self.datasets, num_samples, self.index_maps):
-                for idx in range(num_sample):
-                    items.append(dataset[index_map[(batch_idx * num_sample + idx)] % len(dataset)])
+                for _ in range(num_sample):
+                    items.append(self._get_next_data(dataset, index_map))
         else:
             num_sample = self.num_samples[0]
-            for idx in range(num_sample):
+            for _ in range(num_sample):
                 paired_items = [
-                    dataset[index_map[(batch_idx * num_sample + idx)] % len(dataset)] for dataset,
+                    self._get_next_data(dataset, index_map) for dataset,
                     index_map in zip(self.datasets, self.index_maps)
                 ]
                 items.append({k: v for d in paired_items for k, v in d.items()})
         return items
+
+    @staticmethod
+    def _get_next_data(dataset: Union[FEDataset, Iterable[FEDataset]], index_map: List[int]) -> Dict[str, Any]:
+        """get the next element of the dataset by sampling without replacement.
+
+        Args:
+            dataset: Input dataset instance.
+            index_map: Index map of the dataset.
+
+        Returns:
+            Dataset element.
+        """
+        index = index_map.pop(random.randrange(len(index_map)))
+        if not index_map:
+            index_map.extend(list(range(len(dataset))))
+        return dataset[index]
