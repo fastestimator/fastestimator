@@ -23,7 +23,6 @@ pipeline{
                                     fi
 
                                     conda activate $JENKINS_PYTHON_ENV
-                                    pip install torch torchvision tensorflow-gpu==2.1.0
                                     pip install -e .
                                     pip install pytest ipython ipykernel ipywidgets papermill
                                     ipython kernel install --user --name nightly_build
@@ -56,7 +55,6 @@ pipeline{
                                     fi
 
                                     conda activate $JENKINS_PYTHON_ENV
-                                    pip install torch torchvision tensorflow==2.1.0
                                     pip install -e .
                                     pip install pytest ipython ipykernel ipywidgets papermill
                                     ipython kernel install --user --name nightly_build
@@ -92,8 +90,8 @@ pipeline{
                         fi
 
                         conda activate $JENKINS_PYTHON_ENV
-                        pip install torch torchvision tensorflow==2.1.0 twine
                         pip install -e .
+                        pip install twine
                         rm -rf dist/*
                         FASTESTIMATOR_IS_NIGHTLY=1 python setup.py sdist bdist_wheel
                         twine upload dist/* -u fastestimatordev -p ${PYPI_PWD}
