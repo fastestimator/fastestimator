@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import os
+import random
 from collections import ChainMap, deque
 from typing import Any, Dict, Iterable, List, Optional, Set, Union
-import os
+
 import numpy as np
-import torch
-import random
 import tensorflow as tf
+import torch
 from tensorflow.python.distribute.input_lib import DistributedDataset
 from torch.utils.data import DataLoader
 

@@ -63,7 +63,7 @@ class BatchDataset(FEDataset):
         self.probability = to_list(probability)
         self.same_feature = False
         self._check_input()
-        self.index_maps = [list(range(len(ds))) for ds in self.datasets]
+        self.reset_index_maps()
         self.pad_value = None
 
     def _check_input(self) -> None:
@@ -147,7 +147,7 @@ class BatchDataset(FEDataset):
         new_datasets = [[ds[i] for ds in new_datasets] for i in range(num_splits)]
         results = [BatchDataset(ds, self.num_samples, self.probability) for ds in new_datasets]
         # Re-compute personal variables
-        self.index_maps = [list(range(len(ds))) for ds in self.datasets]
+        self.reset_index_maps()
         # Unpack response if only a single split
         if len(results) == 1:
             results = results[0]
@@ -202,6 +202,13 @@ class BatchDataset(FEDataset):
                 ]
                 items.append({k: v for d in paired_items for k, v in d.items()})
         return items
+
+    def reset_index_maps(self) -> None:
+        """Rearrange the index maps of this BatchDataset.
+        This method is invoked every epoch by OpDataset which allows each epoch to have different random pairings of the
+        basis datasets.
+        """
+        self.index_maps = [list(range(len(ds))) for ds in self.datasets]
 
     @staticmethod
     def _get_next_data(dataset: Union[FEDataset, Iterable[FEDataset]], index_map: List[int]) -> Dict[str, Any]:
