@@ -205,6 +205,7 @@ class BatchDataset(FEDataset):
 
     def reset_index_maps(self) -> None:
         """Rearrange the index maps of this BatchDataset.
+
         This method is invoked every epoch by OpDataset which allows each epoch to have different random pairings of the
         basis datasets.
         """
