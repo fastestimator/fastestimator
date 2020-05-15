@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import os
+import random
 import time
 import warnings
 from copy import deepcopy
@@ -278,7 +279,7 @@ class Pipeline:
                               sampler=RandomSampler(op_dataset) if isinstance(data, BatchDataset) and shuffle else None,
                               num_workers=self.num_process,
                               drop_last=self.drop_last,
-                              worker_init_fn=lambda _: np.random.seed(),
+                              worker_init_fn=lambda _: np.random.seed(random.randint(0, 2**32 - 1)),
                               collate_fn=collate_fn)
         return data
 

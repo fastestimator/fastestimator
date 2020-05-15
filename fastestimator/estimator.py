@@ -12,10 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import os
+import random
 from collections import ChainMap, deque
 from typing import Any, Dict, Iterable, List, Optional, Set, Union
 
+import numpy as np
 import tensorflow as tf
+import torch
 from tensorflow.python.distribute.input_lib import DistributedDataset
 from torch.utils.data import DataLoader
 
@@ -465,3 +469,12 @@ class Estimator:
 class EarlyStop(Exception):
     """An exception raised when the system.stop_training flag is flipped by a Trace in order to abort the training.
     """
+
+
+def enable_deterministic(seed):
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    os.environ['TF_DETERMINISTIC_OPS'] = str(1)
+    random.seed(seed)
+    np.random.seed(seed)
+    tf.random.set_seed(seed)
+    torch.manual_seed(seed)
