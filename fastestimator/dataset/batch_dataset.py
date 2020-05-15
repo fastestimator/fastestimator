@@ -213,7 +213,7 @@ class BatchDataset(FEDataset):
 
     @staticmethod
     def _get_next_data(dataset: Union[FEDataset, Iterable[FEDataset]], index_map: List[int]) -> Dict[str, Any]:
-        """get the next element of the dataset by sampling without replacement.
+        """Get the next element of the dataset by sampling without replacement.
 
         Args:
             dataset: Input dataset instance.
