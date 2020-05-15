@@ -480,7 +480,7 @@ class TFNetwork(BaseNetwork):
         """
         if isinstance(data, DistributedValues):
             if data.values[0].shape.rank == 0:
-                return tf.reduce_mean(data.values)
+                return tf.reduce_mean(tuple(d for d in data.values if not tf.math.is_nan(d)))
             else:
                 return tf.concat(data.values, axis=0)
         elif isinstance(data, dict):
