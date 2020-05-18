@@ -192,7 +192,7 @@ class BatchDataset(FEDataset):
                 num_samples = self.num_samples
             for dataset, num_sample, index_map in zip(self.datasets, num_samples, self.index_maps):
                 for idx in range(num_sample):
-                    items.append(dataset[int(index_map[batch_idx * num_sample + idx])])
+                    items.append(dataset[index_map[batch_idx * num_sample + idx]])
         else:
             num_sample = self.num_samples[0]
             for idx in range(num_sample):
@@ -214,7 +214,7 @@ class BatchDataset(FEDataset):
             num_samples = num_samples * len(self.datasets)
         self.index_maps = []
         for dataset, num_sample in zip(self.datasets, num_samples):
-            index_map = [list(range(len(dataset))) for _ in range(int(np.ceil(len(self) * num_sample / len(dataset))))]
+            index_map = [list(range(len(dataset))) for _ in range(math.ceil(len(self) * num_sample / len(dataset)))]
             for mapping in index_map:
                 random.shuffle(mapping)
-            self.index_maps.append(list(np.array(index_map).flatten()))
+            self.index_maps.append([item for sublist in index_map for item in sublist])
