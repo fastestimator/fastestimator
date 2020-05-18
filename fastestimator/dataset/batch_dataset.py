@@ -191,13 +191,13 @@ class BatchDataset(FEDataset):
             else:
                 num_samples = self.num_samples
             for dataset, num_sample, index_map in zip(self.datasets, num_samples, self.index_maps):
-                for _ in range(num_sample):
-                    items.append(self._get_next_data(dataset, index_map))
+                for idx in range(num_sample):
+                    items.append(dataset[index_map[batch_idx * num_sample + idx]])
         else:
             num_sample = self.num_samples[0]
-            for _ in range(num_sample):
+            for idx in range(num_sample):
                 paired_items = [
-                    self._get_next_data(dataset, index_map) for dataset,
+                    dataset[index_map[batch_idx * num_sample + idx]] for dataset,
                     index_map in zip(self.datasets, self.index_maps)
                 ]
                 items.append({k: v for d in paired_items for k, v in d.items()})
@@ -209,20 +209,12 @@ class BatchDataset(FEDataset):
         This method is invoked every epoch by OpDataset which allows each epoch to have different random pairings of the
         basis datasets.
         """
-        self.index_maps = [list(range(len(ds))) for ds in self.datasets]
-
-    @staticmethod
-    def _get_next_data(dataset: Union[FEDataset, Iterable[FEDataset]], index_map: List[int]) -> Dict[str, Any]:
-        """Get the next element of the dataset by sampling without replacement.
-
-        Args:
-            dataset: Input dataset instance.
-            index_map: Index map of the dataset.
-
-        Returns:
-            Dataset element.
-        """
-        index = index_map.pop(random.randrange(len(index_map)))
-        if not index_map:
-            index_map.extend(list(range(len(dataset))))
-        return dataset[index]
+        num_samples = self.num_samples
+        if self.probability:
+            num_samples = num_samples * len(self.datasets)
+        self.index_maps = []
+        for dataset, num_sample in zip(self.datasets, num_samples):
+            index_map = [list(range(len(dataset))) for _ in range(math.ceil(len(self) * num_sample / len(dataset)))]
+            for mapping in index_map:
+                random.shuffle(mapping)
+            self.index_maps.append([item for sublist in index_map for item in sublist])
