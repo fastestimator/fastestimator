@@ -197,7 +197,7 @@ class BatchDataset(FEDataset):
             num_sample = self.num_samples[0]
             for idx in range(num_sample):
                 paired_items = [
-                    dataset[int(index_map[batch_idx * num_sample + idx])] for dataset,
+                    dataset[index_map[batch_idx * num_sample + idx]] for dataset,
                     index_map in zip(self.datasets, self.index_maps)
                 ]
                 items.append({k: v for d in paired_items for k, v in d.items()})
