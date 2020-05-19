@@ -19,8 +19,10 @@ import numpy as np
 from fastestimator.backend.to_number import to_number
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class Accuracy(Trace):
     """A trace which computes the accuracy for a given set of predictions.
 
