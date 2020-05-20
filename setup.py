@@ -6,7 +6,6 @@ import sys
 from setuptools import find_packages, setup
 
 is_nightly = os.environ.get('FASTESTIMATOR_IS_NIGHTLY', None)
-
 if is_nightly is not None:
     sys.stderr.write("Using '%s=%s' environment variable!\n" % ('FASTESTIMATOR_IS_NIGHTLY', is_nightly))
 
@@ -52,13 +51,10 @@ def get_dependency():
         'python-docx',
         'tensorflow_probability==0.9.0',
         'transformers==2.4.1',
-        'tensorflow==2.2.0'
+        'tensorflow==2.2.0',
+        'pycocotools @ git+https://github.com/chm123/cocoapi.git#egg=pycocotools&subdirectory=PythonAPI'
     ]
-    if os.name == "nt":
-        dependencies.append(
-            "pycocotools @ git+https://github.com/philferriere/cocoapi.git#egg=pycocotools&subdirectory=PythonAPI")
-    else:
-        dependencies.append('pycocotools-fix')
+    if os.name != "nt":
         dependencies.append('torch==1.4.0')
         dependencies.append('torchvision==0.5.0')
     return dependencies
@@ -78,7 +74,6 @@ setup(
     license="Apache License 2.0",
     keywords="fastestimator tensorflow pytorch",
     classifiers=["License :: OSI Approved :: Apache Software License", "Programming Language :: Python :: 3"],
-
     # Declare minimal set for installation
     install_requires=get_dependency(),
     # Declare extra set for installation
