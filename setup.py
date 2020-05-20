@@ -52,7 +52,7 @@ def get_dependency():
         'tensorflow_probability==0.9.0',
         'transformers==2.4.1',
         'tensorflow==2.2.0',
-        "pycocotools @ git+https://github.com/chm123/cocoapi.git#egg=pycocotools&subdirectory=PythonAPI",
+        'pycocotools @ git+https://github.com/chm123/cocoapi.git#egg=pycocotools&subdirectory=PythonAPI'
     ]
     if os.name != "nt":
         dependencies.append('torch==1.4.0')
