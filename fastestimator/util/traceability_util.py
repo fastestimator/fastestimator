@@ -25,6 +25,7 @@ from fastestimator.util.util import strip_prefix
 
 _BoundFn = namedtuple('_BoundFn', ['func', 'args'])
 _Command = namedtuple('_Command', ['left', 'right', 'command'])
+_Condition = namedtuple('_Condition', ['left', 'right', 'condition'])
 _VarWrap = namedtuple('_VarWrap', ['var'])
 _CommandTable = {
     'POWER': '**',
@@ -110,6 +111,10 @@ def _trace_value(inp: Any, wrap_str: bool = True, include_id: bool = True) -> st
         return "{} {} {}".format(_trace_value(inp.left, wrap_str, include_id),
                                  inp.command,
                                  _trace_value(inp.right, wrap_str, include_id))
+    elif isinstance(inp, _Condition):
+        return "{} if {} else {}".format(_trace_value(inp.left, wrap_str, include_id),
+                                         _trace_value(inp.condition, wrap_str, include_id),
+                                         _trace_value(inp.right, wrap_str, include_id))
     elif isinstance(inp, _BoundFn):
         return "{} invoked with: {}".format(_trace_value(inp.func, wrap_str, include_id=False),
                                             _trace_value(inp.args, wrap_str=False, include_id=include_id))
@@ -151,6 +156,9 @@ def _trace_value(inp: Any, wrap_str: bool = True, include_id: bool = True) -> st
 def _parse_instructions(closure_vars: inspect.ClosureVars, instructions: List[dis.Instruction]) -> Optional[Any]:
     """Convert a list of bytecode instructions into an argument-based representation.
 
+    The set of `instructions` is expected to have come from a lambda expression, which means that the set of bytecode
+    instructions is limited compared to examining any possible function.
+
     Args:
         closure_vars: The variables defining the current scope.
         instructions: A set of instructions being executed.
@@ -160,12 +168,31 @@ def _parse_instructions(closure_vars: inspect.ClosureVars, instructions: List[di
         fails.
     """
     instructions = [x for x in instructions]  # Shallow copy to manipulate list
+    conditions = []
     args = []
     idx = 0
     while idx < len(instructions):
         instruction = instructions[idx]
         if instruction.opname == 'RETURN_VALUE':
-            break
+            # Lambda functions don't support the return keyword, instead values are returned implicitly
+            if conditions:
+                current_condition = conditions.pop()
+                arg = args.pop()
+                instructions.pop(idx - 1)
+                idx -= 1
+                # In lambda functions, conditions always fill in the order: condition -> left -> right
+                if current_condition.left is None:
+                    conditions.append(_Condition(left=arg, condition=current_condition.condition, right=None))
+                    instructions.pop(idx - 1)
+                    idx -= 1
+                else:
+                    args.append(
+                        _Condition(left=current_condition.left, condition=current_condition.condition, right=arg))
+                    if conditions:
+                        # The return value can be used to satisfy a condition slot
+                        idx -= 1
+            else:
+                break
         elif instruction.opname == 'LOAD_CONST':
             # It's a constant value
             args.append(instruction.argval)
@@ -270,13 +297,20 @@ def _parse_instructions(closure_vars: inspect.ClosureVars, instructions: List[di
             instructions.pop(idx - 1)
             idx -= 1
             args.append(_Command(left, right, _CommandTable[command]))
+        elif instruction.opname == 'POP_JUMP_IF_FALSE':
+            # a if a < b else b     |||     <left> if <condition> else <right>
+            conditions.append(_Condition(left=None, right=None, condition=args.pop()))
+            instructions.pop(idx - 1)
+            idx -= 1
         else:
             # TODO - to be fully rigorous we need the rest: https://docs.python.org/3.7/library/dis.html#bytecodes
             # TODO - LIST_APPEND, SET_ADD, MAP_ADD, BUILD_STRING, CALL_FUNCTION_EX, BUILD_TUPLE_UNPACK, etc.
+            # Note that this function is only ever used to examine lambda functions, which helps to restrict the set of
+            # possible commands
             return None  # We weren't able to parse this correctly
         idx += 1
     # Return the bound args
-    if len(args) != 1:
+    if conditions or len(args) != 1:
         return None  # We weren't able to parse this correctly
     return args[0]
 
