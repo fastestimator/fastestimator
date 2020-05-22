@@ -44,7 +44,9 @@ _CommandTable = {
     '>': '>',
     '<': '<',
     '==': '==',
-    '!=': '!='
+    '!=': '!=',
+    '<=': '<=',
+    '>=': '>='
 }
 
 
@@ -77,10 +79,11 @@ def _trace_value(inp: Any, wrap_str: bool = True, include_id: bool = True) -> st
     """
     if isinstance(inp, str):
         return f"'{inp}'" if wrap_str else inp
-    elif hasattr(inp, 'fe_summary') and hasattr(inp, '_fe_traceability_summary'):
-        # The first time a traceable object goes through here it won't have it's summary instantiated yet
-        # noinspection PyCallingNonCallable
-        return inp.fe_summary()
+    elif hasattr(inp, '_fe_traceability_summary'):
+        # The first time a traceable object goes through here it won't have it's summary instantiated yet, so it will
+        # fall through to the class check at the end to get it's id.
+        # noinspection PyProtectedMember
+        return inp._fe_traceability_summary
     elif isinstance(inp, (int, float, bool, type(None))):
         return f"{inp}"
     elif inspect.ismethod(inp):
@@ -324,7 +327,7 @@ def traceable(whitelist: Union[str, Tuple[str]] = (), blacklist: Union[str, Tupl
             Returns:
                 A summary of the instance.
             """
-            return self._fe_traceability_summary
+            return f"This experiment used {self._fe_traceability_summary}"
 
         base_func = getattr(cls, 'fe_summary', None)
         if base_func is None:
