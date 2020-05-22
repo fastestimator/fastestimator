@@ -14,7 +14,7 @@
 # ==============================================================================
 from fastestimator.util.data import Data
 from fastestimator.util.img_data import ImgData
-from fastestimator.util.traceability_util import traceable
+from fastestimator.util.traceability_util import trace_model, traceable
 from fastestimator.util.util import DefaultKeyDict, NonContext, Suppressor, Timer, draw, get_batch_size, \
     get_num_devices, get_shape, get_type, is_number, pad_batch, pad_data, parse_modes, parse_string_to_python, \
     prettify_metric_name, show_image, strip_prefix, strip_suffix, to_list, to_set

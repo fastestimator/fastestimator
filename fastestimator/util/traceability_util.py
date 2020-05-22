@@ -15,7 +15,7 @@
 import dis
 import inspect
 from collections import deque, namedtuple
-from typing import Any, Callable, List, Mapping, Optional, Set, Tuple, Union
+from typing import Any, Callable, List, Mapping, Optional, Set, Tuple, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
@@ -49,6 +49,8 @@ _CommandTable = {
     '<=': '<=',
     '>=': '>='
 }
+
+Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
 
 def _deref_is_callable(instruction: dis.Instruction, closure_vars: inspect.ClosureVars) -> bool:
@@ -123,6 +125,7 @@ def _trace_value(inp: Any, wrap_str: bool = True, include_id: bool = True) -> st
     elif isinstance(inp, _VarWrap):
         return inp.var
     elif isinstance(inp, (tf.keras.Model, torch.nn.Module)):
+        # FE models should never actually get here since they are given summaries by trace_model() during fe.build()
         name = inp.model_name if hasattr(inp, 'model_name') else "<Unknown Model Name>"
         id_str = f" (id: {id(inp)})" if include_id else ""
         return f"a neural network model named '{name}'{id_str}"
@@ -313,6 +316,44 @@ def _parse_instructions(closure_vars: inspect.ClosureVars, instructions: List[di
     if conditions or len(args) != 1:
         return None  # We weren't able to parse this correctly
     return args[0]
+
+
+def trace_model(model: Model, model_idx: int, model_fn: Any, optimizer_fn: Any, weights_path: Any) -> Model:
+    """A function to add traceability information to an FE-compiled model.
+
+    Args:
+        model: The model to be made traceable.
+        model_idx: Which of the return values from the `model_fn` is this model (or -1 if only a single return value).
+        model_fn: The function used to generate this model.
+        optimizer_fn: The thing used to define this model's optimizer.
+        weights_path: The path to the weights for this model.
+
+    Returns:
+        The `model`, but now with an fe_summary() method.
+    """
+    prefix = "the" if model_idx == -1 else "the 1st" if model_idx == 0 else "the 2nd" if model_idx == 1 else "the 3rd" \
+        if model_idx == 2 else "the {}th".format(model_idx + 1)
+    model_fn_summary = strip_prefix(_trace_value(model_fn), "a lambda function passing no arguments to: ")
+    optimizer_fn_summary = " with no optimizer" if not optimizer_fn or isinstance(
+        optimizer_fn, list) and optimizer_fn[0] is None else " using an optimizer defined by {}".format(
+            strip_prefix(_trace_value(optimizer_fn), "a lambda function passing no arguments to: "))
+    weights_suffix = "" if not weights_path else " and weights specified by {}".format(_trace_value(weights_path))
+    model._fe_traceability_summary = "{} neural network model ('{}') generated from {}{}{}".format(
+        prefix, model.model_name, model_fn_summary, optimizer_fn_summary, weights_suffix)
+
+    def fe_summary(self) -> str:
+        """Return a summary of how this class was instantiated (for traceability).
+
+        Args:
+            self: The bound class instance.
+
+        Returns:
+            A summary of the instance.
+        """
+        return f"This experiment used {self._fe_traceability_summary}"
+
+    setattr(model, 'fe_summary', fe_summary)
+    return model
 
 
 def traceable(whitelist: Union[str, Tuple[str]] = (), blacklist: Union[str, Tuple[str]] = ()) -> Callable:

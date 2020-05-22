@@ -26,6 +26,7 @@ from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model.model import ModelOp
 from fastestimator.op.tensorop.model.update import UpdateOp
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
+from fastestimator.util.traceability_util import trace_model
 from fastestimator.util.util import NonContext, get_batch_size, to_list
 
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
@@ -688,7 +689,11 @@ def build(model_fn: Callable[[], Union[Model, List[Model]]],
         "Found inconsistency in number of models, optimizers, model_name or weights"
     # create optimizer
     for idx, (model, optimizer_def, weight, name) in enumerate(zip(models, optimizer_fn, weights_path, model_name)):
-        models[idx] = _fe_compile(model, optimizer_def, weight, name, framework)
+        models[idx] = trace_model(_fe_compile(model, optimizer_def, weight, name, framework),
+                                  model_idx=idx if len(models) > 1 else -1,
+                                  model_fn=model_fn,
+                                  optimizer_fn=optimizer_def,
+                                  weights_path=weight)
     if len(models) == 1:
         models = models[0]
     return models
