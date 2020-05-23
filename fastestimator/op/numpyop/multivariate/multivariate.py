@@ -19,8 +19,10 @@ import numpy as np
 from albumentations import BboxParams, Compose, DualTransform, KeypointParams
 
 from fastestimator.op.numpyop.numpyop import NumpyOp
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class MultiVariateAlbumentation(NumpyOp):
     """A base class for the DualTransform albumentation functions.
 

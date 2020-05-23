@@ -19,11 +19,13 @@ import torch
 
 from fastestimator.backend.get_gradient import get_gradient
 from fastestimator.op.tensorop.tensorop import TensorOp
+from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_list
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
+@traceable()
 class GradientOp(TensorOp):
     """Return the gradients of finals w.r.t. inputs.
 

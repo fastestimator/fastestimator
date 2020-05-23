@@ -18,8 +18,9 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 import requests
-from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset
 from tqdm import tqdm
+
+from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset
 
 
 def load_data(root_dir: Optional[str] = None) -> Tuple[LabeledDirDataset, LabeledDirDataset]:

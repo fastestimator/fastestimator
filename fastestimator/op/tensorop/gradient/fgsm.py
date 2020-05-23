@@ -23,10 +23,12 @@ from fastestimator.backend.reduce_max import reduce_max
 from fastestimator.backend.reduce_min import reduce_min
 from fastestimator.backend.sign import sign
 from fastestimator.op.tensorop.tensorop import TensorOp
+from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
+@traceable()
 class FGSM(TensorOp):
     """Create an adversarial sample from input data using the Fast Gradient Sign Method.
 

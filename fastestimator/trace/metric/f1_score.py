@@ -20,8 +20,10 @@ from sklearn.metrics import f1_score
 from fastestimator.backend.to_number import to_number
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class F1Score(Trace):
     """Calculate the F1 score for a classification task and report it back to the logger.
 

@@ -19,8 +19,10 @@ import numpy as np
 from albumentations import Compose, ImageOnlyTransform, ReplayCompose
 
 from fastestimator.op.numpyop.numpyop import NumpyOp
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class ImageOnlyAlbumentation(NumpyOp):
     """Operators which apply to single images (as opposed to images + masks or images + bounding boxes).
 

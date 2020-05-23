@@ -21,9 +21,11 @@ from fastestimator.backend.get_lr import get_lr
 from fastestimator.backend.to_number import to_number
 from fastestimator.summary.system import System
 from fastestimator.util.data import Data
+from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import parse_modes, to_list, to_set
 
 
+@traceable()
 class Trace:
     """Trace controls the training loop. Users can use the `Trace` base class to customize their own functionality.
 
@@ -124,6 +126,7 @@ class Trace:
         pass
 
 
+@traceable()
 class TrainEssential(Trace):
     """A trace to collect important information during training.
 
@@ -173,6 +176,7 @@ class TrainEssential(Trace):
                 data.write_with_log(model.model_name + "_lr", get_lr(model))
 
 
+@traceable()
 class EvalEssential(Trace):
     """A trace to collect important information during evaluation.
 
@@ -201,6 +205,7 @@ class EvalEssential(Trace):
             data.write_with_log(key, np.mean(np.array(value_list), axis=0))
 
 
+@traceable()
 class Logger(Trace):
     """A Trace that prints log messages.
 

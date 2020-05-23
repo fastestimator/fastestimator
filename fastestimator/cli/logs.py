@@ -14,7 +14,7 @@
 # ==============================================================================
 import argparse
 import sys
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 from fastestimator.cli.cli_util import SaveAction
 from fastestimator.summary.logs import parse_log_dir

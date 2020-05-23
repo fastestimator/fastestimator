@@ -18,8 +18,10 @@ from albumentations import BboxParams, KeypointParams
 from albumentations.augmentations.transforms import RandomCropNearBBox as RandomCropNearBBoxAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class RandomCropNearBBox(MultiVariateAlbumentation):
     """Crop bbox from an image with random shift by x,y coordinates.
 

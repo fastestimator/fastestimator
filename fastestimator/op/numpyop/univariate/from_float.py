@@ -18,8 +18,10 @@ import numpy as np
 from albumentations.augmentations.transforms import FromFloat as FromFloatAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class FromFloat(ImageOnlyAlbumentation):
     """Takes an input float image in range [0, 1.0] and then multiplies by `max_value` to get an int image.
 

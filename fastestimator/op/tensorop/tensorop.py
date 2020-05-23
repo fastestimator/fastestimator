@@ -18,10 +18,12 @@ import tensorflow as tf
 import torch
 
 from fastestimator.op.op import Op
+from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
+@traceable()
 class TensorOp(Op):
     """An Operator class which takes and returns tensor data.
 

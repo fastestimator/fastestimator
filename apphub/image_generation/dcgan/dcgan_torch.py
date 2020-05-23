@@ -28,13 +28,16 @@ from fastestimator.op.numpyop.univariate import ExpandDims, Normalize
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import ModelSaver
+from fastestimator.util import traceable
 
 
+@traceable()
 class GLoss(TensorOp):
     def forward(self, data, state):
         return binary_crossentropy(y_pred=data, y_true=torch.ones_like(data), from_logits=True)
 
 
+@traceable()
 class DLoss(TensorOp):
     def forward(self, data, state):
         true_score, fake_score = data

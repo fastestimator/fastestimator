@@ -17,8 +17,10 @@ from typing import Any, Callable, Dict, Iterable, List, Union
 import numpy as np
 
 from fastestimator.op.numpyop.numpyop import NumpyOp
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class Onehot(NumpyOp):
     """Transform an integer label to one-hot-encoding.
 

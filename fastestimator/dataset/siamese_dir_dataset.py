@@ -19,8 +19,10 @@ import numpy as np
 
 from fastestimator.dataset.dataset import DatasetSummary
 from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class SiameseDirDataset(LabeledDirDataset):
     """A dataset which returns pairs of data.
 

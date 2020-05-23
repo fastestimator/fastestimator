@@ -17,8 +17,10 @@ from typing import Optional, Tuple
 from albumentations.augmentations.transforms import RandomGridShuffle as RandomGridShuffleAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class RandomGridShuffle(MultiVariateAlbumentation):
     """Divide an image into a grid and randomly shuffle the grid's cells.
 

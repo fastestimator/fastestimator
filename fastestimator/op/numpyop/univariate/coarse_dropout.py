@@ -17,8 +17,10 @@ from typing import Callable, Iterable, List, Optional, Union
 from albumentations.augmentations.transforms import CoarseDropout as CoarseDropoutAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class CoarseDropout(ImageOnlyAlbumentation):
     """Drop rectangular regions from an image.
 

@@ -19,10 +19,12 @@ import torch
 
 from fastestimator.backend.argmax import argmax
 from fastestimator.op.tensorop.tensorop import TensorOp
+from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
+@traceable()
 class Argmax(TensorOp):
     """Get the argmax from a tensor.
 

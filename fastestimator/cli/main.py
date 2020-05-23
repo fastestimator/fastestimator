@@ -15,8 +15,8 @@
 # ==============================================================================
 import argparse
 
-from fastestimator.cli.train import configure_train_parser, configure_test_parser
 from fastestimator.cli.logs import configure_log_parser
+from fastestimator.cli.train import configure_test_parser, configure_train_parser
 
 
 def run() -> None:

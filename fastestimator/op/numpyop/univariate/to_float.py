@@ -17,8 +17,10 @@ from typing import Callable, Iterable, Optional, Union
 from albumentations.augmentations.transforms import ToFloat as ToFloatAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class ToFloat(ImageOnlyAlbumentation):
     """Divides an input by max_value to give a float image in range [0,1].
 

@@ -30,7 +30,7 @@ from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.schedule import EpochScheduler
 from fastestimator.trace import Trace
 from fastestimator.trace.io import ModelSaver
-from fastestimator.util import get_num_devices
+from fastestimator.util import get_num_devices, traceable
 
 
 def _nf(stage, fmap_base=8192, fmap_decay=1.0, fmap_max=512):
@@ -286,6 +286,7 @@ def build_D(fade_in_alpha, initial_resolution=2, target_resolution=10, num_chann
     return discriminators
 
 
+@traceable()
 class ImageBlender(TensorOp):
     def __init__(self, alpha, inputs=None, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
@@ -297,6 +298,7 @@ class ImageBlender(TensorOp):
         return new_img
 
 
+@traceable()
 class Interpolate(TensorOp):
     def forward(self, data, state):
         fake, real = data
@@ -305,6 +307,7 @@ class Interpolate(TensorOp):
         return real + (fake - real) * coeff
 
 
+@traceable()
 class GradientPenalty(TensorOp):
     def __init__(self, inputs, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
@@ -317,11 +320,13 @@ class GradientPenalty(TensorOp):
         return gp
 
 
+@traceable()
 class GLoss(TensorOp):
     def forward(self, data, state):
         return -torch.mean(data)
 
 
+@traceable()
 class DLoss(TensorOp):
     """Compute discriminator loss."""
     def __init__(self, inputs, outputs=None, mode=None, wgan_lambda=10, wgan_epsilon=0.001):
@@ -335,6 +340,7 @@ class DLoss(TensorOp):
         return torch.mean(loss)
 
 
+@traceable()
 class AlphaController(Trace):
     def __init__(self, alpha, fade_start_epochs, duration, batch_scheduler, num_examples):
         super().__init__(inputs=None, outputs=None, mode="train")
@@ -371,6 +377,7 @@ class AlphaController(Trace):
             self.alpha.data = torch.tensor(self.nimg_so_far / self.nimg_total, dtype=torch.float32)
 
 
+@traceable()
 class ImageSaving(Trace):
     def __init__(self, epoch_model_map, save_dir, num_sample=16, latent_dim=512):
         super().__init__(inputs=None, outputs=None, mode="train")
@@ -389,7 +396,7 @@ class ImageSaving(Trace):
                 pred = feed_forward(model, random_vectors, training=False)
                 if torch.cuda.is_available():
                     pred = pred.to("cpu")
-                disp_img = np.transpose(pred.data.numpy(), (0, 2, 3, 1))  #BCHW -> BHWC
+                disp_img = np.transpose(pred.data.numpy(), (0, 2, 3, 1))  # BCHW -> BHWC
                 disp_img = np.squeeze(disp_img)
                 disp_img -= disp_img.min()
                 disp_img /= (disp_img.max() + self.eps)

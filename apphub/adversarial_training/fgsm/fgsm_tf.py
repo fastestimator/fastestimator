@@ -40,8 +40,7 @@ def get_estimator(epsilon=0.04,
         eval_data=eval_data,
         test_data=test_data,
         batch_size=batch_size,
-        ops=[
-            Normalize(inputs="x", outputs="x", mean=(0.4914, 0.4822, 0.4465), std=(0.2471, 0.2435, 0.2616)), ])
+        ops=[Normalize(inputs="x", outputs="x", mean=(0.4914, 0.4822, 0.4465), std=(0.2471, 0.2435, 0.2616))])
 
     # step 2
     model = fe.build(model_fn=lambda: LeNet(input_shape=(32, 32, 3)), optimizer_fn="adam")

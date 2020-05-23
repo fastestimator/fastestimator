@@ -17,8 +17,10 @@ from typing import Callable, Iterable, Union
 from albumentations.augmentations.transforms import ToGray as ToGrayAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class ToGray(ImageOnlyAlbumentation):
     """Convert an RGB image to grayscale. If the mean pixel value of the result is > 127, the image is inverted.
 

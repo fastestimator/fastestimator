@@ -17,8 +17,10 @@ from typing import Callable, Iterable, Union
 from albumentations.augmentations.transforms import RandomSnow as RandomSnowAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class RandomSnow(ImageOnlyAlbumentation):
     """Bleach out some pixels to simulate snow.
 

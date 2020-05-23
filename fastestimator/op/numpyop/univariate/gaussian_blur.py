@@ -17,8 +17,10 @@ from typing import Callable, Iterable, Tuple, Union
 from albumentations.augmentations.transforms import GaussianBlur as GaussianBlurAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class GaussianBlur(ImageOnlyAlbumentation):
     """Blur the image with a Gaussian filter of random kernel size.
 

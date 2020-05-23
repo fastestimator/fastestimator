@@ -18,8 +18,10 @@ import cv2
 from albumentations.augmentations.transforms import OpticalDistortion as OpticalDistortionAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class OpticalDistortion(MultiVariateAlbumentation):
     """Apply optical distortion to an image / mask.
 

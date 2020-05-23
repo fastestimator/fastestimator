@@ -35,8 +35,10 @@ from fastestimator.schedule import cosine_decay
 from fastestimator.trace.adapt import LRScheduler
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy, Dice
+from fastestimator.util import traceable
 
 
+@traceable()
 class ReduceLoss(TensorOp):
     """TensorOp to average loss for a batch"""
     def forward(self, data, state):
@@ -148,7 +150,7 @@ def get_estimator(batch_size=8,
     eval_data = train_data.split(0.3)
     test_data = eval_data.split(0.5)
 
-    #step 1, pipeline
+    # step 1, pipeline
     pipeline = fe.Pipeline(
         batch_size=batch_size,
         train_data=train_data,
@@ -185,7 +187,7 @@ def get_estimator(batch_size=8,
             Reshape(shape=(1, 512, 512), inputs="seg", outputs="seg")
         ])
 
-    #step 2, network
+    # step 2, network
     resunet50 = fe.build(model_fn=ResUnet50,
                          model_name="resunet50",
                          optimizer_fn=lambda x: torch.optim.Adam(x, lr=1e-4))
@@ -203,7 +205,7 @@ def get_estimator(batch_size=8,
         UpdateOp(model=uncertainty, loss_name="total_loss")
     ])
 
-    #step 3, estimator
+    # step 3, estimator
     traces = [
         Accuracy(true_key="label", pred_key="label_pred"),
         Dice(true_key="seg", pred_key='mask_pred'),

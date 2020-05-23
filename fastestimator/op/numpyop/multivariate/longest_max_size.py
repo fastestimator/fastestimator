@@ -19,8 +19,10 @@ from albumentations import BboxParams, KeypointParams
 from albumentations.augmentations.transforms import LongestMaxSize as LongestMaxSizeAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class LongestMaxSize(MultiVariateAlbumentation):
     """Rescale an image so that maximum side is equal to max_size, keeping the aspect ratio of the initial image.
 

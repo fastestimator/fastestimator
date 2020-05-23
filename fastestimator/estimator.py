@@ -35,9 +35,11 @@ from fastestimator.trace.io.best_model_saver import BestModelSaver
 from fastestimator.trace.io.model_saver import ModelSaver
 from fastestimator.trace.trace import EvalEssential, Logger, Trace, TrainEssential
 from fastestimator.util.data import Data
+from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import Suppressor, draw, to_list, to_set
 
 
+@traceable()
 class Estimator:
     """One class to rule them all.
 

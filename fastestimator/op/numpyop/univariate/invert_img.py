@@ -17,8 +17,10 @@ from typing import Callable, Iterable, Union
 from albumentations.augmentations.transforms import InvertImg as InvertImgAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class InvertImg(ImageOnlyAlbumentation):
     """Invert an image by subtracting its pixel values from 255.
 

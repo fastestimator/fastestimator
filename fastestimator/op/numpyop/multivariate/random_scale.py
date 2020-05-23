@@ -19,8 +19,10 @@ from albumentations import BboxParams, KeypointParams
 from albumentations.augmentations.transforms import RandomScale as RandomScaleAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class RandomScale(MultiVariateAlbumentation):
     """Randomly resize the input. Output image size is different from the input image size.
 

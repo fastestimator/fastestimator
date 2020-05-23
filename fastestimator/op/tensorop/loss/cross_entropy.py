@@ -21,10 +21,12 @@ from fastestimator.backend.binary_crossentropy import binary_crossentropy
 from fastestimator.backend.categorical_crossentropy import categorical_crossentropy
 from fastestimator.backend.sparse_categorical_crossentropy import sparse_categorical_crossentropy
 from fastestimator.op.tensorop.tensorop import TensorOp
+from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
+@traceable()
 class CrossEntropy(TensorOp):
     """Calculate Element-Wise CrossEntropy (binary, categorical or sparse categorical).
 

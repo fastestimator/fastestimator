@@ -18,8 +18,10 @@ import numpy as np
 
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class EarlyStopping(Trace):
     """Stop training when a monitored quantity has stopped improving.
 

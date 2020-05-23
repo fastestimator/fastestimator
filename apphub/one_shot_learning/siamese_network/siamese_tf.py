@@ -34,7 +34,7 @@ from fastestimator.trace import Trace
 from fastestimator.trace.adapt import EarlyStopping, LRScheduler
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
-from fastestimator.util import Data
+from fastestimator.util import Data, traceable
 
 
 def lr_schedule(epoch):
@@ -43,9 +43,10 @@ def lr_schedule(epoch):
     return lr
 
 
+@traceable()
 class OneShotAccuracy(Trace):
     """Trace for calculating one shot accuracy"""
-    def __init__(self, dataset, model, N=20, trials=400, mode=["eval", "test"], output_name="one_shot_accuracy"):
+    def __init__(self, dataset, model, N=20, trials=400, mode=("eval", "test"), output_name="one_shot_accuracy"):
 
         super().__init__(mode=mode, outputs=output_name)
         self.dataset = dataset
@@ -82,7 +83,7 @@ def siamese_network(input_shape=(105, 105, 1), classes=1):
     left_input = layers.Input(shape=input_shape)
     right_input = layers.Input(shape=input_shape)
 
-    #Creating the convnet which shares weights between the left and right legs of Siamese network
+    # Creating the convnet which shares weights between the left and right legs of Siamese network
     siamese_convnet = Sequential()
 
     siamese_convnet.add(

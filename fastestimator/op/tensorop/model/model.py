@@ -19,10 +19,12 @@ import torch
 
 from fastestimator.backend.feed_forward import feed_forward
 from fastestimator.op.tensorop.tensorop import TensorOp
+from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
+@traceable()
 class ModelOp(TensorOp):
     """This class performs forward passes of a neural network over batch data to generate predictions.
 

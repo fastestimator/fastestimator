@@ -19,8 +19,10 @@ from albumentations import BboxParams
 from albumentations.augmentations.transforms import RandomSizedBBoxSafeCrop as RandomSizedBBoxSafeCropAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class RandomSizedBBoxSafeCrop(MultiVariateAlbumentation):
     """Crop a random part of the input and rescale it to some size without loss of bboxes.
 
