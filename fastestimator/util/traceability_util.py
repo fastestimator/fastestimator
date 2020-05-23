@@ -145,6 +145,9 @@ def _trace_value(inp: Any, wrap_str: bool = True, include_id: bool = True) -> st
     elif isinstance(inp, (tf.Tensor, torch.Tensor, np.ndarray)):
         if isinstance(inp, (tf.Tensor, torch.Tensor)):
             inp = inp.numpy()
+        rank = inp.ndim
+        if rank > 1 or (rank == 1 and inp.shape[0] > 5):
+            return f"an array with shape {inp.shape}"
         return f"{inp}"
     # This should be the last elif
     elif hasattr(inp, '__class__'):

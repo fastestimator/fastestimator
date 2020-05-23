@@ -20,8 +20,10 @@ from sklearn.metrics import recall_score
 from fastestimator.backend.to_number import to_number
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class Recall(Trace):
     """Compute recall for a classification task and report it back to the logger.
 

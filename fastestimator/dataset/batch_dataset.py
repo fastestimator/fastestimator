@@ -19,9 +19,11 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
 import numpy as np
 
 from fastestimator.dataset.dataset import DatasetSummary, FEDataset
+from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_list
 
 
+@traceable()
 class BatchDataset(FEDataset):
     """BatchDataset extracts a list (batch) of data from a single dataset or multiple datasets.
 

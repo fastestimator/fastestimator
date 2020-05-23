@@ -33,8 +33,10 @@ from fastestimator.schedule import cosine_decay
 from fastestimator.trace.adapt import LRScheduler
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy, Dice
+from fastestimator.util import traceable
 
 
+@traceable()
 class ReduceLoss(TensorOp):
     """TensorOp to average loss for a batch"""
     def forward(self, data, state):

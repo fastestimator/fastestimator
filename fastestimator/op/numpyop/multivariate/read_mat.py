@@ -18,8 +18,10 @@ from typing import Any, Dict, Iterable, List, Union
 from scipy.io import loadmat
 
 from fastestimator.op.numpyop.numpyop import NumpyOp
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class ReadMat(NumpyOp):
     """A class for reading .mat files from disk.
 

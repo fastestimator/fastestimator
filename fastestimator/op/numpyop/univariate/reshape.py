@@ -17,8 +17,10 @@ from typing import Any, Callable, Dict, Iterable, List, Tuple, Union
 import numpy as np
 
 from fastestimator.op.numpyop.numpyop import NumpyOp
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class Reshape(NumpyOp):
     """An Op which re-shapes data to a target shape.
 

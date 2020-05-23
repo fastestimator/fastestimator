@@ -17,8 +17,10 @@ from typing import Callable, Iterable, Union
 from albumentations.augmentations.transforms import ChannelShuffle as ChannelShuffleAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class ChannelShuffle(ImageOnlyAlbumentation):
     """Randomly rearrange channels of an image.
 

@@ -28,11 +28,13 @@ from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.op_dataset import OpDataset
 from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
 from fastestimator.schedule.schedule import Scheduler, get_current_items
+from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import pad_batch, to_list, to_set
 
 DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
 
 
+@traceable()
 class Pipeline:
     """A data pipeline class that takes care of data pre-processing.
 

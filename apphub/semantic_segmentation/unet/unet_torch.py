@@ -31,8 +31,10 @@ from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Dice
+from fastestimator.util import traceable
 
 
+@traceable()
 class CombineLeftRightMask(NumpyOp):
     """NumpyOp to combine left lung mask and right lung mask."""
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:

@@ -19,9 +19,11 @@ import matplotlib.pyplot as plt
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.img_data import ImgData
+from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import show_image
 
 
+@traceable()
 class ImageViewer(Trace):
     """A trace that interrupts your training in order to display images on the screen.
 

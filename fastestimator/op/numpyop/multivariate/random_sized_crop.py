@@ -19,8 +19,10 @@ from albumentations import BboxParams, KeypointParams
 from albumentations.augmentations.transforms import RandomSizedCrop as RandomSizedCropAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class RandomSizedCrop(MultiVariateAlbumentation):
     """Crop a random part of the input and rescale it to some size.
 

@@ -18,8 +18,10 @@ import numpy as np
 from albumentations.augmentations.transforms import Equalize as EqualizeAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class Equalize(ImageOnlyAlbumentation):
     """Equalize the image histogram.
 

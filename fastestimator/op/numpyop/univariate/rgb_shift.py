@@ -17,8 +17,10 @@ from typing import Callable, Iterable, Tuple, Union
 from albumentations.augmentations.transforms import RGBShift as RGBShiftAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class RGBShift(ImageOnlyAlbumentation):
     """Randomly shift the channel values for an input RGB image.
 

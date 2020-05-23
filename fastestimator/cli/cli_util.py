@@ -1,6 +1,6 @@
 import argparse
 import os
-from typing import List, Dict, Any, Sequence, Union, Optional
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 from fastestimator.util.util import parse_string_to_python
 
@@ -47,7 +47,7 @@ def parse_cli_to_dictionary(input_list: List[str]) -> Dict[str, Any]:
     """Convert a list of strings into a dictionary with python objects as values.
 
     ```python
-    a = parse_cli_to_dictionary(["--epochs", "5", "--test", "this", "--lr", "0.74"]) 
+    a = parse_cli_to_dictionary(["--epochs", "5", "--test", "this", "--lr", "0.74"])
     # {'epochs': 5, 'test': 'this', 'lr': 0.74}
     ```
 

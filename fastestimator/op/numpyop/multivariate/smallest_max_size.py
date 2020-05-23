@@ -19,8 +19,10 @@ from albumentations import BboxParams, KeypointParams
 from albumentations.augmentations.transforms import SmallestMaxSize as SmallestMaxSizeAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class SmallestMaxSize(MultiVariateAlbumentation):
     """Rescale an image so that minimum side is equal to max_size, keeping the aspect ratio of the initial image.
 

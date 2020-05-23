@@ -17,8 +17,10 @@ from typing import Dict
 import numpy as np
 
 from fastestimator.dataset.dataset import InMemoryDataset
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class NumpyDataset(InMemoryDataset):
     """A dataset constructed from a dictionary of Numpy data.
 

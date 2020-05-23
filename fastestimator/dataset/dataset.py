@@ -22,9 +22,11 @@ import jsonpickle
 import numpy as np
 from torch.utils.data import Dataset
 
+from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import get_shape, get_type
 
 
+@traceable()
 class KeySummary:
     """A summary of the dataset attributes corresponding to a particular key.
 
@@ -50,6 +52,7 @@ class KeySummary:
         return {k: v for k, v in self.__dict__.items() if v is not None}
 
 
+@traceable()
 class DatasetSummary:
     """This class contains information summarizing a dataset object.
 
@@ -88,6 +91,7 @@ class DatasetSummary:
         return jsonpickle.dumps(self, unpicklable=False)
 
 
+@traceable()
 class FEDataset(Dataset):
     def __len__(self) -> int:
         """Defines how many datapoints the dataset contains.
@@ -224,6 +228,7 @@ class FEDataset(Dataset):
         return str(self.summary())
 
 
+@traceable()
 class InMemoryDataset(FEDataset):
     """A dataset abstraction to simplify the implementation of datasets which hold their data in memory.
 

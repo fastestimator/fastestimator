@@ -19,8 +19,10 @@ from albumentations import BboxParams, KeypointParams
 from albumentations.augmentations.transforms import Resize as ResizeAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class Resize(MultiVariateAlbumentation):
     """Resize the input to the given height and width.
 

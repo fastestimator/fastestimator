@@ -17,8 +17,10 @@ from typing import Callable, Iterable, Tuple, Union
 from albumentations.augmentations.transforms import GaussNoise as GaussNoiseAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class GaussianNoise(ImageOnlyAlbumentation):
     """Apply gaussian noise to the image
 

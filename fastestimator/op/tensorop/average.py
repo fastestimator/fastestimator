@@ -19,10 +19,12 @@ import torch
 
 from fastestimator.backend.zeros_like import zeros_like
 from fastestimator.op.tensorop.tensorop import TensorOp
+from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
+@traceable()
 class Average(TensorOp):
     """Compute the average across tensors.
 

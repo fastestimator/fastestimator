@@ -21,8 +21,10 @@ from fastestimator.backend.load_model import load_model
 from fastestimator.backend.save_model import save_model
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class RestoreWizard(Trace):
     """A trace that can backup and load your entire training status.
 

@@ -17,8 +17,10 @@ from typing import Callable, Iterable, Optional, Tuple, Union
 from albumentations.augmentations.transforms import RandomRain as RandomRainAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class RandomRain(ImageOnlyAlbumentation):
     """Add rain to an image
 

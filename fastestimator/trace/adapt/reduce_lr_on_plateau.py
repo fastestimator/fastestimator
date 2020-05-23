@@ -23,8 +23,10 @@ from fastestimator.backend.set_lr import set_lr
 from fastestimator.summary.system import System
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class ReduceLROnPlateau(Trace):
     """Reduce learning rate based on evaluation results.
 

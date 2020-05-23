@@ -18,8 +18,10 @@ import cv2
 from albumentations.augmentations.transforms import GridDistortion as GridDistortionAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class GridDistortion(MultiVariateAlbumentation):
     """Distort an image within a grid sub-division
 

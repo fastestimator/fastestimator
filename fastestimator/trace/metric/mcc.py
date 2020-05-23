@@ -20,8 +20,10 @@ from sklearn.metrics import matthews_corrcoef
 from fastestimator.backend.to_number import to_number
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class MCC(Trace):
     """A trace which computes the Matthews Correlation Coefficient for a given set of predictions.
 

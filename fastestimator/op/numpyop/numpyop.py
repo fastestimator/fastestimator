@@ -17,8 +17,10 @@ from typing import Any, Dict, Iterable, List, MutableMapping, Union
 import numpy as np
 
 from fastestimator.op.op import Op, get_inputs_by_op, write_outputs_by_op
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class NumpyOp(Op):
     """An Operator class which takes and returns numpy data.
 
@@ -41,6 +43,7 @@ class NumpyOp(Op):
         return data
 
 
+@traceable()
 class Delete(NumpyOp):
     """Delete key(s) and their associated values from the data dictionary.
 

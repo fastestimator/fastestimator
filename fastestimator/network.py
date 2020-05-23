@@ -26,13 +26,14 @@ from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model.model import ModelOp
 from fastestimator.op.tensorop.model.update import UpdateOp
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
-from fastestimator.util.traceability_util import trace_model
+from fastestimator.util.traceability_util import trace_model, traceable
 from fastestimator.util.util import NonContext, get_batch_size, to_list
 
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 T = TypeVar('T')
 
 
+@traceable()
 class BaseNetwork:
     """A base class for Network objects.
 
@@ -252,6 +253,7 @@ def Network(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> BaseNetwork:
     return network
 
 
+@traceable()
 class TorchNetwork(BaseNetwork):
     """An extension of BaseNetwork for PyTorch models.
 
@@ -425,6 +427,7 @@ class TorchNetwork(BaseNetwork):
         return data
 
 
+@traceable()
 class TFNetwork(BaseNetwork):
     """An extension of BaseNetwork for TensorFlow models.
     """

@@ -17,8 +17,10 @@ from typing import Callable, Iterable, Tuple, Union
 from albumentations.augmentations.transforms import HueSaturationValue as HueSaturationValueAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class HueSaturationValue(ImageOnlyAlbumentation):
     """Randomly modify the hue, saturation, and value of an image.
 

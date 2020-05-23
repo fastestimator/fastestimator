@@ -18,8 +18,10 @@ from albumentations import BboxParams, KeypointParams
 from albumentations.augmentations.transforms import Transpose as TransposeAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class Transpose(MultiVariateAlbumentation):
     """Transpose the input by swapping rows and columns.
 

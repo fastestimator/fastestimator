@@ -18,10 +18,12 @@ import tensorflow as tf
 import torch
 
 from fastestimator.op.tensorop.tensorop import TensorOp
+from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
+@traceable()
 class Reshape(TensorOp):
     """Reshape a input tensor to conform to a given shape.
 

@@ -17,8 +17,10 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 import numpy as np
 
 from fastestimator.op.numpyop.numpyop import NumpyOp
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class ToArray(NumpyOp):
     """Convert data to a numpy array.
 

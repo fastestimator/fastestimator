@@ -27,8 +27,10 @@ from fastestimator.op.numpyop.univariate import Normalize, ReadImage
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import ModelSaver
+from fastestimator.util import traceable
 
 
+@traceable()
 class ExtractVGGFeatures(TensorOp):
     def __init__(self, inputs, outputs, mode=None):
         super().__init__(inputs, outputs, mode)
@@ -38,6 +40,7 @@ class ExtractVGGFeatures(TensorOp):
         return self.vgg(data)
 
 
+@traceable()
 class StyleContentLoss(TensorOp):
     def __init__(self, style_weight, content_weight, tv_weight, inputs, outputs=None, mode=None, average_loss=True):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)

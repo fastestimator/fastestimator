@@ -17,8 +17,10 @@ from typing import Callable, Iterable, Union
 from albumentations.augmentations.transforms import RandomFog as RandomFogAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class RandomFog(ImageOnlyAlbumentation):
     """Add fog to an image.
 

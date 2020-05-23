@@ -17,8 +17,10 @@ from typing import Any, Dict, List, Union
 import numpy as np
 
 from fastestimator.op.numpyop.numpyop import NumpyOp
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class Sometimes(NumpyOp):
     """Perform a NumpyOp with a given probability.
 
