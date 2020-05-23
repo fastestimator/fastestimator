@@ -230,10 +230,10 @@ class Pipeline:
         loader = self.get_loader(mode=mode, epoch=epoch, shuffle=shuffle)
         if isinstance(loader, tf.data.Dataset):
             loader = loader.take(num_steps)
-        for idx, batch in enumerate(loader):
+        for idx, batch in enumerate(loader, start=1):
+            results.append(batch)
             if idx == num_steps:
                 break
-            results.append(batch)
         if len(results) == 1:
             results = results[0]
         return results
@@ -279,7 +279,7 @@ class Pipeline:
                               sampler=RandomSampler(op_dataset) if isinstance(data, BatchDataset) and shuffle else None,
                               num_workers=self.num_process,
                               drop_last=self.drop_last,
-                              worker_init_fn=lambda _: np.random.seed(random.randint(0, 2**32-1)),
+                              worker_init_fn=lambda _: np.random.seed(random.randint(0, 2**32 - 1)),
                               collate_fn=collate_fn)
         return data
 
