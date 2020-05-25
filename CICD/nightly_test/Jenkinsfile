@@ -113,6 +113,7 @@ pipeline{
                         docker push fastestimator/fastestimator:nightly-cpu
                         docker build -t fastestimator/fastestimator:nightly-gpu --no-cache - < fastestimator-misc/docker/nightly/Dockerfile.gpu
                         docker push fastestimator/fastestimator:nightly-gpu
+                        docker image prune -f
                     '''
                 }
             }
