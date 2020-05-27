@@ -8,4 +8,10 @@ suite = loader.discover(test_dir)
 
 runner = unittest.TextTestRunner()
 res = runner.run(suite)
-sys.exit(0 if res.wasSuccessful else 1)
+
+if not res.wasSuccessful:
+    raise ValueError("not all tests were successfully executed (pass or fail)")
+
+if res.failures:
+    raise ValueError("not all tests passed")
+
