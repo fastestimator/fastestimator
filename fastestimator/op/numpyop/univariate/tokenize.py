@@ -14,11 +14,11 @@
 # ==============================================================================
 from typing import Any, Callable, Dict, Iterable, List, Union
 
-import numpy as np
-
 from fastestimator.op.numpyop.numpyop import NumpyOp
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class Tokenize(NumpyOp):
     """Split the sequences into tokens.
 

@@ -37,8 +37,9 @@ from fastestimator.backend.to_tensor import to_tensor
 from fastestimator.network import BaseNetwork, TFNetwork
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
-from fastestimator.util.util import DefaultKeyDict, is_number, to_list, to_set
 from fastestimator.util.img_data import ImgData
+from fastestimator.util.traceability_util import traceable
+from fastestimator.util.util import DefaultKeyDict, is_number, to_list, to_set
 
 # https://github.com/pytorch/pytorch/issues/30966
 tf.io.gfile = tb.compat.tensorflow_stub.io.gfile
@@ -257,6 +258,7 @@ class _TorchWriter(_BaseWriter):
                                                               dataformats='NHWC')
 
 
+@traceable()
 class TensorBoard(Trace):
     """Output data for use in TensorBoard.
 

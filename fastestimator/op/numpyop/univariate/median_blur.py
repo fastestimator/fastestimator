@@ -17,8 +17,10 @@ from typing import Callable, Iterable, Tuple, Union
 from albumentations.augmentations.transforms import MedianBlur as MedianBlurAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class MedianBlur(ImageOnlyAlbumentation):
     """Blur the image with median filter of random aperture size.
 

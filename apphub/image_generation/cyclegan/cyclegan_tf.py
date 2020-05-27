@@ -32,6 +32,7 @@ from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace import Trace
 from fastestimator.trace.adapt import LRScheduler
 from fastestimator.trace.io import ModelSaver
+from fastestimator.util import traceable
 
 
 def lr_schedule(epoch):
@@ -43,12 +44,14 @@ def lr_schedule(epoch):
     return lr
 
 
+@traceable()
 class PlaceholderOp(NumpyOp):
     """NumpyOp to generate dummy keys required by the Network"""
     def forward(self, data, state):
         return 1.0, np.zeros(shape=(256, 256, 3))
 
 
+@traceable()
 class Buffer(TensorOp):
     """Image Buffer implementation as outlined in https://arxiv.org/abs/1703.10593v6"""
     def __init__(self, image_in=None, buffer_in=None, index_in=None, image_out=None, mode=None):
@@ -63,6 +66,7 @@ class Buffer(TensorOp):
         return output
 
 
+@traceable()
 class BufferUpdate(Trace):
     """Trace to update Image Buffer"""
     def __init__(self, input_name="fake", buffer_size=50, batch_size=1, mode="train", output_name=["buffer", "index"]):
@@ -114,6 +118,7 @@ class BufferUpdate(Trace):
                     self.image_buffer[self.buffer_index[i]] = image
 
 
+@traceable()
 class GLoss(TensorOp):
     """TensorOp to compute generator loss"""
     def __init__(self, inputs, weight, outputs=None, mode=None, average_loss=True):
@@ -142,6 +147,7 @@ class GLoss(TensorOp):
         return total_loss
 
 
+@traceable()
 class DLoss(TensorOp):
     """TensorOp to compute discriminator loss"""
     def __init__(self, inputs, outputs=None, mode=None, average_loss=True):

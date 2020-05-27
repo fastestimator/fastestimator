@@ -17,8 +17,10 @@ from typing import Callable, Iterable, Tuple, Union
 from albumentations.augmentations.transforms import Blur as BlurAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class Blur(ImageOnlyAlbumentation):
     """Blur the image with a randomly-sized kernel
 

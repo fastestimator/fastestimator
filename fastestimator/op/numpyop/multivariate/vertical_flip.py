@@ -18,8 +18,10 @@ from albumentations import BboxParams, KeypointParams
 from albumentations.augmentations.transforms import VerticalFlip as VerticalFlipAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class VerticalFlip(MultiVariateAlbumentation):
     """Flip an image vertically (over x-axis).
 

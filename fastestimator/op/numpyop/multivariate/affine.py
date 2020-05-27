@@ -18,10 +18,12 @@ from albumentations import BboxParams, KeypointParams
 from albumentations.imgaug.transforms import IAAAffine
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 Number = TypeVar('Number', int, float)
 
 
+@traceable()
 class Affine(MultiVariateAlbumentation):
     """Perform affine transformations on an image.
 

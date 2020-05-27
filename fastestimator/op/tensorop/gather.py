@@ -20,11 +20,13 @@ import torch
 from fastestimator.backend.gather_from_batch import gather_from_batch
 from fastestimator.backend.reduce_max import reduce_max
 from fastestimator.op.tensorop.tensorop import TensorOp
+from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_list
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
+@traceable()
 class Gather(TensorOp):
     """Gather values from an input tensor.
 

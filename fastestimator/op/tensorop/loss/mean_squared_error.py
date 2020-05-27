@@ -20,10 +20,12 @@ import torch
 from fastestimator.backend.mean_squared_error import mean_squared_error
 from fastestimator.backend.reduce_mean import reduce_mean
 from fastestimator.op.tensorop.tensorop import TensorOp
+from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
+@traceable()
 class MeanSquaredError(TensorOp):
     """Calculate the mean squared error loss between two tensors.
 

@@ -22,8 +22,10 @@ from pycocotools import mask as maskUtils
 from fastestimator.backend.to_number import to_number
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class MeanAveragePrecision(Trace):
     """Calculate COCO mean average precision.
 

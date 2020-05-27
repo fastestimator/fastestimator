@@ -17,8 +17,10 @@ from typing import Callable, Iterable, Union
 from albumentations.augmentations.transforms import ToSepia as ToSepiaAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class ToSepia(ImageOnlyAlbumentation):
     """Convert an RGB image to sepia.
 

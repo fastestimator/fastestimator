@@ -20,8 +20,10 @@ from sklearn.metrics import confusion_matrix
 from fastestimator.backend.to_number import to_number
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class ConfusionMatrix(Trace):
     """Computes the confusion matrix between y_true and y_predicted.
 

@@ -14,11 +14,13 @@
 # ==============================================================================
 from typing import Any, Dict, Generic, Iterable, List, Optional, TypeVar, Union
 
+from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_set
 
 T = TypeVar('T')
 
 
+@traceable()
 class Scheduler(Generic[T]):
     """A class which can wrap things like Datasets and Ops to make their behavior epoch-dependent.
     """
@@ -42,6 +44,7 @@ class Scheduler(Generic[T]):
         raise NotImplementedError
 
 
+@traceable()
 class RepeatScheduler(Scheduler[T]):
     """A scheduler which repeats a collection of entries one after another every epoch.
 
@@ -78,6 +81,7 @@ class RepeatScheduler(Scheduler[T]):
         return self.repeat_list
 
 
+@traceable()
 class EpochScheduler(Scheduler[T]):
     """A scheduler which selects entries based on a specified epoch mapping.
 

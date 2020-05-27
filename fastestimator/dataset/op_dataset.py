@@ -20,9 +20,11 @@ from torch.utils.data import Dataset
 
 from fastestimator.dataset import BatchDataset
 from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
+from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import pad_batch
 
 
+@traceable()
 class OpDataset(Dataset):
     """A wrapper for datasets which allows operators to be applied to them in a pipeline.
 

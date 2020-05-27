@@ -20,8 +20,10 @@ from sklearn.metrics import precision_score
 from fastestimator.backend.to_number import to_number
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class Precision(Trace):
     """Computes precision for a classification task and reports it back to the logger.
 

@@ -14,11 +14,13 @@
 # ==============================================================================
 import os
 from collections import deque
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
-from fastestimator.dataset.dataset import InMemoryDataset, DatasetSummary
+from fastestimator.dataset.dataset import DatasetSummary, InMemoryDataset
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class LabeledDirDataset(InMemoryDataset):
     """A dataset which reads files from a folder hierarchy like root/class(/es)/data.file.
 

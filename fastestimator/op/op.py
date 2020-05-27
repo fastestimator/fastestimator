@@ -14,9 +14,11 @@
 # ==============================================================================
 from typing import Any, Callable, Iterable, List, Mapping, MutableMapping, Set, Union
 
+from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import parse_modes, to_list, to_set
 
 
+@traceable()
 class Op:
     """A base class for FastEstimator Operators.
 

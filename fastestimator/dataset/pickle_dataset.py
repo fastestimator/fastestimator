@@ -17,8 +17,10 @@ import os
 import pandas as pd
 
 from fastestimator.dataset.dataset import InMemoryDataset
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class PickleDataset(InMemoryDataset):
     """A dataset from a pickle file.
 

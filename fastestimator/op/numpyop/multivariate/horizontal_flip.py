@@ -18,8 +18,10 @@ from albumentations import BboxParams, KeypointParams
 from albumentations.augmentations.transforms import HorizontalFlip as FlipAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class HorizontalFlip(MultiVariateAlbumentation):
     """Flip an image horizontally.
 

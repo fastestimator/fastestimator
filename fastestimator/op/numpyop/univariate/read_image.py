@@ -19,8 +19,10 @@ import cv2
 import numpy as np
 
 from fastestimator.op.numpyop.numpyop import NumpyOp
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class ReadImage(NumpyOp):
     """A class for reading png or jpg images from disk.
 

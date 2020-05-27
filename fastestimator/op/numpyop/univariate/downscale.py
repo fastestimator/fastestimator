@@ -18,8 +18,10 @@ import cv2
 from albumentations.augmentations.transforms import Downscale as DownscaleAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class Downscale(ImageOnlyAlbumentation):
     """Decrease image quality by downscaling and then upscaling.
 

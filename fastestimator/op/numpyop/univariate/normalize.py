@@ -17,8 +17,10 @@ from typing import Callable, Iterable, Tuple, Union
 from albumentations.augmentations.transforms import Normalize as NormalizeAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class Normalize(ImageOnlyAlbumentation):
     """Divide pixel values by a maximum value, subtract mean per channel and divide by std per channel.
 

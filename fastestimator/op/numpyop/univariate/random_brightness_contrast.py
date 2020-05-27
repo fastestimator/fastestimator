@@ -17,8 +17,10 @@ from typing import Callable, Iterable, Tuple, Union
 from albumentations.augmentations.transforms import RandomBrightnessContrast as RandomBrightnessContrastAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class RandomBrightnessContrast(ImageOnlyAlbumentation):
     """Randomly change the brightness and contrast of an image.
 

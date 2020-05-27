@@ -24,9 +24,11 @@ from docx.text.paragraph import Paragraph
 
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
+from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_list
 
 
+@traceable()
 class QMSTest(Trace):
     """Automate QMS testing and report generation.
 
