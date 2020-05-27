@@ -49,9 +49,9 @@ def get_dependency():
         'h5py',
         'jsonpickle',
         'python-docx',
-        'tensorflow_probability==0.9.0',
+        'tensorflow_probability==0.8.0',
         'transformers==2.4.1',
-        'tensorflow==2.2.0',
+        'tensorflow==2.1.0',
         'pycocotools @ git+https://github.com/chm123/cocoapi.git#egg=pycocotools&subdirectory=PythonAPI'
     ]
     if os.name != "nt":
