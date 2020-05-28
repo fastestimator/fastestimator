@@ -14,6 +14,7 @@
 # ==============================================================================
 import dis
 import inspect
+import types
 from collections import deque, namedtuple
 from typing import Any, Callable, List, Mapping, Optional, Set, Tuple, TypeVar, Union
 
@@ -23,7 +24,9 @@ import torch
 
 from fastestimator.util.util import strip_prefix
 
+_Function = namedtuple('_Function', ['func', 'name'])
 _BoundFn = namedtuple('_BoundFn', ['func', 'args'])
+_PartialBind = namedtuple('_PartialBind', ['args', 'kwargs'])
 _Command = namedtuple('_Command', ['left', 'right', 'command'])
 _Condition = namedtuple('_Condition', ['left', 'right', 'condition'])
 _VarWrap = namedtuple('_VarWrap', ['var'])
@@ -109,6 +112,19 @@ def _trace_value(inp: Any, wrap_str: bool = True, include_id: bool = True) -> st
                     _trace_value(func_description, wrap_str, include_id))
         else:
             return f"{inp.__module__}.{inp.__qualname__}"
+    elif isinstance(inp, _Function):
+        if inspect.isbuiltin(inp.func) or not hasattr(inp.func, '__module__') or not hasattr(inp.func, '__qualname__'):
+            return inp.name
+        else:
+            return f"{inp.func.__module__}.{inp.func.__qualname__}"
+    elif isinstance(inp, _PartialBind):
+        s1, join, s2 = "", "", ""
+        if inp.args:
+            s1 = "args={}".format(_trace_value(inp.args, wrap_str=True, include_id=include_id))
+        if inp.kwargs:
+            join = ", kwargs=" if s1 else ""
+            s2 = "{}".format(_trace_value(inp.args, wrap_str, include_id))
+        return f"{s1}{join}{s2}"
     elif isinstance(inp, _Command):
         return "{} {} {}".format(_trace_value(inp.left, wrap_str, include_id),
                                  inp.command,
@@ -142,13 +158,14 @@ def _trace_value(inp: Any, wrap_str: bool = True, include_id: bool = True) -> st
                            _trace_value(v, wrap_str=True, include_id=True)) for k,
             v in inp.items()
         ]))
-    elif isinstance(inp, (tf.Tensor, torch.Tensor, np.ndarray)):
-        if isinstance(inp, (tf.Tensor, torch.Tensor)):
+    elif isinstance(inp, (tf.Tensor, torch.Tensor, np.ndarray, tf.Variable)):
+        id_str = f" (id: {id(inp)})" if include_id or isinstance(inp, tf.Variable) else ""
+        if isinstance(inp, (tf.Tensor, torch.Tensor, tf.Variable)):
             inp = inp.numpy()
         rank = inp.ndim
         if rank > 1 or (rank == 1 and inp.shape[0] > 5):
-            return f"an array with shape {inp.shape}"
-        return f"{inp}"
+            return f"an array with shape {inp.shape}{id_str}"
+        return f"{inp}{id_str}"
     # This should be the last elif
     elif hasattr(inp, '__class__'):
         inp = inp.__class__
@@ -253,12 +270,17 @@ def _parse_instructions(closure_vars: inspect.ClosureVars, instructions: List[di
         elif instruction.opname in ('LOAD_METHOD', 'LOAD_ATTR', 'LOAD_GLOBAL', 'LOAD_DEREF'):
             # We're setting up a function call, which may or may not be invoked
             # Look ahead to combine all of the function pieces together into 1 variable
-            function = instructions[idx].argval
-            function = closure_vars.nonlocals.get(
-                function, closure_vars.globals.get(function, closure_vars.builtins.get(function, None)))
+            name = instructions[idx].argval
+            function = _Function(
+                closure_vars.nonlocals.get(name, closure_vars.globals.get(name, closure_vars.builtins.get(name, None))),
+                name=name)
+            if function.func is None:
+                # This function can't be found for some reason
+                return None  # We weren't able to parse this correctly
             while idx + 1 < len(instructions):
                 if instructions[idx + 1].opname in ('LOAD_METHOD', 'LOAD_ATTR'):
-                    function = getattr(function, instructions[idx + 1].argval)
+                    name = instructions[idx + 1].argval
+                    function = _Function(getattr(function.func, name), name=function.name + f".{name}")
                     instructions.pop(idx + 1)
                 else:
                     break
@@ -285,8 +307,15 @@ def _parse_instructions(closure_vars: inspect.ClosureVars, instructions: List[di
             instructions.pop(idx - 1)  # Remove the method def from the stack
             idx -= 1
             # Bind the fn
-            bound_args = inspect.signature(function).bind(*fn_args, **kwargs)
-            bound_args.apply_defaults()
+            if not callable(function.func):
+                # This shouldn't ever happen, but just in case...
+                return None  # We weren't able to parse this correctly
+            try:
+                bound_args = inspect.signature(function.func).bind(*fn_args, **kwargs)
+                bound_args.apply_defaults()
+            except ValueError:
+                # Some functions (C bindings) don't have convenient signature lookup
+                bound_args = _PartialBind(tuple(fn_args), kwargs)
             args.append(_BoundFn(function, bound_args))
         elif instruction.opname.startswith('BINARY_') or instruction.opname.startswith(
                 'INPLACE_') or instruction.opname == 'COMPARE_OP':
@@ -355,7 +384,8 @@ def trace_model(model: Model, model_idx: int, model_fn: Any, optimizer_fn: Any, 
         """
         return f"This experiment used {self._fe_traceability_summary}"
 
-    setattr(model, 'fe_summary', fe_summary)
+    # Use MethodType to bind the method to the class instance
+    setattr(model, 'fe_summary', types.MethodType(fe_summary, model))
     return model
 
 
@@ -380,21 +410,23 @@ def traceable(whitelist: Union[str, Tuple[str]] = (), blacklist: Union[str, Tupl
 
     def make_traceable(cls):
         base_init = getattr(cls, '__init__')
+        if hasattr(base_init, '__module__') and base_init.__module__ != 'fastestimator.util.traceability_util':
+            # We haven't already overridden this class' init method
+            def init(self, *args, **kwargs):
+                if not hasattr(self, '_fe_state_whitelist'):
+                    self._fe_state_whitelist = whitelist
+                if not hasattr(self, '_fe_state_blacklist'):
+                    self._fe_state_blacklist = blacklist + (
+                        '_fe_state_whitelist', '_fe_state_blacklist', '_fe_base_init')
+                if not hasattr(self, '_fe_traceability_summary'):
+                    bound_args = inspect.signature(base_init).bind(self, *args, **kwargs)
+                    bound_args.apply_defaults()
+                    bound_args = bound_args.arguments
+                    bound_args.pop('self')
+                    self._fe_traceability_summary = _trace_value(_BoundFn(self, bound_args))
+                base_init(self, *args, **kwargs)
 
-        def init(self, *args, **kwargs):
-            if not hasattr(self, '_fe_state_whitelist'):
-                self._fe_state_whitelist = whitelist
-            if not hasattr(self, '_fe_state_blacklist'):
-                self._fe_state_blacklist = blacklist + ('_fe_state_whitelist', '_fe_state_blacklist')
-            if not hasattr(self, '_fe_traceability_summary'):
-                bound_args = inspect.signature(base_init).bind(self, *args, **kwargs)
-                bound_args.apply_defaults()
-                bound_args = bound_args.arguments
-                bound_args.pop('self')
-                self._fe_traceability_summary = _trace_value(_BoundFn(self, bound_args))
-            base_init(self, *args, **kwargs)
-
-        setattr(cls, '__init__', init)
+            setattr(cls, '__init__', init)
 
         def fe_summary(self) -> str:
             """Return a summary of how this class was instantiated (for traceability).
