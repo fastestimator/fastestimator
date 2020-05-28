@@ -15,7 +15,6 @@ pipeline {
                     fi
                     conda activate $JENKINS_PYTHON_ENV
                     pip install -e .
-                    pip install pytest numpy nibabel pydicom twine ipython ipykernel
                     pip freeze | tee requirement.txt
                 '''
             }
@@ -26,7 +25,7 @@ pipeline {
                 sh '''#!/bin/bash
                     . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
                     conda activate $JENKINS_PYTHON_ENV
-                    python -m pytest
+                    python3 test/run_unit_test.py
                 '''
             }
         }
