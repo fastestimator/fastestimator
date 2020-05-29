@@ -242,7 +242,7 @@ def _traverse_chunks(lambda_specs: List[_ChunkSpec],
 
 
 def _combine_chunks(chunks: List[str], specs: List[_ChunkSpec],
-                    skip: str = "ambda ") -> List[Tuple[Set[str], Set[str], str]]:
+                    skip: str = "ambda") -> List[Tuple[Set[str], Set[str], str]]:
     """Recombine a series of `chunks` into individual lambda expressions based on the given `specs`.
 
     Args:
@@ -379,7 +379,7 @@ def _parse_lambda_fallback(function: types.FunctionType) -> Optional[str]:
         if chunk.startswith("'") or chunk.startswith('"'):
             # Ignore string chunks
             continue
-        lambda_idx.extend([(chunk_idx, m.start() + 1) for m in re.finditer(r'(^|[\W])lambda ', chunk)])
+        lambda_idx.extend([(chunk_idx, m.start() + 1) for m in re.finditer(r'(^|[\W])lambda[ :]', chunk)])
     # Figure out the extents of the lambda functions, starting from the back
     lambda_specs = []
     for fn in reversed(lambda_idx):
