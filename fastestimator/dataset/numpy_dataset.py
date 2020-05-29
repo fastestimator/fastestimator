@@ -32,12 +32,15 @@ class NumpyDataset(InMemoryDataset):
     """
     def __init__(self, data: Dict[str, np.ndarray]) -> None:
         size = None
-        for key, val in data.items():
+        for val in data.values():
             if isinstance(val, np.ndarray):
-                if size is not None:
-                    assert val.shape[0] == size, "All data arrays must have the same number of elements"
-                else:
-                    size = val.shape[0]
-        assert isinstance(size, int), \
-            "Could not infer size of data. Please ensure you are passing numpy arrays in the data dictionary."
+                current_size = val.shape[0]
+            elif isinstance(val, list):
+                current_size = len(val)
+            else:
+                raise ValueError("Please ensure you are passing numpy array or list in the data dictionary.")
+            if size is not None:
+                assert size == current_size, "All data arrays must have the same number of elements"
+            else:
+                size = current_size
         super().__init__({i: {k: v[i] for k, v in data.items()} for i in range(size)})
