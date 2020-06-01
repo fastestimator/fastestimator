@@ -22,15 +22,14 @@ from fastestimator.util.traceability_util import traceable
 
 @traceable()
 class NumpyDataset(InMemoryDataset):
-    """A dataset constructed from a dictionary of Numpy data.
+    """A dataset constructed from a dictionary of Numpy data or list of data.
 
     Args:
-        data: A dictionary of data like {"key": <numpy array>}.
-
+        data: A dictionary of data like {"key1": <numpy array>, "key2": [list]}.
     Raises:
         AssertionError: If any of the Numpy arrays have differing numbers of elements.
     """
-    def __init__(self, data: Dict[str, np.ndarray]) -> None:
+    def __init__(self, data: Dict[str, Union[np.ndarray, List]]) -> None:
         size = None
         for val in data.values():
             if isinstance(val, np.ndarray):
