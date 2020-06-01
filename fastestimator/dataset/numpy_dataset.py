@@ -27,7 +27,8 @@ class NumpyDataset(InMemoryDataset):
     Args:
         data: A dictionary of data like {"key1": <numpy array>, "key2": [list]}.
     Raises:
-        AssertionError: If any of the Numpy arrays have differing numbers of elements.
+        AssertionError: If any of the Numpy arrays or lists have differing numbers of elements.
+        ValueError: If any dictionary value is not instance of Numpy array or list.
     """
     def __init__(self, data: Dict[str, Union[np.ndarray, List]]) -> None:
         size = None
