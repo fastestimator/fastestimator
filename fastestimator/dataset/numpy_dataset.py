@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Dict
+from typing import Dict, List, Union
 
 import numpy as np
 
@@ -20,22 +20,25 @@ from fastestimator.dataset.dataset import InMemoryDataset
 
 
 class NumpyDataset(InMemoryDataset):
-    """A dataset constructed from a dictionary of Numpy data.
+    """A dataset constructed from a dictionary of Numpy data or list of data.
 
     Args:
-        data: A dictionary of data like {"key": <numpy array>}.
-
+        data: A dictionary of data like {"key1": <numpy array>, "key2": [list]}.
     Raises:
-        AssertionError: If any of the Numpy arrays have differing numbers of elements.
+        AssertionError: If any of the Numpy arrays or lists have differing numbers of elements.
+        ValueError: If any dictionary value is not instance of Numpy array or list.
     """
-    def __init__(self, data: Dict[str, np.ndarray]) -> None:
+    def __init__(self, data: Dict[str, Union[np.ndarray, List]]) -> None:
         size = None
-        for key, val in data.items():
+        for val in data.values():
             if isinstance(val, np.ndarray):
-                if size is not None:
-                    assert val.shape[0] == size, "All data arrays must have the same number of elements"
-                else:
-                    size = val.shape[0]
-        assert isinstance(size, int), \
-            "Could not infer size of data. Please ensure you are passing numpy arrays in the data dictionary."
+                current_size = val.shape[0]
+            elif isinstance(val, list):
+                current_size = len(val)
+            else:
+                raise ValueError("Please ensure you are passing numpy array or list in the data dictionary.")
+            if size is not None:
+                assert size == current_size, "All data arrays must have the same number of elements"
+            else:
+                size = current_size
         super().__init__({i: {k: v[i] for k, v in data.items()} for i in range(size)})

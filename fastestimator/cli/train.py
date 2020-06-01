@@ -55,7 +55,7 @@ def train(args: Dict[str, Any], unknown: Optional[List[str]]) -> None:
         unknown: The remainder of the command line arguments to be passed along to the get_estimator() method.
     """
     estimator = _get_estimator(args, unknown)
-    estimator.fit()
+    estimator.fit(warmup=not args['no_warmup'])
 
 
 def test(args: Dict[str, Any], unknown: Optional[List[str]]) -> None:
@@ -86,6 +86,7 @@ def configure_train_parser(subparsers: argparse.PARSER) -> None:
                         dest='hyperparameters_json',
                         type=str,
                         help="The path to the hyperparameters JSON file")
+    parser.add_argument('--no_warmup', help="Disable warmup for this session", action='store_true')
     parser.add_argument_group(
         'hyperparameter arguments',
         'Arguments to be passed through to the get_estimator() call. \
@@ -109,6 +110,7 @@ def configure_test_parser(subparsers: argparse.PARSER) -> None:
                         dest='hyperparameters_json',
                         type=str,
                         help="The path to the hyperparameters JSON file")
+    parser.add_argument('--no_warmup', help="Disable warmup for this session", action='store_true')
     parser.add_argument_group(
         'hyperparameter arguments',
         'Arguments to be passed through to the get_estimator() call. \
