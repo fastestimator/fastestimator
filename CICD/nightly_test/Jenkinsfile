@@ -23,8 +23,8 @@ pipeline{
                                     fi
 
                                     conda activate $JENKINS_PYTHON_ENV
-                                    pip install -e .
-                                    pip install ipython ipykernel ipywidgets papermill
+                                    pip install --no-cache-dir -e .
+                                    pip install --no-cache-dir ipython ipykernel ipywidgets papermill 
                                     ipython kernel install --user --name nightly_build
 
                                     aws s3 sync $S3_DATASET_PATH $LOCAL_DATASET_PATH --delete
@@ -55,8 +55,8 @@ pipeline{
                                     fi
 
                                     conda activate $JENKINS_PYTHON_ENV
-                                    pip install -e .
-                                    pip install ipython ipykernel ipywidgets papermill
+                                    pip install --no-cache-dir -e .
+                                    pip install --no-cache-dir ipython ipykernel ipywidgets papermill
                                     ipython kernel install --user --name nightly_build
 
                                     aws s3 sync $S3_DATASET_PATH $LOCAL_DATASET_PATH --delete
@@ -90,8 +90,8 @@ pipeline{
                         fi
 
                         conda activate $JENKINS_PYTHON_ENV
-                        pip install -e .
-                        pip install twine
+                        pip install --no-cache-dir -e .
+                        pip install --no-cache-dir twine
                         rm -rf dist/*
                         FASTESTIMATOR_IS_NIGHTLY=1 python setup.py sdist bdist_wheel
                         twine upload dist/* -u fastestimatordev -p ${PYPI_PWD}
