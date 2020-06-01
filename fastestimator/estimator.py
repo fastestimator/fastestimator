@@ -84,7 +84,8 @@ class Estimator:
                              log_steps=log_steps,
                              total_epochs=epochs,
                              max_train_steps_per_epoch=max_train_steps_per_epoch,
-                             max_eval_steps_per_epoch=max_eval_steps_per_epoch)
+                             max_eval_steps_per_epoch=max_eval_steps_per_epoch,
+                             system_config=self.fe_summary())
 
     def fit(self, summary: Optional[str] = None, warmup: bool = True) -> Optional[Summary]:
         """Train the network for the number of epochs specified by the estimator's constructor.
@@ -101,7 +102,7 @@ class Estimator:
             A summary object containing the training history for this session iff a `summary` name was provided.
         """
         draw()
-        self.system.reset(summary)
+        self.system.reset(summary, self.fe_summary())
         self._prepare_traces(run_modes={"train", "eval"})
         if warmup:
             self._warmup()
