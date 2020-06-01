@@ -38,20 +38,12 @@ def _get_estimator(args: Dict[str, Any], unknown: Optional[List[str]]) -> Estima
     if args['hyperparameters_json']:
         hyperparameters = os.path.abspath(args['hyperparameters_json'])
         hyperparameters = json.load(open(hyperparameters, 'r'))
-    warmup = True
-    if args['warmup']:
-        if args['warmup'] in ["True", "true"]:
-            warmup = True
-        elif args['warmup'] in ["False", "false"]:
-            warmup = False
-        else:
-            raise ValueError("--warmup must be True or False")
     hyperparameters.update(parse_cli_to_dictionary(unknown))
     module_name = os.path.splitext(os.path.basename(entry_point))[0]
     dir_name = os.path.abspath(os.path.dirname(entry_point))
     sys.path.insert(0, dir_name)
     spec_module = __import__(module_name, globals(), locals(), ["get_estimator"])
-    return spec_module.get_estimator(**hyperparameters), warmup
+    return spec_module.get_estimator(**hyperparameters)
 
 
 def train(args: Dict[str, Any], unknown: Optional[List[str]]) -> None:
@@ -62,8 +54,8 @@ def train(args: Dict[str, Any], unknown: Optional[List[str]]) -> None:
             'hyperparameters_json' key if the user is storing their parameters in a file.
         unknown: The remainder of the command line arguments to be passed along to the get_estimator() method.
     """
-    estimator, warmup = _get_estimator(args, unknown)
-    estimator.fit(warmup=warmup)
+    estimator = _get_estimator(args, unknown)
+    estimator.fit(warmup=not args['no_warmup'])
 
 
 def test(args: Dict[str, Any], unknown: Optional[List[str]]) -> None:
@@ -94,7 +86,7 @@ def configure_train_parser(subparsers: argparse.PARSER) -> None:
                         dest='hyperparameters_json',
                         type=str,
                         help="The path to the hyperparameters JSON file")
-    parser.add_argument('--warmup', dest='warmup', type=str, help="Wheter to perform warmup training, True or False")
+    parser.add_argument('--no_warmup', help="Disable warmup for this session", action='store_true')
     parser.add_argument_group(
         'hyperparameter arguments',
         'Arguments to be passed through to the get_estimator() call. \
@@ -118,6 +110,7 @@ def configure_test_parser(subparsers: argparse.PARSER) -> None:
                         dest='hyperparameters_json',
                         type=str,
                         help="The path to the hyperparameters JSON file")
+    parser.add_argument('--no_warmup', help="Disable warmup for this session", action='store_true')
     parser.add_argument_group(
         'hyperparameter arguments',
         'Arguments to be passed through to the get_estimator() call. \
