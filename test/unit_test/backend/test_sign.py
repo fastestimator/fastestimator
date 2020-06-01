@@ -37,7 +37,3 @@ class TestSign(unittest.TestCase):
         self.assertIsInstance(output, torch.Tensor, 'Output type must be torch.Tensor')
         # check the output value
         self.assertTrue(np.array_equal(output.numpy(), self.test_output_torch))
-
-
-if __name__ == "__main__":
-    unittest.main()

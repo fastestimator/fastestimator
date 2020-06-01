@@ -35,7 +35,3 @@ class TestSparseCategoricalCrossEntropy(unittest.TestCase):
                                                    average_loss=False).numpy()
         obj2 = np.array([2.3025851, 2.9957323, 2.3025851])
         self.assertTrue(np.allclose(obj1, obj2))
-
-
-if __name__ == "__main__":
-    unittest.main()

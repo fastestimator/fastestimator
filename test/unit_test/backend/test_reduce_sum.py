@@ -41,7 +41,3 @@ class TestReduceSum(unittest.TestCase):
         self.assertIsInstance(output, np.ndarray, 'Output type should be NumPy array')
         # check output value
         self.assertTrue(np.array_equal(output, [4, 5]))
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -34,7 +34,3 @@ class TestReshape(unittest.TestCase):
         self.assertIsInstance(output, torch.Tensor, 'Output type must be torch.Tensor')
         # check the output value
         self.assertEqual(output.numpy().shape, (2, 3))
-
-
-if __name__ == "__main__":
-    unittest.main()
