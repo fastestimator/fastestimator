@@ -14,6 +14,7 @@
 # ==============================================================================
 import dis
 import inspect
+import json
 import re
 import types
 from collections import deque, namedtuple
@@ -74,8 +75,8 @@ def _deref_is_callable(instruction: dis.Instruction, closure_vars: inspect.Closu
     return hasattr(deref, '__call__')
 
 
-def _trace_value(inp: Any, wrap_str: bool = True, include_id: bool = True) -> str:
-    """Convert an input value to it's string representation.
+def _trace_value(inp: Any, wrap_str: bool = True, include_id: bool = True) -> Any:
+    """Convert an input value to a json representation.
 
     Args:
         inp: The input value to be converted.
@@ -83,7 +84,7 @@ def _trace_value(inp: Any, wrap_str: bool = True, include_id: bool = True) -> st
         include_id: Whether to include object ids when representing objects.
 
     Returns:
-        A string representation of the input.
+        A json representation of the input.
     """
     if isinstance(inp, str):
         return f"'{inp}'" if wrap_str else inp
@@ -93,9 +94,9 @@ def _trace_value(inp: Any, wrap_str: bool = True, include_id: bool = True) -> st
         # noinspection PyProtectedMember
         return inp._fe_traceability_summary
     elif isinstance(inp, (int, float, bool, type(None))):
-        return f"{inp}"
+        return inp
     elif inspect.ismethod(inp):
-        return f"the '{inp.__name__}' method of ({_trace_value(inp.__self__, wrap_str, include_id)})"
+        return {"@Method": inp.__name__, "@Parent": {_trace_value(inp.__self__, wrap_str, include_id)}}
     elif inspect.isfunction(inp) or inspect.isclass(inp):
         if inspect.isfunction(inp) and inp.__name__ == "<lambda>":
             code = inp.__code__
@@ -104,14 +105,18 @@ def _trace_value(inp: Any, wrap_str: bool = True, include_id: bool = True) -> st
             # function (like one might do with LRScheduler), then the parse should work.
             func_description = _parse_lambda(inp)
             if func_description is None:
-                return "a lambda function passing {}".format(
-                    str.join(", ", map(lambda x: "'{}'".format(x), var_names)) or 'no arguments')
+                return {"@Description": "a lambda function", "@Args": var_names}
             else:
-                return "a lambda function passing {} to: {}".format(
-                    str.join(", ", map(lambda x: "'{}'".format(x), var_names)) or 'no arguments',
+                return {
+                    "@Description":
+                    "a lambda function",
+                    "@Args":
+                    var_names,
+                    "@Function":
                     _trace_value(func_description,
                                  wrap_str=False if isinstance(func_description, str) else True,
-                                 include_id=include_id))
+                                 include_id=include_id)
+                }
         else:
             return f"{inp.__module__}.{inp.__qualname__}"
     elif isinstance(inp, _Function):
@@ -120,13 +125,10 @@ def _trace_value(inp: Any, wrap_str: bool = True, include_id: bool = True) -> st
         else:
             return f"{inp.func.__module__}.{inp.func.__qualname__}"
     elif isinstance(inp, _PartialBind):
-        s1, join, s2 = "", "", ""
-        if inp.args:
-            s1 = "args={}".format(_trace_value(inp.args, wrap_str=True, include_id=include_id))
-        if inp.kwargs:
-            join = ", kwargs=" if s1 else ""
-            s2 = "{}".format(_trace_value(inp.args, wrap_str, include_id))
-        return f"{s1}{join}{s2}"
+        return {
+            "@Args": _trace_value(inp.args, wrap_str=True, include_id=include_id),
+            "@Kwargs": _trace_value(inp.args, wrap_str, include_id)
+        }
     elif isinstance(inp, _Command):
         return "{} {} {}".format(_trace_value(inp.left, wrap_str, include_id),
                                  inp.command,
@@ -136,8 +138,13 @@ def _trace_value(inp: Any, wrap_str: bool = True, include_id: bool = True) -> st
                                          _trace_value(inp.condition, wrap_str, include_id),
                                          _trace_value(inp.right, wrap_str, include_id))
     elif isinstance(inp, _BoundFn):
-        return "{} invoked with: {}".format(_trace_value(inp.func, wrap_str, include_id=False),
-                                            _trace_value(inp.args, wrap_str=False, include_id=include_id))
+        response = {
+            "@Description": _trace_value(inp.func, wrap_str, include_id=False),
+            "@Args": _trace_value(inp.args, wrap_str=False, include_id=include_id)
+        }
+        if include_id:
+            response["@Id"] = id(inp.func)
+        return response
     elif isinstance(inp, inspect.BoundArguments):
         return _trace_value(inp.arguments, wrap_str=False, include_id=include_id)
     elif isinstance(inp, _VarWrap):
@@ -145,37 +152,50 @@ def _trace_value(inp: Any, wrap_str: bool = True, include_id: bool = True) -> st
     elif isinstance(inp, (tf.keras.Model, torch.nn.Module)):
         # FE models should never actually get here since they are given summaries by trace_model() during fe.build()
         name = inp.model_name if hasattr(inp, 'model_name') else "<Unknown Model Name>"
-        id_str = f" (id: {id(inp)})" if include_id else ""
-        return f"a neural network model named '{name}'{id_str}"
+        if include_id:
+            return {"@Description": f"a neural network model named '{name}'"}
+        else:
+            return f"a neural network model named '{name}'"
     # The collections need to go after _Command and _BoundFn
     elif isinstance(inp, List):
-        return "[{}]".format(", ".join([_trace_value(x, wrap_str, include_id) for x in inp]))
+        return [_trace_value(x, wrap_str, include_id) for x in inp]
     elif isinstance(inp, Tuple):
-        return "({})".format(", ".join([_trace_value(x, wrap_str, include_id) for x in inp]))
+        return tuple([_trace_value(x, wrap_str, include_id) for x in inp])
     elif isinstance(inp, Set):
-        return "{{{}}}".format(", ".join([_trace_value(x, wrap_str, include_id) for x in inp]))
+        return set([_trace_value(x, wrap_str, include_id) for x in inp])
     elif isinstance(inp, Mapping):
-        return "{{{}}}".format(", ".join([
-            "{}={}".format(_trace_value(k, wrap_str=wrap_str, include_id=include_id),
-                           _trace_value(v, wrap_str=True, include_id=True)) for k,
+        return {
+            _trace_value(k, wrap_str=wrap_str, include_id=include_id): _trace_value(v, wrap_str=True, include_id=True)
+            for k,
             v in inp.items()
-        ]))
+        }
     elif isinstance(inp, (tf.Tensor, torch.Tensor, np.ndarray, tf.Variable)):
-        id_str = f" (id: {id(inp)})" if include_id or isinstance(inp, tf.Variable) else ""
         if isinstance(inp, (tf.Tensor, torch.Tensor, tf.Variable)):
+            if isinstance(inp, torch.Tensor):
+                inp = inp.cpu().detach()
             inp = inp.numpy()
         rank = inp.ndim
-        if rank > 1 or (rank == 1 and inp.shape[0] > 5):
-            return f"an array with shape {inp.shape}{id_str}"
-        return f"{inp}{id_str}"
+        response = {
+            "@Description": "A tensor",
+            "@Shape": inp.shape,
+        }
+        if rank == 0 or (rank == 1 and inp.shape[0] <= 10):
+            response["@Values"] = str(inp)
+        if include_id or isinstance(inp, tf.Variable):
+            response["@Id"] = id(inp)
+        return response
     # This should be the last elif
     elif hasattr(inp, '__class__'):
         inp = inp.__class__
-        id_str = f" (id: {id(inp)})" if include_id else ""
-        return f"an instance of {inp.__module__}.{inp.__qualname__}{id_str}"
+        if include_id:
+            return {"@Description": f"{inp.__module__}.{inp.__qualname__}", "@Id": id(inp)}
+        else:
+            return f"{inp.__module__}.{inp.__qualname__}"
     else:
-        id_str = f" with id: {id(inp)})" if include_id else ""
-        return f"an object{id_str}"
+        if include_id:
+            return {"@Desciption": "an object", "@Id": id(inp)}
+        else:
+            return "an object"
 
 
 def _traverse_chunks(lambda_specs: List[_ChunkSpec],
@@ -616,6 +636,18 @@ def _parse_lambda(function: types.FunctionType) -> Optional[Any]:
     return args[0]
 
 
+def fe_summary(self) -> str:
+    """Return a summary of how this class was instantiated (for traceability).
+
+    Args:
+        self: The bound class instance.
+
+    Returns:
+        A summary of the instance.
+    """
+    return json.dumps(self._fe_traceability_summary, indent=2)
+
+
 def trace_model(model: Model, model_idx: int, model_fn: Any, optimizer_fn: Any, weights_path: Any) -> Model:
     """A function to add traceability information to an FE-compiled model.
 
@@ -629,26 +661,17 @@ def trace_model(model: Model, model_idx: int, model_fn: Any, optimizer_fn: Any, 
     Returns:
         The `model`, but now with an fe_summary() method.
     """
-    prefix = "the" if model_idx == -1 else "the 1st" if model_idx == 0 else "the 2nd" if model_idx == 1 else "the 3rd" \
-        if model_idx == 2 else "the {}th".format(model_idx + 1)
-    model_fn_summary = strip_prefix(_trace_value(model_fn), "a lambda function passing no arguments to: ")
-    optimizer_fn_summary = " with no optimizer" if not optimizer_fn or isinstance(
-        optimizer_fn, list) and optimizer_fn[0] is None else " using an optimizer defined by {}".format(
-            strip_prefix(_trace_value(optimizer_fn), "a lambda function passing no arguments to: "))
-    weights_suffix = "" if not weights_path else " and weights specified by {}".format(_trace_value(weights_path))
-    model._fe_traceability_summary = "{} neural network model ('{}') generated from {}{}{}".format(
-        prefix, model.model_name, model_fn_summary, optimizer_fn_summary, weights_suffix)
-
-    def fe_summary(self) -> str:
-        """Return a summary of how this class was instantiated (for traceability).
-
-        Args:
-            self: The bound class instance.
-
-        Returns:
-            A summary of the instance.
-        """
-        return f"This experiment used {self._fe_traceability_summary}"
+    summary = {
+        "@Description": f"a neural network model named '{model.model_name}'", "@Definition": _trace_value(model_fn)
+    }
+    if model_idx != -1:
+        summary["@Index"] = model_idx
+    if optimizer_fn or isinstance(optimizer_fn, list) and optimizer_fn[0] is not None:
+        summary["@Optimizer"] = _trace_value(optimizer_fn)[model_idx] if isinstance(
+            optimizer_fn, list) else _trace_value(optimizer_fn)
+    if weights_path:
+        summary["@Weights"] = _trace_value(weights_path)
+    model._fe_traceability_summary = summary
 
     # Use MethodType to bind the method to the class instance
     setattr(model, 'fe_summary', types.MethodType(fe_summary, model))
@@ -693,17 +716,6 @@ def traceable(whitelist: Union[str, Tuple[str]] = (), blacklist: Union[str, Tupl
                 base_init(self, *args, **kwargs)
 
             setattr(cls, '__init__', init)
-
-        def fe_summary(self) -> str:
-            """Return a summary of how this class was instantiated (for traceability).
-
-            Args:
-                self: The bound class instance.
-
-            Returns:
-                A summary of the instance.
-            """
-            return f"This experiment used {self._fe_traceability_summary}"
 
         base_func = getattr(cls, 'fe_summary', None)
         if base_func is None:
