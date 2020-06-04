@@ -16,14 +16,15 @@ import dis
 import inspect
 import re
 import types
-from collections import defaultdict, deque, namedtuple
-from typing import Any, Callable, DefaultDict, Dict, List, Mapping, Optional, Set, Tuple, Type, TypeVar, Union
+from collections import deque, namedtuple
+from copy import deepcopy
+from typing import Any, Callable, Dict, List, Mapping, Optional, Set, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
 import torch
 from pylatex import Document, Label, Marker, MultiColumn, NoEscape, Package, Table, Tabularx, TextColor
-from pylatex.base_classes import CommandBase, Container, Options
+from pylatex.base_classes import Container, Options
 from pylatex.lists import Enumerate
 from pylatex.utils import bold, escape_latex
 
@@ -62,6 +63,158 @@ _CommandTable = {
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
 
+class FEID:
+    """An int wrapper class that can change how it's values are printed.
+
+    Args:
+        val: An integer id to be wrapped.
+    """
+    __slots__ = ['_val']
+    _translation_dict = {}
+
+    def __init__(self, val: int):
+        self._val = val
+
+    def __hash__(self) -> int:
+        return hash(self._val)
+
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, FEID):
+            return self._val == other._val
+        else:
+            return int.__eq__(self._val, other)
+
+    def __lt__(self, other: Any) -> bool:
+        if isinstance(other, FEID):
+            other = other._val
+        return int.__lt__(self._val, other)
+
+    def __str__(self) -> str:
+        return f"@FE{self._translation_dict.get(self._val, self._val)}"
+
+    def __repr__(self) -> str:
+        return f"@FE{self._translation_dict.get(self._val, self._val)}"
+
+    @classmethod
+    def set_translation_dict(cls, mapping: Dict[int, Any]) -> None:
+        """Provide a lookup table to be invoked during value printing.
+
+        Args:
+            mapping: A mapping of id: printable id
+        """
+        cls._translation_dict.clear()
+        cls._translation_dict.update(mapping)
+
+
+class FeSummaryTable:
+    """A class containing summaries of traceability information.
+
+    Args:
+        name: The string to be used as the title line in the summary table.
+        fe_id: The id of this table, used for cross-referencing from other tables.
+        **fields: Any other information about the summarized object / function.
+    """
+    def __init__(self,
+                 name: str,
+                 fe_id: FEID,
+                 target_type: Type,
+                 path: Optional[str] = None,
+                 kwargs: Optional[Dict[str, Any]] = None,
+                 **fields: Any):
+        self.name = name
+        self.fe_id = fe_id
+        self.type = target_type
+        self.path = path
+        self.args = fields.pop("args", None)
+        self.kwargs = kwargs or {}
+        self.fields = fields
+
+    def render_table(self, doc: Document) -> None:
+        with doc.create(Table(position='htbp')) as table:
+            table.append(NoEscape(r'\refstepcounter{table}'))
+            table.append(Label(Marker(name=str(self.fe_id), prefix="tbl")))
+            with doc.create(Tabularx('|lX|', booktabs=True)) as tabular:
+                package = Package('xcolor', options='table')
+                if package not in tabular.packages:
+                    # Need to invoke a table color before invoking TextColor (bug?)
+                    tabular.packages.append(package)
+                tabular.add_row((bold(self.name), MultiColumn(size=1, align='r|', data=TextColor('blue', self.fe_id))))
+                tabular.add_hline()
+                tabular.add_row(("Type: ", escape_latex(f"{self.type}".split("'")[1])))
+                if self.path:
+                    tabular.add_row(("", escape_latex(self.path)))
+                if self.fields or self.args or self.kwargs:
+                    tabular.add_hline()
+                for idx, (k, v) in enumerate(self.fields.items()):
+                    tabular.add_row((f"{k.capitalize()}: ", v))
+                    if self.args or self.kwargs or idx < len(self.fields) - 1:
+                        tabular.add_hline()
+                if self.args:
+                    tabular.add_row(("Args: ", self.args))
+                    if self.kwargs:
+                        tabular.add_hline()
+                if self.kwargs:
+                    for idx, (kwarg, val) in enumerate(self.kwargs.items()):
+                        tabular.add_row((kwarg, val), color='white' if idx % 2 else 'black!5')
+
+
+class ContainerList(Container):
+    """A class to expedite combining pieces of latex together.
+    """
+    def dumps(self) -> str:
+        """Get a string representation of this container.
+
+        Returns:
+            A string representation of itself.
+        """
+        return self.dumps_content()
+
+
+class PyContainer(ContainerList):
+    """A class to convert python containers to a LaTeX representation.
+
+    Args:
+        data: The python object to be converted to LaTeX.
+    """
+    def __init__(self, data: Union[list, tuple, set, dict]):
+        self.packages.add(Package('enumitem', options='inline'))
+        assert isinstance(data, (list, tuple, set, dict)), f"Unacceptable data type for PyContainer: {type(data)}"
+        open_char = '[' if isinstance(data, list) else '(' if isinstance(data, tuple) else r'\{'
+        close_char = ']' if isinstance(data, list) else ')' if isinstance(data, tuple) else r'\}'
+        ltx = Enumerate(options=Options(NoEscape('label={}'), NoEscape('itemjoin={,}')))
+        ltx._star_latex_name = True  # Converts this to an inline list
+        self.raw_input = data
+        if isinstance(data, dict):
+            for key, val in data.items():
+                ltx.add_item(ContainerList(data=[key, ": ", val]))
+        else:
+            for val in data:
+                ltx.add_item(val)
+        super().__init__(data=[NoEscape(open_char), ltx, NoEscape(close_char)])
+
+
+class HrefFEID(ContainerList):
+    """A class to represent a colored and underlined hyperref based on a given fe_id.
+
+    Args:
+        fe_id: The id used to link this hyperref.
+        name: A string suffix to be printed as part of the link text.
+    """
+    def __init__(self, fe_id: FEID, name: str):
+        self.packages.add(Package('hyperref', options='hidelinks'))
+        self.packages.add(Package('ulem'))
+        self.packages.add(Package('xcolor', options='table'))
+        self.fe_id = fe_id
+        super().__init__(data=[
+            NoEscape(r'\hyperref[tbl:'),
+            fe_id,
+            NoEscape(r']{\textcolor{blue}{\uline{'),
+            fe_id,
+            escape_latex(f": {name}") if name else "",
+            NoEscape("}}}")
+        ])
+
+
 def _deref_is_callable(instruction: dis.Instruction, closure_vars: inspect.ClosureVars) -> bool:
     """A function to determine whether an `instruction` is referencing something that is callable or not.
 
@@ -78,102 +231,149 @@ def _deref_is_callable(instruction: dis.Instruction, closure_vars: inspect.Closu
     return hasattr(deref, '__call__')
 
 
-def _trace_value(inp: Any, wrap_str: bool = True) -> Any:
-    """Convert an input value to a json representation.
+def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], wrap_str: bool = True) -> Any:
+    """Convert an input value to a FESummaryTable table representation
 
     Args:
         inp: The input value to be converted.
+        tables: A collection of tables representing objects which are used by the current stack of inputs.
         wrap_str: Whether literal string values should be wrapped inside extra quote marks.
 
     Returns:
-        A json representation of the input.
+        An FESummaryTable representation of the input.
     """
     if isinstance(inp, str):
         return f"`{inp}'" if wrap_str else inp
+    elif isinstance(inp, (int, float, bool, type(None), HrefFEID, FEID, PyContainer)):
+        return inp
     elif hasattr(inp, '_fe_traceability_summary'):
         # The first time a traceable object goes through here it won't have it's summary instantiated yet, so it will
         # fall through to the class check at the end to get it's id.
-        # noinspection PyProtectedMember
-        return inp._fe_traceability_summary
-    elif isinstance(inp, (int, float, bool, type(None))):
-        return inp
+        # noinspection PyProtectedMember,PyUnresolvedReferences
+        tables.update(inp._fe_traceability_summary)
+        inp_id = FEID(id(inp))
+        return HrefFEID(inp_id, tables[inp_id].name)
     elif inspect.ismethod(inp):
-        return {
-            "@name": inp.__name__, "@parent": _trace_value(inp.__self__, wrap_str), "@type": type(inp), "@id": id(inp)
-        }
+        inp_id = FEID(id(inp))
+        if inp_id not in tables:
+            tables[inp_id] = FeSummaryTable(name=inp.__name__,
+                                            fe_id=inp_id,
+                                            target_type=type(inp),
+                                            parent=_trace_value(inp.__self__, tables, wrap_str))
+        return HrefFEID(inp_id, inp.__name__)
     elif inspect.isfunction(inp) or inspect.isclass(inp):
-        if inspect.isfunction(inp) and inp.__name__ == "<lambda>":
-            code = inp.__code__
-            var_names = code.co_varnames
-            # Attempt to figure out what the lambda function is doing. If it is being used only to invoke some other
-            # function (like one might do with LRScheduler), then the parse should work.
-            func_description = _parse_lambda(inp)
-            response = {"@name": "lambda", "@vars": var_names, "@id": id(inp), "@type": type(inp)}
-            if func_description is not None:
-                if isinstance(func_description, dict):
-                    # Description came from the backup parser
-                    response.update(func_description)
-                else:
-                    response['@function'] = _trace_value(func_description, wrap_str=True)
-            return response
+        inp_id = FEID(id(inp))
+        if inp_id in tables:
+            name = tables[inp_id].name
         else:
-            return {
-                "@name": inp.__name__,
-                "@path": f"{inp.__module__}.{inp.__qualname__}",
-                "@type": type(inp),
-                "@id": id(inp)
-            }
+            if inspect.isfunction(inp) and inp.__name__ == "<lambda>":
+                code = inp.__code__
+                var_names = code.co_varnames
+                # Attempt to figure out what the lambda function is doing. If it is being used only to invoke some other
+                # function (like one might do with LRScheduler), then the parse should work.
+                func_description = _parse_lambda(inp, tables) or {}
+                func_description['vars'] = _trace_value(var_names, tables, wrap_str=False)
+                name = "lambda"
+                path = None
+            else:
+                name = inp.__name__
+                path = f"{inp.__module__}.{inp.__qualname__}"
+                func_description = {}
+            tables[inp_id] = FeSummaryTable(name=name,
+                                            fe_id=inp_id,
+                                            target_type=type(inp),
+                                            path=path,
+                                            **func_description)
+        return HrefFEID(inp_id, name)
     elif isinstance(inp, _Function):
-        response = {"@name": inp.name, "@id": id(inp), "@type": type(inp.func)}
-        if hasattr(inp.func, '__module__') and hasattr(inp.func, '__qualname__'):
-            response['@path'] = f"{inp.func.__module__}.{inp.func.__qualname__}"
-        return response
+        inp_id = FEID(id(inp))
+        if inp_id not in tables:
+            if hasattr(inp.func, '__module__') and hasattr(inp.func, '__qualname__'):
+                path = f"{inp.func.__module__}.{inp.func.__qualname__}"
+            else:
+                path = None
+            tables[inp_id] = FeSummaryTable(name=inp.name, fe_id=inp_id, target_type=type(inp.func), path=path)
+        return HrefFEID(inp_id, inp.name)
     elif isinstance(inp, _PartialBind):
-        return {"@args": _trace_value(inp.args, wrap_str=True), "@kwargs": _trace_value(inp.kwargs, wrap_str)}
+        return {
+            "args": _trace_value(inp.args, tables, wrap_str=True),
+            "kwargs": _trace_value(inp.kwargs, tables, wrap_str).raw_input  # unwrap kwargs back into a dict
+        }
     elif isinstance(inp, _Command):
-        return "{} {} {}".format(_trace_value(inp.left, wrap_str), inp.command, _trace_value(inp.right, wrap_str))
+        return ContainerList(data=[
+            _trace_value(inp.left, tables, wrap_str),
+            escape_latex(inp.command),
+            _trace_value(inp.right, tables, wrap_str)
+        ])
     elif isinstance(inp, _Condition):
-        return "{} if {} else {}".format(_trace_value(inp.left, wrap_str),
-                                         _trace_value(inp.condition, wrap_str),
-                                         _trace_value(inp.right, wrap_str))
+        return ContainerList(data=[
+            _trace_value(inp.left, tables, wrap_str),
+            " if ",
+            _trace_value(inp.condition, tables, wrap_str),
+            " else ",
+            _trace_value(inp.right, tables, wrap_str)
+        ])
     elif isinstance(inp, _BoundFn):
-        args = _trace_value(inp.args, wrap_str=False)
-        if "@kwargs" in args:
-            return {**_trace_value(inp.func, wrap_str), **args}
-        return {**_trace_value(inp.func, wrap_str), "@kwargs": args}
+        func_href = _trace_value(inp.func, tables, wrap_str)
+        inp_id = func_href.fe_id
+        inp_table = tables[inp_id]
+        args = _trace_value(inp.args, tables, wrap_str=False)
+        if isinstance(args, dict):
+            inp_table.kwargs = args
+        else:
+            inp_table.args = args
+        return func_href
     elif isinstance(inp, inspect.BoundArguments):
-        return _trace_value(inp.arguments, wrap_str=False)
+        args = inp.arguments
+        args.pop('self', None)
+        return _trace_value(args, tables, wrap_str=False).raw_input  # unwrap kwargs back into a dict
     elif isinstance(inp, _VarWrap):
         return inp.var
     elif isinstance(inp, (tf.keras.Model, torch.nn.Module)):
         # FE models should never actually get here since they are given summaries by trace_model() during fe.build()
-        name = inp.model_name if hasattr(inp, 'model_name') else "<Unknown Model Name>"
-        return {"@name": name, "@id": id(inp), "@type": type(inp)}
-    # The collections need to go after _Command and _BoundFn
-    elif isinstance(inp, list):  # tf wraps objects such that isinstance List, Tuple, Mapping, etc don't match them
-        return [_trace_value(x, wrap_str) for x in inp]
+        inp_id = FEID(id(inp))
+        if inp_id in tables:
+            name = tables[inp_id].name
+        else:
+            name = inp.model_name if hasattr(inp, 'model_name') else "<Unknown Model Name>"
+            tables[inp_id] = FeSummaryTable(name=name, fe_id=inp_id, target_type=type(inp))
+        return HrefFEID(inp_id, name)
+    elif isinstance(inp, list):
+        return PyContainer(data=[_trace_value(x, tables, wrap_str) for x in inp])
     elif isinstance(inp, tuple):
-        return tuple([_trace_value(x, wrap_str) for x in inp])
+        return PyContainer(data=tuple([_trace_value(x, tables, wrap_str) for x in inp]))
     elif isinstance(inp, set):
-        return set([_trace_value(x, wrap_str) for x in inp])
+        return PyContainer(data=set([_trace_value(x, tables, wrap_str) for x in inp]))
     elif isinstance(inp, dict):
-        return {_trace_value(k, wrap_str=wrap_str): _trace_value(v, wrap_str=True) for k, v in inp.items()}
+        return PyContainer(data={
+            _trace_value(k, tables, wrap_str=wrap_str): _trace_value(v, tables, wrap_str=True)
+            for k, v in inp.items()
+        })
     elif isinstance(inp, (tf.Tensor, torch.Tensor, np.ndarray, tf.Variable)):
-        response = {"@name": "tensor", "@type": type(inp), "@id": id(inp)}
-        if isinstance(inp, (tf.Tensor, torch.Tensor, tf.Variable)):
-            if isinstance(inp, torch.Tensor):
-                inp = inp.cpu().detach()
-            inp = inp.numpy()
-        rank = inp.ndim
-        response["@shape"] = inp.shape
-        if rank == 0 or (rank == 1 and inp.shape[0] <= 10):
-            response["@values"] = str(inp)
-        return response
+        inp_type = type(inp)
+        inp_id = FEID(id(inp))
+        if inp_id not in tables:
+            if isinstance(inp, (tf.Tensor, torch.Tensor, tf.Variable)):
+                if isinstance(inp, torch.Tensor):
+                    inp = inp.cpu().detach()
+                inp = inp.numpy()
+            rank = inp.ndim
+            description = {'shape': inp.shape}
+            if rank == 0 or (rank == 1 and inp.shape[0] <= 10):
+                description['values'] = str(inp)
+            tables[inp_id] = FeSummaryTable(name="tensor", fe_id=inp_id, target_type=inp_type, **description)
+        return HrefFEID(inp_id, "tensor")
     # This should be the last elif
     elif hasattr(inp, '__class__'):
-        return {"@name": inp.__class__.__name__, "@type": type(inp), "@id": id(inp)}
+        inp_id = FEID(id(inp))
+        if inp_id not in tables:
+            tables[inp_id] = FeSummaryTable(name=inp.__class__.__name__, target_type=type(inp), fe_id=inp_id)
+        return HrefFEID(inp_id, inp.__class__.__name__)
     else:
-        return {"@name": "an object", "@id": id(inp), "@type": type(inp)}
+        inp_id = FEID(id(inp))
+        if inp_id not in tables:
+            tables[inp_id] = FeSummaryTable(name="an object", target_type=type(inp), fe_id=inp_id)
+        return HrefFEID(inp_id, "an object")
 
 
 def _traverse_chunks(lambda_specs: List[_ChunkSpec],
@@ -322,7 +522,8 @@ def _extract_args(input_str: str) -> Set[str]:
     return results
 
 
-def _parse_lambda_fallback(function: types.FunctionType) -> Optional[Dict[str, Any]]:
+def _parse_lambda_fallback(function: types.FunctionType, tables: Dict[FEID,
+                                                                      FeSummaryTable]) -> Optional[Dict[str, Any]]:
     """Convert a lambda function into a string representation, disambiguating variables when possible.
 
     Args:
@@ -428,7 +629,7 @@ def _parse_lambda_fallback(function: types.FunctionType) -> Optional[Dict[str, A
     # De-reference any variables
     refs = code.co_freevars
     lam = lambda_fn[2]
-    response = {"@function": lam, "@type": type(function), "@id": id(function)}
+    response = {"function": escape_latex(lam)}
     if refs:
         closure_vars = inspect.getclosurevars(function)
         ref_map = {
@@ -437,11 +638,11 @@ def _parse_lambda_fallback(function: types.FunctionType) -> Optional[Dict[str, A
                                        closure_vars.globals.get(ref, closure_vars.builtins.get(ref, _VarWrap(ref))))
             for ref in refs
         }
-        response['@kwargs'] = _trace_value(ref_map, wrap_str=False)
+        response['kwargs'] = _trace_value(ref_map, tables, wrap_str=False)
     return response
 
 
-def _parse_lambda(function: types.FunctionType) -> Optional[Any]:
+def _parse_lambda(function: types.FunctionType, tables: Dict[FEID, FeSummaryTable]) -> Optional[Dict[str, Any]]:
     """Convert a lambda function into its argument-based representation.
 
     The `function` is expected to be a lambda expression, which means that the set of bytecode instructions is limited
@@ -541,7 +742,7 @@ def _parse_lambda(function: types.FunctionType) -> Optional[Any]:
                 name=name)
             if func_pair.func is None:
                 # This function can't be found for some reason
-                return _parse_lambda_fallback(function)
+                return _parse_lambda_fallback(function, tables)
             while idx + 1 < len(instructions):
                 if instructions[idx + 1].opname in ('LOAD_METHOD', 'LOAD_ATTR'):
                     name = instructions[idx + 1].argval
@@ -574,7 +775,7 @@ def _parse_lambda(function: types.FunctionType) -> Optional[Any]:
             # Bind the fn
             if not callable(func_pair.func):
                 # This shouldn't ever happen, but just in case...
-                return _parse_lambda_fallback(function)
+                return _parse_lambda_fallback(function, tables)
             try:
                 bound_args = inspect.signature(func_pair.func).bind(*fn_args, **kwargs)
                 bound_args.apply_defaults()
@@ -589,7 +790,7 @@ def _parse_lambda(function: types.FunctionType) -> Optional[Any]:
             if instruction.opname == 'COMPARE_OP':
                 command = instruction.argval
             if command not in _CommandTable:
-                return _parse_lambda_fallback(function)
+                return _parse_lambda_fallback(function, tables)
             right = args.pop()
             instructions.pop(idx - 1)
             idx -= 1
@@ -607,129 +808,12 @@ def _parse_lambda(function: types.FunctionType) -> Optional[Any]:
             # TODO - LIST_APPEND, SET_ADD, MAP_ADD, BUILD_STRING, CALL_FUNCTION_EX, BUILD_TUPLE_UNPACK, etc.
             # Note that this function is only ever used to examine lambda functions, which helps to restrict the set of
             # possible commands
-            return _parse_lambda_fallback(function)
+            return _parse_lambda_fallback(function, tables)
         idx += 1
     # Return the bound args
     if conditions or len(args) != 1:
-        return _parse_lambda_fallback(function)
-    return args[0]
-
-
-class ContainerList(Container):
-    """A class to expedite combining pieces of latex together.
-    """
-    def dumps(self) -> str:
-        """Get a string representation of this container.
-
-        Returns:
-            A string representation of itself.
-        """
-        return self.dumps_content()
-
-
-class PyContainer(Container):
-    """A class to convert python containers to a LaTeX representation.
-
-    Args:
-        data: The python object to be converted to LaTeX.
-    """
-    def __init__(self, data: Union[list, tuple, set, dict]):
-        self.packages.add(Package('enumitem', options='inline'))
-        assert isinstance(data, (list, tuple, set, dict)), f"Unacceptable data type for PyContainer: {type(data)}"
-        open_char = '[' if isinstance(data, list) else '(' if isinstance(data, tuple) else r'\{'
-        close_char = ']' if isinstance(data, list) else ')' if isinstance(data, tuple) else r'\}'
-        ltx = Enumerate(options=Options(NoEscape('label={}'), NoEscape('itemjoin={,}')))
-        ltx._star_latex_name = True  # Converts this to an inline list
-        if isinstance(data, dict):
-            for key, val in data.items():
-                ltx.add_item(ContainerList(data=[key, ": ", val]))
-        else:
-            for val in data:
-                ltx.add_item(val)
-        super().__init__(data=[NoEscape(open_char), ltx, NoEscape(close_char)])
-
-    def dumps(self) -> str:
-        """Get a string representation of this container.
-
-        Returns:
-            A string representation of itself.
-        """
-        return self.dumps_content()
-
-
-class HrefColored(CommandBase):
-    """A class that represents an hyperlink to a label.
-
-    Args:
-        marker: The marker to use with the label/ref.
-        text: The text that will be shown as a link to the label of the same marker.
-    """
-    _repr_attributes_mapping = {
-        'marker': 'options',
-        'text': 'arguments',
-    }
-
-    _latex_name = 'hyperref'
-
-    packages = [Package('hyperref', options='hidelinks'), Package('ulem'), Package('xcolor', options='table')]
-
-    def __init__(self, marker: Marker, text: str):
-        self.marker = marker
-        self.text = text
-        super().__init__(options=(str(marker)),
-                         arguments=NoEscape(r'\textcolor{blue}{\uline{' + escape_latex(text) + '}}'))
-
-
-class FeSummaryTable:
-    """A class containing summaries of traceability information.
-
-    Args:
-        title: The string to be used as the title line in the summary table.
-        fe_id: The id of this table, used for cross-referencing from other tables.
-        **fields: Any other information about the summarized object / function.
-    """
-    def __init__(self,
-                 title: str,
-                 fe_id: str,
-                 target_type: Type,
-                 path: Optional[str],
-                 kwargs: Dict[str, Any],
-                 **fields: Any):
-        self.title = title
-        self.fe_id = fe_id
-        self.type = target_type
-        self.path = path
-        self.args = fields.pop("@args", None)
-        self.kwargs = kwargs
-        self.fields = fields
-
-    def render_table(self, doc: Document) -> None:
-        with doc.create(Table(position='htbp')) as table:
-            table.append(NoEscape(r'\refstepcounter{table}'))
-            table.append(Label(Marker(name=self.fe_id, prefix="tbl")))
-            with doc.create(Tabularx('|lX|', booktabs=True)) as tabular:
-                package = Package('xcolor', options='table')
-                if package not in tabular.packages:
-                    # Need to invoke a table color before invoking TextColor (bug?)
-                    tabular.packages.append(package)
-                tabular.add_row((bold(self.title), MultiColumn(size=1, align='r|', data=TextColor('blue', self.fe_id))))
-                tabular.add_hline()
-                tabular.add_row(("Type: ", escape_latex(f"{self.type}".split("'")[1])))
-                if self.path:
-                    tabular.add_row(("", escape_latex(self.path)))
-                if self.fields or self.args or self.kwargs:
-                    tabular.add_hline()
-                for idx, (k, v) in enumerate(self.fields.items()):
-                    tabular.add_row((f"{strip_prefix(k, '@').capitalize()}: ", v))
-                    if self.args or self.kwargs or idx < len(self.fields) - 1:
-                        tabular.add_hline()
-                if self.args:
-                    tabular.add_row(("Args: ", self.args))
-                    if self.kwargs:
-                        tabular.add_hline()
-                if self.kwargs:
-                    for idx, (kwarg, val) in enumerate(self.kwargs.items()):
-                        tabular.add_row((kwarg, val), color='white' if idx % 2 else 'black!5')
+        return _parse_lambda_fallback(function, tables)
+    return {"function": _trace_value(args[0], tables, wrap_str=True)}
 
 
 def fe_summary(self) -> List[FeSummaryTable]:
@@ -741,59 +825,10 @@ def fe_summary(self) -> List[FeSummaryTable]:
     Returns:
         A summary of the instance.
     """
-    objects = {}
-    to_parse = [self._fe_traceability_summary]
-    g = (f"@FE{i}" for i, _ in enumerate(iter(int, 1)))
-    id_map = defaultdict(lambda: next(g))
-    while to_parse:
-        current = to_parse.pop()
-        title = current["@name"]
-        fe_id = id_map[current["@id"]]
-        typ = current["@type"]
-        path = current.get("@path", None)
-        kwargs = current.get("@kwargs", {})
-        kwargs = {key: _json_to_table(val, to_parse, objects, id_map) for key, val in kwargs.items()}
-        other_stuff = {
-            key: _json_to_table(current[key], to_parse, objects, id_map)
-            for key in current.keys() - {"@name", "@id", "@type", "@path", "@kwargs"}
-        }
-        objects[fe_id] = FeSummaryTable(title, fe_id, typ, path, kwargs, **other_stuff)
-    return [objects[key] for key in sorted(objects.keys(), key=lambda x: int(x[3:]))]
-
-
-def _json_to_table(value: Any, queue: List[Any], objects: Dict[str, Any], id_map: DefaultDict[int, str]) -> Any:
-    """Move through a JSON object converting nested objects into variable references to generate a flat list of tables.
-
-    Args:
-        value: The JSON to parse.
-        queue: A queue of nested objects to parse (may be appended to by this method).
-        objects: Existing objects which have already been parsed.
-        id_map: A map of in-memory ids to 'friendlier' string ids.
-
-    Returns:
-        The object converted to LaTeX with it's nested objects stripped out and replaced with external references.
-    """
-    if isinstance(value, (list, tuple, set)):
-        parsed = [_json_to_table(val, queue, objects, id_map) for val in value]
-        if isinstance(value, tuple):
-            parsed = tuple(parsed)
-        elif isinstance(value, set):
-            parsed = set(parsed)
-        return PyContainer(parsed)
-    elif isinstance(value, dict):
-        if "@id" in value:
-            fe_id = id_map[value['@id']]
-            if fe_id not in objects:
-                queue.append(value)
-            name = value.get("@name", "").strip()
-            if name:
-                name = f": {name}"
-            ltx = HrefColored(Marker(name=fe_id, prefix="tbl"), text=f"{fe_id}{name}")
-            return ltx
-        value = {key: _json_to_table(val, queue, objects, id_map) for key, val in value.items()}
-        return PyContainer(value)
-    else:
-        return escape_latex(value)
+    # re-number the references for nicer viewing
+    key_mapping = {fe_id: idx for idx, fe_id in enumerate(self._fe_traceability_summary.keys())}
+    FEID.set_translation_dict(key_mapping)
+    return list(self._fe_traceability_summary.values())
 
 
 def trace_model(model: Model, model_idx: int, model_fn: Any, optimizer_fn: Any, weights_path: Any) -> Model:
@@ -809,17 +844,19 @@ def trace_model(model: Model, model_idx: int, model_fn: Any, optimizer_fn: Any, 
     Returns:
         The `model`, but now with an fe_summary() method.
     """
-    summary = {
-        "@name": f"{model.model_name}", "@definition": _trace_value(model_fn), "@type": type(model), "@id": id(model)
-    }
+    tables = {}
+    description = {'definition': _trace_value(model_fn, tables)}
     if model_idx != -1:
-        summary["@index"] = model_idx
+        description['index'] = model_idx
     if optimizer_fn or isinstance(optimizer_fn, list) and optimizer_fn[0] is not None:
-        summary["@optimizer"] = _trace_value(optimizer_fn)[model_idx] if isinstance(
-            optimizer_fn, list) else _trace_value(optimizer_fn)
+        description['optimizer'] = _trace_value(
+            optimizer_fn[model_idx] if isinstance(optimizer_fn, list) else optimizer_fn, tables)
     if weights_path:
-        summary["@weights"] = _trace_value(weights_path)
-    model._fe_traceability_summary = summary
+        description['weights'] = _trace_value(weights_path, tables)
+    fe_id = FEID(id(model))
+    tbl = FeSummaryTable(name=model.model_name, fe_id=fe_id, target_type=type(model), **description)
+    tables[fe_id] = tbl
+    model._fe_traceability_summary = tables
 
     # Use MethodType to bind the method to the class instance
     setattr(model, 'fe_summary', types.MethodType(fe_summary, model))
@@ -858,9 +895,9 @@ def traceable(whitelist: Union[str, Tuple[str]] = (), blacklist: Union[str, Tupl
                 if not hasattr(self, '_fe_traceability_summary'):
                     bound_args = inspect.signature(base_init).bind(self, *args, **kwargs)
                     bound_args.apply_defaults()
-                    bound_args = bound_args.arguments
-                    bound_args.pop('self')
-                    self._fe_traceability_summary = _trace_value(_BoundFn(self, bound_args))
+                    tables = {}
+                    _trace_value(_BoundFn(self, bound_args), tables)
+                    self._fe_traceability_summary = tables
                 base_init(self, *args, **kwargs)
 
             setattr(cls, '__init__', init)

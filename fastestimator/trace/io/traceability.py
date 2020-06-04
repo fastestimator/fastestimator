@@ -13,11 +13,14 @@
 # limitations under the License.
 # ==============================================================================
 
-import getpass
+import sys
 
 import matplotlib
-from pylatex import Command, Document, Figure, NoEscape, Section
+import torch
+from pylatex import Command, Document, Figure, Itemize, LongTable, MultiColumn, NoEscape, Package, Section, escape_latex
+from pylatex.utils import bold
 
+import fastestimator as fe
 from fastestimator.summary.logs.log_plot import plot_logs
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
@@ -34,6 +37,7 @@ class Traceability(Trace):
     def __init__(self, save_path: str):
         super().__init__(mode={"train", "eval"})
         self.doc = Document(geometry_options=['lmargin=2cm', 'rmargin=2cm', 'tmargin=2cm', 'bmargin=2cm'])
+        self.doc.packages.append(Package(name='placeins', options=['section']))  # Keep tables in their sections
         self.save_path = save_path
         self.config_tables = []
 
@@ -48,7 +52,8 @@ class Traceability(Trace):
         self.doc.preamble.append(NoEscape(r'\extrafloats{' + str(len(self.config_tables) + 10) + '}'))
 
         self.doc.preamble.append(Command('title', exp_name))
-        self.doc.preamble.append(Command('author', getpass.getuser()))
+        backend = 'TensorFlow Backend' if isinstance(self.system.network, fe.network.TFNetwork) else 'PyTorch Backend'
+        self.doc.preamble.append(Command('author', f"FastEstimator {fe.__version__} - {backend}"))
         self.doc.preamble.append(Command('date', NoEscape(r'\today')))
         self.doc.append(NoEscape(r'\maketitle'))
 
@@ -64,4 +69,35 @@ class Traceability(Trace):
         with self.doc.create(Section("Initialization Parameters")):
             for tbl in self.config_tables:
                 tbl.render_table(self.doc)
+
+        with self.doc.create(Section("System Config")):
+            with self.doc.create(Itemize()) as itemize:
+                itemize.add_item(escape_latex(f"FastEstimator {fe.__version__}"))
+                itemize.add_item(escape_latex(f"OS: {sys.platform}"))
+                itemize.add_item(f"Number of GPUs: {torch.cuda.device_count()}")
+                if fe.fe_deterministic_seed is not None:
+                    itemize.add_item(escape_latex(f"Deterministic Seed: {fe.fe_deterministic_seed}"))
+            with self.doc.create(LongTable('|lr|', pos=['h!'], booktabs=True)) as tabular:
+                tabular.add_row((bold("Module"), bold("Version")))
+                tabular.add_hline()
+                tabular.end_table_header()
+                tabular.add_hline()
+                tabular.add_row((MultiColumn(2, align='r', data='Continued on Next Page'), ))
+                tabular.add_hline()
+                tabular.end_table_footer()
+                tabular.end_table_last_footer()
+                color = True
+                for name, module in sorted(sys.modules.items()):
+                    if "." in name:
+                        continue  # Skip sub-packages
+                    if name.startswith("_"):
+                        continue  # Skip private packages
+                    if hasattr(module, '__version__'):
+                        tabular.add_row((escape_latex(name), escape_latex(str(module.__version__))),
+                                        color='black!5' if color else 'white')
+                        color = not color
+                    elif hasattr(module, 'VERSION'):
+                        tabular.add_row((escape_latex(name), escape_latex(str(module.VERSION))),
+                                        color='black!5' if color else 'white')
+                        color = not color
         self.doc.generate_pdf(self.save_path, clean_tex=False)
