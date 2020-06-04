@@ -15,7 +15,10 @@ FastEstimator is a high-level deep learning library built on TensorFlow2 and PyT
     ``` bash
     $ pip install torch==1.4.0+cpu torchvision==0.5.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
     ```
-    You will also need to install Visual C++ 2015 build tools [here](https://go.microsoft.com/fwlink/?LinkId=691126) and install default option.
+    * Install Visual C++ 2015 build tools [here](https://go.microsoft.com/fwlink/?LinkId=691126) and install default option.
+
+    * Install latest Visual C++ redistributable [here](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads) and choose x86 for 32 bit OS, x64 for 64 bit OS.
+
 * Linux (CPU/GPU):
     ``` bash
     $ apt-get install libglib2.0-0 libsm6 libxrender1 libxext6

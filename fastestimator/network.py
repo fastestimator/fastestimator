@@ -447,7 +447,7 @@ class TFNetwork(BaseNetwork):
         batch_in = self._get_effective_batch_input(batch, mode)
         strategy = tf.distribute.get_strategy()
         if isinstance(strategy, tf.distribute.MirroredStrategy):
-            if self.epoch_state["warmup"]:
+            if self.epoch_state["warmup"] == "debug":
                 prediction = strategy.experimental_run_v2(
                     self._forward_step_eager,
                     args=(batch_in, self.epoch_state, self.epoch_ops, to_list(self.effective_outputs[mode])))
@@ -458,7 +458,7 @@ class TFNetwork(BaseNetwork):
             batch = self._per_replica_to_global(batch)
             prediction = self._per_replica_to_global(prediction)
         else:
-            if self.epoch_state["warmup"]:
+            if self.epoch_state["warmup"] == "debug":
                 prediction = self._forward_step_eager(batch_in,
                                                       self.epoch_state,
                                                       self.epoch_ops,
@@ -587,7 +587,7 @@ class TFNetwork(BaseNetwork):
         Returns:
             (batch_data, prediction_data)
         """
-        self.load_epoch(mode, epoch, warmup=True)
+        self.load_epoch(mode, epoch)
         data = to_tensor(data, target_type="tf")
         data, prediction = self.run_step(data)
         self.unload_epoch()
