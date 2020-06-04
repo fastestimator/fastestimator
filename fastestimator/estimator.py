@@ -86,7 +86,7 @@ class Estimator:
                              max_train_steps_per_epoch=max_train_steps_per_epoch,
                              max_eval_steps_per_epoch=max_eval_steps_per_epoch)
 
-    def fit(self, summary: Optional[str] = None, warmup: bool = True) -> Optional[Summary]:
+    def fit(self, summary: Optional[str] = None, warmup: Union[bool, str] = True) -> Optional[Summary]:
         """Train the network for the number of epochs specified by the estimator's constructor.
 
         Args:
@@ -95,7 +95,7 @@ class Estimator:
             warmup: Whether to perform warmup before training begins. The warmup procedure will test one step at every
                 epoch where schedulers cause the execution graph to change. This can take some time up front, but can
                 also save significant heartache on epoch 300 when the training unexpectedly fails due to a tensor size
-                mismatch.
+                mismatch. When set to "debug", the warmup will be performed in eager execution for easier debugging.
 
         Returns:
             A summary object containing the training history for this session iff a `summary` name was provided.
@@ -104,7 +104,7 @@ class Estimator:
         self.system.reset(summary)
         self._prepare_traces(run_modes={"train", "eval"})
         if warmup:
-            self._warmup()
+            self._warmup(warmup=warmup)
         self._start(run_modes={"train", "eval"})
         return self.system.summary or None
 
@@ -223,11 +223,14 @@ class Estimator:
         sorted_traces.extend(list(end_traces))
         return sorted_traces
 
-    def _warmup(self) -> None:
+    def _warmup(self, warmup: Union[bool, str]) -> None:
         """Perform a test run of each pipeline and network signature epoch to make sure that training won't fail later.
 
         Traces are not executed in the warmup since they are likely to contain state variables which could become
         corrupted by running extra steps.
+
+        Args:
+            warmup: Warmup arg specified by estimator.fit.
         """
         all_traces = get_current_items(self.traces_in_use, run_modes={"train", "eval"})
         self._sort_traces(all_traces)
@@ -264,7 +267,7 @@ class Estimator:
                     "found missing key(s) during epoch {} mode {}: {}".format(epoch, mode, unmet_requirements)
                 self._sort_traces(traces, available_outputs=pipeline_output_keys | network_output_keys)
                 trace_input_keys.update(traces[0].inputs)
-                self.network.load_epoch(mode, epoch, output_keys=trace_input_keys, warmup=True)
+                self.network.load_epoch(mode, epoch, output_keys=trace_input_keys, warmup=warmup)
                 self.network.run_step(batch)
                 self.network.unload_epoch()
         assert not monitor_names, "found missing key(s): {}".format(monitor_names)
