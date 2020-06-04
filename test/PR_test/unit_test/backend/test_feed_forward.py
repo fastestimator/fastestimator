@@ -14,7 +14,6 @@ class TestFeedForward(unittest.TestCase):
         x = tf.constant([[1.0, 1.0, 1.0], [1.0, -1.0, -0.5]])
         obj1 = fe.backend.feed_forward(model, x)
         obj2 = tf.constant([[6.0], [-2.5]])
-        print(obj1)
         self.assertTrue(is_equal(obj1, obj2))
 
     def test_feed_forward_torch(self):
