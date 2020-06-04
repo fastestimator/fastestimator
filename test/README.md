@@ -22,7 +22,7 @@ $ python3 -m unittest discover PR_test
 $ python3 -m unittest <file_path>
 ```
 
-### Run specific test case(class)
+### Run specific test case (unittest.TestCase)
 
 ```bash
 $ python3 -m unittest <module_path>
@@ -36,6 +36,11 @@ $ python3 -m unittest PR_test.unit_test.backend.test_abs.TestAbs
 ```
 
 ## Run PR-test and check its test coverage
+
+* step 0: install `coverage` package
+    ```bash
+    $ pip install coverage
+    ```
 
 * step 1: running PR test using coverage command line
 
