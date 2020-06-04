@@ -3,6 +3,7 @@ pipeline{
 
     environment {
         JENKINS_ANACONDA_DIR='/home/ubuntu/anaconda3'
+        JENKINS_MASTER_ANACONDA_DIR='/var/jenkins_home/anaconda3'
         JENKINS_PYTHON_ENV='nightly_env'
         LOCAL_DATASET_PATH='/home/ubuntu/fastestimator_data'
         S3_DATASET_PATH='s3://fastestimator-public/nightly_test'
@@ -19,7 +20,7 @@ pipeline{
                                 sh '''
                                     set -e
                                     . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
-                                    if [ ! -d "$JENKINS_ANACONDA_DIR/envs/nightly_env"  ]; then
+                                    if [ ! -d "$JENKINS_ANACONDA_DIR/envs/$JENKINS_PYTHON_ENV"  ]; then
                                         conda create --name $JENKINS_PYTHON_ENV python=3.6 -y
                                     fi
 
@@ -53,7 +54,7 @@ pipeline{
                                 sh '''
                                     set -e
                                     . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
-                                    if [ ! -d "$JENKINS_ANACONDA_DIR/envs/nightly_env"  ]; then
+                                    if [ ! -d "$JENKINS_ANACONDA_DIR/envs/$JENKINS_PYTHON_ENV"  ]; then
                                         conda create --name $JENKINS_PYTHON_ENV python=3.6 -y
                                     fi
 
@@ -88,8 +89,8 @@ pipeline{
                     sh '''#!/bin/bash
                         set -e
                         source ~/.bashrc
-                        . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
-                        if [ ! -d "$JENKINS_ANACONDA_DIR/envs/nightly_env"  ]; then
+                        . $JENKINS_MASTER_ANACONDA_DIR/etc/profile.d/conda.sh
+                        if [ ! -d "$JENKINS_MASTER_ANACONDA_DIR/envs/$JENKINS_PYTHON_ENV"  ]; then
                             conda create --name $JENKINS_PYTHON_ENV python=3.6 -y
                         fi
 

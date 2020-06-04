@@ -1,5 +1,4 @@
 import os
-import sys
 import unittest
 
 loader = unittest.TestLoader()
@@ -12,5 +11,5 @@ res = runner.run(suite)
 if not res.wasSuccessful:
     raise ValueError("not all tests were successfully executed (pass or fail)")
 
-if res.failures is not [] or res.errors is not []:
+if res.failures or res.errors:
     raise ValueError("not all tests passed")

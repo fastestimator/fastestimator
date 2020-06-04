@@ -14,12 +14,13 @@
 # ==============================================================================
 import datetime
 import json
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 import torch
 
 from fastestimator.network import BaseNetwork
 from fastestimator.summary.summary import Summary
+from fastestimator.util.traceability_util import FeSummaryTable
 
 
 class System:
@@ -73,7 +74,7 @@ class System:
                  total_epochs: int = 0,
                  max_train_steps_per_epoch: Optional[int] = None,
                  max_eval_steps_per_epoch: Optional[int] = None,
-                 system_config: Optional[str] = None) -> None:
+                 system_config: Optional[List[FeSummaryTable]] = None) -> None:
 
         self.network = network
         self.mode = mode
