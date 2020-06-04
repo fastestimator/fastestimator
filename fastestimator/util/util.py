@@ -294,6 +294,15 @@ def get_type(obj: Any) -> str:
     x = fe.util.get_type(27)  # "int"
     ```
 
+    For container to look into its element's type, its type needs to be either list or tuple, and the return string will
+    be List[...]. All container elements need to have the same data type becuase it will only check its first element.
+
+    ```python
+    x = fe.util.get_type({"a":1, "b":2})  # "dict"
+    x = fe.util.get_type([1, "a"]) # "List[int]"
+    x = fe.util.get_type([[[1]]]) # "List[List[List[int]]]"
+    ```
+
     Args:
         obj: Data which may be wrapped in some kind of container.
 
@@ -383,13 +392,14 @@ def parse_modes(modes: Set[str]) -> Set[str]:
     return modes
 
 
-def pad_batch(batch: List[MutableMapping[str, Any]], pad_value: Union[float, int]) -> None:
-    """A function to pad a batch of data in-place by appending to the ends of the tensors.
+def pad_batch(batch: List[MutableMapping[str, np.ndarray]], pad_value: Union[float, int]) -> None:
+    """A function to pad a batch of data in-place by appending to the ends of the tensors. Tensor type needs to be
+    numpy array otherwise would get ignored. (tf.Tensor and torch.Tensor will cause error)
 
     ```python
     data = [{"x": np.ones((2, 2)), "y": 8}, {"x": np.ones((3, 1)), "y": 4}]
     fe.util.pad_batch(data, pad_value=0)
-    print(data)  # [{'x': [[1., 1.], [1., 1.],[0., 0.]], 'y': 8}, {'x': [[1., 0.], [1., 0.], [1., 0.]]), 'y': 4}]
+    print(data)  # [{'x': [[1., 1.], [1., 1.], [0., 0.]], 'y': 8}, {'x': [[1., 0.], [1., 0.], [1., 0.]]), 'y': 4}]
     ```
 
     Args:
@@ -397,9 +407,13 @@ def pad_batch(batch: List[MutableMapping[str, Any]], pad_value: Union[float, int
         pad_value: The value to pad with.
 
     Raises:
-        AssertionError: If the data within the batch do not have matching ranks.
+        AssertionError: If the data within the batch do not have matching rank, or have different keys
     """
-    for key in batch[0].keys():
+    keys = batch[0].keys()
+    for one_batch in batch:
+        assert one_batch.keys() == keys, "data within batch must have same keys"
+
+    for key in keys:
         shapes = [data[key].shape for data in batch if hasattr(data[key], "shape")]
         if len(set(shapes)) > 1:
             assert len(set(len(shape) for shape in shapes)) == 1, "data within batch must have same rank"
