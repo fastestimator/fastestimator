@@ -30,7 +30,6 @@ class TestRandomNormalLike(unittest.TestCase):
         test = torch.Tensor([[1, 1], [2, 3]])
         output_shape = (2, 2)
         output = random_normal_like(test)
-        print(np.array(output).std())
         # check the type of output array
         self.assertIsInstance(output, torch.Tensor, 'Output must be torch.Tensor')
         # check if the shape is same
