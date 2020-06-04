@@ -8,14 +8,15 @@ pipeline {
         stage('Build') {
             steps {
                 sh '''#!/bin/bash
+                    set -e
                     source ~/.bashrc
                     . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
                     if [ ! -d "$JENKINS_ANACONDA_DIR/envs/$JENKINS_PYTHON_ENV" ]; then
                         conda create --name $JENKINS_PYTHON_ENV python=3.6 -y
                     fi
                     conda activate $JENKINS_PYTHON_ENV
-                    pip install -e .
-                    pip freeze | tee requirement.txt
+                    pip install --no-cache-dir -e .
+                    pip install --no-cache-dir coverage
                 '''
             }
         }
@@ -23,9 +24,10 @@ pipeline {
         stage('Test') {
             steps {
                 sh '''#!/bin/bash
+                    set -e
                     . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
                     conda activate $JENKINS_PYTHON_ENV
-                    python3 test/run_unit_test.py
+                    python3 test/run_pr_test.py
                 '''
             }
         }

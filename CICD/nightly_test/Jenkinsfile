@@ -3,6 +3,7 @@ pipeline{
 
     environment {
         JENKINS_ANACONDA_DIR='/home/ubuntu/anaconda3'
+        JENKINS_MASTER_ANACONDA_DIR='/var/jenkins_home/anaconda3'
         JENKINS_PYTHON_ENV='nightly_env'
         LOCAL_DATASET_PATH='/home/ubuntu/fastestimator_data'
         S3_DATASET_PATH='s3://fastestimator-public/nightly_test'
@@ -17,14 +18,15 @@ pipeline{
                         stage('Build-GPU'){
                             steps{
                                 sh '''
+                                    set -e
                                     . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
-                                    if [ ! -d "$JENKINS_ANACONDA_DIR/envs/nightly_env"  ]; then
+                                    if [ ! -d "$JENKINS_ANACONDA_DIR/envs/$JENKINS_PYTHON_ENV"  ]; then
                                         conda create --name $JENKINS_PYTHON_ENV python=3.6 -y
                                     fi
 
                                     conda activate $JENKINS_PYTHON_ENV
-                                    pip install -e .
-                                    pip install ipython ipykernel ipywidgets papermill
+                                    pip install --no-cache-dir -e .
+                                    pip install --no-cache-dir ipython ipykernel ipywidgets papermill
                                     ipython kernel install --user --name nightly_build
 
                                     aws s3 sync $S3_DATASET_PATH $LOCAL_DATASET_PATH --delete
@@ -34,6 +36,7 @@ pipeline{
                         stage('Test-GPU'){
                             steps{
                                 sh '''
+                                    set -e
                                     . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
                                     conda activate $JENKINS_PYTHON_ENV
                                     python3 test/run_nightly_build.py
@@ -49,14 +52,15 @@ pipeline{
                         stage('Build-CPU'){
                             steps{
                                 sh '''
+                                    set -e
                                     . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
-                                    if [ ! -d "$JENKINS_ANACONDA_DIR/envs/nightly_env"  ]; then
+                                    if [ ! -d "$JENKINS_ANACONDA_DIR/envs/$JENKINS_PYTHON_ENV"  ]; then
                                         conda create --name $JENKINS_PYTHON_ENV python=3.6 -y
                                     fi
 
                                     conda activate $JENKINS_PYTHON_ENV
-                                    pip install -e .
-                                    pip install ipython ipykernel ipywidgets papermill
+                                    pip install --no-cache-dir -e .
+                                    pip install --no-cache-dir ipython ipykernel ipywidgets papermill
                                     ipython kernel install --user --name nightly_build
 
                                     aws s3 sync $S3_DATASET_PATH $LOCAL_DATASET_PATH --delete
@@ -66,6 +70,7 @@ pipeline{
                         stage('Test-CPU'){
                             steps{
                                 sh '''
+                                    set -e
                                     . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
                                     conda activate $JENKINS_PYTHON_ENV
                                     python3 test/run_nightly_build.py
@@ -81,17 +86,17 @@ pipeline{
             agent {label 'master'}
             steps{
                 withCredentials([string(credentialsId: 'pypi_password', variable: 'PYPI_PWD')]) {
-
                     sh '''#!/bin/bash
+                        set -e
                         source ~/.bashrc
-                        . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
-                        if [ ! -d "$JENKINS_ANACONDA_DIR/envs/nightly_env"  ]; then
+                        . $JENKINS_MASTER_ANACONDA_DIR/etc/profile.d/conda.sh
+                        if [ ! -d "$JENKINS_MASTER_ANACONDA_DIR/envs/$JENKINS_PYTHON_ENV"  ]; then
                             conda create --name $JENKINS_PYTHON_ENV python=3.6 -y
                         fi
 
                         conda activate $JENKINS_PYTHON_ENV
-                        pip install -e .
-                        pip install twine
+                        pip install --no-cache-dir -e .
+                        pip install --no-cache-dir twine
                         rm -rf dist/*
                         FASTESTIMATOR_IS_NIGHTLY=1 python setup.py sdist bdist_wheel
                         twine upload dist/* -u fastestimatordev -p ${PYPI_PWD}
@@ -104,11 +109,13 @@ pipeline{
             agent {label 'master'}
             steps{
                 sh '''
+                    set -e
                     rm -rf ./fastestimator-misc
                     git clone https://github.com/fastestimator-util/fastestimator-misc.git fastestimator-misc
                 '''
                 withDockerRegistry(credentialsId: 'docker_hub_credentials', url:'') {
                     sh '''
+                        set -e
                         docker build -t fastestimator/fastestimator:nightly-cpu --no-cache - < fastestimator-misc/docker/nightly/Dockerfile.cpu
                         docker push fastestimator/fastestimator:nightly-cpu
                         docker build -t fastestimator/fastestimator:nightly-gpu --no-cache - < fastestimator-misc/docker/nightly/Dockerfile.gpu

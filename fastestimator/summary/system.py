@@ -14,12 +14,13 @@
 # ==============================================================================
 import datetime
 import json
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 import torch
 
 from fastestimator.network import BaseNetwork
 from fastestimator.summary.summary import Summary
+from fastestimator.util.traceability_util import FeSummaryTable
 
 
 class System:
@@ -31,8 +32,9 @@ class System:
         num_devices: How many GPUs are available for training.
         log_steps: Log every n steps (0 to disable train logging, None to disable all logging).
         total_epochs: How many epochs training is expected to run for.
-        max_train_steps_per_epoch: Whether training epochs will be cut short after N steps (or use None if they will run to
-            completion)
+        max_train_steps_per_epoch: Whether training epochs will be cut short after N steps (or use None if they will run
+            to completion)
+        system_config: A description of the initialization parameters defining the associated estimator.
 
     Attributes:
         mode: What is the current execution mode of the estimator ('train', 'eval', 'test'), None if warmup.
@@ -71,7 +73,8 @@ class System:
                  log_steps: Optional[int] = None,
                  total_epochs: int = 0,
                  max_train_steps_per_epoch: Optional[int] = None,
-                 max_eval_steps_per_epoch: Optional[int] = None) -> None:
+                 max_eval_steps_per_epoch: Optional[int] = None,
+                 system_config: Optional[List[FeSummaryTable]] = None) -> None:
 
         self.network = network
         self.mode = mode
@@ -82,7 +85,7 @@ class System:
         self.max_train_steps_per_epoch = max_train_steps_per_epoch
         self.max_eval_steps_per_epoch = max_eval_steps_per_epoch
         self.stop_training = False
-        self.summary = Summary(None)
+        self.summary = Summary(None, system_config)
         self.experiment_time = ""
         self._initialize_state()
 
@@ -130,18 +133,19 @@ class System:
         else:
             self.batch_idx += 1
 
-    def reset(self, summary_name: Optional[str] = None) -> None:
+    def reset(self, summary_name: Optional[str] = None, system_config: Optional[str] = None) -> None:
         """Reset the current `System` for a new round of training, including a new `Summary` object.
 
         Args:
             summary_name: The name of the experiment. The `Summary` object will store information iff name is not None.
+            system_config: A description of the initialization parameters defining the associated estimator.
         """
         self.experiment_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         self.mode = "train"
         self._initialize_state()
         self.batch_idx = None
         self.stop_training = False
-        self.summary = Summary(summary_name)
+        self.summary = Summary(summary_name, system_config)
 
     def reset_for_test(self, summary_name: Optional[str] = None) -> None:
         """Partially reset the current `System` object for a new round of testing.
