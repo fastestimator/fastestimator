@@ -58,17 +58,17 @@ class ReadImage(NumpyOp):
         self.in_list, self.out_list = True, True
 
     def forward(self, data: List[str], state: Dict[str, Any]) -> List[np.ndarray]:
-        results = []
-        for path in data:
-            path = os.path.normpath(os.path.join(self.parent_path, path))
-            img = cv2.imread(path, self.color_flag)
-            if self.color_flag in {cv2.IMREAD_COLOR, cv2.IMREAD_REDUCED_COLOR_2, cv2.IMREAD_REDUCED_COLOR_4,
-                                   cv2.IMREAD_REDUCED_COLOR_8}:
-                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            if not isinstance(img, np.ndarray):
-                raise ValueError('cv2 did not read correctly for file "{}"'.format(path))
-            if self.color_flag in {cv2.IMREAD_GRAYSCALE, cv2.IMREAD_REDUCED_GRAYSCALE_2, cv2.IMREAD_REDUCED_GRAYSCALE_4,
-                                   cv2.IMREAD_REDUCED_GRAYSCALE_8}:
-                img = np.expand_dims(img, -1)
-            results.append(img)
-        return results
+        return [self._read(elem) for elem in data]
+
+    def _read(self, path: str) -> np.ndarray:
+        path = os.path.normpath(os.path.join(self.parent_path, path))
+        img = cv2.imread(path, self.color_flag)
+        if self.color_flag in {
+                cv2.IMREAD_COLOR, cv2.IMREAD_REDUCED_COLOR_2, cv2.IMREAD_REDUCED_COLOR_4, cv2.IMREAD_REDUCED_COLOR_8
+        }:
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        if not isinstance(img, np.ndarray):
+            raise ValueError('cv2 did not read correctly for file "{}"'.format(path))
+        if img.ndim == 2:
+            img = np.expand_dims(img, -1)
+        return img
