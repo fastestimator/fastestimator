@@ -113,7 +113,7 @@ def to_set(data: Any) -> Set[Any]:
     """Convert data to a set. A single None value will be converted to the empty set.
 
     ```python
-    x = fe.util.to_set(None)  # {}
+    x = fe.util.to_set(None)  # set()
     x = fe.util.to_set([None])  # {None}
     x = fe.util.to_set(7)  # {7}
     x = fe.util.to_set([7, 8])  # {7,8}
@@ -294,6 +294,15 @@ def get_type(obj: Any) -> str:
     x = fe.util.get_type(27)  # "int"
     ```
 
+    For container to look into its element's type, its type needs to be either list or tuple, and the return string will
+    be List[...]. All container elements need to have the same data type becuase it will only check its first element.
+
+    ```python
+    x = fe.util.get_type({"a":1, "b":2})  # "dict"
+    x = fe.util.get_type([1, "a"]) # "List[int]"
+    x = fe.util.get_type([[[1]]]) # "List[List[List[int]]]"
+    ```
+
     Args:
         obj: Data which may be wrapped in some kind of container.
 
@@ -383,13 +392,14 @@ def parse_modes(modes: Set[str]) -> Set[str]:
     return modes
 
 
-def pad_batch(batch: List[MutableMapping[str, Any]], pad_value: Union[float, int]) -> None:
-    """A function to pad a batch of data in-place by appending to the ends of the tensors.
+def pad_batch(batch: List[MutableMapping[str, np.ndarray]], pad_value: Union[float, int]) -> None:
+    """A function to pad a batch of data in-place by appending to the ends of the tensors. Tensor type needs to be
+    numpy array otherwise would get ignored. (tf.Tensor and torch.Tensor will cause error)
 
     ```python
     data = [{"x": np.ones((2, 2)), "y": 8}, {"x": np.ones((3, 1)), "y": 4}]
     fe.util.pad_batch(data, pad_value=0)
-    print(data)  # [{'x': [[1., 1.], [1., 1.],[0., 0.]], 'y': 8}, {'x': [[1., 0.], [1., 0.], [1., 0.]]), 'y': 4}]
+    print(data)  # [{'x': [[1., 1.], [1., 1.], [0., 0.]], 'y': 8}, {'x': [[1., 0.], [1., 0.], [1., 0.]]), 'y': 4}]
     ```
 
     Args:
@@ -397,9 +407,13 @@ def pad_batch(batch: List[MutableMapping[str, Any]], pad_value: Union[float, int
         pad_value: The value to pad with.
 
     Raises:
-        AssertionError: If the data within the batch do not have matching ranks.
+        AssertionError: If the data within the batch do not have matching rank, or have different keys
     """
-    for key in batch[0].keys():
+    keys = batch[0].keys()
+    for one_batch in batch:
+        assert one_batch.keys() == keys, "data within batch must have same keys"
+
+    for key in keys:
         shapes = [data[key].shape for data in batch if hasattr(data[key], "shape")]
         if len(set(shapes)) > 1:
             assert len(set(len(shape) for shape in shapes)) == 1, "data within batch must have same rank"
@@ -409,11 +423,14 @@ def pad_batch(batch: List[MutableMapping[str, Any]], pad_value: Union[float, int
 
 
 def pad_data(data: np.ndarray, target_shape: Tuple[int, ...], pad_value: Union[float, int]) -> np.ndarray:
-    """Pad `data` by appending `pad_value`s along it's dimensions until the `target_shape` is reached.
+    """Pad `data` by appending `pad_value`s along it's dimensions until the `target_shape` is reached. All entris of
+    target_shape should be larger than the data.shape, and have the same rank.
 
     ```python
     x = np.ones((1,2))
     x = fe.util.pad_data(x, target_shape=(3, 3), pad_value = -2)  # [[1, 1, -2], [-2, -2, -2], [-2, -2, -2]]
+    x = fe.util.pad_data(x, target_shape=(3, 3, 3), pad_value = -2) # error
+    x = fe.util.pad_data(x, target_shape=(4, 1), pad_value = -2) # error
     ```
 
     Args:
@@ -488,16 +505,42 @@ def show_image(im: Union[np.ndarray, Tensor],
                title: Optional[str] = None,
                color_map: str = "inferno",
                stack_depth: int = 0) -> Optional[plt.Figure]:
-    """Plots a given image onto an axis.
+    """Plots a given image onto an axis. The repeated invocation of this function will cause figure plot overlap.
+
+    If `im` is 2D and the length of second dimension are 4 or 5, it will be viewed as bounding box data (x0, y0, w, h,
+    <label>).
+
+    ```python
+    boxes = np.array([[0, 0, 10, 20, "apple"],
+                      [10, 20, 30, 50, "dog"],
+                      [40, 70, 200, 200, "cat"],
+                      [0, 0, 0, 0, "not_shown"],
+                      [0, 0, -10, -20, "not_shown2"]])
+
+    img = np.zeros((150, 150))
+    fig, axis = plt.subplots(1, 1)
+    fe.util.show_image(img, fig=fig, axis=axis) # need to plot image first
+    fe.util.show_image(boxes, fig=fig, axis=axis)
+    ```
+
+    Users can also directly plot text
+
+    ```python
+    fig, axis = plt.subplots(1, 1)
+    fe.util.show_image("apple", fig=fig, axis=axis)
+    ```
 
     Args:
         axis: The matplotlib axis to plot on, or None for a new plot.
         fig: A reference to the figure to plot on, or None if new plot.
-        im: The image to display (width X height).
+        im: The image (width X height) / bounding box / text to display.
         title: A title for the image.
         color_map: Which colormap to use for greyscale images.
         stack_depth: Multiple images can be drawn onto the same axis. When stack depth is greater than zero, the `im`
             will be alpha blended on top of a given axis.
+
+    Returns:
+        plotted figure. It will be the same object as user have provided in the argument. 
     """
     if axis is None:
         fig, axis = plt.subplots(1, 1)
@@ -537,8 +580,8 @@ def show_image(im: Union[np.ndarray, Tensor],
             height = int(box[3])
             label = None if len(box) < 5 else str(box[4])
 
-            # Don't draw empty boxes
-            if width == 0 and height == 0:
+            # Don't draw empty boxes, or invalid box
+            if width <= 0 or height <= 0:
                 continue
             r = Rectangle((x0, y0), width=width, height=height, fill=False, edgecolor=color, linewidth=3)
             boxes.append(r)
@@ -549,7 +592,7 @@ def show_image(im: Union[np.ndarray, Tensor],
                           ha='left',
                           va='top',
                           color=color,
-                          fontsize=min(14, width // len(label)),
+                          fontsize=max(8, min(14, width // len(label))),
                           fontweight='bold',
                           family='monospace')
         pc = PatchCollection(boxes, match_original=True)
@@ -587,7 +630,8 @@ def show_image(im: Union[np.ndarray, Tensor],
 
 
 def get_batch_size(data: Dict[str, Any]) -> int:
-    """Infer batch size from a batch dictionary.
+    """Infer batch size from a batch dictionary. It will ignore all dictionary value with data type that
+    doesn't have "shape" attribute.
 
     Args:
         data: The batch dictionary.
