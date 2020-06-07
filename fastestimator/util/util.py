@@ -423,11 +423,14 @@ def pad_batch(batch: List[MutableMapping[str, np.ndarray]], pad_value: Union[flo
 
 
 def pad_data(data: np.ndarray, target_shape: Tuple[int, ...], pad_value: Union[float, int]) -> np.ndarray:
-    """Pad `data` by appending `pad_value`s along it's dimensions until the `target_shape` is reached.
+    """Pad `data` by appending `pad_value`s along it's dimensions until the `target_shape` is reached. All entris of
+    target_shape should be larger than the data.shape, and have the same rank.
 
     ```python
     x = np.ones((1,2))
     x = fe.util.pad_data(x, target_shape=(3, 3), pad_value = -2)  # [[1, 1, -2], [-2, -2, -2], [-2, -2, -2]]
+    x = fe.util.pad_data(x, target_shape=(3, 3, 3), pad_value = -2) # error
+    x = fe.util.pad_data(x, target_shape=(4, 1), pad_value = -2) # error
     ```
 
     Args:
@@ -502,16 +505,42 @@ def show_image(im: Union[np.ndarray, Tensor],
                title: Optional[str] = None,
                color_map: str = "inferno",
                stack_depth: int = 0) -> Optional[plt.Figure]:
-    """Plots a given image onto an axis.
+    """Plots a given image onto an axis. The repeated invocation of this function will cause figure plot overlap.
+
+    If `im` is 2D and the length of second dimension are 4 or 5, it will be viewed as bounding box data (x0, y0, w, h,
+    <label>).
+
+    ```python
+    boxes = np.array([[0, 0, 10, 20, "apple"],
+                      [10, 20, 30, 50, "dog"],
+                      [40, 70, 200, 200, "cat"],
+                      [0, 0, 0, 0, "not_shown"],
+                      [0, 0, -10, -20, "not_shown2"]])
+
+    img = np.zeros((150, 150))
+    fig, axis = plt.subplots(1, 1)
+    fe.util.show_image(img, fig=fig, axis=axis) # need to plot image first
+    fe.util.show_image(boxes, fig=fig, axis=axis)
+    ```
+
+    Users can also directly plot text
+
+    ```python
+    fig, axis = plt.subplots(1, 1)
+    fe.util.show_image("apple", fig=fig, axis=axis)
+    ```
 
     Args:
         axis: The matplotlib axis to plot on, or None for a new plot.
         fig: A reference to the figure to plot on, or None if new plot.
-        im: The image to display (width X height).
+        im: The image (width X height) / bounding box / text to display.
         title: A title for the image.
         color_map: Which colormap to use for greyscale images.
         stack_depth: Multiple images can be drawn onto the same axis. When stack depth is greater than zero, the `im`
             will be alpha blended on top of a given axis.
+
+    Returns:
+        plotted figure. It will be the same object as user have provided in the argument. 
     """
     if axis is None:
         fig, axis = plt.subplots(1, 1)
@@ -551,8 +580,8 @@ def show_image(im: Union[np.ndarray, Tensor],
             height = int(box[3])
             label = None if len(box) < 5 else str(box[4])
 
-            # Don't draw empty boxes
-            if width == 0 and height == 0:
+            # Don't draw empty boxes, or invalid box
+            if width <= 0 or height <= 0:
                 continue
             r = Rectangle((x0, y0), width=width, height=height, fill=False, edgecolor=color, linewidth=3)
             boxes.append(r)
@@ -563,7 +592,7 @@ def show_image(im: Union[np.ndarray, Tensor],
                           ha='left',
                           va='top',
                           color=color,
-                          fontsize=min(14, width // len(label)),
+                          fontsize=max(8, min(14, width // len(label))),
                           fontweight='bold',
                           family='monospace')
         pc = PatchCollection(boxes, match_original=True)
@@ -601,7 +630,8 @@ def show_image(im: Union[np.ndarray, Tensor],
 
 
 def get_batch_size(data: Dict[str, Any]) -> int:
-    """Infer batch size from a batch dictionary.
+    """Infer batch size from a batch dictionary. It will ignore all dictionary value with data type that
+    doesn't have "shape" attribute.
 
     Args:
         data: The batch dictionary.
