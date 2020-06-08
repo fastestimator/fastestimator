@@ -15,9 +15,11 @@
 """DCGAN example using MNIST data set."""
 import tempfile
 
-import fastestimator as fe
 import numpy as np
 import tensorflow as tf
+from tensorflow.keras import layers
+
+import fastestimator as fe
 from fastestimator.backend import binary_crossentropy
 from fastestimator.dataset.data import mnist
 from fastestimator.op import LambdaOp
@@ -26,7 +28,6 @@ from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import ModelSaver
 from fastestimator.util import traceable
-from tensorflow.keras import layers
 
 
 @traceable()

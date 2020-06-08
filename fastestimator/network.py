@@ -17,6 +17,8 @@ from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional
 
 import tensorflow as tf
 import torch
+from tensorflow.python.distribute.values import DistributedValues
+
 from fastestimator.backend.load_model import load_model
 from fastestimator.backend.to_tensor import to_tensor
 from fastestimator.op.op import LambdaOp, get_inputs_by_op, write_outputs_by_op
@@ -26,7 +28,6 @@ from fastestimator.op.tensorop.model.update import UpdateOp
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
 from fastestimator.util.traceability_util import trace_model, traceable
 from fastestimator.util.util import NonContext, get_batch_size, to_list
-from tensorflow.python.distribute.values import DistributedValues
 
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 T = TypeVar('T')

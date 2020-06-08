@@ -15,9 +15,11 @@ import os
 import tempfile
 
 import cv2
-import fastestimator as fe
 import numpy as np
 import torch
+from torch.optim import Adam
+
+import fastestimator as fe
 from fastestimator.backend import feed_forward, get_gradient
 from fastestimator.dataset.data import nih_chestxray
 from fastestimator.op import LambdaOp
@@ -29,7 +31,6 @@ from fastestimator.schedule import EpochScheduler
 from fastestimator.trace import Trace
 from fastestimator.trace.io import ModelSaver
 from fastestimator.util import get_num_devices, traceable
-from torch.optim import Adam
 
 
 def _nf(stage, fmap_base=8192, fmap_decay=1.0, fmap_max=512):

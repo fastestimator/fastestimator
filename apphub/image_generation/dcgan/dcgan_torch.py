@@ -15,11 +15,12 @@
 """DCGAN example using MNIST data set."""
 import tempfile
 
-import fastestimator as fe
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as fn
+
+import fastestimator as fe
 from fastestimator.backend import binary_crossentropy
 from fastestimator.dataset.data import mnist
 from fastestimator.op import LambdaOp

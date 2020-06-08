@@ -21,6 +21,9 @@ from typing import Any, Callable, Dict, List, MutableMapping, Optional, Set, Typ
 
 import numpy as np
 import tensorflow as tf
+from torch.utils.data import DataLoader, Dataset, RandomSampler
+from torch.utils.data.dataloader import default_collate
+
 from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.op_dataset import OpDataset
 from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
@@ -28,8 +31,6 @@ from fastestimator.op.op import LambdaOp
 from fastestimator.schedule.schedule import Scheduler, get_current_items
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import pad_batch, to_list, to_set
-from torch.utils.data import DataLoader, Dataset, RandomSampler
-from torch.utils.data.dataloader import default_collate
 
 DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
 
