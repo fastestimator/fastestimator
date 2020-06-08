@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Callable, Iterable, Tuple, Union
+from typing import Iterable, Tuple, Union
 
 from albumentations.augmentations.transforms import RandomBrightnessContrast as RandomBrightnessContrastAlb
 
@@ -40,7 +40,7 @@ class RandomBrightnessContrast(ImageOnlyAlbumentation):
         uint8, float32
     """
     def __init__(self,
-                 inputs: Union[str, Iterable[str], Callable],
+                 inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  brightness_limit: Union[float, Tuple[float, float]] = 0.2,

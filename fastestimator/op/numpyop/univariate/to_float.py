@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Callable, Iterable, Optional, Union
+from typing import Iterable, Optional, Union
 
 from albumentations.augmentations.transforms import ToFloat as ToFloatAlb
 
@@ -36,7 +36,7 @@ class ToFloat(ImageOnlyAlbumentation):
         Any
     """
     def __init__(self,
-                 inputs: Union[str, Iterable[str], Callable],
+                 inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  max_value: Optional[float] = None):

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Callable, Iterable, Union
+from typing import Iterable, Union
 
 from albumentations.augmentations.transforms import ToSepia as ToSepiaAlb
 
@@ -35,7 +35,7 @@ class ToSepia(ImageOnlyAlbumentation):
         uint8, float32
     """
     def __init__(self,
-                 inputs: Union[str, Iterable[str], Callable],
+                 inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None):
         super().__init__(ToSepiaAlb(always_apply=True), inputs=inputs, outputs=outputs, mode=mode)

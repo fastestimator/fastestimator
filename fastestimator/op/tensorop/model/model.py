@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Callable, Dict, Iterable, List, TypeVar, Union
+from typing import Any, Dict, Iterable, List, TypeVar, Union
 
 import tensorflow as tf
 import torch
@@ -39,7 +39,7 @@ class ModelOp(TensorOp):
     """
     def __init__(self,
                  model: Union[tf.keras.Model, torch.nn.Module],
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
+                 inputs: Union[None, str, Iterable[str]] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
                  mode: Union[None, str, Iterable[str]] = None,
                  trainable: bool = True):

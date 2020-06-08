@@ -57,20 +57,20 @@ class Op:
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
     """
-    inputs: List[Union[str, Callable]]
+    inputs: List[str]
     outputs: List[str]
     mode: Set[str]
     in_list: bool  # Whether inputs should be presented as a list or an individual value
     out_list: bool  # Whether outputs will be returned as a list or an individual value
 
     def __init__(self,
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
+                 inputs: Union[None, str, Iterable[str]] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
                  mode: Union[None, str, Iterable[str]] = None) -> None:
         self.inputs = to_list(inputs)
         self.outputs = to_list(outputs)
         self.mode = parse_modes(to_set(mode))
-        self.in_list = not isinstance(inputs, (str, Callable))
+        self.in_list = not isinstance(inputs, str)
         self.out_list = not isinstance(outputs, str)
 
 
@@ -84,7 +84,10 @@ def get_inputs_by_op(op: Op, store: Mapping[str, Any]) -> Any:
     Returns:
         Input data to be fed to the `op` forward function.
     """
-    data = None
+    if op.in_list:
+        data = []
+    else:
+        data = None
     if op.inputs:
         data = [store[key] for key in op.inputs]
         if not op.in_list:
@@ -120,7 +123,7 @@ class LambdaOp(Op):
     """
     def __init__(self,
                  fn: Callable,
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
+                 inputs: Union[None, str, Iterable[str]] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
                  mode: Union[None, str, Iterable[str]] = None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
@@ -128,4 +131,4 @@ class LambdaOp(Op):
         self.in_list = True
 
     def forward(self, data: List[Any], state: Dict[str, Any]) -> Any:
-        return self.fn(*to_list(data))
+        return self.fn(*data)
