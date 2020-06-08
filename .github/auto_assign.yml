@@ -5,14 +5,16 @@ addReviewers: true
 addAssignees: false
 
 # A list of reviewers to be added to pull requests (GitHub user name)
-reviewers: 
+reviewers:
   - vbvg2008
-  - jphong89
   - TortoiseHam
   - chm123
   - purujitb
+  - geez0219
+  - Vivek305
+  - gaurav272333
 
-# A list of keywords to be skipped the process that add reviewers if pull requests include it 
+# A list of keywords to be skipped the process that add reviewers if pull requests include it
 skipKeywords:
   - wip
 
