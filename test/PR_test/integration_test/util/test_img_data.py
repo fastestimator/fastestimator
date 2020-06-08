@@ -7,6 +7,7 @@ import tensorflow as tf
 import torch
 from matplotlib.backends.backend_agg import FigureCanvas
 from PIL import Image
+import os
 
 from fastestimator.util import ImgData
 
@@ -14,7 +15,7 @@ from fastestimator.util import ImgData
 class TestImageData(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.batch_size = 4
+        cls.output_img = os.path.abspath(os.path.join(__file__, "..", "resources", "test_img_data_paintfig.png"))
         cls.input_image_shape = (150, 150)
         cls.label_shape = (4, )
         cls.x_test = 0.5 * tf.ones((4, 150, 150, 3))
@@ -68,16 +69,16 @@ class TestImageData(unittest.TestCase):
         canvas = FigureCanvas(fig)
         canvas.draw()
         output_test = np.array(canvas.renderer.buffer_rgba())
-        img = Image.open('test_paint_fig.png')
+        img = Image.open(self.output_img)
         output = np.asarray(img)
-        self.assertTrue(np.array_equal(output, output_test))
+        self.assertTrue(np.allclose(output, output_test))
 
     def test_paint_numpy(self):
         output_test = self.img_data.paint_numpy()
-        img = Image.open('test_paint_fig.png')
+        img = Image.open(self.output_img)
         output = np.asarray(img)
         output = np.stack([output[..., :3]])
-        self.assertTrue(np.array_equal(output, output_test))
+        self.assertTrue(np.allclose(output, output_test))
 
 
 if __name__ == "__main__":
