@@ -1,3 +1,4 @@
+import os
 import unittest
 
 import matplotlib.backends.backend_agg as plt_backend_agg
@@ -7,7 +8,6 @@ import tensorflow as tf
 import torch
 from matplotlib.backends.backend_agg import FigureCanvas
 from PIL import Image
-import os
 
 from fastestimator.util import ImgData
 
