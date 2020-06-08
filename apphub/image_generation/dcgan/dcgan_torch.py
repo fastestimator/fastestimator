@@ -15,15 +15,14 @@
 """DCGAN example using MNIST data set."""
 import tempfile
 
+import fastestimator as fe
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as fn
-
-import fastestimator as fe
 from fastestimator.backend import binary_crossentropy
 from fastestimator.dataset.data import mnist
-from fastestimator.op.numpyop import NumpyOp
+from fastestimator.op import LambdaOp
 from fastestimator.op.numpyop.univariate import ExpandDims, Normalize
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
@@ -103,7 +102,7 @@ def get_estimator(epochs=50, batch_size=256, max_train_steps_per_epoch=None, sav
         ops=[
             ExpandDims(inputs="x", outputs="x", axis=0),
             Normalize(inputs="x", outputs="x", mean=1.0, std=1.0, max_pixel_value=127.5),
-            NumpyOp(inputs=lambda: np.random.normal(size=[100]).astype('float32'), outputs="z")
+            LambdaOp(fn=lambda: np.random.normal(size=[100]).astype('float32'), outputs="z")
         ])
     gen_model = fe.build(model_fn=Generator, optimizer_fn=lambda x: torch.optim.Adam(x, lr=1e-4))
     disc_model = fe.build(model_fn=Discriminator, optimizer_fn=lambda x: torch.optim.Adam(x, lr=1e-4))

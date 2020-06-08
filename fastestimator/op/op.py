@@ -86,7 +86,7 @@ def get_inputs_by_op(op: Op, store: Mapping[str, Any]) -> Any:
     """
     data = None
     if op.inputs:
-        data = [store[key] if not isinstance(key, Callable) else key() for key in op.inputs]
+        data = [store[key] for key in op.inputs]
         if not op.in_list:
             data = data[0]
     return data
@@ -128,4 +128,4 @@ class LambdaOp(Op):
         self.in_list = True
 
     def forward(self, data: List[Any], state: Dict[str, Any]) -> Any:
-        return self.fn(*data)
+        return self.fn(*to_list(data))

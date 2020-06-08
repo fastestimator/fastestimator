@@ -15,14 +15,12 @@ import os
 import tempfile
 
 import cv2
+import fastestimator as fe
 import numpy as np
 import torch
-from torch.optim import Adam
-
-import fastestimator as fe
 from fastestimator.backend import feed_forward, get_gradient
 from fastestimator.dataset.data import nih_chestxray
-from fastestimator.op.numpyop import NumpyOp
+from fastestimator.op import LambdaOp
 from fastestimator.op.numpyop.multivariate import Resize
 from fastestimator.op.numpyop.univariate import ChannelTranspose, Normalize, ReadImage
 from fastestimator.op.tensorop import TensorOp
@@ -31,6 +29,7 @@ from fastestimator.schedule import EpochScheduler
 from fastestimator.trace import Trace
 from fastestimator.trace.io import ModelSaver
 from fastestimator.util import get_num_devices, traceable
+from torch.optim import Adam
 
 
 def _nf(stage, fmap_base=8192, fmap_decay=1.0, fmap_max=512):
@@ -449,7 +448,7 @@ def get_estimator(target_size=128,
             EpochScheduler(epoch_dict=resize_low_res_map2),
             Normalize(inputs=["x", "x_low_res"], outputs=["x", "x_low_res"], mean=1.0, std=1.0, max_pixel_value=127.5),
             ChannelTranspose(inputs=["x", "x_low_res"], outputs=["x", "x_low_res"]),
-            NumpyOp(inputs=lambda: np.random.normal(size=[512]).astype('float32'), outputs="z")
+            LambdaOp(fn=lambda: np.random.normal(size=[512]).astype('float32'), outputs="z")
         ])
     fade_in_alpha = torch.tensor(1.0)
     d_models = fe.build(
