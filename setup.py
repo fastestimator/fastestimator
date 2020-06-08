@@ -49,6 +49,7 @@ def get_dependency():
         'h5py',
         'jsonpickle',
         'python-docx',
+        'PyLaTeX',
         'tensorflow_probability==0.8.0',
         'transformers==2.4.1',
         'tensorflow==2.1.0'

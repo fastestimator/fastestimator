@@ -295,8 +295,8 @@ class Estimator:
         """
         all_traces = get_current_items(self.traces_in_use, run_modes=run_modes)
         self._sort_traces(all_traces)
-        self._run_traces_on_begin(traces=all_traces)
         try:
+            self._run_traces_on_begin(traces=all_traces)
             if "train" in run_modes or "eval" in run_modes:
                 for self.system.epoch_idx in range(self.system.epoch_idx + 1, self.system.total_epochs + 1):
                     if "train" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
