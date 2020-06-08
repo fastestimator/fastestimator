@@ -14,23 +14,25 @@ class TestReshape(unittest.TestCase):
         cls.test_tf = tf.constant([[1, 1], [2, -3], [4, 1]])
         cls.test_torch = torch.Tensor([[1, 1], [2, -3], [4, 1]])
 
-    def test_reshape_np(self):
-        output = reshape(self.test_np, shape=(4, ))
-        # check the output type
-        self.assertIsInstance(output, (np.ndarray, np.ScalarType), 'Output type must be NumPy')
-        # check the output value
-        self.assertEqual(output.shape, (4, ))
+    def test_reshape_np_type(self):
+        self.assertIsInstance(reshape(self.test_np, shape=(4, )), (np.ndarray, np.ScalarType),
+                              'Output type must be NumPy')
 
-    def test_reshape_tf(self):
-        output = reshape(self.test_tf, shape=(2, 3))
-        # check the output type
-        self.assertIsInstance(output, tf.Tensor, 'Output type must be tf.Tensor')
-        # check the output value
-        self.assertEqual(output.numpy().shape, (2, 3))
+    def test_reshape_np_value(self):
+        self.assertEqual(reshape(self.test_np, shape=(4, )).shape, (4, ))
 
-    def test_reshape_torch(self):
-        output = reshape(self.test_torch, shape=(2, 3))
-        # check the output type
-        self.assertIsInstance(output, torch.Tensor, 'Output type must be torch.Tensor')
-        # check the output value
-        self.assertEqual(output.numpy().shape, (2, 3))
+    def test_reshape_tf_type(self):
+        self.assertIsInstance(reshape(self.test_tf, shape=(2, 3)), tf.Tensor, 'Output type must be tf.Tensor')
+
+    def test_reshape_tf_value(self):
+        self.assertEqual(reshape(self.test_tf, shape=(2, 3)).numpy().shape, (2, 3))
+
+    def test_reshape_torch_type(self):
+        self.assertIsInstance(reshape(self.test_torch, shape=(2, 3)), torch.Tensor, 'Output type must be torch.Tensor')
+
+    def test_reshape_torch_value(self):
+        self.assertEqual(reshape(self.test_torch, shape=(2, 3)).numpy().shape, (2, 3))
+
+
+if __name__ == "__main__":
+    unittest.main()

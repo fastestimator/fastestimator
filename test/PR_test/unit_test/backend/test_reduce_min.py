@@ -14,30 +14,27 @@ class TestReduceMin(unittest.TestCase):
         cls.test_tf = tf.constant([[1, 1], [2, -3], [4, 1]])
         cls.test_torch = torch.Tensor([[1, 1], [2, -3], [4, 1]])
 
-    def test_reduce_min_np(self):
-        output = reduce_min(self.test_np)
-        # check the output type
-        self.assertIsInstance(output, np.ScalarType, 'Output type must be NumPy')
-        # check the output value
-        self.assertEqual(output, 1)
+    def test_reduce_min_np_type(self):
+        self.assertIsInstance(reduce_min(self.test_np), np.ScalarType, 'Output type must be NumPy')
 
-    def test_reduce_min_tf(self):
-        output = reduce_min(self.test_tf)
-        # check the output type
-        self.assertIsInstance(output, tf.Tensor, 'Output type must be tf.Tensor')
-        # check the output value
-        self.assertTrue(np.array_equal(output.numpy(), -3))
+    def test_reduce_min_np_value(self):
+        self.assertEqual(reduce_min(self.test_np), 1)
 
-    def test_reduce_min_torch(self):
-        output = reduce_min(self.test_torch)
-        # check the output type
-        self.assertIsInstance(output, torch.Tensor, 'Output type must be torch.Tensor')
-        # check the output value
-        self.assertTrue(np.array_equal(output.numpy(), -3))
+    def test_reduce_min_tf_type(self):
+        self.assertIsInstance(reduce_min(self.test_tf), tf.Tensor, 'Output type must be tf.Tensor')
+
+    def test_reduce_min_tf_value(self):
+        self.assertTrue(np.array_equal(reduce_min(self.test_tf).numpy(), -3))
+
+    def test_reduce_min_torch_type(self):
+        self.assertIsInstance(reduce_min(self.test_torch), torch.Tensor, 'Output type must be torch.Tensor')
+
+    def test_reduce_min_torch_value(self):
+        self.assertTrue(np.array_equal(reduce_min(self.test_torch).numpy(), -3))
 
     def test_reduce_min_axis(self):
-        output = reduce_min(self.test_np, axis=0)
-        # check the output type
-        self.assertIsInstance(output, np.ndarray, 'Output type should be NumPy array')
-        # check output value
-        self.assertTrue(np.array_equal(output, [1, 2]))
+        self.assertTrue(np.array_equal(reduce_min(self.test_np, axis=0), [1, 2]))
+
+
+if __name__ == "__main__":
+    unittest.main()
