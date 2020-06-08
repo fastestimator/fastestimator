@@ -13,8 +13,12 @@
 # limitations under the License.
 # ==============================================================================
 
-from pylatex import Document, NoEscape
+import getpass
 
+import matplotlib
+from pylatex import Command, Document, Figure, NoEscape, Section
+
+from fastestimator.summary.logs.log_plot import plot_logs
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
@@ -22,14 +26,42 @@ from fastestimator.util.traceability_util import traceable
 
 @traceable()
 class Traceability(Trace):
+    """Automatically generate summary reports of the training.
+
+    Args:
+        save_path: Where to save the output files.
+    """
+    def __init__(self, save_path: str):
+        super().__init__(mode={"train", "eval"})
+        self.doc = Document(geometry_options=['lmargin=2cm', 'rmargin=2cm', 'tmargin=2cm', 'bmargin=2cm'])
+        self.save_path = save_path
+        self.config_tables = []
+
     def on_begin(self, data: Data) -> None:
-        # \newcolumntype{R}{>{\raggedleft\arraybackslash}X}
-        # %\renewcommand{\tabularxcolumn}[1]{m{#1}}
-        config = self.system.summary.system_config
-        doc = Document(geometry_options={'lmargin': "1cm", 'rmargin': "1cm"})
-        doc.preamble.append(NoEscape(r'\maxdeadcycles=' + str(2 * len(config) + 10) + ''))
-        doc.preamble.append(NoEscape(r'\extrafloats{' + str(len(config) + 10) + '}'))
-        for tbl in config:
-            tbl.render_table(doc)
-        doc.generate_pdf('mypdf', clean_tex=False)
-        self.system.stop_training = True  # TODO - Remove this
+
+        exp_name = self.system.summary.name
+        if not exp_name:
+            raise RuntimeError("Traceability reports require an experiment name to be provided in estimator.fit()")
+        self.config_tables = self.system.summary.system_config
+
+        self.doc.preamble.append(NoEscape(r'\maxdeadcycles=' + str(2 * len(self.config_tables) + 10) + ''))
+        self.doc.preamble.append(NoEscape(r'\extrafloats{' + str(len(self.config_tables) + 10) + '}'))
+
+        self.doc.preamble.append(Command('title', exp_name))
+        self.doc.preamble.append(Command('author', getpass.getuser()))
+        self.doc.preamble.append(Command('date', NoEscape(r'\today')))
+        self.doc.append(NoEscape(r'\maketitle'))
+
+    def on_end(self, data: Data) -> None:
+        with self.doc.create(Section("Training Graphs")):
+            with self.doc.create(Figure(position='h!')) as plot:
+                old_backend = matplotlib.get_backend() or 'Agg'
+                matplotlib.use('Agg')
+                plot_logs(experiments=[self.system.summary])
+                plot.add_plot(width=NoEscape(r'1\textwidth'), dpi=300)
+                matplotlib.use(old_backend)
+
+        with self.doc.create(Section("Initialization Parameters")):
+            for tbl in self.config_tables:
+                tbl.render_table(self.doc)
+        self.doc.generate_pdf(self.save_path, clean_tex=False)
