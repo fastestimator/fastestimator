@@ -16,22 +16,10 @@ class TestMeanSquaredError(unittest.TestCase):
         obj2 = np.array([0.00625, 0.035, 0.01625, 0.0])
         self.assertTrue(np.allclose(obj1, obj2))
 
-        true = tf.constant([[1], [3], [2], [0]])
-        pred = tf.constant([[2.0], [0.0], [2.0], [1.0]])
-        obj1 = fe.backend.mean_squared_error(y_pred=pred, y_true=true).numpy()
-        obj2 = np.array([1.0, 9.0, 0.0, 1.0])
-        self.assertTrue(np.allclose(obj1, obj2))
-
     def test_mean_squared_error_torch_input(self):
         true = torch.tensor([[0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0], [1, 0, 0, 0]])
         pred = torch.tensor([[0.1, 0.9, 0.05, 0.05], [0.1, 0.2, 0.0, 0.7], [0.0, 0.15, 0.8, 0.05], [1.0, 0.0, 0.0,
                                                                                                     0.0]])
         obj1 = fe.backend.mean_squared_error(y_pred=pred, y_true=true).numpy()
         obj2 = np.array([0.00625, 0.035, 0.01625, 0.0])
-        self.assertTrue(np.allclose(obj1, obj2))
-
-        true = torch.tensor([[1], [3], [2], [0]])
-        pred = torch.tensor([[2.0], [0.0], [2.0], [1.0]])
-        obj1 = fe.backend.mean_squared_error(y_pred=pred, y_true=true).numpy()
-        obj2 = np.array([1.0, 9.0, 0.0, 1.0])
         self.assertTrue(np.allclose(obj1, obj2))

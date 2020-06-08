@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Callable, Iterable, List, Mapping, MutableMapping, Set, Union
+from typing import Any, Callable, Dict, Iterable, List, Mapping, MutableMapping, Set, Union
 
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import parse_modes, to_list, to_set
@@ -104,3 +104,28 @@ def write_outputs_by_op(op: Op, store: MutableMapping[str, Any], outputs: Any) -
         outputs = [outputs]
     for key, data in zip(op.outputs, outputs):
         store[key] = data
+
+
+@traceable()
+class LambdaOp(Op):
+    """An Operator that performs any specified function as forward function.
+
+    Args:
+        fn: The function to be executed.
+        inputs: Key(s) from which to retrieve data from the data dictionary.
+        outputs: Key(s) under which to write the outputs of this Op back to the data dictionary.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+    """
+    def __init__(self,
+                 fn: Callable,
+                 inputs: Union[None, str, Iterable[str], Callable] = None,
+                 outputs: Union[None, str, Iterable[str]] = None,
+                 mode: Union[None, str, Iterable[str]] = None):
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.fn = fn
+        self.in_list = True
+
+    def forward(self, data: List[Any], state: Dict[str, Any]) -> Any:
+        return self.fn(*data)

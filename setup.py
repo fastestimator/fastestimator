@@ -51,10 +51,13 @@ def get_dependency():
         'python-docx',
         'tensorflow_probability==0.8.0',
         'transformers==2.4.1',
-        'tensorflow==2.1.0',
-        'pycocotools @ git+https://github.com/chm123/cocoapi.git#egg=pycocotools&subdirectory=PythonAPI'
+        'tensorflow==2.1.0'
     ]
-    if os.name != "nt":
+    if os.name == "nt":
+        dependencies.append(
+            "pycocotools @ git+https://github.com/philferriere/cocoapi.git#egg=pycocotools&subdirectory=PythonAPI")
+    else:
+        dependencies.append('pycocotools-fix')
         dependencies.append('torch==1.4.0')
         dependencies.append('torchvision==0.5.0')
     return dependencies

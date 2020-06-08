@@ -72,8 +72,8 @@ def load_data(root_dir: Optional[str] = None) -> CSVDataset:
         df = pd.DataFrame(data={'image': img_list})
         df['image'] = df['image'].apply(lambda x: os.path.relpath(x, root_dir))
         df['image'] = df['image'].apply(os.path.normpath)
-        df['mask_left'] = df['image'].str.replace('CXR_png', os.path.join('ManualMask', 'leftMask'))
-        df['mask_right'] = df['image'].str.replace('CXR_png', os.path.join('ManualMask', 'rightMask'))
+        df['mask_left'] = df['image'].apply(lambda x: x.replace('CXR_png', os.path.join('ManualMask', 'leftMask')))
+        df['mask_right'] = df['image'].apply(lambda x: x.replace('CXR_png', os.path.join('ManualMask', 'rightMask')))
         df.to_csv(csv_path, index=False)
 
     return CSVDataset(csv_path)
