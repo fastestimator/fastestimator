@@ -17,23 +17,24 @@ class TestSign(unittest.TestCase):
         cls.test_torch = torch.Tensor([[1, 1], [2, -3], [4, 1]])
         cls.test_output_torch = torch.Tensor([[1, 1], [1, -1], [1, 1]])
 
-    def test_sign_np(self):
-        output = sign(self.test_np)
-        # check the output type
-        self.assertIsInstance(output, np.ndarray, 'Output type must be NumPy array')
-        # check the output value
-        self.assertTrue(np.array_equal(output, self.test_output_np))
+    def test_sign_np_type(self):
+        self.assertIsInstance(sign(self.test_np), np.ndarray, 'Output type must be NumPy array')
 
-    def test_sign_tf(self):
-        output = sign(self.test_tf)
-        # check the output type
-        self.assertIsInstance(output, tf.Tensor, 'Output type must be tf.Tensor')
-        # check the output value
-        self.assertTrue(np.array_equal(output.numpy(), self.test_output_tf))
+    def test_sign_np_value(self):
+        self.assertTrue(np.array_equal(sign(self.test_np), self.test_output_np))
 
-    def test_sign_torch(self):
-        output = sign(self.test_torch)
-        # check the output type
-        self.assertIsInstance(output, torch.Tensor, 'Output type must be torch.Tensor')
-        # check the output value
-        self.assertTrue(np.array_equal(output.numpy(), self.test_output_torch))
+    def test_sign_tf_type(self):
+        self.assertIsInstance(sign(self.test_tf), tf.Tensor, 'Output type must be tf.Tensor')
+
+    def test_sign_tf_value(self):
+        self.assertTrue(np.array_equal(sign(self.test_tf).numpy(), self.test_output_tf))
+
+    def test_sign_torch_type(self):
+        self.assertIsInstance(sign(self.test_torch), torch.Tensor, 'Output type must be torch.Tensor')
+
+    def test_sign_torch_value(self):
+        self.assertTrue(np.array_equal(sign(self.test_torch).numpy(), self.test_output_torch))
+
+
+if __name__ == "__main__":
+    unittest.main()
