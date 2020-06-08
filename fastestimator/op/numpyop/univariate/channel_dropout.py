@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Callable, Iterable, Tuple, Union
+from typing import Iterable, Tuple, Union
 
 from albumentations.augmentations.transforms import ChannelDropout as ChannelDropoutAlb
 
@@ -37,7 +37,7 @@ class ChannelDropout(ImageOnlyAlbumentation):
         int8, uint16, unit32, float32
     """
     def __init__(self,
-                 inputs: Union[str, Iterable[str], Callable],
+                 inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  channel_drop_range: Tuple[int, int] = (1, 1),

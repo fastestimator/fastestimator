@@ -21,7 +21,7 @@ from tensorflow.python.distribute.values import DistributedValues
 
 from fastestimator.backend.load_model import load_model
 from fastestimator.backend.to_tensor import to_tensor
-from fastestimator.op.op import get_inputs_by_op, write_outputs_by_op
+from fastestimator.op.op import LambdaOp, get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model.model import ModelOp
 from fastestimator.op.tensorop.model.update import UpdateOp
@@ -60,7 +60,7 @@ class BaseNetwork:
             AssertionError: If any of the ops are not TensorOps.
         """
         for op in get_current_items(self.ops):
-            assert isinstance(op, TensorOp), "unsupported op format, must provide TensorOp in Network"
+            assert isinstance(op, (TensorOp, LambdaOp)), "unsupported op format, must provide TensorOp in Network"
 
     def get_scheduled_items(self, mode: str) -> List[Any]:
         """Get a list of items considered for scheduling.

@@ -35,7 +35,7 @@ class WordtoId(NumpyOp):
     def __init__(
             self,
             mapping: Union[Dict[str, int], Callable[[List[str]], List[int]]],
-            inputs: Union[str, Iterable[str], Callable],
+            inputs: Union[str, Iterable[str]],
             outputs: Union[str, Iterable[str]],
             mode: Union[None, str, Iterable[str]] = None,
     ) -> None:

@@ -35,7 +35,7 @@ class Tokenize(NumpyOp):
         to_lower_case: Whether to convert tokens to lowercase.
     """
     def __init__(self,
-                 inputs: Union[str, Iterable[str], Callable],
+                 inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  tokenize_fn: Union[None, Callable[[str], List[str]]] = None,

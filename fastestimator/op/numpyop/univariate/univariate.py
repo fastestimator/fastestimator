@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 from copy import deepcopy
-from typing import Any, Callable, Dict, Iterable, List, Union
+from typing import Any, Dict, Iterable, List, Union
 
 import numpy as np
 from albumentations import Compose, ImageOnlyTransform, ReplayCompose
@@ -41,7 +41,7 @@ class ImageOnlyAlbumentation(NumpyOp):
     """
     def __init__(self,
                  func: ImageOnlyTransform,
-                 inputs: Union[str, List[str], Callable],
+                 inputs: Union[str, List[str]],
                  outputs: Union[str, List[str]],
                  mode: Union[None, str, Iterable[str]] = None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)

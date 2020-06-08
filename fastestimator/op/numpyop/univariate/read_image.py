@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import os
-from typing import Any, Callable, Dict, Iterable, List, Union
+from typing import Any, Dict, Iterable, List, Union
 
 import cv2
 import numpy as np
@@ -39,7 +39,7 @@ class ReadImage(NumpyOp):
         AssertionError: If `inputs` and `outputs` have mismatched lengths, or the `color_flag` is unacceptable.
     """
     def __init__(self,
-                 inputs: Union[str, Iterable[str], Callable],
+                 inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  parent_path: str = "",
