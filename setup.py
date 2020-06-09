@@ -65,7 +65,7 @@ def get_dependency():
 
 
 setup(
-    entry_points={"console_scripts": ["fastestimator = fastestimator.cli.main:run"]},
+    entry_points={"console_scripts": ["fastestimator = fastestimator.cli.main:main"]},
     name=get_name(),
     version=get_version(),
     description="Deep learning framework",

@@ -37,7 +37,8 @@ def _get_estimator(args: Dict[str, Any], unknown: Optional[List[str]]) -> Estima
     hyperparameters = {}
     if args['hyperparameters_json']:
         hyperparameters = os.path.abspath(args['hyperparameters_json'])
-        hyperparameters = json.load(open(hyperparameters, 'r'))
+        with open(hyperparameters, 'r') as f:
+            hyperparameters = json.load(f)
     hyperparameters.update(parse_cli_to_dictionary(unknown))
     module_name = os.path.splitext(os.path.basename(entry_point))[0]
     dir_name = os.path.abspath(os.path.dirname(entry_point))
