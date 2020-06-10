@@ -18,3 +18,4 @@ from fastestimator.network import Network, build
 from fastestimator.pipeline import Pipeline
 
 __version__ = '1.1.0'
+fe_deterministic_seed = None

@@ -315,6 +315,8 @@ class InMemoryDataset(FEDataset):
         for k, v in kwargs.items():
             if k == 'summary':
                 continue  # Ignore summary object since we're going to re-initialize it
+            elif k == '_fe_traceability_summary':
+                continue  # TODO - make this work with traceability
             else:
                 obj.__setattr__(k, v)
         obj.summary = lru_cache(maxsize=1)(obj.summary)

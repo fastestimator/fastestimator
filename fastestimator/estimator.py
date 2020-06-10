@@ -23,6 +23,7 @@ import torch
 from tensorflow.python.distribute.input_lib import DistributedDataset
 from torch.utils.data import DataLoader
 
+import fastestimator as fe
 from fastestimator.backend.to_shape import to_shape
 from fastestimator.backend.to_tensor import to_tensor
 from fastestimator.backend.to_type import to_type
@@ -485,6 +486,7 @@ def enable_deterministic(seed):
     * tf.keras.layers.UpSampling2D
 
     """
+    fe.fe_deterministic_seed = seed
     os.environ['PYTHONHASHSEED'] = str(seed)
     os.environ['TF_DETERMINISTIC_OPS'] = str(1)
     random.seed(seed)
