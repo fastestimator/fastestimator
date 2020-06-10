@@ -22,6 +22,7 @@ import fastestimator as fe
 from fastestimator.backend import reduce_mean
 from fastestimator.dataset.data import mscoco
 from fastestimator.layers.tensorflow import InstanceNormalization, ReflectionPadding2D
+from fastestimator.op import LambdaOp
 from fastestimator.op.numpyop.multivariate import Resize
 from fastestimator.op.numpyop.univariate import Normalize, ReadImage
 from fastestimator.op.tensorop import TensorOp
@@ -207,7 +208,6 @@ def get_estimator(batch_size=4,
     assert style_img is not None, "cannot load the style image, please go to the folder with style image"
     style_img = cv2.resize(style_img, (256, 256))
     style_img = (style_img.astype(np.float32) - 127.5) / 127.5
-    style_img_t = tf.convert_to_tensor(np.expand_dims(style_img, axis=0))
 
     pipeline = fe.Pipeline(
         train_data=train_data,
@@ -215,7 +215,8 @@ def get_estimator(batch_size=4,
         ops=[
             ReadImage(inputs="image", outputs="image"),
             Normalize(inputs="image", outputs="image", mean=1.0, std=1.0, max_pixel_value=127.5),
-            Resize(height=256, width=256, image_in="image", image_out="image")
+            Resize(height=256, width=256, image_in="image", image_out="image"),
+            LambdaOp(fn=lambda: style_img, outputs="style_image"),
         ])
 
     model = fe.build(model_fn=StyleTransferNet,
@@ -224,7 +225,7 @@ def get_estimator(batch_size=4,
 
     network = fe.Network(ops=[
         ModelOp(inputs="image", model=model, outputs="image_out"),
-        ExtractVGGFeatures(inputs=lambda: style_img_t, outputs="y_style"),
+        ExtractVGGFeatures(inputs="style_image", outputs="y_style"),
         ExtractVGGFeatures(inputs="image", outputs="y_content"),
         ExtractVGGFeatures(inputs="image_out", outputs="y_pred"),
         StyleContentLoss(style_weight=style_weight,
