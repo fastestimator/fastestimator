@@ -9,6 +9,7 @@ import torch
 from matplotlib.backends.backend_agg import FigureCanvas
 from PIL import Image
 
+from fastestimator.test.unittest_util import check_img_similar, fig_to_rgb_array, img_to_rgb_array
 from fastestimator.util import ImgData
 
 
@@ -66,19 +67,15 @@ class TestImageData(unittest.TestCase):
 
     def test_paint_figure(self):
         fig = self.img_data.paint_figure()
-        canvas = FigureCanvas(fig)
-        canvas.draw()
-        output_test = np.array(canvas.renderer.buffer_rgba())
-        img = Image.open(self.output_img)
-        output = np.asarray(img)
-        self.assertTrue(np.allclose(output, output_test))
+        output = img_to_rgb_array(self.output_img)
+        output_test = fig_to_rgb_array(fig)
+        self.assertTrue(check_img_similar(output, output_test))
 
     def test_paint_numpy(self):
         output_test = self.img_data.paint_numpy()
-        img = Image.open(self.output_img)
-        output = np.asarray(img)
-        output = np.stack([output[..., :3]])
-        self.assertTrue(np.allclose(output, output_test))
+        output_test = np.squeeze(output_test, axis=0)
+        output = img_to_rgb_array(self.output_img)
+        self.assertTrue(check_img_similar(output, output_test))
 
 
 if __name__ == "__main__":

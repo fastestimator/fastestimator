@@ -153,4 +153,4 @@ def fig_to_rgb_array(fig: plt.Figure) -> np.ndarray:
     fig.canvas.draw()
     buf = fig.canvas.tostring_rgb()
     ncols, nrows = fig.canvas.get_width_height()
-    return np.fromstring(buf, dtype=np.uint8).reshape(nrows, ncols, 3)
+    return np.frombuffer(buf, dtype=np.uint8).reshape(nrows, ncols, 3)
