@@ -1,15 +1,14 @@
 import os
-import pdb
 import unittest
 
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 import torch
-from PIL import Image
 
 import fastestimator as fe
-from fastestimator.test.unittest_util import check_img_similar, img_to_rgb_array, fig_to_rgb_array
+from fastestimator.test.unittest_util import check_img_similar, fig_to_rgb_array, img_to_rgb_array
+
 
 class TestShowImage(unittest.TestCase):
     @classmethod
@@ -77,7 +76,7 @@ class TestShowImage(unittest.TestCase):
 
     def test_show_image_check_float_0_to_1_np(self):
         img = np.zeros((256, 256, 3), dtype=np.float32)
-        for x in range(256):
+            img[x, :, :] = x / 255
             img[x, :, :] = x/255
 
         fig, axis = plt.subplots(1, 1)
@@ -88,7 +87,7 @@ class TestShowImage(unittest.TestCase):
 
     def test_show_image_check_float_neg_1_to_1_np(self):
         img = np.zeros((256, 256, 3), dtype=np.float32)
-        for x in range(256):
+            img[x, :, :] = (x - 127.5) / 127.5
             img[x, :, :] = (x-127.5) / 127.5
 
         fig, axis = plt.subplots(1, 1)
