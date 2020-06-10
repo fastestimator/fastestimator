@@ -1,4 +1,3 @@
-import pdb
 import time
 import unittest
 from io import StringIO
@@ -119,7 +118,7 @@ class TestTimer(unittest.TestCase):
                     time.sleep(1)
                 context = fake_stdout.getvalue()  # Tasks took ? seconds
         exec_time = float(context.split(" ")[2])
-        self.assertTrue(abs(exec_time - 1) < 0.005)
+        self.assertTrue(abs(exec_time - 1) < 0.1)
 
     def test_timer_as_decorator(self):
         @fe.util.Timer("T2")
@@ -137,7 +136,7 @@ class TestTimer(unittest.TestCase):
 
         with self.subTest("test recorded time"):
             exec_time = float(context.split(" ")[2])
-            self.assertTrue(abs(exec_time - 1) < 0.005)
+            self.assertTrue(abs(exec_time - 1) < 0.1)
 
 
 class TestDraw(unittest.TestCase):
