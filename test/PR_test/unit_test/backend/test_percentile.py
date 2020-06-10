@@ -190,7 +190,7 @@ class TestPercentile(unittest.TestCase):
         with self.subTest("multi_axis"):
             obj1 = fe.backend.percentile(n, percentiles=50, axis=[0, 1], keepdims=False)
             obj2 = np.int64(5)
-            self.assertTrue(is_equal(obj1, obj2))
+            self.assertEqual(obj1, obj2)
 
         with self.subTest("multi_percentile"):
             obj1 = fe.backend.percentile(n, percentiles=[0, 50], axis=[0, 1], keepdims=False)
