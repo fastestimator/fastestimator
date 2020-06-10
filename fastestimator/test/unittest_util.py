@@ -1,8 +1,11 @@
+from typing import Any
+
+import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-
 import torch
-from typing import Any
+from PIL import Image
+
 
 def is_equal(obj1: Any, obj2: Any) -> bool:
     """Check whether input objects are equal. The object type can be nested iterable (list, tuple, set, dict) and
@@ -105,3 +108,49 @@ class OneLayerTorchModel(torch.nn.Module):
         return x
 
 
+def check_img_similar(img1: np.ndarray, img2: np.ndarray, ptol: int = 3, ntol: float = 0.01) -> bool:
+    """ check whether img1 and img2 array are similar based on pixel to pixel comparision
+    Args:
+        img1: image 1
+        img2: image 2
+        ptol: pixel value tolerance
+        ntol: number of pixel difference tolerace rate
+
+    Returns:
+        boolean of whether the images are similar
+    """
+    if img1.shape == img2.shape:
+        diff = np.abs(img1.astype(np.float32) - img2.astype(np.float32))
+        n_pixel_diff = diff[diff > ptol].size
+        if n_pixel_diff < img1.size * ntol:
+            return True
+        else:
+            return False
+    return False
+
+
+def img_to_rgb_array(path: str) -> np.ndarray:
+    """Read png file to numpy array (RGB)
+
+    Args:
+        path: image path
+
+    Returns:
+        image nump yarray
+    """
+    return np.asarray(Image.open(path).convert('RGB'))
+
+
+def fig_to_rgb_array(fig: plt.Figure) -> np.ndarray:
+    """convert image in plt.Figure to numpy array
+
+    Args:
+        fig: input figure object
+
+    Returns:
+        image array
+    """
+    fig.canvas.draw()
+    buf = fig.canvas.tostring_rgb()
+    ncols, nrows = fig.canvas.get_width_height()
+    return np.fromstring(buf, dtype=np.uint8).reshape(nrows, ncols, 3)
