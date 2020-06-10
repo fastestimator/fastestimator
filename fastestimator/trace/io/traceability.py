@@ -13,6 +13,8 @@
 # limitations under the License.
 # ==============================================================================
 
+import platform
+import shutil
 import sys
 
 import matplotlib
@@ -52,8 +54,7 @@ class Traceability(Trace):
         self.doc.preamble.append(NoEscape(r'\extrafloats{' + str(len(self.config_tables) + 10) + '}'))
 
         self.doc.preamble.append(Command('title', exp_name))
-        backend = 'TensorFlow Backend' if isinstance(self.system.network, fe.network.TFNetwork) else 'PyTorch Backend'
-        self.doc.preamble.append(Command('author', f"FastEstimator {fe.__version__} - {backend}"))
+        self.doc.preamble.append(Command('author', f"FastEstimator {fe.__version__}"))
         self.doc.preamble.append(Command('date', NoEscape(r'\today')))
         self.doc.append(NoEscape(r'\maketitle'))
 
@@ -73,6 +74,7 @@ class Traceability(Trace):
         with self.doc.create(Section("System Config")):
             with self.doc.create(Itemize()) as itemize:
                 itemize.add_item(escape_latex(f"FastEstimator {fe.__version__}"))
+                itemize.add_item(escape_latex(f"Python {platform.python_version()}"))
                 itemize.add_item(escape_latex(f"OS: {sys.platform}"))
                 itemize.add_item(f"Number of GPUs: {torch.cuda.device_count()}")
                 if fe.fe_deterministic_seed is not None:
@@ -100,4 +102,9 @@ class Traceability(Trace):
                         tabular.add_row((escape_latex(name), escape_latex(str(module.VERSION))),
                                         color='black!5' if color else 'white')
                         color = not color
-        self.doc.generate_pdf(self.save_path, clean_tex=False)
+        if shutil.which("latexmk") is None and shutil.which("pdflatex") is None:
+            # No LaTeX Compiler is available
+            self.doc.generate_tex(self.save_path)
+            # TODO - Gather the images from their tmp dirs so that user can compile later
+        else:
+            self.doc.generate_pdf(self.save_path, clean_tex=False)
