@@ -73,8 +73,9 @@ class TestImageData(unittest.TestCase):
 
     def test_paint_numpy(self):
         output_test = self.img_data.paint_numpy()
+        output_test = np.squeeze(output_test, axis=0)
         output = img_to_rgb_array(self.output_img)
-        self.assertTrue(np.allclose(output, output_test))
+        self.assertTrue(check_img_similar(output, output_test))
 
 
 if __name__ == "__main__":
