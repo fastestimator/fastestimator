@@ -7,18 +7,19 @@ import torch
 from PIL import Image
 
 
-def is_equal(obj1: Any, obj2: Any) -> bool:
+def is_equal(obj1: Any, obj2: Any, assert_type: bool = True) -> bool:
     """Check whether input objects are equal. The object type can be nested iterable (list, tuple, set, dict) and
     with elements such as int, float, np.ndarray, tf.Tensor, tf.Varaible, torch.Tensor
 
     Args:
         obj1: input object 1
         obj2: input object 2
+        assert_dtype: whether to assert the same data type
 
     Returns:
         boolean of whether those two object are equal
     """
-    if type(obj1) != type(obj2):
+    if assert_type and type(obj1) != type(obj2):
         return False
 
     if type(obj1) in [list, set, tuple]:
