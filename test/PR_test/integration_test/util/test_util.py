@@ -9,41 +9,30 @@ import torch
 from PIL import Image
 
 import fastestimator as fe
-
+from fastestimator.test.unittest_util import check_img_similar, img_to_rgb_array, fig_to_rgb_array
 
 class TestShowImage(unittest.TestCase):
-    @staticmethod
-    def png_to_rgb_array(path):
-        return np.asarray(Image.open(path).convert('RGB'))
-
-    @staticmethod
-    def fig_to_rgb_array(fig):
-        fig.canvas.draw()
-        buf = fig.canvas.tostring_rgb()
-        ncols, nrows = fig.canvas.get_width_height()
-        return np.fromstring(buf, dtype=np.uint8).reshape(nrows, ncols, 3)
-
     @classmethod
     def setUpClass(cls):
-        cls.color_img_ans = cls.png_to_rgb_array(
+        cls.color_img_ans = img_to_rgb_array(
             os.path.abspath(os.path.join(__file__, "..", "resources", "test_show_image_color.png")))
 
-        cls.hw_ratio_img_ans = cls.png_to_rgb_array(
+        cls.hw_ratio_img_ans = img_to_rgb_array(
             os.path.abspath(os.path.join(__file__, "..", "resources", "test_show_image_height_width.png")))
 
-        cls.bb_img_ans = cls.png_to_rgb_array(
+        cls.bb_img_ans = img_to_rgb_array(
             os.path.abspath(os.path.join(__file__, "..", "resources", "test_show_image_bounding_box.png")))
 
-        cls.mixed_img_ans = cls.png_to_rgb_array(
+        cls.mixed_img_ans = img_to_rgb_array(
             os.path.abspath(os.path.join(__file__, "..", "resources", "test_show_image_mixed.png")))
 
-        cls.text_img_ans = cls.png_to_rgb_array(
+        cls.text_img_ans = img_to_rgb_array(
             os.path.abspath(os.path.join(__file__, "..", "resources", "test_show_image_text.png")))
 
-        cls.title_img_ans = cls.png_to_rgb_array(
+        cls.title_img_ans = img_to_rgb_array(
             os.path.abspath(os.path.join(__file__, "..", "resources", "test_show_image_title.png")))
 
-        cls.float_img_ans = cls.png_to_rgb_array(
+        cls.float_img_ans = img_to_rgb_array(
             os.path.abspath(os.path.join(__file__, "..", "resources", "test_show_image_check_float.png")))
 
     def test_show_image_color_np(self):
@@ -56,9 +45,9 @@ class TestShowImage(unittest.TestCase):
         fe.util.show_image(img, fig=fig, axis=axis)
 
         # Now we can save it to a numpy array.
-        obj1 = self.fig_to_rgb_array(fig)
+        obj1 = fig_to_rgb_array(fig)
         obj2 = self.color_img_ans
-        self.assertTrue(np.array_equal(obj1, obj2))
+        self.assertTrue(check_img_similar(obj1, obj2))
 
     def test_show_image_color_torch(self):
         img = np.zeros((90, 90, 3), dtype=np.uint8)
@@ -69,9 +58,9 @@ class TestShowImage(unittest.TestCase):
 
         fig, axis = plt.subplots(1, 1)
         fe.util.show_image(img, fig=fig, axis=axis)
-        obj1 = self.fig_to_rgb_array(fig)
+        obj1 = fig_to_rgb_array(fig)
         obj2 = self.color_img_ans
-        self.assertTrue(np.array_equal(obj1, obj2))
+        self.assertTrue(check_img_similar(obj1, obj2))
 
     def test_show_image_color_tf(self):
         img = np.zeros((90, 90, 3), dtype=np.uint8)
@@ -82,9 +71,9 @@ class TestShowImage(unittest.TestCase):
 
         fig, axis = plt.subplots(1, 1)
         fe.util.show_image(img, fig=fig, axis=axis)
-        obj1 = self.fig_to_rgb_array(fig)
+        obj1 = fig_to_rgb_array(fig)
         obj2 = self.color_img_ans
-        self.assertTrue(np.array_equal(obj1, obj2))
+        self.assertTrue(check_img_similar(obj1, obj2))
 
     def test_show_image_check_float_0_to_1_np(self):
         img = np.zeros((256, 256, 3), dtype=np.float32)
@@ -93,9 +82,9 @@ class TestShowImage(unittest.TestCase):
 
         fig, axis = plt.subplots(1, 1)
         fe.util.show_image(img, fig=fig, axis=axis)
-        obj1 = self.fig_to_rgb_array(fig)
+        obj1 = fig_to_rgb_array(fig)
         obj2 = self.float_img_ans
-        self.assertTrue(np.allclose(obj1, obj2, atol=1))
+        self.assertTrue(check_img_similar(obj1, obj2))
 
     def test_show_image_check_float_neg_1_to_1_np(self):
         img = np.zeros((256, 256, 3), dtype=np.float32)
@@ -105,9 +94,9 @@ class TestShowImage(unittest.TestCase):
         fig, axis = plt.subplots(1, 1)
         fe.util.show_image(img, fig=fig, axis=axis)
 
-        obj1 = self.fig_to_rgb_array(fig)
+        obj1 = fig_to_rgb_array(fig)
         obj2 = self.float_img_ans
-        self.assertTrue(np.allclose(obj1, obj2, atol=1))
+        self.assertTrue(check_img_similar(obj1, obj2))
 
     def test_show_image_color_arbitrary_range_np(self):
         img = np.zeros((256, 256, 3), dtype=np.float32)
@@ -116,26 +105,26 @@ class TestShowImage(unittest.TestCase):
 
         fig, axis = plt.subplots(1, 1)
         fe.util.show_image(img, fig=fig, axis=axis)
-        obj1 = self.fig_to_rgb_array(fig)
+        obj1 = fig_to_rgb_array(fig)
         obj2 = self.float_img_ans
-        self.assertTrue(np.allclose(obj1, obj2, atol=1))
+        self.assertTrue(check_img_similar(obj1, obj2))
 
     def test_show_image_height_width_np(self):
         img = np.zeros((150, 100))
 
         fig, axis = plt.subplots(1, 1)
         fe.util.show_image(img, fig=fig, axis=axis)
-        obj1 = self.fig_to_rgb_array(fig)
+        obj1 = fig_to_rgb_array(fig)
         obj2 = self.hw_ratio_img_ans
-        self.assertTrue(np.array_equal(obj1, obj2))
+        self.assertTrue(check_img_similar(obj1, obj2))
 
     def test_show_image_text_np(self):
         text = "apple"
         fig, axis = plt.subplots(1, 1)
         fe.util.show_image(text, fig=fig, axis=axis)
-        obj1 = self.fig_to_rgb_array(fig)
+        obj1 = fig_to_rgb_array(fig)
         obj2 = self.text_img_ans
-        self.assertTrue(np.array_equal(obj1, obj2))
+        self.assertTrue(check_img_similar(obj1, obj2))
 
     def test_show_image_bounding_box_np(self):
         bg_img = np.zeros((150, 150))
@@ -145,9 +134,9 @@ class TestShowImage(unittest.TestCase):
         fig, axis = plt.subplots(1, 1)
         fe.util.show_image(bg_img, fig=fig, axis=axis)
         fe.util.show_image(boxes, fig=fig, axis=axis)
-        obj1 = self.fig_to_rgb_array(fig)
+        obj1 = fig_to_rgb_array(fig)
         obj2 = self.bb_img_ans
-        self.assertTrue(np.array_equal(obj1, obj2))
+        self.assertTrue(check_img_similar(obj1, obj2))
 
     def test_show_image_mixed_figure_layer_np(self):
         bg_img = np.ones((150, 150, 3), dtype=np.uint8) * 255
@@ -157,14 +146,14 @@ class TestShowImage(unittest.TestCase):
         fe.util.show_image(bg_img, fig=fig, axis=axis)
         fe.util.show_image(boxes, fig=fig, axis=axis)
         fe.util.show_image("apple", fig=fig, axis=axis)
-        obj1 = self.fig_to_rgb_array(fig)
+        obj1 = fig_to_rgb_array(fig)
         obj2 = self.mixed_img_ans
-        self.assertTrue(np.array_equal(obj1, obj2))
+        self.assertTrue(check_img_similar(obj1, obj2))
 
     def test_show_image_title_np(self):
         img = np.ones((150, 150), dtype=np.uint8) * 255
         fig, axis = plt.subplots(1, 1)
         fe.util.show_image(img, fig=fig, axis=axis, title="test title")
-        obj1 = self.fig_to_rgb_array(fig)
+        obj1 = fig_to_rgb_array(fig)
         obj2 = self.title_img_ans
-        self.assertTrue(np.array_equal(obj1, obj2))
+        self.assertTrue(check_img_similar(obj1, obj2))
