@@ -134,6 +134,10 @@ class FeSummaryTable:
         fe_id: The id of this table, used for cross-referencing from other tables.
         **fields: Any other information about the summarized object / function.
     """
+    name: str
+    fe_id: FEID
+    fields: Dict[str, Any]
+
     def __init__(self,
                  name: str,
                  fe_id: FEID,
@@ -918,7 +922,8 @@ def fe_summary(self) -> List[FeSummaryTable]:
         if issubclass(x[1].type, (TFNetwork, TorchNetwork)) else 2 if issubclass(x[1].type, Pipeline) else 3
         if issubclass(x[1].type, Scheduler) else 4 if issubclass(x[1].type, Trace) else 5
         if issubclass(x[1].type, Op) else 6 if issubclass(x[1].type, (Dataset, tf.data.Dataset)) else 7
-        if not issubclass(x[1].type, (np.ndarray, tf.Tensor, torch.Tensor)) else 8)
+        if issubclass(x[1].type, (tf.keras.Model, torch.nn.Module)) else 8
+        if not issubclass(x[1].type, (np.ndarray, tf.Tensor, torch.Tensor)) else 9)
     key_mapping = {fe_id: idx for idx, (fe_id, val) in enumerate(ordered_items)}
     FEID.set_translation_dict(key_mapping)
     return [item[1] for item in ordered_items]
