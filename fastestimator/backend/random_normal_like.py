@@ -23,12 +23,8 @@ from fastestimator.util.util import STRING_TO_TORCH_DTYPE
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
 
-def random_normal_like(
-        tensor: Tensor,
-        mean: float = 0.0,
-        std: float = 1.0,
-        dtype: Union[None, str] = 'float32',
-) -> Tensor:
+def random_normal_like(tensor: Tensor, mean: float = 0.0, std: float = 1.0,
+                       dtype: Union[None, str] = 'float32') -> Tensor:
     """Generate noise shaped like `tensor` from a random normal distribution with a given `mean` and `std`.
 
     This method can be used with Numpy data:

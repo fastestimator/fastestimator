@@ -16,6 +16,7 @@ from typing import Optional, Union
 
 import tensorflow as tf
 import torch
+from tensorflow.keras.mixed_precision import experimental as mixed_precision
 
 from fastestimator.backend.get_gradient import get_gradient
 from fastestimator.backend.reduce_mean import reduce_mean
@@ -59,11 +60,18 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
     """
     loss = reduce_mean(loss)
     if isinstance(model, tf.keras.Model):
+        #  scale up loss for mixed precision training to avoid underflow
+        if mixed_precision.global_policy().name != "float32":
+            loss = model.current_optimizer.get_scaled_loss(loss)
+        # for multi-gpu training, the gradient will be combined by sum, normalize the loss to balance that
         strategy = tf.distribute.get_strategy()
         if isinstance(strategy, tf.distribute.MirroredStrategy):
             loss = loss / strategy.num_replicas_in_sync
         gradients = get_gradient(loss, model.trainable_variables, tape=tape)
         with tape.stop_recording():
+            #  scale down gradient for mixed precision training balance scale-up loss
+            if mixed_precision.global_policy().name != "float32":
+                gradients = model.current_optimizer.get_unscaled_gradients(gradients)
             model.current_optimizer.apply_gradients(zip(gradients, model.trainable_variables))
     elif isinstance(model, torch.nn.Module):
         gradients = get_gradient(loss, model.parameters(), retain_graph=retain_graph)
