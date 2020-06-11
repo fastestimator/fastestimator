@@ -1,6 +1,7 @@
 import os
 import unittest
 
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
@@ -33,6 +34,13 @@ class TestShowImage(unittest.TestCase):
 
         cls.float_img_ans = img_to_rgb_array(
             os.path.abspath(os.path.join(__file__, "..", "resources", "test_show_image_check_float.png")))
+
+    def setUp(self) -> None:
+        self.old_backend = matplotlib.get_backend()
+        matplotlib.use("Agg")
+
+    def tearDown(self) -> None:
+        matplotlib.use(self.old_backend)
 
     def test_show_image_color_np(self):
         img = np.zeros((90, 90, 3), dtype=np.uint8)

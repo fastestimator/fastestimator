@@ -17,7 +17,6 @@ import inspect
 import re
 import types
 from collections import deque, namedtuple
-from copy import deepcopy
 from typing import Any, Callable, Dict, List, Mapping, Optional, Set, Tuple, Type, TypeVar, Union
 
 import numpy as np
@@ -100,10 +99,31 @@ class FEID:
         """Provide a lookup table to be invoked during value printing.
 
         Args:
-            mapping: A mapping of id: printable id
+            mapping: A mapping of id: printable id.
         """
         cls._translation_dict.clear()
         cls._translation_dict.update(mapping)
+
+
+class Flag:
+    """A mutable wrapper around a boolean.
+
+    Args:
+        val: The initial value for the Flag.
+    """
+    __slots__ = ['_val']
+
+    def __init__(self, val: bool = False):
+        self._val = val
+
+    def set_true(self):
+        self._val = True
+
+    def set_false(self):
+        self._val = False
+
+    def __bool__(self):
+        return self._val
 
 
 class FeSummaryTable:
@@ -205,6 +225,7 @@ class HrefFEID(ContainerList):
         self.packages.add(Package('ulem'))
         self.packages.add(Package('xcolor', options='table'))
         self.fe_id = fe_id
+        self.name = name
         super().__init__(data=[
             NoEscape(r'\hyperref[tbl:'),
             fe_id,
@@ -231,12 +252,14 @@ def _deref_is_callable(instruction: dis.Instruction, closure_vars: inspect.Closu
     return hasattr(deref, '__call__')
 
 
-def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], wrap_str: bool = True) -> Any:
+def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wrap_str: bool = True) -> Any:
     """Convert an input value to a FESummaryTable table representation
 
     Args:
         inp: The input value to be converted.
         tables: A collection of tables representing objects which are used by the current stack of inputs.
+        ret_ref: A flag to indicate that _trace_value is returning a reference (this is used to figure out whether
+            functions can be in-lined or deserve their own tables).
         wrap_str: Whether literal string values should be wrapped inside extra quote marks.
 
     Returns:
@@ -252,15 +275,11 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], wrap_str: bool = 
         # noinspection PyProtectedMember,PyUnresolvedReferences
         tables.update(inp._fe_traceability_summary)
         inp_id = FEID(id(inp))
+        ret_ref.set_true()
         return HrefFEID(inp_id, tables[inp_id].name)
     elif inspect.ismethod(inp):
-        inp_id = FEID(id(inp))
-        if inp_id not in tables:
-            tables[inp_id] = FeSummaryTable(name=inp.__name__,
-                                            fe_id=inp_id,
-                                            target_type=type(inp),
-                                            parent=_trace_value(inp.__self__, tables, wrap_str))
-        return HrefFEID(inp_id, inp.__name__)
+        parent = _trace_value(inp.__self__, tables, ret_ref, wrap_str)
+        return ContainerList(data=[parent, escape_latex(f".{inp.__name__}")])
     elif inspect.isfunction(inp) or inspect.isclass(inp):
         inp_id = FEID(id(inp))
         if inp_id in tables:
@@ -271,10 +290,23 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], wrap_str: bool = 
                 var_names = code.co_varnames
                 # Attempt to figure out what the lambda function is doing. If it is being used only to invoke some other
                 # function (like one might do with LRScheduler), then the parse should work.
-                func_description = _parse_lambda(inp, tables) or {}
-                func_description['vars'] = _trace_value(var_names, tables, wrap_str=False)
+                flag = Flag()
+                func_description = _parse_lambda(inp, tables, flag) or {}
+                func_description['vars'] = _trace_value(var_names, tables, flag, wrap_str=False)
                 name = "lambda"
                 path = None
+                if not flag and func_description.keys() == {'vars', 'function'}:
+                    # This is a simple lambda function, so inline it instead of making a new table
+                    raw_vars = func_description['vars'].raw_input
+                    formatted_vars = []
+                    for var in raw_vars:
+                        formatted_vars.append(var)
+                        formatted_vars.append(', ')
+                    if formatted_vars:
+                        formatted_vars.pop()  # remove trailing comma
+                    return ContainerList(data=[
+                        TextColor('cyan', f"{name} "), *formatted_vars, ": ", func_description.get('function', '')
+                    ])
             else:
                 name = inp.__name__
                 path = f"{inp.__module__}.{inp.__qualname__}"
@@ -284,6 +316,7 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], wrap_str: bool = 
                                             target_type=type(inp),
                                             path=path,
                                             **func_description)
+        ret_ref.set_true()
         return HrefFEID(inp_id, name)
     elif isinstance(inp, _Function):
         inp_id = FEID(id(inp))
@@ -293,40 +326,71 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], wrap_str: bool = 
             else:
                 path = None
             tables[inp_id] = FeSummaryTable(name=inp.name, fe_id=inp_id, target_type=type(inp.func), path=path)
+        ret_ref.set_true()
         return HrefFEID(inp_id, inp.name)
     elif isinstance(inp, _PartialBind):
         return {
-            "args": _trace_value(inp.args, tables, wrap_str=True),
-            "kwargs": _trace_value(inp.kwargs, tables, wrap_str).raw_input  # unwrap kwargs back into a dict
+            "args": _trace_value(inp.args, tables, ret_ref, wrap_str=True),
+            "kwargs": _trace_value(inp.kwargs, tables, ret_ref, wrap_str).raw_input  # unwrap kwargs back into a dict
         }
     elif isinstance(inp, _Command):
         return ContainerList(data=[
-            _trace_value(inp.left, tables, wrap_str),
+            _trace_value(inp.left, tables, ret_ref, wrap_str),
             escape_latex(inp.command),
-            _trace_value(inp.right, tables, wrap_str)
+            _trace_value(inp.right, tables, ret_ref, wrap_str)
         ])
     elif isinstance(inp, _Condition):
         return ContainerList(data=[
-            _trace_value(inp.left, tables, wrap_str),
+            _trace_value(inp.left, tables, ret_ref, wrap_str),
             " if ",
-            _trace_value(inp.condition, tables, wrap_str),
+            _trace_value(inp.condition, tables, ret_ref, wrap_str),
             " else ",
-            _trace_value(inp.right, tables, wrap_str)
+            _trace_value(inp.right, tables, ret_ref, wrap_str)
         ])
     elif isinstance(inp, _BoundFn):
-        func_href = _trace_value(inp.func, tables, wrap_str)
-        inp_id = func_href.fe_id
-        inp_table = tables[inp_id]
-        args = _trace_value(inp.args, tables, wrap_str=False)
-        if isinstance(args, dict):
-            inp_table.kwargs = args
+        flag = Flag()
+        args = _trace_value(inp.args, tables, flag, wrap_str=False)
+        kwargs = {}
+        if isinstance(inp.args, _PartialBind):
+            kwargs = args["kwargs"]
+            args = args["args"]
+        elif isinstance(args, dict):
+            kwargs = args
+            args = None
+        if not flag and isinstance(inp.func, _Function):
+            # The function args are simple, so inline this function in whatever is above it
+            if isinstance(args, PyContainer):
+                args = args.raw_input
+            if isinstance(kwargs, PyContainer):
+                kwargs = kwargs.raw_input
+            formatted = ["("]
+            args = args or ()
+            kwargs = kwargs or {}
+            for arg in args:
+                formatted.append(arg)
+                formatted.append(", ")
+            for key, value in kwargs.items():
+                formatted.append(key)
+                formatted.append("=")
+                formatted.append(value)
+                formatted.append(", ")
+            if len(formatted) > 1:
+                formatted.pop()  # Remove trailing comma
+            formatted.append(")")
+            return ContainerList(data=[inp.func.name, *formatted])
         else:
+            # The function args are complicated, so use the normal approach
+            func_href = _trace_value(inp.func, tables, ret_ref, wrap_str)
+            inp_id = func_href.fe_id
+            inp_table = tables[inp_id]
             inp_table.args = args
-        return func_href
+            inp_table.kwargs = kwargs
+            ret_ref.set_true()
+            return func_href
     elif isinstance(inp, inspect.BoundArguments):
         args = inp.arguments
         args.pop('self', None)
-        return _trace_value(args, tables, wrap_str=False).raw_input  # unwrap kwargs back into a dict
+        return _trace_value(args, tables, ret_ref, wrap_str=False).raw_input  # unwrap kwargs back into a dict
     elif isinstance(inp, _VarWrap):
         return inp.var
     elif isinstance(inp, (tf.keras.Model, torch.nn.Module)):
@@ -337,18 +401,21 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], wrap_str: bool = 
         else:
             name = inp.model_name if hasattr(inp, 'model_name') else "<Unknown Model Name>"
             tables[inp_id] = FeSummaryTable(name=name, fe_id=inp_id, target_type=type(inp))
+        ret_ref.set_true()
         return HrefFEID(inp_id, name)
     elif isinstance(inp, list):
-        return PyContainer(data=[_trace_value(x, tables, wrap_str) for x in inp])
+        return PyContainer(data=[_trace_value(x, tables, ret_ref, wrap_str) for x in inp])
     elif isinstance(inp, tuple):
-        return PyContainer(data=tuple([_trace_value(x, tables, wrap_str) for x in inp]))
+        return PyContainer(data=tuple([_trace_value(x, tables, ret_ref, wrap_str) for x in inp]))
     elif isinstance(inp, set):
-        return PyContainer(data=set([_trace_value(x, tables, wrap_str) for x in inp]))
+        return PyContainer(data=set([_trace_value(x, tables, ret_ref, wrap_str) for x in inp]))
     elif isinstance(inp, dict):
-        return PyContainer(data={
-            _trace_value(k, tables, wrap_str=wrap_str): _trace_value(v, tables, wrap_str=True)
-            for k, v in inp.items()
-        })
+        return PyContainer(
+            data={
+                _trace_value(k, tables, ret_ref, wrap_str=wrap_str): _trace_value(v, tables, ret_ref, wrap_str=True)
+                for k,
+                v in inp.items()
+            })
     elif isinstance(inp, (tf.Tensor, torch.Tensor, np.ndarray, tf.Variable)):
         inp_type = type(inp)
         inp_id = FEID(id(inp))
@@ -362,17 +429,20 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], wrap_str: bool = 
             if rank == 0 or (rank == 1 and inp.shape[0] <= 10):
                 description['values'] = str(inp)
             tables[inp_id] = FeSummaryTable(name="tensor", fe_id=inp_id, target_type=inp_type, **description)
+        ret_ref.set_true()
         return HrefFEID(inp_id, "tensor")
     # This should be the last elif
     elif hasattr(inp, '__class__'):
         inp_id = FEID(id(inp))
         if inp_id not in tables:
             tables[inp_id] = FeSummaryTable(name=inp.__class__.__name__, target_type=type(inp), fe_id=inp_id)
+        ret_ref.set_true()
         return HrefFEID(inp_id, inp.__class__.__name__)
     else:
         inp_id = FEID(id(inp))
         if inp_id not in tables:
             tables[inp_id] = FeSummaryTable(name="an object", target_type=type(inp), fe_id=inp_id)
+        ret_ref.set_true()
         return HrefFEID(inp_id, "an object")
 
 
@@ -522,12 +592,16 @@ def _extract_args(input_str: str) -> Set[str]:
     return results
 
 
-def _parse_lambda_fallback(function: types.FunctionType, tables: Dict[FEID,
-                                                                      FeSummaryTable]) -> Optional[Dict[str, Any]]:
+def _parse_lambda_fallback(function: types.FunctionType, tables: Dict[FEID, FeSummaryTable],
+                           ret_ref: Flag) -> Optional[Dict[str, Any]]:
     """Convert a lambda function into a string representation, disambiguating variables when possible.
 
     Args:
         function: The lambda function to be inspected.
+        tables: A collection of tables representing objects which are used by the current stack of inputs.
+        ret_ref: A flag to indicate that _trace_value is returning a reference (this is used to figure out whether
+            functions can be in-lined or deserve their own tables).
+
 
     Returns:
         A string representation of the lambda function, along with information about the variables it references when
@@ -638,18 +712,22 @@ def _parse_lambda_fallback(function: types.FunctionType, tables: Dict[FEID,
                                        closure_vars.globals.get(ref, closure_vars.builtins.get(ref, _VarWrap(ref))))
             for ref in refs
         }
-        response['kwargs'] = _trace_value(ref_map, tables, wrap_str=False)
+        response['kwargs'] = _trace_value(ref_map, tables, ret_ref=ret_ref, wrap_str=False)
     return response
 
 
-def _parse_lambda(function: types.FunctionType, tables: Dict[FEID, FeSummaryTable]) -> Optional[Dict[str, Any]]:
+def _parse_lambda(function: types.FunctionType, tables: Dict[FEID, FeSummaryTable],
+                  ret_ref: Flag) -> Optional[Dict[str, Any]]:
     """Convert a lambda function into its argument-based representation.
 
     The `function` is expected to be a lambda expression, which means that the set of bytecode instructions is limited
     compared to examining any possible function.
 
     Args:
-        function: A lambda function to be inspected
+        function: A lambda function to be inspected.
+        tables: A collection of tables representing objects which are used by the current stack of inputs.
+        ret_ref: A flag to indicate that _trace_value is returning a reference (this is used to figure out whether
+            functions can be in-lined or deserve their own tables).
 
     Returns:
         The arguments being used to invoke `function`, or None if parsing fails.
@@ -742,7 +820,7 @@ def _parse_lambda(function: types.FunctionType, tables: Dict[FEID, FeSummaryTabl
                 name=name)
             if func_pair.func is None:
                 # This function can't be found for some reason
-                return _parse_lambda_fallback(function, tables)
+                return _parse_lambda_fallback(function, tables, ret_ref)
             while idx + 1 < len(instructions):
                 if instructions[idx + 1].opname in ('LOAD_METHOD', 'LOAD_ATTR'):
                     name = instructions[idx + 1].argval
@@ -775,7 +853,7 @@ def _parse_lambda(function: types.FunctionType, tables: Dict[FEID, FeSummaryTabl
             # Bind the fn
             if not callable(func_pair.func):
                 # This shouldn't ever happen, but just in case...
-                return _parse_lambda_fallback(function, tables)
+                return _parse_lambda_fallback(function, tables, ret_ref)
             try:
                 bound_args = inspect.signature(func_pair.func).bind(*fn_args, **kwargs)
                 bound_args.apply_defaults()
@@ -790,7 +868,7 @@ def _parse_lambda(function: types.FunctionType, tables: Dict[FEID, FeSummaryTabl
             if instruction.opname == 'COMPARE_OP':
                 command = instruction.argval
             if command not in _CommandTable:
-                return _parse_lambda_fallback(function, tables)
+                return _parse_lambda_fallback(function, tables, ret_ref)
             right = args.pop()
             instructions.pop(idx - 1)
             idx -= 1
@@ -808,12 +886,12 @@ def _parse_lambda(function: types.FunctionType, tables: Dict[FEID, FeSummaryTabl
             # TODO - LIST_APPEND, SET_ADD, MAP_ADD, BUILD_STRING, CALL_FUNCTION_EX, BUILD_TUPLE_UNPACK, etc.
             # Note that this function is only ever used to examine lambda functions, which helps to restrict the set of
             # possible commands
-            return _parse_lambda_fallback(function, tables)
+            return _parse_lambda_fallback(function, tables, ret_ref)
         idx += 1
     # Return the bound args
     if conditions or len(args) != 1:
-        return _parse_lambda_fallback(function, tables)
-    return {"function": _trace_value(args[0], tables, wrap_str=True)}
+        return _parse_lambda_fallback(function, tables, ret_ref)
+    return {"function": _trace_value(args[0], tables, ret_ref=ret_ref, wrap_str=True)}
 
 
 def fe_summary(self) -> List[FeSummaryTable]:
@@ -825,10 +903,25 @@ def fe_summary(self) -> List[FeSummaryTable]:
     Returns:
         A summary of the instance.
     """
+    # Delayed imports to avoid circular dependency
+    from fastestimator.estimator import Estimator
+    from fastestimator.network import TFNetwork, TorchNetwork
+    from fastestimator.pipeline import Pipeline
+    from fastestimator.op.op import Op
+    from fastestimator.trace.trace import Trace
+    from fastestimator.schedule.schedule import Scheduler
+    from torch.utils.data import Dataset
     # re-number the references for nicer viewing
-    key_mapping = {fe_id: idx for idx, fe_id in enumerate(self._fe_traceability_summary.keys())}
+    ordered_items = sorted(
+        self._fe_traceability_summary.items(),
+        key=lambda x: 0 if issubclass(x[1].type, Estimator) else 1
+        if issubclass(x[1].type, (TFNetwork, TorchNetwork)) else 2 if issubclass(x[1].type, Pipeline) else 3
+        if issubclass(x[1].type, Scheduler) else 4 if issubclass(x[1].type, Trace) else 5
+        if issubclass(x[1].type, Op) else 6 if issubclass(x[1].type, (Dataset, tf.data.Dataset)) else 7
+        if not issubclass(x[1].type, (np.ndarray, tf.Tensor, torch.Tensor)) else 8)
+    key_mapping = {fe_id: idx for idx, (fe_id, val) in enumerate(ordered_items)}
     FEID.set_translation_dict(key_mapping)
-    return list(self._fe_traceability_summary.values())
+    return [item[1] for item in ordered_items]
 
 
 def trace_model(model: Model, model_idx: int, model_fn: Any, optimizer_fn: Any, weights_path: Any) -> Model:
@@ -845,14 +938,14 @@ def trace_model(model: Model, model_idx: int, model_fn: Any, optimizer_fn: Any, 
         The `model`, but now with an fe_summary() method.
     """
     tables = {}
-    description = {'definition': _trace_value(model_fn, tables)}
+    description = {'definition': _trace_value(model_fn, tables, ret_ref=Flag())}
     if model_idx != -1:
         description['index'] = model_idx
     if optimizer_fn or isinstance(optimizer_fn, list) and optimizer_fn[0] is not None:
         description['optimizer'] = _trace_value(
-            optimizer_fn[model_idx] if isinstance(optimizer_fn, list) else optimizer_fn, tables)
+            optimizer_fn[model_idx] if isinstance(optimizer_fn, list) else optimizer_fn, tables, ret_ref=Flag())
     if weights_path:
-        description['weights'] = _trace_value(weights_path, tables)
+        description['weights'] = _trace_value(weights_path, tables, ret_ref=Flag())
     fe_id = FEID(id(model))
     tbl = FeSummaryTable(name=model.model_name, fe_id=fe_id, target_type=type(model), **description)
     tables[fe_id] = tbl
@@ -896,7 +989,7 @@ def traceable(whitelist: Union[str, Tuple[str]] = (), blacklist: Union[str, Tupl
                     bound_args = inspect.signature(base_init).bind(self, *args, **kwargs)
                     bound_args.apply_defaults()
                     tables = {}
-                    _trace_value(_BoundFn(self, bound_args), tables)
+                    _trace_value(_BoundFn(self, bound_args), tables, ret_ref=Flag())
                     self._fe_traceability_summary = tables
                 base_init(self, *args, **kwargs)
 
