@@ -63,7 +63,7 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
         #  scale up loss for mixed precision training to avoid underflow
         if mixed_precision.global_policy().name != "float32":
             loss = model.current_optimizer.get_scaled_loss(loss)
-        # for multi-gpu training, the gradient will be combined by sum, normalize the loss to balance that
+        # for multi-gpu training, the gradient will be combined by sum, normalize the loss
         strategy = tf.distribute.get_strategy()
         if isinstance(strategy, tf.distribute.MirroredStrategy):
             loss = loss / strategy.num_replicas_in_sync
