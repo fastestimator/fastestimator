@@ -903,10 +903,24 @@ def fe_summary(self) -> List[FeSummaryTable]:
     Returns:
         A summary of the instance.
     """
+    # Delayed imports to avoid circular dependency
+    from fastestimator.estimator import Estimator
+    from fastestimator.network import TFNetwork, TorchNetwork
+    from fastestimator.pipeline import Pipeline
+    from fastestimator.op.op import Op
+    from fastestimator.trace.trace import Trace
+    from torch.utils.data import Dataset
     # re-number the references for nicer viewing
-    key_mapping = {fe_id: idx for idx, fe_id in enumerate(self._fe_traceability_summary.keys())}
+    ordered_items = sorted(
+        self._fe_traceability_summary.items(),
+        key=lambda x: 0 if issubclass(x[1].type, Estimator) else 1
+        if issubclass(x[1].type, (TFNetwork, TorchNetwork)) else 2 if issubclass(x[1].type, Pipeline) else 3
+        if issubclass(x[1].type, Trace) else 4 if issubclass(x[1].type, Op) else 5
+        if issubclass(x[1].type, (Dataset, tf.data.Dataset)) else 6
+        if not issubclass(x[1].type, (np.ndarray, tf.Tensor, torch.Tensor)) else 7)
+    key_mapping = {fe_id: idx for idx, (fe_id, val) in enumerate(ordered_items)}
     FEID.set_translation_dict(key_mapping)
-    return list(self._fe_traceability_summary.values())
+    return [item[1] for item in ordered_items]
 
 
 def trace_model(model: Model, model_idx: int, model_fn: Any, optimizer_fn: Any, weights_path: Any) -> Model:
