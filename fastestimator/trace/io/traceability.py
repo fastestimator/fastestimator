@@ -37,11 +37,10 @@ class Traceability(Trace):
         save_path: Where to save the output files.
     """
     def __init__(self, save_path: str):
-        super().__init__(mode={"train", "eval"})
-        self.doc = Document(geometry_options=['lmargin=2cm', 'rmargin=2cm', 'tmargin=2cm', 'bmargin=2cm'])
-        self.doc.packages.append(Package(name='placeins', options=['section']))  # Keep tables in their sections
+        super().__init__(mode="!infer")
         self.save_path = save_path
         self.config_tables = []
+        self.doc = Document()
 
     def on_begin(self, data: Data) -> None:
 
@@ -49,6 +48,9 @@ class Traceability(Trace):
         if not exp_name:
             raise RuntimeError("Traceability reports require an experiment name to be provided in estimator.fit()")
         self.config_tables = self.system.summary.system_config
+
+        self.doc = Document(geometry_options=['lmargin=2cm', 'rmargin=2cm', 'tmargin=2cm', 'bmargin=2cm'])
+        self.doc.packages.append(Package(name='placeins', options=['section']))  # Keep tables in their sections
 
         self.doc.preamble.append(NoEscape(r'\maxdeadcycles=' + str(2 * len(self.config_tables) + 10) + ''))
         self.doc.preamble.append(NoEscape(r'\extrafloats{' + str(len(self.config_tables) + 10) + '}'))
