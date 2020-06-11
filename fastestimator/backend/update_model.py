@@ -61,7 +61,7 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
     loss = reduce_mean(loss)
     if isinstance(model, tf.keras.Model):
         #  scale up loss for mixed precision training to avoid underflow
-        if mixed_precision.global_policy().name != "float32":
+        if isinstance(model.current_optimizer, mixed_precision.LossScaleOptimizer):
             loss = model.current_optimizer.get_scaled_loss(loss)
         # for multi-gpu training, the gradient will be combined by sum, normalize the loss
         strategy = tf.distribute.get_strategy()
@@ -70,7 +70,7 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
         gradients = get_gradient(loss, model.trainable_variables, tape=tape)
         with tape.stop_recording():
             #  scale down gradient to balance scale-up loss
-            if mixed_precision.global_policy().name != "float32":
+            if isinstance(model.current_optimizer, mixed_precision.LossScaleOptimizer):
                 gradients = model.current_optimizer.get_unscaled_gradients(gradients)
             model.current_optimizer.apply_gradients(zip(gradients, model.trainable_variables))
     elif isinstance(model, torch.nn.Module):
