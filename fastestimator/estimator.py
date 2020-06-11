@@ -62,6 +62,7 @@ class Estimator:
         monitor_names: Additional keys from the data dictionary to be written into the logs.
     """
     pipeline: Pipeline
+    network: BaseNetwork
     traces: List[Union[Trace, Scheduler[Trace]]]
     monitor_names: Set[str]
 
@@ -82,6 +83,7 @@ class Estimator:
             "log_steps must be None or positive (or 0 to disable only train logging)"
         self.monitor_names = to_set(monitor_names) | self.network.get_loss_keys()
         self.system = System(network=network,
+                             pipeline=pipeline,
                              log_steps=log_steps,
                              total_epochs=epochs,
                              max_train_steps_per_epoch=max_train_steps_per_epoch,
