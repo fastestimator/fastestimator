@@ -69,7 +69,7 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
             loss = loss / strategy.num_replicas_in_sync
         gradients = get_gradient(loss, model.trainable_variables, tape=tape)
         with tape.stop_recording():
-            #  scale down gradient for mixed precision training balance scale-up loss
+            #  scale down gradient to balance scale-up loss
             if mixed_precision.global_policy().name != "float32":
                 gradients = model.current_optimizer.get_unscaled_gradients(gradients)
             model.current_optimizer.apply_gradients(zip(gradients, model.trainable_variables))
