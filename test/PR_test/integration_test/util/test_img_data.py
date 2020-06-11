@@ -1,13 +1,9 @@
 import os
 import unittest
 
-import matplotlib.backends.backend_agg as plt_backend_agg
-import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 import tensorflow as tf
-import torch
-from matplotlib.backends.backend_agg import FigureCanvas
-from PIL import Image
 
 from fastestimator.test.unittest_util import check_img_similar, fig_to_rgb_array, img_to_rgb_array
 from fastestimator.util import ImgData
@@ -22,6 +18,13 @@ class TestImageData(unittest.TestCase):
         cls.x_test = 0.5 * tf.ones((4, 150, 150, 3))
         cls.y_test = tf.ones(cls.label_shape)
         cls.img_data = ImgData(y=cls.y_test, x=cls.x_test)
+
+    def setUp(self) -> None:
+        self.old_backend = matplotlib.get_backend()
+        matplotlib.use("Agg")
+
+    def tearDown(self) -> None:
+        matplotlib.use(self.old_backend)
 
     def test_n_cols(self):
         self.assertEqual(self.img_data._n_cols(), 2)
