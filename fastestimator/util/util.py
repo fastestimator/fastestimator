@@ -51,6 +51,22 @@ STRING_TO_TORCH_DTYPE = {
     'bool': torch.bool
 }
 
+STRING_TO_TF_DTYPE = {
+    None: None,
+    "string": tf.string,
+    "int8": tf.int8,
+    "uint8": tf.uint8,
+    "int16": tf.int16,
+    "uint16": tf.uint16,
+    "int32": tf.int32,
+    "uint32": tf.uint32,
+    "int64": tf.int64,
+    "uint64": tf.uint64,
+    "float16": tf.float16,
+    "float32": tf.float32,
+    "float64": tf.float64
+}
+
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
@@ -540,7 +556,7 @@ def show_image(im: Union[np.ndarray, Tensor],
             will be alpha blended on top of a given axis.
 
     Returns:
-        plotted figure. It will be the same object as user have provided in the argument. 
+        plotted figure. It will be the same object as user have provided in the argument.
     """
     if axis is None:
         fig, axis = plt.subplots(1, 1)

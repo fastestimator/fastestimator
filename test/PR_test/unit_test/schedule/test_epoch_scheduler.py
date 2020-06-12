@@ -18,7 +18,3 @@ class TestEpochScheduler(unittest.TestCase):
 
     def test_get_last_key(self):
         self.assertEqual(self.scheduler._get_last_key(3), 3)
-
-
-if __name__ == "__main__":
-    unittest.main()

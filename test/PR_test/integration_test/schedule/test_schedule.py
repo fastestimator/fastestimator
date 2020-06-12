@@ -22,7 +22,3 @@ class TestSchedule(unittest.TestCase):
     def test_get_signature_epochs(self):
         epochs = get_signature_epochs([self.scheduler, self.epoch_scheduler], total_epochs=50, mode="train")
         self.assertEqual(epochs, self.signature_epochs)
-
-
-if __name__ == "__main__":
-    unittest.main()
