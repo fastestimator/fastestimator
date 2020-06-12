@@ -32,7 +32,3 @@ class TestReshape(unittest.TestCase):
 
     def test_reshape_torch_value(self):
         self.assertEqual(reshape(self.test_torch, shape=(2, 3)).numpy().shape, (2, 3))
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -38,7 +38,3 @@ class TestSqueeze(unittest.TestCase):
 
     def test_squeeze_axis(self):
         self.assertTrue(np.array_equal(squeeze(self.test_np, axis=1), self.test_output_np_axis))
-
-
-if __name__ == "__main__":
-    unittest.main()

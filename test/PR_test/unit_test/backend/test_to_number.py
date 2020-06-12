@@ -25,12 +25,9 @@ class TestToNumber(unittest.TestCase):
 
     def test_to_number_tf_type(self):
         self.assertEqual(type(fe.backend.to_number(self.t)), np.ndarray)
-    
+
     def test_to_number_torch_value(self):
         self.assertTrue(np.allclose(fe.backend.to_number(self.p), self.n))
 
     def test_to_number_torch_type(self):
         self.assertEqual(type(fe.backend.to_number(self.p)), np.ndarray)
-
-if __name__ == "__main__":
-    unittest.main()

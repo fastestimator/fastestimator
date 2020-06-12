@@ -1,14 +1,11 @@
 import os
 import unittest
 
-import matplotlib.backends.backend_agg as plt_backend_agg
-import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 import tensorflow as tf
-import torch
-from matplotlib.backends.backend_agg import FigureCanvas
-from PIL import Image
 
+from fastestimator.test.unittest_util import check_img_similar, fig_to_rgb_array, img_to_rgb_array
 from fastestimator.util import ImgData
 
 
@@ -21,6 +18,13 @@ class TestImageData(unittest.TestCase):
         cls.x_test = 0.5 * tf.ones((4, 150, 150, 3))
         cls.y_test = tf.ones(cls.label_shape)
         cls.img_data = ImgData(y=cls.y_test, x=cls.x_test)
+
+    def setUp(self) -> None:
+        self.old_backend = matplotlib.get_backend()
+        matplotlib.use("Agg")
+
+    def tearDown(self) -> None:
+        matplotlib.use(self.old_backend)
 
     def test_n_cols(self):
         self.assertEqual(self.img_data._n_cols(), 2)
@@ -66,20 +70,12 @@ class TestImageData(unittest.TestCase):
 
     def test_paint_figure(self):
         fig = self.img_data.paint_figure()
-        canvas = FigureCanvas(fig)
-        canvas.draw()
-        output_test = np.array(canvas.renderer.buffer_rgba())
-        img = Image.open(self.output_img)
-        output = np.asarray(img)
-        self.assertTrue(np.allclose(output, output_test))
+        output = img_to_rgb_array(self.output_img)
+        output_test = fig_to_rgb_array(fig)
+        self.assertTrue(check_img_similar(output, output_test))
 
     def test_paint_numpy(self):
         output_test = self.img_data.paint_numpy()
-        img = Image.open(self.output_img)
-        output = np.asarray(img)
-        output = np.stack([output[..., :3]])
-        self.assertTrue(np.allclose(output, output_test))
-
-
-if __name__ == "__main__":
-    unittest.main()
+        output_test = np.squeeze(output_test, axis=0)
+        output = img_to_rgb_array(self.output_img)
+        self.assertTrue(check_img_similar(output, output_test))

@@ -34,6 +34,3 @@ class TestReduceMax(unittest.TestCase):
 
     def test_reduce_max_axis_value(self):
         self.assertTrue(np.array_equal(reduce_max(self.test_np, axis=0), [3, 3]))
-
-if __name__ == "__main__":
-    unittest.main()

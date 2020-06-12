@@ -32,6 +32,6 @@ class TestSparseCategoricalCrossEntropy(unittest.TestCase):
 
     def test_sparse_categorical_crossentropy_average_loss_false_torch(self):
         obj1 = sparse_categorical_crossentropy(y_pred=self.torch_pred, y_true=self.torch_true,
-                                                   average_loss=False).numpy()
+                                               average_loss=False).numpy()
         obj2 = np.array([2.3025851, 2.9957323, 2.3025851])
         self.assertTrue(np.allclose(obj1, obj2))

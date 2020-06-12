@@ -1,12 +1,12 @@
-import unittest
-from unittest.mock import patch
-import wget
 import io
 import sys
+import unittest
+from unittest.mock import patch
 
 import numpy as np
 import tensorflow as tf
 import torch
+import wget
 
 import fastestimator as fe
 import fastestimator.test.unittest_util as fet
@@ -14,7 +14,7 @@ import fastestimator.test.unittest_util as fet
 
 class TestCropping2D(unittest.TestCase):
     def setUp(self):
-        self.x = torch.tensor(list(range(100))).view((1,1,10,10))
+        self.x = torch.tensor(list(range(100))).view((1, 1, 10, 10))
 
     def test_cropping_2d_1arg(self):
         op = torch.tensor([[[[33, 34, 35, 36], [43, 44, 45, 46], [53, 54, 55, 56], [63, 64, 65, 66]]]])
@@ -33,6 +33,3 @@ class TestCropping2D(unittest.TestCase):
         m = fe.layers.pytorch.Cropping2D(((1, 4), 4))
         y = m.forward(self.x)
         self.assertTrue(fet.is_equal(y, op))
-
-if __name__ == "__main__":
-    unittest.main()
