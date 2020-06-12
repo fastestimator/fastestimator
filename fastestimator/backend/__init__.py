@@ -15,6 +15,7 @@
 from fastestimator.backend.abs import abs
 from fastestimator.backend.argmax import argmax
 from fastestimator.backend.binary_crossentropy import binary_crossentropy
+from fastestimator.backend.cast import cast
 from fastestimator.backend.categorical_crossentropy import categorical_crossentropy
 from fastestimator.backend.clip_by_value import clip_by_value
 from fastestimator.backend.concat import concat

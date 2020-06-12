@@ -27,7 +27,3 @@ class TestUNet(unittest.TestCase):
         unet = UNet()
         output_shape = unet(self.test_architecture_data).detach().numpy().shape
         self.assertEqual(output_shape, (1, 1, 128, 128))
-
-
-if __name__ == "__main__":
-    unittest.main()

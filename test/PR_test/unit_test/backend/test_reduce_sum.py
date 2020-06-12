@@ -34,7 +34,3 @@ class TestReduceSum(unittest.TestCase):
 
     def test_reduce_sum_axis(self):
         self.assertTrue(np.array_equal(reduce_sum(self.test_np, axis=0), [4, 5]))
-
-
-if __name__ == "__main__":
-    unittest.main()

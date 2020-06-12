@@ -79,7 +79,3 @@ class TestImageData(unittest.TestCase):
         output_test = np.squeeze(output_test, axis=0)
         output = img_to_rgb_array(self.output_img)
         self.assertTrue(check_img_similar(output, output_test))
-
-
-if __name__ == "__main__":
-    unittest.main()

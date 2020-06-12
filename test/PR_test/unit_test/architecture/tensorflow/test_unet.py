@@ -1,4 +1,5 @@
 import unittest
+
 import numpy as np
 import tensorflow as tf
 
@@ -12,7 +13,3 @@ class TestUNet(unittest.TestCase):
         unet = UNet()
         output_shape = unet(input_data).numpy().shape
         self.assertEqual(output_shape, (1, 128, 128, 1))
-
-
-if __name__ == "__main__":
-    unittest.main()
