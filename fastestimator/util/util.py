@@ -659,3 +659,67 @@ def get_batch_size(data: Dict[str, Any]) -> int:
     batch_size = set(data[key].shape[0] for key in data if hasattr(data[key], "shape") and list(data[key].shape))
     assert len(batch_size) == 1, "invalid batch size: {}".format(batch_size)
     return batch_size.pop()
+
+
+class FEID:
+    """An int wrapper class that can change how it's values are printed.
+
+    Args:
+        val: An integer id to be wrapped.
+    """
+    __slots__ = ['_val']
+    _translation_dict = {}
+
+    def __init__(self, val: int):
+        self._val = val
+
+    def __hash__(self) -> int:
+        return hash(self._val)
+
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, FEID):
+            return self._val == other._val
+        else:
+            return int.__eq__(self._val, other)
+
+    def __lt__(self, other: Any) -> bool:
+        if isinstance(other, FEID):
+            other = other._val
+        return int.__lt__(self._val, other)
+
+    def __str__(self) -> str:
+        return f"{self._translation_dict.get(self._val, self._val)}"
+
+    def __repr__(self) -> str:
+        return f"{self._translation_dict.get(self._val, self._val)}"
+
+    @classmethod
+    def set_translation_dict(cls, mapping: Dict[int, Any]) -> None:
+        """Provide a lookup table to be invoked during value printing.
+
+        Args:
+            mapping: A mapping of id: printable id.
+        """
+        cls._translation_dict.clear()
+        cls._translation_dict.update(mapping)
+
+
+class Flag:
+    """A mutable wrapper around a boolean.
+
+    Args:
+        val: The initial value for the Flag.
+    """
+    __slots__ = ['_val']
+
+    def __init__(self, val: bool = False):
+        self._val = val
+
+    def set_true(self):
+        self._val = True
+
+    def set_false(self):
+        self._val = False
+
+    def __bool__(self):
+        return self._val
