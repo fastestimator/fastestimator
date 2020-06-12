@@ -16,15 +16,18 @@ import dis
 import inspect
 import re
 import types
-from collections import deque, namedtuple
+from collections import ChainMap, deque, namedtuple
 from typing import Any, Callable, Dict, List, Mapping, Optional, Set, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
 import torch
 from pylatex import Document, Label, Marker, MultiColumn, NoEscape, Package, Table, Tabularx, TextColor
+from pylatex.base_classes import LatexObject
 from pylatex.utils import bold, escape_latex
 
+from fastestimator.backend.to_shape import to_shape
+from fastestimator.backend.to_type import to_type
 from fastestimator.util.latex_util import ContainerList, HrefFEID, PyContainer
 from fastestimator.util.util import FEID, Flag, strip_prefix
 
@@ -61,6 +64,51 @@ _CommandTable = {
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
 
+class FeInputSpec:
+    """A class to keep track of a model's input so that fake inputs can be generated.
+
+    Args:
+        model_input: The input to the model.
+        model: The model which corresponds to the given `model_input`.
+    """
+    def __init__(self, model_input: Any, model: Model):
+        self.shape = to_shape(model_input)
+        self.dtype = to_type(model_input)
+        self.tensor_func = tf.ones if isinstance(model, tf.keras.Model) else torch.ones
+
+    def get_dummy_input(self) -> Any:
+        """Get fake input for the model.
+
+        Returns:
+            Input of the correct shape and dtype for the model.
+        """
+        return self._from_shape_and_type(self.shape, self.dtype)
+
+    def _from_shape_and_type(self, shape: Any, dtype: Any) -> Any:
+        """Constructs tensor(s) with the specified shape and dtype.
+
+        It is assumed that the `shape` and `dtype` arguments have the same container structure. That is to say, if
+        `shape` is a list of 5 elements, it is required that `dtype` also be a list of 5 elements.
+
+        Args:
+            shape: A shape or (possibly nested) container of shapes.
+            dtype: A dtype or (possibly nested) container of dtypes.
+
+        Returns:
+            A tensor or collection of tensors corresponding to the shape and dtype arguments.
+        """
+        if isinstance(dtype, dict):
+            return {key: self._from_shape_and_type(value, dtype[key]) for key, value in shape.items()}
+        elif isinstance(dtype, list):
+            return [self._from_shape_and_type(shape[i], dtype[i]) for i in range(len(shape))]
+        elif isinstance(dtype, tuple):
+            return tuple([self._from_shape_and_type(shape[i], dtype[i]) for i in range(len(shape))])
+        elif isinstance(dtype, set):
+            return set([self._from_shape_and_type(s, t) for s, t in zip(shape, dtype)])
+        else:
+            return self.tensor_func(shape, dtype=dtype)
+
+
 class FeSummaryTable:
     """A class containing summaries of traceability information.
 
@@ -69,7 +117,7 @@ class FeSummaryTable:
         fe_id: The id of this table, used for cross-referencing from other tables.
         **fields: Any other information about the summarized object / function.
     """
-    name: str
+    name: Union[str, LatexObject]
     fe_id: FEID
     fields: Dict[str, Any]
 
@@ -97,7 +145,8 @@ class FeSummaryTable:
                 if package not in tabular.packages:
                     # Need to invoke a table color before invoking TextColor (bug?)
                     tabular.packages.append(package)
-                tabular.add_row((bold(self.name), MultiColumn(size=1, align='r|', data=TextColor('blue', self.fe_id))))
+                tabular.add_row((bold(self.name) if isinstance(self.name, str) else self.name,
+                                 MultiColumn(size=1, align='r|', data=TextColor('blue', self.fe_id))))
                 tabular.add_hline()
                 tabular.add_row(("Type: ", escape_latex(f"{self.type}".split("'")[1])))
                 if self.path:
@@ -831,7 +880,8 @@ def trace_model(model: Model, model_idx: int, model_fn: Any, optimizer_fn: Any, 
     fe_id = FEID(id(model))
     tbl = FeSummaryTable(name=model.model_name, fe_id=fe_id, target_type=type(model), **description)
     tables[fe_id] = tbl
-    model._fe_traceability_summary = tables
+    # Have to put this in a ChainMap b/c dict gets put into model._layers automatically somehow
+    model._fe_traceability_summary = ChainMap(tables)
 
     # Use MethodType to bind the method to the class instance
     setattr(model, 'fe_summary', types.MethodType(fe_summary, model))

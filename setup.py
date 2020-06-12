@@ -50,9 +50,13 @@ def get_dependency():
         'jsonpickle',
         'python-docx',
         'PyLaTeX',
+        'natsort',
         'tensorflow_probability==0.8.0',
         'transformers==2.4.1',
-        'tensorflow==2.1.0'
+        'tensorflow==2.1.0',
+        'pytorch-model-summary',
+        'graphviz',
+        'hiddenlayer',
     ]
     if os.name == "nt":
         dependencies.append(
