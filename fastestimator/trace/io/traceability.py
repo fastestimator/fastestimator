@@ -17,16 +17,21 @@ import platform
 import shutil
 import sys
 
+import jsonpickle
 import matplotlib
 import torch
-from pylatex import Command, Document, Figure, Itemize, LongTable, MultiColumn, NoEscape, Package, Section, escape_latex
+from pylatex import Command, Document, Figure, Itemize, LongTable, MultiColumn, NoEscape, Package, Section, Subsection, \
+    escape_latex
 from pylatex.utils import bold
 
 import fastestimator as fe
+from fastestimator.dataset.dataset import FEDataset
 from fastestimator.summary.logs.log_plot import plot_logs
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
+from fastestimator.util.latex_util import HrefFEID, Verbatim
 from fastestimator.util.traceability_util import traceable
+from fastestimator.util.util import FEID
 
 
 @traceable()
@@ -72,6 +77,15 @@ class Traceability(Trace):
         with self.doc.create(Section("Initialization Parameters")):
             for tbl in self.config_tables:
                 tbl.render_table(self.doc)
+
+        with self.doc.create(Section("Datasets")):
+            for title in ['train', 'eval', 'test']:
+                dataset = self.system.pipeline.data.get(title, None)
+                if dataset:
+                    with self.doc.create(Subsection(f"{title.capitalize()} Data")):
+                        self.doc.append(HrefFEID(FEID(id(dataset)), dataset.__class__.__name__))
+                        if isinstance(dataset, FEDataset):
+                            self.doc.append(Verbatim(jsonpickle.dumps(dataset.summary(), unpicklable=False, indent=2)))
 
         with self.doc.create(Section("System Config")):
             with self.doc.create(Itemize()) as itemize:

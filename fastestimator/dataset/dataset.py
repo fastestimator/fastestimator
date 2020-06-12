@@ -23,13 +23,14 @@ import jsonpickle
 import numpy as np
 from torch.utils.data import Dataset
 
-from fastestimator.util.traceability_util import FEID, traceable
-from fastestimator.util.util import get_shape, get_type
+from fastestimator.util.traceability_util import traceable
+from fastestimator.util.util import FEID, get_shape, get_type
 
 
-@traceable()
 class KeySummary:
     """A summary of the dataset attributes corresponding to a particular key.
+
+    This class is intentionally not @traceable.
 
     Args:
         num_unique_values: The number of unique values corresponding to a particular key (if known).
@@ -53,9 +54,10 @@ class KeySummary:
         return {k: v for k, v in self.__dict__.items() if v is not None}
 
 
-@traceable()
 class DatasetSummary:
     """This class contains information summarizing a dataset object.
+
+    This class is intentionally not @traceable.
 
     Args:
         num_instances: The number of data instances within the dataset (influences the size of an epoch).
