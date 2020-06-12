@@ -74,6 +74,10 @@ class Traceability(Trace):
                 plot.add_plot(width=NoEscape(r'1\textwidth'), dpi=300)
                 matplotlib.use(old_backend)
 
+        with self.doc.create(Section("Initialization Parameters")):
+            for tbl in self.config_tables:
+                tbl.render_table(self.doc)
+
         with self.doc.create(Section("Datasets")):
             for title in ['train', 'eval', 'test']:
                 dataset = self.system.pipeline.data.get(title, None)
@@ -82,12 +86,6 @@ class Traceability(Trace):
                         self.doc.append(HrefFEID(FEID(id(dataset)), dataset.__class__.__name__))
                         if isinstance(dataset, FEDataset):
                             self.doc.append(Verbatim(jsonpickle.dumps(dataset.summary(), unpicklable=False, indent=2)))
-                        else:
-                            self.doc.append("Use a FastEstimator Dataset for detailed summary information.")
-
-        with self.doc.create(Section("Initialization Parameters")):
-            for tbl in self.config_tables:
-                tbl.render_table(self.doc)
 
         with self.doc.create(Section("System Config")):
             with self.doc.create(Itemize()) as itemize:
