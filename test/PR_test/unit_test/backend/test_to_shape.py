@@ -18,13 +18,6 @@ class TestToShape(unittest.TestCase):
             }
         }
         cls.op = {"x": (10, 15), "y": [(4, ), (5, 3)], "z": {"key": (2, 2)}}
-<<<<<<< HEAD
-
-        # shape = fe.backend.to_shape(data, add_batch=True)
-        # {"x": (None, 10, 15), "y":[(None, 4), (None, 5, 3)], "z": {"key": (None, 2, 2)}}
-        # shape = fe.backend.to_shape(data, exact_shape=False)
-=======
->>>>>>> 04f4eb1c148d1e290c426fc97aab4679c423d8f1
 
     def test_to_shape_np(self):
         self.assertEqual(fe.backend.to_shape(self.data_np), self.op)
