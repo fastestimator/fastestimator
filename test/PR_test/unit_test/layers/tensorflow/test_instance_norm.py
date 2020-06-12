@@ -1,16 +1,9 @@
-import io
-import sys
 import unittest
-from unittest.mock import patch
 
-import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
-import torch
-import wget
 
 import fastestimator as fe
-import fastestimator.test.unittest_util as fet
 
 
 class TestInstanceNorm(unittest.TestCase):
