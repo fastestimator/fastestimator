@@ -201,6 +201,7 @@ class BatchDataset(FEDataset):
                     index_map in zip(self.datasets, self.index_maps)
                 ]
                 items.append({k: v for d in paired_items for k, v in d.items()})
+        random.shuffle(items)
         return items
 
     def reset_index_maps(self) -> None:
