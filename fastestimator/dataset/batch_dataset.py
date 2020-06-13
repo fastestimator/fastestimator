@@ -150,6 +150,7 @@ class BatchDataset(FEDataset):
         results = [BatchDataset(ds, self.num_samples, self.probability) for ds in new_datasets]
         # Re-compute personal variables
         self.reset_index_maps()
+        FEDataset.fix_split_traceabilty(self, results, fractions)
         # Unpack response if only a single split
         if len(results) == 1:
             results = results[0]

@@ -19,6 +19,7 @@ from typing import Any, List, Optional
 import torch
 
 from fastestimator.network import BaseNetwork
+from fastestimator.pipeline import Pipeline
 from fastestimator.summary.summary import Summary
 from fastestimator.util.traceability_util import FeSummaryTable
 
@@ -61,6 +62,7 @@ class System:
     batch_idx: Optional[int]
     stop_training: bool
     network: BaseNetwork
+    pipeline: Pipeline
     max_train_steps_per_epoch: Optional[int]
     max_eval_steps_per_epoch: Optional[int]
     summary: Summary
@@ -68,6 +70,7 @@ class System:
 
     def __init__(self,
                  network: BaseNetwork,
+                 pipeline: Pipeline,
                  mode: Optional[str] = None,
                  num_devices: int = torch.cuda.device_count(),
                  log_steps: Optional[int] = None,
@@ -77,6 +80,7 @@ class System:
                  system_config: Optional[List[FeSummaryTable]] = None) -> None:
 
         self.network = network
+        self.pipeline = pipeline
         self.mode = mode
         self.num_devices = num_devices
         self.log_steps = log_steps

@@ -1,4 +1,5 @@
 import unittest
+
 import numpy as np
 import tensorflow as tf
 
@@ -19,7 +20,3 @@ class TestLenet(unittest.TestCase):
         lenet = LeNet(classes=5)
         output_shape = lenet(input_data).numpy().shape
         self.assertEqual(output_shape, (1, 5))
-
-
-if __name__ == "__main__":
-    unittest.main()

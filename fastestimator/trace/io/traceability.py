@@ -13,18 +13,25 @@
 # limitations under the License.
 # ==============================================================================
 
+import platform
+import shutil
 import sys
 
+import jsonpickle
 import matplotlib
 import torch
-from pylatex import Command, Document, Figure, Itemize, LongTable, MultiColumn, NoEscape, Package, Section, escape_latex
+from pylatex import Command, Document, Figure, Itemize, LongTable, MultiColumn, NoEscape, Package, Section, Subsection, \
+    escape_latex
 from pylatex.utils import bold
 
 import fastestimator as fe
+from fastestimator.dataset.dataset import FEDataset
 from fastestimator.summary.logs.log_plot import plot_logs
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
+from fastestimator.util.latex_util import HrefFEID, Verbatim
 from fastestimator.util.traceability_util import traceable
+from fastestimator.util.util import FEID
 
 
 @traceable()
@@ -35,11 +42,10 @@ class Traceability(Trace):
         save_path: Where to save the output files.
     """
     def __init__(self, save_path: str):
-        super().__init__(mode={"train", "eval"})
-        self.doc = Document(geometry_options=['lmargin=2cm', 'rmargin=2cm', 'tmargin=2cm', 'bmargin=2cm'])
-        self.doc.packages.append(Package(name='placeins', options=['section']))  # Keep tables in their sections
+        super().__init__(mode="!infer")
         self.save_path = save_path
         self.config_tables = []
+        self.doc = Document()
 
     def on_begin(self, data: Data) -> None:
 
@@ -48,12 +54,14 @@ class Traceability(Trace):
             raise RuntimeError("Traceability reports require an experiment name to be provided in estimator.fit()")
         self.config_tables = self.system.summary.system_config
 
+        self.doc = Document(geometry_options=['lmargin=2cm', 'rmargin=2cm', 'tmargin=2cm', 'bmargin=2cm'])
+        self.doc.packages.append(Package(name='placeins', options=['section']))  # Keep tables in their sections
+
         self.doc.preamble.append(NoEscape(r'\maxdeadcycles=' + str(2 * len(self.config_tables) + 10) + ''))
         self.doc.preamble.append(NoEscape(r'\extrafloats{' + str(len(self.config_tables) + 10) + '}'))
 
         self.doc.preamble.append(Command('title', exp_name))
-        backend = 'TensorFlow Backend' if isinstance(self.system.network, fe.network.TFNetwork) else 'PyTorch Backend'
-        self.doc.preamble.append(Command('author', f"FastEstimator {fe.__version__} - {backend}"))
+        self.doc.preamble.append(Command('author', f"FastEstimator {fe.__version__}"))
         self.doc.preamble.append(Command('date', NoEscape(r'\today')))
         self.doc.append(NoEscape(r'\maketitle'))
 
@@ -70,9 +78,19 @@ class Traceability(Trace):
             for tbl in self.config_tables:
                 tbl.render_table(self.doc)
 
+        with self.doc.create(Section("Datasets")):
+            for title in ['train', 'eval', 'test']:
+                dataset = self.system.pipeline.data.get(title, None)
+                if dataset:
+                    with self.doc.create(Subsection(f"{title.capitalize()} Data")):
+                        self.doc.append(HrefFEID(FEID(id(dataset)), dataset.__class__.__name__))
+                        if isinstance(dataset, FEDataset):
+                            self.doc.append(Verbatim(jsonpickle.dumps(dataset.summary(), unpicklable=False, indent=2)))
+
         with self.doc.create(Section("System Config")):
             with self.doc.create(Itemize()) as itemize:
                 itemize.add_item(escape_latex(f"FastEstimator {fe.__version__}"))
+                itemize.add_item(escape_latex(f"Python {platform.python_version()}"))
                 itemize.add_item(escape_latex(f"OS: {sys.platform}"))
                 itemize.add_item(f"Number of GPUs: {torch.cuda.device_count()}")
                 if fe.fe_deterministic_seed is not None:
@@ -100,4 +118,9 @@ class Traceability(Trace):
                         tabular.add_row((escape_latex(name), escape_latex(str(module.VERSION))),
                                         color='black!5' if color else 'white')
                         color = not color
-        self.doc.generate_pdf(self.save_path, clean_tex=False)
+        if shutil.which("latexmk") is None and shutil.which("pdflatex") is None:
+            # No LaTeX Compiler is available
+            self.doc.generate_tex(self.save_path)
+            # TODO - Gather the images from their tmp dirs so that user can compile later
+        else:
+            self.doc.generate_pdf(self.save_path, clean_tex=False)

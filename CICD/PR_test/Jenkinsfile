@@ -2,7 +2,7 @@ pipeline {
     agent {label 'master'}
     environment {
         JENKINS_ANACONDA_DIR='/var/jenkins_home/anaconda3'
-        JENKINS_PYTHON_ENV='pr_env_conda'
+        JENKINS_PYTHON_ENV='env'
     }
     stages {
         stage('Build') {
@@ -11,10 +11,8 @@ pipeline {
                     set -e
                     source ~/.bashrc
                     . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
-                    if [ ! -d "$JENKINS_ANACONDA_DIR/envs/$JENKINS_PYTHON_ENV" ]; then
-                        conda create --name $JENKINS_PYTHON_ENV python=3.6 -y
-                    fi
-                    conda activate $JENKINS_PYTHON_ENV
+                    virtualenv --python=$JENKINS_ANACONDA_DIR/bin/python $JENKINS_PYTHON_ENV
+                    source $JENKINS_PYTHON_ENV/bin/activate
                     pip install --no-cache-dir -e .
                     pip install --no-cache-dir coverage
                 '''
@@ -25,11 +23,19 @@ pipeline {
             steps {
                 sh '''#!/bin/bash
                     set -e
-                    . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
-                    conda activate $JENKINS_PYTHON_ENV
-                    python3 test/run_pr_test.py
+                    source $JENKINS_PYTHON_ENV/bin/activate
+                    python test/run_pr_test.py
                 '''
             }
+        }
+
+    }
+
+    post {
+        always {
+            sh '''
+                rm -rf $JENKINS_PYTHON_ENV
+            '''
         }
     }
 }

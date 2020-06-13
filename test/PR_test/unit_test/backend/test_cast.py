@@ -33,21 +33,26 @@ class TestToType(unittest.TestCase):
             }
         }
         cls.op_np = {
-            'x': np.dtype('float32'), 'y': [np.dtype('int8'), np.dtype('float64')], 'z': {
-                'key': np.dtype('int64')
+            'x': np.dtype('float16'),
+            'y': [np.dtype('float16'), np.dtype('float16')],
+            'z': {
+                'key': np.dtype('float16')
             }
         }
-        cls.op_tf = {'x': tf.float32, 'y': [tf.int8, tf.float64], 'z': {'key': tf.int64}}
-        cls.op_torch = {'x': torch.float32, 'y': [torch.int8, torch.float64], 'z': {'key': torch.int64}}
+        cls.op_tf = {'x': tf.uint8, 'y': [tf.uint8, tf.uint8], 'z': {'key': tf.uint8}}
+        cls.op_torch = {'x': torch.float64, 'y': [torch.float64, torch.float64], 'z': {'key': torch.float64}}
 
     def test_to_type_np(self):
-        types = fe.backend.to_type(self.data_np)
+        data = fe.backend.cast(self.data_np, "float16")
+        types = fe.backend.to_type(data)
         self.assertTrue(fet.is_equal(types, self.op_np))
 
     def test_to_type_tf(self):
-        types = fe.backend.to_type(self.data_tf)
+        data = fe.backend.cast(self.data_tf, "uint8")
+        types = fe.backend.to_type(data)
         self.assertTrue(fet.is_equal(types, self.op_tf))
 
     def test_to_type_torch(self):
-        types = fe.backend.to_type(self.data_torch)
+        data = fe.backend.cast(self.data_torch, "float64")
+        types = fe.backend.to_type(data)
         self.assertTrue(fet.is_equal(types, self.op_torch))
