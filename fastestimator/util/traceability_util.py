@@ -23,11 +23,10 @@ import numpy as np
 import tensorflow as tf
 import torch
 from pylatex import Document, Label, Marker, MultiColumn, NoEscape, Package, Table, Tabularx, TextColor
-from pylatex.base_classes import Container, Options
-from pylatex.lists import Enumerate
 from pylatex.utils import bold, escape_latex
 
-from fastestimator.util.util import strip_prefix
+from fastestimator.util.latex_util import ContainerList, HrefFEID, PyContainer
+from fastestimator.util.util import FEID, Flag, strip_prefix
 
 _Function = namedtuple('_Function', ['func', 'name'])
 _BoundFn = namedtuple('_BoundFn', ['func', 'args'])
@@ -62,70 +61,6 @@ _CommandTable = {
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
 
-class FEID:
-    """An int wrapper class that can change how it's values are printed.
-
-    Args:
-        val: An integer id to be wrapped.
-    """
-    __slots__ = ['_val']
-    _translation_dict = {}
-
-    def __init__(self, val: int):
-        self._val = val
-
-    def __hash__(self) -> int:
-        return hash(self._val)
-
-    def __eq__(self, other: Any) -> bool:
-        if isinstance(other, FEID):
-            return self._val == other._val
-        else:
-            return int.__eq__(self._val, other)
-
-    def __lt__(self, other: Any) -> bool:
-        if isinstance(other, FEID):
-            other = other._val
-        return int.__lt__(self._val, other)
-
-    def __str__(self) -> str:
-        return f"@FE{self._translation_dict.get(self._val, self._val)}"
-
-    def __repr__(self) -> str:
-        return f"@FE{self._translation_dict.get(self._val, self._val)}"
-
-    @classmethod
-    def set_translation_dict(cls, mapping: Dict[int, Any]) -> None:
-        """Provide a lookup table to be invoked during value printing.
-
-        Args:
-            mapping: A mapping of id: printable id.
-        """
-        cls._translation_dict.clear()
-        cls._translation_dict.update(mapping)
-
-
-class Flag:
-    """A mutable wrapper around a boolean.
-
-    Args:
-        val: The initial value for the Flag.
-    """
-    __slots__ = ['_val']
-
-    def __init__(self, val: bool = False):
-        self._val = val
-
-    def set_true(self):
-        self._val = True
-
-    def set_false(self):
-        self._val = False
-
-    def __bool__(self):
-        return self._val
-
-
 class FeSummaryTable:
     """A class containing summaries of traceability information.
 
@@ -134,6 +69,10 @@ class FeSummaryTable:
         fe_id: The id of this table, used for cross-referencing from other tables.
         **fields: Any other information about the summarized object / function.
     """
+    name: str
+    fe_id: FEID
+    fields: Dict[str, Any]
+
     def __init__(self,
                  name: str,
                  fe_id: FEID,
@@ -176,64 +115,6 @@ class FeSummaryTable:
                 if self.kwargs:
                     for idx, (kwarg, val) in enumerate(self.kwargs.items()):
                         tabular.add_row((kwarg, val), color='white' if idx % 2 else 'black!5')
-
-
-class ContainerList(Container):
-    """A class to expedite combining pieces of latex together.
-    """
-    def dumps(self) -> str:
-        """Get a string representation of this container.
-
-        Returns:
-            A string representation of itself.
-        """
-        return self.dumps_content()
-
-
-class PyContainer(ContainerList):
-    """A class to convert python containers to a LaTeX representation.
-
-    Args:
-        data: The python object to be converted to LaTeX.
-    """
-    def __init__(self, data: Union[list, tuple, set, dict]):
-        self.packages.add(Package('enumitem', options='inline'))
-        assert isinstance(data, (list, tuple, set, dict)), f"Unacceptable data type for PyContainer: {type(data)}"
-        open_char = '[' if isinstance(data, list) else '(' if isinstance(data, tuple) else r'\{'
-        close_char = ']' if isinstance(data, list) else ')' if isinstance(data, tuple) else r'\}'
-        ltx = Enumerate(options=Options(NoEscape('label={}'), NoEscape('itemjoin={,}')))
-        ltx._star_latex_name = True  # Converts this to an inline list
-        self.raw_input = data
-        if isinstance(data, dict):
-            for key, val in data.items():
-                ltx.add_item(ContainerList(data=[key, ": ", val]))
-        else:
-            for val in data:
-                ltx.add_item(val)
-        super().__init__(data=[NoEscape(open_char), ltx, NoEscape(close_char)])
-
-
-class HrefFEID(ContainerList):
-    """A class to represent a colored and underlined hyperref based on a given fe_id.
-
-    Args:
-        fe_id: The id used to link this hyperref.
-        name: A string suffix to be printed as part of the link text.
-    """
-    def __init__(self, fe_id: FEID, name: str):
-        self.packages.add(Package('hyperref', options='hidelinks'))
-        self.packages.add(Package('ulem'))
-        self.packages.add(Package('xcolor', options='table'))
-        self.fe_id = fe_id
-        self.name = name
-        super().__init__(data=[
-            NoEscape(r'\hyperref[tbl:'),
-            fe_id,
-            NoEscape(r']{\textcolor{blue}{\uline{'),
-            fe_id,
-            escape_latex(f": {name}") if name else "",
-            NoEscape("}}}")
-        ])
 
 
 def _deref_is_callable(instruction: dis.Instruction, closure_vars: inspect.ClosureVars) -> bool:
@@ -918,8 +799,9 @@ def fe_summary(self) -> List[FeSummaryTable]:
         if issubclass(x[1].type, (TFNetwork, TorchNetwork)) else 2 if issubclass(x[1].type, Pipeline) else 3
         if issubclass(x[1].type, Scheduler) else 4 if issubclass(x[1].type, Trace) else 5
         if issubclass(x[1].type, Op) else 6 if issubclass(x[1].type, (Dataset, tf.data.Dataset)) else 7
-        if not issubclass(x[1].type, (np.ndarray, tf.Tensor, torch.Tensor)) else 8)
-    key_mapping = {fe_id: idx for idx, (fe_id, val) in enumerate(ordered_items)}
+        if issubclass(x[1].type, (tf.keras.Model, torch.nn.Module)) else 8
+        if not issubclass(x[1].type, (np.ndarray, tf.Tensor, torch.Tensor)) else 9)
+    key_mapping = {fe_id: f"@FE{idx}" for idx, (fe_id, val) in enumerate(ordered_items)}
     FEID.set_translation_dict(key_mapping)
     return [item[1] for item in ordered_items]
 

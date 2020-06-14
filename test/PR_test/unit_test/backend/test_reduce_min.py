@@ -34,7 +34,3 @@ class TestReduceMin(unittest.TestCase):
 
     def test_reduce_min_axis(self):
         self.assertTrue(np.array_equal(reduce_min(self.test_np, axis=0), [1, 2]))
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -34,7 +34,3 @@ class TestSign(unittest.TestCase):
 
     def test_sign_torch_value(self):
         self.assertTrue(np.array_equal(sign(self.test_torch).numpy(), self.test_output_torch))
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -34,7 +34,3 @@ class TestReduceMean(unittest.TestCase):
 
     def test_reduce_mean_axis(self):
         self.assertTrue(np.array_equal(reduce_mean(self.test_np, axis=0), [2, 2.5]))
-
-
-if __name__ == "__main__":
-    unittest.main()

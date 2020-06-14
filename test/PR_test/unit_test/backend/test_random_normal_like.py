@@ -36,7 +36,3 @@ class TestRandomNormalLike(unittest.TestCase):
         output_shape = (2, 2)
         self.assertTrue((random_normal_like(self.test_torch).size() == output_shape),
                         'Output tensor shape should be same as input')
-
-
-if __name__ == "__main__":
-    unittest.main()

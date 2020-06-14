@@ -14,7 +14,3 @@ class TestRepeatScheduler(unittest.TestCase):
 
     def test_repeat_scheduler_all_values(self):
         self.assertEqual(self.scheduler.get_all_values(), self.input_data)
-
-
-if __name__ == "__main__":
-    unittest.main()
