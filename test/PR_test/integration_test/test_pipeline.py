@@ -12,6 +12,7 @@ from fastestimator.schedule import EpochScheduler
 from fastestimator.test.unittest_util import is_equal
 
 
+
 class SampleNumpyOp(NumpyOp):
     def forward(self, data, state):
         return data
@@ -471,12 +472,11 @@ class TestPipelineGetLoader(unittest.TestCase):
         """
         dataset = fe.dataset.NumpyDataset({"x": [np.ones((2, 1), dtype=np.float32), np.ones((1, 2), dtype=np.float32)]})
         pipeline = fe.Pipeline(train_data=dataset, pad_value=-1, batch_size=2)
-        loader = pipeline.get_loader(mode="train")
+        loader = pipeline.get_loader(mode="train", shuffle=False)
         for idx, batch in enumerate(loader, start=1):
             result = batch
             if idx == 1:
                 break
 
         ans = {"x": torch.tensor([[[1, -1], [1, -1]], [[1, 1], [-1, -1]]], dtype=torch.float32)}
-
-        self.assertTrue(ans, result)
+        self.assertTrue(is_equal(ans, result))
