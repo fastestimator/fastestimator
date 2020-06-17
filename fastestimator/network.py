@@ -99,7 +99,7 @@ class BaseNetwork:
         gradient_ops = [op for op in self.epoch_ops if hasattr(op, "retain_graph")]
         for idx, gradient_op in enumerate(gradient_ops):
             gradient_op.retain_graph = idx != len(gradient_ops) - 1
-        self.epoch_state = {"warmup": warmup, "mode": mode, "req_grad": len(gradient_ops) > 0}
+        self.epoch_state = {"warmup": warmup, "mode": mode, "req_grad": len(gradient_ops) > 0, "epoch": epoch}
         for model in self.epoch_models:
             if hasattr(model, "optimizer") and model.optimizer is not None:
                 if isinstance(model.optimizer, Scheduler):

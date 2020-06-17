@@ -49,10 +49,14 @@ def get_dependency():
         'h5py',
         'jsonpickle',
         'python-docx',
-        'PyLaTeX',
+        'PyLaTeX==1.3.2',
+        'natsort==7.0.1',
         'tensorflow_probability==0.8.0',
         'transformers==2.4.1',
-        'tensorflow==2.1.0'
+        'tensorflow==2.1.0',
+        'pytorch-model-summary==0.1.1',
+        'graphviz==0.14',
+        'hiddenlayer==0.3',
     ]
     if os.name == "nt":
         dependencies.append(

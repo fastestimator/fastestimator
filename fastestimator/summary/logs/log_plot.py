@@ -172,7 +172,8 @@ def visualize_logs(experiments: List[Summary],
                    share_legend: bool = True,
                    pretty_names: bool = False,
                    ignore_metrics: Optional[Set[str]] = None,
-                   include_metrics: Optional[Set[str]] = None):
+                   include_metrics: Optional[Set[str]] = None,
+                   verbose: bool = True):
     """A function which will save or display experiment histories for comparison viewing / analysis.
 
     Args:
@@ -183,6 +184,7 @@ def visualize_logs(experiments: List[Summary],
         pretty_names: Whether to modify the metric names in graph titles (True) or leave them alone (False).
         ignore_metrics: Any metrics to ignore during plotting.
         include_metrics: A whitelist of metric keys (None whitelists all keys).
+        verbose: Whether to print out the save location.
     """
     plot_logs(experiments,
               smooth_factor=smooth_factor,
@@ -193,10 +195,12 @@ def visualize_logs(experiments: List[Summary],
     if save_path is None:
         plt.show()
     else:
-        save_path = os.path.dirname(save_path)
-        if save_path == "":
-            save_path = "."
-        os.makedirs(save_path, exist_ok=True)
-        save_file = os.path.join(save_path, 'parse_logs.png')
-        print("Saving to {}".format(save_file))
+        save_path = os.path.normpath(save_path)
+        root_dir = os.path.dirname(save_path)
+        if root_dir == "":
+            root_dir = "."
+        os.makedirs(root_dir, exist_ok=True)
+        save_file = os.path.join(root_dir, os.path.basename(save_path) or 'parse_logs.png')
+        if verbose:
+            print("Saving to {}".format(save_file))
         plt.savefig(save_file, dpi=300, bbox_inches="tight")
