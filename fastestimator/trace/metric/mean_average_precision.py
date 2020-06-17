@@ -13,23 +13,28 @@
 # limitations under the License.
 # ==============================================================================
 """COCO Mean average precisin (mAP) implementation."""
-import json  # REMOVE
 from collections import defaultdict
 from typing import Dict, List
 
 import numpy as np
+from pycocotools import mask as maskUtils
 
 from fastestimator.backend.to_number import to_number
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
-from pycocotools import mask as maskUtils
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class MeanAveragePrecision(Trace):
     """Calculate COCO mean average precision.
 
     Args:
+        num_classes: Maximum `int` value for your class label. In COCO dataset we only used 80 classes, but the maxium
+            value of the class label is `90`. In this case `num_classes` should be `90`.
+
     Returns:
+        Mean Average Precision.
     """
     def __init__(self,
                  num_classes: int,
@@ -69,15 +74,16 @@ class MeanAveragePrecision(Trace):
     def pred_key(self) -> str:
         return self.inputs[1]
 
-    def _get_id_in_epoch(self, idx_in_batch):
+    def _get_id_in_epoch(self, idx_in_batch: int) -> int:
         """Get unique image id in epoch.
 
         Id starts from 1.
 
         Args:
-            idx_in_batch:
+            idx_in_batch: Image id within a batch.
 
         Returns:
+            Global unique id within one epoch.
         """
         # for this batch
         num_unique_id_previous = len(np.unique(self.ids_unique))
@@ -91,14 +97,14 @@ class MeanAveragePrecision(Trace):
         return self.ids_in_epoch
 
     def on_epoch_begin(self, data: Data):
-        """Reset"""
+        """Reset instance variables."""
         self.image_ids = []  # append all the image ids coming from each iteration
         self.evalimgs = {}
         self.eval = {}
         self.ids_in_epoch = 0
 
     def on_batch_begin(self, data: Data):
-        """Reset"""
+        """Reset instance variables."""
         self.gt = defaultdict(list)  # gt for evaluation
         self.det = defaultdict(list)  # det for evaluation
         self.batch_image_ids = []  # img_ids per batch
@@ -155,8 +161,7 @@ class MeanAveragePrecision(Trace):
         return pred_with_id
 
     def on_batch_end(self, data: Data):
-        #########read det, gt
-
+        # begin of reading det and gt
         pred = list(map(to_number, data[self.pred_key]))  # pred is list (batch, ) of np.ndarray (?, 6)
         pred = self._reshape_pred(pred)
 
@@ -187,7 +192,7 @@ class MeanAveragePrecision(Trace):
 
         for dict_elem in predicted_bb:
             self.det[dict_elem['idx'], dict_elem['label']].append(dict_elem)
-        #########end of read det, gt
+        # end of reading det and gt
 
         # compute iou matrix, matrix index is (img_id, cat_id), each element in matrix has shape (num_det, num_gt)
         self.ious = {(img_id, cat_id): self.compute_iou(self.det[img_id, cat_id], self.gt[img_id, cat_id])
@@ -270,8 +275,8 @@ class MeanAveragePrecision(Trace):
             'num_gt': num_gt,
         }
 
-    def accumulate(self):
-        """Generate precision recall curve."""
+    def accumulate(self) -> None:
+        """Generate precision-recall curve."""
         key_list = sorted(self.evalimgs)  # key format (cat_id, img_id)
         eval_list = [self.evalimgs[key] for key in key_list]
 
@@ -328,7 +333,7 @@ class MeanAveragePrecision(Trace):
                 recall = true_positives / num_all_gt
                 precision = true_positives / (false_positives + true_positives + np.spacing(1))
 
-                q = np.zeros((num_recall_thresh, ))
+                precision_at_recall = np.zeros((num_recall_thresh, ))
                 score = np.zeros((num_recall_thresh, ))
 
                 if nd:
@@ -337,7 +342,7 @@ class MeanAveragePrecision(Trace):
                     recall_matrix[index, cat_index] = 0
 
                 precision = precision.tolist()
-                q = q.tolist()
+                precision_at_recall = precision_at_recall.tolist()
 
                 # smooth precision along the curve, remove zigzag
                 for i in range(nd - 1, 0, -1):
@@ -348,12 +353,12 @@ class MeanAveragePrecision(Trace):
 
                 try:
                     for recall_index, precision_index in enumerate(inds):
-                        q[recall_index] = precision[precision_index]
+                        precision_at_recall[recall_index] = precision[precision_index]
                         score[recall_index] = det_scores_sorted[precision_index]
                 except:
                     pass
 
-                precision_matrix[index, :, cat_index] = np.array(q)
+                precision_matrix[index, :, cat_index] = np.array(precision_at_recall)
                 scores_matrix[index, :, cat_index] = np.array(score)
 
         self.eval = {
@@ -363,7 +368,16 @@ class MeanAveragePrecision(Trace):
             'scores': scores_matrix,
         }
 
-    def summarize(self, iou=None):
+    def summarize(self, iou: float = None) -> float:
+        """Compute average precision given one intersection union threshold.
+
+        Args:
+            iou: Intersection over union threshold. If this value is `None`, then average all iou thresholds. The result
+                is the mean average precision.
+
+        Returns:
+            Average precision.
+        """
         precision_at_iou = self.eval['precision']  # shape (num_iou_thresh, num_recall_thresh, num_categories)
         if iou is not None:
             iou_thresh_index = np.where(iou == self.iou_thres)[0]
@@ -381,12 +395,14 @@ class MeanAveragePrecision(Trace):
     def compute_iou(self, det: np.ndarray, gt: np.ndarray) -> np.ndarray:
         """Compute intersection over union.
 
+        We leverage `maskUtils.iou`.
+
         Args:
-            det:
-            gt:
+            det: Detection array.
+            gt: Ground truth array.
 
         Returns:
-            Intersection of union matrix.
+            Intersection of union array.
         """
         num_dt = len(det)
         num_gt = len(gt)
