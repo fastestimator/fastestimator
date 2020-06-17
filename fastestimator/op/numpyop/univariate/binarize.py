@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Callable, Dict, Iterable, List, Union
+from typing import Any, Dict, Iterable, List, Union
 
 import numpy as np
 
 from fastestimator.op.numpyop.numpyop import NumpyOp
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class Binarize(NumpyOp):
     """Binarize the input data such that all elements >= threshold become 1 otherwise 0.
 
@@ -32,7 +34,7 @@ class Binarize(NumpyOp):
     """
     def __init__(self,
                  threshold: float,
-                 inputs: Union[str, Iterable[str], Callable],
+                 inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)

@@ -17,8 +17,10 @@ from typing import Any, Callable, Dict, Iterable, List, Union
 import numpy as np
 
 from fastestimator.op.numpyop.numpyop import NumpyOp
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class WordtoId(NumpyOp):
     """Converts words to their corresponding id using mapper function or dictionary.
 
@@ -33,7 +35,7 @@ class WordtoId(NumpyOp):
     def __init__(
             self,
             mapping: Union[Dict[str, int], Callable[[List[str]], List[int]]],
-            inputs: Union[str, Iterable[str], Callable],
+            inputs: Union[str, Iterable[str]],
             outputs: Union[str, Iterable[str]],
             mode: Union[None, str, Iterable[str]] = None,
     ) -> None:

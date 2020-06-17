@@ -19,8 +19,10 @@ from albumentations import BboxParams, KeypointParams
 from albumentations.augmentations.transforms import ShiftScaleRotate as ShiftScaleRotateAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class ShiftScaleRotate(MultiVariateAlbumentation):
     """Randomly apply affine transforms: translate, scale and rotate the input.
 

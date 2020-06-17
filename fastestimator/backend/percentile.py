@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import TypeVar, Union, List
+import math
+from typing import List, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
@@ -31,7 +32,7 @@ def percentile(tensor: Tensor,
     """Compute the `percentiles` of a `tensor`.
 
     The n-th percentile of `tensor` is the value n/100 of the way from the minimum to the maximum in a sorted copy of
-    `tensor`. If the percentile falls in between two values, the nearest of the two values will be used.
+    `tensor`. If the percentile falls in between two values, the lower of the two values will be used.
 
     This method can be used with Numpy data:
     ```python
@@ -72,7 +73,7 @@ def percentile(tensor: Tensor,
     if isinstance(tensor, tf.Tensor):
         if isinstance(percentiles, List):
             percentiles = tf.convert_to_tensor(percentiles)
-        return tfp.stats.percentile(tensor, percentiles, axis=axis, keep_dims=keepdims)
+        return tfp.stats.percentile(tensor, percentiles, axis=axis, keep_dims=keepdims, interpolation='lower')
     elif isinstance(tensor, torch.Tensor):
         n_dims = len(tensor.shape)
         if axis is None:
@@ -93,7 +94,7 @@ def percentile(tensor: Tensor,
         permuted = torch.reshape(permuted, other_shape)
         results = []
         for tile in to_list(percentiles):
-            target = min(round(tile / 100.0 * permuted.shape[-1]), permuted.shape[-1])
+            target = 1 + math.floor(tile / 100.0 * (permuted.shape[-1] - 1))
             kth_val = torch.kthvalue(permuted, k=target, dim=-1, keepdim=True)[0]
             for dim in range(n_dims - len(kth_val.shape)):
                 kth_val = torch.unsqueeze(kth_val, dim=-1)
@@ -108,6 +109,6 @@ def percentile(tensor: Tensor,
         else:
             return torch.stack(results, dim=0)
     elif isinstance(tensor, np.ndarray):
-        return np.percentile(tensor, percentiles, axis=axis, keepdims=keepdims, interpolation='nearest')
+        return np.percentile(tensor, percentiles, axis=axis, keepdims=keepdims, interpolation='lower')
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(tensor)))

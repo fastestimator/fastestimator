@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Callable, Dict, Iterable, List, Union
+from typing import Any, Dict, Iterable, List, Union
 
 import numpy as np
 
 from fastestimator.op.numpyop.numpyop import NumpyOp
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class PadSequence(NumpyOp):
     """Pad sequences to the same length with provided value.
 
@@ -33,7 +35,7 @@ class PadSequence(NumpyOp):
             like "!infer" or "!train".
     """
     def __init__(self,
-                 inputs: Union[str, Iterable[str], Callable],
+                 inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  max_len: int,
                  value: Union[str, int] = 0,

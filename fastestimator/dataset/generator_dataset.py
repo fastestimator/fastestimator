@@ -17,9 +17,11 @@ from functools import lru_cache
 from typing import Any, Dict, Generator, Iterable, List, Sequence, Sized
 
 from fastestimator.dataset.dataset import DatasetSummary, FEDataset, KeySummary
+from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import get_shape, get_type
 
 
+@traceable()
 class GeneratorDataset(FEDataset):
     """A dataset from a generator function.
 

@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Callable, Iterable, Tuple, Union
+from typing import Iterable, Tuple, Union
 
 from albumentations.augmentations.transforms import RandomShadow as RandomShadowAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class RandomShadow(ImageOnlyAlbumentation):
     """Add shadows to an image
 
@@ -39,7 +41,7 @@ class RandomShadow(ImageOnlyAlbumentation):
         uint8, float32
     """
     def __init__(self,
-                 inputs: Union[str, Iterable[str], Callable],
+                 inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  shadow_roi: Tuple[float, float, float, float] = (0.0, 0.5, 1.0, 1.0),

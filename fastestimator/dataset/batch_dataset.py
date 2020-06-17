@@ -19,34 +19,36 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
 import numpy as np
 
 from fastestimator.dataset.dataset import DatasetSummary, FEDataset
+from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_list
 
 
+@traceable()
 class BatchDataset(FEDataset):
     """BatchDataset extracts a list (batch) of data from a single dataset or multiple datasets.
 
     This dataset helps to enable several use-cases:
-        1. Creating an unpaired dataset from two or more completely disjoint (no common keys) datasets.
-            ```python
-            ds1 = fe.dataset.DirDataset(...)  # {"a": <32x32>}
-            ds2 = fe.dataset.DirDataset(...)  # {"b": <28x28>}
-            unpaired_ds = fe.dataset.BatchDataset(datasets=[ds1, ds2], num_samples=[4, 4])
-            # {"a": <4x32x32>, "b": <4x28x28>}
-            ```
-        2. Deterministic class balanced sampling from two or more similar (all keys in common) datasets.
-            ```python
-            class1_ds = fe.dataset.DirDataset(...)  # {"x": <32x32>, "y": <>}
-            class2_ds = fe.dataset.DirDataset(...)  # {"x": <32x32>, "y": <>}
-            ds = fe.dataset.BatchDataset(datasets=[ds1, ds2], num_samples=[3, 5])
-            # {"x": <8x32x32>, "y": <8>}  (3 of the samples are from class1_ds, 5 of the samples from class2_ds)
-            ```
-        3. Probabilistic class balanced sampling from two or more similar (all keys in common) datasets.
-            ```python
-            class1_ds = fe.dataset.DirDataset(...)  # {"x": <32x32>, "y": <>}
-            class2_ds = fe.dataset.DirDataset(...)  # {"x": <32x32>, "y": <>}
-            ds = fe.dataset.BatchDataset(datasets=[ds1, ds2], num_samples=8, probability=[0.7, 0.3])
-            # {"x": <8x32x32>, "y": <8>}  (~70% of the samples are from class1_ds, ~30% of the samples from class2_ds)
-            ```
+    1. Creating an unpaired dataset from two or more completely disjoint (no common keys) datasets.
+        ```python
+        ds1 = fe.dataset.DirDataset(...)  # {"a": <32x32>}
+        ds2 = fe.dataset.DirDataset(...)  # {"b": <28x28>}
+        unpaired_ds = fe.dataset.BatchDataset(datasets=[ds1, ds2], num_samples=[4, 4])
+        # {"a": <4x32x32>, "b": <4x28x28>}
+        ```
+    2. Deterministic class balanced sampling from two or more similar (all keys in common) datasets.
+        ```python
+        class1_ds = fe.dataset.DirDataset(...)  # {"x": <32x32>, "y": <>}
+        class2_ds = fe.dataset.DirDataset(...)  # {"x": <32x32>, "y": <>}
+        ds = fe.dataset.BatchDataset(datasets=[ds1, ds2], num_samples=[3, 5])
+        # {"x": <8x32x32>, "y": <8>}  (3 of the samples are from class1_ds, 5 of the samples from class2_ds)
+        ```
+    3. Probabilistic class balanced sampling from two or more similar (all keys in common) datasets.
+        ```python
+        class1_ds = fe.dataset.DirDataset(...)  # {"x": <32x32>, "y": <>}
+        class2_ds = fe.dataset.DirDataset(...)  # {"x": <32x32>, "y": <>}
+        ds = fe.dataset.BatchDataset(datasets=[ds1, ds2], num_samples=8, probability=[0.7, 0.3])
+        # {"x": <8x32x32>, "y": <8>}  (~70% of the samples are from class1_ds, ~30% of the samples from class2_ds)
+        ```
 
     Args:
         datasets: The dataset(s) to use for batch sampling.
@@ -63,7 +65,7 @@ class BatchDataset(FEDataset):
         self.probability = to_list(probability)
         self.same_feature = False
         self._check_input()
-        self.index_maps = [list(range(max((len(dataset) for dataset in self.datasets)))) for _ in self.datasets]
+        self.reset_index_maps()
         self.pad_value = None
 
     def _check_input(self) -> None:
@@ -72,6 +74,7 @@ class BatchDataset(FEDataset):
         Raises:
             AssertionError: If any of the parameters are found to by unacceptable for a variety of reasons.
         """
+        assert len(self.datasets) > 1, "must provide multiple datasets as input"
         for num_sample in self.num_samples:
             assert isinstance(num_sample, int) and num_sample > 0, "only accept positive integer type as num_sample"
         # check dataset keys
@@ -146,20 +149,12 @@ class BatchDataset(FEDataset):
         new_datasets = [[ds[i] for ds in new_datasets] for i in range(num_splits)]
         results = [BatchDataset(ds, self.num_samples, self.probability) for ds in new_datasets]
         # Re-compute personal variables
-        self.index_maps = [list(range(max((len(dataset) for dataset in self.datasets)))) for _ in self.datasets]
+        self.reset_index_maps()
+        FEDataset.fix_split_traceabilty(self, results, fractions)
         # Unpack response if only a single split
         if len(results) == 1:
             results = results[0]
         return results
-
-    def shuffle(self) -> None:
-        """Rearrange the index maps of this BatchDataset.
-
-        This method is invoked every epoch by OpDataset which allows each epoch to have different random pairings of the
-        basis datasets.
-        """
-        for mapping in self.index_maps:
-            random.shuffle(mapping)
 
     def summary(self) -> DatasetSummary:
         """Generate a summary representation of this dataset.
@@ -175,11 +170,11 @@ class BatchDataset(FEDataset):
         Returns:
             How many batches of data can this dataset serve per epoch.
         """
-        if self.same_feature:
-            length = math.ceil(sum([len(dataset) for dataset in self.datasets]) / sum(self.num_samples))
+        if len(self.num_samples) > 1:
+            length = max([math.ceil(len(ds) / num_sample) for ds, num_sample in zip(self.datasets, self.num_samples)])
         else:
             num_sample = self.num_samples[0]
-            length = max([math.ceil(len(ds) / num_sample) for ds in self.datasets])
+            length = max([math.ceil(len(ds) / num_sample / p) for ds, p in zip(self.datasets, self.probability)])
         return length
 
     def __getitem__(self, batch_idx: int) -> List[Dict[str, Any]]:
@@ -200,13 +195,30 @@ class BatchDataset(FEDataset):
                 num_samples = self.num_samples
             for dataset, num_sample, index_map in zip(self.datasets, num_samples, self.index_maps):
                 for idx in range(num_sample):
-                    items.append(dataset[index_map[(batch_idx * num_sample + idx)] % len(dataset)])
+                    items.append(dataset[index_map[batch_idx * num_sample + idx]])
         else:
             num_sample = self.num_samples[0]
             for idx in range(num_sample):
                 paired_items = [
-                    dataset[index_map[(batch_idx * num_sample + idx)] % len(dataset)] for dataset,
+                    dataset[index_map[batch_idx * num_sample + idx]] for dataset,
                     index_map in zip(self.datasets, self.index_maps)
                 ]
                 items.append({k: v for d in paired_items for k, v in d.items()})
+        random.shuffle(items)
         return items
+
+    def reset_index_maps(self) -> None:
+        """Rearrange the index maps of this BatchDataset.
+
+        This method is invoked every epoch by OpDataset which allows each epoch to have different random pairings of the
+        basis datasets.
+        """
+        num_samples = self.num_samples
+        if self.probability:
+            num_samples = num_samples * len(self.datasets)
+        self.index_maps = []
+        for dataset, num_sample in zip(self.datasets, num_samples):
+            index_map = [list(range(len(dataset))) for _ in range(math.ceil(len(self) * num_sample / len(dataset)))]
+            for mapping in index_map:
+                random.shuffle(mapping)
+            self.index_maps.append([item for sublist in index_map for item in sublist])

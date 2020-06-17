@@ -12,13 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import os
+import random
 from collections import ChainMap, deque
 from typing import Any, Dict, Iterable, List, Optional, Set, Union
 
+import numpy as np
 import tensorflow as tf
+import torch
 from tensorflow.python.distribute.input_lib import DistributedDataset
 from torch.utils.data import DataLoader
 
+import fastestimator as fe
 from fastestimator.backend.to_shape import to_shape
 from fastestimator.backend.to_tensor import to_tensor
 from fastestimator.backend.to_type import to_type
@@ -31,9 +36,11 @@ from fastestimator.trace.io.best_model_saver import BestModelSaver
 from fastestimator.trace.io.model_saver import ModelSaver
 from fastestimator.trace.trace import EvalEssential, Logger, Trace, TrainEssential
 from fastestimator.util.data import Data
+from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import Suppressor, draw, to_list, to_set
 
 
+@traceable()
 class Estimator:
     """One class to rule them all.
 
@@ -55,6 +62,7 @@ class Estimator:
         monitor_names: Additional keys from the data dictionary to be written into the logs.
     """
     pipeline: Pipeline
+    network: BaseNetwork
     traces: List[Union[Trace, Scheduler[Trace]]]
     monitor_names: Set[str]
 
@@ -75,26 +83,32 @@ class Estimator:
             "log_steps must be None or positive (or 0 to disable only train logging)"
         self.monitor_names = to_set(monitor_names) | self.network.get_loss_keys()
         self.system = System(network=network,
+                             pipeline=pipeline,
                              log_steps=log_steps,
                              total_epochs=epochs,
                              max_train_steps_per_epoch=max_train_steps_per_epoch,
-                             max_eval_steps_per_epoch=max_eval_steps_per_epoch)
+                             max_eval_steps_per_epoch=max_eval_steps_per_epoch,
+                             system_config=self.fe_summary())
 
-    def fit(self, summary: Optional[str] = None, warmup=True) -> Optional[Summary]:
+    def fit(self, summary: Optional[str] = None, warmup: Union[bool, str] = True) -> Optional[Summary]:
         """Train the network for the number of epochs specified by the estimator's constructor.
 
         Args:
             summary: A name for the experiment. If provided, the log history will be recorded in-memory and returned as
                 a summary object at the end of training.
+            warmup: Whether to perform warmup before training begins. The warmup procedure will test one step at every
+                epoch where schedulers cause the execution graph to change. This can take some time up front, but can
+                also save significant heartache on epoch 300 when the training unexpectedly fails due to a tensor size
+                mismatch. When set to "debug", the warmup will be performed in eager execution for easier debugging.
 
         Returns:
             A summary object containing the training history for this session iff a `summary` name was provided.
         """
         draw()
-        self.system.reset(summary)
+        self.system.reset(summary, self.fe_summary())
         self._prepare_traces(run_modes={"train", "eval"})
         if warmup:
-            self._warmup()
+            self._warmup(warmup=warmup)
         self._start(run_modes={"train", "eval"})
         return self.system.summary or None
 
@@ -213,11 +227,14 @@ class Estimator:
         sorted_traces.extend(list(end_traces))
         return sorted_traces
 
-    def _warmup(self) -> None:
+    def _warmup(self, warmup: Union[bool, str]) -> None:
         """Perform a test run of each pipeline and network signature epoch to make sure that training won't fail later.
 
         Traces are not executed in the warmup since they are likely to contain state variables which could become
         corrupted by running extra steps.
+
+        Args:
+            warmup: Warmup arg specified by estimator.fit.
         """
         all_traces = get_current_items(self.traces_in_use, run_modes={"train", "eval"})
         self._sort_traces(all_traces)
@@ -254,7 +271,7 @@ class Estimator:
                     "found missing key(s) during epoch {} mode {}: {}".format(epoch, mode, unmet_requirements)
                 self._sort_traces(traces, available_outputs=pipeline_output_keys | network_output_keys)
                 trace_input_keys.update(traces[0].inputs)
-                self.network.load_epoch(mode, epoch, output_keys=trace_input_keys, warmup=True)
+                self.network.load_epoch(mode, epoch, output_keys=trace_input_keys, warmup=warmup)
                 self.network.run_step(batch)
                 self.network.unload_epoch()
         assert not monitor_names, "found missing key(s): {}".format(monitor_names)
@@ -281,8 +298,8 @@ class Estimator:
         """
         all_traces = get_current_items(self.traces_in_use, run_modes=run_modes)
         self._sort_traces(all_traces)
-        self._run_traces_on_begin(traces=all_traces)
         try:
+            self._run_traces_on_begin(traces=all_traces)
             if "train" in run_modes or "eval" in run_modes:
                 for self.system.epoch_idx in range(self.system.epoch_idx + 1, self.system.total_epochs + 1):
                     if "train" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
@@ -322,8 +339,8 @@ class Estimator:
                 if self.system.mode == "train":
                     self.system.update_global_step()
                 self.system.update_batch_idx()
-                self._run_traces_on_batch_begin(traces=traces)
                 batch = self._configure_tensor(loader, batch)
+                self._run_traces_on_batch_begin(batch, traces=traces)
                 batch, prediction = self.network.run_step(batch)
                 self._run_traces_on_batch_end(batch, prediction, traces=traces)
                 if (self.system.batch_idx == self.system.max_train_steps_per_epoch and self.system.mode == "train") or (
@@ -400,13 +417,14 @@ class Estimator:
             trace.on_epoch_begin(data)
         self._check_early_exit()
 
-    def _run_traces_on_batch_begin(self, traces: Iterable[Trace]) -> None:
+    def _run_traces_on_batch_begin(self, batch: Dict[str, Any], traces: Iterable[Trace]) -> None:
         """Invoke the on_batch_begin methods of given traces.
 
         Args:
+            batch: The batch data which was provided by the pipeline.
             traces: List of traces.
         """
-        data = Data()
+        data = Data(batch)
         for trace in traces:
             trace.on_batch_begin(data)
         self._check_early_exit()
@@ -460,3 +478,20 @@ class Estimator:
 class EarlyStop(Exception):
     """An exception raised when the system.stop_training flag is flipped by a Trace in order to abort the training.
     """
+
+
+def enable_deterministic(seed):
+    """Invoke to set random seed for deterministic training. The determinism only works for tensorflow >= 2.1 and
+    pytorch >= 1.14, and some model layers don't support.
+
+    Known failing layers:
+    * tf.keras.layers.UpSampling2D
+
+    """
+    fe.fe_deterministic_seed = seed
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    os.environ['TF_DETERMINISTIC_OPS'] = str(1)
+    random.seed(seed)
+    np.random.seed(seed)
+    tf.random.set_seed(seed)
+    torch.manual_seed(seed)

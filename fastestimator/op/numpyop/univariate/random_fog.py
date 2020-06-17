@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Callable, Iterable, Union
+from typing import Iterable, Union
 
 from albumentations.augmentations.transforms import RandomFog as RandomFogAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class RandomFog(ImageOnlyAlbumentation):
     """Add fog to an image.
 
@@ -36,7 +38,7 @@ class RandomFog(ImageOnlyAlbumentation):
         uint8, float32
     """
     def __init__(self,
-                 inputs: Union[str, Iterable[str], Callable],
+                 inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  fog_coef_lower: float = 0.3,

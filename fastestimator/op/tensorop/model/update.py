@@ -16,14 +16,15 @@ from typing import Any, Dict, Iterable, List, TypeVar, Union
 
 import tensorflow as tf
 import torch
-from tensorflow.python.framework import ops as tfops
 
 from fastestimator.backend.update_model import update_model
 from fastestimator.op.tensorop.tensorop import TensorOp
+from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
+@traceable()
 class UpdateOp(TensorOp):
     """This class performs updates to a model's weights based on the loss.
 

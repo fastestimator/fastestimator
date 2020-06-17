@@ -13,7 +13,9 @@
 # limitations under the License.
 # ==============================================================================
 from collections import defaultdict
-from typing import Optional
+from typing import List, Optional
+
+from fastestimator.util.traceability_util import FeSummaryTable
 
 
 class Summary:
@@ -21,9 +23,12 @@ class Summary:
 
     Args:
         name: Name of the experiment. If None then experiment results will be ignored.
+        system_config: A description of the initialization parameters defining the estimator associated with this
+            experiment.
     """
-    def __init__(self, name: Optional[str]) -> None:
+    def __init__(self, name: Optional[str], system_config: Optional[List[FeSummaryTable]] = None) -> None:
         self.name = name
+        self.system_config = system_config
         self.history = defaultdict(lambda: defaultdict(dict))  # {mode: {key: {step: value}}}
 
     def merge(self, other: 'Summary'):

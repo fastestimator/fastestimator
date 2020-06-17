@@ -15,11 +15,12 @@
 # ==============================================================================
 import argparse
 
-from fastestimator.cli.train import configure_train_parser, configure_test_parser
 from fastestimator.cli.logs import configure_log_parser
+from fastestimator.cli.train import configure_test_parser, configure_train_parser
+import sys
 
 
-def run() -> None:
+def run(argv) -> None:
     """A function which invokes the various argument parsers and then runs the requested subroutine.
     """
     parser = argparse.ArgumentParser(allow_abbrev=False)
@@ -30,9 +31,13 @@ def run() -> None:
     configure_train_parser(subparsers)
     configure_test_parser(subparsers)
     configure_log_parser(subparsers)
-    args, unknown = parser.parse_known_args()
+    args, unknown = parser.parse_known_args(argv)
     args.func(vars(args), unknown)
 
 
+def main() -> None:
+    run(sys.argv[1:])
+
+
 if __name__ == '__main__':
-    run()
+    main()

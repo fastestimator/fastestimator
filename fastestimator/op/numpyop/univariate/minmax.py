@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Callable, Dict, Iterable, List, Union
+from typing import Any, Dict, Iterable, List, Union
 
 import numpy as np
 
 from fastestimator.op.numpyop.numpyop import NumpyOp
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class Minmax(NumpyOp):
     """Normalize data using the minmax method.
 
@@ -31,7 +33,7 @@ class Minmax(NumpyOp):
         epsilon: A small value to prevent numeric instability in the division.
     """
     def __init__(self,
-                 inputs: Union[str, Iterable[str], Callable],
+                 inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  epsilon: float = 1e-7):

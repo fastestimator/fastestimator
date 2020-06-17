@@ -17,21 +17,24 @@ from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional
 
 import tensorflow as tf
 import torch
+from tensorflow.keras.mixed_precision import experimental as mixed_precision_tf
 from tensorflow.python.distribute.values import DistributedValues
 
 from fastestimator.backend.load_model import load_model
 from fastestimator.backend.to_tensor import to_tensor
-from fastestimator.op.op import get_inputs_by_op, write_outputs_by_op
+from fastestimator.op.op import LambdaOp, get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model.model import ModelOp
 from fastestimator.op.tensorop.model.update import UpdateOp
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
+from fastestimator.util.traceability_util import trace_model, traceable
 from fastestimator.util.util import NonContext, get_batch_size, to_list
 
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 T = TypeVar('T')
 
 
+@traceable()
 class BaseNetwork:
     """A base class for Network objects.
 
@@ -58,7 +61,7 @@ class BaseNetwork:
             AssertionError: If any of the ops are not TensorOps.
         """
         for op in get_current_items(self.ops):
-            assert isinstance(op, TensorOp), "unsupported op format, must provide TensorOp in Network"
+            assert isinstance(op, (TensorOp, LambdaOp)), "unsupported op format, must provide TensorOp in Network"
 
     def get_scheduled_items(self, mode: str) -> List[Any]:
         """Get a list of items considered for scheduling.
@@ -96,7 +99,7 @@ class BaseNetwork:
         gradient_ops = [op for op in self.epoch_ops if hasattr(op, "retain_graph")]
         for idx, gradient_op in enumerate(gradient_ops):
             gradient_op.retain_graph = idx != len(gradient_ops) - 1
-        self.epoch_state = {"warmup": warmup, "mode": mode, "req_grad": len(gradient_ops) > 0}
+        self.epoch_state = {"warmup": warmup, "mode": mode, "req_grad": len(gradient_ops) > 0, "epoch": epoch}
         for model in self.epoch_models:
             if hasattr(model, "optimizer") and model.optimizer is not None:
                 if isinstance(model.optimizer, Scheduler):
@@ -251,6 +254,7 @@ def Network(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> BaseNetwork:
     return network
 
 
+@traceable()
 class TorchNetwork(BaseNetwork):
     """An extension of BaseNetwork for PyTorch models.
 
@@ -424,6 +428,7 @@ class TorchNetwork(BaseNetwork):
         return data
 
 
+@traceable()
 class TFNetwork(BaseNetwork):
     """An extension of BaseNetwork for TensorFlow models.
     """
@@ -443,7 +448,7 @@ class TFNetwork(BaseNetwork):
         batch_in = self._get_effective_batch_input(batch, mode)
         strategy = tf.distribute.get_strategy()
         if isinstance(strategy, tf.distribute.MirroredStrategy):
-            if self.epoch_state["warmup"]:
+            if self.epoch_state["warmup"] == "debug":
                 prediction = strategy.experimental_run_v2(
                     self._forward_step_eager,
                     args=(batch_in, self.epoch_state, self.epoch_ops, to_list(self.effective_outputs[mode])))
@@ -454,7 +459,7 @@ class TFNetwork(BaseNetwork):
             batch = self._per_replica_to_global(batch)
             prediction = self._per_replica_to_global(prediction)
         else:
-            if self.epoch_state["warmup"]:
+            if self.epoch_state["warmup"] == "debug":
                 prediction = self._forward_step_eager(batch_in,
                                                       self.epoch_state,
                                                       self.epoch_ops,
@@ -480,7 +485,7 @@ class TFNetwork(BaseNetwork):
         """
         if isinstance(data, DistributedValues):
             if data.values[0].shape.rank == 0:
-                return tf.reduce_mean(data.values)
+                return tf.reduce_mean(tuple(d for d in data.values if not tf.math.is_nan(d)))
             else:
                 return tf.concat(data.values, axis=0)
         elif isinstance(data, dict):
@@ -583,7 +588,7 @@ class TFNetwork(BaseNetwork):
         Returns:
             (batch_data, prediction_data)
         """
-        self.load_epoch(mode, epoch, warmup=True)
+        self.load_epoch(mode, epoch)
         data = to_tensor(data, target_type="tf")
         data, prediction = self.run_step(data)
         self.unload_epoch()
@@ -619,7 +624,8 @@ class TFNetwork(BaseNetwork):
 def build(model_fn: Callable[[], Union[Model, List[Model]]],
           optimizer_fn: Union[str, Scheduler, Callable, List[str], List[Callable], List[Scheduler], None],
           weights_path: Union[str, None, List[Union[str, None]]] = None,
-          model_name: Union[str, List[str], None] = None) -> Union[Model, List[Model]]:
+          model_name: Union[str, List[str], None] = None,
+          mixed_precision: bool = False) -> Union[Model, List[Model]]:
     """Build model instances and associate them with optimizers.
 
     This method can be used with TensorFlow models / optimizers:
@@ -646,6 +652,7 @@ def build(model_fn: Callable[[], Union[Model, List[Model]]],
             automatically generated and assigned.
         weights_path: Path(s) from which to load model weights. If not None, then the number of weight paths provided
             should match the number of models generated by the `model_fn`.
+        mixed_precision: Whether to enable mix precision network operations, only applies to tensorflow models.
 
     Returns:
         models: The model(s) built by FastEstimator.
@@ -657,6 +664,11 @@ def build(model_fn: Callable[[], Union[Model, List[Model]]],
 
     if not hasattr(build, "count"):
         build.count = 0
+    # mix-precision handling
+    if mixed_precision:
+        mixed_precision_tf.set_policy(mixed_precision_tf.Policy('mixed_float16'))
+    else:
+        mixed_precision_tf.set_policy(mixed_precision_tf.Policy('float32'))
     models, optimizer_fn = to_list(model_fn()), to_list(optimizer_fn)
     # fill optimizer
     if not optimizer_fn:
@@ -688,7 +700,11 @@ def build(model_fn: Callable[[], Union[Model, List[Model]]],
         "Found inconsistency in number of models, optimizers, model_name or weights"
     # create optimizer
     for idx, (model, optimizer_def, weight, name) in enumerate(zip(models, optimizer_fn, weights_path, model_name)):
-        models[idx] = _fe_compile(model, optimizer_def, weight, name, framework)
+        models[idx] = trace_model(_fe_compile(model, optimizer_def, weight, name, framework),
+                                  model_idx=idx if len(models) > 1 else -1,
+                                  model_fn=model_fn,
+                                  optimizer_fn=optimizer_def,
+                                  weights_path=weight)
     if len(models) == 1:
         models = models[0]
     return models
@@ -803,6 +819,9 @@ def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None], model: Model
             _ = optimizer.iterations
             optimizer._create_hypers()
             optimizer._create_slots(model.trainable_variables)
+            # handle mixed precision loss scaling
+            if mixed_precision_tf.global_policy().name != "float32":
+                optimizer = mixed_precision_tf.LossScaleOptimizer(optimizer, loss_scale='dynamic')
             assert isinstance(optimizer, tf.optimizers.Optimizer)
         else:
             optimizer = optimizer_fn(model.parameters())

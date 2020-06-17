@@ -12,14 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Callable, Iterable, List, Union
+from typing import Iterable, List, Union
 
 import numpy as np
 from albumentations.augmentations.transforms import Equalize as EqualizeAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class Equalize(ImageOnlyAlbumentation):
     """Equalize the image histogram.
 
@@ -33,19 +35,19 @@ class Equalize(ImageOnlyAlbumentation):
         by_channels: If True, use equalization by channels separately, else convert image to YCbCr representation and
             use equalization by `Y` channel.
         mask: If given, only the pixels selected by the mask are included in the analysis. May be 1 channel or 3 channel
-            array or callable. Function signature must include `image` argument.
+            array. Function signature must include `image` argument.
         mask_params: Params for mask function.
 
     Image types:
         uint8
     """
     def __init__(self,
-                 inputs: Union[str, Iterable[str], Callable],
+                 inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  eq_mode: str = "cv",
                  by_channels: bool = True,
-                 mask: Union[None, np.ndarray, Callable] = None,
+                 mask: Union[None, np.ndarray] = None,
                  mask_params: List[str] = ()):
         super().__init__(
             EqualizeAlb(mode=eq_mode, by_channels=by_channels, mask=mask, mask_params=mask_params, always_apply=True),

@@ -37,7 +37,8 @@ def _get_estimator(args: Dict[str, Any], unknown: Optional[List[str]]) -> Estima
     hyperparameters = {}
     if args['hyperparameters_json']:
         hyperparameters = os.path.abspath(args['hyperparameters_json'])
-        hyperparameters = json.load(open(hyperparameters, 'r'))
+        with open(hyperparameters, 'r') as f:
+            hyperparameters = json.load(f)
     hyperparameters.update(parse_cli_to_dictionary(unknown))
     module_name = os.path.splitext(os.path.basename(entry_point))[0]
     dir_name = os.path.abspath(os.path.dirname(entry_point))
@@ -55,7 +56,8 @@ def train(args: Dict[str, Any], unknown: Optional[List[str]]) -> None:
         unknown: The remainder of the command line arguments to be passed along to the get_estimator() method.
     """
     estimator = _get_estimator(args, unknown)
-    estimator.fit()
+    warmup_option = {"true": True, "false": False, "debug": "debug"}
+    estimator.fit(warmup=warmup_option[args['warmup'].lower()])
 
 
 def test(args: Dict[str, Any], unknown: Optional[List[str]]) -> None:
@@ -86,6 +88,7 @@ def configure_train_parser(subparsers: argparse.PARSER) -> None:
                         dest='hyperparameters_json',
                         type=str,
                         help="The path to the hyperparameters JSON file")
+    parser.add_argument('--warmup', type=str, help="Warmup setting, can be true, false or debug", default="true")
     parser.add_argument_group(
         'hyperparameter arguments',
         'Arguments to be passed through to the get_estimator() call. \

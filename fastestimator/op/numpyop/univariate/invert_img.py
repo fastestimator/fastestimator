@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Callable, Iterable, Union
+from typing import Iterable, Union
 
 from albumentations.augmentations.transforms import InvertImg as InvertImgAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class InvertImg(ImageOnlyAlbumentation):
     """Invert an image by subtracting its pixel values from 255.
 
@@ -33,7 +35,7 @@ class InvertImg(ImageOnlyAlbumentation):
         int8
     """
     def __init__(self,
-                 inputs: Union[str, Iterable[str], Callable],
+                 inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None):
         super().__init__(InvertImgAlb(always_apply=True), inputs=inputs, outputs=outputs, mode=mode)

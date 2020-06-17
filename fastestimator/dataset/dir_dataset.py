@@ -16,8 +16,10 @@ import os
 from typing import Dict, Optional
 
 from fastestimator.dataset.dataset import InMemoryDataset
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class DirDataset(InMemoryDataset):
     """A dataset which reads files from a folder hierarchy like root/data.file.
 

@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Callable, Iterable, List, Mapping, MutableMapping, Set, Union
+from typing import Any, Callable, Dict, Iterable, List, Mapping, MutableMapping, Set, Union
 
+from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import parse_modes, to_list, to_set
 
 
+@traceable()
 class Op:
     """A base class for FastEstimator Operators.
 
@@ -55,20 +57,20 @@ class Op:
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
     """
-    inputs: List[Union[str, Callable]]
+    inputs: List[str]
     outputs: List[str]
     mode: Set[str]
     in_list: bool  # Whether inputs should be presented as a list or an individual value
     out_list: bool  # Whether outputs will be returned as a list or an individual value
 
     def __init__(self,
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
+                 inputs: Union[None, str, Iterable[str]] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
                  mode: Union[None, str, Iterable[str]] = None) -> None:
         self.inputs = to_list(inputs)
         self.outputs = to_list(outputs)
         self.mode = parse_modes(to_set(mode))
-        self.in_list = not isinstance(inputs, (str, Callable))
+        self.in_list = not isinstance(inputs, str)
         self.out_list = not isinstance(outputs, str)
 
 
@@ -82,9 +84,12 @@ def get_inputs_by_op(op: Op, store: Mapping[str, Any]) -> Any:
     Returns:
         Input data to be fed to the `op` forward function.
     """
-    data = None
+    if op.in_list:
+        data = []
+    else:
+        data = None
     if op.inputs:
-        data = [store[key] if not isinstance(key, Callable) else key() for key in op.inputs]
+        data = [store[key] for key in op.inputs]
         if not op.in_list:
             data = data[0]
     return data
@@ -102,3 +107,28 @@ def write_outputs_by_op(op: Op, store: MutableMapping[str, Any], outputs: Any) -
         outputs = [outputs]
     for key, data in zip(op.outputs, outputs):
         store[key] = data
+
+
+@traceable()
+class LambdaOp(Op):
+    """An Operator that performs any specified function as forward function.
+
+    Args:
+        fn: The function to be executed.
+        inputs: Key(s) from which to retrieve data from the data dictionary.
+        outputs: Key(s) under which to write the outputs of this Op back to the data dictionary.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+    """
+    def __init__(self,
+                 fn: Callable,
+                 inputs: Union[None, str, Iterable[str]] = None,
+                 outputs: Union[None, str, Iterable[str]] = None,
+                 mode: Union[None, str, Iterable[str]] = None):
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.fn = fn
+        self.in_list = True
+
+    def forward(self, data: List[Any], state: Dict[str, Any]) -> Any:
+        return self.fn(*data)

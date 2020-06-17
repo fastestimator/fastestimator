@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Callable, Dict, Iterable, List, Union
+from typing import Any, Dict, Iterable, List, Union
 
 import numpy as np
 
 from fastestimator.op.numpyop.numpyop import NumpyOp
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class ChannelTranspose(NumpyOp):
     """Transpose the data (for example to make it channel-width-height instead of width-height-channel).
 
@@ -31,7 +33,7 @@ class ChannelTranspose(NumpyOp):
         axes: The permutation order.
     """
     def __init__(self,
-                 inputs: Union[str, Iterable[str], Callable],
+                 inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  axes: List[int] = (2, 0, 1)):

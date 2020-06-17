@@ -13,14 +13,16 @@
 # limitations under the License.
 # ==============================================================================
 from copy import deepcopy
-from typing import Any, Callable, Dict, Iterable, List, Union
+from typing import Any, Dict, Iterable, List, Union
 
 import numpy as np
 from albumentations import Compose, ImageOnlyTransform, ReplayCompose
 
 from fastestimator.op.numpyop.numpyop import NumpyOp
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class ImageOnlyAlbumentation(NumpyOp):
     """Operators which apply to single images (as opposed to images + masks or images + bounding boxes).
 
@@ -39,7 +41,7 @@ class ImageOnlyAlbumentation(NumpyOp):
     """
     def __init__(self,
                  func: ImageOnlyTransform,
-                 inputs: Union[str, List[str], Callable],
+                 inputs: Union[str, List[str]],
                  outputs: Union[str, List[str]],
                  mode: Union[None, str, Iterable[str]] = None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)

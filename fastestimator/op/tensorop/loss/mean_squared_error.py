@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Callable, Dict, Iterable, List, TypeVar, Union
+from typing import Any, Dict, Iterable, List, TypeVar, Union
 
 import tensorflow as tf
 import torch
@@ -20,22 +20,24 @@ import torch
 from fastestimator.backend.mean_squared_error import mean_squared_error
 from fastestimator.backend.reduce_mean import reduce_mean
 from fastestimator.op.tensorop.tensorop import TensorOp
+from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
+@traceable()
 class MeanSquaredError(TensorOp):
     """Calculate the mean squared error loss between two tensors.
 
     Args:
-        inputs: A tuple or list like: [<y_true>, <y_pred>].
+        inputs: A tuple or list like: [<y_pred>, <y_true>].
         outputs: String key under which to store the computed loss.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
     """
     def __init__(self,
-                 inputs: Union[None, str, Iterable[str], Callable] = None,
+                 inputs: Union[None, str, Iterable[str]] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
                  mode: Union[None, str, Iterable[str]] = None,
                  average_loss: bool = True):

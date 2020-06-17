@@ -45,8 +45,8 @@ def binary_crossentropy(y_pred: Tensor, y_true: Tensor, from_logits: bool = Fals
     ```
 
     Args:
-        y_pred: Prediction with a shape like (batch, ...). dtype: float32.
-        y_true: Ground truth class labels with the same shape as `y_pred`. dtype: int or float32.
+        y_pred: Prediction with a shape like (batch, ...). dtype: float32 or float16.
+        y_true: Ground truth class labels with the same shape as `y_pred`. dtype: int or float32 or float16.
         from_logits: Whether y_pred is from logits. If True, a sigmoid will be applied to the prediction.
         average_loss: Whether to average the element-wise loss.
 

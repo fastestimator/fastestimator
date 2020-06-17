@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Callable, Iterable, Union
+from typing import Iterable, Union
 
 from albumentations.augmentations.transforms import ChannelShuffle as ChannelShuffleAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class ChannelShuffle(ImageOnlyAlbumentation):
     """Randomly rearrange channels of an image.
 
@@ -32,7 +34,7 @@ class ChannelShuffle(ImageOnlyAlbumentation):
         int8, float32
     """
     def __init__(self,
-                 inputs: Union[str, Iterable[str], Callable],
+                 inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None):
         super().__init__(ChannelShuffleAlb(always_apply=True), inputs=inputs, outputs=outputs, mode=mode)

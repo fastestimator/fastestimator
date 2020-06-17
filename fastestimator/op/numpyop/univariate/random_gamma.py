@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Callable, Iterable, Tuple, Union
+from typing import Iterable, Tuple, Union
 
 from albumentations.augmentations.transforms import RandomGamma as RandomGammaAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class RandomGamma(ImageOnlyAlbumentation):
     """Apply a gamma transform to an image.
 
@@ -35,7 +37,7 @@ class RandomGamma(ImageOnlyAlbumentation):
         uint8, float32
     """
     def __init__(self,
-                 inputs: Union[str, Iterable[str], Callable],
+                 inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  gamma_limit: Union[float, Tuple[float, float]] = (80, 120),

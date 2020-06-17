@@ -289,7 +289,7 @@ class ImgData(OrderedDict):
                         show_image(img,
                                    axis=ax,
                                    fig=fig,
-                                   title=row[col_idx][0] if batch_idx == 0 else None,
+                                   title=row[col_idx][0] if (batch_idx == 0 and idx == 0) else None,
                                    stack_depth=idx,
                                    color_map=self.colormap)
         if save_path:

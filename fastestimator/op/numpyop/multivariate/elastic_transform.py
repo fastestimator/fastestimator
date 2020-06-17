@@ -18,8 +18,10 @@ import cv2
 from albumentations.augmentations.transforms import ElasticTransform as ElasticTransformAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class ElasticTransform(MultiVariateAlbumentation):
     """Elastic deformation of images.
 

@@ -22,7 +22,7 @@ from torch.optim import Adam
 import fastestimator as fe
 from fastestimator.backend import feed_forward, get_gradient
 from fastestimator.dataset.data import nih_chestxray
-from fastestimator.op.numpyop import NumpyOp
+from fastestimator.op import LambdaOp
 from fastestimator.op.numpyop.multivariate import Resize
 from fastestimator.op.numpyop.univariate import ChannelTranspose, Normalize, ReadImage
 from fastestimator.op.tensorop import TensorOp
@@ -30,7 +30,7 @@ from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.schedule import EpochScheduler
 from fastestimator.trace import Trace
 from fastestimator.trace.io import ModelSaver
-from fastestimator.util import get_num_devices
+from fastestimator.util import get_num_devices, traceable
 
 
 def _nf(stage, fmap_base=8192, fmap_decay=1.0, fmap_max=512):
@@ -286,6 +286,7 @@ def build_D(fade_in_alpha, initial_resolution=2, target_resolution=10, num_chann
     return discriminators
 
 
+@traceable()
 class ImageBlender(TensorOp):
     def __init__(self, alpha, inputs=None, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
@@ -297,6 +298,7 @@ class ImageBlender(TensorOp):
         return new_img
 
 
+@traceable()
 class Interpolate(TensorOp):
     def forward(self, data, state):
         fake, real = data
@@ -305,6 +307,7 @@ class Interpolate(TensorOp):
         return real + (fake - real) * coeff
 
 
+@traceable()
 class GradientPenalty(TensorOp):
     def __init__(self, inputs, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
@@ -317,11 +320,13 @@ class GradientPenalty(TensorOp):
         return gp
 
 
+@traceable()
 class GLoss(TensorOp):
     def forward(self, data, state):
         return -torch.mean(data)
 
 
+@traceable()
 class DLoss(TensorOp):
     """Compute discriminator loss."""
     def __init__(self, inputs, outputs=None, mode=None, wgan_lambda=10, wgan_epsilon=0.001):
@@ -335,6 +340,7 @@ class DLoss(TensorOp):
         return torch.mean(loss)
 
 
+@traceable()
 class AlphaController(Trace):
     def __init__(self, alpha, fade_start_epochs, duration, batch_scheduler, num_examples):
         super().__init__(inputs=None, outputs=None, mode="train")
@@ -371,6 +377,7 @@ class AlphaController(Trace):
             self.alpha.data = torch.tensor(self.nimg_so_far / self.nimg_total, dtype=torch.float32)
 
 
+@traceable()
 class ImageSaving(Trace):
     def __init__(self, epoch_model_map, save_dir, num_sample=16, latent_dim=512):
         super().__init__(inputs=None, outputs=None, mode="train")
@@ -389,7 +396,7 @@ class ImageSaving(Trace):
                 pred = feed_forward(model, random_vectors, training=False)
                 if torch.cuda.is_available():
                     pred = pred.to("cpu")
-                disp_img = np.transpose(pred.data.numpy(), (0, 2, 3, 1))  #BCHW -> BHWC
+                disp_img = np.transpose(pred.data.numpy(), (0, 2, 3, 1))  # BCHW -> BHWC
                 disp_img = np.squeeze(disp_img)
                 disp_img -= disp_img.min()
                 disp_img /= (disp_img.max() + self.eps)
@@ -442,7 +449,7 @@ def get_estimator(target_size=128,
             EpochScheduler(epoch_dict=resize_low_res_map2),
             Normalize(inputs=["x", "x_low_res"], outputs=["x", "x_low_res"], mean=1.0, std=1.0, max_pixel_value=127.5),
             ChannelTranspose(inputs=["x", "x_low_res"], outputs=["x", "x_low_res"]),
-            NumpyOp(inputs=lambda: np.random.normal(size=[512]).astype('float32'), outputs="z")
+            LambdaOp(fn=lambda: np.random.normal(size=[512]).astype('float32'), outputs="z")
         ])
     fade_in_alpha = torch.tensor(1.0)
     d_models = fe.build(

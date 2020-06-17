@@ -18,8 +18,10 @@ from typing import Any, Dict, List, Union
 import numpy as np
 
 from fastestimator.op.numpyop.numpyop import NumpyOp
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class OneOf(NumpyOp):
     """Perform one of several possible NumpyOps.
 

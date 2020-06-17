@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Callable, Iterable, Tuple, Union
+from typing import Iterable, Tuple, Union
 
 from albumentations.augmentations.transforms import Normalize as NormalizeAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class Normalize(ImageOnlyAlbumentation):
     """Divide pixel values by a maximum value, subtract mean per channel and divide by std per channel.
 
@@ -36,7 +38,7 @@ class Normalize(ImageOnlyAlbumentation):
         uint8, float32
     """
     def __init__(self,
-                 inputs: Union[str, Iterable[str], Callable],
+                 inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  mean: Union[float, Tuple[float, ...]] = (0.485, 0.456, 0.406),

@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import os
 from typing import Optional, Union
 
 import numpy as np
@@ -22,8 +21,10 @@ import torch
 from fastestimator.backend.save_model import save_model
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class BestModelSaver(Trace):
     """Save the weights of best model based on a given evaluation metric.
 

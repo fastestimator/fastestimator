@@ -20,9 +20,11 @@ from torch.utils.data import Dataset
 
 from fastestimator.dataset import BatchDataset
 from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
+from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import pad_batch
 
 
+@traceable()
 class OpDataset(Dataset):
     """A wrapper for datasets which allows operators to be applied to them in a pipeline.
 
@@ -37,7 +39,7 @@ class OpDataset(Dataset):
     def __init__(self, dataset: Dataset, ops: List[NumpyOp], mode: str) -> None:
         self.dataset = dataset
         if isinstance(self.dataset, BatchDataset):
-            self.dataset.shuffle()
+            self.dataset.reset_index_maps()
         self.ops = ops
         self.mode = mode
 
@@ -52,8 +54,11 @@ class OpDataset(Dataset):
         """
         items = deepcopy(self.dataset[index])  # Deepcopy to prevent ops from overwriting values in datasets
         if isinstance(self.dataset, BatchDataset):
+            unique_list = []
             for item in items:
-                forward_numpyop(self.ops, item, self.mode)
+                if id(item) not in unique_list:
+                    forward_numpyop(self.ops, item, self.mode)
+                    unique_list.append(id(item))
             if self.dataset.pad_value is not None:
                 pad_batch(items, self.dataset.pad_value)
             items = {key: np.array([item[key] for item in items]) for key in items[0]}

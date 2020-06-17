@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, Iterable, Callable, Tuple
+from typing import Iterable, Tuple, Union
 
 from albumentations.augmentations.transforms import ChannelDropout as ChannelDropoutAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class ChannelDropout(ImageOnlyAlbumentation):
     """Randomly drop channels from the image.
 
@@ -35,7 +37,7 @@ class ChannelDropout(ImageOnlyAlbumentation):
         int8, uint16, unit32, float32
     """
     def __init__(self,
-                 inputs: Union[str, Iterable[str], Callable],
+                 inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  channel_drop_range: Tuple[int, int] = (1, 1),

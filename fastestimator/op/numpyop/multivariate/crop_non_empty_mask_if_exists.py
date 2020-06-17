@@ -18,8 +18,10 @@ from albumentations import BboxParams, KeypointParams
 from albumentations.augmentations.transforms import CropNonEmptyMaskIfExists as CropNonEmptyMaskIfExistsAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class CropNonEmptyMaskIfExists(MultiVariateAlbumentation):
     """Crop an area with mask if mask is non-empty, otherwise crop randomly.
 

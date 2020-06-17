@@ -27,12 +27,14 @@ from fastestimator.backend.to_number import to_number
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.img_data import ImgData
+from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_list
 from fastestimator.xai.saliency import SaliencyNet
 
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
 
+@traceable()
 class Saliency(Trace):
     """A Trace which computes saliency maps for a given model throughout training.
 

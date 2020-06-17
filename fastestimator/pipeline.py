@@ -13,10 +13,11 @@
 # limitations under the License.
 # ==============================================================================
 import os
+import random
 import time
 import warnings
 from copy import deepcopy
-from typing import Any, Dict, List, MutableMapping, Optional, Set, TypeVar, Union
+from typing import Any, Callable, Dict, List, MutableMapping, Optional, Set, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
@@ -26,12 +27,15 @@ from torch.utils.data.dataloader import default_collate
 from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.op_dataset import OpDataset
 from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
+from fastestimator.op.op import LambdaOp
 from fastestimator.schedule.schedule import Scheduler, get_current_items
+from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import pad_batch, to_list, to_set
 
 DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
 
 
+@traceable()
 class Pipeline:
     """A data pipeline class that takes care of data pre-processing.
 
@@ -49,6 +53,7 @@ class Pipeline:
         drop_last: Whether to drop the last batch if the last batch is incomplete.
         pad_value: The padding value if batch padding is needed. None indicates that no padding is needed. NOTE: This
             argument is only applicable when using a FastEstimator Dataset.
+        collate_fn: Function to merge data into one batch with input being list of elements.
     """
     ops: List[Union[NumpyOp, Scheduler[NumpyOp]]]
 
@@ -60,13 +65,15 @@ class Pipeline:
                  ops: Union[None, NumpyOp, Scheduler[NumpyOp], List[Union[NumpyOp, Scheduler[NumpyOp]]]] = None,
                  num_process: Optional[int] = None,
                  drop_last: bool = False,
-                 pad_value: Optional[Union[int, float]] = None):
+                 pad_value: Optional[Union[int, float]] = None,
+                 collate_fn: Optional[Callable] = None):
         self.data = {x: y for (x, y) in zip(["train", "eval", "test"], [train_data, eval_data, test_data]) if y}
         self.batch_size = batch_size
         self.ops = to_list(ops)
         self.num_process = num_process if num_process is not None else os.cpu_count() if os.name != 'nt' else 0
         self.drop_last = drop_last
         self.pad_value = pad_value
+        self.collate_fn = collate_fn
         self._verify_inputs(**{k: v for k, v in locals().items() if k != 'self'})
 
     def _verify_inputs(self, **kwargs) -> None:
@@ -107,7 +114,7 @@ class Pipeline:
                 assert isinstance(batch_size, int), "unsupported batch_size format: {}".format(type(batch_size))
             # ops check
             for op in get_current_items(self.ops):
-                assert isinstance(op, NumpyOp), "unsupported op format, must provide NumpyOp in Pipeline"
+                assert isinstance(op, (NumpyOp, LambdaOp)), "unsupported op format, must provide NumpyOp in Pipeline"
             # num_process check
             assert isinstance(self.num_process, int), "number of processes must be an integer"
             return True
@@ -229,10 +236,10 @@ class Pipeline:
         loader = self.get_loader(mode=mode, epoch=epoch, shuffle=shuffle)
         if isinstance(loader, tf.data.Dataset):
             loader = loader.take(num_steps)
-        for idx, batch in enumerate(loader):
+        for idx, batch in enumerate(loader, start=1):
+            results.append(batch)
             if idx == num_steps:
                 break
-            results.append(batch)
         if len(results) == 1:
             results = results[0]
         return results
@@ -260,26 +267,22 @@ class Pipeline:
                 batch_size = batch_size.get_current_value(epoch)
             # batch dataset
             if isinstance(data, BatchDataset):
-                assert batch_size is None, "batch_size must be None when using BatchDataset"
                 data.pad_value = self.pad_value
-            else:
-                assert batch_size is not None, "batch_size should not be None"
             # shuffle
             if shuffle is None:
-                shuffle = mode == "train"
+                shuffle = mode == "train" and batch_size is not None
             # collate_fn
-            if self.pad_value is None or isinstance(data, BatchDataset):
-                collate_fn = None
-            else:
+            collate_fn = self.collate_fn
+            if collate_fn is None and self.pad_value is not None:
                 collate_fn = self._pad_batch_collate
             op_dataset = OpDataset(data, get_current_items(self.ops, mode, epoch), mode)
             data = DataLoader(op_dataset,
-                              batch_size=batch_size,
+                              batch_size=None if isinstance(data, BatchDataset) else batch_size,
                               shuffle=False if isinstance(data, BatchDataset) else shuffle,
                               sampler=RandomSampler(op_dataset) if isinstance(data, BatchDataset) and shuffle else None,
                               num_workers=self.num_process,
                               drop_last=self.drop_last,
-                              worker_init_fn=lambda _: np.random.seed(),
+                              worker_init_fn=lambda _: np.random.seed(random.randint(0, 2**32 - 1)),
                               collate_fn=collate_fn)
         return data
 

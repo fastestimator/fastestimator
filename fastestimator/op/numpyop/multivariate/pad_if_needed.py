@@ -19,8 +19,10 @@ from albumentations import BboxParams, KeypointParams
 from albumentations.augmentations.transforms import PadIfNeeded as PadIfNeededAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class PadIfNeeded(MultiVariateAlbumentation):
     """Pad the sides of an image / mask if size is less than a desired number.
 

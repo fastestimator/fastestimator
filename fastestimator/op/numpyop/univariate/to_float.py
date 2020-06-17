@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Callable, Iterable, Optional, Union
+from typing import Iterable, Optional, Union
 
 from albumentations.augmentations.transforms import ToFloat as ToFloatAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class ToFloat(ImageOnlyAlbumentation):
     """Divides an input by max_value to give a float image in range [0,1].
 
@@ -34,7 +36,7 @@ class ToFloat(ImageOnlyAlbumentation):
         Any
     """
     def __init__(self,
-                 inputs: Union[str, Iterable[str], Callable],
+                 inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  max_value: Optional[float] = None):

@@ -6,7 +6,6 @@ import sys
 from setuptools import find_packages, setup
 
 is_nightly = os.environ.get('FASTESTIMATOR_IS_NIGHTLY', None)
-
 if is_nightly is not None:
     sys.stderr.write("Using '%s=%s' environment variable!\n" % ('FASTESTIMATOR_IS_NIGHTLY', is_nightly))
 
@@ -50,10 +49,14 @@ def get_dependency():
         'h5py',
         'jsonpickle',
         'python-docx',
-        'tensorboard',
+        'PyLaTeX==1.3.2',
+        'natsort==7.0.1',
         'tensorflow_probability==0.8.0',
         'transformers==2.4.1',
-        'tensorflow==2.1.0'
+        'tensorflow==2.1.0',
+        'pytorch-model-summary==0.1.1',
+        'graphviz==0.14',
+        'hiddenlayer==0.3',
     ]
     if os.name == "nt":
         dependencies.append(
@@ -66,7 +69,7 @@ def get_dependency():
 
 
 setup(
-    entry_points={"console_scripts": ["fastestimator = fastestimator.cli.main:run"]},
+    entry_points={"console_scripts": ["fastestimator = fastestimator.cli.main:main"]},
     name=get_name(),
     version=get_version(),
     description="Deep learning framework",
@@ -77,9 +80,8 @@ setup(
     author="FastEstimator Dev",
     url='https://github.com/fastestimator/fastestimator',
     license="Apache License 2.0",
-    keywords="fastestimator tensorflow",
+    keywords="fastestimator tensorflow pytorch",
     classifiers=["License :: OSI Approved :: Apache Software License", "Programming Language :: Python :: 3"],
-
     # Declare minimal set for installation
     install_requires=get_dependency(),
     # Declare extra set for installation
