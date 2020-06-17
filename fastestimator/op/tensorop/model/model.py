@@ -19,7 +19,7 @@ import torch
 
 from fastestimator.backend.feed_forward import feed_forward
 from fastestimator.op.tensorop.tensorop import TensorOp
-from fastestimator.util.traceability_util import traceable
+from fastestimator.util.traceability_util import FeInputSpec, traceable
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
@@ -47,8 +47,13 @@ class ModelOp(TensorOp):
         assert hasattr(model, "fe_compiled"), "must use fe.build to compile the model before use"
         self.model = model
         self.trainable = trainable
+        self.epoch_spec = None
 
     def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
         training = state['mode'] == "train" and self.trainable
+        if self.epoch_spec != state['epoch']:
+            # Gather model input specs for the sake of TensorBoard and Traceability
+            self.model.fe_input_spec = FeInputSpec(data, self.model)
+            self.epoch_spec = state['epoch']
         data = feed_forward(self.model, data, training=training)
         return data
