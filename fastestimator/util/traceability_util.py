@@ -24,7 +24,7 @@ import tensorflow as tf
 import torch
 from pylatex import Document, Label, Marker, MultiColumn, NoEscape, Package, Table, Tabularx, TextColor
 from pylatex.base_classes import LatexObject
-from pylatex.utils import bold, escape_latex
+from pylatex.utils import bold, escape_latex, italic
 
 from fastestimator.backend.to_shape import to_shape
 from fastestimator.backend.to_type import to_type
@@ -136,34 +136,49 @@ class FeSummaryTable:
         self.kwargs = kwargs or {}
         self.fields = fields
 
-    def render_table(self, doc: Document) -> None:
+    def render_table(self,
+                     doc: Document,
+                     name_override: Optional[LatexObject] = None,
+                     toc_ref: Optional[str] = None,
+                     extra_rows: Optional[List[Tuple[str, Any]]] = None) -> None:
+        """Write this table into a LaTeX document.
+
+        Args:
+            doc: The LaTeX document to be appended to.
+            name_override: An optional replacement for this table's name field.
+            toc_ref: A reference to be added to the table of contents.
+            extra_rows: Any extra rows to be added to the table before the kwargs.
+        """
         with doc.create(Table(position='htbp')) as table:
             table.append(NoEscape(r'\refstepcounter{table}'))
             table.append(Label(Marker(name=str(self.fe_id), prefix="tbl")))
+            if toc_ref:
+                table.append(NoEscape(r'\addcontentsline{toc}{subsection}{' + escape_latex(toc_ref) + '}'))
             with doc.create(Tabularx('|lX|', booktabs=True)) as tabular:
                 package = Package('xcolor', options='table')
                 if package not in tabular.packages:
                     # Need to invoke a table color before invoking TextColor (bug?)
                     tabular.packages.append(package)
-                tabular.add_row((bold(self.name) if isinstance(self.name, str) else self.name,
+                tabular.add_row((name_override if name_override else bold(self.name),
                                  MultiColumn(size=1, align='r|', data=TextColor('blue', self.fe_id))))
                 tabular.add_hline()
                 tabular.add_row(("Type: ", escape_latex(f"{self.type}".split("'")[1])))
                 if self.path:
                     tabular.add_row(("", escape_latex(self.path)))
-                if self.fields or self.args or self.kwargs:
+                for k, v in self.fields.items():
                     tabular.add_hline()
-                for idx, (k, v) in enumerate(self.fields.items()):
                     tabular.add_row((f"{k.capitalize()}: ", v))
-                    if self.args or self.kwargs or idx < len(self.fields) - 1:
-                        tabular.add_hline()
                 if self.args:
+                    tabular.add_hline()
                     tabular.add_row(("Args: ", self.args))
-                    if self.kwargs:
+                if extra_rows:
+                    for (key, val) in extra_rows:
                         tabular.add_hline()
+                        tabular.add_row(key, val)
                 if self.kwargs:
+                    tabular.add_hline()
                     for idx, (kwarg, val) in enumerate(self.kwargs.items()):
-                        tabular.add_row((kwarg, val), color='white' if idx % 2 else 'black!5')
+                        tabular.add_row((italic(kwarg), val), color='white' if idx % 2 else 'black!5')
 
 
 def _deref_is_callable(instruction: dis.Instruction, closure_vars: inspect.ClosureVars) -> bool:

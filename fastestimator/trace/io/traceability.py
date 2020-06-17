@@ -26,17 +26,20 @@ import tensorflow as tf
 import torch
 from natsort import humansorted
 from pylatex import Command, Document, Figure, Hyperref, Itemize, Label, LongTable, Marker, MultiColumn, NoEscape, \
-    Package, Section, Subsection, escape_latex
+    Package, Section, Subsection, Tabular, escape_latex
 from pylatex.utils import bold
 
 import fastestimator as fe
 from fastestimator.dataset.dataset import FEDataset
+from fastestimator.estimator import Estimator
+from fastestimator.network import BaseNetwork
+from fastestimator.pipeline import Pipeline
 from fastestimator.summary.logs.log_plot import visualize_logs
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.latex_util import Center, HrefFEID, Verbatim
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import FEID, Suppressor
+from fastestimator.util.util import FEID, Suppressor, prettify_metric_name
 
 
 @traceable()
@@ -96,7 +99,6 @@ class Traceability(Trace):
     def on_end(self, data: Data) -> None:
         self._document_training_graphs()
         self._document_init_params()
-        self._document_datasets()
         self._document_models()
         self._document_sys_config()
 
@@ -119,29 +121,52 @@ class Traceability(Trace):
     def _document_init_params(self) -> None:
         """Add initialization parameters to the traceability document.
         """
-        with self.doc.create(Section("Initialization Parameters")):
+        with self.doc.create(Section("Parameters")):
             model_ids = {
                 FEID(id(model))
                 for model in self.system.network.models if isinstance(model, (tf.keras.Model, torch.nn.Module))
             }
+            datasets = {
+                FEID(id(self.system.pipeline.data.get(title, None))):
+                (title, self.system.pipeline.data.get(title, None))
+                for title in ['train', 'eval', 'test']
+            }
             for tbl in self.config_tables:
-                if tbl.fe_id in model_ids and isinstance(tbl.name, str):
-                    # Link to later detailed model description
-                    tbl.name = Hyperref(Marker(name=str(tbl.name), prefix="subsec"),
-                                        text=NoEscape(r'\textcolor{blue}{') + bold(tbl.name) + NoEscape('}'))
-                tbl.render_table(self.doc)
-
-    def _document_datasets(self) -> None:
-        """Add dataset summaries to the traceability document.
-        """
-        with self.doc.create(Section("Datasets")):
-            for title in ['train', 'eval', 'test']:
-                dataset = self.system.pipeline.data.get(title, None)
-                if dataset:
-                    with self.doc.create(Subsection(f"{title.capitalize()} Data")):
-                        self.doc.append(HrefFEID(FEID(id(dataset)), dataset.__class__.__name__))
-                        if isinstance(dataset, FEDataset):
-                            self.doc.append(Verbatim(jsonpickle.dumps(dataset.summary(), unpicklable=False, indent=2)))
+                name_override = None
+                toc_ref = None
+                extra_rows = None
+                if issubclass(tbl.type, Estimator):
+                    toc_ref = "Estimator"
+                if issubclass(tbl.type, BaseNetwork):
+                    toc_ref = "Network"
+                if issubclass(tbl.type, Pipeline):
+                    toc_ref = "Pipeline"
+                if tbl.fe_id in model_ids:
+                    # Link to a later detailed model description
+                    name_override = Hyperref(Marker(name=str(tbl.name), prefix="subsec"),
+                                             text=NoEscape(r'\textcolor{blue}{') + bold(tbl.name) + NoEscape('}'))
+                    toc_ref = tbl.name
+                if tbl.fe_id in datasets:
+                    title, dataset = datasets[tbl.fe_id]
+                    name_override = bold(f'{tbl.name} ({title.capitalize()})')
+                    toc_ref = f"{title.capitalize()} Dataset"
+                    # Enhance the dataset summary
+                    if isinstance(dataset, FEDataset):
+                        extra_rows = list(dataset.summary().__getstate__().items())
+                        for idx, (key, val) in enumerate(extra_rows):
+                            key = f"{prettify_metric_name(key)}:"
+                            if isinstance(val, dict) and val:
+                                if isinstance(list(val.values())[0], (int, float, str, bool, type(None))):
+                                    val = jsonpickle.dumps(val, unpicklable=False)
+                                else:
+                                    subtable = Tabular('l|l')
+                                    for k, v in val.items():
+                                        if hasattr(v, '__getstate__'):
+                                            v = jsonpickle.dumps(v, unpicklable=False)
+                                        subtable.add_row((k, v))
+                                    val = subtable
+                            extra_rows[idx] = (key, val)
+                tbl.render_table(self.doc, name_override=name_override, toc_ref=toc_ref, extra_rows=extra_rows)
 
     def _document_models(self) -> None:
         """Add model summaries to the traceability document.
