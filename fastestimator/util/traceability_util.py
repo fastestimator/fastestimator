@@ -16,15 +16,18 @@ import dis
 import inspect
 import re
 import types
-from collections import deque, namedtuple
+from collections import ChainMap, deque, namedtuple
 from typing import Any, Callable, Dict, List, Mapping, Optional, Set, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
 import torch
 from pylatex import Document, Label, Marker, MultiColumn, NoEscape, Package, Table, Tabularx, TextColor
-from pylatex.utils import bold, escape_latex
+from pylatex.base_classes import LatexObject
+from pylatex.utils import bold, escape_latex, italic
 
+from fastestimator.backend.to_shape import to_shape
+from fastestimator.backend.to_type import to_type
 from fastestimator.util.latex_util import ContainerList, HrefFEID, PyContainer
 from fastestimator.util.util import FEID, Flag, strip_prefix
 
@@ -61,6 +64,51 @@ _CommandTable = {
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
 
+class FeInputSpec:
+    """A class to keep track of a model's input so that fake inputs can be generated.
+
+    Args:
+        model_input: The input to the model.
+        model: The model which corresponds to the given `model_input`.
+    """
+    def __init__(self, model_input: Any, model: Model):
+        self.shape = to_shape(model_input)
+        self.dtype = to_type(model_input)
+        self.tensor_func = tf.ones if isinstance(model, tf.keras.Model) else torch.ones
+
+    def get_dummy_input(self) -> Any:
+        """Get fake input for the model.
+
+        Returns:
+            Input of the correct shape and dtype for the model.
+        """
+        return self._from_shape_and_type(self.shape, self.dtype)
+
+    def _from_shape_and_type(self, shape: Any, dtype: Any) -> Any:
+        """Constructs tensor(s) with the specified shape and dtype.
+
+        It is assumed that the `shape` and `dtype` arguments have the same container structure. That is to say, if
+        `shape` is a list of 5 elements, it is required that `dtype` also be a list of 5 elements.
+
+        Args:
+            shape: A shape or (possibly nested) container of shapes.
+            dtype: A dtype or (possibly nested) container of dtypes.
+
+        Returns:
+            A tensor or collection of tensors corresponding to the shape and dtype arguments.
+        """
+        if isinstance(dtype, dict):
+            return {key: self._from_shape_and_type(value, dtype[key]) for key, value in shape.items()}
+        elif isinstance(dtype, list):
+            return [self._from_shape_and_type(shape[i], dtype[i]) for i in range(len(shape))]
+        elif isinstance(dtype, tuple):
+            return tuple([self._from_shape_and_type(shape[i], dtype[i]) for i in range(len(shape))])
+        elif isinstance(dtype, set):
+            return set([self._from_shape_and_type(s, t) for s, t in zip(shape, dtype)])
+        else:
+            return self.tensor_func(shape, dtype=dtype)
+
+
 class FeSummaryTable:
     """A class containing summaries of traceability information.
 
@@ -69,7 +117,7 @@ class FeSummaryTable:
         fe_id: The id of this table, used for cross-referencing from other tables.
         **fields: Any other information about the summarized object / function.
     """
-    name: str
+    name: Union[str, LatexObject]
     fe_id: FEID
     fields: Dict[str, Any]
 
@@ -88,33 +136,49 @@ class FeSummaryTable:
         self.kwargs = kwargs or {}
         self.fields = fields
 
-    def render_table(self, doc: Document) -> None:
+    def render_table(self,
+                     doc: Document,
+                     name_override: Optional[LatexObject] = None,
+                     toc_ref: Optional[str] = None,
+                     extra_rows: Optional[List[Tuple[str, Any]]] = None) -> None:
+        """Write this table into a LaTeX document.
+
+        Args:
+            doc: The LaTeX document to be appended to.
+            name_override: An optional replacement for this table's name field.
+            toc_ref: A reference to be added to the table of contents.
+            extra_rows: Any extra rows to be added to the table before the kwargs.
+        """
         with doc.create(Table(position='htbp')) as table:
             table.append(NoEscape(r'\refstepcounter{table}'))
             table.append(Label(Marker(name=str(self.fe_id), prefix="tbl")))
+            if toc_ref:
+                table.append(NoEscape(r'\addcontentsline{toc}{subsection}{' + escape_latex(toc_ref) + '}'))
             with doc.create(Tabularx('|lX|', booktabs=True)) as tabular:
                 package = Package('xcolor', options='table')
                 if package not in tabular.packages:
                     # Need to invoke a table color before invoking TextColor (bug?)
                     tabular.packages.append(package)
-                tabular.add_row((bold(self.name), MultiColumn(size=1, align='r|', data=TextColor('blue', self.fe_id))))
+                tabular.add_row((name_override if name_override else bold(self.name),
+                                 MultiColumn(size=1, align='r|', data=TextColor('blue', self.fe_id))))
                 tabular.add_hline()
                 tabular.add_row(("Type: ", escape_latex(f"{self.type}".split("'")[1])))
                 if self.path:
                     tabular.add_row(("", escape_latex(self.path)))
-                if self.fields or self.args or self.kwargs:
+                for k, v in self.fields.items():
                     tabular.add_hline()
-                for idx, (k, v) in enumerate(self.fields.items()):
                     tabular.add_row((f"{k.capitalize()}: ", v))
-                    if self.args or self.kwargs or idx < len(self.fields) - 1:
-                        tabular.add_hline()
                 if self.args:
+                    tabular.add_hline()
                     tabular.add_row(("Args: ", self.args))
-                    if self.kwargs:
+                if extra_rows:
+                    for (key, val) in extra_rows:
                         tabular.add_hline()
+                        tabular.add_row(key, val)
                 if self.kwargs:
+                    tabular.add_hline()
                     for idx, (kwarg, val) in enumerate(self.kwargs.items()):
-                        tabular.add_row((kwarg, val), color='white' if idx % 2 else 'black!5')
+                        tabular.add_row((italic(kwarg), val), color='white' if idx % 2 else 'black!5')
 
 
 def _deref_is_callable(instruction: dis.Instruction, closure_vars: inspect.ClosureVars) -> bool:
@@ -831,7 +895,8 @@ def trace_model(model: Model, model_idx: int, model_fn: Any, optimizer_fn: Any, 
     fe_id = FEID(id(model))
     tbl = FeSummaryTable(name=model.model_name, fe_id=fe_id, target_type=type(model), **description)
     tables[fe_id] = tbl
-    model._fe_traceability_summary = tables
+    # Have to put this in a ChainMap b/c dict gets put into model._layers automatically somehow
+    model._fe_traceability_summary = ChainMap(tables)
 
     # Use MethodType to bind the method to the class instance
     setattr(model, 'fe_summary', types.MethodType(fe_summary, model))

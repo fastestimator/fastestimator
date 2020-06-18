@@ -17,6 +17,7 @@ from typing import Union
 from pylatex import NoEscape, Package, escape_latex
 from pylatex.base_classes import Container, Environment, Options
 from pylatex.lists import Enumerate
+from pylatex.utils import bold
 
 from fastestimator.util.util import FEID
 
@@ -67,24 +68,41 @@ class Verbatim(Environment):
         self.content_separator = '\n'
 
 
+class Center(Environment):
+    """A class to center content in a page.
+    """
+    pass
+
+
 class HrefFEID(ContainerList):
     """A class to represent a colored and underlined hyperref based on a given fe_id.
 
     Args:
         fe_id: The id used to link this hyperref.
         name: A string suffix to be printed as part of the link text.
+        link_prefix: The prefix for the hyperlink.
+        id_in_name: Whether to include the id in front of the name text.
+        bold_name: Whether to bold the name.
     """
-    def __init__(self, fe_id: FEID, name: str):
+    def __init__(self,
+                 fe_id: FEID,
+                 name: str,
+                 link_prefix: str = 'tbl',
+                 id_in_name: bool = True,
+                 bold_name: bool = False):
         self.packages.add(Package('hyperref', options='hidelinks'))
         self.packages.add(Package('ulem'))
         self.packages.add(Package('xcolor', options='table'))
         self.fe_id = fe_id
         self.name = name
-        super().__init__(data=[
-            NoEscape(r'\hyperref[tbl:'),
-            fe_id,
-            NoEscape(r']{\textcolor{blue}{\uline{'),
-            fe_id,
-            escape_latex(f": {name}") if name else "",
-            NoEscape("}}}")
-        ])
+        data = [
+            NoEscape(r'\hyperref['), escape_latex(f"{link_prefix}:"), fe_id, NoEscape(r']{\textcolor{blue}{\uline{')
+        ]
+        if id_in_name:
+            data.append(fe_id)
+            if name:
+                data.append(": ")
+        if name:
+            data.append(bold(escape_latex(name)) if bold_name else escape_latex(name))
+        data.append(NoEscape("}}}"))
+        super().__init__(data=data)

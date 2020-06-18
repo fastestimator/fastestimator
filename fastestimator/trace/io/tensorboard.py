@@ -64,12 +64,11 @@ class _BaseWriter:
                                               (SummaryWriter(log_dir=os.path.join(root_log_dir, time_stamp, key))))
         self.network = network
 
-    def write_epoch_models(self, mode: str, data: Data) -> None:
+    def write_epoch_models(self, mode: str) -> None:
         """Write summary graphs for all of the models in the current epoch.
 
         Args:
             mode: The current mode of execution ('train', 'eval', 'test', 'infer').
-            data: A set of batch data
         """
         raise NotImplementedError
 
@@ -198,7 +197,7 @@ class _TfWriter(_BaseWriter):
         self.tf_summary_writers = DefaultKeyDict(
             lambda key: (tf.summary.create_file_writer(os.path.join(root_log_dir, time_stamp, key))))
 
-    def write_epoch_models(self, mode: str, data: Data) -> None:
+    def write_epoch_models(self, mode: str) -> None:
         with self.tf_summary_writers[mode].as_default(), summary_ops_v2.always_record_summaries():
             summary_ops_v2.graph(backend.get_graph(), step=0)
             for model in self.network.epoch_models:
@@ -234,12 +233,9 @@ class _TfWriter(_BaseWriter):
 class _TorchWriter(_BaseWriter):
     """A class to write various Pytorch data into TensorBoard summary files.
     """
-    def write_epoch_models(self, mode: str, data: Data) -> None:
+    def write_epoch_models(self, mode: str) -> None:
         for model in self.network.epoch_models:
-            model_op = next(filter(lambda op: model is op.model, self.network.epoch_ops))
-            inputs = [data[key] for key in model_op.inputs]
-            if len(inputs) == 1 and not model_op.in_list:
-                inputs = inputs[0]
+            inputs = model.fe_input_spec.get_dummy_input()
             self.summary_writers[mode].add_graph(model, input_to_model=inputs)
 
     def write_weights(self, mode: str, models: Iterable[Model], step: int, visualize: bool) -> None:
@@ -373,7 +369,7 @@ class TensorBoard(Trace):
 
     def on_batch_end(self, data: Data) -> None:
         if self.write_graph and self.system.network.epoch_models.symmetric_difference(self.painted_graphs):
-            self.writer.write_epoch_models(mode=self.system.mode, data=data)
+            self.writer.write_epoch_models(mode=self.system.mode)
             self.painted_graphs = self.system.network.epoch_models
         if self.system.mode != 'train':
             return
