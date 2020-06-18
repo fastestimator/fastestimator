@@ -345,21 +345,21 @@ class PredictBox(TensorOp):
 
 
 def lr_fn(step):
-    if step < 2000:
+    if step < 1000:
         lr = (0.01 - 0.0002) / 2000 * step + 0.0002
-    elif step < 120000:
+    elif step < 60000:
         lr = 0.01
-    elif step < 160000:
+    elif step < 80000:
         lr = 0.001
     else:
         lr = 0.0001
-    return lr / 2  # original batch_size 16, for 512 we have batch_size 8
+    return lr
 
 
 def get_estimator(data_dir=None,
                   save_dir=tempfile.mkdtemp(),
-                  batch_size=8,
-                  epochs=12,
+                  batch_size=16,
+                  epochs=13,
                   max_train_steps_per_epoch=None,
                   max_eval_steps_per_epoch=None,
                   image_size=512,
@@ -404,7 +404,7 @@ def get_estimator(data_dir=None,
         pad_value=0)
     # network
     model = fe.build(model_fn=lambda: RetinaNet(num_classes=num_classes),
-                     optimizer_fn=lambda x: torch.optim.SGD(x, lr=1e-4, momentum=0.9, weight_decay=0.0001))
+                     optimizer_fn=lambda x: torch.optim.SGD(x, lr=2e-4, momentum=0.9, weight_decay=0.0001))
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="image", outputs=["cls_pred", "loc_pred"]),
         RetinaLoss(inputs=["anchorbox", "cls_pred", "loc_pred"], outputs=["total_loss", "focal_loss", "l1_loss"]),
