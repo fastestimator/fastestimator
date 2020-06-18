@@ -113,7 +113,10 @@ class Traceability(Trace):
         """
         with self.doc.create(Section("Training Graphs")):
             log_path = os.path.join(self.figure_dir, 'logs.png')
-            visualize_logs(experiments=[self.system.summary], save_path=log_path, verbose=False)
+            visualize_logs(experiments=[self.system.summary],
+                           save_path=log_path,
+                           verbose=False,
+                           ignore_metrics={'num_device', 'logging_interval'})
             with self.doc.create(Figure(position='h!')) as plot:
                 plot.add_image(os.path.relpath(log_path, start=self.save_dir),
                                width=NoEscape(r'1.0\textwidth,height=0.95\textheight,keepaspectratio'))

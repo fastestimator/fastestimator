@@ -16,15 +16,132 @@ import math
 import os
 import re
 from collections import defaultdict
-from typing import List, Optional, Set
+from typing import Any, DefaultDict, Dict, List, Optional, Set, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+from matplotlib.markers import MarkerStyle
 from scipy.ndimage.filters import gaussian_filter1d
 
 from fastestimator.summary.summary import Summary
 from fastestimator.util.util import prettify_metric_name, to_list, to_set
+
+
+class _MetricGroup:
+    """A class for wrapping the values recorded for a given metric based on its experiment id and mode.
+    """
+    state: DefaultDict[int, Dict[str, np.ndarray]]
+
+    def __init__(self):
+        self.state = defaultdict(dict)  # exp_id: {mode: value}
+
+    def __getitem__(self, exp_id: int) -> Dict[str, np.ndarray]:
+        return self.state[exp_id]
+
+    def add(self, exp_id: int, mode: str, values: Dict[int, Any]) -> bool:
+        """Add a new set of values to the metric group.
+
+        Args:
+            exp_id: The experiment id associated with these `values`.
+            mode: The mode associated with these `values`.
+            values: A dictionary of time: value pairs
+
+        Returns:
+            Whether the add was successful.
+        """
+        if values:
+            values = list(sorted(values.items()))
+            if len(values) == 1:
+                # We will allow any data types if there's only one value since it will be displayed differently
+                self.state[exp_id][mode] = np.array(values)
+                return True
+            else:
+                # We will be plotting something over time
+                for idx, (step, elem) in enumerate(values):
+                    if isinstance(elem, np.ndarray):
+                        if elem.ndim == 0 or (elem.ndim == 1 and elem.shape[0] == 1):
+                            elem = elem.item()
+                        else:
+                            # TODO - handle larger arrays somehow (maybe a heat map?)
+                            return False
+                    if isinstance(elem, str):
+                        # Can't plot strings over time...
+                        elem = [float(s) for s in re.findall(r'(\d+\.\d+|\.?\d+)', elem)]
+                        if len(elem) == 1:
+                            # We got an unambiguous number
+                            elem = elem[0]
+                        else:
+                            # Can't disambiguate what should be plotted
+                            return False
+                    if not isinstance(elem, (int, float)):
+                        # Can only plot numeric values over time
+                        return False
+                    values[idx] = (step, elem)
+                self.state[exp_id][mode] = np.array(values)
+
+    def ndim(self) -> int:
+        """Compute how many dimensions this data require to plot.
+
+        Returns:
+            The number of dimensions this data requires to plot.
+        """
+        ndims = [0]
+        for mode_val in self.state.values():
+            for mode, values in mode_val.items():
+                if values.ndim in (0, 1):
+                    # A singular value (this should never happen based on implementation of summary)
+                    ndims.append(1)
+                elif values.ndim == 2:
+                    if values.shape[0] == 1:
+                        # Metrics with only 1 time point can be displayed as singular values
+                        ndims.append(1)
+                    else:
+                        # A regular time vs metric value plot
+                        ndims.append(2)
+                else:
+                    # Time vs array value. Not supported yet.
+                    ndims.append(3)
+        return max(ndims)
+
+    def get_val(self, exp_idx: int, mode: str) -> Union[None, str, np.ndarray]:
+        """Get the value for a given experiment id and mode.
+
+        Args:
+            exp_idx: The id of the experiment in question.
+            mode: The mode under consideration.
+
+        Returns:
+            The value associated with the `exp_id` and `mode`, or None if no such value exists. If only a single item
+            exists and it is numeric then it will be returned as a string truncated to 5 decimal places.
+        """
+        vals = self.state[exp_idx].get(mode, None)
+        if vals is None:
+            return vals
+        if vals.ndim in (0, 1):
+            item = vals.item()
+            if isinstance(item, float):
+                return "{:.5f}".format(item)
+            return str(item)
+        if vals.ndim == 2 and vals.shape[0] == 1:
+            # This value isn't really time dependent
+            item = vals[0][1]
+            if isinstance(item, float):
+                return "{:.5f}".format(item)
+            return str(item)
+        else:
+            return vals
+
+    def modes(self, exp_id: int) -> List[str]:
+        """Get the modes supported by this group for a given experiment.
+
+        Args:
+            exp_id: The id of the experiment in question.
+
+        Returns:
+            Which modes have data for the given `exp_id`.
+        """
+        return list(self.state[exp_id].keys())
 
 
 def plot_logs(experiments: List[Summary],
@@ -47,120 +164,176 @@ def plot_logs(experiments: List[Summary],
         The handle of the pyplot figure.
     """
     experiments = to_list(experiments)
+    n_experiments = len(experiments)
+    if n_experiments == 0:
+        return plt.subplots(111)[0]
 
     ignore_keys = ignore_metrics or set()
     ignore_keys = to_set(ignore_keys)
-    ignore_keys |= {'epoch', 'progress', 'total_train_steps'}
+    ignore_keys |= {'epoch'}
     include_keys = to_set(include_metrics)
-    # TODO: epoch should be indicated on the axis (top x axis?)
+    # TODO: epoch should be indicated on the axis (top x axis?). Problem - different epochs per experiment.
     # TODO: figure out how ignore_metrics should interact with mode
 
-    max_time = 0
-    metric_keys = set()
-    for experiment in experiments:
+    metric_histories = defaultdict(_MetricGroup)  # metric: MetricGroup
+    for idx, experiment in enumerate(experiments):
         history = experiment.history
         for mode, metrics in history.items():
-            for key, value in metrics.items():
-                if key in ignore_keys:
+            for metric, step_val in metrics.items():
+                if len(step_val) == 0:
+                    continue  # Ignore empty metrics
+                if metric in ignore_keys:
                     continue
-                if include_keys and key not in include_keys:
-                    ignore_keys.add(key)
+                if include_keys and metric not in include_keys:
                     continue
-                if any(map(lambda x: isinstance(x[1], np.ndarray) and x[1].ndim > 0, value.items())):
-                    ignore_keys.add(key)
-                    continue  # TODO: nd array not currently supported. maybe in future visualize as heat map?
-                if value.keys():
-                    max_time = max(max_time, max(value.keys()))
-                metric_keys.add("{}: {}".format(mode, key))
-    metric_list = sorted(list(metric_keys))  # Sort the metrics alphabetically for consistency
-    num_metrics = len(metric_list)
-    num_experiments = len(experiments)
+                metric_histories[metric].add(idx, mode, step_val)
 
-    if num_metrics == 0:
+    metric_list = list(sorted(metric_histories.keys()))
+    if len(metric_list) == 0:
         return plt.subplots(111)[0]
 
+    # If sharing legend and there is more than 1 plot, then dedicate 1 subplot for the legend
+    share_legend = share_legend and (len(metric_list) > 1)
+    n_plots = len(metric_list) + share_legend
+
     # map the metrics into an n x n grid, then remove any extra rows. Final grid will be m x n with m <= n
-    num_cols = math.ceil(math.sqrt(num_metrics))
-    metric_grid_location = {key: (idx // num_cols, idx % num_cols) for (idx, key) in enumerate(metric_list)}
-    num_rows = math.ceil(num_metrics / num_cols)
+    n_cols = math.ceil(math.sqrt(n_plots))
+    n_rows = math.ceil(n_plots / n_cols)
+    metric_grid_location = {}
+    nd1_metrics = []
+    idx = 0
+    for metric in metric_list:
+        if metric_histories[metric].ndim() == 1:
+            # Delay placement of the 1D plots until the end
+            nd1_metrics.append(metric)
+        else:
+            metric_grid_location[metric] = (idx // n_cols, idx % n_cols)
+            idx += 1
+    for metric in nd1_metrics:
+        metric_grid_location[metric] = (idx // n_cols, idx % n_cols)
+        idx += 1
 
     sns.set_context('paper')
-    fig, axs = plt.subplots(num_rows, num_cols, sharex='all', figsize=(4 * num_cols, 2.8 * num_rows))
+    fig, axs = plt.subplots(n_rows, n_cols, sharex='all', figsize=(4 * n_cols, 2.8 * n_rows))
 
     # If only one row, need to re-format the axs object for consistency. Likewise for columns
-    if num_rows == 1:
+    if n_rows == 1:
         axs = [axs]
-        if num_cols == 1:
+        if n_cols == 1:
             axs = [axs]
 
     for metric in metric_grid_location.keys():
         axis = axs[metric_grid_location[metric][0]][metric_grid_location[metric][1]]
-        axis.set_title(metric if not pretty_names else prettify_metric_name(metric))
-        axis.ticklabel_format(axis='y', style='sci', scilimits=(-2, 3))
-        axis.grid(linestyle='--')
+        if metric_histories[metric].ndim() == 1:
+            axis.grid(linestyle='')
+        else:
+            axis.grid(linestyle='--')
+            axis.ticklabel_format(axis='y', style='sci', scilimits=(-2, 3))
+        axis.set_title(metric if not pretty_names else prettify_metric_name(metric), fontweight='bold')
         axis.spines['top'].set_visible(False)
         axis.spines['right'].set_visible(False)
         axis.spines['bottom'].set_visible(False)
         axis.spines['left'].set_visible(False)
         axis.tick_params(bottom=False, left=False)
 
-    for i in range(num_cols):
-        axs[num_rows - 1][i].set_xlabel('Steps')
+    for i in range(n_cols):
+        axs[n_rows - 1][i].set_xlabel('Steps')
 
     # some of the columns in the last row might be unused, so disable them
-    last_column_idx = num_cols - (num_rows * num_cols - num_metrics) - 1
-    for i in range(last_column_idx + 1, num_cols):
-        axs[num_rows - 1][i].axis('off')
-        axs[num_rows - 2][i].set_xlabel('Steps')
-        axs[num_rows - 2][i].xaxis.set_tick_params(which='both', labelbottom=True)
+    last_column_idx = n_cols - (n_rows * n_cols - (n_plots - share_legend)) - 1
+    for i in range(last_column_idx + 1, n_cols):
+        axs[n_rows - 1][i].axis('off')
+        axs[n_rows - 2][i].set_xlabel('Steps')
+        axs[n_rows - 2][i].xaxis.set_tick_params(which='both', labelbottom=True)
 
-    colors = sns.hls_palette(n_colors=num_experiments,
-                             s=0.95) if num_experiments > 10 else sns.color_palette("colorblind")
+    # the 1D metrics don't need x axis, so move them up, starting with the last in case multiple rows of them
+    for metric in reversed(nd1_metrics):
+        row = metric_grid_location[metric][0]
+        col = metric_grid_location[metric][1]
+        axs[row][col].axis('off')
+        if row > 0:
+            axs[row - 1][col].set_xlabel('Steps')
+            axs[row - 1][col].xaxis.set_tick_params(which='both', labelbottom=True)
+
+    colors = sns.hls_palette(n_colors=n_experiments, s=0.95) if n_experiments > 10 else sns.color_palette("colorblind")
 
     handles = []
     labels = []
-    bar_counter = defaultdict(lambda: 0)
-    for (color_idx, experiment) in enumerate(experiments):
-        labels.append(experiment.name)
-        metrics = {
-            "{}: {}".format(mode, key): val
-            for mode,
-            sub in experiment.history.items() for key,
-            val in sub.items() if key not in ignore_keys
-        }
-        for (idx, (metric, value)) in enumerate(metrics.items()):
-            data = np.array(list(value.items()))
-            if len(data) == 1:
-                y = data[0][1]
-                if isinstance(y, str):
-                    vals = [float(x) for x in re.findall(r'\d+\.?\d+', y)]
-                    if len(vals) == 1:
-                        y = vals[0]
-                width = max(10, max_time // 10)
-                x = max_time // 2 + (2 * (bar_counter[metric] % 2) - 1) * width * math.ceil(bar_counter[metric] / 2)
-                ln = axs[metric_grid_location[metric][0]][metric_grid_location[metric][1]].bar(
-                    x=x, height=y, color=colors[color_idx], label=experiment.name, width=width)
-                bar_counter[metric] += 1
+    has_label = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: False)))  # exp_id : {mode: {type: True}}
+    ax_text = defaultdict(lambda: (0.0, 0.9))  # Where to put the text on a given axis
+    for exp_idx, experiment in enumerate(experiments):
+        for metric, group in metric_histories.items():
+            axis = axs[metric_grid_location[metric][0]][metric_grid_location[metric][1]]
+            if group.ndim() == 1:
+                # Single value
+                for mode in group.modes(exp_idx):
+                    ax_id = id(axis)
+                    prefix = f"{experiment.name} ({mode})" if n_experiments > 1 else f"{mode}"
+                    axis.text(ax_text[ax_id][0],
+                              ax_text[ax_id][1],
+                              f"{prefix}: {group.get_val(exp_idx, mode)}",
+                              color=colors[exp_idx],
+                              transform=axis.transAxes)
+                    ax_text[ax_id] = (ax_text[ax_id][0], ax_text[ax_id][1] - 0.1)
+                    if ax_text[ax_id][1] < 0:
+                        ax_text[ax_id] = (ax_text[ax_id][0] + 0.5, 0.9)
+            elif group.ndim() == 2:
+                for mode, data in group[exp_idx].items():
+                    title = f"{experiment.name} ({mode})" if n_experiments > 1 else f"{mode}"
+                    if data.shape[0] < 2:
+                        # This particular mode only has a single data point, so need to draw a shape instead of a line
+                        xy = (data[0][0], data[0][1])
+                        if mode == 'train':
+                            style = MarkerStyle(marker='o', fillstyle='full')
+                        elif mode == 'eval':
+                            style = MarkerStyle(marker='v', fillstyle='full')
+                        elif mode == 'test':
+                            style = MarkerStyle(marker='*', fillstyle='full')
+                        else:
+                            style = MarkerStyle(marker='s', fillstyle='full')
+                        s = axis.scatter(xy[0],
+                                         xy[1],
+                                         s=40,
+                                         c=[colors[exp_idx]],
+                                         marker=style,
+                                         linewidth=1.0,
+                                         edgecolors='black')
+                        if not has_label[exp_idx][mode]['patch']:
+                            labels.append(title)
+                            handles.append(s)
+                            has_label[exp_idx][mode]['patch'] = True
+                    else:
+                        # We can draw a line
+                        y = data[:, 1] if smooth_factor == 0 else gaussian_filter1d(data[:, 1], sigma=smooth_factor)
+                        ln = axis.plot(
+                            data[:, 0],
+                            y,
+                            color=colors[exp_idx],
+                            label=title,
+                            linewidth=1.5,
+                            linestyle='solid' if mode == 'train' else
+                            'dashed' if mode == 'eval' else 'dotted' if mode == 'test' else 'dashdot')
+                        if not has_label[exp_idx][mode]['line']:
+                            labels.append(title)
+                            handles.append(ln[0])
+                            has_label[exp_idx][mode]['line'] = True
             else:
-                y = data[:, 1] if smooth_factor == 0 else gaussian_filter1d(data[:, 1], sigma=smooth_factor)
-                ln = axs[metric_grid_location[metric][0]][metric_grid_location[metric][1]].plot(
-                    data[:, 0], y, color=colors[color_idx], label=experiment.name, linewidth=1.5)
-            if idx == 0:
-                handles.append(ln[0])
+                # Some kind of image or matrix. Not implemented yet.
+                pass
 
     plt.tight_layout()
 
     if len(labels) > 1 or labels[0]:
-        if share_legend and num_rows > 1:
-            if last_column_idx == num_cols - 1:
-                fig.subplots_adjust(bottom=0.15)
-                fig.legend(handles, labels, loc='lower center', ncol=num_cols + 1)
-            else:
-                axs[num_rows - 1][last_column_idx + 1].legend(handles, labels, loc='center', fontsize='large')
+        if share_legend:
+            axs[n_rows - 1][last_column_idx + 1].legend(
+                handles,
+                labels,
+                loc='center',
+                fontsize='large' if len(handles) <= 6 else 'medium' if len(handles) <= 8 else 'small')
         else:
-            for i in range(num_rows):
-                for j in range(num_cols):
-                    if i == num_rows - 1 and j > last_column_idx:
+            for i in range(n_rows):
+                for j in range(n_cols):
+                    if i == n_rows - 1 and j > last_column_idx:
                         break
                     axs[i][j].legend(loc='best', fontsize='small')
     return fig
