@@ -6,7 +6,6 @@ import pandas as pd
 
 import fastestimator as fe
 
-
 class TestCSVDataset(unittest.TestCase):
     def test_dataset(self):
         tmpdirname = tempfile.mkdtemp()
