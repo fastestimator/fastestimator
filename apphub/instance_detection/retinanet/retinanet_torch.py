@@ -308,34 +308,40 @@ class PredictBox(TensorOp):
         h_abs = torch.exp(h_loc) * self.all_anchors[..., 3]
         x2_abs = x1_abs + w_abs
         y2_abs = y1_abs + h_abs
-        keep = torch.zeros_like(y2_abs)  # whether to keep the anchorbox results
         # iterate over images
+        final_results = []
         for idx in range(batch_size):
             scores_pred_single = scores_pred[idx]
-            keep_anchor = torch.zeros_like(scores_pred_single)
             boxes_pred_single = torch.stack([x1_abs[idx], y1_abs[idx], x2_abs[idx], y2_abs[idx]], dim=-1)
             # iterate over each pyramid to select top 1000 anchor boxes
             start = 0
+            top_idx = []
             for num_anchors_fpn_level in self.num_anchors_per_level:
                 fpn_scores = scores_pred_single[start:start + num_anchors_fpn_level]
-                keep_fpn = torch.zeros_like(fpn_scores)
-                if num_anchors_fpn_level > self.select_top_k:
-                    _, selected_index = torch.topk(fpn_scores, self.select_top_k)
-                    keep_fpn[selected_index] = 1.0
-                else:
-                    keep_fpn = 1.0
-                keep_anchor[start:start + num_anchors_fpn_level] = keep_fpn
+                _, selected_index = torch.topk(fpn_scores, min(self.select_top_k, int(num_anchors_fpn_level)))
+                top_idx.append(selected_index + start)
                 start += num_anchors_fpn_level
+            top_idx = torch.cat([x.long() for x in top_idx])
             # perform nms
-            keep_idx = torch.where(keep_anchor == 1.0)[0]
-            nms_keep = torchvision.ops.nms(boxes_pred_single[keep_idx], scores_pred_single[keep_idx], iou_threshold=1.0)
+            nms_keep = torchvision.ops.nms(boxes_pred_single[top_idx], scores_pred_single[top_idx], iou_threshold=1.0)
             nms_keep = nms_keep[:self.nms_max_outputs]  # select the top nms outputs
-            keep_idx = keep_idx[nms_keep]  # narrow the keep index
-            keep[idx][keep_idx] = 1.0
-            # remove any anchorbox with score lower than threshold
-            keep[idx] = torch.where(scores_pred_single < self.score_threshold, torch.zeros_like(keep[idx]), keep[idx])
-        image_results = torch.stack([x1_abs, y1_abs, w_abs, h_abs, labels_pred.float(), scores_pred, keep], dim=-1)
-        return image_results  # [Batch, num_anchor, [x1, y1, w, h, label, score, select]]
+            top_idx = top_idx[nms_keep]  # narrow the keep index
+            results_single = [
+                x1_abs[idx][top_idx],
+                y1_abs[idx][top_idx],
+                w_abs[idx][top_idx],
+                h_abs[idx][top_idx],
+                labels_pred[idx][top_idx].float(),
+                scores_pred[idx][top_idx],
+                torch.ones_like(x1_abs[idx][top_idx])
+            ]
+            final_results.append(torch.stack(results_single, dim=-1))
+        final_results = torch.stack(final_results)
+        # mark the select as 0 for any anchorbox with score lower than threshold
+        final_results[..., -1] = torch.where(final_results[..., -2] > self.score_threshold,
+                                             final_results[..., -1],
+                                             torch.zeros_like(final_results[..., -1]))
+        return final_results  # [Batch, nms_max_outputs, 7], where 7 is [x1, y1, w, h, label, score, select]
 
 
 def lr_fn(step):

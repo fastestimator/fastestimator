@@ -29,6 +29,10 @@ from fastestimator.util.traceability_util import traceable
 class MeanAveragePrecision(Trace):
     """Calculate COCO mean average precision.
 
+    The value of 'y_pred' has shape [batch, num_box, 7] where 7 is [x1, y1, w, h, label, label_score, select], select
+    is either 0 or 1.
+    The value of 'bbox' has shape (batch_size, num_bbox, 5). The 5 is [x1, y1, w, h, label].
+
     Args:
         num_classes: Maximum `int` value for your class label. In COCO dataset we only used 80 classes, but the maxium
             value of the class label is `90`. In this case `num_classes` should be `90`.
@@ -48,7 +52,7 @@ class MeanAveragePrecision(Trace):
 
         self.iou_thres = np.linspace(.5, 0.95, np.round((0.95 - .5) / .05).astype(np.int) + 1, endpoint=True)
         self.recall_thres = np.linspace(.0, 1.00, np.round((1.00 - .0) / .01).astype(np.int) + 1, endpoint=True)
-        self.categories = range(1, num_classes + 1)  # MSCOCO style class label starts from 1
+        self.categories = range(num_classes)
         self.max_detection = 100
         self.image_ids = []
 
@@ -140,8 +144,8 @@ class MeanAveragePrecision(Trace):
     def _reshape_pred(pred: List[np.ndarray]) -> np.ndarray:
         """Reshape predicted bounding boxes and add local image id within batch.
 
-        The input prediction array is a list of batch_size elements. For each element inside the list, it
-        has shape (num_bbox, 6). The 6 is [x1, y1, w, h, label, score] for each bounding box.
+        The input pred array has shape [batch, num_box, 7] where 7 is [x1, y1, w, h, label, label_score, select], select
+        is either 0 or 1.
         For output we flatten the batch dimension. The output shape is (total_num_bbox_in_batch, 7). The 7 is
         [id_in_batch, x1, y1, w, h, label, score].
 
@@ -152,17 +156,18 @@ class MeanAveragePrecision(Trace):
             Predected bounding boxes with shape (total_num_bbox_in_batch, 7).
         """
         pred_with_id = []
-        for index, item in enumerate(pred):
-            local_ids = np.repeat([index], item.shape[0], axis=None)
+        for id_batch in range(pred.shape[0]):
+            pred_single = pred[id_batch]
+            local_ids = np.repeat([id_batch], pred_single.shape[0], axis=None)
             local_ids = np.expand_dims(local_ids, axis=-1)
-            pred_with_id.append(np.concatenate([local_ids, item], axis=1))
-
+            pred_single = np.concatenate([local_ids, pred_single], axis=1)
+            pred_with_id.append(pred_single[pred_single[:, -1] > 0, :-1])
         pred_with_id = np.concatenate(pred_with_id, axis=0)
         return pred_with_id
 
     def on_batch_end(self, data: Data):
         # begin of reading det and gt
-        pred = to_number(data[self.pred_key])  # pred is [Batch, num_anchor, 7]
+        pred = to_number(data[self.pred_key])  # pred is [batch, nms_max_outputs, 7]
         pred = self._reshape_pred(pred)
 
         gt = to_number(data[self.true_key])  # gt is np.array (batch, box, 5), box dimension is padded
