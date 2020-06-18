@@ -1,5 +1,4 @@
 import math
-import pdb
 import tempfile
 
 import cv2
@@ -346,7 +345,7 @@ class PredictBox(TensorOp):
 
 def lr_fn(step):
     if step < 1000:
-        lr = (0.01 - 0.0002) / 2000 * step + 0.0002
+        lr = (0.01 - 0.0002) / 1000 * step + 0.0002
     elif step < 60000:
         lr = 0.01
     elif step < 80000:
