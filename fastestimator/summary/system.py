@@ -14,14 +14,18 @@
 # ==============================================================================
 import datetime
 import json
-from typing import Any, List, Optional
+from typing import Any, List, Optional, TYPE_CHECKING, Union
 
 import torch
 
 from fastestimator.network import BaseNetwork
 from fastestimator.pipeline import Pipeline
+from fastestimator.schedule.schedule import Scheduler
 from fastestimator.summary.summary import Summary
 from fastestimator.util.traceability_util import FeSummaryTable
+
+if TYPE_CHECKING:
+    from fastestimator.trace.trace import Trace
 
 
 class System:
@@ -29,6 +33,8 @@ class System:
 
     Args:
         network: The network instance being used by the current fe.Estimator.
+        pipeline: The pipeline instance being used by the current fe.Estimator.
+        traces: The traces provided to the current fe.Estimator.
         mode: The current execution mode (or None for warmup).
         num_devices: How many GPUs are available for training.
         log_steps: Log every n steps (0 to disable train logging, None to disable all logging).
@@ -46,7 +52,9 @@ class System:
         epoch_idx: The current epoch index for the training (starting from 1).
         batch_idx: The current batch index within an epoch (starting from 1).
         stop_training: A flag to signal that training should abort.
-        network: A reference to the network being used this epoch
+        network: A reference to the network being used.
+        pipeline: A reference to the pipeline being used.
+        traces: The traces being used.
         max_train_steps_per_epoch: Training will complete after n steps even if loader is not yet exhausted.
         max_eval_steps_per_epoch: Evaluation will complete after n steps even if loader is not yet exhausted.
         summary: An object to write experiment results to.
@@ -63,6 +71,7 @@ class System:
     stop_training: bool
     network: BaseNetwork
     pipeline: Pipeline
+    traces: List[Union['Trace', Scheduler['Trace']]]
     max_train_steps_per_epoch: Optional[int]
     max_eval_steps_per_epoch: Optional[int]
     summary: Summary
@@ -71,6 +80,7 @@ class System:
     def __init__(self,
                  network: BaseNetwork,
                  pipeline: Pipeline,
+                 traces: List[Union['Trace', Scheduler['Trace']]],
                  mode: Optional[str] = None,
                  num_devices: int = torch.cuda.device_count(),
                  log_steps: Optional[int] = None,
@@ -81,6 +91,7 @@ class System:
 
         self.network = network
         self.pipeline = pipeline
+        self.traces = traces
         self.mode = mode
         self.num_devices = num_devices
         self.log_steps = log_steps
