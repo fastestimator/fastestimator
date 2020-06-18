@@ -162,7 +162,7 @@ class MeanAveragePrecision(Trace):
 
     def on_batch_end(self, data: Data):
         # begin of reading det and gt
-        pred = list(map(to_number, data[self.pred_key]))  # pred is list (batch, ) of np.ndarray (?, 6)
+        pred = to_number(data[self.pred_key])  # pred is [Batch, num_anchor, 7]
         pred = self._reshape_pred(pred)
 
         gt = to_number(data[self.true_key])  # gt is np.array (batch, box, 5), box dimension is padded

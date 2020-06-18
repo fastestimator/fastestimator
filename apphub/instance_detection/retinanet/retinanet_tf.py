@@ -310,6 +310,8 @@ class RetinaLoss(TensorOp):
     def focal_loss(self, single_cls_gt, single_cls_pred, alpha=0.25, gamma=2.0):
         # single_cls_gt shape: [num_anchor], single_cls_pred shape: [num_anchor, num_class]
         num_classes = single_cls_pred.shape[-1]
+        # ground truth object label starts from 1, shift object label to start from 0
+        single_cls_gt = tf.where(single_cls_gt > 0, single_cls_gt - 1, single_cls_gt)
         # gather the objects and background, discard the rest
         anchor_obj_idx = tf.where(tf.greater_equal(single_cls_gt, 0))
         anchor_obj_bg_idx = tf.where(tf.greater_equal(single_cls_gt, -1))
@@ -442,7 +444,6 @@ class PredictBox(TensorOp):
 
             image_results = tf.stack([x1, y1, w, h, final_labels, final_scores], axis=1)
             pred.append(image_results)
-
         return pred
 
 
@@ -458,13 +459,16 @@ def lr_fn(step):
     return lr / 2  # original batch_size 16, for 512 we have batch_size 8
 
 
-def get_estimator(batch_size=8,
-                  epochs=12,
+def get_estimator(data_dir=None,
                   save_dir=tempfile.mkdtemp(),
+                  batch_size=8,
+                  epochs=12,
                   max_train_steps_per_epoch=None,
+                  max_eval_steps_per_epoch=None,
                   image_size=512,
                   num_classes=90):
-    train_ds, eval_ds = mscoco.load_data()
+    # pipeline
+    train_ds, eval_ds = mscoco.load_data(root_dir=data_dir)
     pipeline = fe.Pipeline(
         train_data=train_ds,
         eval_data=eval_ds,
@@ -499,10 +503,9 @@ def get_estimator(batch_size=8,
             AnchorBox(inputs="bbox", outputs="anchorbox", width=image_size, height=image_size)
         ],
         pad_value=0)
-
+    # network
     model = fe.build(model_fn=lambda: RetinaNet(input_shape=(image_size, image_size, 3), num_classes=num_classes),
                      optimizer_fn=lambda: tf.optimizers.SGD(momentum=0.9))
-
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="image", outputs=["cls_pred", "loc_pred"]),
         RetinaLoss(inputs=["anchorbox", "cls_pred", "loc_pred"], outputs=["total_loss", "focal_loss", "l1_loss"]),
@@ -512,18 +515,19 @@ def get_estimator(batch_size=8,
                    outputs="pred",
                    mode="eval")
     ])
-
-    estimator = fe.Estimator(
-        pipeline=pipeline,
-        network=network,
-        epochs=epochs,
-        max_train_steps_per_epoch=max_train_steps_per_epoch,
-        traces=[
-            LRScheduler(model=model, lr_fn=lr_fn),
-            BestModelSaver(model=model, save_dir=save_dir, metric='mAP', save_best_mode="max"),
-            MeanAveragePrecision(num_classes=num_classes)
-        ],
-        monitor_names=["l1_loss", "focal_loss"])
+    # estimator
+    traces = [
+        LRScheduler(model=model, lr_fn=lr_fn),
+        BestModelSaver(model=model, save_dir=save_dir, metric='mAP', save_best_mode="max"),
+        MeanAveragePrecision(num_classes=num_classes, true_key='bbox', pred_key='pred', mode="eval")
+    ]
+    estimator = fe.Estimator(pipeline=pipeline,
+                             network=network,
+                             epochs=epochs,
+                             max_train_steps_per_epoch=max_train_steps_per_epoch,
+                             max_eval_steps_per_epoch=max_eval_steps_per_epoch,
+                             traces=traces,
+                             monitor_names=["l1_loss", "focal_loss"])
 
     return estimator
 

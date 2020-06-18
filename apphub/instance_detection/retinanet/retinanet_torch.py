@@ -19,104 +19,7 @@ from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.adapt import LRScheduler
 from fastestimator.trace.io import BestModelSaver
-
-
-class ClassificationSubNet(nn.Module):
-    """Classification subnet."""
-    def __init__(self, in_channels, num_classes, num_anchors=9):
-        super().__init__()
-        self.num_classes = num_classes
-        self.conv2d_1 = nn.Conv2d(in_channels, 256, 3, padding=1)
-        nn.init.normal_(self.conv2d_1.weight.data, std=0.01)
-        nn.init.zeros_(self.conv2d_1.bias.data)
-        self.conv2d_2 = nn.Conv2d(256, 256, 3, padding=1)
-        nn.init.normal_(self.conv2d_2.weight.data, std=0.01)
-        nn.init.zeros_(self.conv2d_2.bias.data)
-        self.conv2d_3 = nn.Conv2d(256, 256, 3, padding=1)
-        nn.init.normal_(self.conv2d_3.weight.data, std=0.01)
-        nn.init.zeros_(self.conv2d_3.bias.data)
-        self.conv2d_4 = nn.Conv2d(256, 256, 3, padding=1)
-        nn.init.normal_(self.conv2d_4.weight.data, std=0.01)
-        nn.init.zeros_(self.conv2d_4.bias.data)
-        self.conv2d_5 = nn.Conv2d(256, num_classes * num_anchors, 3, padding=1)
-        nn.init.normal_(self.conv2d_5.weight.data, std=0.01)
-        nn.init.constant_(self.conv2d_5.bias.data, val=math.log(1 / 99))
-
-    def forward(self, x):
-        x = self.conv2d_1(x)
-        x = nn.functional.relu(x)
-        x = self.conv2d_2(x)
-        x = nn.functional.relu(x)
-        x = self.conv2d_3(x)
-        x = nn.functional.relu(x)
-        x = self.conv2d_4(x)
-        x = nn.functional.relu(x)
-        x = self.conv2d_5(x)
-        x = torch.sigmoid(x)
-        return x.view(x.size(0), -1, self.num_classes)  # the output dimension is [batch, #anchor, #classes]
-
-
-class RegressionSubNet(nn.Module):
-    def __init__(self, in_channels, num_anchors=9):
-        super().__init__()
-        self.layers = nn.Sequential(nn.Conv2d(in_channels, 256, 3, padding=1),
-                                    nn.ReLU(inplace=True),
-                                    nn.Conv2d(256, 256, 3, padding=1),
-                                    nn.ReLU(inplace=True),
-                                    nn.Conv2d(256, 256, 3, padding=1),
-                                    nn.ReLU(inplace=True),
-                                    nn.Conv2d(256, 256, 3, padding=1),
-                                    nn.ReLU(inplace=True),
-                                    nn.Conv2d(256, 4 * num_anchors, 3, padding=1))
-        for layer in self.layers:
-            if isinstance(layer, nn.Conv2d):
-                nn.init.normal_(layer.weight.data, std=0.01)
-                nn.init.zeros_(layer.bias.data)
-
-    def forward(self, x):
-        x = self.layers(x)
-        return x.view(x.size(0), -1, 4)  # the output dimension is [batch, #anchor, 4]
-
-
-class RetinaNet(nn.Module):
-    def __init__(self, num_classes):
-        super().__init__()
-        res50_layers = list(torchvision.models.resnet50(pretrained=True).children())
-        self.res50_in_C3 = nn.Sequential(*(res50_layers[:6]))
-        self.res50_C3_C4 = nn.Sequential(*(res50_layers[6]))
-        self.res50_C4_C5 = nn.Sequential(*(res50_layers[7]))
-        self.conv2d_C5 = nn.Conv2d(2048, 256, 1)
-        self.conv2d_C4 = nn.Conv2d(1024, 256, 1)
-        self.conv2d_C3 = nn.Conv2d(512, 256, 1)
-        self.conv2d_P6 = nn.Conv2d(2048, 256, 3, stride=2, padding=1)
-        self.conv2d_P7 = nn.Conv2d(256, 256, 3, stride=2, padding=1)
-        self.conv2d_P5 = nn.Conv2d(256, 256, 3, padding=1)
-        self.conv2d_P4 = nn.Conv2d(256, 256, 3, padding=1)
-        self.conv2d_P3 = nn.Conv2d(256, 256, 3, padding=1)
-        self.cls_net = ClassificationSubNet(in_channels=256, num_classes=num_classes)
-        self.reg_net = RegressionSubNet(in_channels=256)
-
-    def forward(self, x):
-        C3 = self.res50_in_C3(x)
-        C4 = self.res50_C3_C4(C3)
-        C5 = self.res50_C4_C5(C4)
-        P5 = self.conv2d_C5(C5)
-        P5_upsampling = nn.functional.interpolate(P5, scale_factor=2)
-        P4 = self.conv2d_C4(C4)
-        P4 = P5_upsampling + P4
-        P4_upsampling = nn.functional.interpolate(P4, scale_factor=2)
-        P3 = self.conv2d_C3(C3)
-        P3 = P4_upsampling + P3
-        P6 = self.conv2d_P6(C5)
-        P7 = nn.functional.relu(P6)
-        P7 = self.conv2d_P7(P7)
-        P5 = self.conv2d_P5(P5)
-        P4 = self.conv2d_P4(P4)
-        P3 = self.conv2d_P3(P3)
-        pyramid = [P3, P4, P5, P6, P7]
-        cls_output = torch.cat([self.cls_net(x) for x in pyramid], dim=-2)
-        loc_output = torch.cat([self.reg_net(x) for x in pyramid], dim=-2)
-        return cls_output, loc_output
+from fastestimator.trace.metric import MeanAveragePrecision
 
 
 def _get_fpn_anchor_box(width, height):
@@ -217,6 +120,104 @@ class AnchorBox(NumpyOp):
         return iou
 
 
+class ClassificationSubNet(nn.Module):
+    """Classification subnet."""
+    def __init__(self, in_channels, num_classes, num_anchors=9):
+        super().__init__()
+        self.num_classes = num_classes
+        self.conv2d_1 = nn.Conv2d(in_channels, 256, 3, padding=1)
+        nn.init.normal_(self.conv2d_1.weight.data, std=0.01)
+        nn.init.zeros_(self.conv2d_1.bias.data)
+        self.conv2d_2 = nn.Conv2d(256, 256, 3, padding=1)
+        nn.init.normal_(self.conv2d_2.weight.data, std=0.01)
+        nn.init.zeros_(self.conv2d_2.bias.data)
+        self.conv2d_3 = nn.Conv2d(256, 256, 3, padding=1)
+        nn.init.normal_(self.conv2d_3.weight.data, std=0.01)
+        nn.init.zeros_(self.conv2d_3.bias.data)
+        self.conv2d_4 = nn.Conv2d(256, 256, 3, padding=1)
+        nn.init.normal_(self.conv2d_4.weight.data, std=0.01)
+        nn.init.zeros_(self.conv2d_4.bias.data)
+        self.conv2d_5 = nn.Conv2d(256, num_classes * num_anchors, 3, padding=1)
+        nn.init.normal_(self.conv2d_5.weight.data, std=0.01)
+        nn.init.constant_(self.conv2d_5.bias.data, val=math.log(1 / 99))
+
+    def forward(self, x):
+        x = self.conv2d_1(x)
+        x = nn.functional.relu(x)
+        x = self.conv2d_2(x)
+        x = nn.functional.relu(x)
+        x = self.conv2d_3(x)
+        x = nn.functional.relu(x)
+        x = self.conv2d_4(x)
+        x = nn.functional.relu(x)
+        x = self.conv2d_5(x)
+        x = torch.sigmoid(x)
+        return x.view(x.size(0), -1, self.num_classes)  # the output dimension is [batch, #anchor, #classes]
+
+
+class RegressionSubNet(nn.Module):
+    def __init__(self, in_channels, num_anchors=9):
+        super().__init__()
+        self.layers = nn.Sequential(nn.Conv2d(in_channels, 256, 3, padding=1),
+                                    nn.ReLU(inplace=True),
+                                    nn.Conv2d(256, 256, 3, padding=1),
+                                    nn.ReLU(inplace=True),
+                                    nn.Conv2d(256, 256, 3, padding=1),
+                                    nn.ReLU(inplace=True),
+                                    nn.Conv2d(256, 256, 3, padding=1),
+                                    nn.ReLU(inplace=True),
+                                    nn.Conv2d(256, 4 * num_anchors, 3, padding=1))
+        for layer in self.layers:
+            if isinstance(layer, nn.Conv2d):
+                nn.init.normal_(layer.weight.data, std=0.01)
+                nn.init.zeros_(layer.bias.data)
+
+    def forward(self, x):
+        x = self.layers(x)
+        return x.view(x.size(0), -1, 4)  # the output dimension is [batch, #anchor, 4]
+
+
+class RetinaNet(nn.Module):
+    def __init__(self, num_classes):
+        super().__init__()
+        res50_layers = list(torchvision.models.resnet50(pretrained=True).children())
+        self.res50_in_C3 = nn.Sequential(*(res50_layers[:6]))
+        self.res50_C3_C4 = nn.Sequential(*(res50_layers[6]))
+        self.res50_C4_C5 = nn.Sequential(*(res50_layers[7]))
+        self.conv2d_C5 = nn.Conv2d(2048, 256, 1)
+        self.conv2d_C4 = nn.Conv2d(1024, 256, 1)
+        self.conv2d_C3 = nn.Conv2d(512, 256, 1)
+        self.conv2d_P6 = nn.Conv2d(2048, 256, 3, stride=2, padding=1)
+        self.conv2d_P7 = nn.Conv2d(256, 256, 3, stride=2, padding=1)
+        self.conv2d_P5 = nn.Conv2d(256, 256, 3, padding=1)
+        self.conv2d_P4 = nn.Conv2d(256, 256, 3, padding=1)
+        self.conv2d_P3 = nn.Conv2d(256, 256, 3, padding=1)
+        self.cls_net = ClassificationSubNet(in_channels=256, num_classes=num_classes)
+        self.reg_net = RegressionSubNet(in_channels=256)
+
+    def forward(self, x):
+        C3 = self.res50_in_C3(x)
+        C4 = self.res50_C3_C4(C3)
+        C5 = self.res50_C4_C5(C4)
+        P5 = self.conv2d_C5(C5)
+        P5_upsampling = nn.functional.interpolate(P5, scale_factor=2)
+        P4 = self.conv2d_C4(C4)
+        P4 = P5_upsampling + P4
+        P4_upsampling = nn.functional.interpolate(P4, scale_factor=2)
+        P3 = self.conv2d_C3(C3)
+        P3 = P4_upsampling + P3
+        P6 = self.conv2d_P6(C5)
+        P7 = nn.functional.relu(P6)
+        P7 = self.conv2d_P7(P7)
+        P5 = self.conv2d_P5(P5)
+        P4 = self.conv2d_P4(P4)
+        P3 = self.conv2d_P3(P3)
+        pyramid = [P3, P4, P5, P6, P7]
+        cls_output = torch.cat([self.cls_net(x) for x in pyramid], dim=-2)
+        loc_output = torch.cat([self.reg_net(x) for x in pyramid], dim=-2)
+        return cls_output, loc_output
+
+
 class RetinaLoss(TensorOp):
     def forward(self, data, state):
         anchorbox, cls_pred, loc_pred = data
@@ -274,6 +275,69 @@ class RetinaLoss(TensorOp):
         return loc_loss
 
 
+class PredictBox(TensorOp):
+    """Convert network output to bounding boxes.
+        """
+    def __init__(self,
+                 inputs=None,
+                 outputs=None,
+                 mode=None,
+                 input_shape=(512, 512, 3),
+                 select_top_k=1000,
+                 nms_max_outputs=100,
+                 score_threshold=0.05):
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.input_shape = input_shape
+        self.select_top_k = select_top_k
+        self.nms_max_outputs = nms_max_outputs
+        self.score_threshold = score_threshold
+        self.all_anchors, self.num_anchors_per_level = _get_fpn_anchor_box(width=input_shape[1], height=input_shape[0])
+        self.all_anchors = torch.Tensor(self.all_anchors)
+        if torch.cuda.is_available():
+            self.all_anchors = self.all_anchors.to("cuda")
+
+    def forward(self, data, state):
+        cls_pred, loc_pred = data  # [Batch, #anchor, #num_classes], [Batch, #anchor, 4]
+        batch_size = cls_pred.size(0)
+        scores_pred, labels_pred = torch.max(cls_pred, dim=-1)
+        # loc_pred -> loc_abs
+        x1_loc, y1_loc, w_loc, h_loc = cls_pred[..., 0], cls_pred[..., 1], cls_pred[..., 2], cls_pred[..., 3]
+        x1_abs = x1_loc * self.all_anchors[..., 2] + self.all_anchors[..., 0]
+        y1_abs = y1_loc * self.all_anchors[..., 3] + self.all_anchors[..., 1]
+        w_abs = torch.exp(w_loc) * self.all_anchors[..., 2]
+        h_abs = torch.exp(h_loc) * self.all_anchors[..., 3]
+        x2_abs = x1_abs + w_abs
+        y2_abs = y1_abs + h_abs
+        keep = torch.zeros_like(y2_abs)  # whether to keep the anchorbox results
+        # iterate over images
+        for idx in range(batch_size):
+            scores_pred_single = scores_pred[idx]
+            keep_anchor = torch.zeros_like(scores_pred_single)
+            boxes_pred_single = torch.stack([x1_abs[idx], y1_abs[idx], x2_abs[idx], y2_abs[idx]], dim=-1)
+            # iterate over each pyramid to select top 1000 anchor boxes
+            start = 0
+            for num_anchors_fpn_level in self.num_anchors_per_level:
+                fpn_scores = scores_pred_single[start:start + num_anchors_fpn_level]
+                keep_fpn = torch.zeros_like(fpn_scores)
+                if num_anchors_fpn_level > self.select_top_k:
+                    _, selected_index = torch.topk(fpn_scores, self.select_top_k)
+                    keep_fpn[selected_index] = 1.0
+                else:
+                    keep_fpn = 1.0
+                keep_anchor[start:start + num_anchors_fpn_level] = keep_fpn
+                start += num_anchors_fpn_level
+            # perform nms
+            keep_idx = torch.where(keep_anchor == 1.0)[0]
+            nms_keep = torchvision.ops.nms(boxes_pred_single[keep_idx], scores_pred_single[keep_idx], iou_threshold=1.0)
+            nms_keep = nms_keep[:self.nms_max_outputs]  # select the top nms outputs
+            keep_idx = keep_idx[nms_keep]  # narrow the keep index
+            keep[idx][keep_idx] = 1.0
+            # remove any anchorbox with score lower than threshold
+            keep[idx] = torch.where(scores_pred_single < self.score_threshold, torch.zeros_like(keep[idx]), keep[idx])
+        image_results = torch.stack([x1_abs, y1_abs, w_abs, h_abs, labels_pred.float(), scores_pred, keep], dim=-1)
+        return image_results  # [Batch, num_anchor, [x1, y1, w, h, label, score, select]]
+
+
 def lr_fn(step):
     if step < 2000:
         lr = (0.01 - 0.0002) / 2000 * step + 0.0002
@@ -286,7 +350,15 @@ def lr_fn(step):
     return lr / 2  # original batch_size 16, for 512 we have batch_size 8
 
 
-def get_estimator(data_dir=None, save_dir=tempfile.mkdtemp(), batch_size=16, epochs=12):
+def get_estimator(data_dir=None,
+                  save_dir=tempfile.mkdtemp(),
+                  batch_size=8,
+                  epochs=12,
+                  max_train_steps_per_epoch=None,
+                  max_eval_steps_per_epoch=None,
+                  image_size=512,
+                  num_classes=90):
+    # pipeline
     train_ds, eval_ds = mscoco.load_data(root_dir=data_dir)
     pipeline = fe.Pipeline(
         train_data=train_ds,
@@ -294,15 +366,15 @@ def get_estimator(data_dir=None, save_dir=tempfile.mkdtemp(), batch_size=16, epo
         batch_size=batch_size,
         ops=[
             ReadImage(inputs="image", outputs="image"),
-            LongestMaxSize(512,
+            LongestMaxSize(image_size,
                            image_in="image",
                            image_out="image",
                            bbox_in="bbox",
                            bbox_out="bbox",
                            bbox_params=BboxParams("coco", min_area=1.0)),
             PadIfNeeded(
-                512,
-                512,
+                image_size,
+                image_size,
                 border_mode=cv2.BORDER_CONSTANT,
                 image_in="image",
                 image_out="image",
@@ -320,26 +392,33 @@ def get_estimator(data_dir=None, save_dir=tempfile.mkdtemp(), batch_size=16, epo
             # normalize from uint8 to [-1, 1]
             Normalize(inputs="image", outputs="image", mean=1.0, std=1.0, max_pixel_value=127.5),
             ToArray(inputs="bbox", outputs="bbox", dtype="float32"),
-            AnchorBox(inputs="bbox", outputs="anchorbox", width=512, height=512, mode="train"),
+            AnchorBox(inputs="bbox", outputs="anchorbox", width=image_size, height=image_size),
             ChannelTranspose(inputs="image", outputs="image")
         ],
         pad_value=0)
-    model = fe.build(model_fn=lambda: RetinaNet(num_classes=90),
+    # network
+    model = fe.build(model_fn=lambda: RetinaNet(num_classes=num_classes),
                      optimizer_fn=lambda x: torch.optim.SGD(x, lr=1e-4, momentum=0.9, weight_decay=0.0001))
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="image", outputs=["cls_pred", "loc_pred"]),
         RetinaLoss(inputs=["anchorbox", "cls_pred", "loc_pred"], outputs=["total_loss", "focal_loss", "l1_loss"]),
-        UpdateOp(model=model, loss_name="total_loss")
+        UpdateOp(model=model, loss_name="total_loss"),
+        PredictBox(
+            input_shape=(image_size, image_size, 3), inputs=["cls_pred", "loc_pred"], outputs="pred", mode="eval")
     ])
-    estimator = fe.Estimator(
-        pipeline=pipeline,
-        network=network,
-        epochs=epochs,
-        traces=[
-            LRScheduler(model=model, lr_fn=lr_fn),
-            BestModelSaver(model=model, save_dir=save_dir, metric='total_loss', save_best_mode="min")
-        ],
-        monitor_names=["l1_loss", "focal_loss"])
+    # estimator
+    traces = [
+        LRScheduler(model=model, lr_fn=lr_fn),
+        BestModelSaver(model=model, save_dir=save_dir, metric='total_loss', save_best_mode="min"),
+        MeanAveragePrecision(num_classes=num_classes, true_key='bbox', pred_key='pred')
+    ]
+    estimator = fe.Estimator(pipeline=pipeline,
+                             network=network,
+                             epochs=epochs,
+                             traces=traces,
+                             max_train_steps_per_epoch=max_train_steps_per_epoch,
+                             max_eval_steps_per_epoch=max_eval_steps_per_epoch,
+                             monitor_names=["l1_loss", "focal_loss"])
     return estimator
 
 
