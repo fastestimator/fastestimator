@@ -61,10 +61,9 @@ class Estimator:
             information will still print). None to completely disable printing.
         monitor_names: Additional keys from the data dictionary to be written into the logs.
     """
-    pipeline: Pipeline
-    network: BaseNetwork
-    traces: List[Union[Trace, Scheduler[Trace]]]
     monitor_names: Set[str]
+    traces_in_use: List[Union[Trace, Scheduler[Trace]]]
+    system: System
 
     def __init__(self,
                  pipeline: Pipeline,
@@ -75,20 +74,30 @@ class Estimator:
                  traces: Union[None, Trace, Scheduler[Trace], Iterable[Union[Trace, Scheduler[Trace]]]] = None,
                  log_steps: Optional[int] = 100,
                  monitor_names: Union[None, str, Iterable[str]] = None):
-        self.pipeline = pipeline
-        self.network = network
-        self.traces = to_list(traces)
-        self.traces_in_use = None
+        self.traces_in_use = []
         assert log_steps is None or log_steps >= 0, \
             "log_steps must be None or positive (or 0 to disable only train logging)"
-        self.monitor_names = to_set(monitor_names) | self.network.get_loss_keys()
+        self.monitor_names = to_set(monitor_names) | network.get_loss_keys()
         self.system = System(network=network,
                              pipeline=pipeline,
+                             traces=to_list(traces),
                              log_steps=log_steps,
                              total_epochs=epochs,
                              max_train_steps_per_epoch=max_train_steps_per_epoch,
                              max_eval_steps_per_epoch=max_eval_steps_per_epoch,
                              system_config=self.fe_summary())
+
+    @property
+    def pipeline(self) -> Pipeline:
+        return self.system.pipeline
+
+    @property
+    def network(self) -> BaseNetwork:
+        return self.system.network
+
+    @property
+    def traces(self) -> List[Union[Trace, Scheduler[Trace]]]:
+        return self.system.traces
 
     def fit(self, summary: Optional[str] = None, warmup: Union[bool, str] = True) -> Optional[Summary]:
         """Train the network for the number of epochs specified by the estimator's constructor.
