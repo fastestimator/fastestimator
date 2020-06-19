@@ -373,11 +373,6 @@ class PredictBox(TensorOp):
         w_abs = tf.math.exp(loc_pred[..., 2]) * self.all_anchors[..., 2]
         h_abs = tf.math.exp(loc_pred[..., 3]) * self.all_anchors[..., 3]
         x2_abs, y2_abs = x1_abs + w_abs, y1_abs + h_abs
-        # clip bounding boxes to image size
-        x1_abs = tf.clip_by_value(x1_abs, clip_value_min=0, clip_value_max=self.input_shape[1])
-        y1_abs = tf.clip_by_value(y1_abs, clip_value_min=0, clip_value_max=self.input_shape[0])
-        w_abs = tf.clip_by_value(w_abs, clip_value_min=0, clip_value_max=self.input_shape[1] - x1_abs)
-        h_abs = tf.clip_by_value(h_abs, clip_value_min=0, clip_value_max=self.input_shape[0] - y1_abs)
         # iterate over images
         final_results = []
         for idx in range(batch_size):
@@ -407,6 +402,20 @@ class PredictBox(TensorOp):
                 tf.gather(scores_pred[idx], top_idx),
                 tf.ones_like(tf.gather(x1_abs[idx], top_idx))
             ]
+            # clip bounding boxes to image size
+            results_single[0] = tf.clip_by_value(results_single[0],
+                                                 clip_value_min=0,
+                                                 clip_value_max=self.input_shape[1])
+            results_single[1] = tf.clip_by_value(results_single[1],
+                                                 clip_value_min=0,
+                                                 clip_value_max=self.input_shape[0])
+            results_single[2] = tf.clip_by_value(results_single[2],
+                                                 clip_value_min=0,
+                                                 clip_value_max=self.input_shape[1] - results_single[0])
+            results_single[3] = tf.clip_by_value(results_single[3],
+                                                 clip_value_min=0,
+                                                 clip_value_max=self.input_shape[0] - results_single[1])
+            # mark the select as 0 for any anchorbox with score lower than threshold
             results_single[-1] = tf.where(results_single[-2] > self.score_threshold,
                                           results_single[-1],
                                           tf.zeros_like(results_single[-1]))
@@ -429,7 +438,7 @@ def lr_fn(step):
 def get_estimator(data_dir=None,
                   save_dir=tempfile.mkdtemp(),
                   batch_size=8,
-                  epochs=12,
+                  epochs=13,
                   max_train_steps_per_epoch=None,
                   max_eval_steps_per_epoch=None,
                   image_size=512,
