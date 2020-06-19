@@ -1,4 +1,3 @@
-import math
 import tempfile
 
 import cv2
@@ -128,7 +127,6 @@ class AnchorBox(NumpyOp):
 
 
 class ClassificationSubNet(nn.Module):
-    """Classification subnet."""
     def __init__(self, in_channels, num_classes, num_anchors=9):
         super().__init__()
         self.num_classes = num_classes
@@ -146,7 +144,7 @@ class ClassificationSubNet(nn.Module):
         nn.init.zeros_(self.conv2d_4.bias.data)
         self.conv2d_5 = nn.Conv2d(256, num_classes * num_anchors, 3, padding=1)
         nn.init.normal_(self.conv2d_5.weight.data, std=0.01)
-        nn.init.constant_(self.conv2d_5.bias.data, val=math.log(1 / 99))
+        nn.init.constant_(self.conv2d_5.bias.data, val=np.log(1 / 99))
 
     def forward(self, x):
         x = self.conv2d_1(x)
@@ -159,29 +157,41 @@ class ClassificationSubNet(nn.Module):
         x = nn.functional.relu(x)
         x = self.conv2d_5(x)
         x = torch.sigmoid(x)
-        return x.view(x.size(0), -1, self.num_classes)  # the output dimension is [batch, #anchor, #classes]
+        x = x.permute(0, 2, 3, 1)  # [8, c, h, w] -> [8, h, w, c] , to make reshape meaningful on position
+        return x.reshape(x.size(0), -1, self.num_classes)  # the output dimension is [batch, #anchor, #classes]
 
 
 class RegressionSubNet(nn.Module):
     def __init__(self, in_channels, num_anchors=9):
         super().__init__()
-        self.layers = nn.Sequential(nn.Conv2d(in_channels, 256, 3, padding=1),
-                                    nn.ReLU(inplace=True),
-                                    nn.Conv2d(256, 256, 3, padding=1),
-                                    nn.ReLU(inplace=True),
-                                    nn.Conv2d(256, 256, 3, padding=1),
-                                    nn.ReLU(inplace=True),
-                                    nn.Conv2d(256, 256, 3, padding=1),
-                                    nn.ReLU(inplace=True),
-                                    nn.Conv2d(256, 4 * num_anchors, 3, padding=1))
-        for layer in self.layers:
-            if isinstance(layer, nn.Conv2d):
-                nn.init.normal_(layer.weight.data, std=0.01)
-                nn.init.zeros_(layer.bias.data)
+        self.conv2d_1 = nn.Conv2d(in_channels, 256, 3, padding=1)
+        nn.init.normal_(self.conv2d_1.weight.data, std=0.01)
+        nn.init.zeros_(self.conv2d_1.bias.data)
+        self.conv2d_2 = nn.Conv2d(256, 256, 3, padding=1)
+        nn.init.normal_(self.conv2d_2.weight.data, std=0.01)
+        nn.init.zeros_(self.conv2d_2.bias.data)
+        self.conv2d_3 = nn.Conv2d(256, 256, 3, padding=1)
+        nn.init.normal_(self.conv2d_3.weight.data, std=0.01)
+        nn.init.zeros_(self.conv2d_3.bias.data)
+        self.conv2d_4 = nn.Conv2d(256, 256, 3, padding=1)
+        nn.init.normal_(self.conv2d_4.weight.data, std=0.01)
+        nn.init.zeros_(self.conv2d_4.bias.data)
+        self.conv2d_5 = nn.Conv2d(256, 4 * num_anchors, 3, padding=1)
+        nn.init.normal_(self.conv2d_5.weight.data, std=0.01)
+        nn.init.zeros_(self.conv2d_5.bias.data)
 
     def forward(self, x):
-        x = self.layers(x)
-        return x.view(x.size(0), -1, 4)  # the output dimension is [batch, #anchor, 4]
+        x = self.conv2d_1(x)
+        x = nn.functional.relu(x)
+        x = self.conv2d_2(x)
+        x = nn.functional.relu(x)
+        x = self.conv2d_3(x)
+        x = nn.functional.relu(x)
+        x = self.conv2d_4(x)
+        x = nn.functional.relu(x)
+        x = self.conv2d_5(x)
+        x = x.permute(0, 2, 3, 1)  # [8, c, h, w] -> [8, h, w, c] , to make reshape meaningful on position
+        return x.reshape(x.size(0), -1, 4)  # the output dimension is [batch, #anchor, 4]
 
 
 class RetinaNet(nn.Module):
@@ -358,20 +368,20 @@ class PredictBox(TensorOp):
 
 
 def lr_fn(step):
-    if step < 2000:
-        lr = (0.01 - 0.0002) / 2000 * step + 0.0002
-    elif step < 120000:
+    if step < 1000:
+        lr = (0.01 - 0.0002) / 1000 * step + 0.0002
+    elif step < 60000:
         lr = 0.01
-    elif step < 160000:
+    elif step < 80000:
         lr = 0.001
     else:
         lr = 0.0001
-    return lr / 2  # original batch_size 16, for 512 we have batch_size 8
+    return lr
 
 
 def get_estimator(data_dir=None,
                   model_dir=tempfile.mkdtemp(),
-                  batch_size=8,
+                  batch_size=16,
                   epochs=13,
                   max_train_steps_per_epoch=None,
                   max_eval_steps_per_epoch=None,
