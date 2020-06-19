@@ -361,90 +361,57 @@ class PredictBox(TensorOp):
         self.select_top_k = select_top_k
         self.nms_max_outputs = nms_max_outputs
         self.score_threshold = score_threshold
-
-        all_anchors, num_anchors_per_level = _get_fpn_anchor_box(width=input_shape[1], height=input_shape[0])
-        self.all_anchors = tf.convert_to_tensor(all_anchors)
-        self.num_anchors_per_level = num_anchors_per_level
+        self.all_anchors, self.num_anchors_per_level = _get_fpn_anchor_box(width=input_shape[1], height=input_shape[0])
 
     def forward(self, data, state):
-        pred = []
-
-        # extract max score and its class label
-        cls_pred, deltas, bbox = data
-        batch_size = bbox.shape[0]
-        labels = tf.cast(tf.argmax(cls_pred, axis=2), dtype=tf.int32)
-        scores = tf.reduce_max(cls_pred, axis=2)
-
+        cls_pred, loc_pred = data  # [Batch, #anchor, #num_classes], [Batch, #anchor, 4]
+        batch_size = cls_pred.shape[0]
+        labels_pred, scores_pred = tf.argmax(cls_pred, axis=-1), tf.reduce_max(cls_pred, axis=-1)
+        # loc_pred -> loc_abs
+        x1_abs = loc_pred[..., 0] * self.all_anchors[..., 2] + self.all_anchors[..., 0]
+        y1_abs = loc_pred[..., 1] * self.all_anchors[..., 3] + self.all_anchors[..., 1]
+        w_abs = tf.math.exp(loc_pred[..., 2]) * self.all_anchors[..., 2]
+        h_abs = tf.math.exp(loc_pred[..., 3]) * self.all_anchors[..., 3]
+        x2_abs, y2_abs = x1_abs + w_abs, y1_abs + h_abs
+        # clip bounding boxes to image size
+        x1_abs = tf.clip_by_value(x1_abs, clip_value_min=0, clip_value_max=self.input_shape[1])
+        y1_abs = tf.clip_by_value(y1_abs, clip_value_min=0, clip_value_max=self.input_shape[0])
+        w_abs = tf.clip_by_value(w_abs, clip_value_min=0, clip_value_max=self.input_shape[1] - x1_abs)
+        h_abs = tf.clip_by_value(h_abs, clip_value_min=0, clip_value_max=self.input_shape[0] - y1_abs)
         # iterate over images
-        for i in range(batch_size):
-            # split batch into images
-            labels_per_image = labels[i]
-            scores_per_image = scores[i]
-            deltas_per_image = deltas[i]
-
-            selected_deltas_per_image = tf.constant([], shape=(0, 4))
-            selected_labels_per_image = tf.constant([], dtype=tf.int32)
-            selected_scores_per_image = tf.constant([])
-            selected_anchor_indices_per_image = tf.constant([], dtype=tf.int32)
-
-            end_index = 0
-            # iterate over each pyramid level
-            for j in range(self.num_anchors_per_level.shape[0]):
-                start_index = end_index
-                end_index += self.num_anchors_per_level[j]
-                anchor_indices = tf.range(start_index, end_index, dtype=tf.int32)
-
-                level_scores = scores_per_image[start_index:end_index]
-                level_deltas = deltas_per_image[start_index:end_index]
-                level_labels = labels_per_image[start_index:end_index]
-
-                # select top k
-                if self.num_anchors_per_level[j] >= self.select_top_k:
-                    top_k = tf.math.top_k(level_scores, self.select_top_k)
-                    top_k_indices = top_k.indices
-                else:
-                    top_k_indices = tf.subtract(anchor_indices, [start_index])
-
-                # combine all pyramid levels
-                selected_deltas_per_image = tf.concat(
-                    [selected_deltas_per_image, tf.gather(level_deltas, top_k_indices)], axis=0)
-                selected_scores_per_image = tf.concat(
-                    [selected_scores_per_image, tf.gather(level_scores, top_k_indices)], axis=0)
-                selected_labels_per_image = tf.concat(
-                    [selected_labels_per_image, tf.gather(level_labels, top_k_indices)], axis=0)
-                selected_anchor_indices_per_image = tf.concat(
-                    [selected_anchor_indices_per_image, tf.gather(anchor_indices, top_k_indices)], axis=0)
-
-            # delta -> (x1, y1, w, h)
-            selected_anchors_per_image = tf.gather(self.all_anchors, selected_anchor_indices_per_image)
-            x1 = (selected_deltas_per_image[:, 0] * selected_anchors_per_image[:, 2]) + selected_anchors_per_image[:, 0]
-            y1 = (selected_deltas_per_image[:, 1] * selected_anchors_per_image[:, 3]) + selected_anchors_per_image[:, 1]
-            w = tf.math.exp(selected_deltas_per_image[:, 2]) * selected_anchors_per_image[:, 2]
-            h = tf.math.exp(selected_deltas_per_image[:, 3]) * selected_anchors_per_image[:, 3]
-            x2 = x1 + w
-            y2 = y1 + h
-
-            # nms
-            # filter out low score, and perform nms
-            boxes_per_image = tf.stack([y1, x1, y2, x2], axis=1)
-            nms_indices = tf.image.non_max_suppression(boxes_per_image,
-                                                       selected_scores_per_image,
-                                                       self.nms_max_outputs,
-                                                       score_threshold=self.score_threshold)
-
-            nms_boxes = tf.gather(boxes_per_image, nms_indices)
-            final_scores = tf.gather(selected_scores_per_image, nms_indices)
-            final_labels = tf.cast(tf.gather(selected_labels_per_image, nms_indices), dtype=tf.float32)
-
-            # clip bounding boxes to image size
-            x1 = tf.clip_by_value(nms_boxes[:, 1], clip_value_min=0, clip_value_max=self.input_shape[1])
-            y1 = tf.clip_by_value(nms_boxes[:, 0], clip_value_min=0, clip_value_max=self.input_shape[0])
-            w = tf.clip_by_value(nms_boxes[:, 3], clip_value_min=0, clip_value_max=self.input_shape[1]) - x1
-            h = tf.clip_by_value(nms_boxes[:, 2], clip_value_min=0, clip_value_max=self.input_shape[0]) - y1
-
-            image_results = tf.stack([x1, y1, w, h, final_labels, final_scores], axis=1)
-            pred.append(image_results)
-        return pred
+        final_results = []
+        for idx in range(batch_size):
+            scores_pred_single = scores_pred[idx]
+            boxes_pred_single = tf.stack([y1_abs[idx], x1_abs[idx], y2_abs[idx], x2_abs[idx]], axis=-1)
+            # iterate over each pyramid to select top 1000 anchor boxes
+            start = 0
+            top_idx = []
+            for num_anchors_fpn_level in self.num_anchors_per_level:
+                fpn_scores = scores_pred_single[start:start + num_anchors_fpn_level]
+                selected_index = tf.math.top_k(fpn_scores, min(self.select_top_k, int(num_anchors_fpn_level))).indices
+                top_idx.append(selected_index + start)
+                start += num_anchors_fpn_level
+            top_idx = tf.concat(top_idx, axis=0)
+            # perform nms
+            nms_keep = tf.image.non_max_suppression(tf.gather(boxes_pred_single, top_idx),
+                                                    tf.gather(scores_pred_single, top_idx),
+                                                    self.nms_max_outputs)
+            top_idx = tf.gather(top_idx, nms_keep)  # narrow the keep index
+            # mark the select as 0 for any anchorbox with score lower than threshold
+            results_single = [
+                tf.gather(x1_abs[idx], top_idx),
+                tf.gather(y1_abs[idx], top_idx),
+                tf.gather(w_abs[idx], top_idx),
+                tf.gather(h_abs[idx], top_idx),
+                tf.cast(tf.gather(labels_pred[idx], top_idx), tf.float32),
+                tf.gather(scores_pred[idx], top_idx),
+                tf.ones_like(tf.gather(x1_abs[idx], top_idx))
+            ]
+            results_single[-1] = tf.where(results_single[-2] > self.score_threshold,
+                                          results_single[-1],
+                                          tf.zeros_like(results_single[-1]))
+            final_results.append(tf.stack(results_single, axis=-1))
+        return tf.stack(final_results)
 
 
 def lr_fn(step):
@@ -510,10 +477,8 @@ def get_estimator(data_dir=None,
         ModelOp(model=model, inputs="image", outputs=["cls_pred", "loc_pred"]),
         RetinaLoss(inputs=["anchorbox", "cls_pred", "loc_pred"], outputs=["total_loss", "focal_loss", "l1_loss"]),
         UpdateOp(model=model, loss_name="total_loss"),
-        PredictBox(input_shape=(image_size, image_size, 3),
-                   inputs=["cls_pred", "loc_pred", "bbox"],
-                   outputs="pred",
-                   mode="eval")
+        PredictBox(
+            input_shape=(image_size, image_size, 3), inputs=["cls_pred", "loc_pred"], outputs="pred", mode="eval")
     ])
     # estimator
     traces = [

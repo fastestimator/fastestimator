@@ -1,4 +1,5 @@
 import math
+import pdb
 import tempfile
 
 import cv2
@@ -300,13 +301,11 @@ class PredictBox(TensorOp):
         batch_size = cls_pred.size(0)
         scores_pred, labels_pred = torch.max(cls_pred, dim=-1)
         # loc_pred -> loc_abs
-        x1_loc, y1_loc, w_loc, h_loc = cls_pred[..., 0], cls_pred[..., 1], cls_pred[..., 2], cls_pred[..., 3]
-        x1_abs = x1_loc * self.all_anchors[..., 2] + self.all_anchors[..., 0]
-        y1_abs = y1_loc * self.all_anchors[..., 3] + self.all_anchors[..., 1]
-        w_abs = torch.exp(w_loc) * self.all_anchors[..., 2]
-        h_abs = torch.exp(h_loc) * self.all_anchors[..., 3]
-        x2_abs = x1_abs + w_abs
-        y2_abs = y1_abs + h_abs
+        x1_abs = loc_pred[..., 0] * self.all_anchors[..., 2] + self.all_anchors[..., 0]
+        y1_abs = loc_pred[..., 1] * self.all_anchors[..., 3] + self.all_anchors[..., 1]
+        w_abs = torch.exp(loc_pred[..., 2]) * self.all_anchors[..., 2]
+        h_abs = torch.exp(loc_pred[..., 3]) * self.all_anchors[..., 3]
+        x2_abs, y2_abs = x1_abs + w_abs, y1_abs + h_abs
         # iterate over images
         final_results = []
         for idx in range(batch_size):
@@ -322,7 +321,8 @@ class PredictBox(TensorOp):
                 start += num_anchors_fpn_level
             top_idx = torch.cat([x.long() for x in top_idx])
             # perform nms
-            nms_keep = torchvision.ops.nms(boxes_pred_single[top_idx], scores_pred_single[top_idx], iou_threshold=1.0)
+            pdb.set_trace()
+            nms_keep = torchvision.ops.nms(boxes_pred_single[top_idx], scores_pred_single[top_idx], iou_threshold=0.5)
             nms_keep = nms_keep[:self.nms_max_outputs]  # select the top nms outputs
             top_idx = top_idx[nms_keep]  # narrow the keep index
             results_single = [
