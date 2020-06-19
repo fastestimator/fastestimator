@@ -332,7 +332,7 @@ def plot_logs(experiments: List[Summary],
 
     plt.tight_layout()
 
-    if len(labels) > 1 or labels[0]:
+    if labels:
         if share_legend:
             axs[n_rows - 1][last_column_idx + 1].legend(
                 handles,

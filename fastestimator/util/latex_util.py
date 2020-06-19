@@ -74,6 +74,12 @@ class Center(Environment):
     pass
 
 
+class AdjustBox(Environment):
+    """A class to adjust the size of boxes.
+    """
+    packages = [Package('adjustbox')]
+
+
 class HrefFEID(ContainerList):
     """A class to represent a colored and underlined hyperref based on a given fe_id.
 
@@ -90,6 +96,7 @@ class HrefFEID(ContainerList):
                  link_prefix: str = 'tbl',
                  id_in_name: bool = True,
                  bold_name: bool = False):
+        self.content_separator = ''
         self.packages.add(Package('hyperref', options='hidelinks'))
         self.packages.add(Package('ulem'))
         self.packages.add(Package('xcolor', options='table'))
