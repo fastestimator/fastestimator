@@ -26,7 +26,7 @@ from fastestimator.dataset.data import mscoco
 from fastestimator.op.numpyop import NumpyOp
 from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import HorizontalFlip, LongestMaxSize, PadIfNeeded
-from fastestimator.op.numpyop.univariate import Normalize, ReadImage, ToArray
+from fastestimator.op.numpyop.univariate import Normalize, ReadImage
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.adapt import LRScheduler
@@ -70,6 +70,14 @@ def _get_fpn_anchor_box(width: int, height: int):
         if p_h == 1 and p_w == 1:  # the next level of 1x1 feature map is still 1x1, therefore ignore
             break
     return np.float32(anchorbox), np.int32(num_pixel) * 9
+
+
+class ShiftLabel(NumpyOp):
+    def forward(self, data, state):
+        # the label of COCO dataset starts from 1, shifting the start to 0
+        bbox = np.array(data, dtype=np.float32)
+        bbox[:, -1] = bbox[:, -1] - 1
+        return bbox
 
 
 class AnchorBox(NumpyOp):
@@ -310,8 +318,6 @@ class RetinaLoss(TensorOp):
     def focal_loss(self, single_cls_gt, single_cls_pred, alpha=0.25, gamma=2.0):
         # single_cls_gt shape: [num_anchor], single_cls_pred shape: [num_anchor, num_class]
         num_classes = single_cls_pred.shape[-1]
-        # ground truth object label starts from 1, shift object label to start from 0
-        single_cls_gt = tf.where(single_cls_gt > 0, single_cls_gt - 1, single_cls_gt)
         # gather the objects and background, discard the rest
         anchor_obj_idx = tf.where(tf.greater_equal(single_cls_gt, 0))
         anchor_obj_bg_idx = tf.where(tf.greater_equal(single_cls_gt, -1))
@@ -475,7 +481,7 @@ def get_estimator(data_dir=None,
                                bbox_out="bbox",
                                bbox_params='coco')),
             Normalize(inputs="image", outputs="image", mean=1.0, std=1.0, max_pixel_value=127.5),
-            ToArray(inputs="bbox", outputs="bbox", dtype="float32"),
+            ShiftLabel(inputs="bbox", outputs="bbox"),
             AnchorBox(inputs="bbox", outputs="anchorbox", width=image_size, height=image_size)
         ],
         pad_value=0)
