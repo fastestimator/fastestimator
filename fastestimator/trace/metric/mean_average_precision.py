@@ -136,8 +136,7 @@ class MeanAveragePrecision(Trace):
         local_ids = np.expand_dims(local_ids, axis=-1)
 
         gt_with_id = np.concatenate([local_ids, gt_array.reshape(-1, 5)], axis=1)
-        keep = gt_with_id[..., -1] > 0
-
+        keep = ~np.all(gt_with_id[:, 1:] == 0, axis=1)  # remove rows of all 0 bounding boxes
         return gt_with_id[keep]
 
     @staticmethod
