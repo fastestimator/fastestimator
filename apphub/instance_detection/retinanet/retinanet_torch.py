@@ -370,7 +370,7 @@ def lr_fn(step):
 
 
 def get_estimator(data_dir=None,
-                  save_dir=tempfile.mkdtemp(),
+                  model_dir=tempfile.mkdtemp(),
                   batch_size=8,
                   epochs=13,
                   max_train_steps_per_epoch=None,
@@ -428,7 +428,7 @@ def get_estimator(data_dir=None,
     # estimator
     traces = [
         LRScheduler(model=model, lr_fn=lr_fn),
-        BestModelSaver(model=model, save_dir=save_dir, metric='mAP', save_best_mode="max"),
+        BestModelSaver(model=model, save_dir=model_dir, metric='mAP', save_best_mode="max"),
         MeanAveragePrecision(num_classes=num_classes, true_key='bbox', pred_key='pred', mode="eval")
     ]
     estimator = fe.Estimator(pipeline=pipeline,
