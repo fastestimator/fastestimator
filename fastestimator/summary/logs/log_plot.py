@@ -178,7 +178,10 @@ def plot_logs(experiments: List[Summary],
     metric_histories = defaultdict(_MetricGroup)  # metric: MetricGroup
     for idx, experiment in enumerate(experiments):
         history = experiment.history
-        for mode, metrics in history.items():
+        # Since python dicts remember insertion order, sort the history so that train mode is always plotted on bottom
+        for mode, metrics in sorted(history.items(),
+                                    key=lambda x: 0 if x[0] == 'train' else 1 if x[0] == 'eval' else 2 if x[0] == 'test'
+                                    else 3 if x[0] == 'infer' else 4):
             for metric, step_val in metrics.items():
                 if len(step_val) == 0:
                     continue  # Ignore empty metrics
@@ -256,6 +259,12 @@ def plot_logs(experiments: List[Summary],
             axs[row - 1][col].xaxis.set_tick_params(which='both', labelbottom=True)
 
     colors = sns.hls_palette(n_colors=n_experiments, s=0.95) if n_experiments > 10 else sns.color_palette("colorblind")
+    color_offset = defaultdict(lambda: 0)
+    # If there is only 1 experiment, we will use alternate colors based on mode
+    if n_experiments == 1:
+        color_offset['eval'] = 1
+        color_offset['test'] = 2
+        color_offset['infer'] = 3
 
     handles = []
     labels = []
@@ -272,7 +281,7 @@ def plot_logs(experiments: List[Summary],
                     axis.text(ax_text[ax_id][0],
                               ax_text[ax_id][1],
                               f"{prefix}: {group.get_val(exp_idx, mode)}",
-                              color=colors[exp_idx],
+                              color=colors[exp_idx + color_offset[mode]],
                               transform=axis.transAxes)
                     ax_text[ax_id] = (ax_text[ax_id][0], ax_text[ax_id][1] - 0.1)
                     if ax_text[ax_id][1] < 0:
@@ -294,7 +303,7 @@ def plot_logs(experiments: List[Summary],
                         s = axis.scatter(xy[0],
                                          xy[1],
                                          s=40,
-                                         c=[colors[exp_idx]],
+                                         c=[colors[exp_idx + color_offset[mode]]],
                                          marker=style,
                                          linewidth=1.0,
                                          edgecolors='black')
@@ -308,7 +317,7 @@ def plot_logs(experiments: List[Summary],
                         ln = axis.plot(
                             data[:, 0],
                             y,
-                            color=colors[exp_idx],
+                            color=colors[exp_idx + color_offset[mode]],
                             label=title,
                             linewidth=1.5,
                             linestyle='solid' if mode == 'train' else
