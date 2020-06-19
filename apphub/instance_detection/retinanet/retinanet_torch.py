@@ -1,5 +1,4 @@
 import math
-import pdb
 import tempfile
 
 import cv2
@@ -14,7 +13,7 @@ from fastestimator.dataset.data import mscoco
 from fastestimator.op.numpyop import NumpyOp
 from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import HorizontalFlip, LongestMaxSize, PadIfNeeded
-from fastestimator.op.numpyop.univariate import ChannelTranspose, Normalize, ReadImage, ToArray
+from fastestimator.op.numpyop.univariate import ChannelTranspose, Normalize, ReadImage
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.adapt import LRScheduler
@@ -58,6 +57,14 @@ def _get_fpn_anchor_box(width, height):
         if p_h == 1 and p_w == 1:  # the next level of 1x1 feature map is still 1x1, therefore ignore
             break
     return np.float32(anchorbox), np.int32(num_pixel) * 9
+
+
+class ShiftLabel(NumpyOp):
+    def forward(self, data, state):
+        # the label of COCO dataset starts from 1, shifting the start to 0
+        bbox = np.array(data, dtype=np.float32)
+        bbox[:, -1] = bbox[:, -1] - 1
+        return bbox
 
 
 class AnchorBox(NumpyOp):
@@ -238,8 +245,6 @@ class RetinaLoss(TensorOp):
     def focal_loss(self, single_cls_gt, single_cls_pred, alpha=0.25, gamma=2.0):
         # single_cls_gt shape: [num_anchor], single_cls_pred shape: [num_anchor, num_class]
         num_classes = single_cls_pred.size(-1)
-        # ground truth label starts from 1, shift the starting point to 0
-        single_cls_gt[single_cls_gt > 0] -= 1
         # gather the objects and background, discard the rest
         anchor_obj_bool = single_cls_gt >= 0
         anchor_background_obj_bool = single_cls_gt >= -1
@@ -321,7 +326,6 @@ class PredictBox(TensorOp):
                 start += num_anchors_fpn_level
             top_idx = torch.cat([x.long() for x in top_idx])
             # perform nms
-            pdb.set_trace()
             nms_keep = torchvision.ops.nms(boxes_pred_single[top_idx], scores_pred_single[top_idx], iou_threshold=0.5)
             nms_keep = nms_keep[:self.nms_max_outputs]  # select the top nms outputs
             top_idx = top_idx[nms_keep]  # narrow the keep index
@@ -334,30 +338,40 @@ class PredictBox(TensorOp):
                 scores_pred[idx][top_idx],
                 torch.ones_like(x1_abs[idx][top_idx])
             ]
+            # clip bounding boxes to image size
+            results_single[0] = torch.clamp(results_single[0], min=0, max=self.input_shape[1])
+            results_single[1] = torch.clamp(results_single[1], min=0, max=self.input_shape[0])
+            results_single[2] = torch.clamp(results_single[2], min=0)
+            results_single[2] = torch.where(results_single[2] > self.input_shape[1] - results_single[0],
+                                            self.input_shape[1] - results_single[0],
+                                            results_single[2])
+            results_single[3] = torch.clamp(results_single[3], min=0)
+            results_single[3] = torch.where(results_single[3] > self.input_shape[0] - results_single[1],
+                                            self.input_shape[0] - results_single[1],
+                                            results_single[3])
+            # mark the select as 0 for any anchorbox with score lower than threshold
+            results_single[-1] = torch.where(results_single[-2] > self.score_threshold,
+                                             results_single[-1],
+                                             torch.zeros_like(results_single[-1]))
             final_results.append(torch.stack(results_single, dim=-1))
-        final_results = torch.stack(final_results)
-        # mark the select as 0 for any anchorbox with score lower than threshold
-        final_results[..., -1] = torch.where(final_results[..., -2] > self.score_threshold,
-                                             final_results[..., -1],
-                                             torch.zeros_like(final_results[..., -1]))
-        return final_results  # [Batch, nms_max_outputs, 7], where 7 is [x1, y1, w, h, label, score, select]
+        return torch.stack(final_results)
 
 
 def lr_fn(step):
-    if step < 1000:
-        lr = (0.01 - 0.0002) / 1000 * step + 0.0002
-    elif step < 60000:
+    if step < 2000:
+        lr = (0.01 - 0.0002) / 2000 * step + 0.0002
+    elif step < 120000:
         lr = 0.01
-    elif step < 80000:
+    elif step < 160000:
         lr = 0.001
     else:
         lr = 0.0001
-    return lr
+    return lr / 2  # original batch_size 16, for 512 we have batch_size 8
 
 
 def get_estimator(data_dir=None,
                   save_dir=tempfile.mkdtemp(),
-                  batch_size=16,
+                  batch_size=8,
                   epochs=13,
                   max_train_steps_per_epoch=None,
                   max_eval_steps_per_epoch=None,
@@ -396,7 +410,7 @@ def get_estimator(data_dir=None,
                                bbox_params='coco')),
             # normalize from uint8 to [-1, 1]
             Normalize(inputs="image", outputs="image", mean=1.0, std=1.0, max_pixel_value=127.5),
-            ToArray(inputs="bbox", outputs="bbox", dtype="float32"),
+            ShiftLabel(inputs="bbox", outputs="bbox"),
             AnchorBox(inputs="bbox", outputs="anchorbox", width=image_size, height=image_size),
             ChannelTranspose(inputs="image", outputs="image")
         ],
@@ -414,8 +428,8 @@ def get_estimator(data_dir=None,
     # estimator
     traces = [
         LRScheduler(model=model, lr_fn=lr_fn),
-        BestModelSaver(model=model, save_dir=save_dir, metric='total_loss', save_best_mode="min"),
-        MeanAveragePrecision(num_classes=num_classes, true_key='bbox', pred_key='pred')
+        BestModelSaver(model=model, save_dir=save_dir, metric='mAP', save_best_mode="max"),
+        MeanAveragePrecision(num_classes=num_classes, true_key='bbox', pred_key='pred', mode="eval")
     ]
     estimator = fe.Estimator(pipeline=pipeline,
                              network=network,
