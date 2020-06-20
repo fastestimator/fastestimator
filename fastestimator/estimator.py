@@ -352,9 +352,10 @@ class Estimator:
                 self._run_traces_on_batch_begin(batch, traces=traces)
                 batch, prediction = self.network.run_step(batch)
                 self._run_traces_on_batch_end(batch, prediction, traces=traces)
-                if (self.system.batch_idx == self.system.max_train_steps_per_epoch and self.system.mode == "train") or (
-                        self.system.batch_idx == self.system.max_eval_steps_per_epoch and self.system.mode == "eval"):
-                    break
+                if isinstance(loader, DataLoader) and (
+                    (self.system.batch_idx == self.system.max_train_steps_per_epoch and self.system.mode == "train") or
+                    (self.system.batch_idx == self.system.max_eval_steps_per_epoch and self.system.mode == "eval")):
+                    raise StopIteration
                 with Suppressor():
                     batch = next(iterator)
             except StopIteration:
