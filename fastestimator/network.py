@@ -832,8 +832,8 @@ def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None], model: Model
             try:
                 optimizer = optimizer_fn(model.parameters())
             except:
-                raise AssertionError("optimizer_fn of Tensorflow backend should be callable without single args. "
-                                     "Please make sure model and optimizer_fn are using the same backend")
+                raise AssertionError("optimizer_fn of Pytorch backend should be callable with single arg. Please sure "
+                                     "model and optimizer_fn are using the same backend")
 
             assert isinstance(optimizer, torch.optim.Optimizer), "optimizer_fn should generate pytorch optimizer"
     return optimizer
