@@ -420,7 +420,7 @@ class TorchNetwork(BaseNetwork):
         Returns:
             (batch_data, prediction_data)
         """
-        self.load_epoch(mode, epoch, warmup=True)
+        self.load_epoch(mode, epoch, warmup=False)
         data = to_tensor(data, "torch")
         data, prediction = self.run_step(data)
         self.unload_epoch()
@@ -588,7 +588,7 @@ class TFNetwork(BaseNetwork):
         Returns:
             (batch_data, prediction_data)
         """
-        self.load_epoch(mode, epoch)
+        self.load_epoch(mode, epoch, warmup=False)
         data = to_tensor(data, target_type="tf")
         data, prediction = self.run_step(data)
         self.unload_epoch()
@@ -814,7 +814,12 @@ def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None], model: Model
     optimizer = None
     if optimizer_fn:
         if framework == "tf":
-            optimizer = optimizer_fn()
+            try:
+                optimizer = optimizer_fn()
+            except:
+                raise AssertionError("optimizer_fn of Tensorflow backend should be callable without args. Please "
+                                     "make sure model and optimizer_fn are using the same backend")
+
             # initialize optimizer variables
             _ = optimizer.iterations
             optimizer._create_hypers()
@@ -822,8 +827,13 @@ def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None], model: Model
             # handle mixed precision loss scaling
             if mixed_precision_tf.global_policy().name != "float32":
                 optimizer = mixed_precision_tf.LossScaleOptimizer(optimizer, loss_scale='dynamic')
-            assert isinstance(optimizer, tf.optimizers.Optimizer)
+            assert isinstance(optimizer, tf.optimizers.Optimizer), "optimizer_fn should generate tensorflow optimizer"
         else:
-            optimizer = optimizer_fn(model.parameters())
-            assert isinstance(optimizer, torch.optim.Optimizer)
+            try:
+                optimizer = optimizer_fn(model.parameters())
+            except:
+                raise AssertionError("optimizer_fn of Pytorch backend should be callable with single arg. Please sure "
+                                     "model and optimizer_fn are using the same backend")
+
+            assert isinstance(optimizer, torch.optim.Optimizer), "optimizer_fn should generate pytorch optimizer"
     return optimizer

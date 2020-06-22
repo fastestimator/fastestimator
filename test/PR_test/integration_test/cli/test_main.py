@@ -12,94 +12,77 @@ class TestMain(unittest.TestCase):
     * fe.cli.train.configure_train_parser
     * fe.cli.run
     """
-    def mock_fuc(self, args, unknown):
-        self.args = args
-        self.unknown = unknown
-
     def test_cli_main_run_train(self):
-        with patch('fastestimator.cli.train.train', new=self.mock_fuc):
+        with patch('fastestimator.cli.train.train') as fake:
             fe.cli.run(["train", "example_entry.py", "--epochs", "3", "--batch_size", "64"])
-            arg_key = "mode"
-            with self.subTest(arg_key=arg_key):
-                self.assertEqual(self.args[arg_key], "train")
+            args, unknown = fake.call_args[0]
 
-            arg_key = "entry_point"
-            with self.subTest(arg_key=arg_key):
-                self.assertEqual(self.args[arg_key], "example_entry.py")
+            with self.subTest('args["mode"]'):
+                self.assertEqual(args["mode"], "train")
 
-            arg_key = "hyperparameters_json"
-            with self.subTest(arg_key=arg_key):
-                self.assertEqual(self.args[arg_key], None)
+            with self.subTest('args["entry_point"]'):
+                self.assertEqual(args["entry_point"], "example_entry.py")
 
-            arg_key = "warmup"
-            with self.subTest(arg_key=arg_key):
-                self.assertEqual(self.args[arg_key], "true")
+            with self.subTest('args["hyperparameters_json"]'):
+                self.assertEqual(args["hyperparameters_json"], None)
 
-            with self.subTest("unknown args"):
-                self.assertEqual(self.unknown, ['--epochs', '3', '--batch_size', '64'])
+            with self.subTest('args["warmup"]'):
+                self.assertEqual(args["warmup"], "true")
+
+            with self.subTest("unknown"):
+                self.assertEqual(unknown, ['--epochs', '3', '--batch_size', '64'])
 
     def test_cli_main_run_test(self):
-        with patch('fastestimator.cli.train.test', new=self.mock_fuc):
+        with patch('fastestimator.cli.train.test') as fake:
             fe.cli.run(["test", "example_entry.py", "--randon", "200"])
+            args, unknown = fake.call_args[0]
 
-            arg_key = "mode"
-            with self.subTest(arg_key=arg_key):
-                self.assertEqual(self.args[arg_key], "test")
+            with self.subTest('args["mode"]'):
+                self.assertEqual(args["mode"], "test")
 
-            arg_key = "entry_point"
-            with self.subTest(arg_key=arg_key):
-                self.assertEqual(self.args[arg_key], "example_entry.py")
+            with self.subTest('args["entry_point"]'):
+                self.assertEqual(args["entry_point"], "example_entry.py")
 
-            arg_key = "hyperparameters_json"
-            with self.subTest(arg_key=arg_key):
-                self.assertEqual(self.args[arg_key], None)
+            with self.subTest('args["hyperparameters_json"]'):
+                self.assertEqual(args["hyperparameters_json"], None)
 
-            with self.subTest("unknown args"):
-                self.assertEqual(self.unknown, ["--randon", "200"])
+            with self.subTest("unknown"):
+                self.assertEqual(unknown, ["--randon", "200"])
 
     def test_cli_main_run_logs(self):
-        with patch('fastestimator.cli.logs.logs', new=self.mock_fuc):
+        with patch('fastestimator.cli.logs.logs') as fake:
             fe.cli.run(["logs", "example_entry.py", "-b", "-v"])
+            args, unknown = fake.call_args[0]
 
-            arg_key = "mode"
-            with self.subTest(arg_key=arg_key):
-                self.assertEqual(self.args[arg_key], "logs")
+            with self.subTest('args["mode"]'):
+                self.assertEqual(args["mode"], "logs")
 
-            arg_key = "log_dir"
-            with self.subTest(arg_key=arg_key):
-                self.assertEqual(self.args[arg_key], "example_entry.py")
+            with self.subTest('args["log_dir"]'):
+                self.assertEqual(args["log_dir"], "example_entry.py")
 
-            arg_key = "recursive"
-            with self.subTest(arg_key=arg_key):
-                self.assertEqual(self.args[arg_key], False)
+            with self.subTest('args["recursive"]'):
+                self.assertEqual(args["recursive"], False)
 
-            arg_key = "ignore"
-            with self.subTest(arg_key=arg_key):
-                self.assertEqual(self.args[arg_key], None)
+            with self.subTest('args["ignore"]'):
+                self.assertEqual(args["ignore"], None)
 
-            arg_key = "smooth"
-            with self.subTest(arg_key=arg_key):
-                self.assertEqual(self.args[arg_key], 1)
+            with self.subTest('args["smooth"]'):
+                self.assertEqual(args["smooth"], 1)
 
-            arg_key = "pretty_names"
-            with self.subTest(arg_key=arg_key):
-                self.assertEqual(self.args[arg_key], False)
+            with self.subTest('args["pretty_names"]'):
+                self.assertEqual(args["pretty_names"], False)
 
-            arg_key = "smooth"
-            with self.subTest(arg_key=arg_key):
-                self.assertEqual(self.args[arg_key], 1)
+            with self.subTest('args["smooth"]'):
+                self.assertEqual(args["smooth"], 1)
 
-            arg_key = "share_legend"
-            with self.subTest(arg_key=arg_key):
-                self.assertEqual(self.args[arg_key], True)
+            with self.subTest('args["share_legend"]'):
+                self.assertEqual(args["share_legend"], True)
 
-            arg_key = "save"
-            with self.subTest(arg_key=arg_key):
-                self.assertEqual(self.args[arg_key], False)
+            with self.subTest('args["save"]'):
+                self.assertEqual(args["save"], False)
 
-            arg_key = "save_dir"
-            with self.subTest(arg_key=arg_key):
-                self.assertEqual(self.args[arg_key], None)
+            with self.subTest('args["save_dir"]'):
+                self.assertEqual(args["save_dir"], None)
 
-            with self.subTest("unknown args"):
-                self.assertEqual(self.unknown, ["-b", "-v"])
+            with self.subTest("unknown"):
+                self.assertEqual(unknown, ["-b", "-v"])

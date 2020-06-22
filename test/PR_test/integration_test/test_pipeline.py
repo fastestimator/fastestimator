@@ -12,7 +12,6 @@ from fastestimator.schedule import EpochScheduler
 from fastestimator.test.unittest_util import is_equal
 
 
-
 class SampleNumpyOp(NumpyOp):
     def forward(self, data, state):
         return data
