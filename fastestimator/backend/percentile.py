@@ -70,7 +70,7 @@ def percentile(tensor: Tensor,
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if isinstance(tensor, tf.Tensor):
+    if tf.is_tensor(tensor):
         if isinstance(percentiles, List):
             percentiles = tf.convert_to_tensor(percentiles)
         return tfp.stats.percentile(tensor, percentiles, axis=axis, keep_dims=keepdims, interpolation='lower')

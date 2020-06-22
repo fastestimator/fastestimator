@@ -68,7 +68,7 @@ def gather_from_batch(tensor: Tensor, indices: Tensor) -> Tensor:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if isinstance(tensor, tf.Tensor):
+    if tf.is_tensor(tensor):
         indices = to_tensor(indices, 'tf')
         indices = tf.cast(indices, tf.int64)
         if len(indices.shape) == 1:  # Indices not batched

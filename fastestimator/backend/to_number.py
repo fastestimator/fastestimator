@@ -48,7 +48,7 @@ def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray, int, float]) -> n
     Returns:
         An ndarray corresponding to the given `data`.
     """
-    if isinstance(data, tf.Tensor):
+    if tf.is_tensor(data):
         data = data.numpy()
     elif isinstance(data, torch.Tensor):
         if data.requires_grad:

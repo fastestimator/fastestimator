@@ -55,7 +55,7 @@ def feed_forward(model: Union[tf.keras.Model, torch.nn.Module], x: Union[Tensor,
         ValueError: If `model` is an unacceptable data type.
     """
     if isinstance(model, tf.keras.Model):
-        if not isinstance(x, tf.Tensor):
+        if not tf.is_tensor(x):
             x = to_tensor(x, "tf")
         x = model(x, training=training)
     elif isinstance(model, torch.nn.Module):

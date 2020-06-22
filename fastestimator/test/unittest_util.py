@@ -48,7 +48,7 @@ def is_equal(obj1: Any, obj2: Any, assert_type: bool = True) -> bool:
     elif type(obj1) == np.ndarray:
         return np.array_equal(obj1, obj2)
 
-    elif isinstance(obj1, tf.Tensor) or isinstance(obj1, tf.Variable):
+    elif tf.is_tensor(obj1)::
         obj1 = obj1.numpy()
         obj2 = obj2.numpy()
         return np.array_equal(obj1, obj2)

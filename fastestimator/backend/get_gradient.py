@@ -67,7 +67,7 @@ def get_gradient(target: Tensor,
     Raises:
         ValueError: If `target` is an unacceptable data type.
     """
-    if isinstance(target, tf.Tensor):
+    if tf.is_tensor(target):
         with NonContext() if higher_order else tape.stop_recording():
             gradients = tape.gradient(target, sources)
     elif isinstance(target, torch.Tensor):

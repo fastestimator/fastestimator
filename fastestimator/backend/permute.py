@@ -55,7 +55,7 @@ def permute(tensor: Tensor, permutation: List[int]) -> Tensor:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if isinstance(tensor, tf.Tensor):
+    if tf.is_tensor(tensor):
         return tf.transpose(tensor, perm=permutation)
     elif isinstance(tensor, torch.Tensor):
         return tensor.permute(*permutation)

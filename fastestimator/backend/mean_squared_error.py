@@ -59,7 +59,7 @@ def mean_squared_error(y_true: Tensor, y_pred: Tensor) -> Tensor:
     assert type(y_pred) == type(y_true), "y_pred and y_true must be of the same tensor type"
     assert y_pred.shape == y_true.shape, \
         f"MSE requires y_true and y_pred to have the same shape, but found {y_true.shape} and {y_pred.shape}"
-    if isinstance(y_pred, tf.Tensor):
+    if tf.is_tensor(y_pred):
         mse = tf.losses.MSE(y_true, y_pred)
     elif isinstance(y_pred, torch.Tensor):
         mse = reduce_mean(

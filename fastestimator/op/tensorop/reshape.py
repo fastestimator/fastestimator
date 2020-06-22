@@ -46,7 +46,7 @@ class Reshape(TensorOp):
         self.in_list, self.out_list = False, False
 
     def forward(self, data: Tensor, state: Dict[str, Any]) -> Tensor:
-        if isinstance(data, tf.Tensor):
+        if tf.is_tensor(data):
             return tf.reshape(data, self.shape)
         elif isinstance(data, torch.Tensor):
             return data.view(self.shape)

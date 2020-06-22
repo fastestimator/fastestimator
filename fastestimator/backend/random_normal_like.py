@@ -61,7 +61,7 @@ def random_normal_like(tensor: Tensor, mean: float = 0.0, std: float = 1.0,
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if isinstance(tensor, tf.Tensor):
+    if tf.is_tensor(tensor):
         return tf.random.normal(shape=tensor.shape, mean=mean, stddev=std, dtype=dtype)
     elif isinstance(tensor, torch.Tensor):
         return torch.randn_like(tensor, dtype=STRING_TO_TORCH_DTYPE[dtype]) * std + mean

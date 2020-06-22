@@ -57,7 +57,7 @@ def concat(tensors: List[Tensor], axis: int = 0) -> Optional[Tensor]:
     """
     if len(tensors) == 0:
         return None
-    if isinstance(tensors[0], tf.Tensor):
+    if tf.is_tensor(tensors[0]):
         return tf.concat(tensors, axis=axis)
     elif isinstance(tensors[0], torch.Tensor):
         return torch.cat(tensors, dim=axis)

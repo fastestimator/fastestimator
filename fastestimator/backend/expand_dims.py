@@ -55,7 +55,7 @@ def expand_dims(tensor: Tensor, axis: int = 1) -> Tensor:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if isinstance(tensor, tf.Tensor):
+    if tf.is_tensor(tensor):
         return tf.expand_dims(tensor, axis=axis)
     elif isinstance(tensor, torch.Tensor):
         return torch.unsqueeze(tensor, dim=axis)

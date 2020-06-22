@@ -58,9 +58,9 @@ def binary_crossentropy(y_pred: Tensor, y_true: Tensor, from_logits: bool = Fals
         AssertionError: If `y_true` or `y_pred` are unacceptable data types.
     """
     assert type(y_pred) is type(y_true), "y_pred and y_true must be same tensor type"
-    assert isinstance(y_pred, (tf.Tensor, torch.Tensor)), "only support tf.Tensor or torch.Tensor as y_pred"
-    assert isinstance(y_true, (tf.Tensor, torch.Tensor)), "only support tf.Tensor or torch.Tensor as y_true"
-    if isinstance(y_pred, tf.Tensor):
+    assert isinstance(y_pred, torch.Tensor) or tf.is_tensor(y_pred), "only support tf.Tensor or torch.Tensor as y_pred"
+    assert isinstance(y_true, torch.Tensor) or tf.is_tensor(y_true), "only support tf.Tensor or torch.Tensor as y_true"
+    if tf.is_tensor(y_pred):
         ce = tf.losses.binary_crossentropy(y_pred=y_pred,
                                            y_true=tf.reshape(y_true, y_pred.shape),
                                            from_logits=from_logits)
