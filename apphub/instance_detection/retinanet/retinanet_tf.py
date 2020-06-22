@@ -26,7 +26,7 @@ from fastestimator.dataset.data import mscoco
 from fastestimator.op.numpyop import NumpyOp
 from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import HorizontalFlip, LongestMaxSize, PadIfNeeded
-from fastestimator.op.numpyop.univariate import Normalize, ReadImage, ToArray
+from fastestimator.op.numpyop.univariate import Normalize, ReadImage
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.adapt import LRScheduler
@@ -70,6 +70,14 @@ def _get_fpn_anchor_box(width: int, height: int):
         if p_h == 1 and p_w == 1:  # the next level of 1x1 feature map is still 1x1, therefore ignore
             break
     return np.float32(anchorbox), np.int32(num_pixel) * 9
+
+
+class ShiftLabel(NumpyOp):
+    def forward(self, data, state):
+        # the label of COCO dataset starts from 1, shifting the start to 0
+        bbox = np.array(data, dtype=np.float32)
+        bbox[:, -1] = bbox[:, -1] - 1
+        return bbox
 
 
 class AnchorBox(NumpyOp):
@@ -359,91 +367,66 @@ class PredictBox(TensorOp):
         self.select_top_k = select_top_k
         self.nms_max_outputs = nms_max_outputs
         self.score_threshold = score_threshold
-
-        all_anchors, num_anchors_per_level = _get_fpn_anchor_box(width=input_shape[1], height=input_shape[0])
-        self.all_anchors = tf.convert_to_tensor(all_anchors)
-        self.num_anchors_per_level = num_anchors_per_level
+        self.all_anchors, self.num_anchors_per_level = _get_fpn_anchor_box(width=input_shape[1], height=input_shape[0])
 
     def forward(self, data, state):
-        pred = []
-
-        # extract max score and its class label
-        cls_pred, deltas, bbox = data
-        batch_size = bbox.shape[0]
-        labels = tf.cast(tf.argmax(cls_pred, axis=2), dtype=tf.int32)
-        scores = tf.reduce_max(cls_pred, axis=2)
-
+        cls_pred, loc_pred = data  # [Batch, #anchor, #num_classes], [Batch, #anchor, 4]
+        batch_size = cls_pred.shape[0]
+        labels_pred, scores_pred = tf.argmax(cls_pred, axis=-1), tf.reduce_max(cls_pred, axis=-1)
+        # loc_pred -> loc_abs
+        x1_abs = loc_pred[..., 0] * self.all_anchors[..., 2] + self.all_anchors[..., 0]
+        y1_abs = loc_pred[..., 1] * self.all_anchors[..., 3] + self.all_anchors[..., 1]
+        w_abs = tf.math.exp(loc_pred[..., 2]) * self.all_anchors[..., 2]
+        h_abs = tf.math.exp(loc_pred[..., 3]) * self.all_anchors[..., 3]
+        x2_abs, y2_abs = x1_abs + w_abs, y1_abs + h_abs
         # iterate over images
-        for i in range(batch_size):
-            # split batch into images
-            labels_per_image = labels[i]
-            scores_per_image = scores[i]
-            deltas_per_image = deltas[i]
-
-            selected_deltas_per_image = tf.constant([], shape=(0, 4))
-            selected_labels_per_image = tf.constant([], dtype=tf.int32)
-            selected_scores_per_image = tf.constant([])
-            selected_anchor_indices_per_image = tf.constant([], dtype=tf.int32)
-
-            end_index = 0
-            # iterate over each pyramid level
-            for j in range(self.num_anchors_per_level.shape[0]):
-                start_index = end_index
-                end_index += self.num_anchors_per_level[j]
-                anchor_indices = tf.range(start_index, end_index, dtype=tf.int32)
-
-                level_scores = scores_per_image[start_index:end_index]
-                level_deltas = deltas_per_image[start_index:end_index]
-                level_labels = labels_per_image[start_index:end_index]
-
-                # select top k
-                if self.num_anchors_per_level[j] >= self.select_top_k:
-                    top_k = tf.math.top_k(level_scores, self.select_top_k)
-                    top_k_indices = top_k.indices
-                else:
-                    top_k_indices = tf.subtract(anchor_indices, [start_index])
-
-                # combine all pyramid levels
-                selected_deltas_per_image = tf.concat(
-                    [selected_deltas_per_image, tf.gather(level_deltas, top_k_indices)], axis=0)
-                selected_scores_per_image = tf.concat(
-                    [selected_scores_per_image, tf.gather(level_scores, top_k_indices)], axis=0)
-                selected_labels_per_image = tf.concat(
-                    [selected_labels_per_image, tf.gather(level_labels, top_k_indices)], axis=0)
-                selected_anchor_indices_per_image = tf.concat(
-                    [selected_anchor_indices_per_image, tf.gather(anchor_indices, top_k_indices)], axis=0)
-
-            # delta -> (x1, y1, w, h)
-            selected_anchors_per_image = tf.gather(self.all_anchors, selected_anchor_indices_per_image)
-            x1 = (selected_deltas_per_image[:, 0] * selected_anchors_per_image[:, 2]) + selected_anchors_per_image[:, 0]
-            y1 = (selected_deltas_per_image[:, 1] * selected_anchors_per_image[:, 3]) + selected_anchors_per_image[:, 1]
-            w = tf.math.exp(selected_deltas_per_image[:, 2]) * selected_anchors_per_image[:, 2]
-            h = tf.math.exp(selected_deltas_per_image[:, 3]) * selected_anchors_per_image[:, 3]
-            x2 = x1 + w
-            y2 = y1 + h
-
-            # nms
-            # filter out low score, and perform nms
-            boxes_per_image = tf.stack([y1, x1, y2, x2], axis=1)
-            nms_indices = tf.image.non_max_suppression(boxes_per_image,
-                                                       selected_scores_per_image,
-                                                       self.nms_max_outputs,
-                                                       score_threshold=self.score_threshold)
-
-            nms_boxes = tf.gather(boxes_per_image, nms_indices)
-            final_scores = tf.gather(selected_scores_per_image, nms_indices)
-            final_labels = tf.cast(tf.gather(selected_labels_per_image, nms_indices), dtype=tf.float32)
-
+        final_results = []
+        for idx in range(batch_size):
+            scores_pred_single = scores_pred[idx]
+            boxes_pred_single = tf.stack([y1_abs[idx], x1_abs[idx], y2_abs[idx], x2_abs[idx]], axis=-1)
+            # iterate over each pyramid to select top 1000 anchor boxes
+            start = 0
+            top_idx = []
+            for num_anchors_fpn_level in self.num_anchors_per_level:
+                fpn_scores = scores_pred_single[start:start + num_anchors_fpn_level]
+                selected_index = tf.math.top_k(fpn_scores, min(self.select_top_k, int(num_anchors_fpn_level))).indices
+                top_idx.append(selected_index + start)
+                start += num_anchors_fpn_level
+            top_idx = tf.concat(top_idx, axis=0)
+            # perform nms
+            nms_keep = tf.image.non_max_suppression(tf.gather(boxes_pred_single, top_idx),
+                                                    tf.gather(scores_pred_single, top_idx),
+                                                    self.nms_max_outputs)
+            top_idx = tf.gather(top_idx, nms_keep)  # narrow the keep index
+            # mark the select as 0 for any anchorbox with score lower than threshold
+            results_single = [
+                tf.gather(x1_abs[idx], top_idx),
+                tf.gather(y1_abs[idx], top_idx),
+                tf.gather(w_abs[idx], top_idx),
+                tf.gather(h_abs[idx], top_idx),
+                tf.cast(tf.gather(labels_pred[idx], top_idx), tf.float32),
+                tf.gather(scores_pred[idx], top_idx),
+                tf.ones_like(tf.gather(x1_abs[idx], top_idx))
+            ]
             # clip bounding boxes to image size
-            x1 = tf.clip_by_value(nms_boxes[:, 1], clip_value_min=0, clip_value_max=self.input_shape[1])
-            y1 = tf.clip_by_value(nms_boxes[:, 0], clip_value_min=0, clip_value_max=self.input_shape[0])
-            w = tf.clip_by_value(nms_boxes[:, 3], clip_value_min=0, clip_value_max=self.input_shape[1]) - x1
-            h = tf.clip_by_value(nms_boxes[:, 2], clip_value_min=0, clip_value_max=self.input_shape[0]) - y1
-
-            image_results = tf.stack([x1, y1, w, h, final_labels, final_scores], axis=1)
-            pred.append(image_results)
-
-        return pred
+            results_single[0] = tf.clip_by_value(results_single[0],
+                                                 clip_value_min=0,
+                                                 clip_value_max=self.input_shape[1])
+            results_single[1] = tf.clip_by_value(results_single[1],
+                                                 clip_value_min=0,
+                                                 clip_value_max=self.input_shape[0])
+            results_single[2] = tf.clip_by_value(results_single[2],
+                                                 clip_value_min=0,
+                                                 clip_value_max=self.input_shape[1] - results_single[0])
+            results_single[3] = tf.clip_by_value(results_single[3],
+                                                 clip_value_min=0,
+                                                 clip_value_max=self.input_shape[0] - results_single[1])
+            # mark the select as 0 for any anchorbox with score lower than threshold
+            results_single[-1] = tf.where(results_single[-2] > self.score_threshold,
+                                          results_single[-1],
+                                          tf.zeros_like(results_single[-1]))
+            final_results.append(tf.stack(results_single, axis=-1))
+        return tf.stack(final_results)
 
 
 def lr_fn(step):
@@ -458,13 +441,16 @@ def lr_fn(step):
     return lr / 2  # original batch_size 16, for 512 we have batch_size 8
 
 
-def get_estimator(batch_size=8,
-                  epochs=12,
-                  save_dir=tempfile.mkdtemp(),
+def get_estimator(data_dir=None,
+                  model_dir=tempfile.mkdtemp(),
+                  batch_size=8,
+                  epochs=13,
                   max_train_steps_per_epoch=None,
+                  max_eval_steps_per_epoch=None,
                   image_size=512,
                   num_classes=90):
-    train_ds, eval_ds = mscoco.load_data()
+    # pipeline
+    train_ds, eval_ds = mscoco.load_data(root_dir=data_dir)
     pipeline = fe.Pipeline(
         train_data=train_ds,
         eval_data=eval_ds,
@@ -495,35 +481,33 @@ def get_estimator(batch_size=8,
                                bbox_out="bbox",
                                bbox_params='coco')),
             Normalize(inputs="image", outputs="image", mean=1.0, std=1.0, max_pixel_value=127.5),
-            ToArray(inputs="bbox", outputs="bbox", dtype="float32"),
+            ShiftLabel(inputs="bbox", outputs="bbox"),
             AnchorBox(inputs="bbox", outputs="anchorbox", width=image_size, height=image_size)
         ],
         pad_value=0)
-
+    # network
     model = fe.build(model_fn=lambda: RetinaNet(input_shape=(image_size, image_size, 3), num_classes=num_classes),
                      optimizer_fn=lambda: tf.optimizers.SGD(momentum=0.9))
-
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="image", outputs=["cls_pred", "loc_pred"]),
         RetinaLoss(inputs=["anchorbox", "cls_pred", "loc_pred"], outputs=["total_loss", "focal_loss", "l1_loss"]),
         UpdateOp(model=model, loss_name="total_loss"),
-        PredictBox(input_shape=(image_size, image_size, 3),
-                   inputs=["cls_pred", "loc_pred", "bbox"],
-                   outputs="pred",
-                   mode="eval")
+        PredictBox(
+            input_shape=(image_size, image_size, 3), inputs=["cls_pred", "loc_pred"], outputs="pred", mode="eval")
     ])
-
-    estimator = fe.Estimator(
-        pipeline=pipeline,
-        network=network,
-        epochs=epochs,
-        max_train_steps_per_epoch=max_train_steps_per_epoch,
-        traces=[
-            LRScheduler(model=model, lr_fn=lr_fn),
-            BestModelSaver(model=model, save_dir=save_dir, metric='mAP', save_best_mode="max"),
-            MeanAveragePrecision(num_classes=num_classes)
-        ],
-        monitor_names=["l1_loss", "focal_loss"])
+    # estimator
+    traces = [
+        LRScheduler(model=model, lr_fn=lr_fn),
+        BestModelSaver(model=model, save_dir=model_dir, metric='mAP', save_best_mode="max"),
+        MeanAveragePrecision(num_classes=num_classes, true_key='bbox', pred_key='pred', mode="eval")
+    ]
+    estimator = fe.Estimator(pipeline=pipeline,
+                             network=network,
+                             epochs=epochs,
+                             max_train_steps_per_epoch=max_train_steps_per_epoch,
+                             max_eval_steps_per_epoch=max_eval_steps_per_epoch,
+                             traces=traces,
+                             monitor_names=["l1_loss", "focal_loss"])
 
     return estimator
 
