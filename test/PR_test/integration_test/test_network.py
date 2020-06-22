@@ -1,16 +1,26 @@
-import pdb
 import unittest
+from copy import deepcopy
 
+import numpy as np
 import tensorflow as tf
 import torch
 
 import fastestimator as fe
+from fastestimator.architecture.pytorch import LeNet as LeNetTorch
+from fastestimator.architecture.tensorflow import LeNet as LeNetTf
 from fastestimator.network import TFNetwork, TorchNetwork
 from fastestimator.op.numpyop import NumpyOp
 from fastestimator.op.tensorop import TensorOp
+from fastestimator.op.tensorop.loss import CrossEntropy, MeanSquaredError
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.schedule import EpochScheduler, RepeatScheduler
-from fastestimator.test.unittest_util import OneLayerTorchModel, one_layer_tf_model
+from fastestimator.test.unittest_util import OneLayerTorchModel, is_equal, one_layer_tf_model
+
+
+class UnknownCompiledModel:
+    def __init__(self, model):
+        self.model = model
+        self.fe_compiled = True
 
 
 class SampleNumpyOp(NumpyOp):
@@ -21,6 +31,25 @@ class SampleNumpyOp(NumpyOp):
 class SampleTensorOp(TensorOp):
     def forward(self, data, state):
         return data
+
+
+def get_torch_lenet_model_weight(model):
+    weight = []
+    weight.append(deepcopy(model.conv1.weight.data.numpy()))
+    weight.append(deepcopy(model.conv2.weight.data.numpy()))
+    weight.append(deepcopy(model.conv3.weight.data.numpy()))
+    weight.append(deepcopy(model.fc1.weight.data.numpy()))
+    weight.append(deepcopy(model.fc1.weight.data.numpy()))
+
+    return weight
+
+
+def get_tf_model_weight(model):
+    weight = []
+    for layer in model.layers:
+        weight.append(layer.get_weights())
+
+    return weight
 
 
 class TestNetworkCollectModel(unittest.TestCase):
@@ -68,6 +97,7 @@ class TestNetworkNetwork(unittest.TestCase):
     def setUpClass(cls):
         cls.tf_model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=None)
         cls.torch_model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=None)
+        cls.unknown_model = UnknownCompiledModel("string")
 
     def test_network_network_case_could_work(self):
         ops_dict = {
@@ -110,9 +140,13 @@ class TestNetworkNetwork(unittest.TestCase):
                 with self.assertRaises(AssertionError):
                     network = fe.Network(ops=ops)
 
+    def test_network_network_unkown_compiled_model(self):
+        with self.assertRaises(ValueError):
+            network = fe.Network(ops=[ModelOp(model=self.unknown_model, inputs="x", outputs="y")])
+
 
 class TestNetworkBuildOptimizer(unittest.TestCase):
-    """This test include:
+    """This test includes:
     * fe.network._build_optimizer
     * fe.network._optimizer_fn_from_string
     * fe.network._optimizer_fn_to_optimizer
@@ -151,8 +185,6 @@ class TestNetworkBuildOptimizer(unittest.TestCase):
         self.assertIsInstance(optimizer, torch.optim.Optimizer)
 
 
-
-
 class TestNetworkFeCompile(unittest.TestCase):
     """This test has dependency on:
     * fe.network._build_optimizer
@@ -176,7 +208,6 @@ class TestNetworkFeCompile(unittest.TestCase):
             _, weight = fake.call_args[0]
             self.assertEqual(weight, "example_path")
 
-
     def test_network_fe_compile_optimizer_epochscheduler_tf_check_all(self):
         optimizer = EpochScheduler(epoch_dict={1: "adam", 10: "sgd"})
         model = fe.network._fe_compile(model=self.tf_model,
@@ -197,7 +228,6 @@ class TestNetworkFeCompile(unittest.TestCase):
 
         with self.subTest("check fe_compiled"):
             self.assertEqual(model.fe_compiled, True)
-
 
     def test_network_fe_compile_optimizer_repeatscheduler_tf_check_optimizer(self):
         optimizer = RepeatScheduler(["adam", "sgd"])
@@ -278,6 +308,10 @@ class TestNetworkFeCompile(unittest.TestCase):
 
 
 class TestNetworkBuild(unittest.TestCase):
+    """This test has dependency on:
+    * fe.util.traceability_util.trace_model
+    * fe.network._fe_compile
+    """
     def test_network_build_check_model_name(self):
         with self.subTest("not specify model_name"):
             model = fe.build(model_fn=one_layer_tf_model, optimizer_fn="adam")
@@ -287,7 +321,6 @@ class TestNetworkBuild(unittest.TestCase):
         with self.subTest("specify model_name"):
             model = fe.build(model_fn=one_layer_tf_model, optimizer_fn="adam", model_name="test")
             self.assertEqual(model.model_name, "test")
-
 
     def test_network_build_tf_model_tf_optimizer_check_model_optimizer_instance(self):
         model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=tf.optimizers.Adadelta)
@@ -305,6 +338,103 @@ class TestNetworkBuild(unittest.TestCase):
         with self.subTest("check optimizer"):
             self.assertIsInstance(model.optimizer, torch.optim.Optimizer)
 
-    def test_network_build_tf_model_torch_optimizer_check_model_optimizer_instance(self):
-        with self.assertRaises(TypeError):
+    def test_network_build_tf_model_torch_optimizer_check_assertion_error(self):
+        with self.assertRaises(AssertionError):
             model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=lambda x: torch.optim.SGD(params=x, lr=0.01))
+
+    def test_network_build_torch_model_tf_optimizer_check_assertion_error(self):
+        with self.subTest("optimizer_fn directly uses tf optimizer "):
+            with self.assertRaises(AssertionError):
+                model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=tf.optimizers.Adadelta)
+
+        with self.subTest("optimizer_fn use lambda function"):
+            with self.assertRaises(AssertionError):
+                model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=lambda: tf.optimizers.Adadelta())
+
+    def test_network_build_unknown_model_check_assertion_error(self):
+        with self.assertRaises(ValueError):
+            model = fe.build(model_fn=lambda: "string", optimizer_fn=tf.optimizers.Adadelta)
+
+    def test_network_build_check_load_weight_from_path(self):
+        with unittest.mock.patch("fastestimator.network.load_model") as fake:
+            optimizer = EpochScheduler(epoch_dict={1: "adam", 10: "sgd"})
+            model = fe.build(model_fn=one_layer_tf_model,
+                             optimizer_fn=tf.optimizers.Adadelta,
+                             weights_path="example_path")
+
+            _, weight = fake.call_args[0]
+            self.assertEqual(weight, "example_path")
+
+
+class TestNetworkTransform(unittest.TestCase):
+    """This test includes:
+    * fe.network.TFNetwork.transform (and its all invoking function)
+    * fe.network.TorchNetwork.transform (and its all invoking function)
+    """
+    def test_network_transform_one_layer_model_tf(self):
+        model = fe.build(model_fn=one_layer_tf_model, optimizer_fn="adam")
+        weight = get_tf_model_weight(model)
+        network = fe.Network(ops=[
+            ModelOp(model=model, inputs="x", outputs="y_pred"),
+            MeanSquaredError(inputs=("y_pred", "y"), outputs="ce"),
+            UpdateOp(model=model, loss_name="ce")
+        ])
+        batch = {"x": np.array([[1, 1, 1]]), "y": np.array([[1]])}
+        batch = network.transform(data=batch, mode="train")
+
+        with self.subTest("output y_pred check"):
+            ans = np.array([[6]], dtype=np.float32)  # 1*1 + 1*2 + 1*3
+            self.assertTrue(np.array_equal(batch["y_pred"].numpy(), ans))
+
+        with self.subTest("output ce check"):
+            self.assertEqual(batch["ce"].numpy(), 25)  # (6-1)^2
+
+        with self.subTest("check whether model weight changed"):
+            weight2 = get_tf_model_weight(model)
+            self.assertFalse(is_equal(weight, weight2))
+
+    def test_network_transform_lenet_tf(self):
+        model = fe.build(model_fn=LeNetTf, optimizer_fn="adam")
+        weight = get_tf_model_weight(model)
+        network = fe.Network(ops=[
+            ModelOp(model=model, inputs="x", outputs="y_pred"),
+            CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),
+            UpdateOp(model=model, loss_name="ce")
+        ])
+
+        batch = {"x": np.ones((1, 28, 28, 1)), "y": np.array([[1]])}
+        batch = network.transform(data=batch, mode="train")
+        with self.subTest("output y_pred check"):
+            self.assertTrue("y_pred" in batch.keys())
+            self.assertIsNotNone(batch["y_pred"])
+
+        with self.subTest("output ce check"):
+            self.assertTrue("ce" in batch.keys())
+            self.assertIsNotNone(batch["ce"])
+
+        with self.subTest("check whether model weight changed"):
+            weight2 = get_tf_model_weight(model)
+            self.assertFalse(is_equal(weight, weight2))
+
+    def test_network_transform_lenet_torch(self):
+        model = fe.build(model_fn=LeNetTorch, optimizer_fn=lambda x: torch.optim.Adam(params=x, lr=1.0))
+        weight = get_torch_lenet_model_weight(model)
+        network = fe.Network(ops=[
+            ModelOp(model=model, inputs="x", outputs="y_pred"),
+            CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),
+            UpdateOp(model=model, loss_name="ce")
+        ])
+        batch = {"x": np.ones((1, 1, 28, 28), dtype=np.float32), "y": np.array([[1]], dtype=np.float32)}
+        batch = network.transform(data=batch, mode="train")
+
+        with self.subTest("output y_pred check"):
+            self.assertTrue("y_pred" in batch.keys())
+            self.assertIsNotNone(batch["y_pred"])
+
+        with self.subTest("output ce check"):
+            self.assertTrue("ce" in batch.keys())
+            self.assertIsNotNone(batch["ce"])
+
+        with self.subTest("check whether model weight changed"):
+            weight2 = get_torch_lenet_model_weight(model)
+            self.assertFalse(is_equal(weight, weight2))
