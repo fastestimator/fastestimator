@@ -282,8 +282,9 @@ class TorchNetwork(BaseNetwork):
             for model in self.epoch_models:
                 # move model variables to gpu
                 model.to(self.device)
-                # move optimizer variables to gpu
-                self._move_optimizer_between_device(model.current_optimizer.state, self.device)
+                if model.current_optimizer and mode == "train":
+                    # move optimizer variables to gpu
+                    self._move_optimizer_between_device(model.current_optimizer.state, self.device)
 
     def _move_optimizer_between_device(self, data: Dict[str, Any], device: str) -> None:
         """Move optimizer state between gpu and cpu recursively.
@@ -310,8 +311,9 @@ class TorchNetwork(BaseNetwork):
             for model in self.epoch_models:
                 # move model variables to cpu
                 model.to("cpu")
-                # move optimizer variables to cpu
-                self._move_optimizer_between_device(model.current_optimizer.state, "cpu")
+                if model.current_optimizer and self.epoch_state["mode"] == "train":
+                    # move optimizer variables to cpu
+                    self._move_optimizer_between_device(model.current_optimizer.state, "cpu")
 
     def _get_effective_batch_input(self, batch: MutableMapping[str, Any], mode: str) -> Dict[str, Any]:
         """Copy input data from the the CPU onto the GPU(s).
