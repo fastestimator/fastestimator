@@ -58,7 +58,7 @@ def squeeze(tensor: Tensor, axis: Optional[int] = None) -> Tensor:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if isinstance(tensor, tf.Tensor):
+    if tf.is_tensor(tensor):
         return tf.squeeze(tensor, axis=axis)
     elif isinstance(tensor, torch.Tensor):
         if axis is None:

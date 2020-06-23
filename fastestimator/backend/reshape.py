@@ -62,7 +62,7 @@ def reshape(tensor: Tensor, shape: List[int]) -> Tensor:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if isinstance(tensor, tf.Tensor):
+    if tf.is_tensor(tensor):
         return tf.reshape(tensor, shape=shape)
     elif isinstance(tensor, torch.Tensor):
         return torch.reshape(tensor, shape=shape)

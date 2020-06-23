@@ -67,7 +67,7 @@ def cast(data: Union[Collection, Tensor], dtype: str) -> Union[Collection, Tenso
         return tuple([cast(val, dtype) for val in data])
     elif isinstance(data, set):
         return set([cast(val, dtype) for val in data])
-    elif isinstance(data, tf.Tensor):
+    elif tf.is_tensor(data):
         return tf.cast(data, STRING_TO_TF_DTYPE[dtype])
     elif isinstance(data, torch.Tensor):
         return data.type(STRING_TO_TORCH_DTYPE[dtype])

@@ -57,7 +57,7 @@ def zeros_like(tensor: Tensor, dtype: Union[None, str] = None) -> Tensor:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if isinstance(tensor, tf.Tensor):
+    if tf.is_tensor(tensor):
         return tf.zeros_like(tensor, dtype=dtype)
     elif isinstance(tensor, torch.Tensor):
         return torch.zeros_like(tensor, dtype=STRING_TO_TORCH_DTYPE[dtype])

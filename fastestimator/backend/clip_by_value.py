@@ -53,7 +53,7 @@ def clip_by_value(tensor: Tensor, min_value: Union[int, float, Tensor], max_valu
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if isinstance(tensor, tf.Tensor):
+    if tf.is_tensor(tensor):
         return tf.clip_by_value(tensor, clip_value_min=min_value, clip_value_max=max_value)
     elif isinstance(tensor, torch.Tensor):
         if isinstance(min_value, torch.Tensor):

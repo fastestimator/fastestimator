@@ -47,7 +47,7 @@ def watch(tensor: Tensor, tape: Optional[tf.GradientTape] = None) -> Tensor:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if isinstance(tensor, tf.Tensor):
+    if tf.is_tensor(tensor):
         tape.watch(tensor)
         return tensor
     elif isinstance(tensor, torch.Tensor):

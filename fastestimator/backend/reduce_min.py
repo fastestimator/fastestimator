@@ -64,7 +64,7 @@ def reduce_min(tensor: Tensor, axis: Union[None, int, Sequence[int]] = None, kee
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if isinstance(tensor, tf.Tensor):
+    if tf.is_tensor(tensor):
         return tf.reduce_min(tensor, axis=axis, keepdims=keepdims)
     elif isinstance(tensor, torch.Tensor):
         if axis is None:

@@ -51,7 +51,7 @@ def sign(tensor: Tensor) -> Tensor:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if isinstance(tensor, tf.Tensor):
+    if tf.is_tensor(tensor):
         return tf.sign(tensor)
     elif isinstance(tensor, torch.Tensor):
         return tensor.sign()

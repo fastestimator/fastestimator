@@ -59,7 +59,7 @@ class Gather(TensorOp):
         results = []
         for idx, tensor in enumerate(inputs):
             # Check len(indices[0]) since an empty indices element is used to trigger the else
-            if isinstance(indices[0], tf.Tensor) or isinstance(indices[0], torch.Tensor):
+            if tf.is_tensor(indices[0]) or isinstance(indices[0], torch.Tensor):
                 elem_len = indices[0].shape[0]
             else:
                 elem_len = len(indices[0])
