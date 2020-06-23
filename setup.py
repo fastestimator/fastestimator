@@ -38,7 +38,6 @@ def get_dependency():
         'albumentations',
         'pyfiglet',
         'opencv-python',
-        'scipy',
         'pandas',
         'sklearn',
         'wget',
@@ -50,6 +49,7 @@ def get_dependency():
         'h5py',
         'jsonpickle',
         'python-docx',
+        'scipy==1.4.1',
         'tensorflow_probability==0.8.0',
         'transformers==2.4.1',
         'tensorflow==2.1.0'
