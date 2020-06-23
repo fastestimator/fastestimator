@@ -47,7 +47,7 @@ class TestWriteOutputsByOp(unittest.TestCase):
         batch = {}
         write_outputs_by_op(op=Op(outputs=["x", "y"]), store=batch, outputs=[1, [1, 2]])
         self.assertEqual(batch, {"x": 1, "y": [1, 2]})
-
+    
 
 class TestLambdaOp(unittest.TestCase):
     def test_single_input(self):
