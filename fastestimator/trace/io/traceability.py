@@ -106,6 +106,7 @@ class Traceability(Trace):
             # No LaTeX Compiler is available
             self.doc.generate_tex(os.path.join(self.save_dir, self.report_name))
         else:
+            self.doc.generate_pdf(os.path.join(self.save_dir, self.report_name), clean_tex=False, clean=False)
             self.doc.generate_pdf(os.path.join(self.save_dir, self.report_name), clean_tex=False)
 
     def _document_training_graphs(self) -> None:
