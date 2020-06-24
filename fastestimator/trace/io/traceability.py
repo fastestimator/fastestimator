@@ -15,7 +15,6 @@
 
 import os
 import platform
-import re
 import shutil
 import sys
 from collections import defaultdict
@@ -49,9 +48,6 @@ from fastestimator.util.data import Data
 from fastestimator.util.latex_util import AdjustBox, Center, HrefFEID, Verbatim
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import FEID, Suppressor, prettify_metric_name
-
-# The tf model_to_dot method raises an import error if graphviz is not available, but we don't want that
-tf.python.keras.utils.vis_utils.check_pydot = lambda: True
 
 
 @traceable()
@@ -169,9 +165,8 @@ class Traceability(Trace):
                             ltx = d2t.dot2tex(diagram.to_string(), figonly=True)
                             args = Arguments(**{'max width': r'\textwidth, max height=0.9\textheight'})
                             args.escape = False
-                            with self.doc.create(Center()):
-                                with self.doc.create(AdjustBox(arguments=args)) as box:
-                                    box.append(NoEscape(ltx))
+                            with self.doc.create(AdjustBox(arguments=args)) as box:
+                                box.append(NoEscape(ltx))
 
     def _document_init_params(self) -> None:
         """Add initialization parameters to the traceability document.
@@ -244,17 +239,12 @@ class Traceability(Trace):
                         # Visual Summary
                         # noinspection PyBroadException
                         try:
-                            dot = tf.keras.utils.model_to_dot(model, show_shapes=True, expand_nested=True)
-                            self._adjust_labels(dot)
-                            ltx = d2t.dot2tex(dot.to_string(), figonly=True)
-                            args = Arguments(**{'max width': r'\textwidth, max height=0.9\textheight'})
-                            args.escape = False
-                            with self.doc.create(Figure(position='ht!')) as fig:
-                                fig.append(NoEscape(r'\centering'))
-                                with self.doc.create(AdjustBox(arguments=args)) as box:
-                                    box.append(NoEscape(ltx))
-                                fig.add_caption(NoEscape(HrefFEID(FEID(id(model)), model.model_name).dumps()))
+                            file_path = os.path.join(self.figure_dir, f"FE_Model_{model.model_name}.pdf")
+                            tf.keras.utils.plot_model(model, to_file=file_path, show_shapes=True, expand_nested=True)
+                            # TODO - cap output image size like in the pytorch implementation in case of huge network
+                            # TODO - save raw .dot file in case system lacks graphviz
                         except Exception:
+                            file_path = None
                             print(
                                 f"FastEstimator-Warn: Model {model.model_name} could not be visualized by Traceability")
                     elif isinstance(model, torch.nn.Module):
@@ -280,21 +270,27 @@ class Traceability(Trace):
                                     graph = hl.build_graph(model, inputs)
                                 graph = graph.build_dot()
                                 graph.attr(rankdir='TB')  # Switch it to Top-to-Bottom instead of Left-to-Right
-                                ltx = d2t.dot2tex(graph.source, figonly=True)
-                                args = Arguments(**{'max width': r'\textwidth, max height=0.9\textheight'})
-                                args.escape = False
-                                with self.doc.create(Figure(position='ht!')) as fig:
-                                    fig.append(NoEscape(r'\centering'))
-                                    with self.doc.create(AdjustBox(arguments=args)) as box:
-                                        box.append(NoEscape(ltx))
-                                    fig.add_caption(NoEscape(HrefFEID(FEID(id(model)), model.model_name).dumps()))
+                                graph.attr(size="200,200")  # LaTeX \maxdim is around 575cm (226 inches)
+                                graph.attr(margin='0')
+                                # TODO - save raw .dot file in case system lacks graphviz
+                                file_path = graph.render(filename=f"FE_Model_{model.model_name}",
+                                                         directory=self.figure_dir,
+                                                         format='pdf',
+                                                         cleanup=True)
                             except Exception:
+                                file_path = None
                                 print("FastEstimator-Warn: Model {} could not be visualized by Traceability".format(
                                     model.model_name))
                             finally:
                                 matplotlib.use(old_backend)
                         else:
                             self.doc.append("This model was not used by the Network during training.")
+                    if file_path:
+                        with self.doc.create(Figure(position='ht!')) as fig:
+                            fig.append(Label(Marker(name=str(FEID(id(model))), prefix="model")))
+                            fig.add_image(os.path.relpath(file_path, start=self.save_dir),
+                                          width=NoEscape(r'1.0\textwidth,height=0.95\textheight,keepaspectratio'))
+                            fig.add_caption(NoEscape(HrefFEID(FEID(id(model)), model.model_name).dumps()))
 
     def _document_sys_config(self) -> None:
         """Add a system config summary to the traceability document.
@@ -406,33 +402,3 @@ class Traceability(Trace):
                 # Invisibly connect traces in order so that they aren't all just squashed horizontally into the image
                 diagram.add_edge(pydot.Edge(src=str(id(subgraph_ops[idx - 1])), dst=node_id, style='invis'))
         diagram.add_subgraph(subgraph)
-
-    @staticmethod
-    def _adjust_labels(graph: Union[pydot.Dot, pydot.Subgraph]) -> None:
-        """Convert the labels of nodes in a graph into a format acceptable to dot2tex.
-
-        Args:
-            graph: A pydot graph to be modified.
-        """
-        for subgraph in graph.get_subgraphs():
-            Traceability._adjust_labels(subgraph)
-        for node in graph.get_nodes():
-            if node.get('texlbl'):
-                # This node has already been modified
-                continue
-            lbl = node.get('label')
-            if lbl:
-                parsed = re.fullmatch(
-                    r'^(?P<clz>[\w\d.]*): (?P<name>[\w\d.]*)\n\|{input:\|output:}\|{{(?P<inp>.*)}\|{(?P<out>.*)}}$',
-                    lbl)
-                if not parsed:
-                    raise ValueError(f"Unexpected message format: {lbl}")
-                # The nodes use a table based layout, but this needs special pre-processing for dot2tex
-                texlbl = r'\begin{tabular}{l|rl}' + escape_latex(parsed.group("clz")) + '& input: &' + escape_latex(
-                    parsed.group("inp")) + r'\\\cline{2-3}' + escape_latex(
-                        parsed.group("name")) + '& output: &' + escape_latex(parsed.group("out")) + r'\end{tabular}'
-                # The node width is set by the regular label, so use the longer of the 2 table rows as a proxy
-                l1 = f'{parsed.group("clz")} input: {parsed.group("inp")}'
-                l2 = f'{parsed.group("name")} output: {parsed.group("out")}'
-                node.set('label', l1 if len(l1) > len(l2) else l2)
-                node.set('texlbl', texlbl)
