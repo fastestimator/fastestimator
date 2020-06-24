@@ -21,8 +21,10 @@ from collections import defaultdict
 from typing import DefaultDict, List, Union
 from unittest.mock import Base, MagicMock
 
+import dot2tex as d2t
 import jsonpickle
 import matplotlib
+import pydot
 import pytorch_model_summary as pms
 import tensorflow as tf
 import torch
@@ -32,9 +34,7 @@ from pylatex import Command, Document, Figure, Hyperref, Itemize, Label, LongTab
 from pylatex.base_classes import Arguments
 from pylatex.utils import bold
 
-import dot2tex as d2t
 import fastestimator as fe
-import pydot
 from fastestimator.dataset.dataset import FEDataset
 from fastestimator.estimator import Estimator
 from fastestimator.network import BaseNetwork
