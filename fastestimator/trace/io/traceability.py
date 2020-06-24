@@ -57,8 +57,18 @@ class Traceability(Trace):
     Args:
         save_path: Where to save the output files. Note that this will generate a new folder with the given name, into
             which the report and corresponding graphics assets will be written.
+
+    Raises: 
+        OSError: If graphviz is not installed.
     """
     def __init__(self, save_path: str):
+        # Verify that graphviz is available on this machine
+        try:
+            pydot.Dot.create(pydot.Dot())
+        except OSError:
+            raise OSError(
+                "Traceability requires that graphviz be installed. See www.graphviz.org/download for more information.")
+
         super().__init__(inputs="*", mode="!infer")  # Claim wildcard inputs to get this trace sorted last
         # Report assets will get saved into a folder for portability
         path = os.path.normpath(save_path)
@@ -165,8 +175,9 @@ class Traceability(Trace):
                             ltx = d2t.dot2tex(diagram.to_string(), figonly=True)
                             args = Arguments(**{'max width': r'\textwidth, max height=0.9\textheight'})
                             args.escape = False
-                            with self.doc.create(AdjustBox(arguments=args)) as box:
-                                box.append(NoEscape(ltx))
+                            with self.doc.create(Center()):
+                                with self.doc.create(AdjustBox(arguments=args)) as box:
+                                    box.append(NoEscape(ltx))
 
     def _document_init_params(self) -> None:
         """Add initialization parameters to the traceability document.
@@ -240,9 +251,9 @@ class Traceability(Trace):
                         # noinspection PyBroadException
                         try:
                             file_path = os.path.join(self.figure_dir, f"FE_Model_{model.model_name}.pdf")
-                            tf.keras.utils.plot_model(model, to_file=file_path, show_shapes=True, expand_nested=True)
-                            # TODO - cap output image size like in the pytorch implementation in case of huge network
-                            # TODO - save raw .dot file in case system lacks graphviz
+                            dot = tf.keras.utils.model_to_dot(model, show_shapes=True, expand_nested=True)
+                            dot.set('size', '200')  # LaTeX \maxdim is around 575cm (226 inches)
+                            dot.write(file_path, format='pdf')
                         except Exception:
                             file_path = None
                             print(
@@ -272,7 +283,6 @@ class Traceability(Trace):
                                 graph.attr(rankdir='TB')  # Switch it to Top-to-Bottom instead of Left-to-Right
                                 graph.attr(size="200,200")  # LaTeX \maxdim is around 575cm (226 inches)
                                 graph.attr(margin='0')
-                                # TODO - save raw .dot file in case system lacks graphviz
                                 file_path = graph.render(filename=f"FE_Model_{model.model_name}",
                                                          directory=self.figure_dir,
                                                          format='pdf',
