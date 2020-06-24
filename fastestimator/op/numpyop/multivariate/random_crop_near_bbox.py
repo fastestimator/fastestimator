@@ -30,6 +30,7 @@ class RandomCropNearBBox(MultiVariateAlbumentation):
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
         image_in: The key of an image to be modified.
+        cropping_bbox_in: The key of the cropping box, in [x1, y1, x2, y2] format.
         mask_in: The key of a mask to be modified (with the same random factors as the image).
         masks_in: The key of masks to be modified (with the same random factors as the image).
         bbox_in: The key of a bounding box(es) to be modified (with the same random factors as the image).
@@ -47,6 +48,7 @@ class RandomCropNearBBox(MultiVariateAlbumentation):
         uint8, float32
     """
     def __init__(self,
+                 cropping_bbox_in: str,
                  max_part_shift: float = 0.3,
                  mode: Optional[str] = None,
                  image_in: Optional[str] = None,
@@ -74,4 +76,5 @@ class RandomCropNearBBox(MultiVariateAlbumentation):
                          keypoints_out=keypoints_out,
                          bbox_params=bbox_params,
                          keypoint_params=keypoint_params,
-                         mode=mode)
+                         mode=mode,
+                         extra_in_keys={"cropping_bbox": cropping_bbox_in})
