@@ -428,13 +428,13 @@ class Traceability(Trace):
             node_id: The id to use as the node label.
         """
         if isinstance(op, Sometimes) and op.numpy_op:
-            wrapper = pydot.Cluster(style='loosely dotted', graph_name='sometimes')
+            wrapper = pydot.Cluster(style='loosely dotted', graph_name=str(id(op)))
             wrapper.set('label', f'Sometimes: {op.prob}')
             wrapper.set('labeljust', 'r')
             Traceability._add_node(wrapper, op.numpy_op, node_id)
             diagram.add_subgraph(wrapper)
-        if isinstance(op, OneOf) and op.numpy_ops:
-            wrapper = pydot.Cluster(style='loosely dotted', graph_name='oneof')
+        elif isinstance(op, OneOf) and op.numpy_ops:
+            wrapper = pydot.Cluster(style='loosely dotted', graph_name=str(id(op)))
             wrapper.set('label', 'One Of:')
             wrapper.set('labeljust', 'r')
             Traceability._add_node(wrapper, op.numpy_ops[0], node_id)
