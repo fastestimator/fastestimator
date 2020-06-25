@@ -159,6 +159,9 @@ class FeSummaryTable:
                 if package not in tabular.packages:
                     # Need to invoke a table color before invoking TextColor (bug?)
                     tabular.packages.append(package)
+                package = Package('seqsplit')
+                if package not in tabular.packages:
+                    tabular.packages.append(package)
                 tabular.add_row((name_override if name_override else bold(self.name),
                                  MultiColumn(size=1, align='r|', data=TextColor('blue', self.fe_id))))
                 tabular.add_hline()
@@ -181,6 +184,9 @@ class FeSummaryTable:
                 if self.kwargs:
                     tabular.add_hline()
                     for idx, (kwarg, val) in enumerate(self.kwargs.items()):
+                        if isinstance(val, (str, int, float)):
+                            # Prevent extremely long numbers / string words from overflowing the table
+                            val = NoEscape(r'\seqsplit{' + escape_latex(val) + '}')
                         tabular.add_row((italic(kwarg), val), color='white' if idx % 2 else 'black!5')
 
 
