@@ -414,6 +414,13 @@ class Traceability(Trace):
 
     @staticmethod
     def _add_node(diagram: Union[pydot.Dot, pydot.Cluster], op: Union[Op, Trace], node_id: str) -> None:
+        """Draw a node onto a diagram based on a given op.
+
+        Args:
+            diagram: The diagram to be appended to.
+            op: The op (or trace) to be visualized.
+            node_id: The id to use as the node label.
+        """
         if isinstance(op, Sometimes) and op.numpy_op:
             wrapper = pydot.Cluster(style='loosely dotted', graph_name='sometimes')
             wrapper.set('label', f'Sometimes: {op.prob}')
