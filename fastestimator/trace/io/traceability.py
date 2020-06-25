@@ -45,7 +45,7 @@ from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.pipeline import Pipeline
 from fastestimator.schedule.schedule import Scheduler, get_current_items, get_signature_epochs
 from fastestimator.summary.logs.log_plot import visualize_logs
-from fastestimator.trace.trace import Trace
+from fastestimator.trace.trace import Trace, sort_traces
 from fastestimator.util.data import Data
 from fastestimator.util.latex_util import AdjustBox, Center, HrefFEID, Verbatim
 from fastestimator.util.traceability_util import traceable
@@ -363,7 +363,7 @@ class Traceability(Trace):
         pipe_ops = get_current_items(self.system.pipeline.ops, run_modes=mode, epoch=epoch) if isinstance(
             ds, FEDataset) else []
         net_ops = get_current_items(self.system.network.ops, run_modes=mode, epoch=epoch)
-        traces = get_current_items(self.system.traces, run_modes=mode, epoch=epoch)
+        traces = sort_traces(get_current_items(self.system.traces, run_modes=mode, epoch=epoch))
         diagram = pydot.Dot()
         diagram.set('rankdir', 'TB')
         diagram.set('dpi', 300)
