@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
+import locale
 import os
 import platform
 import shutil
@@ -70,7 +71,12 @@ class Traceability(Trace):
         except OSError:
             raise OSError(
                 "Traceability requires that graphviz be installed. See www.graphviz.org/download for more information.")
-
+        # Verify that the system locale is functioning correctly
+        try:
+            locale.getlocale()
+        except ValueError:
+            raise OSError("Your system locale is not configured correctly. On mac this can be resolved by adding \
+                'export LC_ALL=en_US.UTF-8' and 'export LANG=en_US.UTF-8' to your ~/.bash_profile")
         super().__init__(inputs="*", mode="!infer")  # Claim wildcard inputs to get this trace sorted last
         # Report assets will get saved into a folder for portability
         path = os.path.normpath(save_path)

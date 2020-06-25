@@ -162,7 +162,10 @@ class FeSummaryTable:
                 tabular.add_row((name_override if name_override else bold(self.name),
                                  MultiColumn(size=1, align='r|', data=TextColor('blue', self.fe_id))))
                 tabular.add_hline()
-                tabular.add_row(("Type: ", escape_latex(f"{self.type}".split("'")[1])))
+                type_str = f"{self.type}"
+                match = re.fullmatch(r'^<.* \'(?P<typ>.*)\'>$', type_str)
+                type_str = match.group("typ") if match else type_str
+                tabular.add_row(("Type: ", escape_latex(type_str)))
                 if self.path:
                     tabular.add_row(("", escape_latex(self.path)))
                 for k, v in self.fields.items():
