@@ -38,6 +38,8 @@ import fastestimator as fe
 from fastestimator.dataset.dataset import FEDataset
 from fastestimator.estimator import Estimator
 from fastestimator.network import BaseNetwork
+from fastestimator.op.numpyop.meta.one_of import OneOf
+from fastestimator.op.numpyop.meta.sometimes import Sometimes
 from fastestimator.op.op import Op
 from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.pipeline import Pipeline
@@ -252,7 +254,10 @@ class Traceability(Trace):
                         try:
                             file_path = os.path.join(self.figure_dir, f"FE_Model_{model.model_name}.pdf")
                             dot = tf.keras.utils.model_to_dot(model, show_shapes=True, expand_nested=True)
-                            dot.set('size', '200')  # LaTeX \maxdim is around 575cm (226 inches)
+                            # LaTeX \maxdim is around 575cm (226 inches), so the image must have max dimension less than
+                            # 226 inches. However, the 'size' parameter doesn't account for the whole node height, so
+                            # set the limit lower (100 inches) to leave some wiggle room.
+                            dot.set('size', '100')
                             dot.write(file_path, format='pdf')
                         except Exception:
                             file_path = None
@@ -281,7 +286,10 @@ class Traceability(Trace):
                                     graph = hl.build_graph(model, inputs)
                                 graph = graph.build_dot()
                                 graph.attr(rankdir='TB')  # Switch it to Top-to-Bottom instead of Left-to-Right
-                                graph.attr(size="200,200")  # LaTeX \maxdim is around 575cm (226 inches)
+                                # LaTeX \maxdim is around 575cm (226 inches), so the image must have max dimension less
+                                # than 226 inches. However, the 'size' parameter doesn't account for the whole node
+                                # height, so set the limit lower (100 inches) to leave some wiggle room.
+                                graph.attr(size="100,100")
                                 graph.attr(margin='0')
                                 file_path = graph.render(filename=f"FE_Model_{model.model_name}",
                                                          directory=self.figure_dir,
@@ -389,16 +397,7 @@ class Traceability(Trace):
         subgraph.set('labeljust', 'l')
         for idx, op in enumerate(subgraph_ops):
             node_id = str(id(op))
-            if isinstance(op, ModelOp):
-                label = f"{op.__class__.__name__} ({FEID(id(op))}): {op.model.model_name}"
-                model_ref = Hyperref(Marker(name=str(op.model.model_name), prefix='subsec'),
-                                     text=NoEscape(r'\textcolor{blue}{') + bold(op.model.model_name) +
-                                     NoEscape('}')).dumps()
-                texlbl = f"{HrefFEID(FEID(id(op)), name=op.__class__.__name__).dumps()}: {model_ref}"
-            else:
-                label = f"{op.__class__.__name__} ({FEID(id(op))})"
-                texlbl = HrefFEID(FEID(id(op)), name=op.__class__.__name__).dumps()
-            subgraph.add_node(pydot.Node(node_id, label=label, texlbl=texlbl))
+            Traceability._add_node(subgraph, op, node_id)
             edge_srcs = defaultdict(lambda: [])
             for inp in op.inputs:
                 if inp == '*':
@@ -412,3 +411,38 @@ class Traceability(Trace):
                 # Invisibly connect traces in order so that they aren't all just squashed horizontally into the image
                 diagram.add_edge(pydot.Edge(src=str(id(subgraph_ops[idx - 1])), dst=node_id, style='invis'))
         diagram.add_subgraph(subgraph)
+
+    @staticmethod
+    def _add_node(diagram: Union[pydot.Dot, pydot.Cluster], op: Union[Op, Trace], node_id: str) -> None:
+        """Draw a node onto a diagram based on a given op.
+
+        Args:
+            diagram: The diagram to be appended to.
+            op: The op (or trace) to be visualized.
+            node_id: The id to use as the node label.
+        """
+        if isinstance(op, Sometimes) and op.numpy_op:
+            wrapper = pydot.Cluster(style='loosely dotted', graph_name='sometimes')
+            wrapper.set('label', f'Sometimes: {op.prob}')
+            wrapper.set('labeljust', 'r')
+            Traceability._add_node(wrapper, op.numpy_op, node_id)
+            diagram.add_subgraph(wrapper)
+        if isinstance(op, OneOf) and op.numpy_ops:
+            wrapper = pydot.Cluster(style='loosely dotted', graph_name='oneof')
+            wrapper.set('label', 'One Of:')
+            wrapper.set('labeljust', 'r')
+            Traceability._add_node(wrapper, op.numpy_ops[0], node_id)
+            for sub_op in op.numpy_ops[1:]:
+                Traceability._add_node(wrapper, sub_op, str(id(sub_op)))
+            diagram.add_subgraph(wrapper)
+        else:
+            if isinstance(op, ModelOp):
+                label = f"{op.__class__.__name__} ({FEID(id(op))}): {op.model.model_name}"
+                model_ref = Hyperref(Marker(name=str(op.model.model_name), prefix='subsec'),
+                                     text=NoEscape(r'\textcolor{blue}{') + bold(op.model.model_name) +
+                                     NoEscape('}')).dumps()
+                texlbl = f"{HrefFEID(FEID(id(op)), name=op.__class__.__name__).dumps()}: {model_ref}"
+            else:
+                label = f"{op.__class__.__name__} ({FEID(id(op))})"
+                texlbl = HrefFEID(FEID(id(op)), name=op.__class__.__name__).dumps()
+            diagram.add_node(pydot.Node(node_id, label=label, texlbl=texlbl))
