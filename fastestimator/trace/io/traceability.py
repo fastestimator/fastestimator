@@ -34,6 +34,7 @@ from pylatex import Command, Document, Figure, Hyperref, Itemize, Label, LongTab
     Package, Section, Subsection, Subsubsection, Tabular, escape_latex
 from pylatex.base_classes import Arguments
 from pylatex.utils import bold
+from torch.utils.data import Dataset
 
 import fastestimator as fe
 from fastestimator.dataset.dataset import FEDataset
@@ -367,7 +368,7 @@ class Traceability(Trace):
         if isinstance(ds, Scheduler):
             ds = ds.get_current_value(epoch)
         pipe_ops = get_current_items(self.system.pipeline.ops, run_modes=mode, epoch=epoch) if isinstance(
-            ds, FEDataset) else []
+            ds, Dataset) else []
         net_ops = get_current_items(self.system.network.ops, run_modes=mode, epoch=epoch)
         traces = sort_traces(get_current_items(self.system.traces, run_modes=mode, epoch=epoch))
         diagram = pydot.Dot()
