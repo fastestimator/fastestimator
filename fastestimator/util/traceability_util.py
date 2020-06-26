@@ -666,7 +666,7 @@ def _parse_lambda_fallback(function: types.FunctionType, tables: Dict[FEID, FeSu
                                        closure_vars.globals.get(ref, closure_vars.builtins.get(ref, _VarWrap(ref))))
             for ref in refs
         }
-        response['kwargs'] = _trace_value(ref_map, tables, ret_ref=ret_ref, wrap_str=False)
+        response['kwargs'] = _trace_value(ref_map, tables, ret_ref=ret_ref, wrap_str=False).raw_input
     return response
 
 
