@@ -68,7 +68,9 @@ class MultiVariateAlbumentation(NumpyOp):
                  bbox_out: Optional[str] = None,
                  keypoints_out: Optional[str] = None,
                  bbox_params: Union[BboxParams, str, None] = None,
-                 keypoint_params: Union[KeypointParams, str, None] = None):
+                 keypoint_params: Union[KeypointParams, str, None] = None,
+                 extra_in_keys: Optional[Dict[str, str]] = None,
+                 extra_out_keys: Optional[Dict[str, str]] = None):
         assert any((image_in, mask_in, masks_in, bbox_in, keypoints_in)), "At least one input must be non-None"
         image_out = image_out or image_in
         mask_out = mask_out or mask_in
@@ -77,9 +79,13 @@ class MultiVariateAlbumentation(NumpyOp):
         keypoints_out = keypoints_out or keypoints_in
         keys = OrderedDict([("image", image_in), ("mask", mask_in), ("masks", masks_in), ("bboxes", bbox_in),
                             ("keypoints", keypoints_in)])
+        if extra_in_keys:
+            keys.update(extra_in_keys)
         self.keys_in = OrderedDict([(k, v) for k, v in keys.items() if v is not None])
         keys = OrderedDict([("image", image_out), ("mask", mask_out), ("masks", masks_out), ("bboxes", bbox_out),
                             ("keypoints", keypoints_out)])
+        if extra_out_keys:
+            keys.update(extra_out_keys)
         self.keys_out = OrderedDict([(k, v) for k, v in keys.items() if v is not None])
         super().__init__(inputs=list(self.keys_in.values()), outputs=list(self.keys_out.values()), mode=mode)
         if isinstance(bbox_params, str):

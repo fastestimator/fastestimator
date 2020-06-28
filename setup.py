@@ -57,6 +57,8 @@ def get_dependency():
         'pytorch-model-summary==0.1.1',
         'graphviz==0.14',
         'hiddenlayer==0.3',
+        'pydot==1.4.1',
+        'dot2tex==2.11.3'
     ]
     if os.name == "nt":
         dependencies.append(

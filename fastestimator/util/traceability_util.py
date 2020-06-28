@@ -159,10 +159,16 @@ class FeSummaryTable:
                 if package not in tabular.packages:
                     # Need to invoke a table color before invoking TextColor (bug?)
                     tabular.packages.append(package)
+                package = Package('seqsplit')
+                if package not in tabular.packages:
+                    tabular.packages.append(package)
                 tabular.add_row((name_override if name_override else bold(self.name),
                                  MultiColumn(size=1, align='r|', data=TextColor('blue', self.fe_id))))
                 tabular.add_hline()
-                tabular.add_row(("Type: ", escape_latex(f"{self.type}".split("'")[1])))
+                type_str = f"{self.type}"
+                match = re.fullmatch(r'^<.* \'(?P<typ>.*)\'>$', type_str)
+                type_str = match.group("typ") if match else type_str
+                tabular.add_row(("Type: ", escape_latex(type_str)))
                 if self.path:
                     tabular.add_row(("", escape_latex(self.path)))
                 for k, v in self.fields.items():
@@ -178,6 +184,9 @@ class FeSummaryTable:
                 if self.kwargs:
                     tabular.add_hline()
                     for idx, (kwarg, val) in enumerate(self.kwargs.items()):
+                        if isinstance(val, (str, int, float)):
+                            # Prevent extremely long numbers / string words from overflowing the table
+                            val = NoEscape(r'\seqsplit{' + escape_latex(val) + '}')
                         tabular.add_row((italic(kwarg), val), color='white' if idx % 2 else 'black!5')
 
 
@@ -657,7 +666,7 @@ def _parse_lambda_fallback(function: types.FunctionType, tables: Dict[FEID, FeSu
                                        closure_vars.globals.get(ref, closure_vars.builtins.get(ref, _VarWrap(ref))))
             for ref in refs
         }
-        response['kwargs'] = _trace_value(ref_map, tables, ret_ref=ret_ref, wrap_str=False)
+        response['kwargs'] = _trace_value(ref_map, tables, ret_ref=ret_ref, wrap_str=False).raw_input
     return response
 
 

@@ -13,4 +13,4 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.trace import adapt, io, metric, xai
-from fastestimator.trace.trace import EvalEssential, Logger, Trace, TrainEssential
+from fastestimator.trace.trace import EvalEssential, Logger, Trace, TrainEssential, sort_traces
