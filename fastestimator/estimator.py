@@ -233,7 +233,6 @@ class Estimator:
             run_modes: The current execution modes.
         """
         all_traces = sort_traces(get_current_items(self.traces_in_use, run_modes=run_modes))
-
         try:
             self._run_traces_on_begin(traces=all_traces)
             if "train" in run_modes or "eval" in run_modes:
