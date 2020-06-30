@@ -6,7 +6,7 @@ from fastestimator.op.numpyop.univariate import PadSequence
 from fastestimator.test.unittest_util import is_equal
 
 
-class TestOnehot(unittest.TestCase):
+class TestPadSequence(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.single_input = [np.array([1, 2, 3, 4])]
