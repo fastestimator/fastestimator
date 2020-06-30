@@ -1,17 +1,22 @@
-import unittest
 import os
+import tempfile
+import unittest
+
 import fastestimator as fe
 from fastestimator.architecture.tensorflow import LeNet
 from fastestimator.dataset.data import cifar10
 from fastestimator.op.numpyop.univariate import Normalize
 from fastestimator.op.tensorop.model import ModelOp
+from fastestimator.test.unittest_util import img_to_rgb_array, check_img_similar
 from fastestimator.trace.io import ImageSaver
 from fastestimator.trace.xai import Saliency
-import tempfile
-from fastestimator.test.unittest_util import img_to_rgb_array, check_img_similar
 
 
 class TestSalinecy(unittest.TestCase):
+    """ This test has dependency on:
+    * fe.trace.ImageSaver
+    * fe.estimator.enable_deterministic
+    """
     def test_saliency(self):
         fe.estimator.enable_deterministic(200)
         label_mapping = {
