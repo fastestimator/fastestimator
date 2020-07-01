@@ -125,3 +125,18 @@ class testIsEqual(unittest.TestCase):
 
         obj2 = {"1": [-1, 2.5], "2": {"3": torch.Tensor([1.5])}}
         self.assertFalse(is_equal(obj1, obj2))
+
+    def test_is_equal_dtype_tf(self):
+        obj1 = tf.constant([1, 2], dtype=tf.float32)
+        obj2 = tf.constant([1, 2], dtype=tf.float64)
+        self.assertFalse(is_equal(obj1, obj2, assert_dtype=True))
+
+    def test_is_equal_dtype_torch(self):
+        obj1 = torch.tensor([1, 2], dtype=torch.float32)
+        obj2 = torch.tensor([1, 2], dtype=torch.float64)
+        self.assertFalse(is_equal(obj1, obj2, assert_dtype=True))
+
+    def test_is_equal_dtype_np(self):
+        obj1 = np.array([1, 2], dtype=np.float32)
+        obj2 = np.array([1, 2], dtype=np.float64)
+        self.assertFalse(is_equal(obj1, obj2, assert_dtype=True))

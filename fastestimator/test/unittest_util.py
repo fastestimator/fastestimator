@@ -11,7 +11,7 @@ from fastestimator.dataset.numpy_dataset import NumpyDataset
 import fastestimator as fe
 
 
-def is_equal(obj1: Any, obj2: Any, assert_type: bool = True) -> bool:
+def is_equal(obj1: Any, obj2: Any, assert_type: bool = True, assert_dtype:bool = False) -> bool:
     """Check whether input objects are equal. The object type can be nested iterable (list, tuple, set, dict) and
     with elements such as int, float, np.ndarray, tf.Tensor, tf.Varaible, torch.Tensor
 
@@ -19,6 +19,7 @@ def is_equal(obj1: Any, obj2: Any, assert_type: bool = True) -> bool:
         obj1: input object 1
         obj2: input object 2
         assert_dtype: whether to assert the same data type
+        assert_dtype: whether to assert the same dtype in case of nd.array, tf.Tensor, torch.Tensor
 
     Returns:
         boolean of whether those two object are equal
@@ -50,14 +51,20 @@ def is_equal(obj1: Any, obj2: Any, assert_type: bool = True) -> bool:
         return True
 
     elif type(obj1) == np.ndarray:
+        if assert_dtype and obj1.dtype != obj2.dtype:
+            return False
         return np.array_equal(obj1, obj2)
 
     elif tf.is_tensor(obj1):
+        if assert_dtype and obj1.dtype != obj2.dtype:
+            return False
         obj1 = obj1.numpy()
         obj2 = obj2.numpy()
         return np.array_equal(obj1, obj2)
 
     elif isinstance(obj1, torch.Tensor):
+        if assert_dtype and obj1.dtype != obj2.dtype:
+            return False
         return torch.equal(obj1, obj2)
 
     else:

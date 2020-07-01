@@ -388,17 +388,21 @@ class TestPipelineGetLoader(unittest.TestCase):
         pipeline = fe.Pipeline(train_data=self.sample_torch_dataset)
         loader = pipeline.get_loader(mode="train")
 
-        results = []
-        for idx, batch in enumerate(loader, start=1):
-            results.append(batch)
-            if idx == 2:
-                break
-        ans = [{
-            "x": torch.tensor([0], dtype=torch.float32), "y": torch.tensor([-99], dtype=torch.float32)
-        }, {
-            "x": torch.tensor([1], dtype=torch.float32), "y": torch.tensor([-98], dtype=torch.float32)
-        }]
-        self.assertTrue(is_equal(results, ans))
+        with self.subTest("check loader type"):
+            self.assertIsInstance(loader, torch.utils.data.DataLoader)
+
+        with self.subTest("check data"):
+            results = []
+            for idx, batch in enumerate(loader, start=1):
+                results.append(batch)
+                if idx == 2:
+                    break
+            ans = [{
+                "x": torch.tensor([0], dtype=torch.float32), "y": torch.tensor([-99], dtype=torch.float32)
+            }, {
+                "x": torch.tensor([1], dtype=torch.float32), "y": torch.tensor([-98], dtype=torch.float32)
+            }]
+            self.assertTrue(is_equal(results, ans))
 
     def test_pipeline_get_loader_torch_dataset_with_batch_size(self):
         with self.subTest(shuffle=False):
