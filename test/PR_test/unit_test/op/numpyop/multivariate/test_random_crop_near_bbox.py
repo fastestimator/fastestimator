@@ -8,27 +8,19 @@ from fastestimator.op.numpyop.multivariate import RandomCropNearBBox
 class TestRandomCropNearBBox(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.height = 12
-        cls.width = 15
-        cls.single_input = [np.random.rand(28, 28, 3), np.random.rand(28, 28, 3)]
-        cls.single_output_shape = (28, 28, 3)
-        cls.input_image_and_mask = [np.random.rand(28, 28, 3), np.random.rand(28, 28, 3), np.random.rand(10, 10, 3)]
-        cls.image_and_mask_output_shape = (28, 28, 3)
+        cls.single_input = [np.random.rand(28, 28, 3), np.array([12, 12, 19, 19])]
+        cls.input_image_and_mask = [np.random.rand(28, 28, 3), np.random.rand(28, 28, 3), np.array([12, 12, 19, 19])]
 
     def test_input(self):
-        randomcrop_bbox = RandomCropNearBBox(image_in='x', bbox_in='cropping_box')
+        randomcrop_bbox = RandomCropNearBBox(image_in='x', cropping_bbox_in="x_bbox")
         output = randomcrop_bbox.forward(data=self.single_input, state={})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)
-        with self.subTest('Check output image shape'):
-            self.assertEqual(output[0].shape, self.single_output_shape)
 
     def test_input_image_and_mask(self):
-        randomcrop_bbox = RandomCropNearBBox(image_in='x', mask_in='x_mask', bbox_in='x_bbox')
+        randomcrop_bbox = RandomCropNearBBox(image_in='x', mask_in='x_mask', cropping_bbox_in="x_bbox")
         output = randomcrop_bbox.forward(data=self.input_image_and_mask, state={})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)
-        with self.subTest('Check output image shape'):
-            self.assertEqual(output[0].shape, self.image_and_mask_output_shape)
         with self.subTest('Check output mask shape'):
-            self.assertEqual(output[1].shape, self.image_and_mask_output_shape)
+            self.assertEqual(output[0].shape, output[1].shape)
