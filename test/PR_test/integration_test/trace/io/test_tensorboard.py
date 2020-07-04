@@ -132,7 +132,7 @@ class TestTensorboard(unittest.TestCase):
             for v in e.summary.value:
                 if v.tag == "torch_fc1/bias":
                     output = v.histo.num
-        self.assertEqual(output, 64.0)
+                    self.assertEqual(output, 64.0)
 
     def test_torch_on_epoch_end(self):
         tensorboard = TensorBoard(log_dir=self.log_dir,
