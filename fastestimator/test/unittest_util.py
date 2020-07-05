@@ -5,6 +5,10 @@ import numpy as np
 import tensorflow as tf
 import torch
 from PIL import Image
+from fastestimator.summary import System
+from fastestimator.op.tensorop.model import ModelOp
+from fastestimator.dataset.numpy_dataset import NumpyDataset
+import fastestimator as fe
 
 
 def is_equal(obj1: Any, obj2: Any, assert_type: bool = True, assert_dtype:bool = False) -> bool:
@@ -114,6 +118,51 @@ class OneLayerTorchModel(torch.nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.fc1(x)
         return x
+
+
+class MultiLayerTorchModel(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.fc1 = torch.nn.Linear(4, 2, bias=False)
+        self.fc1.weight.data = torch.tensor([[1, 2, 3, 4], [2, 3, 4, 6]], dtype=torch.float32)
+        self.fc2 = torch.nn.Linear(2, 1, bias=False)
+        self.fc2.weight.data = torch.tensor([[1, 2]], dtype=torch.float32)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.fc1(x)
+        x = self.fc2(x)
+        return x
+
+def sample_system_object():
+    x_train = np.random.rand(3, 28, 28, 3)
+    y_train = np.random.randint(10, size=(3,))
+    x_eval = np.random.rand(2, 28, 28, 3)
+    y_eval = np.random.randint(10, size=(2,))
+
+    train_data = NumpyDataset({'x': x_train, 'y': y_train})
+    eval_data = NumpyDataset({'x': x_eval, 'y': y_eval})
+    test_data = eval_data.split(0.5)
+    model = fe.build(model_fn=fe.architecture.tensorflow.LeNet, optimizer_fn='adam', model_name='tf')
+    pipeline = fe.Pipeline(train_data=train_data, eval_data=eval_data, test_data=test_data, batch_size=1)
+    network = fe.Network(ops=[ModelOp(model=model, inputs="x_out", outputs="y_pred")])
+    system = System(network=network, pipeline=pipeline, traces=[], total_epochs=10, mode='train')
+    return system
+
+def sample_system_object_torch():
+    x_train = np.random.rand(3, 28, 28, 3)
+    y_train = np.random.randint(10, size=(3, ))
+    x_eval = np.random.rand(2, 28, 28, 3)
+    y_eval = np.random.randint(10, size=(2, ))
+
+    train_data = NumpyDataset({'x': x_train, 'y': y_train})
+    eval_data = NumpyDataset({'x': x_eval, 'y': y_eval})
+    test_data = eval_data.split(0.5)
+    model = fe.build(model_fn=fe.architecture.pytorch.LeNet, optimizer_fn='adam', model_name='torch')
+    pipeline = fe.Pipeline(train_data=train_data, eval_data=eval_data, test_data=test_data, batch_size=1)
+    network = fe.Network(ops=[ModelOp(model=model, inputs="x_out", outputs="y_pred")])
+    system = System(network=network, pipeline=pipeline, traces=[], total_epochs=10, mode='train')
+    return system
+
 
 
 def check_img_similar(img1: np.ndarray, img2: np.ndarray, ptol: int = 3, ntol: float = 0.01) -> bool:

@@ -55,7 +55,6 @@ class Gather(TensorOp):
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
         indices = data[:self.num_indices]
         inputs = data[self.num_indices:]
-
         results = []
         for idx, tensor in enumerate(inputs):
             # Check len(indices[0]) since an empty indices element is used to trigger the else
