@@ -42,12 +42,12 @@ class TestQMSTest(unittest.TestCase):
         pipeline = fe.Pipeline(test_data=test_data)
         model = fe.build(model_fn=one_layer_tf_model, optimizer_fn="adam")
         network = fe.Network(ops=[
-            ModelOp(model=model, inputs="x", outputs="y_pred"),
-        ])
+            ModelOp(model=model, inputs="x", outputs="y_pred"), ])
 
         test_title = "Integration Test of QMSTest"
-        json_output = "test.json"
-        doc_output = "summary.docx"
+        temp_dir = tempfile.mkdtemp()
+        json_output = os.path.join(temp_dir, "test.json")
+        doc_output = os.path.join(temp_dir, "summary.docx")
         test_descriptions = ["first result is greater than 0", "second result is greater than 0"]
         traces = [
             PassTrace(inputs="y_pred", mode="test"),
@@ -71,7 +71,8 @@ class TestQMSTest(unittest.TestCase):
 
             with self.subTest("check json summary dict"):
                 ans = {
-                    "title": test_title,
+                    "title":
+                    test_title,
                     "stories": [{
                         "description": test_descriptions[0], "passed": "True"
                     }, {
