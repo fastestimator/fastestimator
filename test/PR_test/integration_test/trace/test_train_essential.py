@@ -2,6 +2,8 @@ import math
 import time
 import unittest
 
+import torch
+
 from fastestimator.test.unittest_util import sample_system_object
 from fastestimator.trace import TrainEssential
 from fastestimator.util.data import Data
@@ -10,7 +12,7 @@ from fastestimator.util.data import Data
 class TestTrainEssential(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.data = Data({'loss':10})
+        cls.data = Data({'loss': 10})
         cls.train_essential = TrainEssential(monitor_names='loss')
         cls.train_essential.system = sample_system_object()
         cls.train_essential.system.log_steps = 5
@@ -21,7 +23,7 @@ class TestTrainEssential(unittest.TestCase):
     def test_on_begin(self):
         self.train_essential.on_begin(data=self.data)
         with self.subTest('Check number of devices'):
-            self.assertEqual(self.data['num_device'], 0)
+            self.assertEqual(self.data['num_device'], torch.cuda.device_count())
         with self.subTest('Check logging interval'):
             self.assertEqual(self.data['logging_interval'], 5)
 
@@ -49,4 +51,4 @@ class TestTrainEssential(unittest.TestCase):
         with self.subTest('Check total time in data'):
             self.assertIsNotNone(self.data['total_time'])
         with self.subTest('Check model learning rate in data dictionary'):
-            self.assertTrue(math.isclose(self.data[model_name+'_lr'], 0.001, rel_tol=1e-3))
+            self.assertTrue(math.isclose(self.data[model_name + '_lr'], 0.001, rel_tol=1e-3))
