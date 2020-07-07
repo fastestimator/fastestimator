@@ -62,7 +62,7 @@ class Traceability(Trace):
         save_path: Where to save the output files. Note that this will generate a new folder with the given name, into
             which the report and corresponding graphics assets will be written.
 
-    Raises: 
+    Raises:
         OSError: If graphviz is not installed.
     """
     def __init__(self, save_path: str):
@@ -275,10 +275,10 @@ class Traceability(Trace):
                             # Text Summary
                             # noinspection PyUnresolvedReferences
                             inputs = model.fe_input_spec.get_dummy_input()
-                            self.doc.append(Verbatim(pms.summary(model, inputs)))
+                            self.doc.append(
+                                Verbatim(pms.summary(model.module if self.system.num_devices > 1 else model, inputs)))
                             with self.doc.create(Center()):
                                 self.doc.append(HrefFEID(FEID(id(model)), model.model_name))
-
                             # Visual Summary
                             # Import has to be done while matplotlib is using the Agg backend
                             old_backend = matplotlib.get_backend() or 'Agg'
@@ -290,7 +290,8 @@ class Traceability(Trace):
                                 sys.modules.setdefault('IPython.display', MagicMock())
                                 import hiddenlayer as hl
                                 with Suppressor():
-                                    graph = hl.build_graph(model, inputs)
+                                    graph = hl.build_graph(model.module if self.system.num_devices > 1 else model,
+                                                           inputs)
                                 graph = graph.build_dot()
                                 graph.attr(rankdir='TB')  # Switch it to Top-to-Bottom instead of Left-to-Right
                                 # LaTeX \maxdim is around 575cm (226 inches), so the image must have max dimension less
