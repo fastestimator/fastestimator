@@ -19,7 +19,7 @@ import platform
 import shutil
 import sys
 from collections import defaultdict
-from typing import DefaultDict, List, Union
+from typing import Any, DefaultDict, List, Union
 from unittest.mock import Base, MagicMock
 
 import dot2tex as d2t
@@ -196,11 +196,23 @@ class Traceability(Trace):
                 FEID(id(model))
                 for model in self.system.network.models if isinstance(model, (tf.keras.Model, torch.nn.Module))
             }
-            datasets = {
-                FEID(id(self.system.pipeline.data.get(title, None))):
-                (title, self.system.pipeline.data.get(title, None))
-                for title in ['train', 'eval', 'test']
-            }
+            # Locate the datasets in order to provide extra details about them later in the summary
+            datasets = {}
+            for mode in ['train', 'eval', 'test']:
+                objs = list(self.system.pipeline.data.get(mode, None))
+                idx = 0
+                while idx < len(objs):
+                    obj = objs[idx]
+                    if obj:
+                        feid = FEID(id(obj))
+                        if feid not in datasets:
+                            datasets[feid] = ({mode}, obj)
+                        else:
+                            datasets[feid][0].add(mode)
+                    if isinstance(obj, Scheduler):
+                        objs.extend(obj.get_all_values())
+                    idx += 1
+            # Parse the config tables
             for tbl in self.config_tables:
                 name_override = None
                 toc_ref = None
@@ -217,9 +229,10 @@ class Traceability(Trace):
                                              text=NoEscape(r'\textcolor{blue}{') + bold(tbl.name) + NoEscape('}'))
                     toc_ref = tbl.name
                 if tbl.fe_id in datasets:
-                    title, dataset = datasets[tbl.fe_id]
-                    name_override = bold(f'{tbl.name} ({title.capitalize()})')
-                    toc_ref = f"{title.capitalize()} Dataset"
+                    modes, dataset = datasets[tbl.fe_id]
+                    title = ", ".join([s.capitalize() for s in modes])
+                    name_override = bold(f'{tbl.name} ({title})')
+                    toc_ref = f"{title} Dataset"
                     # Enhance the dataset summary
                     if isinstance(dataset, FEDataset):
                         extra_rows = list(dataset.summary().__getstate__().items())
@@ -376,10 +389,9 @@ class Traceability(Trace):
         diagram.set('rankdir', 'TB')
         diagram.set('dpi', 300)
         diagram.set_node_defaults(shape='record')
-        diagram.add_node(
-            pydot.Node(str(id(ds)),
-                       label=f'{ds.__class__.__name__} ({FEID(id(ds))})',
-                       texlbl=HrefFEID(FEID(id(ds)), name=ds.__class__.__name__).dumps()))
+
+        # Make the dataset the first of the pipeline ops
+        pipe_ops.insert(0, ds)
         label_last_seen = defaultdict(lambda: str(id(ds)))  # Where was this key last generated
 
         self._draw_subgraph(diagram, label_last_seen, 'Pipeline', pipe_ops)
@@ -391,7 +403,7 @@ class Traceability(Trace):
     def _draw_subgraph(diagram: pydot.Dot,
                        label_last_seen: DefaultDict[str, str],
                        subgraph_name: str,
-                       subgraph_ops: List[Union[Op, Trace]]) -> None:
+                       subgraph_ops: List[Union[Op, Trace, Any]]) -> None:
         """Draw a subgraph of ops into an existing `diagram`.
 
         Args:
@@ -406,15 +418,17 @@ class Traceability(Trace):
         for idx, op in enumerate(subgraph_ops):
             node_id = str(id(op))
             Traceability._add_node(subgraph, op, node_id)
-            edge_srcs = defaultdict(lambda: [])
-            for inp in op.inputs:
-                if inp == '*':
-                    continue
-                edge_srcs[label_last_seen[inp]].append(inp)
-            for src, labels in edge_srcs.items():
-                diagram.add_edge(pydot.Edge(src=src, dst=node_id, label=f" {', '.join(labels)} "))
-            for out in op.outputs:
-                label_last_seen[out] = node_id
+            if isinstance(op, (Op, Trace)):
+                # Need the instance check since subgraph_ops might contain a tf dataset or torch dataloader
+                edge_srcs = defaultdict(lambda: [])
+                for inp in op.inputs:
+                    if inp == '*':
+                        continue
+                    edge_srcs[label_last_seen[inp]].append(inp)
+                for src, labels in edge_srcs.items():
+                    diagram.add_edge(pydot.Edge(src=src, dst=node_id, label=f" {', '.join(labels)} "))
+                for out in op.outputs:
+                    label_last_seen[out] = node_id
             if isinstance(op, Trace) and idx > 0:
                 # Invisibly connect traces in order so that they aren't all just squashed horizontally into the image
                 diagram.add_edge(pydot.Edge(src=str(id(subgraph_ops[idx - 1])), dst=node_id, style='invis'))
