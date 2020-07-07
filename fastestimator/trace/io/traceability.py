@@ -51,7 +51,7 @@ from fastestimator.trace.trace import Trace, sort_traces
 from fastestimator.util.data import Data
 from fastestimator.util.latex_util import AdjustBox, Center, HrefFEID, Verbatim
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import FEID, Suppressor, prettify_metric_name
+from fastestimator.util.util import FEID, Suppressor, prettify_metric_name, to_list
 
 
 @traceable()
@@ -199,7 +199,7 @@ class Traceability(Trace):
             # Locate the datasets in order to provide extra details about them later in the summary
             datasets = {}
             for mode in ['train', 'eval', 'test']:
-                objs = list(self.system.pipeline.data.get(mode, None))
+                objs = to_list(self.system.pipeline.data.get(mode, None))
                 idx = 0
                 while idx < len(objs):
                     obj = objs[idx]
