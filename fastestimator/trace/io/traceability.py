@@ -196,11 +196,23 @@ class Traceability(Trace):
                 FEID(id(model))
                 for model in self.system.network.models if isinstance(model, (tf.keras.Model, torch.nn.Module))
             }
-            datasets = {
-                FEID(id(self.system.pipeline.data.get(title, None))):
-                (title, self.system.pipeline.data.get(title, None))
-                for title in ['train', 'eval', 'test']
-            }
+            # Locate the datasets in order to provide extra details about them later in the summary
+            datasets = {}
+            for mode in ['train', 'eval', 'test']:
+                objs = list(self.system.pipeline.data.get(mode, None))
+                idx = 0
+                while idx < len(objs):
+                    obj = objs[idx]
+                    if obj:
+                        feid = FEID(id(obj))
+                        if feid not in datasets:
+                            datasets[feid] = ({mode}, obj)
+                        else:
+                            datasets[feid][0].add(mode)
+                    if isinstance(obj, Scheduler):
+                        objs.extend(obj.get_all_values())
+                    idx += 1
+            # Parse the config tables
             for tbl in self.config_tables:
                 name_override = None
                 toc_ref = None
@@ -217,9 +229,10 @@ class Traceability(Trace):
                                              text=NoEscape(r'\textcolor{blue}{') + bold(tbl.name) + NoEscape('}'))
                     toc_ref = tbl.name
                 if tbl.fe_id in datasets:
-                    title, dataset = datasets[tbl.fe_id]
-                    name_override = bold(f'{tbl.name} ({title.capitalize()})')
-                    toc_ref = f"{title.capitalize()} Dataset"
+                    modes, dataset = datasets[tbl.fe_id]
+                    title = ", ".join([s.capitalize() for s in modes])
+                    name_override = bold(f'{tbl.name} ({title})')
+                    toc_ref = f"{title} Dataset"
                     # Enhance the dataset summary
                     if isinstance(dataset, FEDataset):
                         extra_rows = list(dataset.summary().__getstate__().items())
