@@ -19,7 +19,7 @@ import platform
 import shutil
 import sys
 from collections import defaultdict
-from typing import DefaultDict, List, Union
+from typing import Any, DefaultDict, List, Union
 from unittest.mock import Base, MagicMock
 
 import dot2tex as d2t
@@ -376,10 +376,9 @@ class Traceability(Trace):
         diagram.set('rankdir', 'TB')
         diagram.set('dpi', 300)
         diagram.set_node_defaults(shape='record')
-        diagram.add_node(
-            pydot.Node(str(id(ds)),
-                       label=f'{ds.__class__.__name__} ({FEID(id(ds))})',
-                       texlbl=HrefFEID(FEID(id(ds)), name=ds.__class__.__name__).dumps()))
+
+        # Make the dataset the first of the pipeline ops
+        pipe_ops.insert(0, ds)
         label_last_seen = defaultdict(lambda: str(id(ds)))  # Where was this key last generated
 
         self._draw_subgraph(diagram, label_last_seen, 'Pipeline', pipe_ops)
@@ -391,7 +390,7 @@ class Traceability(Trace):
     def _draw_subgraph(diagram: pydot.Dot,
                        label_last_seen: DefaultDict[str, str],
                        subgraph_name: str,
-                       subgraph_ops: List[Union[Op, Trace]]) -> None:
+                       subgraph_ops: List[Union[Op, Trace, Any]]) -> None:
         """Draw a subgraph of ops into an existing `diagram`.
 
         Args:
@@ -406,15 +405,17 @@ class Traceability(Trace):
         for idx, op in enumerate(subgraph_ops):
             node_id = str(id(op))
             Traceability._add_node(subgraph, op, node_id)
-            edge_srcs = defaultdict(lambda: [])
-            for inp in op.inputs:
-                if inp == '*':
-                    continue
-                edge_srcs[label_last_seen[inp]].append(inp)
-            for src, labels in edge_srcs.items():
-                diagram.add_edge(pydot.Edge(src=src, dst=node_id, label=f" {', '.join(labels)} "))
-            for out in op.outputs:
-                label_last_seen[out] = node_id
+            if isinstance(op, (Op, Trace)):
+                # Need the instance check since subgraph_ops might contain a tf dataset or torch dataloader
+                edge_srcs = defaultdict(lambda: [])
+                for inp in op.inputs:
+                    if inp == '*':
+                        continue
+                    edge_srcs[label_last_seen[inp]].append(inp)
+                for src, labels in edge_srcs.items():
+                    diagram.add_edge(pydot.Edge(src=src, dst=node_id, label=f" {', '.join(labels)} "))
+                for out in op.outputs:
+                    label_last_seen[out] = node_id
             if isinstance(op, Trace) and idx > 0:
                 # Invisibly connect traces in order so that they aren't all just squashed horizontally into the image
                 diagram.add_edge(pydot.Edge(src=str(id(subgraph_ops[idx - 1])), dst=node_id, style='invis'))
