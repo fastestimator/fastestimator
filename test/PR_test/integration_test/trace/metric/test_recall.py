@@ -10,9 +10,12 @@ from fastestimator.util import Data
 class TestRecall(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        x = np.array([1, 2, 3])
-        x_pred = np.array([[1, 1, 3], [2, 3, 4], [1, 1, 0]])
+        x = np.array([[1, 2], [3, 4]])
+        x_pred = np.array([[1, 5, 3], [2, 1, 0]])
+        x_binary = np.array([1])
+        x_pred_binary = np.array([0.9])
         cls.data = Data({'x': x, 'x_pred': x_pred})
+        cls.data_binary = Data({'x': x_binary, 'x_pred': x_pred_binary})
         cls.recall = Recall(true_key='x', pred_key='x_pred')
 
     def test_on_epoch_begin(self):
@@ -27,15 +30,35 @@ class TestRecall(unittest.TestCase):
         self.recall.y_pred = []
         self.recall.on_batch_end(data=self.data)
         with self.subTest('Check correct values'):
-            self.assertEqual(self.recall.y_true, [1, 2, 3])
+            self.assertEqual(self.recall.y_true, [1, 1])
         with self.subTest('Check total values'):
-            self.assertEqual(self.recall.y_pred, [2, 2, 0])
+            self.assertEqual(self.recall.y_pred, [1, 0])
 
     def test_on_epoch_end(self):
-        self.recall.y_true = [1, 2, 3]
-        self.recall.y_pred = [2, 2, 0]
+        self.recall.y_true = [1, 1]
+        self.recall.y_pred = [1, 0]
+        self.recall.binary_classification = False
         self.recall.on_epoch_end(data=self.data)
         with self.subTest('Check if recall exists'):
             self.assertIn('recall', self.data)
         with self.subTest('Check the value of recall'):
-            self.assertTrue(is_equal(self.data['recall'], np.array([0, 0, 1, 0])))
+            self.assertTrue(is_equal(self.data['recall'], np.array([0, 0.5])))
+
+    def test_on_batch_end_binary_classification(self):
+        self.recall.y_true = []
+        self.recall.y_pred = []
+        self.recall.on_batch_end(data=self.data_binary)
+        with self.subTest('Check correct values'):
+            self.assertEqual(self.recall.y_true, [1])
+        with self.subTest('Check total values'):
+            self.assertEqual(self.recall.y_pred, [1.0])
+
+    def test_on_epoch_end_binary_classification(self):
+        self.recall.y_true = [1]
+        self.recall.y_pred = [1.0]
+        self.recall.binary_classification = True
+        self.recall.on_epoch_end(data=self.data_binary)
+        with self.subTest('Check if recall exists'):
+            self.assertIn('recall', self.data_binary)
+        with self.subTest('Check the value of recall'):
+            self.assertEqual(self.data_binary['recall'], 1.0)
