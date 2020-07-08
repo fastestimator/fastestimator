@@ -3,16 +3,6 @@ import pickle
 import unittest
 import urllib.request
 
-# with open('dataset_urls.pickle', 'rb') as dataset_url_dict:
-#     data_urls = pickle.load(dataset_url_dict)
-
-# print(data_urls)
-# data_urls[
-#     'mendeley'] = 'https://data.mendeley.com/datasets/rscbjbr9sj/2/files/f12eaf6d-6023-432f-acc9-80c9d7393433/ChestXRay2017.zip'
-
-# with open('dataset_urls.pickle', 'wb') as dataset_url_dict:
-#     pickle.dump(data_urls, dataset_url_dict)
-
 
 def ping(host):
     try:
