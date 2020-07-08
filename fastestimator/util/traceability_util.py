@@ -109,6 +109,35 @@ class FeInputSpec:
             return self.tensor_func(shape, dtype=dtype)
 
 
+class FeSplitSummary(LatexObject):
+    """A class to summarize splits performed on an FE Dataset
+    """
+    def __init__(self):
+        super().__init__()
+        self.data = []
+
+    def add_split(self, parent: Union[FEID, str], fraction: str) -> None:
+        """Record another split on this dataset.
+
+        Args:
+            parent: The id of the parent involved in the split (or 'self' if you are the parent).
+            fraction: The string representation of the split fraction that was used.
+        """
+        self.data.append((parent, fraction))
+
+    def dumps(self) -> str:
+        """Generate a LaTeX formatted representation of this object.
+
+        Returns:
+            A LaTeX string representation of this object.
+        """
+        return " $\\rightarrow$ ".join([
+            f"{HrefFEID(parent, name='').dumps() if isinstance(parent, FEID) else parent}({escape_latex(fraction)})"
+            for parent,
+            fraction in self.data
+        ])
+
+
 class FeSummaryTable:
     """A class containing summaries of traceability information.
 
