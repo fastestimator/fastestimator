@@ -172,29 +172,28 @@ class Traceability(Trace):
         """
         with self.doc.create(Section("FastEstimator Architecture")):
             for mode in self.system.pipeline.data.keys():
-                self.doc.append(NoEscape(r'\FloatBarrier'))
-                with self.doc.create(Subsection(mode.capitalize())):
-                    scheduled_items = self.system.pipeline.get_scheduled_items(
-                        mode) + self.system.network.get_scheduled_items(mode) + self.system.traces
-                    signature_epochs = get_signature_epochs(scheduled_items,
-                                                            total_epochs=self.system.epoch_idx,
-                                                            mode=mode)
-                    epochs_with_data = self.system.pipeline.get_epochs_with_data(total_epochs=self.system.epoch_idx,
-                                                                                 mode=mode)
-                    for epoch in signature_epochs:
-                        if epoch not in epochs_with_data:
-                            continue
-                        self.doc.append(NoEscape(r'\FloatBarrier'))
-                        with self.doc.create(
-                                Subsubsection(f"Epoch {epoch}",
-                                              label=Label(Marker(name=f"{mode}{epoch}", prefix="ssubsec")))):
-                            diagram = self._draw_diagram(mode, epoch)
-                            ltx = d2t.dot2tex(diagram.to_string(), figonly=True)
-                            args = Arguments(**{'max width': r'\textwidth, max height=0.9\textheight'})
-                            args.escape = False
-                            with self.doc.create(Center()):
-                                with self.doc.create(AdjustBox(arguments=args)) as box:
-                                    box.append(NoEscape(ltx))
+                scheduled_items = self.system.pipeline.get_scheduled_items(
+                    mode) + self.system.network.get_scheduled_items(mode) + self.system.traces
+                signature_epochs = get_signature_epochs(scheduled_items, total_epochs=self.system.epoch_idx, mode=mode)
+                epochs_with_data = self.system.pipeline.get_epochs_with_data(total_epochs=self.system.epoch_idx,
+                                                                             mode=mode)
+                if set(signature_epochs) & epochs_with_data:
+                    self.doc.append(NoEscape(r'\FloatBarrier'))
+                    with self.doc.create(Subsection(mode.capitalize())):
+                        for epoch in signature_epochs:
+                            if epoch not in epochs_with_data:
+                                continue
+                            self.doc.append(NoEscape(r'\FloatBarrier'))
+                            with self.doc.create(
+                                    Subsubsection(f"Epoch {epoch}",
+                                                  label=Label(Marker(name=f"{mode}{epoch}", prefix="ssubsec")))):
+                                diagram = self._draw_diagram(mode, epoch)
+                                ltx = d2t.dot2tex(diagram.to_string(), figonly=True)
+                                args = Arguments(**{'max width': r'\textwidth, max height=0.9\textheight'})
+                                args.escape = False
+                                with self.doc.create(Center()):
+                                    with self.doc.create(AdjustBox(arguments=args)) as box:
+                                        box.append(NoEscape(ltx))
 
     def _document_init_params(self) -> None:
         """Add initialization parameters to the traceability document.
