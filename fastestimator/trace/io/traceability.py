@@ -37,6 +37,7 @@ from pylatex.utils import bold
 from torch.utils.data import Dataset
 
 import fastestimator as fe
+from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.dataset import FEDataset
 from fastestimator.estimator import Estimator
 from fastestimator.network import BaseNetwork
@@ -394,7 +395,14 @@ class Traceability(Trace):
         pipe_ops.insert(0, ds)
         label_last_seen = defaultdict(lambda: str(id(ds)))  # Where was this key last generated
 
-        self._draw_subgraph(diagram, label_last_seen, 'Pipeline', pipe_ops)
+        batch_size = ""
+        if isinstance(ds, Dataset) and not isinstance(ds, BatchDataset):
+            batch_size = self.system.pipeline.batch_size
+            if isinstance(batch_size, Scheduler):
+                batch_size = batch_size.get_current_value(epoch)
+            if batch_size is not None:
+                batch_size = f" (Batch Size: {batch_size})"
+        self._draw_subgraph(diagram, label_last_seen, f'Pipeline{batch_size}', pipe_ops)
         self._draw_subgraph(diagram, label_last_seen, 'Network', net_ops)
         self._draw_subgraph(diagram, label_last_seen, 'Traces', traces)
         return diagram

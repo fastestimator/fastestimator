@@ -65,6 +65,7 @@ class BatchDataset(FEDataset):
         self.probability = to_list(probability)
         self.same_feature = False
         self._check_input()
+        self.index_maps = []
         self.reset_index_maps()
         self.pad_value = None
 
@@ -99,7 +100,7 @@ class BatchDataset(FEDataset):
         if not self.same_feature:
             assert len(set(self.num_samples)) == 1, "the number of samples must be the same for disjoint features"
 
-    def _do_split(self, splits: Sequence[Iterable[int]]) -> List['UnpairedDataset']:
+    def _do_split(self, splits: Sequence[Iterable[int]]) -> List['BatchDataset']:
         """This class overwrites the .split() method instead of _do_split().
 
         Args:
@@ -111,7 +112,7 @@ class BatchDataset(FEDataset):
         """
         raise AssertionError("This method should not have been invoked. Please file a bug report")
 
-    def split(self, *fractions: Union[float, int, Iterable[int]]) -> Union['UnpairedDataset', List['UnpairedDataset']]:
+    def split(self, *fractions: Union[float, int, Iterable[int]]) -> Union['BatchDataset', List['BatchDataset']]:
         """Split this dataset into multiple smaller datasets.
 
         This function enables several types of splitting:
