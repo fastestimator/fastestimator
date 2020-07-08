@@ -23,7 +23,7 @@ import jsonpickle
 import numpy as np
 from torch.utils.data import Dataset
 
-from fastestimator.util.traceability_util import traceable
+from fastestimator.util.traceability_util import FeSplitSummary, traceable
 from fastestimator.util.util import FEID, get_shape, get_type
 
 
@@ -134,6 +134,10 @@ class FEDataset(Dataset):
         """
         if hasattr(parent, '_fe_traceability_summary'):
             parent_id = FEID(id(parent))
+            fractions = [
+                f"range({frac.start}, {frac.stop}, {frac.step})" if isinstance(frac, range) else f"{frac}"
+                for frac in fractions
+            ]
             for child, frac in zip(children, fractions):
                 # noinspection PyProtectedMember
                 tables = deepcopy(child._fe_traceability_summary)
@@ -147,19 +151,15 @@ class FEDataset(Dataset):
                     tables[child_id] = table
                 else:
                     table = tables[child_id]
-                split_text = table.fields.get('split', '')
-                if split_text:
-                    split_text = f" | {split_text}"
-                if isinstance(frac, range):
-                    frac = f"range({frac.start}, {frac.stop}, {frac.step})"
-                table.fields['split'] = f"Child with final size: {len(child)}, split param: {frac}{split_text}"
+                split_summary = table.fields.get('split', FeSplitSummary())
+                split_summary.add_split(parent=parent_id, fraction=frac)
+                table.fields['split'] = split_summary
                 child._fe_traceability_summary = tables
             # noinspection PyUnresolvedReferences
             table = parent._fe_traceability_summary.get(parent_id)
-            split_text = table.fields.get('split', '')
-            if split_text:
-                split_text = f" | {split_text}"
-            table.fields['split'] = f"Parent with final size: {len(parent)}{split_text}"
+            split_summary = table.fields.get('split', FeSplitSummary())
+            split_summary.add_split(parent='self', fraction=", ".join([f"-{frac}" for frac in fractions]))
+            table.fields['split'] = split_summary
 
     def split(self, *fractions: Union[float, int, Iterable[int]]) -> Union['FEDataset', List['FEDataset']]:
         """Split this dataset into multiple smaller datasets.

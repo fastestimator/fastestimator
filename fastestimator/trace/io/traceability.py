@@ -37,6 +37,7 @@ from pylatex.utils import bold
 from torch.utils.data import Dataset
 
 import fastestimator as fe
+from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.dataset import FEDataset
 from fastestimator.estimator import Estimator
 from fastestimator.network import BaseNetwork
@@ -51,7 +52,7 @@ from fastestimator.trace.trace import Trace, sort_traces
 from fastestimator.util.data import Data
 from fastestimator.util.latex_util import AdjustBox, Center, HrefFEID, Verbatim
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import FEID, Suppressor, prettify_metric_name
+from fastestimator.util.util import FEID, Suppressor, prettify_metric_name, to_list
 
 
 @traceable()
@@ -199,7 +200,7 @@ class Traceability(Trace):
             # Locate the datasets in order to provide extra details about them later in the summary
             datasets = {}
             for mode in ['train', 'eval', 'test']:
-                objs = list(self.system.pipeline.data.get(mode, None))
+                objs = to_list(self.system.pipeline.data.get(mode, None))
                 idx = 0
                 while idx < len(objs):
                     obj = objs[idx]
@@ -394,7 +395,14 @@ class Traceability(Trace):
         pipe_ops.insert(0, ds)
         label_last_seen = defaultdict(lambda: str(id(ds)))  # Where was this key last generated
 
-        self._draw_subgraph(diagram, label_last_seen, 'Pipeline', pipe_ops)
+        batch_size = ""
+        if isinstance(ds, Dataset) and not isinstance(ds, BatchDataset):
+            batch_size = self.system.pipeline.batch_size
+            if isinstance(batch_size, Scheduler):
+                batch_size = batch_size.get_current_value(epoch)
+            if batch_size is not None:
+                batch_size = f" (Batch Size: {batch_size})"
+        self._draw_subgraph(diagram, label_last_seen, f'Pipeline{batch_size}', pipe_ops)
         self._draw_subgraph(diagram, label_last_seen, 'Network', net_ops)
         self._draw_subgraph(diagram, label_last_seen, 'Traces', traces)
         return diagram
