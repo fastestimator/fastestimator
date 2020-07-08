@@ -23,7 +23,7 @@ import jsonpickle
 import numpy as np
 from torch.utils.data import Dataset
 
-from fastestimator.util.traceability_util import traceable, FeSplitSummary
+from fastestimator.util.traceability_util import FeSplitSummary, traceable
 from fastestimator.util.util import FEID, get_shape, get_type
 
 
