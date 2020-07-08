@@ -178,7 +178,7 @@ class FeSummaryTable:
             toc_ref: A reference to be added to the table of contents.
             extra_rows: Any extra rows to be added to the table before the kwargs.
         """
-        with doc.create(Table(position='htbp')) as table:
+        with doc.create(Table(position='h!')) as table:
             table.append(NoEscape(r'\refstepcounter{table}'))
             table.append(Label(Marker(name=str(self.fe_id), prefix="tbl")))
             if toc_ref:
@@ -902,7 +902,8 @@ def fe_summary(self) -> List[FeSummaryTable]:
         if issubclass(x[1].type, Scheduler) else 4 if issubclass(x[1].type, Trace) else 5
         if issubclass(x[1].type, Op) else 6 if issubclass(x[1].type, (Dataset, tf.data.Dataset)) else 7
         if issubclass(x[1].type, (tf.keras.Model, torch.nn.Module)) else 8
-        if not issubclass(x[1].type, (np.ndarray, tf.Tensor, torch.Tensor)) else 9)
+        if issubclass(x[1].type, types.FunctionType) else 9
+        if issubclass(x[1].type, (np.ndarray, tf.Tensor, tf.Variable, torch.Tensor)) else 10)
     key_mapping = {fe_id: f"@FE{idx}" for idx, (fe_id, val) in enumerate(ordered_items)}
     FEID.set_translation_dict(key_mapping)
     return [item[1] for item in ordered_items]
