@@ -199,9 +199,9 @@ def plot_logs(experiments: List[Summary],
     share_legend = share_legend and (len(metric_list) > 1)
     n_plots = len(metric_list) + share_legend
 
-    # map the metrics into an n x n grid, then remove any extra rows. Final grid will be m x n with m <= n
-    n_cols = math.ceil(math.sqrt(n_plots))
-    n_rows = math.ceil(n_plots / n_cols)
+    # map the metrics into an n x n grid, then remove any extra columns. Final grid will be n x m with m <= n
+    n_rows = math.ceil(math.sqrt(n_plots))
+    n_cols = math.ceil(n_plots / n_rows)
     metric_grid_location = {}
     nd1_metrics = []
     idx = 0
@@ -306,7 +306,8 @@ def plot_logs(experiments: List[Summary],
                                          c=[colors[exp_idx + color_offset[mode]]],
                                          marker=style,
                                          linewidth=1.0,
-                                         edgecolors='black')
+                                         edgecolors='black',
+                                         zorder=3)  # zorder to put markers on top of line segments
                         if not has_label[exp_idx][mode]['patch']:
                             labels.append(title)
                             handles.append(s)
