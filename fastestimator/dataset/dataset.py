@@ -160,6 +160,9 @@ class FEDataset(Dataset):
             split_summary = table.fields.get('split', FeSplitSummary())
             split_summary.add_split(parent='self', fraction=", ".join([f"-{frac}" for frac in fractions]))
             table.fields['split'] = split_summary
+            # Put the new parent summary into the child table to ensure it will always exist in the final set of tables
+            for child in children:
+                child._fe_traceability_summary[parent_id] = deepcopy(table)
 
     def split(self, *fractions: Union[float, int, Iterable[int]]) -> Union['FEDataset', List['FEDataset']]:
         """Split this dataset into multiple smaller datasets.
