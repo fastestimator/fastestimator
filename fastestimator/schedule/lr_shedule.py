@@ -29,7 +29,7 @@ def cosine_decay(time: int,
     fe.Estimator(..., traces=[s])
     ```
 
-    For more information, checkout SGDR: https://arxiv.org/pdf/1608.03983.pdf.
+    For more information, check out SGDR: https://arxiv.org/pdf/1608.03983.pdf.
 
     Args:
         time: The current step or epoch during training starting from 1.
@@ -37,7 +37,7 @@ def cosine_decay(time: int,
         init_lr: Initial learning rate to decay from.
         min_lr: Minimum learning rate.
         start: The step or epoch to start the decay schedule.
-        cycle_multiplier: The factor of which next cycle length will be multiplied.
+        cycle_multiplier: The factor by which next cycle length will be multiplied.
 
     Returns:
         lr: learning rate given current step or epoch.
