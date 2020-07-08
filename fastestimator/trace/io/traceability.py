@@ -40,7 +40,6 @@ from torch.utils.data import Dataset
 import fastestimator as fe
 from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.dataset import FEDataset
-from fastestimator.estimator import Estimator
 from fastestimator.network import BaseNetwork
 from fastestimator.op.numpyop.meta.one_of import OneOf
 from fastestimator.op.numpyop.meta.sometimes import Sometimes
@@ -195,6 +194,7 @@ class Traceability(Trace):
     def _document_init_params(self) -> None:
         """Add initialization parameters to the traceability document.
         """
+        from fastestimator.estimator import Estimator  # Avoid circular import
         with self.doc.create(Section("Parameters")):
             model_ids = {
                 FEID(id(model))

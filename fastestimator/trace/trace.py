@@ -171,6 +171,7 @@ class TrainEssential(Trace):
             data.write_with_log("epoch_time", "{} sec".format(round(time.perf_counter() - self.epoch_start, 2)))
 
     def on_end(self, data: Data) -> None:
+        self.system.mode = 'train'  # Set mode to 'train' for better log visualization
         data.write_with_log("total_time", "{} sec".format(round(time.perf_counter() - self.train_start, 2)))
         for model in self.system.network.models:
             if hasattr(model, "current_optimizer"):

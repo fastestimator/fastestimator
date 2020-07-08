@@ -34,6 +34,7 @@ from fastestimator.schedule.schedule import Scheduler, get_current_items, get_si
 from fastestimator.summary.system import Summary, System
 from fastestimator.trace.io.best_model_saver import BestModelSaver
 from fastestimator.trace.io.model_saver import ModelSaver
+from fastestimator.trace.io.traceability import Traceability
 from fastestimator.trace.trace import EvalEssential, Logger, Trace, TrainEssential, sort_traces
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
@@ -398,8 +399,15 @@ class Estimator:
             traces: List of traces.
         """
         data = Data()
+        traceability = None
         for trace in traces:
+            if isinstance(trace, Traceability):
+                # Delay traceability until the end so that it can capture all data including the total training time
+                traceability = trace
+                continue
             trace.on_end(data)
+        if traceability:
+            traceability.on_end(data)
 
     def _check_early_exit(self) -> None:
         """Determine whether training should be prematurely aborted.
