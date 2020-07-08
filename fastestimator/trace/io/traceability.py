@@ -62,11 +62,13 @@ class Traceability(Trace):
     Args:
         save_path: Where to save the output files. Note that this will generate a new folder with the given name, into
             which the report and corresponding graphics assets will be written.
+        extra_objects: Any extra objects which are not part of the Estimator, but which you want to capture in the
+            summary report. One example could be an extra pipeline which performs pre-processing.
 
     Raises:
         OSError: If graphviz is not installed.
     """
-    def __init__(self, save_path: str):
+    def __init__(self, save_path: str, extra_objects: Any = None):
         # Verify that graphviz is available on this machine
         try:
             pydot.Dot.create(pydot.Dot())
@@ -92,6 +94,9 @@ class Traceability(Trace):
         os.makedirs(self.figure_dir, exist_ok=True)
         # Other member variables
         self.config_tables = []
+        # Extra objects will automatically get included in the report since this Trace is @traceable, so we don't need
+        # to do anything with them. Referencing here to stop IDEs from flagging the argument as unused and removing it.
+        to_list(extra_objects)
         self.doc = Document()
 
     def on_begin(self, data: Data) -> None:
