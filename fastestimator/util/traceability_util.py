@@ -110,7 +110,7 @@ class FeInputSpec:
 
 
 class FeSplitSummary(LatexObject):
-    """A class to summarize splits performed on an FE Dataset
+    """A class to summarize splits performed on an FE Dataset.
     """
     def __init__(self):
         super().__init__()
