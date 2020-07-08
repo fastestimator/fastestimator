@@ -12,19 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-
 import locale
 import os
 import platform
 import shutil
 import sys
+import types
 from collections import defaultdict
-from typing import Any, DefaultDict, List, Union
+from typing import Any, DefaultDict, Dict, List, Set, Tuple, Union
 from unittest.mock import Base, MagicMock
 
 import dot2tex as d2t
 import jsonpickle
 import matplotlib
+import numpy as np
 import pydot
 import pytorch_model_summary as pms
 import tensorflow as tf
@@ -51,7 +52,7 @@ from fastestimator.summary.logs.log_plot import visualize_logs
 from fastestimator.trace.trace import Trace, sort_traces
 from fastestimator.util.data import Data
 from fastestimator.util.latex_util import AdjustBox, Center, HrefFEID, Verbatim
-from fastestimator.util.traceability_util import traceable
+from fastestimator.util.traceability_util import FeSummaryTable, traceable
 from fastestimator.util.util import FEID, Suppressor, prettify_metric_name, to_list
 
 
@@ -127,7 +128,9 @@ class Traceability(Trace):
 
     def on_end(self, data: Data) -> None:
         self._document_training_graphs()
+        self.doc.append(NoEscape(r'\newpage'))
         self._document_fe_graph()
+        self.doc.append(NoEscape(r'\newpage'))
         self._document_init_params()
         self._document_models()
         self._document_sys_config()
@@ -214,43 +217,111 @@ class Traceability(Trace):
                         objs.extend(obj.get_all_values())
                     idx += 1
             # Parse the config tables
-            for tbl in self.config_tables:
-                name_override = None
-                toc_ref = None
-                extra_rows = None
-                if issubclass(tbl.type, Estimator):
-                    toc_ref = "Estimator"
-                if issubclass(tbl.type, BaseNetwork):
-                    toc_ref = "Network"
-                if issubclass(tbl.type, Pipeline):
-                    toc_ref = "Pipeline"
-                if tbl.fe_id in model_ids:
-                    # Link to a later detailed model description
-                    name_override = Hyperref(Marker(name=str(tbl.name), prefix="subsec"),
-                                             text=NoEscape(r'\textcolor{blue}{') + bold(tbl.name) + NoEscape('}'))
-                    toc_ref = tbl.name
-                if tbl.fe_id in datasets:
-                    modes, dataset = datasets[tbl.fe_id]
-                    title = ", ".join([s.capitalize() for s in modes])
-                    name_override = bold(f'{tbl.name} ({title})')
-                    toc_ref = f"{title} Dataset"
-                    # Enhance the dataset summary
-                    if isinstance(dataset, FEDataset):
-                        extra_rows = list(dataset.summary().__getstate__().items())
-                        for idx, (key, val) in enumerate(extra_rows):
-                            key = f"{prettify_metric_name(key)}:"
-                            if isinstance(val, dict) and val:
-                                if isinstance(list(val.values())[0], (int, float, str, bool, type(None))):
-                                    val = jsonpickle.dumps(val, unpicklable=False)
-                                else:
-                                    subtable = Tabular('l|l')
-                                    for k, v in val.items():
-                                        if hasattr(v, '__getstate__'):
-                                            v = jsonpickle.dumps(v, unpicklable=False)
-                                        subtable.add_row((k, v))
-                                    val = subtable
-                            extra_rows[idx] = (key, val)
-                tbl.render_table(self.doc, name_override=name_override, toc_ref=toc_ref, extra_rows=extra_rows)
+            start = 0
+            start = self._loop_tables(start,
+                                      classes=(Estimator, BaseNetwork, Pipeline),
+                                      name="Base Classes",
+                                      model_ids=model_ids,
+                                      datasets=datasets)
+            start = self._loop_tables(start,
+                                      classes=Scheduler,
+                                      name="Schedulers",
+                                      model_ids=model_ids,
+                                      datasets=datasets)
+            start = self._loop_tables(start, classes=Trace, name="Traces", model_ids=model_ids, datasets=datasets)
+            start = self._loop_tables(start, classes=Op, name="Ops", model_ids=model_ids, datasets=datasets)
+            start = self._loop_tables(start,
+                                      classes=(Dataset, tf.data.Dataset),
+                                      name="Datasets",
+                                      model_ids=model_ids,
+                                      datasets=datasets)
+            start = self._loop_tables(start,
+                                      classes=(tf.keras.Model, torch.nn.Module),
+                                      name="Models",
+                                      model_ids=model_ids,
+                                      datasets=datasets)
+            start = self._loop_tables(start,
+                                      classes=types.FunctionType,
+                                      name="Functions",
+                                      model_ids=model_ids,
+                                      datasets=datasets)
+            start = self._loop_tables(start,
+                                      classes=(np.ndarray, tf.Tensor, tf.Variable, torch.Tensor),
+                                      name="Tensors",
+                                      model_ids=model_ids,
+                                      datasets=datasets)
+            self._loop_tables(start, classes=Any, name="Miscellaneous", model_ids=model_ids, datasets=datasets)
+
+    def _loop_tables(self,
+                     start: int,
+                     classes: Union[type, Tuple[type, ...]],
+                     name: str,
+                     model_ids: Set[FEID],
+                     datasets: Dict[FEID, Tuple[Set[str], Any]]) -> int:
+        """Iterate through tables grouping them into subsections.
+
+        Args:
+            start: What index to start searching from.
+            classes: What classes are acceptable for this subsection.
+            name: What to call this subsection.
+            model_ids: The ids of any known models.
+            datasets: A mapping like {ID: ({modes}, dataset)}. Useful for augmenting the displayed information.
+
+        Returns:
+            The new start index after traversing as many spaces as possible along the list of tables.
+        """
+        stop = start
+        while stop < len(self.config_tables):
+            if classes == Any or issubclass(self.config_tables[stop].type, classes):
+                stop += 1
+            else:
+                break
+        if stop > start:
+            self.doc.append(NoEscape(r'\FloatBarrier'))
+            with self.doc.create(Subsection(name)):
+                self._write_tables(self.config_tables[start:stop], model_ids, datasets)
+        return stop
+
+    def _write_tables(self,
+                      tables: List[FeSummaryTable],
+                      model_ids: Set[FEID],
+                      datasets: Dict[FEID, Tuple[Set[str], Any]]) -> None:
+        """Insert a LaTeX representation of a list of tables into the current doc.
+
+        Args:
+            tables: The tables to write into the doc.
+            model_ids: The ids of any known models.
+            datasets: A mapping like {ID: ({modes}, dataset)}. Useful for augmenting the displayed information.
+        """
+        for tbl in tables:
+            name_override = None
+            toc_ref = None
+            extra_rows = None
+            if tbl.fe_id in model_ids:
+                # Link to a later detailed model description
+                name_override = Hyperref(Marker(name=str(tbl.name), prefix="subsec"),
+                                         text=NoEscape(r'\textcolor{blue}{') + bold(tbl.name) + NoEscape('}'))
+            if tbl.fe_id in datasets:
+                modes, dataset = datasets[tbl.fe_id]
+                title = ", ".join([s.capitalize() for s in modes])
+                name_override = bold(f'{tbl.name} ({title})')
+                # Enhance the dataset summary
+                if isinstance(dataset, FEDataset):
+                    extra_rows = list(dataset.summary().__getstate__().items())
+                    for idx, (key, val) in enumerate(extra_rows):
+                        key = f"{prettify_metric_name(key)}:"
+                        if isinstance(val, dict) and val:
+                            if isinstance(list(val.values())[0], (int, float, str, bool, type(None))):
+                                val = jsonpickle.dumps(val, unpicklable=False)
+                            else:
+                                subtable = Tabular('l|l')
+                                for k, v in val.items():
+                                    if hasattr(v, '__getstate__'):
+                                        v = jsonpickle.dumps(v, unpicklable=False)
+                                    subtable.add_row((k, v))
+                                val = subtable
+                        extra_rows[idx] = (key, val)
+            tbl.render_table(self.doc, name_override=name_override, toc_ref=toc_ref, extra_rows=extra_rows)
 
     def _document_models(self) -> None:
         """Add model summaries to the traceability document.
