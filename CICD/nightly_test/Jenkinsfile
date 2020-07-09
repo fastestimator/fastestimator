@@ -39,7 +39,7 @@ pipeline{
                                     set -e
                                     . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
                                     conda activate $JENKINS_PYTHON_ENV
-                                    python3 test/run_nightly_build.py
+                                    bash test/run_nightly_build.sh
                                 '''
                             }
                         }
@@ -73,7 +73,7 @@ pipeline{
                                     set -e
                                     . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
                                     conda activate $JENKINS_PYTHON_ENV
-                                    python3 test/run_nightly_build.py
+                                    bash test/run_nightly_build.sh
                                 '''
                             }
                         }
