@@ -434,6 +434,21 @@ class TorchNetwork(BaseNetwork):
 class TFNetwork(BaseNetwork):
     """An extension of BaseNetwork for TensorFlow models.
     """
+    def load_epoch(self, mode: str, epoch: int, output_keys: Optional[Set[str]] = None, warmup: bool = False) -> None:
+        """Prepare the network to run a given epoch and mode.
+
+        This method is necessary since schedulers and op mode restrictions may result in different computation graphs
+        every epoch. This also converts the epoch index a tensor to avoid tensorflow graph rebuilding.
+
+        Args:
+            mode: The mode to prepare to execute. One of 'train', 'eval', 'test', or 'infer'.
+            epoch: The epoch to prepare to execute.
+            output_keys: What keys must be moved from the GPU back to the CPU after executing a step.
+            warmup: Whether to prepare to execute it warmup mode or not (end users can likely ignore this argument).
+        """
+        super().load_epoch(mode, epoch, output_keys, warmup)
+        self.epoch_state["epoch"] = tf.convert_to_tensor(self.epoch_state["epoch"])
+
     def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """Run a forward step through the Network on a batch of data.
 
@@ -833,9 +848,9 @@ def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None], model: Model
         else:
             try:
                 optimizer = optimizer_fn(model.parameters())
-            except:
-                raise AssertionError("optimizer_fn of Pytorch backend should be callable with single arg. Please sure "
-                                     "model and optimizer_fn are using the same backend")
-
+            except Exception as e:
+                print("optimizer_fn of Pytorch backend should be callable with single arg. Please sure model and \
+                optimizer_fn are using the same backend")
+                raise ValueError(repr(e))
             assert isinstance(optimizer, torch.optim.Optimizer), "optimizer_fn should generate pytorch optimizer"
     return optimizer
