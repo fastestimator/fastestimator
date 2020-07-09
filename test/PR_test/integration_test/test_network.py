@@ -348,7 +348,7 @@ class TestNetworkBuild(unittest.TestCase):
                 model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=tf.optimizers.Adadelta)
 
         with self.subTest("optimizer_fn use lambda function"):
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=lambda: tf.optimizers.Adadelta())
 
     def test_network_build_unknown_model_check_assertion_error(self):
