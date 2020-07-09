@@ -51,7 +51,7 @@ class ModelOp(TensorOp):
 
     def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
         training = state['mode'] == "train" and self.trainable
-        if self.epoch_spec != state['epoch']:
+        if isinstance(self.model, torch.nn.Module) and self.epoch_spec != state['epoch']:
             # Gather model input specs for the sake of TensorBoard and Traceability
             self.model.fe_input_spec = FeInputSpec(data, self.model)
             self.epoch_spec = state['epoch']
