@@ -144,6 +144,9 @@ class FeSummaryTable:
     Args:
         name: The string to be used as the title line in the summary table.
         fe_id: The id of this table, used for cross-referencing from other tables.
+        target_type: The type of the object being summarized.
+        path: The import path of the object in question. Might be more complicated when methods/functions are involved.
+        kwargs: The keyword arguments used to instantiate the object being summarized.
         **fields: Any other information about the summarized object / function.
     """
     name: Union[str, LatexObject]
@@ -154,7 +157,7 @@ class FeSummaryTable:
                  name: str,
                  fe_id: FEID,
                  target_type: Type,
-                 path: Optional[str] = None,
+                 path: Union[None, str, LatexObject] = None,
                  kwargs: Optional[Dict[str, Any]] = None,
                  **fields: Any):
         self.name = name
@@ -199,7 +202,10 @@ class FeSummaryTable:
                 type_str = match.group("typ") if match else type_str
                 tabular.add_row(("Type: ", escape_latex(type_str)))
                 if self.path:
-                    tabular.add_row(("", escape_latex(self.path)))
+                    if isinstance(self.path, LatexObject):
+                        tabular.add_row(("", self.path))
+                    else:
+                        tabular.add_row(("", escape_latex(self.path)))
                 for k, v in self.fields.items():
                     tabular.add_hline()
                     tabular.add_row((f"{k.capitalize()}: ", v))
@@ -304,7 +310,9 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
     elif isinstance(inp, _Function):
         inp_id = FEID(id(inp))
         if inp_id not in tables:
-            if hasattr(inp.func, '__module__') and hasattr(inp.func, '__qualname__'):
+            if inspect.ismethod(inp.func):
+                path = _trace_value(inp.func, tables, ret_ref, wrap_str)
+            elif hasattr(inp.func, '__module__') and hasattr(inp.func, '__qualname__'):
                 path = f"{inp.func.__module__}.{inp.func.__qualname__}"
             else:
                 path = None
@@ -360,6 +368,10 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
             if len(formatted) > 1:
                 formatted.pop()  # Remove trailing comma
             formatted.append(")")
+            if inspect.ismethod(inp.func.func):
+                container_list = _trace_value(inp.func.func, tables, ret_ref, wrap_str)
+                container_list.data.extend(formatted)
+                return container_list
             return ContainerList(data=[inp.func.name, *formatted])
         else:
             # The function args are complicated, so use the normal approach

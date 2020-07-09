@@ -365,7 +365,10 @@ class Traceability(Trace):
                             # noinspection PyUnresolvedReferences
                             inputs = model.fe_input_spec.get_dummy_input()
                             self.doc.append(
-                                Verbatim(pms.summary(model.module if self.system.num_devices > 1 else model, inputs)))
+                                Verbatim(
+                                    pms.summary(model.module if self.system.num_devices > 1 else model,
+                                                inputs,
+                                                print_summary=False)))
                             with self.doc.create(Center()):
                                 self.doc.append(HrefFEID(FEID(id(model)), model.model_name))
                             # Visual Summary
