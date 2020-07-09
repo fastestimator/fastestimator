@@ -144,6 +144,9 @@ class FeSummaryTable:
     Args:
         name: The string to be used as the title line in the summary table.
         fe_id: The id of this table, used for cross-referencing from other tables.
+        target_type: The type of the object being summarized.
+        path: The import path of the object in question. Might be more complicated when methods/functions are involved.
+        kwargs: The keyword arguments used to instantiate the object being summarized.
         **fields: Any other information about the summarized object / function.
     """
     name: Union[str, LatexObject]
@@ -154,7 +157,7 @@ class FeSummaryTable:
                  name: str,
                  fe_id: FEID,
                  target_type: Type,
-                 path: Optional[str] = None,
+                 path: Union[None, str, LatexObject] = None,
                  kwargs: Optional[Dict[str, Any]] = None,
                  **fields: Any):
         self.name = name
