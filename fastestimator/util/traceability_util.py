@@ -61,7 +61,7 @@ _CommandTable = {
     '>=': '>='
 }
 # If a collection (list, tuple, set, dict) has more than this many entries, its summary will be truncated
-_CollectionSizeLimit = 40
+_CollectionSizeLimit = 42
 
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
@@ -183,7 +183,7 @@ class FeSummaryTable:
             toc_ref: A reference to be added to the table of contents.
             extra_rows: Any extra rows to be added to the table before the kwargs.
         """
-        with doc.create(Table(position='h!')) as table:
+        with doc.create(Table(position='htp!')) as table:
             table.append(NoEscape(r'\refstepcounter{table}'))
             table.append(Label(Marker(name=str(self.fe_id), prefix="tbl")))
             if toc_ref:
