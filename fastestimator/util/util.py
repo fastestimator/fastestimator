@@ -156,6 +156,8 @@ def to_set(data: Any) -> Set[Any]:
 class NonContext(object):
     """A class which is used to make nothing unusual happen.
 
+    This class is intentionally not @traceable.
+
     ```python
     a = 5
     with fe.util.NonContext():
@@ -172,6 +174,8 @@ class NonContext(object):
 
 class Suppressor(object):
     """A class which can be used to silence output of function calls.
+
+    This class is intentionally not @traceable.
 
     ```python
     x = lambda: print("hello")
@@ -204,6 +208,8 @@ class Suppressor(object):
 
 class Timer(ContextDecorator):
     """A class that can be used to time things.
+
+    This class is intentionally not @traceable.
 
     ```python
     x = lambda: list(map(lambda i: i + i/2, list(range(int(1e6)))))
@@ -487,6 +493,8 @@ def is_number(arg: str) -> bool:
 class DefaultKeyDict(dict):
     """Like collections.defaultdict but it passes the key argument to the default function.
 
+    This class is intentionally not @traceable.
+
     ```python
     d = fe.util.DefaultKeyDict(default=lambda x: x+x, a=4, b=6)
     print(d["a"])  # 4
@@ -664,6 +672,8 @@ def get_batch_size(data: Dict[str, Any]) -> int:
 class FEID:
     """An int wrapper class that can change how it's values are printed.
 
+    This class is intentionally not @traceable.
+
     Args:
         val: An integer id to be wrapped.
     """
@@ -706,6 +716,8 @@ class FEID:
 
 class Flag:
     """A mutable wrapper around a boolean.
+
+    This class is intentionally not @traceable.
 
     Args:
         val: The initial value for the Flag.

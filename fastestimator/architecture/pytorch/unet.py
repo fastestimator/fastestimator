@@ -23,6 +23,8 @@ from torch.nn.init import kaiming_normal_ as he_normal
 class UNetEncoderBlock(nn.Module):
     """A UNet encoder block.
 
+    This class is intentionally not @traceable (models and layers are handled by a different process).
+
     Args:
         in_channels: How many channels enter the encoder.
         out_channels: How many channels leave the encoder.
@@ -46,6 +48,8 @@ class UNetEncoderBlock(nn.Module):
 
 class UNetDecoderBlock(nn.Module):
     """A UNet decoder block.
+
+    This class is intentionally not @traceable (models and layers are handled by a different process).
 
     Args:
         in_channels: How many channels enter the decoder.
@@ -73,6 +77,8 @@ class UNetDecoderBlock(nn.Module):
 
 class UNet(nn.Module):
     """A standard UNet implementation in PyTorch.
+
+    This class is intentionally not @traceable (models and layers are handled by a different process).
 
     Args:
         input_size: The size of the input tensor (channels, height, width).

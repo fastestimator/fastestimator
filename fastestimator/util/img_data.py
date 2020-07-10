@@ -30,6 +30,8 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 class ImgData(OrderedDict):
     """A container for image related data.
 
+    This class is intentionally not @traceable.
+
     This class is useful for automatically laying out collections of images for comparison and visualization.
 
     ```python

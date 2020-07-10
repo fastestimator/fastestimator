@@ -30,6 +30,8 @@ from fastestimator.util.util import prettify_metric_name, to_list, to_set
 
 class _MetricGroup:
     """A class for wrapping the values recorded for a given metric based on its experiment id and mode.
+
+    This class is intentionally not @traceable.
     """
     state: DefaultDict[int, Dict[str, np.ndarray]]
 

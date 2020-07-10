@@ -18,6 +18,7 @@ from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.adapt import LRScheduler
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import MeanAveragePrecision
+from fastestimator.util import traceable
 
 
 def _get_fpn_anchor_box(width, height):
@@ -31,7 +32,7 @@ def _get_fpn_anchor_box(width, height):
     total_num_pixels = np.sum(num_pixel)
     anchorbox = np.zeros((9 * total_num_pixels, 4))
     anchor_length_multipliers = [2**(0.0), 2**(1 / 3), 2**(2 / 3)]
-    aspect_ratios = [1.0, 2.0, 0.5]  #x:y
+    aspect_ratios = [1.0, 2.0, 0.5]  # x:y
     anchor_idx = 0
     for shape, anchor_length in zip(shapes, anchor_lengths):
         p_h, p_w = shape
@@ -58,6 +59,7 @@ def _get_fpn_anchor_box(width, height):
     return np.float32(anchorbox), np.int32(num_pixel) * 9
 
 
+@traceable()
 class ShiftLabel(NumpyOp):
     def forward(self, data, state):
         # the label of COCO dataset starts from 1, shifting the start to 0
@@ -66,6 +68,7 @@ class ShiftLabel(NumpyOp):
         return bbox
 
 
+@traceable()
 class AnchorBox(NumpyOp):
     def __init__(self, width, height, inputs, outputs, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
@@ -79,18 +82,18 @@ class AnchorBox(NumpyOp):
         object_boxes = bbox[:, :-1]  # num_obj x 4
         label = bbox[:, -1]  # num_obj x 1
         ious = self._get_iou(object_boxes, self.anchorbox)  # num_obj x num_anchor
-        #now for each object in image, assign the anchor box with highest iou to them
+        # now for each object in image, assign the anchor box with highest iou to them
         anchorbox_best_iou_idx = np.argmax(ious, axis=1)
         num_obj = ious.shape[0]
         for row in range(num_obj):
             ious[row, anchorbox_best_iou_idx[row]] = 0.99
-        #next, begin the anchor box assignment based on iou
+        # next, begin the anchor box assignment based on iou
         anchor_to_obj_idx = np.argmax(ious, axis=0)  # num_anchor x 1
         anchor_best_iou = np.max(ious, axis=0)  # num_anchor x 1
         cls_gt = np.int32([label[idx] for idx in anchor_to_obj_idx])  # num_anchor x 1
-        cls_gt[np.where(anchor_best_iou <= 0.4)] = -1  #background class
+        cls_gt[np.where(anchor_best_iou <= 0.4)] = -1  # background class
         cls_gt[np.where(np.logical_and(anchor_best_iou > 0.4, anchor_best_iou <= 0.5))] = -2  # ignore these examples
-        #finally, calculate localization target
+        # finally, calculate localization target
         single_loc_gt = object_boxes[anchor_to_obj_idx]  # num_anchor x 4
         gt_x1, gt_y1, gt_width, gt_height = np.split(single_loc_gt, 4, axis=1)
         ac_x1, ac_y1, ac_width, ac_height = np.split(self.anchorbox, 4, axis=1)
@@ -235,6 +238,7 @@ class RetinaNet(nn.Module):
         return cls_output, loc_output
 
 
+@traceable()
 class RetinaLoss(TensorOp):
     def forward(self, data, state):
         anchorbox, cls_pred, loc_pred = data
@@ -290,6 +294,7 @@ class RetinaLoss(TensorOp):
         return loc_loss
 
 
+@traceable()
 class PredictBox(TensorOp):
     """Convert network output to bounding boxes.
         """

@@ -21,6 +21,8 @@ from tensorflow.python.keras import layers
 class ReflectionPadding2D(layers.Layer):
     """A layer for performing Reflection Padding on 2D arrays.
 
+    This class is intentionally not @traceable (models and layers are handled by a different process).
+
     This layer assumes that you are using the a tensor shaped like (Batch, Height, Width, Channels).
     The implementation here is borrowed from https://stackoverflow.com/questions/50677544/reflection-padding-conv2d.
 

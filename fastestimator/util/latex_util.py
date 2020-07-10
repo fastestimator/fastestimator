@@ -24,6 +24,8 @@ from fastestimator.util.util import FEID
 
 class ContainerList(Container):
     """A class to expedite combining pieces of latex together.
+
+    This class is intentionally not @traceable.
     """
     def dumps(self) -> str:
         """Get a string representation of this container.
@@ -36,6 +38,8 @@ class ContainerList(Container):
 
 class PyContainer(ContainerList):
     """A class to convert python containers to a LaTeX representation.
+
+    This class is intentionally not @traceable.
 
     Args:
         data: The python object to be converted to LaTeX.
@@ -64,6 +68,8 @@ class PyContainer(ContainerList):
 class Verbatim(Environment):
     """A class to put a string inside the latex verbatim environment.
 
+    This class is intentionally not @traceable.
+
     Args:
         data: The string to be wrapped.
     """
@@ -74,18 +80,24 @@ class Verbatim(Environment):
 
 class Center(Environment):
     """A class to center content in a page.
+
+    This class is intentionally not @traceable.
     """
     pass
 
 
 class AdjustBox(Environment):
     """A class to adjust the size of boxes.
+
+    This class is intentionally not @traceable.
     """
     packages = [Package('adjustbox')]
 
 
 class HrefFEID(ContainerList):
     """A class to represent a colored and underlined hyperref based on a given fe_id.
+
+    This class is intentionally not @traceable.
 
     Args:
         fe_id: The id used to link this hyperref.

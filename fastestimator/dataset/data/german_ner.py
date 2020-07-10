@@ -24,7 +24,7 @@ from tqdm import tqdm
 from fastestimator.dataset.numpy_dataset import NumpyDataset
 
 
-def get_sentences_and_labels(path: str) -> Tuple[List[str], List[str], Set[str], Set[str]]:
+def get_sentences_and_labels(path: str) -> Tuple[List[str], List[List[str]], Set[str], Set[str]]:
     """Combines tokens into sentences and create vocab set for train data and labels.
 
     For simplicity tokens with 'O' entity are omitted.

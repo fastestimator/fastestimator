@@ -21,6 +21,8 @@ from tensorflow.python.keras import layers
 class InstanceNormalization(layers.Layer):
     """A layer for performing instance normalization.
 
+    This class is intentionally not @traceable (models and layers are handled by a different process).
+
     This layer assumes that you are using the a tensor shaped like (Batch, Height, Width, Channels). See
     https://arxiv.org/abs/1607.08022 for details about this layer. The implementation here is borrowed from
     https://github.com/tensorflow/examples/blob/master/tensorflow_examples/models/pix2pix/pix2pix.py.
