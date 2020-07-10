@@ -579,7 +579,19 @@ def _combine_chunks(chunks: List[str], specs: List[_ChunkSpec],
             for i in range(spec.chunk_mid + 1, spec.chunk_end):
                 part2 = part2 + chunks[i]
                 if chunks[i].startswith("'") or chunks[i].startswith('"'):
-                    strings.add(chunks[i][1:-1])  # Take off the outer quote marks
+                    # In a situation with nested lambda functions, find the closest preceding one to own this string
+                    owned = True
+                    for other in specs:
+                        if other.chunk_end < i:
+                            continue  # Other cannot contain this chunk
+                        if other.chunk_start > spec.chunk_start:
+                            owned = False
+                            break
+                        elif other.chunk_start == spec.chunk_start and other.idx_start > spec.idx_start:
+                            owned = False
+                            break
+                    if owned:
+                        strings.add(chunks[i][1:-1])  # Take off the outer quote marks
             part2 = part2 + chunks[spec.chunk_end][:spec.idx_end]
         part2 = part2.strip()
         results.append((part1, strings, part2))
@@ -617,6 +629,10 @@ def _extract_args(input_str: str) -> Set[str]:
             left_side = False
         elif char == ',' and open_char == 0:
             left_side = True
+            arg = arg.strip()
+            if arg:
+                results.add(arg)
+            arg = ''
         elif left_side:
             arg += char
     return results
@@ -714,7 +730,7 @@ def _parse_lambda_fallback(function: types.FunctionType, tables: Dict[FEID, FeSu
     if lambda_fn is None:
         # Throw out any functions which don't have necessary strings
         strings = set(filter(lambda x: isinstance(x, str) and '<lambda>.<locals>' not in x, code.co_consts))
-        lambda_fns = list(filter(lambda x: strings.issubset(x[1]), lambda_fns))
+        lambda_fns = list(filter(lambda x: x[1] == strings, lambda_fns))
         if len(lambda_fns) == 1:
             lambda_fn = lambda_fns[0]
     if lambda_fn is None:
