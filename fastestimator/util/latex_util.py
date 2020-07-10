@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union
+from typing import Optional, Union
 
 from pylatex import NoEscape, Package, escape_latex
 from pylatex.base_classes import Container, Environment, Options
@@ -39,8 +39,10 @@ class PyContainer(ContainerList):
 
     Args:
         data: The python object to be converted to LaTeX.
+        truncate: How many values to display before truncating with an ellipsis. This should be a positive integer or
+            None to disable truncation.
     """
-    def __init__(self, data: Union[list, tuple, set, dict]):
+    def __init__(self, data: Union[list, tuple, set, dict], truncate: Optional[int] = None):
         self.packages.add(Package('enumitem', options='inline'))
         assert isinstance(data, (list, tuple, set, dict)), f"Unacceptable data type for PyContainer: {type(data)}"
         open_char = '[' if isinstance(data, list) else '(' if isinstance(data, tuple) else r'\{'
@@ -49,11 +51,13 @@ class PyContainer(ContainerList):
         ltx._star_latex_name = True  # Converts this to an inline list
         self.raw_input = data
         if isinstance(data, dict):
-            for key, val in data.items():
+            for key, val in list(data.items())[:truncate]:
                 ltx.add_item(ContainerList(data=[key, ": ", val]))
         else:
-            for val in data:
+            for val in list(data)[:truncate]:
                 ltx.add_item(val)
+        if truncate and len(data) > truncate:
+            ltx.add_item(NoEscape(r'\ldots'))
         super().__init__(data=[NoEscape(open_char), ltx, NoEscape(close_char)])
 
 

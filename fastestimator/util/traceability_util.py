@@ -60,6 +60,8 @@ _CommandTable = {
     '<=': '<=',
     '>=': '>='
 }
+# If a collection (list, tuple, set, dict) has more than this many entries, its summary will be truncated
+_CollectionSizeLimit = 40
 
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
@@ -219,9 +221,6 @@ class FeSummaryTable:
                 if self.kwargs:
                     tabular.add_hline()
                     for idx, (kwarg, val) in enumerate(self.kwargs.items()):
-                        if isinstance(val, (str, int, float)):
-                            # Prevent extremely long numbers / string words from overflowing the table
-                            val = NoEscape(r'\seqsplit{' + escape_latex(val) + '}')
                         tabular.add_row((italic(kwarg), val), color='white' if idx % 2 else 'black!5')
 
 
@@ -255,8 +254,15 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
         An FESummaryTable representation of the input.
     """
     if isinstance(inp, str):
-        return f"`{inp}'" if wrap_str else inp
+        inp = f"`{escape_latex(inp)}'" if wrap_str else escape_latex(inp)
+        if wrap_str:
+            # Prevent extremely long strings from overflowing the table
+            return NoEscape(r'\seqsplit{' + inp + '}')
+        return inp
     elif isinstance(inp, (int, float, bool, type(None), HrefFEID, FEID, PyContainer)):
+        if isinstance(inp, (int, float)):
+            # Prevent extremely long numbers from overflowing the table
+            return NoEscape(r'\seqsplit{' + str(inp) + '}')
         return inp
     elif hasattr(inp, '_fe_traceability_summary'):
         # The first time a traceable object goes through here it won't have it's summary instantiated yet, so it will
@@ -399,18 +405,22 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
         ret_ref.set_true()
         return HrefFEID(inp_id, name)
     elif isinstance(inp, list):
-        return PyContainer(data=[_trace_value(x, tables, ret_ref, wrap_str) for x in inp])
+        return PyContainer(data=[_trace_value(x, tables, ret_ref, wrap_str) for x in inp],
+                           truncate=_CollectionSizeLimit)
     elif isinstance(inp, tuple):
-        return PyContainer(data=tuple([_trace_value(x, tables, ret_ref, wrap_str) for x in inp]))
+        return PyContainer(data=tuple([_trace_value(x, tables, ret_ref, wrap_str) for x in inp]),
+                           truncate=_CollectionSizeLimit)
     elif isinstance(inp, set):
-        return PyContainer(data=set([_trace_value(x, tables, ret_ref, wrap_str) for x in inp]))
+        return PyContainer(data=set([_trace_value(x, tables, ret_ref, wrap_str) for x in inp]),
+                           truncate=_CollectionSizeLimit)
     elif isinstance(inp, dict):
         return PyContainer(
             data={
                 _trace_value(k, tables, ret_ref, wrap_str=wrap_str): _trace_value(v, tables, ret_ref, wrap_str=True)
                 for k,
                 v in inp.items()
-            })
+            },
+            truncate=_CollectionSizeLimit)
     elif isinstance(inp, (tf.Tensor, torch.Tensor, np.ndarray, tf.Variable)):
         inp_type = type(inp)
         inp_id = FEID(id(inp))
@@ -418,7 +428,10 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
             if isinstance(inp, (tf.Tensor, torch.Tensor, tf.Variable)):
                 if isinstance(inp, torch.Tensor):
                     inp = inp.cpu().detach()
-                inp = inp.numpy()
+                    inp.numpy()
+                # In the elif here we're sure to be tf
+                elif inp.dtype != tf.dtypes.variant:
+                    inp = inp.numpy()  # The variant dtype can't be cast to numpy()
             rank = inp.ndim
             description = {'shape': inp.shape}
             if rank == 0 or (rank == 1 and inp.shape[0] <= 10):
@@ -430,7 +443,23 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
     elif hasattr(inp, '__class__'):
         inp_id = FEID(id(inp))
         if inp_id not in tables:
-            tables[inp_id] = FeSummaryTable(name=inp.__class__.__name__, target_type=type(inp), fe_id=inp_id)
+            kwargs = {}
+            path = None
+            if hasattr(inp, '__dict__') and '_fe_state_whitelist' not in inp.__dict__:
+                # Prevent circular recursion
+                tables[inp_id] = FeSummaryTable(name=inp.__class__.__name__, target_type=type(inp), fe_id=inp_id)
+                # This object isn't @traceable but does have some stored variables that we can summarize.
+                kwargs = _trace_value({k: v
+                                       for k, v in inp.__dict__.items() if not k.startswith("_")},
+                                      tables,
+                                      ret_ref,
+                                      wrap_str=False).raw_input
+                path = "Not @traceable, so summary is approximate"
+            tables[inp_id] = FeSummaryTable(name=inp.__class__.__name__,
+                                            target_type=type(inp),
+                                            path=path,
+                                            fe_id=inp_id,
+                                            kwargs=kwargs)
         ret_ref.set_true()
         return HrefFEID(inp_id, inp.__class__.__name__)
     else:
