@@ -51,6 +51,8 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 class _BaseWriter:
     """A class to write various types of data into TensorBoard summary files.
 
+    This class is intentionally not @traceable.
+
     Args:
         root_log_dir: The directory into which to store a new directory corresponding to this experiment's summary data
         time_stamp: The timestamp of this experiment (used as a folder name within `root_log_dir`).
@@ -185,6 +187,8 @@ class _BaseWriter:
 class _TfWriter(_BaseWriter):
     """A class to write various TensorFlow data into TensorBoard summary files.
 
+    This class is intentionally not @traceable.
+
     Args:
         root_log_dir: The directory into which to store a new directory corresponding to this experiment's summary data
         time_stamp: The timestamp of this experiment (used as a folder name within `root_log_dir`).
@@ -232,6 +236,8 @@ class _TfWriter(_BaseWriter):
 
 class _TorchWriter(_BaseWriter):
     """A class to write various Pytorch data into TensorBoard summary files.
+
+    This class is intentionally not @traceable.
     """
     def write_epoch_models(self, mode: str) -> None:
         for model in self.network.epoch_models:

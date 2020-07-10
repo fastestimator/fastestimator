@@ -19,7 +19,9 @@ import torch.nn as nn
 
 
 class Cropping2D(nn.Module):
-    """A layer for cropping along height and width dimensions
+    """A layer for cropping along height and width dimensions.
+
+    This class is intentionally not @traceable (models and layers are handled by a different process).
 
     ```python
     x = torch.tensor(list(range(100))).view((1,1,10,10))

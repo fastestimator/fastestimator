@@ -34,12 +34,14 @@ from fastestimator.op.tensorop.gather import Gather
 from fastestimator.op.tensorop.gradient.gradient import GradientOp
 from fastestimator.op.tensorop.gradient.watch import Watch
 from fastestimator.op.tensorop.model.model import ModelOp
+from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_list
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
 
+@traceable()
 class SaliencyNet:
     """A class to generate saliency masks from a given model.
 

@@ -22,6 +22,8 @@ import torch.nn.functional as fn
 class LeNet(torch.nn.Module):
     """A standard LeNet implementation in pytorch.
 
+    This class is intentionally not @traceable (models and layers are handled by a different process).
+
     The LeNet model has 3 convolution layers and 2 dense layers.
 
     Args:

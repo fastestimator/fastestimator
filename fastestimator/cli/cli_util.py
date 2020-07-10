@@ -11,6 +11,8 @@ class SaveAction(argparse.Action):
     A custom save action which is used to populate a secondary variable inside of an exclusive group. Used if this file
     is invoked directly during argument parsing.
 
+    This class is intentionally not @traceable.
+
     Args:
         option_strings: A list of command-line option strings which should be associated with this action.
         dest: The name of the attribute to hold the created object(s).

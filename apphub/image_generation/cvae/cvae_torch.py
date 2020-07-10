@@ -76,7 +76,6 @@ class CVAELoss(TensorOp):
         return torch.sum(-.5 * ((sample - mean)**2. * exp_logvar + logvar + log2pi), dim=raxis)
 
 
-@traceable()
 class EncoderNet(nn.Module):
     def __init__(self):
         super().__init__()
@@ -94,7 +93,6 @@ class EncoderNet(nn.Module):
         return x
 
 
-@traceable()
 class DecoderNet(nn.Module):
     def __init__(self):
         super().__init__()

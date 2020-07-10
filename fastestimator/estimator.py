@@ -421,6 +421,8 @@ class Estimator:
 
 class EarlyStop(Exception):
     """An exception raised when the system.stop_training flag is flipped by a Trace in order to abort the training.
+
+    This class is intentionally not @traceable.
     """
 
 

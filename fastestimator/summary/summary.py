@@ -21,6 +21,8 @@ from fastestimator.util.traceability_util import FeSummaryTable
 class Summary:
     """A summary object that records training history.
 
+    This class is intentionally not @traceable.
+
     Args:
         name: Name of the experiment. If None then experiment results will be ignored.
         system_config: A description of the initialization parameters defining the estimator associated with this

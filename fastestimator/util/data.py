@@ -18,6 +18,8 @@ from typing import Any, ChainMap, Dict, List, MutableMapping, Optional
 class Data(ChainMap[str, Any]):
     """A class which contains prediction and batch data.
 
+    This class is intentionally not @traceable.
+
     Data objects can be interacted with as if they are regular dictionaries. They are however, actually a combination of
     two dictionaries, a dictionary for trace communication and a dictionary of prediction+batch data. In general, data
     written into the trace dictionary will be logged by the system, whereas data in the pred+batch dictionary will not.

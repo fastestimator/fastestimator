@@ -31,6 +31,8 @@ if TYPE_CHECKING:
 class System:
     """A class which tracks state information while the fe.Estimator is running.
 
+    This class is intentionally not @traceable.
+
     Args:
         network: The network instance being used by the current fe.Estimator.
         pipeline: The pipeline instance being used by the current fe.Estimator.

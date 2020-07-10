@@ -106,6 +106,8 @@ class QMSTest(Trace):
 class _QMSDocx:
     """A class to generate QMS summary report templates given total pass and failure case numbers.
 
+    This class is intentionally not @traceable.
+
     Args:
         total_pass: Total number of passing QMS tests.
         total_fail: Total number of failing QMS tests.

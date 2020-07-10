@@ -5,20 +5,21 @@ import numpy as np
 import tensorflow as tf
 import torch
 from PIL import Image
-from fastestimator.summary import System
-from fastestimator.op.tensorop.model import ModelOp
-from fastestimator.dataset.numpy_dataset import NumpyDataset
+
 import fastestimator as fe
+from fastestimator.dataset.numpy_dataset import NumpyDataset
+from fastestimator.op.tensorop.model import ModelOp
+from fastestimator.summary import System
 
 
-def is_equal(obj1: Any, obj2: Any, assert_type: bool = True, assert_dtype:bool = False) -> bool:
+def is_equal(obj1: Any, obj2: Any, assert_type: bool = True, assert_dtype: bool = False) -> bool:
     """Check whether input objects are equal. The object type can be nested iterable (list, tuple, set, dict) and
     with elements such as int, float, np.ndarray, tf.Tensor, tf.Varaible, torch.Tensor
 
     Args:
         obj1: input object 1
         obj2: input object 2
-        assert_dtype: whether to assert the same data type
+        assert_type: whether to assert the same data type
         assert_dtype: whether to assert the same dtype in case of nd.array, tf.Tensor, torch.Tensor
 
     Returns:
@@ -87,9 +88,9 @@ def one_layer_tf_model() -> tf.keras.Model:
     Returns:
         tf.keras.Model: The model
     """
-    input = tf.keras.layers.Input([3])
-    x = tf.keras.layers.Dense(units=1, use_bias=False)(input)
-    model = tf.keras.models.Model(inputs=input, outputs=x)
+    inp = tf.keras.layers.Input([3])
+    x = tf.keras.layers.Dense(units=1, use_bias=False)(inp)
+    model = tf.keras.models.Model(inputs=inp, outputs=x)
     model.layers[1].set_weights([np.array([[1.0], [2.0], [3.0]])])
     return model
 
@@ -107,8 +108,6 @@ class OneLayerTorchModel(torch.nn.Module):
     b = fe.backend.feed_forward(model, x) # [[6.0], [-2.5]]
     ```
 
-    Args:
-        torch ([type]): The model
     """
     def __init__(self) -> None:
         super().__init__()
@@ -133,11 +132,12 @@ class MultiLayerTorchModel(torch.nn.Module):
         x = self.fc2(x)
         return x
 
+
 def sample_system_object():
     x_train = np.random.rand(3, 28, 28, 3)
-    y_train = np.random.randint(10, size=(3,))
+    y_train = np.random.randint(10, size=(3, ))
     x_eval = np.random.rand(2, 28, 28, 3)
-    y_eval = np.random.randint(10, size=(2,))
+    y_eval = np.random.randint(10, size=(2, ))
 
     train_data = NumpyDataset({'x': x_train, 'y': y_train})
     eval_data = NumpyDataset({'x': x_eval, 'y': y_eval})
@@ -147,6 +147,7 @@ def sample_system_object():
     network = fe.Network(ops=[ModelOp(model=model, inputs="x_out", outputs="y_pred")])
     system = System(network=network, pipeline=pipeline, traces=[], total_epochs=10, mode='train')
     return system
+
 
 def sample_system_object_torch():
     x_train = np.random.rand(3, 28, 28, 3)
@@ -162,7 +163,6 @@ def sample_system_object_torch():
     network = fe.Network(ops=[ModelOp(model=model, inputs="x_out", outputs="y_pred")])
     system = System(network=network, pipeline=pipeline, traces=[], total_epochs=10, mode='train')
     return system
-
 
 
 def check_img_similar(img1: np.ndarray, img2: np.ndarray, ptol: int = 3, ntol: float = 0.01) -> bool:
