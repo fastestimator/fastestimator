@@ -32,7 +32,6 @@ from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.adapt import LRScheduler
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import MeanAveragePrecision
-from fastestimator.util import traceable
 
 
 def _get_fpn_anchor_box(width: int, height: int):
@@ -73,7 +72,6 @@ def _get_fpn_anchor_box(width: int, height: int):
     return np.float32(anchorbox), np.int32(num_pixel) * 9
 
 
-@traceable()
 class ShiftLabel(NumpyOp):
     def forward(self, data, state):
         # the label of COCO dataset starts from 1, shifting the start to 0
@@ -82,7 +80,6 @@ class ShiftLabel(NumpyOp):
         return bbox
 
 
-@traceable()
 class AnchorBox(NumpyOp):
     def __init__(self, width, height, inputs, outputs, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
@@ -302,7 +299,6 @@ def RetinaNet(input_shape, num_classes, num_anchor=9):
     return tf.keras.Model(inputs=inputs, outputs=[cls_output, loc_output])
 
 
-@traceable()
 class RetinaLoss(TensorOp):
     def forward(self, data, state):
         anchorbox, cls_pred, loc_pred = data
@@ -355,7 +351,6 @@ class RetinaLoss(TensorOp):
         return loc_loss
 
 
-@traceable()
 class PredictBox(TensorOp):
     """Convert network output to bounding boxes.
     """

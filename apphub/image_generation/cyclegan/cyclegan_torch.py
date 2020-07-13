@@ -29,7 +29,6 @@ from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.adapt import LRScheduler
 from fastestimator.trace.io import ModelSaver
-from fastestimator.util import traceable
 
 
 def lr_schedule(epoch):
@@ -41,7 +40,6 @@ def lr_schedule(epoch):
     return lr
 
 
-@traceable()
 class Buffer(TensorOp):
     """Image Buffer implementation as outlined in https://arxiv.org/abs/1703.10593v6"""
     def __init__(self, image_in=None, image_out=None, mode=None, buffer_size=50):
@@ -71,7 +69,6 @@ class Buffer(TensorOp):
         return output
 
 
-@traceable()
 class GLoss(TensorOp):
     """TensorOp to compute generator loss"""
     def __init__(self, inputs, weight, device, outputs=None, mode=None, average_loss=True):
@@ -101,7 +98,6 @@ class GLoss(TensorOp):
         return total_loss
 
 
-@traceable()
 class DLoss(TensorOp):
     """TensorOp to compute discriminator loss"""
     def __init__(self, inputs, device, outputs=None, mode=None, average_loss=True):

@@ -34,7 +34,7 @@ from fastestimator.trace import Trace
 from fastestimator.trace.adapt import EarlyStopping, LRScheduler
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
-from fastestimator.util import Data, traceable
+from fastestimator.util import Data
 
 
 def lr_schedule(epoch):
@@ -43,7 +43,6 @@ def lr_schedule(epoch):
     return lr
 
 
-@traceable()
 class L2Regularization(TensorOp):
     """Custom layer level L2 Regularization"""
     def __init__(self, inputs, model, outputs, mode="train"):
@@ -62,7 +61,6 @@ class L2Regularization(TensorOp):
         return loss + l2_loss
 
 
-@traceable()
 class OneShotAccuracy(Trace):
     """Trace for calculating one shot accuracy"""
     def __init__(self, dataset, model, N=20, trials=400, mode=("eval", "test"), output_name="one_shot_accuracy"):

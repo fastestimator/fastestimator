@@ -29,7 +29,6 @@ from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
-from fastestimator.util import traceable
 
 
 def char2idx(data):
@@ -38,7 +37,6 @@ def char2idx(data):
     return tag2idx
 
 
-@traceable()
 class AttentionMask(NumpyOp):
     """Custom NumpyOp that constructs attention masks for input sequences"""
     def forward(self, data, state):
