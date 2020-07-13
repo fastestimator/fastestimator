@@ -32,7 +32,7 @@ from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.schedule import EpochScheduler
 from fastestimator.trace import Trace
 from fastestimator.trace.io import ModelSaver
-from fastestimator.util import get_num_devices, traceable
+from fastestimator.util import get_num_devices
 
 
 def _nf(stage, fmap_base=8192, fmap_decay=1.0, fmap_max=512):
@@ -261,7 +261,6 @@ def build_D(fade_in_alpha, mbstd_group_size=4, initial_resolution=2, target_reso
     return model_list
 
 
-@traceable()
 class ImageBlender(TensorOp):
     def __init__(self, alpha, inputs=None, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
@@ -273,7 +272,6 @@ class ImageBlender(TensorOp):
         return new_img
 
 
-@traceable()
 class Interpolate(TensorOp):
     def forward(self, data, state):
         fake, real = data
@@ -282,7 +280,6 @@ class Interpolate(TensorOp):
         return real + (fake - real) * coeff
 
 
-@traceable()
 class GradientPenalty(TensorOp):
     def __init__(self, inputs, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
@@ -295,13 +292,11 @@ class GradientPenalty(TensorOp):
         return gp
 
 
-@traceable()
 class GLoss(TensorOp):
     def forward(self, data, state):
         return -tf.reduce_mean(data)
 
 
-@traceable()
 class DLoss(TensorOp):
     """Compute discriminator loss."""
     def __init__(self, inputs, outputs=None, mode=None, wgan_lambda=10, wgan_epsilon=0.001):
@@ -315,7 +310,6 @@ class DLoss(TensorOp):
         return tf.reduce_mean(loss)
 
 
-@traceable()
 class AlphaController(Trace):
     def __init__(self, alpha, fade_start_epochs, duration, batch_scheduler, num_examples):
         super().__init__(inputs=None, outputs=None, mode="train")
@@ -352,7 +346,6 @@ class AlphaController(Trace):
             backend.set_value(self.alpha, current_alpha)
 
 
-@traceable()
 class ImageSaving(Trace):
     def __init__(self, epoch_model_map, save_dir, num_sample=16, latent_dim=512):
         super().__init__(inputs=None, outputs=None, mode="train")

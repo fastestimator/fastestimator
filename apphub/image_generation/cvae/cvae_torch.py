@@ -31,12 +31,10 @@ from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver
-from fastestimator.util import traceable
 
 LATENT_DIM = 50
 
 
-@traceable()
 class SplitOp(TensorOp):
     """To split the infer net output into two """
     def forward(self, data: torch.Tensor, state: Dict[str, Any]) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -44,7 +42,6 @@ class SplitOp(TensorOp):
         return mean, logvar
 
 
-@traceable()
 class ReparameterizepOp(TensorOp):
     """Reparameterization trick. Ensures grads pass thru the sample to the infer net parameters"""
     def forward(self, data: Tuple[torch.Tensor, torch.Tensor], state: Dict[str, Any]) -> torch.Tensor:
@@ -55,7 +52,6 @@ class ReparameterizepOp(TensorOp):
         return output
 
 
-@traceable()
 class CVAELoss(TensorOp):
     """Convolutional variational auto-endcoder loss"""
     def forward(self, data: Tuple[torch.Tensor, ...], state: Dict[str, Any]) -> torch.Tensor:
