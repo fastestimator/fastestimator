@@ -402,6 +402,7 @@ class Traceability(Trace):
                             finally:
                                 matplotlib.use(old_backend)
                         else:
+                            file_path = None
                             self.doc.append("This model was not used by the Network during training.")
                     if file_path:
                         with self.doc.create(Figure(position='ht!')) as fig:

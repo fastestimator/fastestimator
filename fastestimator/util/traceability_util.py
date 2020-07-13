@@ -506,7 +506,9 @@ def _traverse_chunks(lambda_specs: List[_ChunkSpec],
     idx = idx_start
     while chunk_end is None:
         if chunk_idx >= len(chunks):
-            return None, None  # Could not find the end
+            # This lambda function runs to the end of the line, so return even though end_char wasn't found.
+            # include_last is ignored in this case since end_char isn't detected.
+            return chunk_idx - 1, len(chunks[-1])
         chunk = chunks[chunk_idx]
         if chunk.startswith("'") or chunk.startswith('"'):
             # Skip over string chunks
@@ -584,7 +586,7 @@ def _combine_chunks(chunks: List[str], specs: List[_ChunkSpec],
                     for other in specs:
                         if other.chunk_end < i:
                             continue  # Other cannot contain this chunk
-                        if other.chunk_start > spec.chunk_start:
+                        if spec.chunk_start < other.chunk_start <= i:
                             owned = False
                             break
                         elif other.chunk_start == spec.chunk_start and other.idx_start > spec.idx_start:
@@ -736,6 +738,12 @@ def _parse_lambda_fallback(function: types.FunctionType, tables: Dict[FEID, FeSu
     if lambda_fn is None:
         # Throw out any functions which don't contain the right references
         names = set(code.co_names)
+        lambda_fns = list(filter(lambda x: all(s in x[2] for s in names), lambda_fns))
+        if len(lambda_fns) == 1:
+            lambda_fn = lambda_fns[0]
+    if lambda_fn is None:
+        # Throw out any functions which don't contain the right free variables
+        names = set(code.co_freevars)
         lambda_fns = list(filter(lambda x: all(s in x[2] for s in names), lambda_fns))
         if len(lambda_fns) == 1:
             lambda_fn = lambda_fns[0]

@@ -1,10 +1,11 @@
 import unittest
 
+import numpy as np
 from pylatex.utils import NoEscape
 
 from fastestimator.schedule.lr_shedule import cosine_decay
 from fastestimator.util.latex_util import ContainerList
-from fastestimator.util.traceability_util import _parse_lambda_fallback, _trace_value
+from fastestimator.util.traceability_util import _parse_lambda, _parse_lambda_fallback, _trace_value
 from fastestimator.util.util import Flag
 
 
@@ -15,6 +16,23 @@ class TestTraceValue(unittest.TestCase):
         resp = _trace_value(lambda x: x + 5, tables, ret_ref)
         self.assertEqual({}, tables, "trace_value should not have generated any tables for this lambda")
         self.assertIsInstance(resp, ContainerList, "trace_value should return a ContainerList describing the function")
+
+
+class TestParseLambda(unittest.TestCase):
+    def test_conditional_lambda(self):
+        tables = {}
+        ret_ref = Flag()
+        a = 5
+        resp = _parse_lambda(
+            lambda x: [0, 1] if x > 10 else (1, a) if x > 8 else {1, 3} if x > 6 else {1: 5} if x < 0 else {
+                'key': 0, 'key2': 1
+            },
+            tables,
+            ret_ref)
+        self.assertIsInstance(resp, dict, "_parse_lambda should return a dictionary")
+        self.assertEqual({}, tables, "_parse_lambda should not have generated any tables for this lambda")
+        self.assertIn('function', resp, "response should contain a function summary")
+        self.assertIsInstance(resp['function'], ContainerList, "_parse_lambda should return a ContainerList")
 
 
 class TestParseLambdaFallback(unittest.TestCase):
@@ -64,7 +82,7 @@ class TestParseLambdaFallback(unittest.TestCase):
         self.assertIn('function', resp, "response should contain a function summary")
         self.assertEqual(r"x(lambda x, y: x(y) + 'x')", resp['function'])
 
-    def test_nested_lambda_fallback_strings_outer(self):
+    def test_nested_lambda_different_strings_outer(self):
         tables = {}
         ret_ref = Flag()
         resp = _parse_lambda_fallback(lambda x, y: x(lambda x, y: x(y)) + 'x', tables, ret_ref)
@@ -73,7 +91,7 @@ class TestParseLambdaFallback(unittest.TestCase):
         self.assertIn('function', resp, "response should contain a function summary")
         self.assertEqual(r"x(lambda x, y: x(y)) + 'x'", resp['function'])
 
-    def test_nested_lambda_fallback_strings(self):
+    def test_nested_lambda_different_strings(self):
         tables = {}
         ret_ref = Flag()
         resp = _parse_lambda_fallback(lambda x, y: x(lambda x, y: x(y) + 'x' + 'y') + 'x', tables, ret_ref)
@@ -81,3 +99,50 @@ class TestParseLambdaFallback(unittest.TestCase):
         self.assertEqual({}, tables, "_parse_lambda_fallback should not have generated any tables for this lambda")
         self.assertIn('function', resp, "response should contain a function summary")
         self.assertEqual(r"x(lambda x, y: x(y) + 'x' + 'y') + 'x'", resp['function'])
+
+    def test_multi_lambda_different_args(self):
+        tables = {}
+        ret_ref = Flag()
+        resp, other = _parse_lambda_fallback(lambda x: x + 5, tables, ret_ref), lambda y: y + 5
+        self.assertIsInstance(resp, dict, "_parse_lambda_fallback should return a dictionary")
+        self.assertEqual({}, tables, "_parse_lambda_fallback should not have generated any tables for this lambda")
+        self.assertIn('function', resp, "response should contain a function summary")
+        self.assertEqual(r"x + 5", resp['function'])
+
+    def test_multi_lambda_different_strings(self):
+        tables = {}
+        ret_ref = Flag()
+        other, resp = lambda x: x + 'x1', _parse_lambda_fallback(lambda x: x + 'x2', tables, ret_ref)
+        self.assertIsInstance(resp, dict, "_parse_lambda_fallback should return a dictionary")
+        self.assertEqual({}, tables, "_parse_lambda_fallback should not have generated any tables for this lambda")
+        self.assertIn('function', resp, "response should contain a function summary")
+        self.assertEqual(r"x + 'x2'", resp['function'])
+
+    def test_multi_lambda_same_fn(self):
+        tables = {}
+        ret_ref = Flag()
+        other, resp = lambda x: x + 'x1', _parse_lambda_fallback(lambda x: x + 'x1', tables, ret_ref)
+        self.assertIsInstance(resp, dict, "_parse_lambda_fallback should return a dictionary")
+        self.assertEqual({}, tables, "_parse_lambda_fallback should not have generated any tables for this lambda")
+        self.assertIn('function', resp, "response should contain a function summary")
+        self.assertEqual(r"x + 'x1'", resp['function'])
+
+    def test_multi_lambda_different_refs(self):
+        tables = {}
+        ret_ref = Flag()
+        other, resp = lambda x: np.log2(128) + x, _parse_lambda_fallback(lambda x: np.ceil(128) + x, tables, ret_ref)
+        self.assertIsInstance(resp, dict, "_parse_lambda_fallback should return a dictionary")
+        self.assertEqual({}, tables, "_parse_lambda_fallback should not have generated any tables for this lambda")
+        self.assertIn('function', resp, "response should contain a function summary")
+        self.assertEqual(r"np.ceil(128) + x", resp['function'])
+
+    def test_multi_lambda_different_vars(self):
+        tables = {}
+        ret_ref = Flag()
+        a = 5
+        b = 10
+        other, resp = lambda x: a * x, _parse_lambda_fallback(lambda x: b * x, tables, ret_ref)
+        self.assertIsInstance(resp, dict, "_parse_lambda_fallback should return a dictionary")
+        self.assertEqual({}, tables, "_parse_lambda_fallback should not have generated any tables for this lambda")
+        self.assertIn('function', resp, "response should contain a function summary")
+        self.assertEqual(r"b * x", resp['function'])
