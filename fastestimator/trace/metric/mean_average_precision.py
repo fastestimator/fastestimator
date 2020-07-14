@@ -19,10 +19,10 @@ from typing import Dict, List
 import numpy as np
 from pycocotools import mask as maskUtils
 
-from fastestimator.backend.to_number import to_number
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
+from fastestimator.util.util import to_number
 
 
 @traceable()

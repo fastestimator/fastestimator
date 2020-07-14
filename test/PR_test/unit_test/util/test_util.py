@@ -6,10 +6,10 @@ from unittest.mock import patch
 import numpy as np
 import tensorflow as tf
 import torch
+from tensorflow.python.client import device_lib
 
 import fastestimator as fe
 from fastestimator.test.unittest_util import is_equal
-from tensorflow.python.client import device_lib
 
 
 class TestParseStringToPython(unittest.TestCase):
@@ -254,10 +254,12 @@ class TestParseModes(unittest.TestCase):
     def setUpClass(cls):
         cls.modes = {"train", "eval", "test", "infer"}
         cls.n_modes = {"!train", "!eval", "!test", "!infer"}
-        cls.n_modes_map = {"!train": {"eval", "test", "infer"},
-                           "!eval": {"train", "test", "infer"},
-                           "!test": {"train", "eval", "infer"},
-                           "!infer": {"train", "eval", "test"}}
+        cls.n_modes_map = {
+            "!train": {"eval", "test", "infer"},
+            "!eval": {"train", "test", "infer"},
+            "!test": {"train", "eval", "infer"},
+            "!infer": {"train", "eval", "test"}
+        }
 
     def test_parse_modes_single_mode_direct(self):
         for mode in self.modes:
@@ -445,3 +447,29 @@ class TestGetBatchSize(unittest.TestCase):
         data = {"a": 1, "b": "hello"}
         with self.assertRaises(AssertionError):
             batch_size = fe.util.get_batch_size(data)
+
+
+class TestToNumber(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.n = np.array([1, 2, 3])
+        cls.t = tf.constant([1, 2, 3])
+        cls.p = torch.tensor([1, 2, 3])
+
+    def test_to_number_np_value(self):
+        self.assertTrue(np.allclose(fe.util.util.to_number(self.n), self.n))
+
+    def test_to_number_np_type(self):
+        self.assertEqual(type(fe.util.util.to_number(self.n)), np.ndarray)
+
+    def test_to_number_tf_value(self):
+        self.assertTrue(np.allclose(fe.util.util.to_number(self.t), self.n))
+
+    def test_to_number_tf_type(self):
+        self.assertEqual(type(fe.util.util.to_number(self.t)), np.ndarray)
+
+    def test_to_number_torch_value(self):
+        self.assertTrue(np.allclose(fe.util.util.to_number(self.p), self.n))
+
+    def test_to_number_torch_type(self):
+        self.assertEqual(type(fe.util.util.to_number(self.p)), np.ndarray)
