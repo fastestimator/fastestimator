@@ -122,8 +122,8 @@ class ResUnet50(nn.Module):
         x_e4 = self.enc4(x_e3)
         x_e5 = self.enc5(x_e4)
 
-        # Storing kernel size as a list to enable model diagram generation in Traceability Report
-        # as ONNX doesn't support dynamic kernel size
+        # Storing kernel size as a list in case the user needs to export the model to ONNX
+        # As ONNX doesn't support dynamic kernel size
         size_array = [int(s) for s in x_e5.size()[2:]]
         x_label = fn.max_pool2d(x_e5, kernel_size=size_array)
         x_label = x_label.view(x_label.shape[0], -1)

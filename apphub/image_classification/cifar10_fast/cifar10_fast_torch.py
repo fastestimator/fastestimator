@@ -82,8 +82,8 @@ class FastCifar(nn.Module):
         x = fn.leaky_relu(x, negative_slope=0.1)
         x = x + self.residual3(x)
         # layer 4
-        # Storing kernel size as a list to enable model diagram generation in Traceability Report
-        # as ONNX doesn't support dynamic kernel size
+        # Storing kernel size as a list in case the user needs to export the model to ONNX
+        # As ONNX doesn't support dynamic kernel size
         size_array = [int(s) for s in x.size()[2:]]
         x = fn.max_pool2d(x, kernel_size=size_array)
         x = torch.flatten(x, 1)
