@@ -19,11 +19,10 @@ from typing import Iterable, List, Optional, Set, Union
 import numpy as np
 
 from fastestimator.backend.get_lr import get_lr
-from fastestimator.backend.to_number import to_number
 from fastestimator.summary.system import System
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import parse_modes, to_list, to_set
+from fastestimator.util.util import parse_modes, to_list, to_number, to_set
 
 
 @traceable()

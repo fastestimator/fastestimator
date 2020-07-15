@@ -30,8 +30,6 @@ from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
 from pyfiglet import Figlet
 
-from fastestimator.backend.to_number import to_number
-
 STRING_TO_TORCH_DTYPE = {
     None: None,
     'float32': torch.float32,
@@ -735,3 +733,42 @@ class Flag:
 
     def __bool__(self):
         return self._val
+
+
+def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray, int, float]) -> np.ndarray:
+    """Convert an input value into a Numpy ndarray.
+
+    This method can be used with Python and Numpy data:
+    ```python
+    b = fe.backend.to_number(5)  # 5 (type==np.ndarray)
+    b = fe.backend.to_number(4.0)  # 4.0 (type==np.ndarray)
+    n = np.array([1, 2, 3])
+    b = fe.backend.to_number(n)  # [1, 2, 3] (type==np.ndarray)
+    ```
+
+    This method can be used with TensorFlow tensors:
+    ```python
+    t = tf.constant([1, 2, 3])
+    b = fe.backend.to_number(t)  # [1, 2, 3] (type==np.ndarray)
+    ```
+
+    This method can be used with PyTorch tensors:
+    ```python
+    p = torch.tensor([1, 2, 3])
+    b = fe.backend.to_number(p)  # [1, 2, 3] (type==np.ndarray)
+    ```
+
+    Args:
+        data: The value to be converted into a np.ndarray.
+
+    Returns:
+        An ndarray corresponding to the given `data`.
+    """
+    if tf.is_tensor(data):
+        data = data.numpy()
+    elif isinstance(data, torch.Tensor):
+        if data.requires_grad:
+            data = data.detach().numpy()
+        else:
+            data = data.numpy()
+    return np.array(data)
