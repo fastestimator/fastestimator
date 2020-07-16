@@ -2,7 +2,6 @@ pipeline {
     agent {label 'master'}
     stages {
         stage('PR-test') {
-            agent {label 'master'}
             steps {
                 script {
                     def customImage = docker.build("$BUILD_TAG", "--no-cache - < CICD/PR_test/Dockerfile.cpu")
