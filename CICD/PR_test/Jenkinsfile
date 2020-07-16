@@ -20,7 +20,6 @@ pipeline {
     }
     post {
         always {
-            sh 'chmod -R 777 ./*'
             sh 'docker rmi "$IMAGE_TAG"'
         }
     }
