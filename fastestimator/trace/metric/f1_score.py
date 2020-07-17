@@ -17,10 +17,10 @@ from typing import Set, Union
 import numpy as np
 from sklearn.metrics import f1_score
 
-from fastestimator.backend.to_number import to_number
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
+from fastestimator.util.util import to_number
 
 
 @traceable()

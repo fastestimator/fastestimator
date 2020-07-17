@@ -1,129 +1,110 @@
-pipeline{
-    agent {label 'master'}
+def IMAGE_TAG="$BUILD_TAG".toLowerCase()
 
+pipeline {
+    agent {label 'master'}
     environment {
-        JENKINS_ANACONDA_DIR='/home/ubuntu/anaconda3'
-        JENKINS_MASTER_ANACONDA_DIR='/var/jenkins_home/anaconda3'
-        JENKINS_PYTHON_ENV='nightly_env'
+        IMAGE_TAG="$IMAGE_TAG"
+        DOCKER_DATASET_PATH='/root/fastestimator_data'
         LOCAL_DATASET_PATH='/home/ubuntu/fastestimator_data'
         S3_DATASET_PATH='s3://fastestimator-public/nightly_test'
     }
-
     stages {
-        stage('Build-and-test'){
-            parallel{
-                stage('GPU'){
-                    agent {label 'nightly-gpu'}
-                    stages{
-                        stage('Build-GPU'){
-                            steps{
-                                sh '''
-                                    set -e
-                                    . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
-                                    if [ ! -d "$JENKINS_ANACONDA_DIR/envs/$JENKINS_PYTHON_ENV"  ]; then
-                                        conda create --name $JENKINS_PYTHON_ENV python=3.6 -y
-                                    fi
-
-                                    conda activate $JENKINS_PYTHON_ENV
-                                    pip install --no-cache-dir -e .
-                                    pip install --no-cache-dir ipython ipykernel ipywidgets papermill
-                                    ipython kernel install --user --name nightly_build
-
-                                    aws s3 sync $S3_DATASET_PATH $LOCAL_DATASET_PATH --delete
-                                '''
+        stage('nightly_test') {
+            parallel {
+                stage('GPU') {
+                    agent {label 'nightly_gpu'}
+                    stages {
+                        stage('download dataset') {
+                            steps {
+                                sh 'aws s3 sync $S3_DATASET_PATH $LOCAL_DATASET_PATH --delete'
                             }
                         }
-                        stage('Test-GPU'){
-                            steps{
-                                sh '''
-                                    set -e
-                                    . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
-                                    conda activate $JENKINS_PYTHON_ENV
-                                    bash test/run_nightly_build.sh
-                                '''
+                        stage('run_test') {
+                            steps {
+                                script {
+                                    def customImage = docker.build('$IMAGE_TAG', \
+                                                                   '--no-cache - < CICD/nightly_test/Dockerfile.gpu')
+                                    customImage.inside('-u root -v $LOCAL_DATASET_PATH:$DOCKER_DATASET_PATH \
+                                                        --gpus all --shm-size 50g') {
+                                        sh 'pip install --no-cache-dir -e .'
+                                        sh 'ipython kernel install --user --name nightly_build'
+                                        sh 'bash test/run_nightly_build.sh'
+                                    }
+                                }
                             }
                         }
                     }
+                    post {
+                        always {
+                            sh 'docker rmi "$IMAGE_TAG"'
+                        }
+                    }
                 }
-
-                stage('CPU'){
-                    agent {label 'nightly-cpu'}
-                    stages{
-                        stage('Build-CPU'){
-                            steps{
-                                sh '''
-                                    set -e
-                                    . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
-                                    if [ ! -d "$JENKINS_ANACONDA_DIR/envs/$JENKINS_PYTHON_ENV"  ]; then
-                                        conda create --name $JENKINS_PYTHON_ENV python=3.6 -y
-                                    fi
-
-                                    conda activate $JENKINS_PYTHON_ENV
-                                    pip install --no-cache-dir -e .
-                                    pip install --no-cache-dir ipython ipykernel ipywidgets papermill
-                                    ipython kernel install --user --name nightly_build
-
-                                    aws s3 sync $S3_DATASET_PATH $LOCAL_DATASET_PATH --delete
-                                '''
+                stage('CPU') {
+                    agent {label 'nightly_cpu'}
+                    stages {
+                        stage('download_dataset') {
+                            steps {
+                                sh 'aws s3 sync $S3_DATASET_PATH $LOCAL_DATASET_PATH --delete'
                             }
                         }
-                        stage('Test-CPU'){
-                            steps{
-                                sh '''
-                                    set -e
-                                    . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
-                                    conda activate $JENKINS_PYTHON_ENV
-                                    bash test/run_nightly_build.sh
-                                '''
+                        stage('run_test') {
+                            steps {
+                                script {
+                                    def customImage = docker.build('$IMAGE_TAG', \
+                                                                   '--no-cache - < CICD/nightly_test/Dockerfile.cpu')
+
+                                    customImage.inside('-u root -v $LOCAL_DATASET_PATH:$DOCKER_DATASET_PATH \
+                                                        --shm-size 50g') {
+                                        sh 'pip install --no-cache-dir -e .'
+                                        sh 'ipython kernel install --user --name nightly_build'
+                                        sh 'bash test/run_nightly_build.sh'
+                                    }
+                                }
                             }
+                        }
+                    }
+                    post {
+                        always {
+                            sh 'docker rmi "$IMAGE_TAG"'
                         }
                     }
                 }
             }
         }
-
-        stage('Deply-pypi'){
+        stage('deploy_pypi') {
             agent {label 'master'}
-            steps{
-                withCredentials([string(credentialsId: 'pypi_password', variable: 'PYPI_PWD')]) {
-                    sh '''#!/bin/bash
-                        set -e
-                        source ~/.bashrc
-                        . $JENKINS_MASTER_ANACONDA_DIR/etc/profile.d/conda.sh
-                        if [ ! -d "$JENKINS_MASTER_ANACONDA_DIR/envs/$JENKINS_PYTHON_ENV"  ]; then
-                            conda create --name $JENKINS_PYTHON_ENV python=3.6 -y
-                        fi
-
-                        conda activate $JENKINS_PYTHON_ENV
-                        pip install --no-cache-dir -e .
-                        pip install --no-cache-dir twine
-                        rm -rf dist/*
-                        FASTESTIMATOR_IS_NIGHTLY=1 python setup.py sdist bdist_wheel
-                        twine upload dist/* -u fastestimatordev -p ${PYPI_PWD}
-                    '''
+            steps {
+                script {
+                    def customImage = docker.build("$IMAGE_TAG", "--no-cache - < CICD/nightly_test/Dockerfile.cpu")
+                    customImage.inside("-u root") {
+                        withCredentials([string(credentialsId: 'pypi_password', variable: 'PYPI_PWD')]) {
+                            sh 'pip install -U keyring keyrings.alt'
+                            sh 'pip install --no-cache-dir twine'
+                            sh 'FASTESTIMATOR_IS_NIGHTLY=1 python setup.py sdist bdist_wheel'
+                            sh 'twine upload dist/* -u fastestimatordev -p ${PYPI_PWD}'
+                        }
+                    }
                 }
             }
         }
-
-        stage('Deploy-docker'){
+        stage('deploy_dockerhub') {
             agent {label 'master'}
-            steps{
-                sh '''
-                    set -e
-                    rm -rf ./fastestimator-misc
-                    git clone https://github.com/fastestimator-util/fastestimator-misc.git fastestimator-misc
-                '''
+            steps {
                 withDockerRegistry(credentialsId: 'docker_hub_credentials', url:'') {
-                    sh '''
-                        set -e
-                        docker build -t fastestimator/fastestimator:nightly-cpu --no-cache - < fastestimator-misc/docker/nightly/Dockerfile.cpu
-                        docker push fastestimator/fastestimator:nightly-cpu
-                        docker build -t fastestimator/fastestimator:nightly-gpu --no-cache - < fastestimator-misc/docker/nightly/Dockerfile.gpu
-                        docker push fastestimator/fastestimator:nightly-gpu
-                        docker image prune -f
-                    '''
+                    sh 'docker build -t fastestimator/fastestimator:nightly-cpu --no-cache - < CICD/nightly_test/Dockerfile_push.cpu'
+                    sh 'docker push fastestimator/fastestimator:nightly-cpu'
+                    sh 'docker build -t fastestimator/fastestimator:nightly-gpu --no-cache - < CICD/nightly_test/Dockerfile_push.gpu'
+                    sh 'docker push fastestimator/fastestimator:nightly-gpu'
+                    sh 'docker image prune -f'
                 }
             }
+
+        }
+    }
+    post {
+        always {
+            sh 'docker rmi "$IMAGE_TAG"'
         }
     }
 }

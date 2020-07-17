@@ -1,41 +1,26 @@
+def IMAGE_TAG="$BUILD_TAG".toLowerCase()
+
 pipeline {
     agent {label 'master'}
     environment {
-        JENKINS_ANACONDA_DIR='/var/jenkins_home/anaconda3'
-        JENKINS_PYTHON_ENV='env'
+        IMAGE_TAG="$IMAGE_TAG"
     }
     stages {
-        stage('Build') {
+        stage('PR-test') {
             steps {
-                sh '''#!/bin/bash
-                    set -e
-                    source ~/.bashrc
-                    . $JENKINS_ANACONDA_DIR/etc/profile.d/conda.sh
-                    virtualenv --python=$JENKINS_ANACONDA_DIR/bin/python $JENKINS_PYTHON_ENV
-                    source $JENKINS_PYTHON_ENV/bin/activate
-                    pip install --no-cache-dir -e .
-                    pip install --no-cache-dir coverage
-                '''
+                script {
+                    def customImage = docker.build("$IMAGE_TAG", "--no-cache - < CICD/PR_test/Dockerfile.cpu")
+                    customImage.inside('-u root') {
+                        sh 'pip install --user --no-cache-dir -e .'
+                        sh 'python test/run_pr_test.py'
+                    }
+                }
             }
         }
-
-        stage('Test') {
-            steps {
-                sh '''#!/bin/bash
-                    set -e
-                    source $JENKINS_PYTHON_ENV/bin/activate
-                    python test/run_pr_test.py
-                '''
-            }
-        }
-
     }
-
     post {
         always {
-            sh '''
-                rm -rf $JENKINS_PYTHON_ENV
-            '''
+            sh 'docker rmi "$IMAGE_TAG"'
         }
     }
 }

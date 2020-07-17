@@ -1,0 +1,20 @@
+FROM tensorflow/tensorflow:2.2.0
+
+RUN apt-get update
+
+# OpenCV dependencies
+RUN apt-get install -y --no-install-recommends \
+    libglib2.0-0 \
+    libsm6 \
+    libxrender1 \
+    libxext6
+
+# Pydot requirement
+RUN apt-get install -y --no-install-recommends \
+    graphviz
+
+RUN pip install --no-cache-dir \
+    ipython \
+    ipykernel \
+    ipywidgets \
+    papermill

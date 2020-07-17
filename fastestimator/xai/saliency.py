@@ -27,7 +27,6 @@ from fastestimator.backend.random_normal_like import random_normal_like
 from fastestimator.backend.reduce_max import reduce_max
 from fastestimator.backend.reduce_min import reduce_min
 from fastestimator.backend.reduce_sum import reduce_sum
-from fastestimator.backend.to_number import to_number
 from fastestimator.backend.zeros_like import zeros_like
 from fastestimator.network import Network
 from fastestimator.op.tensorop.gather import Gather
@@ -35,7 +34,7 @@ from fastestimator.op.tensorop.gradient.gradient import GradientOp
 from fastestimator.op.tensorop.gradient.watch import Watch
 from fastestimator.op.tensorop.model.model import ModelOp
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import to_list
+from fastestimator.util.util import to_list, to_number
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)

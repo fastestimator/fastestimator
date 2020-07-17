@@ -59,7 +59,7 @@ for nb_in in $(find $dir_path/tutorial -type f); do
         exectime[$nb_in]=$((end-start))
         if [ ! ${result[$nb_in]} -eq 0 ]; then
             echo "---------------- error log of $nb_in-------------------"
-            cat "${nb_in/'.sh'/'_stderr.txt'}"
+            cat "${nb_in/'.ipynb'/'_stderr.txt'}"
             echo "-------------------------------------------------------"
         fi
 

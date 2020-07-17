@@ -4,9 +4,22 @@ import numpy as np
 from pylatex.utils import NoEscape
 
 from fastestimator.schedule.lr_shedule import cosine_decay
-from fastestimator.util.latex_util import ContainerList
-from fastestimator.util.traceability_util import _parse_lambda, _parse_lambda_fallback, _trace_value
+from fastestimator.util.latex_util import ContainerList, HrefFEID
+from fastestimator.util.traceability_util import _parse_lambda, _parse_lambda_fallback, _trace_value, traceable
 from fastestimator.util.util import Flag
+
+
+class NonTraceableObject:
+    def __init__(self, a, b):
+        self._private = a
+        self.public = b
+
+
+@traceable()
+class TraceableObject:
+    def __init__(self, a, b):
+        self._private = a
+        self.public = b
 
 
 class TestTraceValue(unittest.TestCase):
@@ -16,6 +29,36 @@ class TestTraceValue(unittest.TestCase):
         resp = _trace_value(lambda x: x + 5, tables, ret_ref)
         self.assertEqual({}, tables, "trace_value should not have generated any tables for this lambda")
         self.assertIsInstance(resp, ContainerList, "trace_value should return a ContainerList describing the function")
+
+    def test_non_traceable_summary(self):
+        thing = NonTraceableObject('x', 11)
+        tables = {}
+        ret_ref = Flag()
+        resp = _trace_value(thing, tables, ret_ref)
+        self.assertIsInstance(resp, HrefFEID, "trace_value should have returned an Href")
+        self.assertEqual(1, len(tables), "trace_value should have generated 1 table")
+        self.assertIn(resp.fe_id, tables, "Object summary table is missing")
+        table = tables[resp.fe_id]
+        self.assertEqual(len(table.kwargs), 1, "trace_value should have found 1 variable to display")
+        self.assertIn(NoEscape('public'), table.kwargs, "the variable 'public' should have been found")
+        self.assertEqual(NoEscape(r'\seqsplit{11}'),
+                         table.kwargs['public'],
+                         "member variable value improperly recorded")
+
+    def test_traceable_summary(self):
+        thing = TraceableObject('x', 11)
+        tables = {}
+        ret_ref = Flag()
+        resp = _trace_value(thing, tables, ret_ref)
+        self.assertIsInstance(resp, HrefFEID, "trace_value should have returned an Href")
+        self.assertEqual(1, len(tables), "trace_value should have generated 1 table")
+        self.assertIn(resp.fe_id, tables, "Object summary table is missing")
+        table = tables[resp.fe_id]
+        self.assertEqual(len(table.kwargs), 2, "trace_value should have found 2 variables to display")
+        self.assertIn('a', table.kwargs, "the variable 'a' should have been found")
+        self.assertEqual(NoEscape(r"\seqsplit{`x'}"), table.kwargs['a'], "member variable value improperly recorded")
+        self.assertIn('b', table.kwargs, "the variable 'b' should have been found")
+        self.assertEqual(NoEscape(r"\seqsplit{11}"), table.kwargs['b'], "member variable value improperly recorded")
 
 
 class TestParseLambda(unittest.TestCase):

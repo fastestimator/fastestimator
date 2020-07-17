@@ -39,7 +39,6 @@ from fastestimator.backend.set_lr import set_lr
 from fastestimator.backend.sign import sign
 from fastestimator.backend.sparse_categorical_crossentropy import sparse_categorical_crossentropy
 from fastestimator.backend.squeeze import squeeze
-from fastestimator.backend.to_number import to_number
 from fastestimator.backend.to_shape import to_shape
 from fastestimator.backend.to_tensor import to_tensor
 from fastestimator.backend.to_type import to_type
