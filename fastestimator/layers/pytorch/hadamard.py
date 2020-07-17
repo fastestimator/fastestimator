@@ -77,7 +77,8 @@ class HadamardCode(nn.Module):
         if code_length < n_classes:
             raise ValueError(f"code_length must be >= n_classes, but got {code_length} and {n_classes}")
         self.code_length = code_length
-        self.labels = torch.tensor(hadamard(self.code_length)[:self.n_classes], dtype=torch.float32).T
+        self.labels = nn.Parameter(
+            torch.tensor(hadamard(self.code_length)[:self.n_classes], dtype=torch.float32).T, requires_grad=False)
         in_features = to_list(in_features)
         if len(in_features) > code_length:
             raise ValueError(f"Too many input heads {len(in_features)} for the given code length {self.code_length}.")

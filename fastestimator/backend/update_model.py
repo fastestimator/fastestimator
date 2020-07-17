@@ -74,8 +74,9 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
                 gradients = model.current_optimizer.get_unscaled_gradients(gradients)
             model.current_optimizer.apply_gradients(zip(gradients, model.trainable_variables))
     elif isinstance(model, torch.nn.Module):
-        gradients = get_gradient(loss, model.parameters(), retain_graph=retain_graph)
-        for gradient, parameter in zip(gradients, model.parameters()):
+        trainable_params = [p for p in model.parameters() if p.requires_grad]
+        gradients = get_gradient(loss, trainable_params, retain_graph=retain_graph)
+        for gradient, parameter in zip(gradients, trainable_params):
             parameter.grad = gradient
         model.current_optimizer.step()
     else:

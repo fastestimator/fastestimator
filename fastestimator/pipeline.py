@@ -170,39 +170,40 @@ class Pipeline:
                 start = time.perf_counter()
             if idx == num_steps:
                 break
+        # Pipeline Operations Benchmarking when using FEDataset
+        if isinstance(loader, DataLoader) and isinstance(loader.dataset, OpDataset):
+            op_list = loader.dataset.ops
+            duration_list = np.zeros(shape=(len(op_list)))
 
-        # Pipeline Operations Benchmarking
-        op_list = loader.dataset.ops
-        duration_list = np.zeros(shape=(len(op_list)))
+            data_len = len(loader.dataset.dataset)
+            if self.batch_size:
+                log_interval = log_interval * self.batch_size
 
-        data_len = len(loader.dataset.dataset)
-        if self.batch_size:
-            log_interval = log_interval * self.batch_size
+            print("\nBreakdown of time taken by Pipeline Operations:")
+            for _ in range(log_interval):
+                index = np.random.randint(data_len)
+                items = deepcopy(loader.dataset.dataset[index])
+                if isinstance(loader.dataset.dataset, BatchDataset):
+                    unique_list = []
+                    for item in items:
+                        if id(item) not in unique_list:
+                            for i, op in enumerate(op_list):
+                                start = time.perf_counter()
+                                forward_numpyop([op], item, loader.dataset.mode)
+                                duration = time.perf_counter() - start
+                                duration_list[i] += duration
+                            unique_list.append(id(item))
+                else:
+                    for i, op in enumerate(op_list):
+                        start = time.perf_counter()
+                        forward_numpyop([op], items, loader.dataset.mode)
+                        duration = time.perf_counter() - start
+                        duration_list[i] += duration
 
-        print("\nBreakdown of time taken by Pipeline Operations:")
-        for _ in range(log_interval):
-            index = np.random.randint(data_len)
-            items = deepcopy(loader.dataset.dataset[index])
-            if isinstance(loader.dataset.dataset, BatchDataset):
-                unique_list = []
-                for item in items:
-                    if id(item) not in unique_list:
-                        for i, op in enumerate(op_list):
-                            start = time.perf_counter()
-                            forward_numpyop([op], item, loader.dataset.mode)
-                            duration = time.perf_counter() - start
-                            duration_list[i] += duration
-                        unique_list.append(id(item))
-            else:
-                for i, op in enumerate(op_list):
-                    start = time.perf_counter()
-                    forward_numpyop([op], items, loader.dataset.mode)
-                    duration = time.perf_counter() - start
-                    duration_list[i] += duration
-
-        total_time = np.sum(duration_list)
-        for i, op in enumerate(op_list):
-            print(" - {}: Time Consumption: {:.2f}%".format(op.__class__.__name__, 100 * duration_list[i] / total_time))
+            total_time = np.sum(duration_list)
+            for i, op in enumerate(op_list):
+                print(" - {}: Time Consumption: {:.2f}%".format(op.__class__.__name__,
+                                                                100 * duration_list[i] / total_time))
 
     def get_scheduled_items(self, mode: str) -> List[Any]:
         """Get a list of items considered for scheduling.
