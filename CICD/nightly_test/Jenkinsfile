@@ -3,6 +3,7 @@ def IMAGE_TAG="$BUILD_TAG".toLowerCase()
 pipeline {
     agent {label 'master'}
     environment {
+        IMAGE_TAG="$IMAGE_TAG"
         DOCKER_DATASET_PATH='/root/fastestimator_data'
         LOCAL_DATASET_PATH='/home/ubuntu/fastestimator_data'
         S3_DATASET_PATH='s3://fastestimator-public/nightly_test'
