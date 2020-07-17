@@ -79,6 +79,8 @@ class HadamardCode(nn.Module):
         self.code_length = code_length
         self.labels = torch.tensor(hadamard(self.code_length)[:self.n_classes], dtype=torch.float32).T
         in_features = to_list(in_features)
+        if len(in_features) > code_length:
+            raise ValueError(f"Too many input heads {len(in_features)} for the given code length {self.code_length}.")
         head_sizes = [self.code_length // len(in_features) for _ in range(len(in_features))]
         head_sizes[0] = head_sizes[0] + self.code_length - sum(head_sizes)
         self.heads = nn.ModuleList([
