@@ -263,6 +263,8 @@ class TorchNetwork(BaseNetwork):
     """
     def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> None:
         super().__init__(ops)
+        for op in get_current_items(self.ops):
+            op.build(framework='torch')
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def load_epoch(self, mode: str, epoch: int, output_keys: Optional[Set[str]] = None, warmup: bool = False) -> None:
@@ -433,7 +435,15 @@ class TorchNetwork(BaseNetwork):
 @traceable()
 class TFNetwork(BaseNetwork):
     """An extension of BaseNetwork for TensorFlow models.
+
+    Args:
+        ops: The ops defining the execution graph for this Network.
     """
+    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> None:
+        super().__init__(ops)
+        for op in get_current_items(self.ops):
+            op.build(framework='tf')
+
     def load_epoch(self, mode: str, epoch: int, output_keys: Optional[Set[str]] = None, warmup: bool = False) -> None:
         """Prepare the network to run a given epoch and mode.
 
