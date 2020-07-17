@@ -78,6 +78,8 @@ class HadamardCode(layers.Layer):
     def build(self, input_shape: Union[Tuple[int, int], List[Tuple[int, int]]]) -> None:
         input_shape = to_list(input_shape)
         batch_size = input_shape[0][0]
+        if len(input_shape) > self.code_length:
+            raise ValueError(f"Too many input heads {len(input_shape)} for the given code length {self.code_length}.")
         head_sizes = [self.code_length // len(input_shape) for _ in range(len(input_shape))]
         head_sizes[0] = head_sizes[0] + self.code_length - sum(head_sizes)
         for idx, shape in enumerate(input_shape):

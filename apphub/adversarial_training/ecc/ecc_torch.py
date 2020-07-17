@@ -78,8 +78,7 @@ def get_estimator(epsilon=0.04,
         ops=[
             Normalize(inputs="x", outputs="x", mean=(0.4914, 0.4822, 0.4465), std=(0.2471, 0.2435, 0.2616)),
             ChannelTranspose(inputs="x", outputs="x"),
-        ],
-        num_process=0)
+        ])
 
     # step 2
     model = fe.build(model_fn=lambda: EccLeNet(code_length=code_length), optimizer_fn="adam")
