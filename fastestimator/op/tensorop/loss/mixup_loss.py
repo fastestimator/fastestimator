@@ -15,6 +15,7 @@
 import tensorflow as tf
 import torch
 
+import fastestimator as fe
 from fastestimator.op.tensorop.loss import Loss
 
 
@@ -31,21 +32,20 @@ class MixUpLoss(Loss):
         outputs: Where to store the computed loss value (not required under normal use cases)
         mode: 'train', 'eval', 'test', or None
     """
-    def __init__(self, loss, lam=None, y_true=None, y_pred=None, inputs=None, outputs=None, mode=None):
+    def __init__(self, loss, lam=None, y_true=None, y_pred=None, outputs=None, mode=None):
         loss_config = loss.get_config()
         loss_config['reduction'] = 'none'
-        inputs = self.validate_loss_inputs(inputs, lam, y_true, y_pred)
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        super().__init__(inputs=(lam, y_true, y_pred), outputs=outputs, mode=mode)
         self.loss_obj = loss.from_config(loss_config)
 
     def forward(self, data, state):
         lam, true, pred = data
         loss1 = self.loss_obj(true, pred)
-        if tf.is_tensor(data):
+        if tf.is_tensor(true):
             loss2 = self.loss_obj(tf.roll(true, shift=1, axis=0), pred)
-        elif isinstance(data, torch.Tensor):
+        elif isinstance(true, torch.Tensor):
             loss2 = self.loss_obj(torch.roll(true, shift=1, axis=0), pred)
         else:
             raise ValueError("unrecognized data format: {}".format(type(data)))
 
-        return lam * loss1 + (1.0 - lam) * loss2
+        return fe.backend.reduce_mean(lam * loss1 + (1.0 - lam) * loss2)

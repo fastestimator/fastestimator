@@ -30,11 +30,18 @@ class MixUpBatch(TensorOp):
         mode: what mode to execute in. Probably 'train'
         alpha: the alpha value defining the beta distribution to be drawn from during training
     """
-    def __init__(self, inputs=None, outputs=None, mode=None, alpha=1.0):
+    def __init__(self, inputs=None, outputs=None, mode=None, alpha=1.0, framework='tf'):
         assert alpha > 0, "Mixup alpha value must be greater than zero"
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
 
-        self.first_iteration = True
+        if framework == 'tf':
+            self.alpha = tf.constant(alpha)
+            self.beta = tfp.distributions.Beta(self.alpha, self.alpha)
+        elif framework == 'torch':
+            self.alpha = torch.FloatTensor(self.alpha)
+            self.beta = torch.distributions.beta.Beta(self.alpha, self.alpha)
+        else:
+            raise ValueError("unrecognized framework: {}".format(framework))
 
     def forward(self, data, state):
         """ Forward method to perform mixup batch augmentation
@@ -46,17 +53,6 @@ class MixUpBatch(TensorOp):
         Returns:
             Mixed-up batch data
         """
-        if self.first_iteration:
-            self.first_iteration = False
-            if tf.is_tensor(data):
-                self.alpha = tf.constant(self.alpha)
-                self.beta = tfp.distributions.Beta(self.alpha, self.alpha)
-            elif isinstance(data, torch.Tensor):
-                self.alpha = torch.FloatTensor(self.alpha)
-                self.beta = torch.distributions.beta.Beta(self.alpha, self.alpha)
-            else:
-                raise ValueError("unrecognized data format: {}".format(type(data)))
-
         iterdata = data if isinstance(data, list) else list(data) if isinstance(data, tuple) else [data]
         lam = self.beta.sample()
         # Could do random mix-up using tf.gather() on a shuffled index list, but batches are already randomly ordered,
