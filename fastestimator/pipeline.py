@@ -201,8 +201,10 @@ class Pipeline:
                     duration_list[i] += duration
 
         total_time = np.sum(duration_list)
+        max_op_len = max(len(op.__class__.__name__) for op in op_list)
         for i, op in enumerate(op_list):
-            print(" - {}: Time Consumption: {:.2f}%".format(op.__class__.__name__, 100 * duration_list[i] / total_time))
+            print(" - {}: Time Consumption: {:5.2f}%".format(op.__class__.__name__.ljust(max_op_len),
+                                                             100 * duration_list[i] / total_time))
 
     def get_scheduled_items(self, mode: str) -> List[Any]:
         """Get a list of items considered for scheduling.
