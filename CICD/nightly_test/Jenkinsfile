@@ -1,6 +1,9 @@
+def IMAGE_TAG="$BUILD_TAG".toLowerCase()
+
 pipeline {
     agent {label 'master'}
     environment {
+        IMAGE_TAG="$IMAGE_TAG"
         DOCKER_DATASET_PATH='/root/fastestimator_data'
         LOCAL_DATASET_PATH='/home/ubuntu/fastestimator_data'
         S3_DATASET_PATH='s3://fastestimator-public/nightly_test'
@@ -19,7 +22,7 @@ pipeline {
                         stage('run_test') {
                             steps {
                                 script {
-                                    def customImage = docker.build('$BUILD_TAG', \
+                                    def customImage = docker.build('$IMAGE_TAG', \
                                                                    '--no-cache - < CICD/nightly_test/Dockerfile.gpu')
                                     customImage.inside('-u root -v $LOCAL_DATASET_PATH:$DOCKER_DATASET_PATH \
                                                         --gpus all --shm-size 50g') {
@@ -33,7 +36,7 @@ pipeline {
                     }
                     post {
                         always {
-                            sh 'docker rmi "$BUILD_TAG"'
+                            sh 'docker rmi "$IMAGE_TAG"'
                         }
                     }
                 }
@@ -48,7 +51,7 @@ pipeline {
                         stage('run_test') {
                             steps {
                                 script {
-                                    def customImage = docker.build('$BUILD_TAG', \
+                                    def customImage = docker.build('$IMAGE_TAG', \
                                                                    '--no-cache - < CICD/nightly_test/Dockerfile.cpu')
 
                                     customImage.inside('-u root -v $LOCAL_DATASET_PATH:$DOCKER_DATASET_PATH \
@@ -63,7 +66,7 @@ pipeline {
                     }
                     post {
                         always {
-                            sh 'docker rmi "$BUILD_TAG"'
+                            sh 'docker rmi "$IMAGE_TAG"'
                         }
                     }
                 }
@@ -73,7 +76,7 @@ pipeline {
             agent {label 'master'}
             steps {
                 script {
-                    def customImage = docker.build("$BUILD_TAG", "--no-cache - < CICD/nightly_test/Dockerfile.cpu")
+                    def customImage = docker.build("$IMAGE_TAG", "--no-cache - < CICD/nightly_test/Dockerfile.cpu")
                     customImage.inside("-u root") {
                         withCredentials([string(credentialsId: 'pypi_password', variable: 'PYPI_PWD')]) {
                             sh 'pip install -U keyring keyrings.alt'
@@ -89,9 +92,9 @@ pipeline {
             agent {label 'master'}
             steps {
                 withDockerRegistry(credentialsId: 'docker_hub_credentials', url:'') {
-                    sh 'docker build -t fastestimator/fastestimator:nightly-cpu --no-cache - < CICD/nightly_test/Dockerfile.cpu'
+                    sh 'docker build -t fastestimator/fastestimator:nightly-cpu --no-cache - < CICD/nightly_test/Dockerfile_push.cpu'
                     sh 'docker push fastestimator/fastestimator:nightly-cpu'
-                    sh 'docker build -t fastestimator/fastestimator:nightly-gpu --no-cache - < CICD/nightly_test/Dockerfile.gpu'
+                    sh 'docker build -t fastestimator/fastestimator:nightly-gpu --no-cache - < CICD/nightly_test/Dockerfile_push.gpu'
                     sh 'docker push fastestimator/fastestimator:nightly-gpu'
                     sh 'docker image prune -f'
                 }
@@ -101,7 +104,7 @@ pipeline {
     }
     post {
         always {
-            sh 'docker rmi "$BUILD_TAG"'
+            sh 'docker rmi "$IMAGE_TAG"'
         }
     }
 }

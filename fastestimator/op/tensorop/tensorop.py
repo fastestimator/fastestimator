@@ -43,3 +43,14 @@ class TensorOp(Op):
             dictionary based on whatever keys this Op declares as its `outputs`.
         """
         return data
+
+    def build(self, framework: str) -> None:
+        """A method which will be invoked during Network instantiation.
+
+        This method can be used to augment the natural __init__ method of the TensorOp once the desired backend
+        framework is known.
+
+        Args:
+            framework: Which framework this Op will be executing in. One of 'tf' or 'torch'.
+        """
+        pass
