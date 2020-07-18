@@ -67,6 +67,8 @@ class HadamardCode(nn.Module):
     Raises:
         ValueError: If `code_length` is invalid.
     """
+    heads: Union[nn.ModuleList, nn.Module]
+
     def __init__(self, in_features: Union[int, List[int]], n_classes: int, code_length: Optional[int] = None) -> None:
         super().__init__()
         self.n_classes = n_classes
@@ -79,6 +81,7 @@ class HadamardCode(nn.Module):
         self.code_length = code_length
         self.labels = nn.Parameter(
             torch.tensor(hadamard(self.code_length)[:self.n_classes], dtype=torch.float32).T, requires_grad=False)
+        single_input = isinstance(in_features, int)
         in_features = to_list(in_features)
         if len(in_features) > code_length:
             raise ValueError(f"Too many input heads {len(in_features)} for the given code length {self.code_length}.")
@@ -87,11 +90,27 @@ class HadamardCode(nn.Module):
         self.heads = nn.ModuleList([
             nn.Linear(in_features=in_feat, out_features=out_feat) for in_feat, out_feat in zip(in_features, head_sizes)
         ])
+        # List comprehension is slow, so we will avoid it for users who don't need it
+        if single_input:
+            self._forward_fn = self._single_head_forward
+            self.heads = self.heads[0]
+        else:
+            self._forward_fn = self._multi_heads_forward
 
-    def forward(self, x: Union[torch.Tensor, List[torch.Tensor]]) -> torch.Tensor:
-        x = [head(tensor) for head, tensor in zip(self.heads, to_list(x))]
+    def _single_head_forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.heads(x)
+        x = torch.tanh(x)
+        x = torch.matmul(x, self.labels) + self.code_length
+        x = torch.div(x, torch.sum(x, dim=1).view(-1, 1))
+        return x
+
+    def _multi_heads_forward(self, x: List[torch.Tensor]) -> torch.Tensor:
+        x = [head(tensor) for head, tensor in zip(self.heads, x)]
         x = torch.cat(x, dim=-1)
         x = torch.tanh(x)
         x = torch.matmul(x, self.labels) + self.code_length
         x = torch.div(x, torch.sum(x, dim=1).view(-1, 1))
         return x
+
+    def forward(self, x: Union[torch.Tensor, List[torch.Tensor]]) -> torch.Tensor:
+        return self._forward_fn(x)

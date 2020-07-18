@@ -59,6 +59,8 @@ class HadamardCode(layers.Layer):
     Raises:
         ValueError: If `code_length` is invalid.
     """
+    heads: Union[List[layers.Dense], layers.Dense]
+
     def __init__(self, n_classes: int, code_length: Optional[int] = None) -> None:
         super().__init__()
         self.n_classes = n_classes
@@ -71,11 +73,13 @@ class HadamardCode(layers.Layer):
         self.code_length = code_length
         self.labels = None
         self.heads = []
+        self._call_fn = None
 
     def get_config(self) -> Dict[str, Any]:
         return {'n_classes': self.n_classes, 'code_length': self.code_length}
 
     def build(self, input_shape: Union[Tuple[int, int], List[Tuple[int, int]]]) -> None:
+        single_input = not isinstance(input_shape, list)
         input_shape = to_list(input_shape)
         batch_size = input_shape[0][0]
         if len(input_shape) > self.code_length:
@@ -89,11 +93,27 @@ class HadamardCode(layers.Layer):
                 raise ValueError("Inputs to ErrorCorrectingCode layer must have the same batch size")
             self.heads.append(layers.Dense(units=head_sizes[idx]))
         self.labels = tf.transpose(tf.convert_to_tensor(hadamard(self.code_length)[:self.n_classes], dtype=tf.float32))
+        # Spare extra operations when they're not needed
+        if single_input:
+            self.heads = self.heads[0]
+            self._call_fn = self._single_head_call
+        else:
+            self._call_fn = self._multi_head_call
 
-    def call(self, x: Union[tf.Tensor, List[tf.Tensor]], **kwargs) -> tf.Tensor:
-        x = [head(tensor) for head, tensor in zip(self.heads, to_list(x))]
+    def _single_head_call(self, x: tf.Tensor) -> tf.Tensor:
+        x = self.heads(x)
+        x = tf.tanh(x)
+        x = tf.matmul(x, self.labels) + self.code_length
+        x = tf.math.divide(x, tf.reshape(tf.reduce_sum(x, axis=1), (-1, 1)))
+        return x
+
+    def _multi_head_call(self, x: List[tf.Tensor]) -> tf.Tensor:
+        x = [head(tensor) for head, tensor in zip(self.heads, x)]
         x = tf.concat(x, axis=-1)
         x = tf.tanh(x)
         x = tf.matmul(x, self.labels) + self.code_length
         x = tf.math.divide(x, tf.reshape(tf.reduce_sum(x, axis=1), (-1, 1)))
         return x
+
+    def call(self, x: Union[tf.Tensor, List[tf.Tensor]], **kwargs) -> tf.Tensor:
+        return self._call_fn(x)
