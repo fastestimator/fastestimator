@@ -82,7 +82,6 @@ def get_estimator(epsilon=0.04,
 
     # step 2
     model = fe.build(model_fn=lambda: EccLeNet(code_length=code_length), optimizer_fn="adam")
-
     network = fe.Network(ops=[
         Watch(inputs="x", mode=('eval', 'test')),
         ModelOp(model=model, inputs="x", outputs="y_pred"),
