@@ -75,13 +75,14 @@ class TestTraceability(unittest.TestCase):
 
         crawler = os.walk(self.tf_dir)
         root = next(crawler)
-        self.assertIn('figures', root[1], "A figures subdirectory should have been generated")
-        self.assertIn('TF.tex', root[2], "The tex file should have been generated")
+        self.assertIn('resources', root[1], "A resources subdirectory should have been generated")
+        self.assertIn('tf_test.tex', root[2], "The tex file should have been generated")
         # Might be a pdf and/or a .ds_store file depending on system, but shouldn't be more than that
         self.assertLessEqual(len(root[2]), 3, "Extra files should not have been generated")
         figs = next(crawler)
-        self.assertIn('FE_Model_tfLeNet.pdf', figs[2], "A figure for the model should have been generated")
-        self.assertIn('logs.png', figs[2], "A log image should have been generated")
+        self.assertIn('tf_test_tfLeNet.pdf', figs[2], "A figure for the model should have been generated")
+        self.assertIn('tf_test_logs.png', figs[2], "A log image should have been generated")
+        self.assertIn('tf_test.txt', figs[2], "A raw log file should have been generated")
 
     def test_torch_traceability(self):
         if os.path.exists(self.torch_dir) and os.path.isdir(self.torch_dir):
@@ -99,10 +100,11 @@ class TestTraceability(unittest.TestCase):
 
         crawler = os.walk(self.torch_dir)
         root = next(crawler)
-        self.assertIn('figures', root[1], "A figures subdirectory should have been generated")
-        self.assertIn('Torch.tex', root[2], "The tex file should have been generated")
+        self.assertIn('resources', root[1], "A figures subdirectory should have been generated")
+        self.assertIn('torch_test.tex', root[2], "The tex file should have been generated")
         # Might be a pdf and/or a .ds_store file depending on system, but shouldn't be more than that
         self.assertLessEqual(len(root[2]), 3, "Extra files should not have been generated")
         figs = next(crawler)
-        self.assertIn('FE_Model_torchLeNet.pdf', figs[2], "A figure for the model should have been generated")
-        self.assertIn('logs.png', figs[2], "A log image should have been generated")
+        self.assertIn('torch_test_torchLeNet.pdf', figs[2], "A figure for the model should have been generated")
+        self.assertIn('torch_test_logs.png', figs[2], "A log image should have been generated")
+        self.assertIn('torch_test.txt', figs[2], "A raw log file should have been generated")
