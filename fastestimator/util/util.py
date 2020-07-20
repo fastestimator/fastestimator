@@ -204,6 +204,32 @@ class Suppressor(object):
         pass
 
 
+class LogSplicer:
+    """A class to send stdout information into a file before passing it along to the normal stdout.
+
+    Args:
+        log_path: The path/filename into which to append the current stdout.
+    """
+    def __init__(self, log_path: str):
+        self.log_path = log_path
+        self.stdout = None
+        self.log_file = None
+
+    def __enter__(self) -> None:
+        self.log_file = open(self.log_path, 'a')
+        self.stdout = sys.stdout
+        self.stderr = sys.stderr
+        sys.stdout = self
+
+    def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
+        sys.stdout = self.stdout
+        self.log_file.close()
+
+    def write(self, output: str) -> None:
+        self.log_file.write(output)
+        self.stdout.write(output)
+
+
 class Timer(ContextDecorator):
     """A class that can be used to time things.
 
