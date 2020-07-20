@@ -179,7 +179,7 @@ class Pipeline:
             if self.batch_size:
                 log_interval = log_interval * self.batch_size
 
-            print("\nBreakdown of time taken by Pipeline Operations:")
+            print("\nBreakdown of time taken by Pipeline Operations: Epoch: {}, Mode: {}".format(epoch, mode))
             for _ in range(log_interval):
                 index = np.random.randint(data_len)
                 items = deepcopy(loader.dataset.dataset[index])
@@ -201,9 +201,19 @@ class Pipeline:
                         duration_list[i] += duration
 
             total_time = np.sum(duration_list)
+            max_op_len = max(len(op.__class__.__name__) for op in op_list)
+            max_in_len = max([len(str(op.inputs)) - 2 for op in op_list] + [len("Inputs")])
+            max_out_len = max([len(str(op.outputs)) - 2 for op in op_list] + [len("Outputs")])
+            print("{}: {}: {}: {}".format("Op".ljust(max_op_len + 1),
+                                          "Inputs".ljust(max_in_len + 1),
+                                          "Outputs".ljust(max_out_len + 1),
+                                          "Time".rjust(5)))
+            print("-" * (max_op_len + max_in_len + max_out_len + 15))
             for i, op in enumerate(op_list):
-                print(" - {}: Time Consumption: {:.2f}%".format(op.__class__.__name__,
-                                                                100 * duration_list[i] / total_time))
+                print("{}: {}: {}: {:5.2f}%".format(op.__class__.__name__.ljust(max_op_len + 1),
+                                                    str(op.inputs)[1:-1].ljust(max_in_len + 1),
+                                                    str(op.outputs)[1:-1].ljust(max_out_len + 1),
+                                                    100 * duration_list[i] / total_time))
 
     def get_scheduled_items(self, mode: str) -> List[Any]:
         """Get a list of items considered for scheduling.
