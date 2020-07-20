@@ -45,7 +45,7 @@ for nb_in in $(find $dir_path/tutorial -type f); do
         current_dir=$(dirname $nb_in)
         stderr_file=${nb_in/'.ipynb'/'_stderr.txt'}
         start=`date +%s`
-        papermill $nb_in $nb_out 2>> $stderr_file --cwd $current_dir
+        papermill $nb_in $nb_out -k python 2>> $stderr_file --cwd $current_dir
         result[$nb_in]=$?
         end=`date +%s`
 
