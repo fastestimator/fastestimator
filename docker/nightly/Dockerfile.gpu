@@ -1,0 +1,26 @@
+FROM tensorflow/tensorflow:2.1.0-gpu-py3
+
+RUN apt-get update
+
+# OpenCV dependencies
+RUN apt-get install -y --no-install-recommends \
+    libglib2.0-0 \
+    libsm6 \
+    libxrender1 \
+    libxext6
+
+# Pydot requirement
+RUN apt-get install -y --no-install-recommends \
+    graphviz \
+    texlive-latex-base \
+    texlive-latex-extra
+
+# git requirement
+RUN apt-get install -y --no-install-recommends \
+    git
+
+RUN pip install --no-cache-dir \
+    jupyter \
+    papermill
+
+RUN pip install git+https://github.com/fastestimator/fastestimator.git
