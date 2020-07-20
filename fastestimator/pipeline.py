@@ -201,7 +201,7 @@ class Pipeline:
                         duration_list[i] += duration
 
             total_time = np.sum(duration_list)
-            max_op_len = max(len(op.__class__.__name__) for op in op_list)
+            max_op_len = max([len(op.__class__.__name__) for op in op_list] + [len("Op")])
             max_in_len = max([len(str(op.inputs)) - 2 for op in op_list] + [len("Inputs")])
             max_out_len = max([len(str(op.outputs)) - 2 for op in op_list] + [len("Outputs")])
             print("{}: {}: {}: {}".format("Op".ljust(max_op_len + 1),
