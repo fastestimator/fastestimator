@@ -26,6 +26,8 @@ from torch.utils.data.dataloader import default_collate
 
 from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.op_dataset import OpDataset
+from fastestimator.op.numpyop.meta.one_of import OneOf
+from fastestimator.op.numpyop.meta.sometimes import Sometimes
 from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
 from fastestimator.op.op import LambdaOp
 from fastestimator.schedule.schedule import Scheduler, get_current_items
@@ -179,7 +181,7 @@ class Pipeline:
             if self.batch_size:
                 log_interval = log_interval * self.batch_size
 
-            print("\nBreakdown of time taken by Pipeline Operations:")
+            print("\nBreakdown of time taken by Pipeline Operations ({} epoch {})".format(mode, epoch))
             for _ in range(log_interval):
                 index = np.random.randint(data_len)
                 items = deepcopy(loader.dataset.dataset[index])
@@ -201,9 +203,30 @@ class Pipeline:
                         duration_list[i] += duration
 
             total_time = np.sum(duration_list)
+            op_names = ["Op"]
+
+            for op in op_list:
+                if isinstance(op, Sometimes) and op.numpy_op:
+                    op_names.append(op.__class__.__name__ + " (" + op.numpy_op.__class__.__name__ + ")")
+                elif isinstance(op, OneOf) and op.numpy_ops:
+                    op_names.append(op.__class__.__name__ + " (" +
+                                    ", ".join([sub_op.__class__.__name__ for sub_op in op.numpy_ops]) + ")")
+                else:
+                    op_names.append(op.__class__.__name__)
+
+            max_op_len = max(len(op_name) for op_name in op_names)
+            max_in_len = max([len(", ".join(op.inputs)) for op in op_list] + [len("Inputs")])
+            max_out_len = max([len(", ".join(op.outputs)) for op in op_list] + [len("Outputs")])
+            print("{}: {}: {}: {}".format("Op".ljust(max_op_len + 1),
+                                          "Inputs".ljust(max_in_len + 1),
+                                          "Outputs".ljust(max_out_len + 1),
+                                          "Time".rjust(5)))
+            print("-" * (max_op_len + max_in_len + max_out_len + 15))
             for i, op in enumerate(op_list):
-                print(" - {}: Time Consumption: {:.2f}%".format(op.__class__.__name__,
-                                                                100 * duration_list[i] / total_time))
+                print("{}: {}: {}: {:5.2f}%".format(op_names[i + 1].ljust(max_op_len + 1),
+                                                    ", ".join(op.inputs).ljust(max_in_len + 1),
+                                                    ", ".join(op.outputs).ljust(max_out_len + 1),
+                                                    100 * duration_list[i] / total_time))
 
     def get_scheduled_items(self, mode: str) -> List[Any]:
         """Get a list of items considered for scheduling.
