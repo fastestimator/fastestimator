@@ -59,6 +59,9 @@ class CutMixBatch(TensorOp):
             lam = tf.dtypes.cast(1.0 - (x2 - x1) * (y2 - y1) / (width * height), tf.float32)
             return data + patches, lam
         else:
+            _, _, height, width = data.shape
+            rx = width * self.uniform.sample()
+            ry = height * self.uniform.sample()
             rw = width * torch.sqrt(1 - lam)
             rh = height * torch.sqrt(1 - lam)
             x1 = torch.round(torch.clamp(rx - rw / 2, min=0)).type(torch.int32)
