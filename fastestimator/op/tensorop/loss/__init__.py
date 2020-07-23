@@ -14,4 +14,4 @@
 # ==============================================================================
 from fastestimator.op.tensorop.loss.cross_entropy import CrossEntropy
 from fastestimator.op.tensorop.loss.mean_squared_error import MeanSquaredError
-from fastestimator.op.tensorop.loss.mixup import MixUpLoss
+from fastestimator.op.tensorop.loss.mixup import MixLoss

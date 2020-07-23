@@ -16,10 +16,10 @@ import tensorflow as tf
 import torch
 
 import fastestimator as fe
-from fastestimator.op.tensorop.tensorop import TensorOp
+from fastestimator.op.tensorop.loss import LossOp
 
 
-class MixUpLoss(TensorOp):
+class MixLoss(LossOp):
     """This class should be used in conjunction with MixUpBatch to perform mix-up training, which helps to reduce
     over-fitting, stabilize GAN training, and harden against adversarial attacks (https://arxiv.org/abs/1710.09412)
     Args:

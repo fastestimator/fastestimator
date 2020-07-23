@@ -1,4 +1,4 @@
-from typing import Any, Dict, Iterable, List, TypeVar, Union
+from typing import Any, Dict, Iterable, List, TypeVar, Union, Tuple
 
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -32,19 +32,19 @@ class CutMixBatch(TensorOp):
         else:
             raise ValueError("unrecognized framework: {}".format(framework))
 
-    def forward(self, data, state):
+    def forward(self, data: Tensor, state: Dict[str, Any]) -> Tuple(Tensor, Tensor):
         """ Forward method to perform cutmix batch augmentation
         Args:
-            data: Batch data to be augmented (batch X height X width X channel)
+            data: Batch data to be augmented
             state: Information about the current execution context.
         Returns:
             Cut-Mixed batch data
         """
-        _, height, width, _ = data.shape
         lam = self.beta.sample()
-        rx = width * self.uniform.sample()
-        ry = height * self.uniform.sample()
         if tf.is_tensor(data):
+            _, height, width, _ = data.shape
+            rx = width * self.uniform.sample()
+            ry = height * self.uniform.sample()
             rw = width * tf.sqrt(1 - lam)
             rh = height * tf.sqrt(1 - lam)
             x1 = tf.dtypes.cast(tf.round(tf.math.maximum(rx - rw / 2, 0)), tf.int32)
@@ -56,7 +56,6 @@ class CutMixBatch(TensorOp):
             patches = tf.pad(patches, [[0, 0], [y1, height - y2], [x1, width - x2], [0, 0]],
                              mode="CONSTANT",
                              constant_values=0)
-            lam = tf.dtypes.cast(1.0 - (x2 - x1) * (y2 - y1) / (width * height), tf.float32)
             return data + patches, lam
         else:
             _, _, height, width = data.shape
@@ -70,6 +69,6 @@ class CutMixBatch(TensorOp):
             y2 = torch.round(torch.clamp(ry + rh / 2, max=height)).type(torch.int32)
 
             data[:, :, y1:y2, x1:x2] = torch.roll(data, shifts=1, dims=0)[:, :, y1:y2, x1:x2]
-            lam = 1.0 - (x2 - x1) * (y2 - y1) / (width * height)
+            lam = 1 - ((x2 - x1) * (y2 - y1).type(torch.float32) / (data.size()[-1] * data.size()[-2]))
             lam = torch.tensor(lam)
             return data, lam
