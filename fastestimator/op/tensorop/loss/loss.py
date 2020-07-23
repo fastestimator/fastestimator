@@ -15,29 +15,26 @@
 from fastestimator.op.tensorop import TensorOp
 
 
-class Loss(TensorOp):
+class LossOp(TensorOp):
     """A base class for loss operations. It can be used directly to perform value pass-through (see the adversarial
     training showcase for an example of when this is useful)
     """
-    def __init__(self, inputs=None, outputs=None, mode=None):
+    def __init__(self, inputs=None, outputs=None, mode=None, average_loss: bool = True):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.average_loss = average_loss
 
-    @staticmethod
-    def validate_loss_inputs(inputs, *args):
-        """A method to ensure that either the inputs array or individual input arguments are specified, but not both
-        Args:
-            inputs: None or a tuple/list of arguments
-            *args: a tuple of arguments or Nones
-        Returns:
-            either 'inputs' or the args tuple depending on which is populated
-        """
-        if inputs is None:  # Using args
-            assert all(map(lambda x: x is not None, args)), \
-                "If the 'inputs' field is not provided then all individual input arguments must be specified"
-            inputs = args
-        else:  # Using Inputs
-            assert all(map(lambda x: x is None, args)), \
-                "If the 'inputs' field is provided then individual input arguments may not be specified"
-            assert len(inputs) == len(args), \
-                "{} inputs were provided, but {} were required".format(len(inputs), len(args))
-        return inputs
+    @property
+    def true_key(self) -> str:
+        return self.inputs[self.true_key_idx]
+
+    @property
+    def pred_key(self) -> str:
+        return self.inputs[self.pred_key_idx]
+
+    @property
+    def true_key_idx(self) -> int:
+        return 0
+
+    @property
+    def pred_key_idx(self) -> int:
+        return 1

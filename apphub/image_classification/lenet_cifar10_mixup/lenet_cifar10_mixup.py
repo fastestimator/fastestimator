@@ -12,30 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import tempfile
 
-import tensorflow as tf
 from tensorflow.python.keras.losses import SparseCategoricalCrossentropy as KerasCrossentropy
 
 import fastestimator as fe
-from fastestimator.dataset.data.cifar10 import load_data
 from fastestimator.architecture.tensorflow import LeNet
+from fastestimator.dataset.data.cifar10 import load_data
 from fastestimator.op.numpyop.univariate import Minmax
 from fastestimator.op.tensorop.augmentation import MixUpBatch
 from fastestimator.op.tensorop.loss import MixUpLoss, SparseCategoricalCrossentropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
-from fastestimator.schedule import Scheduler
-from fastestimator.trace.io import ModelSaver
-from fastestimator.trace.metric import Accuracy, ConfusionMatrix
+from fastestimator.trace.metric import Accuracy
 
 
 def get_estimator(epochs=10, batch_size=32, alpha=1.0):
     # step 1: prepare dataset
-    train_data, test_data = load_data()
-    num_classes = 10
+    train_data, eval_data = load_data()
     pipeline = fe.Pipeline(
         train_data=train_data,
-        test_data=test_data,
+        eval_data=eval_data,
         batch_size=batch_size,
         ops=Minmax(inputs="x", outputs="x"))
 
@@ -51,9 +46,7 @@ def get_estimator(epochs=10, batch_size=32, alpha=1.0):
     ])
 
     # step 3: prepare estimator
-    traces = [
-        Accuracy(true_key="y", pred_key="y_pred")
-    ]
+    traces = [Accuracy(true_key="y", pred_key="y_pred")]
 
     estimator = fe.Estimator(network=network,
                              pipeline=pipeline,

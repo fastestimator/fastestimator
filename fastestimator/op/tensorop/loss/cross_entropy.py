@@ -20,6 +20,7 @@ import torch
 from fastestimator.backend.binary_crossentropy import binary_crossentropy
 from fastestimator.backend.categorical_crossentropy import categorical_crossentropy
 from fastestimator.backend.sparse_categorical_crossentropy import sparse_categorical_crossentropy
+from fastestimator.op.tensorop.loss.loss import LossOp
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 
@@ -27,7 +28,7 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 @traceable()
-class CrossEntropy(TensorOp):
+class CrossEntropy(LossOp):
     """Calculate Element-Wise CrossEntropy (binary, categorical or sparse categorical).
 
     Args:
@@ -48,9 +49,8 @@ class CrossEntropy(TensorOp):
                  from_logits: bool = False,
                  average_loss: bool = True,
                  form: Optional[str] = None):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, average_loss=average_loss)
         self.from_logits = from_logits
-        self.average_loss = average_loss
         self.form = form
         self.cross_entropy_fn = {
             "binary": binary_crossentropy,
