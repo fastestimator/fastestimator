@@ -104,7 +104,6 @@ class TestModelSaver(unittest.TestCase):
         torch_model_path2 = os.path.join(save_dir, model_name + '.pt')
 
         with self.subTest('Check only two file are kept'):
-            print(os.listdir(save_dir))
             self.assertEqual(len(os.listdir(save_dir)), 2)
 
         with self.subTest('Check two latest model are kept'):

@@ -33,7 +33,7 @@ class ModelSaver(Trace):
         model: A model instance compiled with fe.build.
         save_dir: Folder path into which to save the `model`.
         frequency: Model saving frequency in epoch(s).
-        max_to_keep: Maximum number of latest saved files to keep.
+        max_to_keep: Maximum number of latest saved files to keep. If None, all models will be saved.
     """
     def __init__(self,
                  model: Union[tf.keras.Model, torch.nn.Module],
@@ -57,14 +57,8 @@ class ModelSaver(Trace):
 
             if self.max_to_keep:
                 if self.file_queue.qsize() == self.max_to_keep:
-                    removed_name = self.file_queue.get()
-                    if isinstance(self.model, tf.keras.Model):
-                        removed_name = "{}.h5".format(removed_name)
-                    elif isinstance(self.model, torch.nn.Module):
-                        removed_name = "{}.pt".format(removed_name)
-                    else:
-                        raise ValueError("Unrecognized model instance {}".format(type(model)))
-                    os.remove(os.path.join(self.save_dir, removed_name))
+                    removed_path = self.file_queue.get()
+                    os.remove(os.path.join(self.save_dir, removed_path))
                     print("FastEstimator-ModelSaver: Removed model {} due to file number exceeding max_to_keep".format(
                         model_path))
-                self.file_queue.put(model_name)
+                self.file_queue.put(model_path)
