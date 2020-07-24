@@ -25,7 +25,7 @@ from fastestimator.util.util import to_number
 
 @traceable()
 class ConfusionMatrix(Trace):
-    """Computes the confusion matrix between y_true(row) and y_predicted(column).
+    """Computes the confusion matrix between y_true (rows) and y_predicted (columns).
 
     Args:
         true_key: Name of the key that corresponds to ground truth in the batch dictionary.
