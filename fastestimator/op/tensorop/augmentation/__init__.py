@@ -13,4 +13,3 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.op.tensorop.augmentation.cutmix_batch import CutMixBatch
-from fastestimator.op.tensorop.augmentation.mixup_batch import MixUpBatch

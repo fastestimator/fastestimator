@@ -14,7 +14,6 @@
 # ==============================================================================
 from typing import List, TypeVar, Union
 
-import numpy as np
 import tensorflow as tf
 import torch
 

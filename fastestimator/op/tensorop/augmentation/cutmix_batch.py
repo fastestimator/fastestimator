@@ -36,7 +36,6 @@ class CutMixBatch(TensorOp):
         self.alpha = alpha
         self.beta = None
         self.uniform = None
-        self.build(framework)
 
     def build(self, framework: str) -> None:
         if framework == 'tf':

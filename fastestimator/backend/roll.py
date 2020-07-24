@@ -31,27 +31,27 @@ def roll(tensor: Tensor, shift: Union[int, List[int]], axis: Union[int, List[int
     ```python
     n = np.array([[1.0, 2.0, 3.0], [5.0, 6.0, 7.0]])
     b = fe.backend.roll(n, shift=1, axis=0)  # [[5, 6, 7], [1, 2, 3]]
-    b = fe.backend.reshape(n, shift=2, axis=1)  # [[2, 3, 1], [6, 7, 5]]
-    b = fe.backend.reshape(n, shift=-2, axis=1)  # [[3, 1, 2], [7, 5, 6]]
-    b = fe.backend.reshape(n, shift=[-1, -1], axis=[0, 1])  # [[6, 7, 5], [2, 3, 1]]
+    b = fe.backend.roll(n, shift=2, axis=1)  # [[2, 3, 1], [6, 7, 5]]
+    b = fe.backend.roll(n, shift=-2, axis=1)  # [[3, 1, 2], [7, 5, 6]]
+    b = fe.backend.roll(n, shift=[-1, -1], axis=[0, 1])  # [[6, 7, 5], [2, 3, 1]]
     ```
 
     This method can be used with TensorFlow tensors:
     ```python
     t = tf.constant([[1.0, 2.0, 3.0], [5.0, 6.0, 7.0]])
     b = fe.backend.roll(t, shift=1, axis=0)  # [[5, 6, 7], [1, 2, 3]]
-    b = fe.backend.reshape(t, shift=2, axis=1)  # [[2, 3, 1], [6, 7, 5]]
-    b = fe.backend.reshape(t, shift=-2, axis=1)  # [[3, 1, 2], [7, 5, 6]]
-    b = fe.backend.reshape(t, shift=[-1, -1], axis=[0, 1])  # [[6, 7, 5], [2, 3, 1]]
+    b = fe.backend.roll(t, shift=2, axis=1)  # [[2, 3, 1], [6, 7, 5]]
+    b = fe.backend.roll(t, shift=-2, axis=1)  # [[3, 1, 2], [7, 5, 6]]
+    b = fe.backend.roll(t, shift=[-1, -1], axis=[0, 1])  # [[6, 7, 5], [2, 3, 1]]
     ```
 
     This method can be used with PyTorch tensors:
     ```python
     p = torch.tensor([[1.0, 2.0, 3.0], [5.0, 6.0, 7.0]])
     b = fe.backend.roll(p, shift=1, axis=0)  # [[5, 6, 7], [1, 2, 3]]
-    b = fe.backend.reshape(p, shift=2, axis=1)  # [[2, 3, 1], [6, 7, 5]]
-    b = fe.backend.reshape(p, shift=-2, axis=1)  # [[3, 1, 2], [7, 5, 6]]
-    b = fe.backend.reshape(p, shift=[-1, -1], axis=[0, 1])  # [[6, 7, 5], [2, 3, 1]]
+    b = fe.backend.roll(p, shift=2, axis=1)  # [[2, 3, 1], [6, 7, 5]]
+    b = fe.backend.roll(p, shift=-2, axis=1)  # [[3, 1, 2], [7, 5, 6]]
+    b = fe.backend.roll(p, shift=[-1, -1], axis=[0, 1])  # [[6, 7, 5], [2, 3, 1]]
     ```
 
     Args:
