@@ -28,12 +28,14 @@ from fastestimator.backend.load_model import load_model
 from fastestimator.backend.mean_squared_error import mean_squared_error
 from fastestimator.backend.percentile import percentile
 from fastestimator.backend.permute import permute
+from fastestimator.backend.random_mix_patch import random_mix_patch
 from fastestimator.backend.random_normal_like import random_normal_like
 from fastestimator.backend.reduce_max import reduce_max
 from fastestimator.backend.reduce_mean import reduce_mean
 from fastestimator.backend.reduce_min import reduce_min
 from fastestimator.backend.reduce_sum import reduce_sum
 from fastestimator.backend.reshape import reshape
+from fastestimator.backend.roll import roll
 from fastestimator.backend.save_model import save_model
 from fastestimator.backend.set_lr import set_lr
 from fastestimator.backend.sign import sign
@@ -45,4 +47,3 @@ from fastestimator.backend.to_type import to_type
 from fastestimator.backend.update_model import update_model
 from fastestimator.backend.watch import watch
 from fastestimator.backend.zeros_like import zeros_like
-from fastestimator.backend.roll import roll

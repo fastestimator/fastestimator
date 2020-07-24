@@ -4,22 +4,34 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 import torch
 
+from fastestimator.backend import random_mix_patch, roll
 from fastestimator.op.tensorop import TensorOp
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 class CutMixBatch(TensorOp):
-    """ This class should be used in conjunction with MixUpLoss to perform CutMix training, which helps to reduce
-    over-fitting, perform object detection, and against adversarial attacks (https://arxiv.org/pdf/1905.04899.pdf)
+    """This class perform cutmix augmentation on batch of tensors.
+
+    In this augmentation technique patches are cut and pasted among traning images where the ground truth labels are
+    also mixed proportionally to the area of the patches. This class should be used in conjunction with MixUpLoss to
+    perform CutMix training, which helps to reduce over-fitting, perform object detection, and against adversarial
+    attacks (https://arxiv.org/pdf/1905.04899.pdf)
+
     Args:
         inputs: key of the input to be cut-mixed
         outputs: key to store the cut-mixed input
         mode: what mode to execute in. Probably 'train'
         alpha: the alpha value defining the beta distribution to be drawn from during training
+        framework: which framework the current Op will be executing in. Either 'tf' or 'torch'
     """
-    def __init__(self, inputs=None, outputs=None, mode=None, alpha=1.0, framework='tf'):
-        assert alpha > 0, "Mixup alpha value must be greater than zero"
+    def __init__(self,
+                 inputs: Union[str, List[str]],
+                 outputs: Union[str, List[str]],
+                 mode: Union[None, str, Iterable[str]] = None,
+                 alpha: Union[float, Tensor] = 1.0,
+                 framework: str = 'tf') -> None:
+        assert alpha > 0, "Alpha value must be greater than zero"
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.alpha = alpha
         self.beta = None
@@ -44,37 +56,23 @@ class CutMixBatch(TensorOp):
             data: Batch data to be augmented
             state: Information about the current execution context.
         Returns:
-            Cut-Mixed batch data
+            Tuple of Cut-Mixed batch data and lambda
         """
         lam = self.beta.sample()
+        uniform_sample = self.uniform.sample()
+        bbox_x1, bbox_x2, bbox_y1, bbox_y2, width, height = random_mix_patch(data, lam, uniform_sample)
         if tf.is_tensor(data):
-            _, height, width, _ = data.shape
-            rx = width * self.uniform.sample()
-            ry = height * self.uniform.sample()
-            rw = width * tf.sqrt(1 - lam)
-            rh = height * tf.sqrt(1 - lam)
-            x1 = tf.dtypes.cast(tf.round(tf.math.maximum(rx - rw / 2, 0)), tf.int32)
-            x2 = tf.dtypes.cast(tf.round(tf.math.minimum(rx + rw / 2, width)), tf.int32)
-            y1 = tf.dtypes.cast(tf.round(tf.math.maximum(ry - rh / 2, 0)), tf.int32)
-            y2 = tf.dtypes.cast(tf.round(tf.math.minimum(ry + rh / 2, height)), tf.int32)
-
-            patches = tf.roll(data, shift=1, axis=0)[:, y1:y2, x1:x2, :] - data[:, y1:y2, x1:x2, :]
-            patches = tf.pad(patches, [[0, 0], [y1, height - y2], [x1, width - x2], [0, 0]],
+            patches = roll(
+                data, shift=1,
+                axis=0)[:, bbox_y1:bbox_y2, bbox_x1:bbox_x2, :] - data[:, bbox_y1:bbox_y2, bbox_x1:bbox_x2, :]
+            patches = tf.pad(patches, [[0, 0], [bbox_y1, height - bbox_y2], [bbox_x1, width - bbox_x2], [0, 0]],
                              mode="CONSTANT",
                              constant_values=0)
-            lam = tf.dtypes.cast(1.0 - (x2 - x1) * (y2 - y1) / (width * height), tf.float32)
-            return data + patches, lam
+            data = data + patches
+            # adjust lambda to match pixel ratio
+            lam = tf.dtypes.cast(1.0 - (bbox_x2 - bbox_x1) * (bbox_y2 - bbox_y1) / (width * height), tf.float32)
         else:
-            _, _, height, width = data.shape
-            rx = width * self.uniform.sample()
-            ry = height * self.uniform.sample()
-            rw = width * torch.sqrt(1 - lam)
-            rh = height * torch.sqrt(1 - lam)
-            x1 = torch.round(torch.clamp(rx - rw / 2, min=0)).type(torch.int32)
-            x2 = torch.round(torch.clamp(rx + rw / 2, max=width)).type(torch.int32)
-            y1 = torch.round(torch.clamp(ry - rh / 2, min=0)).type(torch.int32)
-            y2 = torch.round(torch.clamp(ry + rh / 2, max=height)).type(torch.int32)
-
-            data[:, :, y1:y2, x1:x2] = torch.roll(data, shifts=1, dims=0)[:, :, y1:y2, x1:x2]
-            lam = 1 - ((x2 - x1) * (y2 - y1)).type(torch.float32) / (width * height)
-            return data, lam
+            data[:, :, bbox_y1:bbox_y2, bbox_x1:bbox_x2] = roll(data, shift=1,
+                                                                axis=0)[:, :, bbox_y1:bbox_y2, bbox_x1:bbox_x2]
+            lam = 1 - ((bbox_x2 - bbox_x1) * (bbox_y2 - bbox_y1)).type(torch.float32) / (width * height)
+        return data, lam
