@@ -12,15 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from typing import Any, Dict, List, TypeVar, Union
+
 import tensorflow as tf
 import torch
 
 import fastestimator as fe
+from fastestimator.backend import roll
 from fastestimator.op.tensorop.loss import LossOp
+
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 class MixUpLoss(LossOp):
-    """This class should be used in conjunction with MixUpBatch to perform mix-up training, which helps to reduce
+    """This class should be used in conjunction with MixUpBatch and CutMixBatch to perform mix-up training, which helps to reduce
     over-fitting, stabilize GAN training, and harden against adversarial attacks (https://arxiv.org/abs/1710.09412)
     Args:
         loss (func): A loss object which can be invoked like "loss(true, pred)". It's reduction method will be
@@ -30,14 +35,16 @@ class MixUpLoss(LossOp):
     def __init__(self, loss: LossOp, lam: str, average_loss: bool = True):
         self.loss = loss
         self.loss.average_loss = False
+        if len(loss.outputs) == 1:
+            loss.outputs = loss.outputs[0]
         super().__init__(inputs=[lam] + loss.inputs, outputs=loss.outputs, mode=loss.mode, average_loss=average_loss)
 
-    def forward(self, data, state):
+    def forward(self, data: List[Tensor], state: Dict[str, Any]):
         lam, *data = data
 
         loss1 = self.loss.forward(data, state)
 
-        data[self.loss.true_key_idx] = fe.backend.roll(data[self.loss.true_key_idx], shift=1, axis=0)
+        data[self.loss.true_key_idx] = roll(data[self.loss.true_key_idx], shift=1, axis=0)
         loss2 = self.loss.forward(data, state)
 
         loss = lam * loss1 + (1.0 - lam) * loss2

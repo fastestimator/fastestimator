@@ -33,8 +33,8 @@ class LossOp(TensorOp):
 
     @property
     def true_key_idx(self) -> int:
-        return 0
+        return 1
 
     @property
     def pred_key_idx(self) -> int:
-        return 1
+        return 0

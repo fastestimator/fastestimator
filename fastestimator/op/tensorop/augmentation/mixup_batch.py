@@ -32,6 +32,7 @@ class MixUpBatch(TensorOp):
         outputs: key to store the mixed-up input
         mode: what mode to execute in. Probably 'train'
         alpha: the alpha value defining the beta distribution to be drawn from during training
+        sharedbeta: Sample a single beta for a batch Or single beta for each image
     """
     def __init__(self, inputs: Union[str, List[str]] = None,
                  outputs: Union[str, List[str]] = None,
@@ -68,20 +69,13 @@ class MixUpBatch(TensorOp):
         """
         iterdata = data if isinstance(data, list) else list(data) if isinstance(data, tuple) else [data]
 
-        # Sample a single beta for a batch Or single beta for each image
         if self.sharedbeta:
             lam = self.beta.sample()
         else:
             lam = self.beta.sample(sample_shape=data.shape[0])
-            # this removes duplicate pairs in the batch in case beta distribution is symmetric
-            # out = 0.9*x1 + 0.1*x2
-            # out = 0.1*x2 + 0.9*x1
             lam = tf.maximum(lam, (1 - lam))
             lam = tf.reshape(lam, (-1, 1, 1, 1))
 
-        # Could do random mix-up using tf.gather() on a shuffled index list, but batches are already randomly ordered,
-        # so just need to roll by 1 to get a random combination of inputs. This also allows MixUpLoss to easily compute
-        # the corresponding Y values
         if tf.is_tensor(data):
             mix = [lam * dat + (1.0 - lam) * tf.roll(dat, shift=1, axis=0) for dat in iterdata]
         elif isinstance(data, torch.Tensor):

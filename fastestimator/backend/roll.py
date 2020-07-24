@@ -12,8 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.tensorop.loss.loss import LossOp
-from fastestimator.op.tensorop.loss.cross_entropy import CrossEntropy
-from fastestimator.op.tensorop.loss.mean_squared_error import MeanSquaredError
-from fastestimator.op.tensorop.loss.mix_loss import MixUpLoss
+from typing import TypeVar
 
+import tensorflow as tf
+import torch
+
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+
+
+def roll(tensor: Tensor, shift, axis) -> Tensor:
+    if tf.is_tensor(tensor):
+        return tf.roll(tensor, shift=shift, axis=axis)
+    elif isinstance(tensor, torch.Tensor):
+        return torch.roll(tensor, shifts=shift, dims=axis)
+    else:
+        raise ValueError("Unrecognized tensor type {}".format(type(tensor)))
