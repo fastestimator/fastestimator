@@ -1,4 +1,4 @@
-from typing import Any, Dict, Iterable, List, TypeVar, Union, Tuple
+from typing import Any, Dict, Iterable, List, Tuple, TypeVar, Union
 
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -21,18 +21,24 @@ class CutMixBatch(TensorOp):
     def __init__(self, inputs=None, outputs=None, mode=None, alpha=1.0, framework='tf'):
         assert alpha > 0, "Mixup alpha value must be greater than zero"
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.alpha = alpha
+        self.beta = None
+        self.uniform = None
+        self.build(framework)
+
+    def build(self, framework: str) -> None:
         if framework == 'tf':
-            self.alpha = tf.constant(alpha)
+            self.alpha = tf.constant(self.alpha)
             self.beta = tfp.distributions.Beta(self.alpha, self.alpha)
             self.uniform = tfp.distributions.Uniform()
         elif framework == 'torch':
-            self.alpha = torch.tensor(alpha)
+            self.alpha = torch.tensor(self.alpha)
             self.beta = torch.distributions.beta.Beta(self.alpha, self.alpha)
             self.uniform = torch.distributions.uniform.Uniform(low=0, high=1)
         else:
             raise ValueError("unrecognized framework: {}".format(framework))
 
-    def forward(self, data: Tensor, state: Dict[str, Any]) -> Tuple(Tensor, Tensor):
+    def forward(self, data: Tensor, state: Dict[str, Any]) -> Tuple[Tensor, Tensor]:
         """ Forward method to perform cutmix batch augmentation
         Args:
             data: Batch data to be augmented
@@ -56,6 +62,7 @@ class CutMixBatch(TensorOp):
             patches = tf.pad(patches, [[0, 0], [y1, height - y2], [x1, width - x2], [0, 0]],
                              mode="CONSTANT",
                              constant_values=0)
+            lam = tf.dtypes.cast(1.0 - (x2 - x1) * (y2 - y1) / (width * height), tf.float32)
             return data + patches, lam
         else:
             _, _, height, width = data.shape
@@ -69,6 +76,5 @@ class CutMixBatch(TensorOp):
             y2 = torch.round(torch.clamp(ry + rh / 2, max=height)).type(torch.int32)
 
             data[:, :, y1:y2, x1:x2] = torch.roll(data, shifts=1, dims=0)[:, :, y1:y2, x1:x2]
-            lam = 1 - ((x2 - x1) * (y2 - y1).type(torch.float32) / (data.size()[-1] * data.size()[-2]))
-            lam = torch.tensor(lam)
+            lam = 1 - ((x2 - x1) * (y2 - y1)).type(torch.float32) / (width * height)
             return data, lam
