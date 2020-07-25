@@ -12,50 +12,46 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import List, TypeVar, Union
+from typing import TypeVar, Union
 
 import tensorflow as tf
 import torch
 
+from fastestimator.backend.cast import cast
+from fastestimator.backend.clip_by_value import clip_by_value
+from fastestimator.backend.get_image_dims import get_image_dims
+from fastestimator.backend.tensor_round import tensor_round
+from fastestimator.backend.tensor_sqrt import tensor_sqrt
+
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
-def random_mix_patch(tensor: Tensor, lam: Tensor, uniform_sample: Tensor) -> Tensor:
+def random_mix_patch(tensor: Tensor, x: Tensor, y: Tensor, lam: Union[int, float, Tensor] = 1.0) -> Tensor:
     """Randomly cut the patches from input images.
+
+    If patches are going to be pasted in other image, combination ratio between two images is defined by `lam`. Cropping
+    region indicates where to drop out from the image and `cut_x` & `cut_y` are used to calculate cropping region whose
+    aspect ratio is proportional to the original image.
 
     Args:
         tensor: The input value.
-        lam: Generated mixed sample.
-        uniform_sample: Sample drawn from the uniform distribution
+        lam: Combination ratio between two data points.
+        x: Rectangular mask X coordinate.
+        y: Rectangular mask Y coordinate.
 
     Returns:
-        The X and Y coordinates of the patch along with width and height
+        The X and Y coordinates of the cropped patch along with width and height.
 
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if tf.is_tensor(tensor):
-        _, height, width, _ = tensor.shape
-        cut_x = width * uniform_sample
-        cut_y = height * uniform_sample
-        cut_w = width * tf.sqrt(1 - lam)
-        cut_h = height * tf.sqrt(1 - lam)
-        bbox_x1 = tf.dtypes.cast(tf.round(tf.math.maximum(cut_x - cut_w / 2, 0)), tf.int32)
-        bbox_x2 = tf.dtypes.cast(tf.round(tf.math.minimum(cut_x + cut_w / 2, width)), tf.int32)
-        bbox_y1 = tf.dtypes.cast(tf.round(tf.math.maximum(cut_y - cut_h / 2, 0)), tf.int32)
-        bbox_y2 = tf.dtypes.cast(tf.round(tf.math.minimum(cut_y + cut_h / 2, height)), tf.int32)
-
-        return bbox_x1, bbox_x2, bbox_y1, bbox_y2, width, height
-    elif isinstance(tensor, torch.Tensor):
-        _, _, height, width = tensor.shape
-        cut_x = width * uniform_sample
-        cut_y = height * uniform_sample
-        cut_w = width * torch.sqrt(1 - lam)
-        cut_h = height * torch.sqrt(1 - lam)
-        bbox_x1 = torch.round(torch.clamp(cut_x - cut_w / 2, min=0)).type(torch.int32)
-        bbox_x2 = torch.round(torch.clamp(cut_x + cut_w / 2, max=width)).type(torch.int32)
-        bbox_y1 = torch.round(torch.clamp(cut_y - cut_h / 2, min=0)).type(torch.int32)
-        bbox_y2 = torch.round(torch.clamp(cut_y + cut_h / 2, max=height)).type(torch.int32)
-        return bbox_x1, bbox_x2, bbox_y1, bbox_y2, width, height
-    else:
-        raise ValueError("Unrecognized tensor type {}".format(type(tensor)))
+    _, img_height, img_width = get_image_dims(tensor)
+    cut_x = img_width * x
+    cut_y = img_height * y
+    cut_w = img_width * tensor_sqrt(1 - lam)
+    cut_h = img_height * tensor_sqrt(1 - lam)
+    bbox_x1 = cast(tensor_round(clip_by_value(cut_x - cut_w / 2, min_value=0)), "int32")
+    bbox_x2 = cast(tensor_round(clip_by_value(cut_x + cut_w / 2, max_value=img_width)), "int32")
+    bbox_y1 = cast(tensor_round(clip_by_value(cut_y - cut_h / 2, min_value=0)), "int32")
+    bbox_y2 = cast(tensor_round(clip_by_value(cut_y + cut_h / 2, max_value=img_height)), "int32")
+    return bbox_x1, bbox_x2, bbox_y1, bbox_y2, img_width, img_height

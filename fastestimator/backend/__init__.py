@@ -23,6 +23,7 @@ from fastestimator.backend.expand_dims import expand_dims
 from fastestimator.backend.feed_forward import feed_forward
 from fastestimator.backend.gather_from_batch import gather_from_batch
 from fastestimator.backend.get_gradient import get_gradient
+from fastestimator.backend.get_image_dims import get_image_dims
 from fastestimator.backend.get_lr import get_lr
 from fastestimator.backend.load_model import load_model
 from fastestimator.backend.mean_squared_error import mean_squared_error
@@ -40,7 +41,9 @@ from fastestimator.backend.save_model import save_model
 from fastestimator.backend.set_lr import set_lr
 from fastestimator.backend.sign import sign
 from fastestimator.backend.sparse_categorical_crossentropy import sparse_categorical_crossentropy
+from fastestimator.backend.tensor_sqrt import tensor_sqrt
 from fastestimator.backend.squeeze import squeeze
+from fastestimator.backend.tensor_round import tensor_round
 from fastestimator.backend.to_shape import to_shape
 from fastestimator.backend.to_tensor import to_tensor
 from fastestimator.backend.to_type import to_type

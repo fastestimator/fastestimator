@@ -57,8 +57,8 @@ def roll(tensor: Tensor, shift: Union[int, List[int]], axis: Union[int, List[int
     Args:
         tensor: The input value.
         shift: The number of places by which the elements need to be shifted. If shift is a list, axis must be a list of
-            same size
-        axis: axis along which elements will be rolled
+            same size.
+        axis: axis along which elements will be rolled.
 
     Returns:
         The rolled `tensor`.
