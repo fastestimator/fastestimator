@@ -28,7 +28,7 @@ class CutMixBatch(TensorOp):
     """
     def __init__(self,
                  inputs: Union[str, List[str]],
-                 outputs: Union[str, List[str]],
+                 outputs: List[str],
                  mode: Union[None, str, Iterable[str]] = 'train',
                  alpha: Union[float, Tensor] = 1.0) -> None:
         assert alpha > 0, "Alpha value must be greater than zero"
