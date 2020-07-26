@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import os
-import queue
+from collections import deque
 from typing import Optional, Union
 
 import tensorflow as tf
@@ -44,9 +44,11 @@ class ModelSaver(Trace):
         self.model = model
         self.save_dir = save_dir
         self.frequency = frequency
-        self.max_to_keep = max_to_keep
-        if max_to_keep:
-            self.file_queue = queue.Queue()
+
+        if max_to_keep is not None:
+            if max_to_keep <= 0:
+                raise ValueError("max_to_keep should be positive integer")
+            self.file_queue = deque([None] * max_to_keep, maxlen=max_to_keep)
 
     def on_epoch_end(self, data: Data) -> None:
         # No model will be saved when save_dir is None, which makes smoke test easier.
@@ -55,10 +57,10 @@ class ModelSaver(Trace):
             model_path = save_model(self.model, self.save_dir, model_name)
             print("FastEstimator-ModelSaver: Saved model to {}".format(model_path))
 
-            if self.max_to_keep:
-                if self.file_queue.qsize() == self.max_to_keep:
-                    removed_path = self.file_queue.get()
-                    os.remove(os.path.join(self.save_dir, removed_path))
+            if hasattr(self, "file_queue"):
+                rm_path = self.file_queue[-1]
+                if rm_path:
+                    os.remove(rm_path)
                     print("FastEstimator-ModelSaver: Removed model {} due to file number exceeding max_to_keep".format(
-                        model_path))
-                self.file_queue.put(model_path)
+                            rm_path))
+                self.file_queue.appendleft(model_path)
