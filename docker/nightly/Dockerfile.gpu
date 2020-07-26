@@ -17,8 +17,15 @@ RUN apt-get install -y \
     texlive-latex-base \
     texlive-latex-extra
 
+# GPU cleaning requirement
+RUN apt-get install -y \
+    lsof
+
 RUN pip install --no-cache-dir \
-    jupyter \
+    ipython \
+    ipykernel \
+    ipywidgets \
     papermill
 
 RUN pip install git+https://github.com/fastestimator/fastestimator.git
+RUN ipython kernel install --user --name nightly_build
