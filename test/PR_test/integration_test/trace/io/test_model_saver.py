@@ -109,3 +109,15 @@ class TestModelSaver(unittest.TestCase):
         with self.subTest('Check two latest model are kept'):
             self.assertTrue(os.path.exists(torch_model_path1))
             self.assertTrue(os.path.exists(torch_model_path2))
+
+    def test_max_to_keep_invalid_value(self):
+        model = fe.build(model_fn=MultiLayerTorchModel, optimizer_fn='adam')
+        save_dir = "dummy"
+        
+        with self.subTest('Check max_to_keep < 0'):
+            with self.assertRaises(ValueError):
+                model_saver = ModelSaver(model=model, save_dir=save_dir, max_to_keep=-2)
+
+        with self.subTest('Check max_to_keep = 0'):
+            with self.assertRaises(ValueError):
+                model_saver = ModelSaver(model=model, save_dir=save_dir, max_to_keep=0)
