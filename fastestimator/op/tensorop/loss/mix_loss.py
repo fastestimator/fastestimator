@@ -39,8 +39,11 @@ class MixUpLoss(LossOp):
     """
     def __init__(self, loss: LossOp, lam: str, average_loss: bool = True):
         self.loss = loss
-        self.loss.average_loss = False
-        super().__init__(inputs=[lam] + loss.inputs, outputs=loss.outputs, mode=loss.mode, average_loss=average_loss)
+        self.loss.average_loss = average_loss
+        super().__init__(inputs=[lam] + loss.inputs,
+                         outputs=loss.outputs,
+                         mode=loss.mode,
+                         average_loss=self.loss.average_loss)
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]):
         lam, *data = data
