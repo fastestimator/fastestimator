@@ -25,6 +25,7 @@ from fastestimator.backend.gather_from_batch import gather_from_batch
 from fastestimator.backend.get_gradient import get_gradient
 from fastestimator.backend.get_lr import get_lr
 from fastestimator.backend.load_model import load_model
+from fastestimator.backend.maximum import maximum
 from fastestimator.backend.mean_squared_error import mean_squared_error
 from fastestimator.backend.percentile import percentile
 from fastestimator.backend.permute import permute
@@ -34,6 +35,7 @@ from fastestimator.backend.reduce_mean import reduce_mean
 from fastestimator.backend.reduce_min import reduce_min
 from fastestimator.backend.reduce_sum import reduce_sum
 from fastestimator.backend.reshape import reshape
+from fastestimator.backend.roll import roll
 from fastestimator.backend.save_model import save_model
 from fastestimator.backend.set_lr import set_lr
 from fastestimator.backend.sign import sign
@@ -45,4 +47,3 @@ from fastestimator.backend.to_type import to_type
 from fastestimator.backend.update_model import update_model
 from fastestimator.backend.watch import watch
 from fastestimator.backend.zeros_like import zeros_like
-from fastestimator.backend.roll import roll
