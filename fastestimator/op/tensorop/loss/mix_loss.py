@@ -20,6 +20,7 @@ import torch
 import fastestimator as fe
 from fastestimator.backend import roll
 from fastestimator.op.tensorop.loss import LossOp
+from fastestimator.util import to_list
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
@@ -39,7 +40,6 @@ class MixUpLoss(LossOp):
     def __init__(self, loss: LossOp, lam: str, average_loss: bool = True):
         self.loss = loss
         self.loss.average_loss = False
-        loss.outputs = loss.outputs[0]
         super().__init__(inputs=[lam] + loss.inputs, outputs=loss.outputs, mode=loss.mode, average_loss=average_loss)
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]):
@@ -53,6 +53,6 @@ class MixUpLoss(LossOp):
         loss = lam * loss1 + (1.0 - lam) * loss2
 
         if self.average_loss:
-            return fe.backend.reduce_mean(loss)
-        else:
-            return loss
+            loss = fe.backend.reduce_mean(loss)
+
+        return to_list(loss)

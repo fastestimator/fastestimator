@@ -44,6 +44,7 @@ class MixUpBatch(TensorOp):
                  sharedbeta: bool = False):
         assert alpha > 0, "Mixup alpha value must be greater than zero"
         assert len(outputs) > 1, "Outputs should have at least two arguments"
+
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.alpha = alpha
         self.beta = None
