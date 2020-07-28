@@ -25,7 +25,7 @@ from fastestimator.util import to_list
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
-class MixUpLoss(LossOp):
+class MixLoss(LossOp):
     """Loss class to compute mixiup and cutmix losses.
 
     This class should be used in conjunction with MixUpBatch and CutMixBatch to perform mix-up training, which helps to reduce

@@ -35,20 +35,20 @@ class MixUpBatch(TensorOp):
         outputs: Key to store the mixed-up input.
         mode: What mode to execute in. Probably 'train'.
         alpha: The alpha value defining the beta distribution to be drawn from during training.
-        sharedbeta: Sample a single beta for a batch Or single beta for each image.
+        shared_beta: Sample a single beta for a batch Or single beta for each image.
     """
     def __init__(self, inputs: Union[str, List[str]],
                  outputs: List[str],
                  mode: Union[None, str, Iterable[str]] = 'train',
                  alpha: float = 1.0,
-                 sharedbeta: bool = False):
-        assert alpha > 0, "Mixup alpha value must be greater than zero"
+                 shared_beta: bool = False):
+        assert alpha > 0, "MixUp alpha value must be greater than zero"
         assert len(outputs) > 1, "Outputs should have at least two arguments"
 
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.alpha = alpha
         self.beta = None
-        self.sharedbeta = sharedbeta
+        self.shared_beta = shared_beta
 
     def build(self, framework: str) -> None:
         if framework == 'tf':
@@ -72,7 +72,7 @@ class MixUpBatch(TensorOp):
         """
         iterdata = data if isinstance(data, list) else list(data) if isinstance(data, tuple) else [data]
 
-        if self.sharedbeta:
+        if self.shared_beta:
             lam = self.beta.sample()
         else:
             lam = self.beta.sample(sample_shape=data.shape[0])
