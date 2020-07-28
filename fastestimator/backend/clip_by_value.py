@@ -61,7 +61,7 @@ def clip_by_value(tensor: Tensor,
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    assert min_value is None or max_value is None, "Both min_value and max_value must not be NoneType"
+    assert min_value is not None or max_value is not None, "Both min_value and max_value must not be NoneType"
     if tf.is_tensor(tensor):
         if min_value is None:
             return tf.math.minimum(tensor, max_value)

@@ -26,7 +26,7 @@ from fastestimator.backend.tensor_sqrt import tensor_sqrt
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
-def random_mix_patch(tensor: Tensor, x: Tensor, y: Tensor, lam: Union[int, float, Tensor] = 1.0) -> Tensor:
+def random_mix_patch(tensor: Tensor, x: Tensor, y: Tensor, lam: Tensor) -> Tensor:
     """Randomly cut the patches from input images.
 
     If patches are going to be pasted in other image, combination ratio between two images is defined by `lam`. Cropping

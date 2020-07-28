@@ -133,6 +133,32 @@ class MultiLayerTorchModel(torch.nn.Module):
         return x
 
 
+class MockBetaDistribution:
+    def __init__(self, framework='tf'):
+        self.framework = framework
+
+    def sample(self):
+        if self.framework == 'tf':
+            return tf.constant(0.5)
+        elif self.framework == 'torch':
+            return torch.Tensor([0.5])
+        else:
+            raise ValueError("Unrecognized framework {}".format(framework))
+
+
+class MockUniformDistribution:
+    def __init__(self, framework='tf'):
+        self.framework = framework
+
+    def sample(self):
+        if self.framework == 'tf':
+            return tf.constant(0.25)
+        elif self.framework == 'torch':
+            return torch.Tensor([0.25])
+        else:
+            raise ValueError("Unrecognized framework {}".format(framework))
+
+
 def sample_system_object():
     x_train = np.random.rand(3, 28, 28, 3)
     y_train = np.random.randint(10, size=(3, ))
