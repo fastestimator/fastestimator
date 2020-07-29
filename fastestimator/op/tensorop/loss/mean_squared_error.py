@@ -35,6 +35,7 @@ class MeanSquaredError(LossOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        average_loss: Whether to average the element-wise loss after the Loss Op.
     """
     def __init__(self,
                  inputs: Union[None, str, Iterable[str]] = None,

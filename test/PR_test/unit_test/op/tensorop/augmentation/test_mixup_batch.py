@@ -19,7 +19,7 @@ class TestMixUpBatch(unittest.TestCase):
 
         mu = MixUpBatch(inputs="x", outputs=["x", "lambda"], alpha=1.0, mode="train", shared_beta=True)
         mu.beta = MyBeta()
-        output = mu.forward(data=[data], state={})
+        output = mu.forward(data=data, state={})
 
         self.assertTrue(is_equal(output[0], expected))
 
@@ -29,6 +29,6 @@ class TestMixUpBatch(unittest.TestCase):
 
         mu = MixUpBatch(inputs="x", outputs=["x", "lambda"], alpha=1.0, mode="train", shared_beta=True)
         mu.beta = MyBeta()
-        output = mu.forward(data=[data], state={})
+        output = mu.forward(data=data, state={})
 
         self.assertTrue(is_equal(output[0], expected))
