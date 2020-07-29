@@ -19,7 +19,7 @@ import tensorflow_probability as tfp
 import torch
 
 import fastestimator as fe
-from fastestimator.op.tensorop import TensorOp
+from fastestimator.op.tensorop.tensorop import TensorOp
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 

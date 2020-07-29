@@ -4,8 +4,13 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 import torch
 
-from fastestimator.backend import cast, clip_by_value, get_image_dims, roll, tensor_round, tensor_sqrt
-from fastestimator.op.tensorop import TensorOp
+from fastestimator.backend.cast import cast
+from fastestimator.backend.clip_by_value import clip_by_value
+from fastestimator.backend.get_image_dims import get_image_dims
+from fastestimator.backend.roll import roll
+from fastestimator.backend.tensor_round import tensor_round
+from fastestimator.backend.tensor_sqrt import tensor_sqrt
+from fastestimator.op.tensorop.tensorop import TensorOp
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 

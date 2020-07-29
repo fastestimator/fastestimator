@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, List, TypeVar, Union
+from typing import Any, Dict, List, TypeVar
 
 import tensorflow as tf
 import torch
 
 import fastestimator as fe
-from fastestimator.backend import roll
-from fastestimator.op.tensorop.loss import LossOp
+from fastestimator.backend.roll import roll
+from fastestimator.op.tensorop.loss.loss import LossOp
 from fastestimator.util import to_list
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
