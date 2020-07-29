@@ -28,9 +28,6 @@ class LossOp(TensorOp):
                  outputs: List[str] = None,
                  mode: Union[None, str, Iterable[str]] = None,
                  average_loss: bool = True):
-        assert len(inputs) > 1, "We need at least two inputs to calculate loss"
-        assert len(outputs) > 0, "We need at least one output to store the loss"
-
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.average_loss = average_loss
 
