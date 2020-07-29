@@ -21,25 +21,33 @@ import torch
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
 
-def clip_by_value(tensor: Tensor, min_value: Union[int, float, Tensor], max_value: Union[int, float, Tensor]) -> Tensor:
+def clip_by_value(tensor: Tensor,
+                  min_value: Union[int, float, Tensor, None] = None,
+                  max_value: Union[int, float, Tensor, None] = None) -> Tensor:
     """Clip a tensor such that `min_value` <= tensor <= `max_value`.
+
+    Given an interval, values outside the interval are clipped. If `min_value` or `max_value` is not provided then
+    clipping is not performed on lower or upper interval edge respectively.
 
     This method can be used with Numpy data:
     ```python
     n = np.array([-5, 4, 2, 0, 9, -2])
     b = fe.backend.clip_by_value(n, min_value=-2, max_value=3)  # [-2, 3, 2, 0, 3, -2]
+    b = fe.backend.clip_by_value(n, min_value=-2) # [-2, 4, 2, 0, 9, -2]
     ```
 
     This method can be used with TensorFlow tensors:
     ```python
     t = tf.constant([-5, 4, 2, 0, 9, -2])
     b = fe.backend.clip_by_value(t, min_value=-2, max_value=3)  # [-2, 3, 2, 0, 3, -2]
+    b = fe.backend.clip_by_value(t, min_value=-2) # [-2, 4, 2, 0, 9, -2]
     ```
 
     This method can be used with PyTorch tensors:
     ```python
     p = torch.tensor([-5, 4, 2, 0, 9, -2])
     b = fe.backend.clip_by_value(p, min_value=-2, max_value=3)  # [-2, 3, 2, 0, 3, -2]
+    b = fe.backend.clip_by_value(p, min_value=-2) # [-2, 4, 2, 0, 9, -2]
     ```
 
     Args:
@@ -53,8 +61,14 @@ def clip_by_value(tensor: Tensor, min_value: Union[int, float, Tensor], max_valu
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
+    assert min_value is not None or max_value is not None, "Both min_value and max_value must not be NoneType"
     if tf.is_tensor(tensor):
-        return tf.clip_by_value(tensor, clip_value_min=min_value, clip_value_max=max_value)
+        if min_value is None:
+            return tf.math.minimum(tensor, max_value)
+        elif max_value is None:
+            return tf.math.maximum(tensor, min_value)
+        else:
+            return tf.clip_by_value(tensor, clip_value_min=min_value, clip_value_max=max_value)
     elif isinstance(tensor, torch.Tensor):
         if isinstance(min_value, torch.Tensor):
             min_value = min_value.item()

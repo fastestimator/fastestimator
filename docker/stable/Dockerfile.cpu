@@ -1,0 +1,26 @@
+FROM tensorflow/tensorflow:2.1.0-py3
+
+RUN apt-get update
+
+# OpenCV dependencies
+RUN apt-get install -y --no-install-recommends \
+    libglib2.0-0 \
+    libsm6 \
+    libxrender1 \
+    libxext6 \
+    git
+
+# Traceability requirement
+ENV DEBIAN_FRONTEND noninteractive
+RUN apt-get install -y \
+    graphviz \
+    texlive-latex-base \
+    texlive-latex-extra
+
+RUN pip install --no-cache-dir \
+    ipython \
+    ipykernel \
+    ipywidgets \
+    papermill
+
+RUN pip install fastestimator

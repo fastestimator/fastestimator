@@ -13,3 +13,4 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.layers.pytorch.cropping_2d import Cropping2D
+from fastestimator.layers.pytorch.hadamard import HadamardCode

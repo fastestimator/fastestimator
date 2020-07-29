@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union
+import os
+from collections import deque
+from typing import Optional, Union
 
 import tensorflow as tf
 import torch
@@ -31,12 +33,22 @@ class ModelSaver(Trace):
         model: A model instance compiled with fe.build.
         save_dir: Folder path into which to save the `model`.
         frequency: Model saving frequency in epoch(s).
+        max_to_keep: Maximum number of latest saved files to keep. If None, all models will be saved.
     """
-    def __init__(self, model: Union[tf.keras.Model, torch.nn.Module], save_dir: str, frequency: int = 1) -> None:
+    def __init__(self,
+                 model: Union[tf.keras.Model, torch.nn.Module],
+                 save_dir: str,
+                 frequency: int = 1,
+                 max_to_keep: Optional[int] = None) -> None:
         super().__init__(mode="train")
         self.model = model
         self.save_dir = save_dir
         self.frequency = frequency
+
+        if max_to_keep is not None:
+            if max_to_keep <= 0:
+                raise ValueError("max_to_keep should be positive integer")
+            self.file_queue = deque([None] * max_to_keep, maxlen=max_to_keep)
 
     def on_epoch_end(self, data: Data) -> None:
         # No model will be saved when save_dir is None, which makes smoke test easier.
@@ -44,3 +56,11 @@ class ModelSaver(Trace):
             model_name = "{}_epoch_{}".format(self.model.model_name, self.system.epoch_idx)
             model_path = save_model(self.model, self.save_dir, model_name)
             print("FastEstimator-ModelSaver: Saved model to {}".format(model_path))
+
+            if hasattr(self, "file_queue"):
+                rm_path = self.file_queue[-1]
+                if rm_path:
+                    os.remove(rm_path)
+                    print("FastEstimator-ModelSaver: Removed model {} due to file number exceeding max_to_keep".format(
+                            rm_path))
+                self.file_queue.appendleft(model_path)

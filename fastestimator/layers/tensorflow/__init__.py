@@ -12,5 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from fastestimator.layers.tensorflow.hadamard import HadamardCode
 from fastestimator.layers.tensorflow.instance_norm import InstanceNormalization
 from fastestimator.layers.tensorflow.reflection_padding_2d import ReflectionPadding2D

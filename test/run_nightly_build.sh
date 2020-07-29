@@ -20,8 +20,8 @@ for file in $(find $dir_path/apphub_scripts -type f); do
 
         # clean GPU memory
         if ls /dev/nvidia* 1> /dev/null 2>&1; then
-            for i in $(sudo lsof /dev/nvidia* | awk 'FNR>1 {print $2}' | sort -u); do
-                sudo kill -9 $i;
+            for i in $(lsof /dev/nvidia* | awk 'FNR>1 {print $2}' | sort -u); do
+                kill -9 $i;
             done
         fi
 
@@ -45,14 +45,14 @@ for nb_in in $(find $dir_path/tutorial -type f); do
         current_dir=$(dirname $nb_in)
         stderr_file=${nb_in/'.ipynb'/'_stderr.txt'}
         start=`date +%s`
-        papermill $nb_in $nb_out 2>> $stderr_file -k nightly_build --cwd $current_dir
+        papermill $nb_in $nb_out -k nightly_build 2>> $stderr_file --cwd $current_dir
         result[$nb_in]=$?
         end=`date +%s`
 
         # clean GPU memory
         if ls /dev/nvidia* 1> /dev/null 2>&1; then
-            for i in $(sudo lsof /dev/nvidia* | awk 'FNR>1 {print $2}' | sort -u); do
-                sudo kill -9 $i;
+            for i in $(lsof /dev/nvidia* | awk 'FNR>1 {print $2}' | sort -u); do
+                kill -9 $i;
             done
         fi
 
