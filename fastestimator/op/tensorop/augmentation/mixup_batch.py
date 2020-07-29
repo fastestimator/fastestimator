@@ -77,8 +77,7 @@ class MixUpBatch(TensorOp):
             shape[0] = -1
             shape[1:] = [1] * (len(shape) - 1)
             lam = fe.backend.reshape(lam, shape)
-        # import pdb
-        # pdb.set_trace()
+
         mix = lam * data + (1.0 - lam) * fe.backend.roll(data, shift=1, axis=0)
 
         return mix, lam
