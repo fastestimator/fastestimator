@@ -54,8 +54,8 @@ def get_image_dims(tensor: Tensor) -> Tensor:
     assert len(tensor.shape) == 3 or len(tensor.shape) == 4, "Number of dimensions of input must be either 3 or 4"
     shape_length = len(tensor.shape)
     if tf.is_tensor(tensor) or isinstance(tensor, np.ndarray):
-        return tensor.shape[shape_length - 1], tensor.shape[shape_length - 3], tensor.shape[shape_length - 2]
+        return tensor.shape[-1], tensor.shape[-3], tensor.shape[-2]
     elif isinstance(tensor, torch.Tensor):
-        return tensor.shape[shape_length - 3], tensor.shape[shape_length - 2], tensor.shape[shape_length - 1]
+        return tensor.shape[-3], tensor.shape[-2], tensor.shape[-1]
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(tensor)))
