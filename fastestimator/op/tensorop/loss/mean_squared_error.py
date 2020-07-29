@@ -19,7 +19,7 @@ import torch
 
 from fastestimator.backend.mean_squared_error import mean_squared_error
 from fastestimator.backend.reduce_mean import reduce_mean
-from fastestimator.op.tensorop.loss import LossOp
+from fastestimator.op.tensorop.loss.loss import LossOp
 from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)

@@ -32,10 +32,10 @@ class MixUpBatch(TensorOp):
 
     Args:
         inputs: Key of the input to be mixed up.
-        outputs: Key to store the mixed-up input.
+        outputs: Key to store the mixed-up outputs.
         mode: What mode to execute in. Probably 'train'.
         alpha: The alpha value defining the beta distribution to be drawn from during training.
-        shared_beta: Sample a single beta for a batch Or single beta for each image.
+        shared_beta: Sample a single beta for a batch or element wise beta for each image.
     """
     def __init__(self, inputs: Union[str, List[str]],
                  outputs: List[str],
@@ -52,10 +52,8 @@ class MixUpBatch(TensorOp):
 
     def build(self, framework: str) -> None:
         if framework == 'tf':
-            self.alpha = tf.constant(self.alpha)
             self.beta = tfp.distributions.Beta(self.alpha, self.alpha)
         elif framework == 'torch':
-            self.alpha = torch.tensor(self.alpha)
             self.beta = torch.distributions.beta.Beta(self.alpha, self.alpha)
         else:
             raise ValueError("unrecognized framework: {}".format(framework))
@@ -70,15 +68,16 @@ class MixUpBatch(TensorOp):
         Returns:
             Mixed-up batch data
         """
-        iterdata = data if isinstance(data, list) else list(data) if isinstance(data, tuple) else [data]
-
         if self.shared_beta:
             lam = self.beta.sample()
         else:
             lam = self.beta.sample(sample_shape=data.shape[0])
             lam = fe.backend.maximum(lam, (1 - lam))
-            lam = fe.backend.reshape(lam, (-1, 1, 1, 1))
+            shape = list(data.shape)
+            shape[0] = -1
+            shape[1:] = [1] * (len(shape) - 1)
+            lam = fe.backend.reshape(lam, shape)
 
-        mix = [lam * dat + (1.0 - lam) * fe.backend.roll(dat, shift=1, axis=0) for dat in iterdata]
+        mix = lam * data + (1.0 - lam) * fe.backend.roll(data, shift=1, axis=0)
 
-        return mix + [lam]
+        return mix, lam
