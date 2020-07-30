@@ -13,4 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.op.tensorop.loss.cross_entropy import CrossEntropy
+from fastestimator.op.tensorop.loss.loss import LossOp
 from fastestimator.op.tensorop.loss.mean_squared_error import MeanSquaredError
+from fastestimator.op.tensorop.loss.mix_loss import MixLoss
+

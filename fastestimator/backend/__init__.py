@@ -26,6 +26,7 @@ from fastestimator.backend.get_gradient import get_gradient
 from fastestimator.backend.get_image_dims import get_image_dims
 from fastestimator.backend.get_lr import get_lr
 from fastestimator.backend.load_model import load_model
+from fastestimator.backend.maximum import maximum
 from fastestimator.backend.mean_squared_error import mean_squared_error
 from fastestimator.backend.percentile import percentile
 from fastestimator.backend.permute import permute

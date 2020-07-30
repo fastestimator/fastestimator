@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.tensorop import gradient, loss, model
+from fastestimator.op.tensorop import augmentation, gradient, loss, model
 from fastestimator.op.tensorop.argmax import Argmax
 from fastestimator.op.tensorop.average import Average
 from fastestimator.op.tensorop.gather import Gather

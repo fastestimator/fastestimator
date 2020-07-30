@@ -14,20 +14,14 @@
 # ==============================================================================
 from typing import Any, Dict, Iterable, List, TypeVar, Union
 
-import tensorflow as tf
-import torch
-
-from fastestimator.backend.mean_squared_error import mean_squared_error
-from fastestimator.backend.reduce_mean import reduce_mean
-from fastestimator.op.tensorop.loss.loss import LossOp
-from fastestimator.util.traceability_util import traceable
-
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+from fastestimator.op.tensorop.tensorop import TensorOp
 
 
-@traceable()
-class MeanSquaredError(LossOp):
-    """Calculate the mean squared error loss between two tensors.
+class LossOp(TensorOp):
+    """Abstract base LossOp class.
+
+    A base class for loss operations. It can be used directly to perform value pass-through (see the adversarial
+    training showcase for an example of when this is useful).
 
     Args:
         inputs: A tuple or list like: [<y_pred>, <y_true>].
@@ -38,16 +32,25 @@ class MeanSquaredError(LossOp):
         average_loss: Whether to average the element-wise loss after the Loss Op.
     """
     def __init__(self,
-                 inputs: Union[None, str, Iterable[str]] = None,
-                 outputs: Union[None, str, Iterable[str]] = None,
+                 inputs: Union[str, List[str]] = None,
+                 outputs: List[str] = None,
                  mode: Union[None, str, Iterable[str]] = None,
                  average_loss: bool = True):
-        self.average_loss = average_loss
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.average_loss = average_loss
 
-    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
-        y_pred, y_true = data
-        loss = mean_squared_error(y_true=y_true, y_pred=y_pred)
-        if self.average_loss:
-            loss = reduce_mean(loss)
-        return loss
+    @property
+    def true_key(self) -> str:
+        return self.inputs[self.true_key_idx]
+
+    @property
+    def pred_key(self) -> str:
+        return self.inputs[self.pred_key_idx]
+
+    @property
+    def true_key_idx(self) -> int:
+        return 1
+
+    @property
+    def pred_key_idx(self) -> int:
+        return 0
