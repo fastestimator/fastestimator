@@ -3,7 +3,7 @@ import unittest
 import tensorflow as tf
 import torch
 
-from fastestimator.op.tensorop.augmentation import MixUpBatch
+from fastestimator.op.tensorop.augmentation.mixup_batch import MixUpBatch
 from fastestimator.test.unittest_util import is_equal
 
 
