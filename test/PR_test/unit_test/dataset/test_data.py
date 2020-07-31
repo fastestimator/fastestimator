@@ -4,6 +4,7 @@ import unittest
 import urllib.request
 import warnings
 
+
 def ping(host):
     try:
         agent = 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.76 Safari/537.36'
@@ -31,14 +32,4 @@ class TestData(unittest.TestCase):
                         self.assertTrue(ping(url))
             else:
                 with self.subTest('Check if {} url reachable'.format(key)):
-                    # ============ temporary skip cub200 ====================
-                    if key == 'cub200_annotations' or key == 'cub200_images':
-                        if not ping(value):
-                            warnings.warn("{} url is not reachable, but we give it a pass".format(key))
-                        else:
-                            warnings.warn("{} url is now reachable, please remove the temporary skip in the unit \
-                                           test".format(key))
-                        self.assertTrue(True)
-                        continue
-                    # =======================================================
                     self.assertTrue(ping(value))
