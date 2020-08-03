@@ -51,6 +51,12 @@ def get_tf_model_weight(model):
 
     return weight
 
+def get_torch_one_layer_model_weight(model):
+    weight = []
+    weight.append(deepcopy(model.fc1.weight.data.numpy()))
+
+    return weight
+
 
 class TestNetworkCollectModel(unittest.TestCase):
     """This test has dependency on:
@@ -391,6 +397,28 @@ class TestNetworkTransform(unittest.TestCase):
 
         with self.subTest("check whether model weight changed"):
             weight2 = get_tf_model_weight(model)
+            self.assertFalse(is_equal(weight, weight2))
+
+    def test_network_transform_one_layer_model_torch(self):
+        model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn="adam")
+        weight = get_torch_one_layer_model_weight(model)
+        network = fe.Network(ops=[
+            ModelOp(model=model, inputs="x", outputs="y_pred"),
+            MeanSquaredError(inputs=("y_pred", "y"), outputs="ce"),
+            UpdateOp(model=model, loss_name="ce")
+        ])
+        batch = {"x": np.array([[1, 1, 1,]], dtype=np.float32), "y": np.array([[1]], dtype=np.float32)}
+        batch = network.transform(data=batch, mode="train")
+
+        with self.subTest("output y_pred check"):
+            ans = np.array([[6]], dtype=np.float32)  # 1*1 + 1*2 + 1*3
+            self.assertTrue(np.array_equal(batch["y_pred"].numpy(), ans))
+
+        with self.subTest("output ce check"):
+            self.assertEqual(batch["ce"].numpy(), 25)  # (6-1)^2
+
+        with self.subTest("check whether model weight changed"):
+            weight2 = get_torch_one_layer_model_weight(model)
             self.assertFalse(is_equal(weight, weight2))
 
     def test_network_transform_lenet_tf(self):

@@ -77,8 +77,23 @@ def get_gradient(target: Tensor,
                                         retain_graph=retain_graph,
                                         create_graph=higher_order,
                                         only_inputs=True)
-        if isinstance(gradients, Tuple) and len(gradients) == 1:
-            # PyTorch seems to unnecessarily wrap results into a tuple when a non-scalar target is provided
+
+        if isinstance(gradients, Tuple) and len(gradients) == 1 and isinstance(sources, torch.Tensor):
+            #  The behavior table of tf and torch backend
+            #  ---------------------------------------------------------------
+            #        | case 1                     | case 2                    |
+            #  ---------------------------------------------------------------|
+            #  tf    | taget: tf.Tensor           | taget: tf.Tensor          |
+            #        | sources: tf.Tensor         | sources: [tf.Tensor]      |
+            #        | gradients: tf.Tensor       | gradients: [tf.Tensor]    |
+            # ----------------------------------------------------------------|
+            #  torch | taget: torch.Tensor        | taget: tf.Tensor          |
+            #        | sources: torch.Tensor      | sources: [tf.Tensor]      |
+            #        | gradients: (torch.Tensor,) | gradients: (torch.Tensor,)|
+            # ----------------------------------------------------------------
+            # In order to make the torch behavior become the same as tf in case 1, need to unwrap the gradients when
+            # source is not Iterable.
+
             gradients = gradients[0]
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(target)))
