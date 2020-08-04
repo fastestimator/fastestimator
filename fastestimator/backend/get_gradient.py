@@ -78,16 +78,16 @@ def get_gradient(target: Tensor,
                                         create_graph=higher_order,
                                         only_inputs=True)
 
-        if isinstance(gradients, Tuple) and len(gradients) == 1 and isinstance(sources, torch.Tensor):
+        if isinstance(sources, torch.Tensor):
             #  The behavior table of tf and torch backend
             #  ---------------------------------------------------------------
             #        | case 1                     | case 2                    |
             #  ---------------------------------------------------------------|
-            #  tf    | taget: tf.Tensor           | taget: tf.Tensor          |
+            #  tf    | target: tf.Tensor          | target: tf.Tensor         |
             #        | sources: tf.Tensor         | sources: [tf.Tensor]      |
             #        | gradients: tf.Tensor       | gradients: [tf.Tensor]    |
             # ----------------------------------------------------------------|
-            #  torch | taget: torch.Tensor        | taget: tf.Tensor          |
+            #  torch | target: torch.Tensor       | target: tf.Tensor         |
             #        | sources: torch.Tensor      | sources: [tf.Tensor]      |
             #        | gradients: (torch.Tensor,) | gradients: (torch.Tensor,)|
             # ----------------------------------------------------------------
