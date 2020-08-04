@@ -25,7 +25,7 @@ from fastestimator.util.traceability_util import traceable
 class TerminateOnNaN(Trace):
     """End Training if a NaN value is detected.
 
-    By default (inputs=None) it will monitor all loss values at the end of each batch. If one or more inputs are
+    By default (monitor_names=None) it will monitor all loss values at the end of each batch. If one or more inputs are
     specified, it will only monitor those values. Inputs may be loss keys and/or the keys corresponding to the outputs
     of other traces (ex. accuracy).
 
