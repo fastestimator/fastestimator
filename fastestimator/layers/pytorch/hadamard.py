@@ -14,6 +14,7 @@
 # ==============================================================================
 from typing import List, Optional, Union
 
+import numpy as np
 import torch
 import torch.nn as nn
 from scipy.linalg import hadamard
@@ -79,9 +80,10 @@ class HadamardCode(nn.Module):
         if code_length < n_classes:
             raise ValueError(f"code_length must be >= n_classes, but got {code_length} and {n_classes}")
         self.code_length = code_length
-        self.labels = nn.Parameter(
-            torch.tensor(hadamard(self.code_length)[:self.n_classes], dtype=torch.float32).T, requires_grad=False)
-        single_input = isinstance(in_features, int)
+        labels = hadamard(self.code_length)
+        labels[np.arange(0, self.code_length, 2), 0] = -1  # Make first column alternate
+        labels = labels[:self.n_classes]
+        self.labels = nn.Parameter(torch.tensor(labels, dtype=torch.float32).T, requires_grad=False)
         in_features = to_list(in_features)
         if len(in_features) > code_length:
             raise ValueError(f"Too many input heads {len(in_features)} for the given code length {self.code_length}.")
