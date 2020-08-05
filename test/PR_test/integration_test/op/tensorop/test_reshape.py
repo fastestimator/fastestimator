@@ -1,6 +1,5 @@
 import unittest
 
-import numpy as np
 import tensorflow as tf
 import torch
 
@@ -18,10 +17,10 @@ class TestReshape(unittest.TestCase):
 
     def test_tf_input(self):
         reshape = Reshape(inputs='x', outputs='x', shape=(1, 6))
-        output = reshape.forward(data=self.tf_data, state={})
-        self.assertTrue(is_equal(output, self.tf_output))
+        output = reshape.forward(data=[self.tf_data], state={})
+        self.assertTrue(is_equal(output[0], self.tf_output))
 
     def test_torch_input(self):
         reshape = Reshape(inputs='x', outputs='x', shape=(1, 6))
-        output = reshape.forward(data=self.torch_data, state={})
-        self.assertTrue(is_equal(output, self.torch_output))
+        output = reshape.forward(data=[self.torch_data], state={})
+        self.assertTrue(is_equal(output[0], self.torch_output))
