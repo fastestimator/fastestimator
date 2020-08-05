@@ -85,5 +85,5 @@ class EarlyStopping(Trace):
             self.wait += 1
             if self.wait >= self.patience:
                 self.system.stop_training = True
-                print("FastEstimator-EarlyStopping: '{}' triggered an early stop. Its best value was {} at epoch {}\
-                      ".format(self.monitored_key, self.best, self.system.epoch_idx - self.wait))
+                print("FastEstimator-EarlyStopping: '{}' triggered an early stop. Its best value was {} at epoch {}".
+                      format(self.monitored_key, self.best, self.system.epoch_idx - self.wait))

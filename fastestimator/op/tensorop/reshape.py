@@ -17,6 +17,7 @@ from typing import Any, Dict, Iterable, List, Tuple, TypeVar, Union
 import tensorflow as tf
 import torch
 
+from fastestimator.backend.reshape import reshape
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 
@@ -40,15 +41,9 @@ class Reshape(TensorOp):
                  outputs: Union[str, List[str]],
                  shape: Union[int, Tuple[int, ...]],
                  mode: Union[None, str, Iterable[str]] = "!infer") -> None:
-
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        self.shape = shape
-        self.in_list, self.out_list = False, False
+        self.shape = list(shape)
+        self.in_list, self.out_list = True, True
 
-    def forward(self, data: Tensor, state: Dict[str, Any]) -> Tensor:
-        if tf.is_tensor(data):
-            return tf.reshape(data, self.shape)
-        elif isinstance(data, torch.Tensor):
-            return data.view(self.shape)
-        else:
-            raise ValueError("unrecognized data format: {}".format(type(data)))
+    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
+        return [reshape(elem, self.shape) for elem in data]
