@@ -44,6 +44,8 @@ class ModelSaver(Trace):
         self.model = model
         self.save_dir = save_dir
         self.frequency = frequency
+        if max_to_keep is not None and max_to_keep < 0:
+            raise ValueError(f"max_to_keep should be a non-negative integer, but got {max_to_keep}")
         self.file_queue = deque([None] * (max_to_keep or 0), maxlen=max_to_keep or 0)
 
     def on_epoch_end(self, data: Data) -> None:

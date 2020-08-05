@@ -113,11 +113,7 @@ class TestModelSaver(unittest.TestCase):
     def test_max_to_keep_invalid_value(self):
         model = fe.build(model_fn=MultiLayerTorchModel, optimizer_fn='adam')
         save_dir = "dummy"
-        
+
         with self.subTest('Check max_to_keep < 0'):
             with self.assertRaises(ValueError):
                 model_saver = ModelSaver(model=model, save_dir=save_dir, max_to_keep=-2)
-
-        with self.subTest('Check max_to_keep = 0'):
-            with self.assertRaises(ValueError):
-                model_saver = ModelSaver(model=model, save_dir=save_dir, max_to_keep=0)
