@@ -5,7 +5,7 @@ import tensorflow as tf
 import torch
 
 from fastestimator.op.tensorop.loss import CrossEntropy
-from fastestimator.test.unittest_util import is_equal
+
 
 class TestCrossEntropy(unittest.TestCase):
     @classmethod
@@ -42,7 +42,3 @@ class TestCrossEntropy(unittest.TestCase):
         ce = CrossEntropy(inputs='x', outputs='x')
         output = ce.forward(data=[self.torch_pred_binary, self.torch_true_binary], state={})
         self.assertTrue(np.allclose(output.detach().numpy(), 0.1976349))
-
-
-if __name__ == "__main__":
-    unittest.main()

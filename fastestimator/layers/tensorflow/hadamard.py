@@ -14,6 +14,7 @@
 # ==============================================================================
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import numpy as np
 import tensorflow as tf
 from scipy.linalg import hadamard
 from tensorflow.python.keras import layers
@@ -92,7 +93,10 @@ class HadamardCode(layers.Layer):
             if shape[0] != batch_size:
                 raise ValueError("Inputs to ErrorCorrectingCode layer must have the same batch size")
             self.heads.append(layers.Dense(units=head_sizes[idx]))
-        self.labels = tf.transpose(tf.convert_to_tensor(hadamard(self.code_length)[:self.n_classes], dtype=tf.float32))
+        labels = hadamard(self.code_length)
+        labels[np.arange(0, self.code_length, 2), 0] = -1  # Make first column alternate
+        labels = labels[:self.n_classes]
+        self.labels = tf.transpose(tf.convert_to_tensor(labels, dtype=tf.float32))
         # Spare extra operations when they're not needed
         if single_input:
             self.heads = self.heads[0]

@@ -15,6 +15,8 @@
 from fastestimator.op.tensorop import augmentation, gradient, loss, model
 from fastestimator.op.tensorop.argmax import Argmax
 from fastestimator.op.tensorop.average import Average
+from fastestimator.op.tensorop.from_hadamard import FromHadamard
 from fastestimator.op.tensorop.gather import Gather
 from fastestimator.op.tensorop.reshape import Reshape
 from fastestimator.op.tensorop.tensorop import TensorOp
+from fastestimator.op.tensorop.to_hadamard import ToHadamard
