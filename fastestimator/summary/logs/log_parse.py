@@ -44,7 +44,7 @@ def parse_log_file(file_path: str, file_extension: str) -> Summary:
                 mode = "test"
             if mode is None:
                 continue
-            parsed_line = re.findall(r"([^:^;\s]+):[\s]*([-]?[0-9]+[.]?[0-9]*);", line)
+            parsed_line = re.findall(r"([^:^;\s]+):[\s]*([-]?[0-9]+[.]?[0-9]*(e[-]?[0-9]+[.]?[0-9]*)?);", line)
             step = parsed_line[0]
             assert step[0] == "step", \
                 "Log file (%s) seems to be missing step information, or step is not listed first" % file
