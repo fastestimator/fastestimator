@@ -16,7 +16,7 @@ class TestMixUpBatch(unittest.TestCase):
         ml = MixLoss(CrossEntropy(inputs=("y_pred", "y"), mode="train", outputs="loss"), lam="lambda")
         output = ml.forward(data=[0.1, pred_binary, true_binary], state={})
 
-        self.assertTrue(np.allclose(output[0].numpy(), -20.444319))
+        self.assertTrue(np.allclose(output.numpy(), -20.444319))
 
     def test_mixup_batch_torch(self):
         true_binary = torch.tensor([[1], [0], [1], [0]])
@@ -25,4 +25,4 @@ class TestMixUpBatch(unittest.TestCase):
         ml = MixLoss(CrossEntropy(inputs=("y_pred", "y"), mode="train", outputs="loss"), lam="lambda")
         output = ml.forward(data=[0.1, pred_binary, true_binary], state={})
 
-        self.assertTrue(np.allclose(output[0].detach().numpy(), 1.6889441))
+        self.assertTrue(np.allclose(output.detach().numpy(), 1.6889441))
