@@ -1,4 +1,18 @@
-from typing import Any, Dict, Iterable, List, Tuple, TypeVar, Union
+# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+from typing import Any, Dict, Iterable, Tuple, TypeVar, Union
 
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -7,6 +21,7 @@ import torch
 from fastestimator.backend.cast import cast
 from fastestimator.backend.clip_by_value import clip_by_value
 from fastestimator.backend.get_image_dims import get_image_dims
+from fastestimator.backend.maximum import maximum
 from fastestimator.backend.roll import roll
 from fastestimator.backend.tensor_round import tensor_round
 from fastestimator.backend.tensor_sqrt import tensor_sqrt
@@ -18,28 +33,31 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 class CutMixBatch(TensorOp):
     """This class performs cutmix augmentation on a batch of tensors.
 
-    In this augmentation technique patches are cut and pasted among traning images where the ground truth labels are
-    also mixed proportionally to the area of the patches. This class should be used in conjunction with MixUpLoss to
+    In this augmentation technique patches are cut and pasted among training images where the ground truth labels are
+    also mixed proportionally to the area of the patches. This class should be used in conjunction with MixLoss to
     perform CutMix training, which helps to reduce over-fitting, perform object detection, and against adversarial
     attacks (https://arxiv.org/pdf/1905.04899.pdf).
 
     Args:
-        inputs: Key(s) of the input to be cut-mixed.
-        outputs: Key(s) under which to store the cut-mixed images and lambda value.
+        inputs: Key of the image batch to be cut-mixed.
+        outputs: Keys under which to store the cut-mixed images and lambda value.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
         alpha: The alpha value defining the beta distribution to be drawn from during training which controls the
             combination ratio between image pairs.
+
+    Raises:
+        AssertionError: If the provided inputs are invalid.
     """
     def __init__(self,
-                 inputs: Union[str, List[str]],
-                 outputs: List[str],
+                 inputs: str,
+                 outputs: Iterable[str],
                  mode: Union[None, str, Iterable[str]] = 'train',
                  alpha: Union[float, Tensor] = 1.0) -> None:
         assert alpha > 0, "Alpha value must be greater than zero"
-        assert len(outputs) >= 2, "Outputs should have at least two string keys for the images and lambda"
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        assert len(self.outputs) == len(self.inputs) + 1, "CutMixBatch should generate 1 more output than it has inputs"
         self.alpha = alpha
         self.beta = None
         self.uniform = None
@@ -54,7 +72,9 @@ class CutMixBatch(TensorOp):
         else:
             raise ValueError("unrecognized framework: {}".format(framework))
 
-    def _get_patch_coordinates(self, tensor: Tensor, x: Tensor, y: Tensor, lam: Tensor) -> Tensor:
+    @staticmethod
+    def _get_patch_coordinates(tensor: Tensor, x: Tensor, y: Tensor,
+                               lam: Tensor) -> Tuple[Tensor, Tensor, Tensor, Tensor, Tensor, Tensor]:
         """Randomly cut the patches from input images.
 
         If patches are going to be pasted in other image, combination ratio between two images is defined by `lam`.
@@ -72,9 +92,6 @@ class CutMixBatch(TensorOp):
 
         Returns:
             The X and Y coordinates of the cropped patch along with width and height.
-
-        Raises:
-            ValueError: If `tensor` is an unacceptable data type.
         """
         _, img_height, img_width = get_image_dims(tensor)
 
@@ -90,6 +107,7 @@ class CutMixBatch(TensorOp):
 
     def forward(self, data: Tensor, state: Dict[str, Any]) -> Tuple[Tensor, Tensor]:
         lam = self.beta.sample()
+        lam = maximum(lam, (1 - lam))
         cut_x = self.uniform.sample()
         cut_y = self.uniform.sample()
         bbox_x1, bbox_x2, bbox_y1, bbox_y2, width, height = self._get_patch_coordinates(data, cut_x, cut_y, lam=lam)
