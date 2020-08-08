@@ -18,7 +18,9 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 import torch
 
-import fastestimator as fe
+from fastestimator.backend.maximum import maximum
+from fastestimator.backend.reshape import reshape
+from fastestimator.backend.roll import roll
 from fastestimator.op.tensorop.tensorop import TensorOp
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
@@ -45,7 +47,7 @@ class MixUpBatch(TensorOp):
                  outputs: Iterable[str],
                  mode: Union[None, str, Iterable[str]] = 'train',
                  alpha: float = 1.0,
-                 shared_beta: bool = False):
+                 shared_beta: bool = True):
         assert alpha > 0, "MixUp alpha value must be greater than zero"
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         assert len(self.outputs) == len(self.inputs) + 1, "MixUpBatch requires 1 more output than inputs"
@@ -68,7 +70,7 @@ class MixUpBatch(TensorOp):
         else:
             lam = self.beta.sample(sample_shape=(data[0].shape[0], ))
             shape = [-1] + [1] * (len(data[0].shape) - 1)
-            lam = fe.backend.reshape(lam, shape)
-        lam = fe.backend.maximum(lam, (1 - lam))
-        mix = [lam * elem + (1.0 - lam) * fe.backend.roll(elem, shift=1, axis=0) for elem in data]
+            lam = reshape(lam, shape)
+        lam = maximum(lam, (1 - lam))
+        mix = [lam * elem + (1.0 - lam) * roll(elem, shift=1, axis=0) for elem in data]
         return mix + [lam]

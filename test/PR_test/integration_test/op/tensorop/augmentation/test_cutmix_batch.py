@@ -1,14 +1,12 @@
 import os
 import unittest
 
-import cv2
-import numpy as np
 import tensorflow as tf
 import torch
 
 from fastestimator.op.tensorop.augmentation import CutMixBatch
 from fastestimator.test.unittest_util import MockBetaDistribution, MockUniformDistribution, check_img_similar, \
-    img_to_rgb_array, is_equal
+    img_to_rgb_array
 
 
 class TestCutMixBatch(unittest.TestCase):
@@ -20,10 +18,10 @@ class TestCutMixBatch(unittest.TestCase):
         cls.tf_lam = tf.constant([0.5])
         cls.tf_output_bbox = (tf.constant([0]), tf.constant([19]), tf.constant([0]), tf.constant([19]), 32, 32)
         cls.test_torch_bbox = torch.rand((4, 3, 32, 32))
-        cls.torch_x = torch.Tensor([0.25])
-        cls.torch_y = torch.Tensor([0.25])
-        cls.torch_lam = torch.Tensor([0.5])
-        cls.torch_output_bbox = (torch.Tensor([0]), torch.Tensor([19]), torch.Tensor([0]), torch.Tensor([19]), 32, 32)
+        cls.torch_x = torch.tensor([0.25])
+        cls.torch_y = torch.tensor([0.25])
+        cls.torch_lam = torch.tensor([0.5])
+        cls.torch_output_bbox = (torch.tensor([0]), torch.tensor([19]), torch.tensor([0]), torch.tensor([19]), 32, 32)
         cls.tf_input = tf.stack([tf.ones((32, 32, 3)), tf.zeros((32, 32, 3))])
         cls.torch_input = torch.cat([torch.ones((1, 3, 32, 32)), torch.zeros((1, 3, 32, 32))], dim=0)
         cls.cutmix_output1 = os.path.abspath(
