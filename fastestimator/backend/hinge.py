@@ -16,13 +16,14 @@ from typing import TypeVar
 
 import tensorflow as tf
 import torch
-import numpy as np
+
 from fastestimator.backend.cast import cast
 from fastestimator.backend.maximum import maximum
 from fastestimator.backend.reduce_mean import reduce_mean
-from fastestimator.backend.to_tensor import to_tensor
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+_TF_ZERO = tf.constant(0.0, dtype='float32')
+_TORCH_ZERO = torch.tensor(0.0, dtype=torch.float32)
 
 
 def hinge(y_true: Tensor, y_pred: Tensor) -> Tensor:
@@ -56,5 +57,5 @@ def hinge(y_true: Tensor, y_pred: Tensor) -> Tensor:
     assert y_pred.shape == y_true.shape, \
         f"Hinge loss requires y_true and y_pred to have the same shape, but found {y_true.shape} and {y_pred.shape}"
     y_true = cast(y_true, 'float32')
-    baseline = to_tensor(np.array(0.0).astype('float32'), target_type='tf' if tf.is_tensor(y_true) else 'torch')
+    baseline = _TF_ZERO if tf.is_tensor(y_true) else _TORCH_ZERO.to(y_true.device)
     return reduce_mean(maximum(1.0 - y_true * y_pred, baseline), axis=-1)
