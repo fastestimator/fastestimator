@@ -69,6 +69,9 @@ class FromHadamard(TensorOp):
         labels = labels[:self.n_classes]
         self.labels = transpose(to_tensor(labels, target_type=framework))
         self.baseline = to_tensor(np.array(0.0).astype('float32'), target_type=framework)
+        if framework == "torch":
+            self.labels = self.labels.to("cuda:0" if torch.cuda.is_available() else "cpu")
+            self.baseline = self.baseline.to("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
         results = []

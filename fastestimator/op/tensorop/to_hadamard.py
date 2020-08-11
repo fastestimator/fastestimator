@@ -18,6 +18,7 @@ import numpy as np
 import tensorflow as tf
 import torch
 from scipy.linalg import hadamard
+
 from fastestimator.backend.gather import gather
 from fastestimator.backend.to_tensor import to_tensor
 from fastestimator.op.tensorop.tensorop import TensorOp
@@ -62,6 +63,8 @@ class ToHadamard(TensorOp):
         labels[np.arange(0, self.code_length, 2), 0] = -1  # Make first column alternate
         labels = labels[:self.n_classes]
         self.labels = to_tensor(labels, target_type=framework)
+        if framework == "torch":
+            self.labels = self.labels.to("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
         # TODO - also support one hot with smoothed labels?
