@@ -218,7 +218,6 @@ class LogSplicer:
     def __enter__(self) -> None:
         self.log_file = open(self.log_path, 'a')
         self.stdout = sys.stdout
-        self.stderr = sys.stderr
         sys.stdout = self
 
     def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
@@ -228,6 +227,10 @@ class LogSplicer:
     def write(self, output: str) -> None:
         self.log_file.write(output)
         self.stdout.write(output)
+
+    def flush(self) -> None:
+        self.stdout.flush()
+        self.log_file.flush()
 
 
 class Timer(ContextDecorator):

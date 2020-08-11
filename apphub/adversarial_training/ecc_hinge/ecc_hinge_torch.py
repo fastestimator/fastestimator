@@ -84,7 +84,6 @@ def get_estimator(epsilon=0.04,
 
     # step 2
     model = fe.build(model_fn=lambda: EccLeNet(code_length=code_length), optimizer_fn="adam")
-
     network = fe.Network(ops=[
         ToHadamard(inputs="y", outputs="y_code", n_classes=10),
         Watch(inputs="x", mode=('eval', 'test')),
