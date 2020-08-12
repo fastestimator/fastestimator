@@ -24,8 +24,8 @@ py_file="${source_dir}/${example_name}_torch.py"
 echo $py_file
 
 
-fastestimator train $py_file $train_info 2> $stderr_file
+fastestimator train $py_file $train_info $@ 2> $stderr_file
 
 if [ $need_test -eq 1 ]; then
-    fastestimator test $py_file $train_info 2>> $stderr_file
+    fastestimator test $py_file $train_info $@ 2>> $stderr_file
 fi
