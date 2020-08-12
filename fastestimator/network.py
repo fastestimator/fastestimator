@@ -30,6 +30,10 @@ from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Sch
 from fastestimator.util.traceability_util import trace_model, traceable
 from fastestimator.util.util import NonContext, get_batch_size, to_list
 
+import gdown
+import os
+import tempfile
+
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 T = TypeVar('T')
 
@@ -768,8 +772,16 @@ def _fe_compile(model: Model,
         model.current_optimizer = optimizer_fn
     model.optimizer = optimizer_fn
     model.fe_compiled = True
+
     if weight:
+        if not os.path.isfile(weight):
+            tmp_dir = tempfile.mkdtemp()
+            file_name = gdown.download(weight, quiet=False)
+            os.rename(os.path.join('./', file_name), os.path.join(tmp_dir, file_name))
+            weight = gdown.download(weight, os.path.join(tmp_dir, file_name), quiet=False)
+
         load_model(model, weight)
+
     model.model_name = name
     return model
 
