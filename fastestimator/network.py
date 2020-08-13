@@ -12,9 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import os
+import tempfile
 from collections import ChainMap
 from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, Set, Tuple, TypeVar, Union
 
+import gdown
 import tensorflow as tf
 import torch
 from tensorflow.keras.mixed_precision import experimental as mixed_precision_tf
@@ -768,8 +771,16 @@ def _fe_compile(model: Model,
         model.current_optimizer = optimizer_fn
     model.optimizer = optimizer_fn
     model.fe_compiled = True
+
     if weight:
+        if not os.path.isfile(weight):
+            tmp_dir = tempfile.mkdtemp()
+            file_name = gdown.download(weight, quiet=False)
+            os.rename(os.path.join('./', file_name), os.path.join(tmp_dir, file_name))
+            weight = gdown.download(weight, os.path.join(tmp_dir, file_name), quiet=False)
+
         load_model(model, weight)
+
     model.model_name = name
     return model
 

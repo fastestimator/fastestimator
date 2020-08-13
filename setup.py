@@ -58,7 +58,8 @@ def get_dependency():
         'graphviz==0.14',
         'hiddenlayer==0.3',
         'pydot==1.4.1',
-        'dot2tex==2.11.3'
+        'dot2tex==2.11.3',
+        'gdown'
     ]
     if os.name == "nt":
         dependencies.append(
