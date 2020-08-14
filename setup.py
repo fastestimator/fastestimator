@@ -59,7 +59,8 @@ def get_dependency():
         'hiddenlayer==0.3',
         'pydot==1.4.1',
         'dot2tex==2.11.3',
-        'gdown'
+        'gdown==3.12.0',
+        'PySocks==1.7.1'
     ]
     if os.name == "nt":
         dependencies.append(
