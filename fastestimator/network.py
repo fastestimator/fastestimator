@@ -36,6 +36,7 @@ from fastestimator.util.util import NonContext, get_batch_size, to_list
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 T = TypeVar('T')
 
+GOOGLE_DRIVE_URL = "https://drive.google.com"
 
 @traceable()
 class BaseNetwork:
@@ -773,7 +774,7 @@ def _fe_compile(model: Model,
     model.fe_compiled = True
 
     if weight:
-        if not os.path.isfile(weight):
+        if weight.startswith(GOOGLE_DRIVE_URL):
             tmp_dir = tempfile.mkdtemp()
             file_name = gdown.download(weight, quiet=False)
             os.rename(os.path.join('./', file_name), os.path.join(tmp_dir, file_name))
