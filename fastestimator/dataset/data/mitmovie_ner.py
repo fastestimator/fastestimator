@@ -18,10 +18,13 @@ from typing import List, Optional, Set, Tuple
 
 import numpy as np
 import requests
+import wget
 from sklearn.model_selection import train_test_split
-from tqdm import tqdm
 
 from fastestimator.dataset.numpy_dataset import NumpyDataset
+from fastestimator.util.wget_util import bar_custom, callback_progress
+
+wget.callback_progress = callback_progress
 
 
 def get_sentences_and_labels(path: str) -> Tuple[List[str], List[List[str]], Set[str], Set[str]]:
@@ -40,29 +43,28 @@ def get_sentences_and_labels(path: str) -> Tuple[List[str], List[List[str]], Set
     sentences, labels = [], []
     data = open(path)
     for line in data:
-        if line[0] != '#':
+        if line != '\n':
             line = line.split()
-            if len(line) > 2 and line[2] != 'O':
-                words.append(line[1])
-                tags.append(line[2])
-                word_vocab.add(line[1])
-                label_vocab.add(line[2])
-            else:
-                sentences.append(" ".join([s for s in words]))
-                labels.append([t for t in tags])
-                words.clear()
-                tags.clear()
+            words.append(line[1])
+            tags.append(line[0])
+            word_vocab.add(line[1])
+            label_vocab.add(line[0])
+        else:
+            sentences.append(" ".join([s for s in words]))
+            labels.append([t for t in tags])
+            words.clear()
+            tags.clear()
     sentences = list(filter(None, sentences))
     labels = list(filter(None, labels))
-    return sentences[:10000], labels[:10000], word_vocab, label_vocab
+    return sentences, labels, word_vocab, label_vocab
 
 
 def load_data(root_dir: Optional[str] = None) -> Tuple[NumpyDataset, NumpyDataset, Set[str], Set[str]]:
-    """Load and return the GermEval dataset.
+    """Load and return the MIT Movie dataset.
 
-    Dataset from GermEval 2014 contains 31,000 sentences corresponding to over 590,000 tokens from German wikipedia
-    and News corpora. The sentence is encoded as one token per line with information provided in tab-seprated columns.
-    Sourced from https://sites.google.com/site/germeval2014ner/data
+    MIT Movies dataset is a semantically tagged training and test corpus in BIO format. The sentence is encoded as one
+    token per line with information provided in tab-seprated columns.
+    Sourced from https://groups.csail.mit.edu/sls/downloads/movie/
 
     Args:
         root_dir: The path to store the downloaded data. When `path` is not provided, the data will be saved into
@@ -71,31 +73,24 @@ def load_data(root_dir: Optional[str] = None) -> Tuple[NumpyDataset, NumpyDatase
     Returns:
         (train_data, eval_data, train_vocab, label_vocab)
     """
-    url = 'https://sites.google.com/site/germeval2014ner/data/NER-de-train.tsv?attredirects=0&d=1'
     home = str(Path.home())
 
     if root_dir is None:
-        root_dir = os.path.join(home, 'fastestimator_data', 'GermEval')
+        root_dir = os.path.join(home, 'fastestimator_data', 'MITMovie')
     else:
-        root_dir = os.path.join(os.path.abspath(root_dir), 'GermEval')
+        root_dir = os.path.join(os.path.abspath(root_dir), 'MITMovie')
     os.makedirs(root_dir, exist_ok=True)
 
-    data_path = os.path.join(root_dir, 'de_ner.tsv')
-    data_folder_path = os.path.join(root_dir, 'germeval')
+    train_data_path = os.path.join(root_dir, 'engtrain.bio')
+    test_data_path = os.path.join(root_dir, 'engtest.bio')
+    files = [(train_data_path, 'https://groups.csail.mit.edu/sls/downloads/movie/engtrain.bio'),
+             (test_data_path, 'https://groups.csail.mit.edu/sls/downloads/movie/engtest.bio')]
 
-    if not os.path.exists(data_folder_path):
-        # download
+    for data_path, download_link in files:
         if not os.path.exists(data_path):
-            print("Downloading data to {}".format(root_dir))
-            stream = requests.get(url, stream=True)  # python wget does not work
-            total_size = int(stream.headers.get('content-length', 0))
-            block_size = 128  # 1 MB
-            progress = tqdm(total=total_size, unit='B', unit_scale=True)
-            with open(data_path, 'wb') as outfile:
-                for data in stream.iter_content(block_size):
-                    progress.update(len(data))
-                    outfile.write(data)
-            progress.close()
+            # Download
+            print("Downloading data: {}".format(data_path))
+            wget.download(download_link, data_path, bar=bar_custom)
 
     x, y, x_vocab, y_vocab = get_sentences_and_labels(data_path)
 
