@@ -92,9 +92,10 @@ def load_data(root_dir: Optional[str] = None) -> Tuple[NumpyDataset, NumpyDatase
             print("Downloading data: {}".format(data_path))
             wget.download(download_link, data_path, bar=bar_custom)
 
-    x, y, x_vocab, y_vocab = get_sentences_and_labels(data_path)
-
-    x_train, x_eval, y_train, y_eval = train_test_split(x, y, test_size=0.2, random_state=42)
+    x_train, y_train, x_vocab, y_vocab = get_sentences_and_labels(train_data_path)
+    x_eval, y_eval, x_eval_vocab, y_eval_vocab = get_sentences_and_labels(test_data_path)
+    x_vocab |= x_eval_vocab
+    y_vocab |= y_eval_vocab
     x_train = np.array(x_train)
     x_eval = np.array(x_eval)
     y_train = np.array(y_train)

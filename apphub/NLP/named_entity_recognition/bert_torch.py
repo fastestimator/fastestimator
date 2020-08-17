@@ -21,7 +21,7 @@ import torch.nn.functional as fn
 from transformers import BertConfig, BertModel, BertTokenizer
 
 import fastestimator as fe
-from fastestimator.dataset.data import german_ner
+from fastestimator.dataset.data import mitmovie_ner
 from fastestimator.op.numpyop.numpyop import NumpyOp
 from fastestimator.op.numpyop.univariate import PadSequence, Tokenize, WordtoId
 from fastestimator.op.tensorop import Reshape
@@ -45,13 +45,13 @@ class AttentionMask(NumpyOp):
 
 
 class NERModel(nn.Module):
-    def __init__(self, head_masks, pretrained_model):
+    def __init__(self, head_masks, pretrained_model, label_vocab):
         super().__init__()
         bert_model = BertModel.from_pretrained(pretrained_model)
         self.head_masks = head_masks
         self.bert_embed = list(bert_model.children())[0]
         self.bert_encode = list(bert_model.children())[1]
-        self.fc = nn.Linear(in_features=768, out_features=24)
+        self.fc = nn.Linear(in_features=768, out_features=len(label_vocab) + 1)
 
     def forward(self, inp):
         x, x_masks = inp
@@ -65,7 +65,7 @@ class NERModel(nn.Module):
 
 
 def get_estimator(max_len=20,
-                  epochs=10,
+                  epochs=20,
                   batch_size=64,
                   max_train_steps_per_epoch=None,
                   max_eval_steps_per_epoch=None,
@@ -73,7 +73,7 @@ def get_estimator(max_len=20,
                   save_dir=tempfile.mkdtemp(),
                   data_dir=None):
     # step 1 prepare data
-    train_data, eval_data, data_vocab, label_vocab = german_ner.load_data(root_dir=data_dir)
+    train_data, eval_data, data_vocab, label_vocab = mitmovie_ner.load_data(root_dir=data_dir)
     tokenizer = BertTokenizer.from_pretrained(pretrained_model, do_lower_case=True)
     tag2idx = char2idx(label_vocab)
     pipeline = fe.Pipeline(
@@ -93,12 +93,13 @@ def get_estimator(max_len=20,
     bert_config = BertConfig.from_pretrained(pretrained_model)
     num_hidden_layers = bert_config.to_dict()['num_hidden_layers']
     head_masks = [None] * num_hidden_layers
-    model = fe.build(model_fn=lambda: NERModel(head_masks=head_masks, pretrained_model=pretrained_model),
-                     optimizer_fn=lambda x: torch.optim.Adam(x, lr=1e-5))
+    model = fe.build(
+        model_fn=lambda: NERModel(head_masks=head_masks, pretrained_model=pretrained_model, label_vocab=label_vocab),
+        optimizer_fn=lambda x: torch.optim.Adam(x, lr=1e-5))
     network = fe.Network(ops=[
         ModelOp(model=model, inputs=["x", "x_masks"], outputs="y_pred"),
         Reshape(inputs="y", outputs="y", shape=(-1, )),
-        Reshape(inputs="y_pred", outputs="y_pred", shape=(-1, 24)),
+        Reshape(inputs="y_pred", outputs="y_pred", shape=(-1, len(label_vocab) + 1)),
         CrossEntropy(inputs=("y_pred", "y"), outputs="loss"),
         UpdateOp(model=model, loss_name="loss")
     ])
