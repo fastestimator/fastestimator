@@ -4,7 +4,6 @@ import unittest
 import urllib.request
 import warnings
 
-
 def ping(host):
     try:
         agent = 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.76 Safari/537.36'

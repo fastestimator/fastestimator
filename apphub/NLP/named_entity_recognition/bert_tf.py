@@ -21,7 +21,7 @@ from tensorflow.keras.models import Model
 from transformers import BertTokenizer, TFBertModel
 
 import fastestimator as fe
-from fastestimator.dataset.data import german_ner
+from fastestimator.dataset.data import mitmovie_ner
 from fastestimator.op.numpyop.numpyop import NumpyOp
 from fastestimator.op.numpyop.univariate import PadSequence, Tokenize, WordtoId
 from fastestimator.op.tensorop import Reshape
@@ -42,12 +42,12 @@ class AttentionMask(NumpyOp):
         return np.array(masks)
 
 
-def ner_model(max_len, pretrained_model):
+def ner_model(max_len, pretrained_model, label_vocab):
     token_inputs = Input((max_len), dtype=tf.int32, name='input_words')
     mask_inputs = Input((max_len), dtype=tf.int32, name='input_masks')
     bert_model = TFBertModel.from_pretrained(pretrained_model)
     seq_output, _ = bert_model(token_inputs, attention_mask=mask_inputs)
-    output = Dense(24, activation='softmax')(seq_output)
+    output = Dense(len(label_vocab) + 1, activation='softmax')(seq_output)
     model = Model([token_inputs, mask_inputs], output)
     return model
 
@@ -61,7 +61,7 @@ def get_estimator(max_len=20,
                   pretrained_model='bert-base-uncased',
                   data_dir=None):
     # step 1 prepare data
-    train_data, eval_data, data_vocab, label_vocab = german_ner.load_data(root_dir=data_dir)
+    train_data, eval_data, data_vocab, label_vocab = mitmovie_ner.load_data(root_dir=data_dir)
     tokenizer = BertTokenizer.from_pretrained(pretrained_model, do_lower_case=True)
     tag2idx = char2idx(label_vocab)
     pipeline = fe.Pipeline(
@@ -78,12 +78,12 @@ def get_estimator(max_len=20,
         ])
 
     # step 2. prepare model
-    model = fe.build(model_fn=lambda: ner_model(max_len, pretrained_model),
+    model = fe.build(model_fn=lambda: ner_model(max_len, pretrained_model, label_vocab),
                      optimizer_fn=lambda: tf.optimizers.Adam(1e-5))
     network = fe.Network(ops=[
         ModelOp(model=model, inputs=["x", "x_masks"], outputs="y_pred"),
         Reshape(inputs="y", outputs="y", shape=(-1, )),
-        Reshape(inputs="y_pred", outputs="y_pred", shape=(-1, 24)),
+        Reshape(inputs="y_pred", outputs="y_pred", shape=(-1, len(label_vocab) + 1)),
         CrossEntropy(inputs=("y_pred", "y"), outputs="loss"),
         UpdateOp(model=model, loss_name="loss")
     ])
