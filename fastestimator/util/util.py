@@ -65,6 +65,39 @@ STRING_TO_TF_DTYPE = {
     "float64": tf.float64
 }
 
+TENSOR_TO_NP_DTYPE = {
+    # Abstract types like 'float' and 'long' are intentionally not included here since they are never actually a
+    # tensor's dtype and they interfere with the finer-grained keys (torch.float intercepts torch.float32, for example)
+    None: None,
+    torch.float32: np.float32,
+    torch.float64: np.float64,
+    torch.float16: np.float16,
+    torch.uint8: np.uint8,
+    torch.int8: np.int8,
+    torch.int16: np.int16,
+    torch.int32: np.int32,
+    torch.int64: np.int64,
+    torch.bool: np.bool,
+    tf.float32: np.float32,
+    tf.float64: np.float64,
+    tf.float16: np.float16,
+    tf.uint8: np.uint8,
+    tf.int8: np.int8,
+    tf.int16: np.int16,
+    tf.int32: np.int32,
+    tf.int64: np.int64,
+    tf.bool: np.bool,
+    np.dtype('float32'): np.float32,
+    np.dtype('float64'): np.float64,
+    np.dtype('float16'): np.float16,
+    np.dtype('uint8'): np.uint8,
+    np.dtype('int8'): np.int8,
+    np.dtype('int16'): np.int16,
+    np.dtype('int32'): np.int32,
+    np.dtype('int64'): np.int64,
+    np.dtype('bool'): np.bool,
+}
+
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 

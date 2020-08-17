@@ -199,7 +199,8 @@ def plot_logs(experiments: List[Summary],
 
     # If sharing legend and there is more than 1 plot, then dedicate 1 subplot for the legend
     share_legend = share_legend and (len(metric_list) > 1)
-    n_plots = len(metric_list) + share_legend
+    n_legends = math.ceil(n_experiments / 4)
+    n_plots = len(metric_list) + (share_legend * n_legends)
 
     # map the metrics into an n x n grid, then remove any extra columns. Final grid will be n x m with m <= n
     n_rows = math.ceil(math.sqrt(n_plots))
@@ -241,15 +242,19 @@ def plot_logs(experiments: List[Summary],
         axis.spines['left'].set_visible(False)
         axis.tick_params(bottom=False, left=False)
 
-    for i in range(n_cols):
-        axs[n_rows - 1][i].set_xlabel('Steps')
-
-    # some of the columns in the last row might be unused, so disable them
-    last_column_idx = n_cols - (n_rows * n_cols - (n_plots - share_legend)) - 1
-    for i in range(last_column_idx + 1, n_cols):
-        axs[n_rows - 1][i].axis('off')
-        axs[n_rows - 2][i].set_xlabel('Steps')
-        axs[n_rows - 2][i].xaxis.set_tick_params(which='both', labelbottom=True)
+    # some of the later rows/columns might be unused or reserved for legends, so disable them
+    last_row_idx = math.ceil(len(metric_list) / n_cols) - 1
+    last_column_idx = len(metric_list) - last_row_idx * n_cols - 1
+    for c in range(n_cols):
+        if c <= last_column_idx:
+            axs[last_row_idx][c].set_xlabel('Steps')
+            axs[last_row_idx][c].xaxis.set_tick_params(which='both', labelbottom=True)
+        else:
+            axs[last_row_idx][c].axis('off')
+            axs[last_row_idx - 1][c].set_xlabel('Steps')
+            axs[last_row_idx - 1][c].xaxis.set_tick_params(which='both', labelbottom=True)
+        for r in range(last_row_idx + 1, n_rows):
+            axs[r][c].axis('off')
 
     # the 1D metrics don't need x axis, so move them up, starting with the last in case multiple rows of them
     for metric in reversed(nd1_metrics):
@@ -337,15 +342,24 @@ def plot_logs(experiments: List[Summary],
 
     if labels:
         if share_legend:
-            axs[n_rows - 1][last_column_idx + 1].legend(
-                handles,
-                labels,
-                loc='center',
-                fontsize='large' if len(handles) <= 6 else 'medium' if len(handles) <= 8 else 'small')
+            # Sort the labels
+            handles = [h for _, h in sorted(zip(labels, handles), key=lambda pair: pair[0])]
+            labels = sorted(labels)
+            # Split the labels over multiple legends if there are too many to fit in one axis
+            elems_per_legend = math.ceil(len(labels) / n_legends)
+            i = 0
+            for r in range(last_row_idx, n_rows):
+                for c in range(last_column_idx + 1 if r == last_row_idx else 0, n_cols):
+                    axs[r][c].legend(
+                        handles[i:i + elems_per_legend],
+                        labels[i:i + elems_per_legend],
+                        loc='center',
+                        fontsize='large' if elems_per_legend <= 6 else 'medium' if elems_per_legend <= 8 else 'small')
+                    i += elems_per_legend
         else:
             for i in range(n_rows):
                 for j in range(n_cols):
-                    if i == n_rows - 1 and j > last_column_idx:
+                    if i == last_row_idx and j > last_column_idx:
                         break
                     axs[i][j].legend(loc='best', fontsize='small')
     return fig
