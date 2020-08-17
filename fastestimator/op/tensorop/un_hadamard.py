@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import math
 from typing import Any, Dict, Iterable, List, Optional, TypeVar, Union
 
 import numpy as np
@@ -19,12 +20,10 @@ import tensorflow as tf
 import torch
 from scipy.linalg import hadamard
 
-from fastestimator.backend.matmul import matmul
-from fastestimator.backend.maximum import maximum
+from fastestimator.backend.expand_dims import expand_dims
+from fastestimator.backend.iwd import iwd
 from fastestimator.backend.reduce_sum import reduce_sum
-from fastestimator.backend.reshape import reshape
 from fastestimator.backend.to_tensor import to_tensor
-from fastestimator.backend.transpose import transpose
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 
@@ -32,7 +31,7 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 @traceable()
-class FromHadamard(TensorOp):
+class UnHadamard(TensorOp):
     """Convert hadamard encoded class representations into onehot probabilities.
 
     Args:
@@ -61,23 +60,28 @@ class FromHadamard(TensorOp):
             raise ValueError(f"code_length must be >= n_classes, but got {code_length} and {n_classes}")
         self.code_length = code_length
         self.labels = None
-        self.baseline = None
+        self.eps = None
 
     def build(self, framework: str) -> None:
         labels = hadamard(self.code_length).astype(np.float32)
         labels[np.arange(0, self.code_length, 2), 0] = -1  # Make first column alternate
         labels = labels[:self.n_classes]
-        self.labels = transpose(to_tensor(labels, target_type=framework))
-        self.baseline = to_tensor(np.array(0.0).astype('float32'), target_type=framework)
+        self.labels = to_tensor(labels, target_type=framework)
+        max_prob = 0.99999  # This will only be approximate since the first column is alternating
+        power = 1.0
+        self.eps = to_tensor(
+            np.array((self.code_length + 1) * math.pow((1.0 - max_prob) / (max_prob * (self.n_classes - 1)), 1 / power),
+                     dtype=np.float32),
+            target_type=framework)
         if framework == "torch":
             self.labels = self.labels.to("cuda:0" if torch.cuda.is_available() else "cpu")
-            self.baseline = self.baseline.to("cuda:0" if torch.cuda.is_available() else "cpu")
+            self.eps = self.eps.to("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
         results = []
         for elem in data:
-            x = matmul(elem, self.labels)
-            x = maximum(x, self.baseline) + 1e-6
-            x = x / reshape(reduce_sum(x, axis=1), shape=[-1, 1])
+            # L1 Distance
+            x = reduce_sum(abs(expand_dims(elem, axis=1) - self.labels), axis=-1)
+            x = iwd(x, power=1.0, eps=self.eps)
             results.append(x)
         return results

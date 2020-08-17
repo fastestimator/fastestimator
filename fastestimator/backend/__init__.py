@@ -28,6 +28,7 @@ from fastestimator.backend.get_gradient import get_gradient
 from fastestimator.backend.get_image_dims import get_image_dims
 from fastestimator.backend.get_lr import get_lr
 from fastestimator.backend.hinge import hinge
+from fastestimator.backend.iwd import iwd
 from fastestimator.backend.load_model import load_model
 from fastestimator.backend.matmul import matmul
 from fastestimator.backend.maximum import maximum
@@ -45,9 +46,10 @@ from fastestimator.backend.save_model import save_model
 from fastestimator.backend.set_lr import set_lr
 from fastestimator.backend.sign import sign
 from fastestimator.backend.sparse_categorical_crossentropy import sparse_categorical_crossentropy
-from fastestimator.backend.tensor_sqrt import tensor_sqrt
 from fastestimator.backend.squeeze import squeeze
+from fastestimator.backend.tensor_pow import tensor_pow
 from fastestimator.backend.tensor_round import tensor_round
+from fastestimator.backend.tensor_sqrt import tensor_sqrt
 from fastestimator.backend.to_shape import to_shape
 from fastestimator.backend.to_tensor import to_tensor
 from fastestimator.backend.to_type import to_type

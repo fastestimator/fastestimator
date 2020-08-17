@@ -19,8 +19,8 @@ from tensorflow.python.keras.models import Model
 
 import fastestimator as fe
 from fastestimator.dataset.data import cifar10
-from fastestimator.op.numpyop.univariate import Normalize
-from fastestimator.op.tensorop import FromHadamard, ToHadamard
+from fastestimator.op.numpyop.univariate import Hadamard, Normalize
+from fastestimator.op.tensorop import UnHadamard
 from fastestimator.op.tensorop.gradient import FGSM, Watch
 from fastestimator.op.tensorop.loss import Hinge
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
@@ -60,23 +60,25 @@ def get_estimator(epsilon=0.04,
         eval_data=eval_data,
         test_data=test_data,
         batch_size=batch_size,
-        ops=[Normalize(inputs="x", outputs="x", mean=(0.4914, 0.4822, 0.4465), std=(0.2471, 0.2435, 0.2616))])
+        ops=[
+            Normalize(inputs="x", outputs="x", mean=(0.4914, 0.4822, 0.4465), std=(0.2471, 0.2435, 0.2616)),
+            Hadamard(inputs="y", outputs="y_code", n_classes=10)
+        ])
 
     # step 2
     model = fe.build(model_fn=lambda: ecc_lenet(code_length=code_length), optimizer_fn='adam')
 
     network = fe.Network(ops=[
-        ToHadamard(inputs="y", outputs="y_code", n_classes=10),
         Watch(inputs="x", mode=('eval', 'test')),
         ModelOp(model=model, inputs="x", outputs="y_pred_code"),
         Hinge(inputs=("y_pred_code", "y_code"), outputs="base_hinge"),
         UpdateOp(model=model, loss_name="base_hinge"),
-        FromHadamard(inputs="y_pred_code", outputs="y_pred", n_classes=10, mode=('eval', 'test')),
+        UnHadamard(inputs="y_pred_code", outputs="y_pred", n_classes=10, mode=('eval', 'test')),
         # The adversarial attack:
         FGSM(data="x", loss="base_hinge", outputs="x_adverse_hinge", epsilon=epsilon, mode=('eval', 'test')),
         ModelOp(model=model, inputs="x_adverse_hinge", outputs="y_pred_adv_hinge_code", mode=('eval', 'test')),
         Hinge(inputs=("y_pred_adv_hinge_code", "y_code"), outputs="adv_hinge", mode=('eval', 'test')),
-        FromHadamard(inputs="y_pred_adv_hinge_code", outputs="y_pred_adv_hinge", n_classes=10, mode=('eval', 'test')),
+        UnHadamard(inputs="y_pred_adv_hinge_code", outputs="y_pred_adv_hinge", n_classes=10, mode=('eval', 'test')),
     ])
     # step 3
     traces = [

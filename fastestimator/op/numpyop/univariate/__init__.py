@@ -26,6 +26,7 @@ from fastestimator.op.numpyop.univariate.expand_dims import ExpandDims
 from fastestimator.op.numpyop.univariate.from_float import FromFloat
 from fastestimator.op.numpyop.univariate.gaussian_blur import GaussianBlur
 from fastestimator.op.numpyop.univariate.gaussian_noise import GaussianNoise
+from fastestimator.op.numpyop.univariate.hadamard import Hadamard
 from fastestimator.op.numpyop.univariate.hue_saturation_value import HueSaturationValue
 from fastestimator.op.numpyop.univariate.image_compression import ImageCompression
 from fastestimator.op.numpyop.univariate.invert_img import InvertImg
