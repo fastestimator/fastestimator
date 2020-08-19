@@ -130,5 +130,9 @@ class LambdaOp(Op):
         self.fn = fn
         self.in_list = True
 
+    def build(self, framework: str) -> None:
+        # This method is needed to make LambdaOp compatible with TensorOps
+        pass
+
     def forward(self, data: List[Any], state: Dict[str, Any]) -> Any:
         return self.fn(*data)
