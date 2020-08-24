@@ -689,12 +689,16 @@ def show_image(im: Union[np.ndarray, Tensor],
             im = im.permute(*channels)
         # image data
         im = to_number(im)
+        im_max = np.max(im)
+        im_min = np.min(im)
         if np.issubdtype(im.dtype, np.integer):
             # im is already in int format
             im = im.astype(np.uint8)
-        elif np.max(im) <= 1 and np.min(im) >= 0:  # im is [0,1]
+        elif 0 <= im_min <= im_max <= 1:  # im is [0,1]
             im = (im * 255).astype(np.uint8)
-        elif np.min(im) >= -1 and np.max(im) <= 1:  # im is [-1, 1]
+        elif -0.5 <= im_min < 0 < im_max <= 0.5:  # im is [-0.5, 0.5]
+            im = ((im + 0.5) * 255).astype(np.uint8)
+        elif -1 <= im_min < 0 < im_max <= 1:  # im is [-1, 1]
             im = ((im + 1) * 127.5).astype(np.uint8)
         else:  # im is in some arbitrary range, probably due to the Normalize Op
             ma = abs(np.max(im, axis=tuple([i for i in range(len(im.shape) - 1)]) if len(im.shape) > 2 else None))
