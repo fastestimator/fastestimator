@@ -22,7 +22,10 @@ from fastestimator.util.traceability_util import traceable
 
 @traceable()
 class GaussianNoise(ImageOnlyAlbumentation):
-    """Apply gaussian noise to the image
+    """Apply gaussian noise to the image.
+
+    WARNING: This assumes that floating point images are in the range [0,1] and will trim the output to that range. If
+    your image is in a range like [-0.5, 0.5] then you do not want to use this Op.
 
     Args:
         inputs: Key(s) of images to be modified.

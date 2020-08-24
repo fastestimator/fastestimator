@@ -350,6 +350,8 @@ def plot_logs(experiments: List[Summary],
             i = 0
             for r in range(last_row_idx, n_rows):
                 for c in range(last_column_idx + 1 if r == last_row_idx else 0, n_cols):
+                    if len(handles) <= i:
+                        break
                     axs[r][c].legend(
                         handles[i:i + elems_per_legend],
                         labels[i:i + elems_per_legend],
