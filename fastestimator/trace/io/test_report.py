@@ -60,7 +60,7 @@ class TestReport(Trace):
         """Initialize json summary
         """
         self.json_summary = {
-            "title": self.test_title, "timestamp": str(datetime.now()), "execution_time(s)": time()
+            "title": self.test_title, "timestamp": str(datetime.now()), "execution_time(s)": time(),
             "tests": []
         }
 
