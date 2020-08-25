@@ -20,4 +20,5 @@ from fastestimator.trace.io.model_saver import ModelSaver
 from fastestimator.trace.io.qms import QMSTest
 from fastestimator.trace.io.restore_wizard import RestoreWizard
 from fastestimator.trace.io.tensorboard import TensorBoard
+from fastestimator.trace.io.test_report import TestReport
 from fastestimator.trace.io.traceability import Traceability
