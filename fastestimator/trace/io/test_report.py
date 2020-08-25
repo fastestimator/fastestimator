@@ -15,15 +15,15 @@
 import inspect
 import json
 import os
+from datetime import datetime
+from time import time
 from typing import Callable, List, Union
 
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_list
-from time import time
-from datetime import datetime
-import pdb
+
 
 @traceable()
 class TestReport(Trace):
@@ -35,7 +35,6 @@ class TestReport(Trace):
             dictionary.
         test_title: Title of the test.
         json_output: Path into which to write the output results JSON.
-        doc_output: Path into which to write the output QMS summary report (docx).
 
     Raises:
         AssertionError: If the number of `test_descriptions` and `test_criteria` do not match.
@@ -60,8 +59,7 @@ class TestReport(Trace):
         """Initialize json summary
         """
         self.json_summary = {
-            "title": self.test_title, "timestamp": str(datetime.now()), "execution_time(s)": time(),
-            "tests": []
+            "title": self.test_title, "timestamp": str(datetime.now()), "execution_time(s)": time(), "tests": []
         }
 
     def on_begin(self, data: Data) -> None:
