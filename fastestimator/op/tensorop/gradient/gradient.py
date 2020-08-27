@@ -41,7 +41,7 @@ class GradientOp(TensorOp):
                  inputs: Union[str, List[str]],
                  finals: Union[str, List[str]],
                  outputs: Union[str, List[str]],
-                 mode: Union[None, str, Iterable[str]] = "eval"):
+                 mode: Union[None, str, Iterable[str]] = None):
         inputs = to_list(inputs)
         finals = to_list(finals)
         outputs = to_list(outputs)
