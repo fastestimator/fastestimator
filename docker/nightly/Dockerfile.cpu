@@ -21,6 +21,9 @@ RUN apt-get install -y \
 RUN apt-get install -y \
     lsof
 
+# upgrade essential packages
+RUN pip install --upgrade pip setuptools
+
 RUN pip install --no-cache-dir \
     ipython \
     ipykernel \
