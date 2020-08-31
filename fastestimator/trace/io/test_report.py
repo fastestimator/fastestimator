@@ -24,7 +24,7 @@ import numpy as np
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import to_list
+from fastestimator.util.util import to_list, to_number
 
 
 @traceable()
@@ -106,12 +106,19 @@ class TestReport(Trace):
         for case in self.sample_cases:
             result = case.criteria(*[data[var_name] for var_name in case.criteria_inputs])
             if not isinstance(result, np.ndarray):
-                raise TypeError("criteria return of sample-case test need to be ndarray with dtype bool")
+                raise TypeError("Criteria return of sample-case test need to be ndarray with dtype bool")
             elif result.dtype != np.dtype("bool"):
-                raise TypeError("criteria return of sample-case test need to be ndarray with dtype bool")
+                raise TypeError("Criteria return of sample-case test need to be ndarray with dtype bool")
 
+            result = result.reshape(-1)
             case.result.append(result)
-            case.fail_id.append(data[self.sample_id][result == False])
+            if self.sample_id:
+                data_id = to_number(data[self.sample_id]).reshape((-1,))
+                if data_id.size != result.size:
+                    raise ValueError("Array size of criteria return doesn't match ID array size."
+                                     "Criteria return size should be equal to the batch_size that each entry represents"
+                                     "test result of corresponding sample")
+                case.fail_id.append(data_id[result == False])
 
     def on_epoch_end(self, data: Data) -> None:
         for case in self.epoch_cases:
@@ -125,12 +132,13 @@ class TestReport(Trace):
         for case in self.sample_cases:
             case_dict = {"test_type": "sample", "description": case.description}
             result = np.hstack(case.result)
-            fail_id = np.hstack(case.fail_id)
             fail_num = np.sum(result == False)
             case_dict["passed"] = self.to_serializable(fail_num <= case.fail_threshold)
             case_dict["fail_threshold"] = case.fail_threshold
             case_dict["fail_num"] = self.to_serializable(fail_num)
-            case_dict["fail_id"] = self.to_serializable(fail_id)
+            if self.sample_id:
+                fail_id = np.hstack(case.fail_id)
+                case_dict["fail_id"] = self.to_serializable(fail_id)
             self.json_summary["tests"].append(case_dict)
 
         for case in self.epoch_cases:
