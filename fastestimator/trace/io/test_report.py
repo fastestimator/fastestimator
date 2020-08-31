@@ -19,6 +19,8 @@ from datetime import datetime
 from time import time
 from typing import Callable, List, Union
 
+import numpy as np
+
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
@@ -26,33 +28,68 @@ from fastestimator.util.util import to_list
 
 
 @traceable()
+class TestCase():
+    """This class defines the test case that TestReport trace will take to perform auto-testing.
+
+    Args:
+        description: A test description.
+        criteria: Function to perform the test that return True when test passes and False when test fails. Input
+            variable name will be used as input keys to futher derive input value.
+        sample_wise: If True, this test will be treated as sample-case of which test criteria will be examined at
+            batch_end. If False, this test is epoch-case and its criteria will be examined at epoch_end.
+        fail_threshold: Thershold of failing sample number to judge sample-case test as failed or passed. If failing
+            number is above this value, then the test fails; otherwise it passes. It only has effect when sample_wise
+            equal to true.
+    """
+    def __init__(self, description: str, criteria: Callable, sample_wise: bool = False,
+                 fail_threshold: int = 0) -> None:
+        self.description = description
+        self.criteria = criteria
+        self.criteria_inputs = inspect.signature(criteria).parameters.keys()
+        self.sample_wise = sample_wise
+        if self.sample_wise:
+            self.fail_threshold = fail_threshold
+
+    def clean_result(self) -> None:
+        if self.sample_wise:
+            self.result = []
+            self.fail_id = []
+
+
+@traceable()
 class TestReport(Trace):
     """Automate testing and report generation.
 
     Args:
-        test_descriptions: List of text-based descriptions.
-        test_criterias: List of test functions. Function input argument names needs to match keys from the data
-            dictionary.
+        test_cases: List of TestCase object.
         test_title: Title of the test.
         json_output: Path into which to write the output results JSON.
-
-    Raises:
-        AssertionError: If the number of `test_descriptions` and `test_criteria` do not match.
+        sample_id: Data sample ID key. If provided, then sample-case test will return failing sample ID.
     """
     def __init__(self,
-                 test_descriptions: Union[str, List[str]],
-                 test_criterias: Union[List[Callable], Callable],
+                 test_cases: Union[TestCase, List[TestCase]],
                  test_title: str = "Test",
-                 json_output: str = "") -> None:
+                 json_output: str = "",
+                 sample_id=None) -> None:
 
         self.json_output = json_output
         self.test_title = test_title
-        self.test_descriptions = to_list(test_descriptions)
-        self.test_criterias = to_list(test_criterias)
-        assert len(self.test_descriptions) == len(self.test_criterias), "inconsistent input length found"
+        self.test_cases = to_list(test_cases)
+        self.sample_cases = []
+        self.epoch_cases = []
+        self.sample_id = sample_id
         all_inputs = set()
-        for criteria in self.test_criterias:
-            all_inputs.update(inspect.signature(criteria).parameters.keys())
+        for case in self.test_cases:
+            all_inputs.update(case.criteria_inputs)
+            case.clean_result()
+            if case.sample_wise:
+                self.sample_cases.append(case)
+            else:
+                self.epoch_cases.append(case)
+
+        if self.sample_id:
+            all_inputs.update([sample_id])
+
         super().__init__(inputs=all_inputs, mode="test")
 
     def _initialize_json_summary(self) -> None:
@@ -65,19 +102,45 @@ class TestReport(Trace):
     def on_begin(self, data: Data) -> None:
         self._initialize_json_summary()
 
-    def on_epoch_end(self, data: Data) -> None:
-        for criteria, description in zip(self.test_criterias, self.test_descriptions):
-            test_case = {"description": description}
-            inputs = {var_name: data[var_name] for var_name in list(inspect.signature(criteria).parameters.keys())}
-            test_case["inputs"] = inputs
+    def on_batch_end(self, data: Data) -> None:
+        for case in self.sample_cases:
+            result = case.criteria(*[data[var_name] for var_name in case.criteria_inputs])
+            if not isinstance(result, np.ndarray):
+                raise TypeError("criteria return of sample-case test need to be ndarray with dtype bool")
+            elif result.dtype != np.dtype("bool"):
+                raise TypeError("criteria return of sample-case test need to be ndarray with dtype bool")
 
-            is_passed = criteria(*[val for val in inputs.values()])
-            test_case["passed"] = str(is_passed)
-            self.json_summary["tests"].append(test_case)
+            case.result.append(result)
+            case.fail_id.append(data[self.sample_id][result == False])
+
+    def on_epoch_end(self, data: Data) -> None:
+        for case in self.epoch_cases:
+            result = case.criteria(*[data[var_name] for var_name in case.criteria_inputs])
+            if not isinstance(result, (bool, np.bool_)):
+                raise TypeError("criteria return of epoch-case test need to be bool")
+            case.result = case.criteria(*[data[var_name] for var_name in case.criteria_inputs])
+            case.input_val = {var_name: self.to_serializable(data[var_name]) for var_name in case.criteria_inputs}
+
+    def on_end(self, data: Data) -> None:
+        for case in self.sample_cases:
+            case_dict = {"test_type": "sample", "description": case.description}
+            result = np.hstack(case.result)
+            fail_id = np.hstack(case.fail_id)
+            fail_num = np.sum(result == False)
+            case_dict["passed"] = self.to_serializable(fail_num <= case.fail_threshold)
+            case_dict["fail_threshold"] = case.fail_threshold
+            case_dict["fail_num"] = self.to_serializable(fail_num)
+            case_dict["fail_id"] = self.to_serializable(fail_id)
+            self.json_summary["tests"].append(case_dict)
+
+        for case in self.epoch_cases:
+            case_dict = {"test_type": "epoch", "description": case.description}
+            case_dict["passed"] = self.to_serializable(case.result)
+            case_dict["inputs"] = case.input_val
+            self.json_summary["tests"].append(case_dict)
 
         self.json_summary["execution_time(s)"] = time() - self.json_summary["execution_time(s)"]
 
-    def on_end(self, data: Data) -> None:
         if self.json_output.endswith(".json"):
             json_path = self.json_output
         else:
@@ -85,3 +148,15 @@ class TestReport(Trace):
         with open(json_path, 'w') as fp:
             json.dump(self.json_summary, fp, indent=4)
         print("Saved test JSON report to {}".format(json_path))
+
+    @staticmethod
+    def to_serializable(obj: np.generic) -> Union[float, int, list]:
+        """ convert to JSON serializable type
+        """
+        if isinstance(obj, np.ndarray):
+            obj = obj.tolist()
+
+        elif isinstance(obj, np.generic):
+            obj = np.asscalar(obj)
+
+        return obj
