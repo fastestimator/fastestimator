@@ -15,14 +15,13 @@
 import contextlib
 import locale
 import os
-import platform
 import re
 import shutil
 import sys
 import types
 from collections import defaultdict
 from typing import Any, DefaultDict, Dict, List, Set, Tuple, Union
-from unittest.mock import Base, MagicMock
+from unittest.mock import MagicMock
 
 import dot2tex as d2t
 import jsonpickle
@@ -53,7 +52,7 @@ from fastestimator.summary.logs.log_plot import visualize_logs
 from fastestimator.trace.trace import Trace, sort_traces
 from fastestimator.util.data import Data
 from fastestimator.util.latex_util import AdjustBox, Center, HrefFEID, Verbatim
-from fastestimator.util.traceability_util import FeSummaryTable, traceable
+from fastestimator.util.traceability_util import FeSummaryTable, get_environment, traceable
 from fastestimator.util.util import FEID, LogSplicer, Suppressor, prettify_metric_name, to_list
 
 
@@ -438,14 +437,23 @@ class Traceability(Trace):
     def _document_sys_config(self) -> None:
         """Add a system config summary to the traceability document.
         """
+        env_dict = get_environment()
+
         with self.doc.create(Section("System Config")):
             with self.doc.create(Itemize()) as itemize:
-                itemize.add_item(escape_latex(f"FastEstimator {fe.__version__}"))
-                itemize.add_item(escape_latex(f"Python {platform.python_version()}"))
-                itemize.add_item(escape_latex(f"OS: {sys.platform}"))
-                itemize.add_item(f"Number of GPUs: {torch.cuda.device_count()}")
-                if fe.fe_deterministic_seed is not None:
-                    itemize.add_item(escape_latex(f"Deterministic Seed: {fe.fe_deterministic_seed}"))
+                for key, value in env_dict["main"].items():
+                    if key == "fastestimator":
+                        key = "FastEstimator"
+                    elif key == "python":
+                        key = "Python"
+                    elif key == "os":
+                        key = "OS"
+                    elif key == "gpu_number":
+                        key = "Number of GPUs"
+                    elif key == "fe_deterministic_seed":
+                        key = "Deterministic Seed"
+                    itemize.add_item(escape_latex(f"{key} {value}"))
+
             with self.doc.create(LongTable('|lr|', pos=['h!'], booktabs=True)) as tabular:
                 tabular.add_row((bold("Module"), bold("Version")))
                 tabular.add_hline()
@@ -456,21 +464,9 @@ class Traceability(Trace):
                 tabular.end_table_footer()
                 tabular.end_table_last_footer()
                 color = True
-                for name, module in humansorted(sys.modules.items(), key=lambda x: x[0]):
-                    if "." in name:
-                        continue  # Skip sub-packages
-                    if name.startswith("_"):
-                        continue  # Skip private packages
-                    if isinstance(module, Base):
-                        continue  # Skip fake packages we mocked
-                    if hasattr(module, '__version__'):
-                        tabular.add_row((escape_latex(name), escape_latex(str(module.__version__))),
-                                        color='black!5' if color else 'white')
-                        color = not color
-                    elif hasattr(module, 'VERSION'):
-                        tabular.add_row((escape_latex(name), escape_latex(str(module.VERSION))),
-                                        color='black!5' if color else 'white')
-                        color = not color
+                for key, value in env_dict["python_packages"].items():
+                    tabular.add_row((escape_latex(key), escape_latex(value)), color='black!5' if color else 'white')
+                    color = not color
 
     def _draw_diagram(self, mode: str, epoch: int) -> pydot.Dot:
         """Draw a summary diagram of the FastEstimator Ops / Traces.

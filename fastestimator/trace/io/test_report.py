@@ -23,7 +23,7 @@ import numpy as np
 
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
-from fastestimator.util.traceability_util import traceable
+from fastestimator.util.traceability_util import get_environment, traceable
 from fastestimator.util.util import to_list, to_number
 
 
@@ -113,7 +113,7 @@ class TestReport(Trace):
             result = result.reshape(-1)
             case.result.append(result)
             if self.sample_id:
-                data_id = to_number(data[self.sample_id]).reshape((-1,))
+                data_id = to_number(data[self.sample_id]).reshape((-1, ))
                 if data_id.size != result.size:
                     raise ValueError("Array size of criteria return doesn't match ID array size."
                                      "Criteria return size should be equal to the batch_size that each entry represents"
@@ -126,28 +126,29 @@ class TestReport(Trace):
             if not isinstance(result, (bool, np.bool_)):
                 raise TypeError("criteria return of epoch-case test need to be bool")
             case.result = case.criteria(*[data[var_name] for var_name in case.criteria_inputs])
-            case.input_val = {var_name: self.to_serializable(data[var_name]) for var_name in case.criteria_inputs}
+            case.input_val = {var_name: self._to_serializable(data[var_name]) for var_name in case.criteria_inputs}
 
     def on_end(self, data: Data) -> None:
         for case in self.sample_cases:
             case_dict = {"test_type": "sample", "description": case.description}
             result = np.hstack(case.result)
             fail_num = np.sum(result == False)
-            case_dict["passed"] = self.to_serializable(fail_num <= case.fail_threshold)
+            case_dict["passed"] = self._to_serializable(fail_num <= case.fail_threshold)
             case_dict["fail_threshold"] = case.fail_threshold
-            case_dict["fail_num"] = self.to_serializable(fail_num)
+            case_dict["fail_number"] = self._to_serializable(fail_num)
             if self.sample_id:
                 fail_id = np.hstack(case.fail_id)
-                case_dict["fail_id"] = self.to_serializable(fail_id)
+                case_dict["fail_id"] = self._to_serializable(fail_id)
             self.json_summary["tests"].append(case_dict)
 
         for case in self.epoch_cases:
             case_dict = {"test_type": "epoch", "description": case.description}
-            case_dict["passed"] = self.to_serializable(case.result)
+            case_dict["passed"] = self._to_serializable(case.result)
             case_dict["inputs"] = case.input_val
             self.json_summary["tests"].append(case_dict)
 
         self.json_summary["execution_time(s)"] = time() - self.json_summary["execution_time(s)"]
+        self.json_summary["environment"] = get_environment()
 
         if self.json_output.endswith(".json"):
             json_path = self.json_output
@@ -158,7 +159,7 @@ class TestReport(Trace):
         print("Saved test JSON report to {}".format(json_path))
 
     @staticmethod
-    def to_serializable(obj: np.generic) -> Union[float, int, list]:
+    def _to_serializable(obj: np.generic) -> Union[float, int, list]:
         """ convert to JSON serializable type
         """
         if isinstance(obj, np.ndarray):
