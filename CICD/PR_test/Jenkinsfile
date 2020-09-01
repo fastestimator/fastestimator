@@ -12,7 +12,7 @@ pipeline {
                     def customImage = docker.build("$IMAGE_TAG", "--no-cache - < docker/nightly/Dockerfile.cpu")
                     try {
                         customImage.inside('-u root') {
-                            sh 'pip install --no-cache-dir -e .'
+                            sh 'pip install --no-cache-dir .'
                             sh 'python test/run_pr_test.py'
                         }
                     }
