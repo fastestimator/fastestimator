@@ -68,8 +68,8 @@ class TestTestReport(unittest.TestCase):
         with self.subTest("fail_threshold"):
             self.assertEqual(json_summary["tests"][0]["fail_threshold"], 0)  # its default value should be zero
 
-        with self.subTest("fail_num"):
-            self.assertEqual(json_summary["tests"][0]["fail_num"], 1)
+        with self.subTest("fail_number"):
+            self.assertEqual(json_summary["tests"][0]["fail_number"], 1)
 
         with self.subTest("fail_id"):
             self.assertEqual(json_summary["tests"][0]["fail_id"], [1])
@@ -109,8 +109,8 @@ class TestTestReport(unittest.TestCase):
         with self.subTest("fail_threshold"):
             self.assertEqual(json_summary["tests"][0]["fail_threshold"], 0)  # its default value should be zero
 
-        with self.subTest("fail_num"):
-            self.assertEqual(json_summary["tests"][0]["fail_num"], 1)
+        with self.subTest("fail_number"):
+            self.assertEqual(json_summary["tests"][0]["fail_number"], 1)
 
         with self.subTest("fail_id"):
             self.assertEqual(json_summary["tests"][0]["fail_id"], [1])
