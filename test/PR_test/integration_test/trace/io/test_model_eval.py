@@ -8,7 +8,7 @@ from fastestimator.dataset import NumpyDataset
 from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.test.unittest_util import OneLayerTorchModel, one_layer_tf_model
 from fastestimator.trace import Trace
-from fastestimator.trace.io.test_report import TestCase, TestReport
+from fastestimator.trace.io.model_eval import TestCase, ModelEval
 from fastestimator.util import to_number
 
 
@@ -33,18 +33,18 @@ class TestTestReport(unittest.TestCase):
         })
         cls.pipeline = fe.Pipeline(test_data=dataset, batch_size=1)
 
-    def test_sample_case_tf(self):
+    def test_instance_case_tf(self):
         test_title = "test"
         test_description = "each return needs to above 0"
 
         model = fe.build(model_fn=one_layer_tf_model, optimizer_fn="adam")
         network = fe.Network(ops=[ModelOp(model=model, inputs="x", outputs="y")])
-        test_cases = TestCase(description=test_description, criteria=lambda y: to_number(y) > 0, sample_wise=True)
-        traces = TestReport(test_cases=test_cases, test_title=test_title, json_output="test.json", sample_id="id")
+        test_cases = TestCase(description=test_description, criteria=lambda y: to_number(y) > 0, aggregate=False)
+        traces = ModelEval(test_cases=test_cases, test_title=test_title, save_path="report", data_id="id")
         estimator = fe.Estimator(pipeline=self.pipeline, network=network, epochs=1, traces=traces)
 
-        with patch('fastestimator.trace.io.test_report.json.dump') as fake:
-            estimator.test()
+        with patch('fastestimator.trace.io.model_eval.json.dump') as fake:
+            estimator.test("test")
             json_summary = fake.call_args[0][0]
 
         with self.subTest("title"):
@@ -57,7 +57,7 @@ class TestTestReport(unittest.TestCase):
             self.assertIn("execution_time(s)", json_summary)
 
         with self.subTest("test_type"):
-            self.assertEqual(json_summary["tests"][0]["test_type"], "sample")
+            self.assertEqual(json_summary["tests"][0]["test_type"], "per-instance")
 
         with self.subTest("description"):
             self.assertEqual(json_summary["tests"][0]["description"], test_description)
@@ -74,18 +74,18 @@ class TestTestReport(unittest.TestCase):
         with self.subTest("fail_id"):
             self.assertEqual(json_summary["tests"][0]["fail_id"], [1])
 
-    def test_sample_case_torch(self):
+    def test_instance_case_torch(self):
         test_title = "test"
         test_description = "each return needs to above 0"
 
         model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn="adam")
         network = fe.Network(ops=[ModelOp(model=model, inputs="x", outputs="y")])
-        test_cases = TestCase(description=test_description, criteria=lambda y: to_number(y) > 0, sample_wise=True)
-        traces = TestReport(test_cases=test_cases, test_title=test_title, json_output="test.json", sample_id="id")
+        test_cases = TestCase(description=test_description, criteria=lambda y: to_number(y) > 0, aggregate=False)
+        traces = ModelEval(test_cases=test_cases, test_title=test_title, save_path="report", data_id="id")
         estimator = fe.Estimator(pipeline=self.pipeline, network=network, epochs=1, traces=traces)
 
-        with patch('fastestimator.trace.io.test_report.json.dump') as fake:
-            estimator.test()
+        with patch('fastestimator.trace.io.model_eval.json.dump') as fake:
+            estimator.test("test")
             json_summary = fake.call_args[0][0]
 
         with self.subTest("title"):
@@ -98,7 +98,7 @@ class TestTestReport(unittest.TestCase):
             self.assertIn("execution_time(s)", json_summary)
 
         with self.subTest("test_type"):
-            self.assertEqual(json_summary["tests"][0]["test_type"], "sample")
+            self.assertEqual(json_summary["tests"][0]["test_type"], "per-instance")
 
         with self.subTest("description"):
             self.assertEqual(json_summary["tests"][0]["description"], test_description)
@@ -115,7 +115,7 @@ class TestTestReport(unittest.TestCase):
         with self.subTest("fail_id"):
             self.assertEqual(json_summary["tests"][0]["fail_id"], [1])
 
-    def test_epoch_case_tf(self):
+    def test_aggregate_case_tf(self):
         test_title = "test"
         test_description = "average value of y need to be above 0"
 
@@ -124,12 +124,12 @@ class TestTestReport(unittest.TestCase):
         test_cases = TestCase(description=test_description, criteria=lambda avg: avg > 0)
         traces = [
             SampleTrace(inputs="y", outputs="avg", mode="test"),
-            TestReport(test_cases=test_cases, test_title=test_title, json_output="test.json", sample_id="id")
+            ModelEval(test_cases=test_cases, test_title=test_title, save_path="report", data_id="id")
         ]
         estimator = fe.Estimator(pipeline=self.pipeline, network=network, epochs=1, traces=traces)
 
-        with patch('fastestimator.trace.io.test_report.json.dump') as fake:
-            estimator.test()
+        with patch('fastestimator.trace.io.model_eval.json.dump') as fake:
+            estimator.test("test")
             json_summary = fake.call_args[0][0]
 
         with self.subTest("title"):
@@ -142,7 +142,7 @@ class TestTestReport(unittest.TestCase):
             self.assertIn("execution_time(s)", json_summary)
 
         with self.subTest("test_type"):
-            self.assertEqual(json_summary["tests"][0]["test_type"], "epoch")
+            self.assertEqual(json_summary["tests"][0]["test_type"], "aggregate")
 
         with self.subTest("description"):
             self.assertEqual(json_summary["tests"][0]["description"], test_description)
@@ -153,7 +153,7 @@ class TestTestReport(unittest.TestCase):
         with self.subTest("inputs"):
             self.assertEqual(json_summary["tests"][0]["inputs"], {"avg": 1.75})
 
-    def test_epoch_case_torch(self):
+    def test_aggregate_case_torch(self):
         test_title = "test"
         test_description = "average value of y need to be above 0"
 
@@ -162,12 +162,12 @@ class TestTestReport(unittest.TestCase):
         test_cases = TestCase(description=test_description, criteria=lambda avg: avg > 0)
         traces = [
             SampleTrace(inputs="y", outputs="avg", mode="test"),
-            TestReport(test_cases=test_cases, test_title=test_title, json_output="test.json", sample_id="id")
+            ModelEval(test_cases=test_cases, test_title=test_title, save_path="report", data_id="id")
         ]
         estimator = fe.Estimator(pipeline=self.pipeline, network=network, epochs=1, traces=traces)
 
-        with patch('fastestimator.trace.io.test_report.json.dump') as fake:
-            estimator.test()
+        with patch('fastestimator.trace.io.model_eval.json.dump') as fake:
+            estimator.test("test")
             json_summary = fake.call_args[0][0]
 
         with self.subTest("title"):
@@ -180,7 +180,7 @@ class TestTestReport(unittest.TestCase):
             self.assertIn("execution_time(s)", json_summary)
 
         with self.subTest("test_type"):
-            self.assertEqual(json_summary["tests"][0]["test_type"], "epoch")
+            self.assertEqual(json_summary["tests"][0]["test_type"], "aggregate")
 
         with self.subTest("description"):
             self.assertEqual(json_summary["tests"][0]["description"], test_description)
