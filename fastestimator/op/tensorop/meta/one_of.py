@@ -46,26 +46,26 @@ class OneOf(TensorOp):
             assert outputs == op.outputs, "All ops within a OneOf must share the same outputs"
             assert self.out_list == op.out_list, "All ops within OneOf must share the same output configuration"
             assert mode == op.mode, "All ops within a OneOf must share the same mode"
-        self.tensor_ops = tensor_ops
+        self.ops = tensor_ops
         self.prob_fn = None
 
     def build(self, framework: str) -> None:
         if framework == 'tf':
-            self.prob_fn = tfp.distributions.Uniform(low=0, high=len(self.tensor_ops))
+            self.prob_fn = tfp.distributions.Uniform(low=0, high=len(self.ops))
         elif framework == 'torch':
-            self.prob_fn = torch.distributions.uniform.Uniform(low=0, high=len(self.tensor_ops))
+            self.prob_fn = torch.distributions.uniform.Uniform(low=0, high=len(self.ops))
         else:
             raise ValueError("unrecognized framework: {}".format(framework))
 
     def get_fe_loss_keys(self) -> Set[str]:
-        return set.union(*[op.get_fe_loss_keys() for op in self.tensor_ops])
+        return set.union(*[op.get_fe_loss_keys() for op in self.ops])
 
     def get_fe_models(self) -> Set[Model]:
-        return set.union(*[op.get_fe_models() for op in self.tensor_ops])
+        return set.union(*[op.get_fe_models() for op in self.ops])
 
     def fe_retain_graph(self, retain: Optional[bool] = None) -> Optional[bool]:
         resp = None
-        for op in self.tensor_ops:
+        for op in self.ops:
             resp = resp or op.fe_retain_graph(retain)
         return resp
 
@@ -79,4 +79,4 @@ class OneOf(TensorOp):
         Returns:
             The `data` after application of one of the available numpyOps.
         """
-        return self.tensor_ops[cast(self.prob_fn.sample(), dtype='int32')].forward(data, state)
+        return self.ops[cast(self.prob_fn.sample(), dtype='int32')].forward(data, state)

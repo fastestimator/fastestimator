@@ -205,11 +205,11 @@ class Pipeline:
             op_names = ["Op"]
 
             for op in op_list:
-                if isinstance(op, Sometimes) and op.numpy_op:
-                    op_names.append(op.__class__.__name__ + " (" + op.numpy_op.__class__.__name__ + ")")
-                elif isinstance(op, OneOf) and op.numpy_ops:
+                if isinstance(op, Sometimes) and op.op:
+                    op_names.append(op.__class__.__name__ + " (" + op.op.__class__.__name__ + ")")
+                elif isinstance(op, OneOf) and op.ops:
                     op_names.append(op.__class__.__name__ + " (" +
-                                    ", ".join([sub_op.__class__.__name__ for sub_op in op.numpy_ops]) + ")")
+                                    ", ".join([sub_op.__class__.__name__ for sub_op in op.ops]) + ")")
                 else:
                     op_names.append(op.__class__.__name__)
 

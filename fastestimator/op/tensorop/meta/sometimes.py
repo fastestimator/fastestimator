@@ -47,7 +47,7 @@ class Sometimes(TensorOp):
         self.inp_idx = len(tensor_op.inputs)
         super().__init__(inputs=tensor_op.inputs + extra_inputs, outputs=tensor_op.outputs, mode=tensor_op.mode)
         # Note that in_list and out_list will always be true
-        self.tensor_op = tensor_op
+        self.op = tensor_op
         self.prob = prob
         self.prob_fn = None
 
@@ -60,13 +60,13 @@ class Sometimes(TensorOp):
             raise ValueError("unrecognized framework: {}".format(framework))
 
     def get_fe_loss_keys(self) -> Set[str]:
-        return self.tensor_op.get_fe_loss_keys()
+        return self.op.get_fe_loss_keys()
 
     def get_fe_models(self) -> Set[Model]:
-        return self.tensor_op.get_fe_models()
+        return self.op.get_fe_models()
 
     def fe_retain_graph(self, retain: Optional[bool] = None) -> Optional[bool]:
-        return self.tensor_op.fe_retain_graph(retain)
+        return self.op.fe_retain_graph(retain)
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
         """Execute the wrapped operator a certain fraction of the time.
@@ -80,10 +80,10 @@ class Sometimes(TensorOp):
         """
         if self.prob > self.prob_fn.sample():
             data = data[:self.inp_idx]  # Cut off the unnecessary inputs
-            if not self.tensor_op.in_list:
+            if not self.op.in_list:
                 data = data[0]
-            data = self.tensor_op.forward(data, state)
-            if not self.tensor_op.out_list:
+            data = self.op.forward(data, state)
+            if not self.op.out_list:
                 data = [data]
         else:
             data = [data[self.inputs.index(out)] for out in self.outputs]

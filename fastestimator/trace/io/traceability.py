@@ -47,6 +47,8 @@ from fastestimator.op.numpyop.meta.one_of import OneOf
 from fastestimator.op.numpyop.meta.sometimes import Sometimes
 from fastestimator.op.op import Op
 from fastestimator.op.tensorop.model import ModelOp
+from fastestimator.op.tensorop.meta.one_of import OneOf as OneOfT
+from fastestimator.op.tensorop.meta.sometimes import Sometimes as SometimesT
 from fastestimator.pipeline import Pipeline
 from fastestimator.schedule.schedule import Scheduler, get_current_items, get_signature_epochs
 from fastestimator.summary.logs.log_plot import visualize_logs
@@ -554,18 +556,18 @@ class Traceability(Trace):
             op: The op (or trace) to be visualized.
             node_id: The id to use as the node label.
         """
-        if isinstance(op, Sometimes) and op.numpy_op:
+        if isinstance(op, (Sometimes, SometimesT)) and op.op:
             wrapper = pydot.Cluster(style='loosely dotted', graph_name=str(id(op)))
             wrapper.set('label', f'Sometimes ({op.prob}):')
             wrapper.set('labeljust', 'r')
-            Traceability._add_node(wrapper, op.numpy_op, node_id)
+            Traceability._add_node(wrapper, op.op, node_id)
             diagram.add_subgraph(wrapper)
-        elif isinstance(op, OneOf) and op.numpy_ops:
+        elif isinstance(op, (OneOf, OneOfT)) and op.ops:
             wrapper = pydot.Cluster(style='loosely dotted', graph_name=str(id(op)))
             wrapper.set('label', 'One Of:')
             wrapper.set('labeljust', 'r')
-            Traceability._add_node(wrapper, op.numpy_ops[0], node_id)
-            for sub_op in op.numpy_ops[1:]:
+            Traceability._add_node(wrapper, op.ops[0], node_id)
+            for sub_op in op.ops[1:]:
                 Traceability._add_node(wrapper, sub_op, str(id(sub_op)))
             diagram.add_subgraph(wrapper)
         else:

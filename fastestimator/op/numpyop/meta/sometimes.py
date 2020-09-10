@@ -42,7 +42,7 @@ class Sometimes(NumpyOp):
         self.inp_idx = len(numpy_op.inputs)
         super().__init__(inputs=numpy_op.inputs + extra_inputs, outputs=numpy_op.outputs, mode=numpy_op.mode)
         # Note that in_list and out_list will always be true
-        self.numpy_op = numpy_op
+        self.op = numpy_op
         self.prob = prob
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
@@ -57,10 +57,10 @@ class Sometimes(NumpyOp):
         """
         if self.prob > np.random.uniform():
             data = data[:self.inp_idx]  # Cut off the unnecessary inputs
-            if not self.numpy_op.in_list:
+            if not self.op.in_list:
                 data = data[0]
-            data = self.numpy_op.forward(data, state)
-            if not self.numpy_op.out_list:
+            data = self.op.forward(data, state)
+            if not self.op.out_list:
                 data = [data]
         else:
             data = [data[self.inputs.index(out)] for out in self.outputs]
