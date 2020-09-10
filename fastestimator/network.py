@@ -25,10 +25,8 @@ from tensorflow.python.distribute.values import DistributedValues
 
 from fastestimator.backend.load_model import load_model
 from fastestimator.backend.to_tensor import to_tensor
-from fastestimator.op.op import LambdaOp, get_inputs_by_op, write_outputs_by_op
+from fastestimator.op.op import get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.tensorop import TensorOp
-from fastestimator.op.tensorop.model.model import ModelOp
-from fastestimator.op.tensorop.model.update import UpdateOp
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
 from fastestimator.util.traceability_util import trace_model, traceable
 from fastestimator.util.util import NonContext, get_batch_size, to_list
@@ -37,6 +35,7 @@ Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 T = TypeVar('T')
 
 GOOGLE_DRIVE_URL = "https://drive.google.com"
+
 
 @traceable()
 class BaseNetwork:
@@ -65,7 +64,7 @@ class BaseNetwork:
             AssertionError: If any of the ops are not TensorOps.
         """
         for op in get_current_items(self.ops):
-            assert isinstance(op, (TensorOp, LambdaOp)), "unsupported op format, must provide TensorOp in Network"
+            assert isinstance(op, TensorOp), "unsupported op format, must provide TensorOp in Network"
 
     def get_scheduled_items(self, mode: str) -> List[Any]:
         """Get a list of items considered for scheduling.
@@ -99,10 +98,10 @@ class BaseNetwork:
         if output_keys:
             self.effective_outputs[mode] = self.effective_outputs[mode].intersection(output_keys)
         self.epoch_ops = get_current_items(self.ops, mode, epoch)
-        self.epoch_models = set(op.model for op in self.epoch_ops if isinstance(op, (UpdateOp, ModelOp)))
-        gradient_ops = [op for op in self.epoch_ops if hasattr(op, "retain_graph")]
+        self.epoch_models = set.union(*[op.get_fe_models() for op in self.epoch_ops])
+        gradient_ops = [op for op in self.epoch_ops if op.fe_retain_graph() is not None]
         for idx, gradient_op in enumerate(gradient_ops):
-            gradient_op.retain_graph = idx != len(gradient_ops) - 1
+            gradient_op.fe_retain_graph(idx != len(gradient_ops) - 1)
         self.epoch_state = {"warmup": warmup, "mode": mode, "req_grad": len(gradient_ops) > 0, "epoch": epoch}
         for model in self.epoch_models:
             if hasattr(model, "optimizer") and model.optimizer is not None:
@@ -124,8 +123,7 @@ class BaseNetwork:
         """
         loss_keys = set()
         for op in get_current_items(self.ops):
-            if isinstance(op, UpdateOp):
-                loss_keys.update(op.inputs)
+            loss_keys |= op.get_fe_loss_keys()
         return loss_keys
 
     def get_effective_input_keys(self, mode: str, epoch: int) -> Set[str]:
@@ -215,8 +213,7 @@ def _collect_models(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> Set[
     """
     models = set()
     for op in get_current_items(ops):
-        if isinstance(op, (ModelOp, UpdateOp)):
-            models.add(op.model)
+        models |= op.get_fe_models()
     return models
 
 
@@ -596,7 +593,7 @@ class TFNetwork(BaseNetwork):
         Returns:
             The prediction dictionary resulting from a forward pass of the Network.
         """
-        batch = ChainMap({}, batch)
+        batch = dict(batch)
         prediction = {}
         with tf.GradientTape(persistent=True) if state["req_grad"] else NonContext() as tape:
             state['tape'] = tape

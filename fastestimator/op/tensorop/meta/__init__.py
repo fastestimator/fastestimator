@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.numpyop.meta.fuse import Fuse
-from fastestimator.op.numpyop.meta.one_of import OneOf
-from fastestimator.op.numpyop.meta.sometimes import Sometimes
+from fastestimator.op.tensorop.meta.fuse import Fuse
+from fastestimator.op.tensorop.meta.one_of import OneOf
+from fastestimator.op.tensorop.meta.sometimes import Sometimes

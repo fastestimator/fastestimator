@@ -12,39 +12,64 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import random
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Set, TypeVar, Union
 
-import numpy as np
+import tensorflow as tf
+import tensorflow_probability as tfp
+import torch
 
-from fastestimator.op.numpyop.numpyop import NumpyOp
+from fastestimator.backend.cast import cast
+from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
+
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
 
 @traceable()
-class OneOf(NumpyOp):
+class OneOf(TensorOp):
     """Perform one of several possible NumpyOps.
 
     Args:
         numpy_ops: A list of ops to choose between with uniform probability.
     """
-    def __init__(self, *numpy_ops: NumpyOp) -> None:
-        inputs = numpy_ops[0].inputs
-        outputs = numpy_ops[0].outputs
-        mode = numpy_ops[0].mode
+    def __init__(self, *tensor_ops: TensorOp) -> None:
+        inputs = tensor_ops[0].inputs
+        outputs = tensor_ops[0].outputs
+        mode = tensor_ops[0].mode
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        self.in_list = numpy_ops[0].in_list
-        self.out_list = numpy_ops[0].out_list
-        for op in numpy_ops[1:]:
+        self.in_list = tensor_ops[0].in_list
+        self.out_list = tensor_ops[0].out_list
+        for op in tensor_ops[1:]:
             assert inputs == op.inputs, "All ops within a OneOf must share the same inputs"
             assert self.in_list == op.in_list, "All ops within OneOf must share the same input configuration"
             assert outputs == op.outputs, "All ops within a OneOf must share the same outputs"
             assert self.out_list == op.out_list, "All ops within OneOf must share the same output configuration"
             assert mode == op.mode, "All ops within a OneOf must share the same mode"
-        self.numpy_ops = numpy_ops
+        self.tensor_ops = tensor_ops
+        self.prob_fn = None
 
-    def forward(self, data: Union[np.ndarray, List[np.ndarray]],
-                state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
+    def build(self, framework: str) -> None:
+        if framework == 'tf':
+            self.prob_fn = tfp.distributions.Uniform(low=0, high=len(self.tensor_ops))
+        elif framework == 'torch':
+            self.prob_fn = torch.distributions.uniform.Uniform(low=0, high=len(self.tensor_ops))
+        else:
+            raise ValueError("unrecognized framework: {}".format(framework))
+
+    def get_fe_loss_keys(self) -> Set[str]:
+        return set.union(*[op.get_fe_loss_keys() for op in self.tensor_ops])
+
+    def get_fe_models(self) -> Set[Model]:
+        return set.union(*[op.get_fe_models() for op in self.tensor_ops])
+
+    def fe_retain_graph(self, retain: Optional[bool] = None) -> Optional[bool]:
+        resp = None
+        for op in self.tensor_ops:
+            resp = resp or op.fe_retain_graph(retain)
+        return resp
+
+    def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
         """Execute a randomly selected op from the list of `numpy_ops`.
 
         Args:
@@ -54,4 +79,4 @@ class OneOf(NumpyOp):
         Returns:
             The `data` after application of one of the available numpyOps.
         """
-        return random.choice(self.numpy_ops).forward(data, state)
+        return self.tensor_ops[cast(self.prob_fn.sample(), dtype='int32')].forward(data, state)

@@ -1,9 +1,6 @@
 import unittest
 
-import numpy as np
-
-from fastestimator.op.op import LambdaOp, Op, get_inputs_by_op, write_outputs_by_op
-from fastestimator.test.unittest_util import is_equal
+from fastestimator.op.op import Op, get_inputs_by_op, write_outputs_by_op
 
 
 class TestOp(unittest.TestCase):
@@ -47,15 +44,3 @@ class TestWriteOutputsByOp(unittest.TestCase):
         batch = {}
         write_outputs_by_op(op=Op(outputs=["x", "y"]), store=batch, outputs=[1, [1, 2]])
         self.assertEqual(batch, {"x": 1, "y": [1, 2]})
-    
-
-class TestLambdaOp(unittest.TestCase):
-    def test_single_input(self):
-        op = LambdaOp(fn=np.sum)
-        data = op.forward(data=[[1, 2, 3]], state={})
-        self.assertEqual(data, 6)
-
-    def test_multi_input(self):
-        op = LambdaOp(fn=np.reshape)
-        data = op.forward(data=[np.array([1, 2, 3, 4]), (2, 2)], state={})
-        self.assertTrue(is_equal(data, np.array([[1, 2], [3, 4]])))

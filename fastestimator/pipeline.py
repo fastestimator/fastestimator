@@ -29,7 +29,6 @@ from fastestimator.dataset.op_dataset import OpDataset
 from fastestimator.op.numpyop.meta.one_of import OneOf
 from fastestimator.op.numpyop.meta.sometimes import Sometimes
 from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
-from fastestimator.op.op import LambdaOp
 from fastestimator.schedule.schedule import Scheduler, get_current_items
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import pad_batch, to_list, to_set
@@ -116,7 +115,7 @@ class Pipeline:
                 assert isinstance(batch_size, int), "unsupported batch_size format: {}".format(type(batch_size))
             # ops check
             for op in get_current_items(self.ops):
-                assert isinstance(op, (NumpyOp, LambdaOp)), "unsupported op format, must provide NumpyOp in Pipeline"
+                assert isinstance(op, NumpyOp), "unsupported op format, must provide NumpyOp in Pipeline"
             # num_process check
             assert isinstance(self.num_process, int), "number of processes must be an integer"
             return True

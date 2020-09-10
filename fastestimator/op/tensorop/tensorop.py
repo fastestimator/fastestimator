@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, List, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, TypeVar, Union
 
 import tensorflow as tf
 import torch
@@ -21,6 +21,7 @@ from fastestimator.op.op import Op
 from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
 
 @traceable()
@@ -54,3 +55,74 @@ class TensorOp(Op):
             framework: Which framework this Op will be executing in. One of 'tf' or 'torch'.
         """
         pass
+
+    # ###########################################################################
+    # The methods below this point can be ignored by most non-FE developers
+    # ###########################################################################
+
+    # noinspection PyMethodMayBeStatic
+    def get_fe_models(self) -> Set[Model]:
+        """A method to get any models held by this Op.
+
+        All users and most developers can safely ignore this method. This method may be invoked to gather and manipulate
+        models, for example by the Network during load_epoch().
+
+        Returns:
+            Any models held by this Op.
+        """
+        return set()
+
+    # noinspection PyMethodMayBeStatic
+    def get_fe_loss_keys(self) -> Set[str]:
+        """A method to get any loss keys held by this Op.
+
+        All users and most developers can safely ignore this method. This method may be invoked to gather information
+        about losses, for example by the Network in get_loss_keys().
+
+        Returns:
+            Any loss keys held by this Op.
+        """
+        return set()
+
+    # noinspection PyMethodMayBeStatic
+    def fe_retain_graph(self, retain: Optional[bool] = None) -> Optional[bool]:
+        """A method to get / set whether this Op should retain network gradients after computing them.
+
+        All users and most developers can safely ignore this method. Ops which do not compute gradients should leave
+        this method alone. If this method is invoked with `retain` as True or False, then the gradient computations
+        performed by this Op should retain or discard the graph respectively afterwards.
+
+        Args:
+            retain: If None, then return the current retain_graph status of the Op. If True or False, then set the
+                retain_graph status of the op to the new status and return the new status.
+
+        Returns:
+            Whether this Op will retain the backward gradient graph after it's forward pass, or None if this Op does not
+            compute backward gradients.
+        """
+        return None
+
+
+@traceable()
+class LambdaOp(TensorOp):
+    """An Operator that performs any specified function as forward function.
+
+    Args:
+        fn: The function to be executed.
+        inputs: Key(s) from which to retrieve data from the data dictionary.
+        outputs: Key(s) under which to write the outputs of this Op back to the data dictionary.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+    """
+    def __init__(self,
+                 fn: Callable,
+                 inputs: Union[None, str, Iterable[str]] = None,
+                 outputs: Union[None, str, Iterable[str]] = None,
+                 mode: Union[None, str, Iterable[str]] = None):
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.fn = fn
+        self.in_list = True
+
+    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
+        return self.fn(*data)

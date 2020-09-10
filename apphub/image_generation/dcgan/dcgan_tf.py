@@ -22,7 +22,7 @@ from tensorflow.keras import layers
 import fastestimator as fe
 from fastestimator.backend import binary_crossentropy
 from fastestimator.dataset.data import mnist
-from fastestimator.op import LambdaOp
+from fastestimator.op.numpyop import LambdaOp
 from fastestimator.op.numpyop.univariate import ExpandDims, Normalize
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp

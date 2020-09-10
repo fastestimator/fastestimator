@@ -24,7 +24,7 @@ from tensorflow.keras.optimizers import Adam
 import fastestimator as fe
 from fastestimator.backend import feed_forward, get_gradient
 from fastestimator.dataset.data import nih_chestxray
-from fastestimator.op import LambdaOp
+from fastestimator.op.numpyop import LambdaOp
 from fastestimator.op.numpyop.multivariate import Resize
 from fastestimator.op.numpyop.univariate import Normalize, ReadImage
 from fastestimator.op.tensorop import TensorOp

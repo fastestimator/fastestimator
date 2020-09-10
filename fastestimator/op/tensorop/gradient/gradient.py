@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Iterable, List, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Optional, TypeVar, Union
 
 import tensorflow as tf
 import torch
@@ -50,6 +50,11 @@ class GradientOp(TensorOp):
         inputs.extend(finals)
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.retain_graph = True
+
+    def fe_retain_graph(self, retain: Optional[bool] = None) -> Optional[bool]:
+        if retain is not None:
+            self.retain_graph = retain
+        return self.retain_graph
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
         initials = data[:len(data) // 2]
