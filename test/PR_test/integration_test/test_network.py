@@ -51,6 +51,7 @@ def get_tf_model_weight(model):
 
     return weight
 
+
 def get_torch_one_layer_model_weight(model):
     weight = []
     weight.append(deepcopy(model.fc1.weight.data.numpy()))
@@ -73,7 +74,6 @@ class TestNetworkCollectModel(unittest.TestCase):
                 model = fe.build(model_fn=model_fn, optimizer_fn=None)
                 model2 = fe.build(model_fn=model_fn, optimizer_fn=None)
                 ops = [
-                    SampleNumpyOp(inputs="x", outputs="x"),
                     SampleTensorOp(inputs="x", outputs="x"),
                     ModelOp(model=model, inputs="x", outputs="y2"),
                     UpdateOp(model=model2, loss_name="ce")
@@ -85,7 +85,6 @@ class TestNetworkCollectModel(unittest.TestCase):
 
     def test_network_collect_model_no_model_op_and_update_op(self):
         ops = [
-            SampleNumpyOp(inputs="x", outputs="x"),
             SampleTensorOp(inputs="x", outputs="x"),
         ]
 
@@ -407,7 +406,13 @@ class TestNetworkTransform(unittest.TestCase):
             MeanSquaredError(inputs=("y_pred", "y"), outputs="ce"),
             UpdateOp(model=model, loss_name="ce")
         ])
-        batch = {"x": np.array([[1, 1, 1,]], dtype=np.float32), "y": np.array([[1]], dtype=np.float32)}
+        batch = {
+            "x": np.array([[
+                1,
+                1,
+                1,
+            ]], dtype=np.float32), "y": np.array([[1]], dtype=np.float32)
+        }
         batch = network.transform(data=batch, mode="train")
 
         with self.subTest("output y_pred check"):

@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 from fastestimator.op.numpyop.meta import Sometimes
-from fastestimator.op.numpyop.univariate import Binarize, Minmax, Normalize
+from fastestimator.op.numpyop.univariate import Minmax
 
 
 class TestOneOf(unittest.TestCase):
@@ -23,7 +23,7 @@ class TestOneOf(unittest.TestCase):
             self.assertEqual(output[0].shape, self.output_shape)
 
     def test_multi_input(self):
-        minmax = Minmax(inputs='x', outputs='x')
+        minmax = Minmax(inputs=['x', 'y'], outputs=['x', 'y'])
         sometimes = Sometimes(minmax)
         output = sometimes.forward(data=self.multi_input, state={})
         with self.subTest('Check output type'):
