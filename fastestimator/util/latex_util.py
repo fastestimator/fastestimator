@@ -17,7 +17,7 @@ from typing import Optional, Union
 from pylatex import NoEscape, Package, escape_latex
 from pylatex.base_classes import Container, Environment, LatexObject, Options
 from pylatex.lists import Enumerate
-from pylatex.utils import _latex_item_to_string, bold, dumps_list
+from pylatex.utils import bold, dumps_list
 
 from fastestimator.util.util import FEID
 
@@ -34,54 +34,6 @@ class ContainerList(Container):
             A string representation of itself.
         """
         return self.dumps_content()
-
-
-class TabularCell(Container):
-    """A class to represent a tabularx cell that can directly used in Tabular.add_row(). The purpose of this class is to
-    fix the issue that first element of Tabularx cells is not wrappable.
-
-    Args:
-        data: Data of the cell.
-        token: String to be added in the interval of data entries.
-    """
-    def __init__(self, data: list, token: str):
-        super().__init__(data=data)
-        self.token = token
-
-    def dumps(self) -> str:
-        """Get a string representation of this cell.
-
-        Returns:
-            A string representation of itself.
-        """
-        return dumps_list(self, token=self.token)
-
-
-class WrapText(LatexObject):
-    """A class to represent a string that will be wrappable text if it is long enough. The purpose of this class is to
-    fix the issue that first element of Tabularx cells is not wrappable.
-
-    Args:
-        data: String data
-        seq_thld: The threshold of length of string. When len(data) is above this number, the string will be considered
-            as wrappable by enclosing the string with seqsplit latex command.
-    """
-    def __init__(self, data: Union[str, int, float], seq_thld: int):
-        assert isinstance(data, (str, int, float)), "the self.data type needs to be str, int, float"
-        self.seq_thld = seq_thld
-        self.data = str(data)
-        super().__init__()
-
-    def dumps(self) -> str:
-        """Get a string representation of this cell.
-
-        Returns:
-            A string representation of itself.
-        """
-        if len(self.data) > self.seq_thld:
-            return NoEscape(r'\seqsplit{' + _latex_item_to_string(self.data) + '}')
-        else:
-            return _latex_item_to_string(self.data)
 
 
 class PyContainer(ContainerList):
@@ -177,3 +129,54 @@ class HrefFEID(ContainerList):
             data.append(bold(escape_latex(name)) if bold_name else escape_latex(name))
         data.append(NoEscape("}}}"))
         super().__init__(data=data)
+
+
+class TabularCell(Container):
+    """A class to convert iterable to latex representation.
+
+    The data of this class can be any type. Usually it is iterable due to its capability to setup interval string.
+
+    Args:
+        data: Data of the cell.
+        token: String to be added in the interval of data entries.
+    """
+    def __init__(self, data: list, token: str):
+        super().__init__(data=data)
+        self.token = token
+
+    def dumps(self) -> str:
+        """Get a string representation of this cell.
+
+        Returns:
+            A string representation of itself.
+        """
+        return dumps_list(self, token=self.token)
+
+
+class WrapText(LatexObject):
+    """A class to convert string or number to wrappable latex representation.
+
+    This class will first convert the data to string, and then to wrappable latex representation if its length is too
+    long. This is to fix the issue that first element and number of Tabularx cells is not wrappable in X column type.
+
+    Args:
+        data: String data.
+        seq_thld: When length of string is above this number, the string will be converted to wrappable text by being
+            enclosed with seqsplit latex command.
+    """
+    def __init__(self, data: Union[str, int, float], seq_thld: int):
+        assert isinstance(data, (str, int, float)), "the self.data type needs to be str, int, float"
+        self.seq_thld = seq_thld
+        self.data = str(data)
+        super().__init__()
+
+    def dumps(self) -> str:
+        """Get a string representation of this cell.
+
+        Returns:
+            A string representation of itself.
+        """
+        if len(self.data) > self.seq_thld:
+            return NoEscape(r'\seqsplit{' + escape_latex(self.data) + '}')
+        else:
+            return escape_latex(self.data)

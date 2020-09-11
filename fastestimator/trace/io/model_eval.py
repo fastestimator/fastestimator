@@ -20,36 +20,33 @@ import re
 import shutil
 from datetime import datetime
 from time import time
-from typing import Callable, List, Union
+from typing import Any, Callable, List, Union
 
 import numpy as np
-import pydot
-from pylatex import Command, Document, Figure, Hyperref, Itemize, Label, LongTable, Marker, MultiColumn, NoEscape, \
-    Package, Section, Subsection, Subsubsection, Table, Tabular, Tabularx, TextColor, escape_latex
-from pylatex.utils import bold, dumps_list
+from pylatex import Command, Document, Itemize, MultiColumn, NoEscape, Package, Section, Subsection, Table, Tabularx, \
+    escape_latex
 
 import fastestimator as fe
-from fastestimator.summary.logs.log_plot import visualize_logs
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
-from fastestimator.util.latex_util import PyContainer, TabularCell, WrapText
-from fastestimator.util.traceability_util import get_environment, traceable
+from fastestimator.util.latex_util import TabularCell, WrapText
+from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_list, to_number
 
 
 @traceable()
 class TestCase():
-    """This class defines the test case that TestReport trace will take to perform auto-testing.
+    """This class defines the test case that ModelEval trace will take to perform auto-testing.
 
     Args:
         description: A test description.
-        criteria: Function to perform the test that return True when test passes and False when test fails. Input
-            variable name will be used as input keys to futher derive input value.
-        aggregate: If True, this test will be treated as per-instance type of which test criteria will be examined at
-            batch_end. If False, this test is aggregate type and its criteria will be examined at epoch_end.
-        fail_threshold: Thershold of failing sample number to judge sample-case test as failed or passed. If failing
-            number is above this value, then the test fails; otherwise it passes. It only has effect when sample_wise
-            equal to true.
+        criteria: Function to perform the test returns True when the test passes and False when it fails. Input
+            variable names will be used as input keys to further derive input value.
+        aggregate: If True, this test is aggregate type and its criteria function will be examined at epoch_end. If
+            False, this test is per-instance type and its test criteria function will be examined at batch_end.
+        fail_threshold: Thershold of failure instance number to judge per-instance test as failed or passed. If failure
+            number is above this value, then the test fails; otherwise it passes. It only has effect when aggregate is
+            equal to False.
     """
     def __init__(self, description: str, criteria: Callable, aggregate: bool = True, fail_threshold: int = 0) -> None:
         self.description = description
@@ -69,11 +66,14 @@ class TestCase():
 class ModelEval(Trace):
     """Automate testing and report generation.
 
+    This trace will examine all input TestCases in the test mode and generate a PDF report and a JSON test result.
+
+
     Args:
-        test_cases: List of TestCase object.
-        save_path: Where to save the output directory
+        test_cases: TestCase object or list of TestCase objects.
+        save_path: Where to save the output directory.
         test_title: Title of the test.
-        data_id: Data instance ID key. If provided, then sample-case test will return failing sample ID.
+        data_id: Data instance ID key. If provided, then per-instance test will return failure instance ID.
     """
     def __init__(self,
                  test_cases: Union[TestCase, List[TestCase]],
@@ -85,7 +85,7 @@ class ModelEval(Trace):
         self.test_cases = to_list(test_cases)
         self.instance_cases = []
         self.aggregate_cases = []
-        self.sample_id = data_id
+        self.data_id = data_id
 
         all_inputs = set()
         for case in self.test_cases:
@@ -96,7 +96,7 @@ class ModelEval(Trace):
             else:
                 self.instance_cases.append(case)
 
-        if self.sample_id:
+        if self.data_id:
             all_inputs.update([data_id])
 
         path = os.path.normpath(save_path)
@@ -119,25 +119,31 @@ class ModelEval(Trace):
         for case in self.instance_cases:
             result = case.criteria(*[data[var_name] for var_name in case.criteria_inputs])
             if not isinstance(result, np.ndarray):
-                raise TypeError("Criteria return of per-instance test need to be ndarray with dtype bool")
+                raise TypeError(f"In test with description \'{case.description}\': "
+                                "Criteria return of per-instance test needs to be ndarray with dtype bool.")
+
             elif result.dtype != np.dtype("bool"):
-                raise TypeError("Criteria return of per-instance test need to be ndarray with dtype bool")
+                raise TypeError(f"In test with description \'{case.description}\': "
+                                "Criteria return of per-instance test needs to be ndarray with dtype bool.")
 
             result = result.reshape(-1)
             case.result.append(result)
-            if self.sample_id:
-                data_id = to_number(data[self.sample_id]).reshape((-1, ))
+            if self.data_id:
+                data_id = to_number(data[self.data_id]).reshape((-1, ))
                 if data_id.size != result.size:
-                    raise ValueError("Array size of criteria return doesn't match ID array size."
-                                     "Criteria return size should be equal to the batch_size that each entry represents"
-                                     "test result of corresponding data instance")
+                    raise ValueError(f"In test with description \'{case.description}\': "
+                                     "Array size of criteria return doesn't match ID array size. Size of criteria"
+                                     "return should be equal to the batch_size such that each entry represents test"
+                                     "result of corresponding data instance.")
+
                 case.fail_id.append(data_id[result == False])
 
     def on_epoch_end(self, data: Data) -> None:
         for case in self.aggregate_cases:
             result = case.criteria(*[data[var_name] for var_name in case.criteria_inputs])
             if not isinstance(result, (bool, np.bool_)):
-                raise TypeError("criteria return of epoch-case test need to be bool")
+                raise TypeError(f"In test with description \'{case.description}\': "
+                                "Criteria return of aggregate-case test needs to be a bool.")
             case.result = case.criteria(*[data[var_name] for var_name in case.criteria_inputs])
             case.input_val = {var_name: self._to_serializable(data[var_name]) for var_name in case.criteria_inputs}
 
@@ -149,7 +155,7 @@ class ModelEval(Trace):
             case_dict["passed"] = self._to_serializable(fail_num <= case.fail_threshold)
             case_dict["fail_threshold"] = case.fail_threshold
             case_dict["fail_number"] = self._to_serializable(fail_num)
-            if self.sample_id:
+            if self.data_id:
                 fail_id = np.hstack(case.fail_id)
                 case_dict["fail_id"] = self._to_serializable(fail_id)
             self.json_summary["tests"].append(case_dict)
@@ -183,8 +189,8 @@ class ModelEval(Trace):
         # Convert the experiment name to a report name (useful for saving multiple experiments into same directory)
         report_name = "".join('_' if c == ' ' else c for c in exp_name
                               if c.isalnum() or c in (' ', '_')).rstrip("_").lower()
-        report_name = re.sub('_{2,}', '_', report_name) + "_test_report"
-        self.report_name = report_name or 'test_report'
+        report_name = re.sub('_{2,}', '_', report_name) + "_ModelEval"
+        self.report_name = report_name or '_ModelEval'
 
     def _init_document(self) -> None:
         """Initialize latex document
@@ -192,7 +198,6 @@ class ModelEval(Trace):
         self.doc = Document(geometry_options=['lmargin=2cm', 'rmargin=2cm', 'tmargin=2cm', 'bmargin=2cm'])
         self.doc.packages.append(Package(name='placeins', options=['section']))
         self.doc.packages.append(Package(name='float'))
-        self.doc.preamble.append(NoEscape(r'\usetikzlibrary{positioning}'))
 
         self.doc.preamble.append(NoEscape(r'\aboverulesep=0ex'))
         self.doc.preamble.append(NoEscape(r'\belowrulesep=0ex'))
@@ -203,10 +208,10 @@ class ModelEval(Trace):
         self.doc.preamble.append(Command('date', NoEscape(r'\today')))
         self.doc.append(NoEscape(r'\maketitle'))
 
-        # new column type
+        # new column type for tabularx
         self.doc.preamble.append(NoEscape(r'\newcolumntype{Y}{>{\centering\arraybackslash}X}'))
 
-        # add tabularx hyphentation
+        # add seqinsert hyphentation
         self.doc.preamble.append(NoEscape(r'\def\seqinsert{\-}'))
 
         # TOC
@@ -237,22 +242,9 @@ class ModelEval(Trace):
             with self.doc.create(Table(position='H')) as table:
                 table.append(NoEscape(r'\refstepcounter{table}'))
                 self._document_summary_table(pass_num=len(instance_pass_tests) + len(aggregate_pass_tests),
-                                                fail_num=len(instance_fail_tests) + len(aggregate_fail_tests))
+                                             fail_num=len(instance_fail_tests) + len(aggregate_fail_tests))
 
-        if len(instance_pass_tests) + len(aggregate_pass_tests) > 0:
-            with self.doc.create(Section("Passed Tests")):
-                if len(aggregate_pass_tests) > 0:
-                    with self.doc.create(Subsection("Passed Aggregate Tests")):
-                        with self.doc.create(Table(position='H')) as table:
-                            table.append(NoEscape(r'\refstepcounter{table}'))
-                            self._document_aggregate_table(tests=aggregate_pass_tests)
-                if len(instance_pass_tests) > 0:
-                    with self.doc.create(Subsection("Passed Per-Instance Tests")):
-                        with self.doc.create(Table(position='H')) as table:
-                            table.append(NoEscape(r'\refstepcounter{table}'))
-                            self._document_instance_table(tests=instance_pass_tests, with_ID=self.sample_id)
-
-        if len(instance_fail_tests) + len(aggregate_fail_tests) > 0:
+        if instance_fail_tests or aggregate_fail_tests:
             with self.doc.create(Section("Failed Tests")):
                 if len(aggregate_fail_tests) > 0:
                     with self.doc.create(Subsection("Failed Aggregate Tests")):
@@ -263,20 +255,29 @@ class ModelEval(Trace):
                     with self.doc.create(Subsection("Failed Per-Instance Tests")):
                         with self.doc.create(Table(position='H')) as table:
                             table.append(NoEscape(r'\refstepcounter{table}'))
-                            self._document_instance_table(tests=instance_fail_tests, with_ID=self.sample_id)
+                            self._document_instance_table(tests=instance_fail_tests, with_ID=self.data_id)
 
-    def _document_summary_table(self, pass_num:int, fail_num:int) -> None:
-        """Document summary table
+        if instance_pass_tests or aggregate_pass_tests:
+            with self.doc.create(Section("Passed Tests")):
+                if aggregate_pass_tests:
+                    with self.doc.create(Subsection("Passed Aggregate Tests")):
+                        with self.doc.create(Table(position='H')) as table:
+                            table.append(NoEscape(r'\refstepcounter{table}'))
+                            self._document_aggregate_table(tests=aggregate_pass_tests)
+                if instance_pass_tests:
+                    with self.doc.create(Subsection("Passed Per-Instance Tests")):
+                        with self.doc.create(Table(position='H')) as table:
+                            table.append(NoEscape(r'\refstepcounter{table}'))
+                            self._document_instance_table(tests=instance_pass_tests, with_ID=self.data_id)
+
+    def _document_summary_table(self, pass_num: int, fail_num: int) -> None:
+        """Document a summary table.
 
         Args:
-            pass_num: Total number of passed tests
-            fail_num: Total number of failed tests
+            pass_num: Total number of passed tests.
+            fail_num: Total number of failed tests.
         """
         with self.doc.create(Tabularx('|Y|Y|Y|', booktabs=True)) as tabular:
-            package = Package('xcolor', options='table')
-            if package not in tabular.packages:
-                # Need to invoke a table color before invoking TextColor (bug?)
-                tabular.packages.append(package)
             package = Package('seqsplit')
             if package not in tabular.packages:
                 tabular.packages.append(package)
@@ -287,8 +288,8 @@ class ModelEval(Trace):
 
             tabular.add_row((pass_num + fail_num, pass_num, fail_num), strict=False)
 
-    def _document_instance_table(self, tests:List[dict], with_ID:bool):
-        """Document instance table
+    def _document_instance_table(self, tests: List[dict], with_ID: bool):
+        """Document a result table of per-instance tests.
 
         Args:
             tests: List of corresponding test dictionary to make a table.
@@ -300,10 +301,6 @@ class ModelEval(Trace):
             table_spec = '|c|X|c|c|'
 
         with self.doc.create(Tabularx(table_spec, booktabs=True)) as tabular:
-            package = Package('xcolor', options='table')
-            if package not in tabular.packages:
-                # Need to invoke a table color before invoking TextColor (bug?)
-                tabular.packages.append(package)
             package = Package('seqsplit')
             if package not in tabular.packages:
                 tabular.packages.append(package)
@@ -340,18 +337,13 @@ class ModelEval(Trace):
                 tabular.add_row(row_cells)
                 self.test_id += 1
 
-
     def _document_aggregate_table(self, tests: List[dict]) -> None:
-        """Document aggregate table
+        """Document a result table of aggregate tests.
 
         Args:
             tests: List of corresponding test dictionary to make a table.
         """
         with self.doc.create(Tabularx('|c|X|X|', booktabs=True)) as tabular:
-            package = Package('xcolor', options='table')
-            if package not in tabular.packages:
-                # Need to invoke a table color before invoking TextColor (bug?)
-                tabular.packages.append(package)
             package = Package('seqsplit')
             if package not in tabular.packages:
                 tabular.packages.append(package)
@@ -380,15 +372,9 @@ class ModelEval(Trace):
                 self.test_id += 1
 
     def _dump_pdf(self) -> None:
-        """Dump PDF file
+        """Dump PDF summary report.
         """
-        # Need to move the tikz dependency after the xcolor package
-        self.doc.dumps_packages()
-        packages = self.doc.packages
-        tikz = Package(name='tikz')
-        packages.discard(tikz)
-        packages.add(tikz)
-
+        # self.doc.dumps_packages()
         if shutil.which("latexmk") is None and shutil.which("pdflatex") is None:
             # No LaTeX Compiler is available
             self.doc.generate_tex(os.path.join(self.save_dir, self.report_name))
@@ -409,38 +395,57 @@ class ModelEval(Trace):
             json.dump(self.json_summary, fp, indent=4)
 
     @staticmethod
-    def _to_serializable(obj: np.generic) -> Union[float, int, list]:
-        """Convert to JSON serializable type
+    def _to_serializable(obj: Any) -> Union[float, int, list]:
+        """Convert to JSON serializable type.
 
         Args:
-            obj: Numpy object that needs to be converted
+            obj: Any object that needs to be converted.
 
         Return:
-            JSON serializable object that essentially is equivalent to input obj
+            JSON serializable object that essentially is equivalent to input obj.
         """
         if isinstance(obj, np.ndarray):
+            shape = obj.shape
+            obj = obj.reshape((-1, ))
+            obj = np.vectorize(ModelEval._element_to_serializable)(obj)
+            obj = obj.reshape(shape)
             obj = obj.tolist()
 
+        else:
+            obj = ModelEval._element_to_serializable(obj)
+
+        return obj
+
+    @staticmethod
+    def _element_to_serializable(obj):
+        """Convert to JSON serializable type.
+
+        This function can handle any object type except ndarray.
+
+        Args:
+            obj: Any object except ndarray that needs to be converted.
+
+        Return:
+            JSON serializable object that essentially is equivalent to input obj.
+        """
+        if isinstance(obj, bytes):
+            obj = obj.decode('utf-8')
+
         elif isinstance(obj, np.generic):
-            obj = np.asscalar(obj)
+            obj = obj.item()
 
         return obj
 
     @staticmethod
     def check_pdf_dependency() -> None:
-        """Check dependency of PDF-generating packages
+        """Check dependency of PDF-generating packages.
 
         Raises:
-            OSError: Some required package has not been installed
+            OSError: Some required package has not been installed.
         """
-        try:
-            pydot.Dot.create(pydot.Dot())
-        except OSError:
-            raise OSError(
-                "TestReport requires that graphviz be installed. See www.graphviz.org/download for more information.")
         # Verify that the system locale is functioning correctly
         try:
             locale.getlocale()
         except ValueError:
             raise OSError("Your system locale is not configured correctly. On mac this can be resolved by adding \
-                'export LC_ALL=en_US.UTF-8' and 'export LANG=en_US.UTF-8' to your ~/.bash_profile"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          )
+                'export LC_ALL=en_US.UTF-8' and 'export LANG=en_US.UTF-8' to your ~/.bash_profile")

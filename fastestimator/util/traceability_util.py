@@ -14,23 +14,18 @@
 # ==============================================================================
 import dis
 import inspect
-import platform
 import re
-import sys
 import types
 from collections import ChainMap, deque, namedtuple
 from typing import Any, Callable, Dict, List, Mapping, Optional, Set, Tuple, Type, TypeVar, Union
-from unittest.mock import Base
 
 import numpy as np
 import tensorflow as tf
 import torch
-from natsort import humansorted
 from pylatex import Document, Label, Marker, MultiColumn, NoEscape, Package, Table, Tabularx, TextColor
 from pylatex.base_classes import LatexObject
 from pylatex.utils import bold, escape_latex, italic
 
-import fastestimator as fe
 from fastestimator.backend.to_shape import to_shape
 from fastestimator.backend.to_type import to_type
 from fastestimator.util.latex_util import ContainerList, HrefFEID, PyContainer
@@ -1085,33 +1080,3 @@ def traceable(whitelist: Union[str, Tuple[str]] = (), blacklist: Union[str, Tupl
         return cls
 
     return make_traceable
-
-
-def get_environment() -> dict:
-    """ A function to get all environmental information, such as OS, Python version, FE version, GPU number, random seed
-    and all python packages.
-
-    Returns:
-        Dict that stored all environmental information.
-    """
-    env_dict = {"main": {}, "python_packages": {}}
-    env_dict["main"]["fastestimator"] = str(fe.__version__)
-    env_dict["main"]["python"] = str(platform.python_version())
-    env_dict["main"]["os"] = str(sys.platform)
-    env_dict["main"]["gpu_number"] = torch.cuda.device_count()
-    if fe.fe_deterministic_seed is not None:
-        env_dict["main"]["fe_deterministic_seed"] = fe.fe_deterministic_seed
-
-    for name, module in humansorted(sys.modules.items(), key=lambda x: x[0]):
-        if "." in name:
-            continue  # Skip sub-packages
-        if name.startswith("_"):
-            continue  # Skip private packages
-        if isinstance(module, Base):
-            continue  # Skip fake packages we mocked
-        if hasattr(module, '__version__'):
-            env_dict["python_packages"][name] = str(module.__version__)
-        elif hasattr(module, 'VERSION'):
-            env_dict["python_packages"][name] = str(module.VERSION)
-
-    return env_dict

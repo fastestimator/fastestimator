@@ -1,3 +1,5 @@
+import os
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -8,7 +10,7 @@ from fastestimator.dataset import NumpyDataset
 from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.test.unittest_util import OneLayerTorchModel, one_layer_tf_model
 from fastestimator.trace import Trace
-from fastestimator.trace.io.model_eval import TestCase, ModelEval
+from fastestimator.trace.io.model_eval import ModelEval, TestCase
 from fastestimator.util import to_number
 
 
@@ -25,7 +27,7 @@ class SampleTrace(Trace):
         data.write_without_log(self.outputs[0], np.mean(np.concatenate(self.buffer)))
 
 
-class TestTestReport(unittest.TestCase):
+class TestModelEval(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         dataset = NumpyDataset({
@@ -36,15 +38,17 @@ class TestTestReport(unittest.TestCase):
     def test_instance_case_tf(self):
         test_title = "test"
         test_description = "each return needs to above 0"
+        save_path = tempfile.mkdtemp()
+        exp_name = "test"
 
         model = fe.build(model_fn=one_layer_tf_model, optimizer_fn="adam")
         network = fe.Network(ops=[ModelOp(model=model, inputs="x", outputs="y")])
         test_cases = TestCase(description=test_description, criteria=lambda y: to_number(y) > 0, aggregate=False)
-        traces = ModelEval(test_cases=test_cases, test_title=test_title, save_path="report", data_id="id")
+        traces = ModelEval(test_cases=test_cases, test_title=test_title, save_path=save_path, data_id="id")
         estimator = fe.Estimator(pipeline=self.pipeline, network=network, epochs=1, traces=traces)
 
         with patch('fastestimator.trace.io.model_eval.json.dump') as fake:
-            estimator.test("test")
+            estimator.test(exp_name)
             json_summary = fake.call_args[0][0]
 
         with self.subTest("title"):
@@ -73,19 +77,25 @@ class TestTestReport(unittest.TestCase):
 
         with self.subTest("fail_id"):
             self.assertEqual(json_summary["tests"][0]["fail_id"], [1])
+
+        with self.subTest("check pdf report"):
+            report_path = os.path.join(save_path, exp_name + "_ModelEval.pdf")
+            self.assertTrue(os.path.exists(report_path))
 
     def test_instance_case_torch(self):
         test_title = "test"
         test_description = "each return needs to above 0"
+        save_path = tempfile.mkdtemp()
+        exp_name = "test"
 
         model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn="adam")
         network = fe.Network(ops=[ModelOp(model=model, inputs="x", outputs="y")])
         test_cases = TestCase(description=test_description, criteria=lambda y: to_number(y) > 0, aggregate=False)
-        traces = ModelEval(test_cases=test_cases, test_title=test_title, save_path="report", data_id="id")
+        traces = ModelEval(test_cases=test_cases, test_title=test_title, save_path=save_path, data_id="id")
         estimator = fe.Estimator(pipeline=self.pipeline, network=network, epochs=1, traces=traces)
 
         with patch('fastestimator.trace.io.model_eval.json.dump') as fake:
-            estimator.test("test")
+            estimator.test(exp_name)
             json_summary = fake.call_args[0][0]
 
         with self.subTest("title"):
@@ -115,21 +125,27 @@ class TestTestReport(unittest.TestCase):
         with self.subTest("fail_id"):
             self.assertEqual(json_summary["tests"][0]["fail_id"], [1])
 
+        with self.subTest("check pdf report"):
+            report_path = os.path.join(save_path, exp_name + "_ModelEval.pdf")
+            self.assertTrue(os.path.exists(report_path))
+
     def test_aggregate_case_tf(self):
         test_title = "test"
         test_description = "average value of y need to be above 0"
+        save_path = tempfile.mkdtemp()
+        exp_name = "test"
 
         model = fe.build(model_fn=one_layer_tf_model, optimizer_fn="adam")
         network = fe.Network(ops=[ModelOp(model=model, inputs="x", outputs="y")])
         test_cases = TestCase(description=test_description, criteria=lambda avg: avg > 0)
         traces = [
             SampleTrace(inputs="y", outputs="avg", mode="test"),
-            ModelEval(test_cases=test_cases, test_title=test_title, save_path="report", data_id="id")
+            ModelEval(test_cases=test_cases, test_title=test_title, save_path=save_path, data_id="id")
         ]
         estimator = fe.Estimator(pipeline=self.pipeline, network=network, epochs=1, traces=traces)
 
         with patch('fastestimator.trace.io.model_eval.json.dump') as fake:
-            estimator.test("test")
+            estimator.test(exp_name)
             json_summary = fake.call_args[0][0]
 
         with self.subTest("title"):
@@ -153,21 +169,27 @@ class TestTestReport(unittest.TestCase):
         with self.subTest("inputs"):
             self.assertEqual(json_summary["tests"][0]["inputs"], {"avg": 1.75})
 
+        with self.subTest("check pdf report"):
+            report_path = os.path.join(save_path, exp_name + "_ModelEval.pdf")
+            self.assertTrue(os.path.exists(report_path))
+
     def test_aggregate_case_torch(self):
         test_title = "test"
         test_description = "average value of y need to be above 0"
+        save_path = tempfile.mkdtemp()
+        exp_name = "test"
 
         model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn="adam")
         network = fe.Network(ops=[ModelOp(model=model, inputs="x", outputs="y")])
         test_cases = TestCase(description=test_description, criteria=lambda avg: avg > 0)
         traces = [
             SampleTrace(inputs="y", outputs="avg", mode="test"),
-            ModelEval(test_cases=test_cases, test_title=test_title, save_path="report", data_id="id")
+            ModelEval(test_cases=test_cases, test_title=test_title, save_path=save_path, data_id="id")
         ]
         estimator = fe.Estimator(pipeline=self.pipeline, network=network, epochs=1, traces=traces)
 
         with patch('fastestimator.trace.io.model_eval.json.dump') as fake:
-            estimator.test("test")
+            estimator.test(exp_name)
             json_summary = fake.call_args[0][0]
 
         with self.subTest("title"):
@@ -190,3 +212,7 @@ class TestTestReport(unittest.TestCase):
 
         with self.subTest("inputs"):
             self.assertEqual(json_summary["tests"][0]["inputs"], {"avg": 1.75})
+
+        with self.subTest("check pdf report"):
+            report_path = os.path.join(save_path, exp_name + "_ModelEval.pdf")
+            self.assertTrue(os.path.exists(report_path))
