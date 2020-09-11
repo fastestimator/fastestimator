@@ -39,6 +39,31 @@ class TestSometimes(unittest.TestCase):
             with self.subTest('Check output image shape'):
                 self.assertEqual(img_output.shape, self.output_shape)
 
+    @tf.function
+    def test_single_input_tf_static(self):
+        a = LambdaOp(inputs='x', outputs='x', fn=lambda x: x + 1)
+        sometimes = Sometimes(a, prob=0.75)
+        sometimes.build('tf')
+        output = sometimes.forward(data=self.single_input_tf, state={})
+        with self.subTest('Check output type'):
+            self.assertEqual(type(output), list)
+        with self.subTest('Check output image shape'):
+            self.assertEqual(output[0].shape, self.output_shape)
+
+    @tf.function
+    def test_multi_input_tf_static(self):
+        a = LambdaOp(inputs=['x', 'y'], outputs=['y', 'x'], fn=lambda x, y: [x + y, x - y])
+        sometimes = Sometimes(a)
+        sometimes.build('tf')
+        output = sometimes.forward(data=self.multi_input_tf, state={})
+        with self.subTest('Check output type'):
+            self.assertEqual(type(output), list)
+        with self.subTest('Check output list length'):
+            self.assertEqual(len(output), 2)
+        for img_output in output:
+            with self.subTest('Check output image shape'):
+                self.assertEqual(img_output.shape, self.output_shape)
+
     def test_single_input_torch(self):
         a = LambdaOp(inputs='x', outputs='x', fn=lambda x: x + 1)
         sometimes = Sometimes(a, prob=0.75)

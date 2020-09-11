@@ -48,12 +48,16 @@ class OneOf(TensorOp):
             assert mode == op.mode, "All ops within a OneOf must share the same mode"
         self.ops = tensor_ops
         self.prob_fn = None
+        self.invoke_fn = None
 
     def build(self, framework: str) -> None:
         if framework == 'tf':
             self.prob_fn = tfp.distributions.Uniform(low=0, high=len(self.ops))
+            self.invoke_fn = lambda idx, data, state: tf.switch_case(idx, [lambda: op.forward(data, state) for op in
+                                                                           self.ops])
         elif framework == 'torch':
             self.prob_fn = torch.distributions.uniform.Uniform(low=0, high=len(self.ops))
+            self.invoke_fn = lambda idx, data, state: self.ops[idx].forward(data, state)
         else:
             raise ValueError("unrecognized framework: {}".format(framework))
 
@@ -79,4 +83,5 @@ class OneOf(TensorOp):
         Returns:
             The `data` after application of one of the available numpyOps.
         """
-        return self.ops[cast(self.prob_fn.sample(), dtype='int32')].forward(data, state)
+        idx = cast(self.prob_fn.sample(), dtype='int32')
+        return self.invoke_fn(idx, data, state)
