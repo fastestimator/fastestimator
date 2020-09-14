@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Iterable, List, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Optional, Set, TypeVar, Union
 
 import tensorflow as tf
 import torch
@@ -22,6 +22,7 @@ from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
 
 @traceable()
@@ -48,7 +49,18 @@ class UpdateOp(TensorOp):
         else:
             self.model.loss_name.add(loss_name)
 
-    def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]):
+    def get_fe_models(self) -> Set[Model]:
+        return {self.model}
+
+    def get_fe_loss_keys(self) -> Set[str]:
+        return set(self.inputs)
+
+    def fe_retain_graph(self, retain: Optional[bool] = None) -> Optional[bool]:
+        if retain is not None:
+            self.retain_graph = retain
+        return self.retain_graph
+
+    def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> None:
         if not state["warmup"]:
             if self.weight_decay:
                 data = data + tf.reduce_sum(self.model.losses)

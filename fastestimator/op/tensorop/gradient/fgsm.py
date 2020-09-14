@@ -59,6 +59,11 @@ class FGSM(TensorOp):
         self.clip_high = clip_high
         self.retain_graph = True
 
+    def fe_retain_graph(self, retain: Optional[bool] = None) -> Optional[bool]:
+        if retain is not None:
+            self.retain_graph = retain
+        return self.retain_graph
+
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
         data, loss = data
         grad = get_gradient(target=loss, sources=data, tape=state['tape'], retain_graph=self.retain_graph)

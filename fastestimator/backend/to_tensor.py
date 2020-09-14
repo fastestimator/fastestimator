@@ -21,7 +21,7 @@ import torch
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
 
-def to_tensor(data: Union[Collection, Tensor, float, int], target_type: str) -> Union[Collection, Tensor]:
+def to_tensor(data: Union[Collection, Tensor, float, int, None], target_type: str) -> Union[Collection, Tensor, None]:
     """Convert tensors within a collection of `data` to a given `target_type` recursively.
 
     This method can be used with Numpy data:
@@ -58,6 +58,8 @@ def to_tensor(data: Union[Collection, Tensor, float, int], target_type: str) -> 
     conversion_function = {"tf": tf.convert_to_tensor, "torch": torch.from_numpy, "np": np.array}
     if isinstance(data, target_instance[target_type]):
         return data
+    elif data is None:
+        return None
     elif isinstance(data, dict):
         return {key: to_tensor(value, target_type) for (key, value) in data.items()}
     elif isinstance(data, list):

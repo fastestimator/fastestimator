@@ -12,16 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Set, TypeVar
 
-import numpy as np
+import tensorflow as tf
+import tensorflow_probability as tfp
+import torch
 
-from fastestimator.op.numpyop.numpyop import NumpyOp
+from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
+
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
 
 @traceable()
-class Sometimes(NumpyOp):
+class Sometimes(TensorOp):
     """Perform a NumpyOp with a given probability.
 
     Note that Sometimes should not be used to wrap an op whose output key(s) do not already exist in the data
@@ -30,22 +35,40 @@ class Sometimes(NumpyOp):
     invoking the Sometimes.
 
     Args:
-        numpy_op: The operator to be performed.
+        tensor_op: The operator to be performed.
         prob: The probability of execution, which should be in the range: [0-1).
     """
-    def __init__(self, numpy_op: NumpyOp, prob: float = 0.5) -> None:
+    def __init__(self, tensor_op: TensorOp, prob: float = 0.5) -> None:
         # We're going to try to collect any missing output keys from the data dictionary so that they don't get
         # overridden when Sometimes chooses not to execute.
-        inps = set(numpy_op.inputs)
-        outs = set(numpy_op.outputs)
+        inps = set(tensor_op.inputs)
+        outs = set(tensor_op.outputs)
         self.extra_inputs = list(outs - inps)  # Used by traceability
-        self.inp_idx = len(numpy_op.inputs)
-        super().__init__(inputs=numpy_op.inputs + self.extra_inputs, outputs=numpy_op.outputs, mode=numpy_op.mode)
+        self.inp_idx = len(tensor_op.inputs)
+        super().__init__(inputs=tensor_op.inputs + self.extra_inputs, outputs=tensor_op.outputs, mode=tensor_op.mode)
         # Note that in_list and out_list will always be true
-        self.op = numpy_op
+        self.op = tensor_op
         self.prob = prob
+        self.prob_fn = None
 
-    def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
+    def build(self, framework: str) -> None:
+        if framework == 'tf':
+            self.prob_fn = tfp.distributions.Uniform()
+        elif framework == 'torch':
+            self.prob_fn = torch.distributions.uniform.Uniform(low=0, high=1)
+        else:
+            raise ValueError("unrecognized framework: {}".format(framework))
+
+    def get_fe_loss_keys(self) -> Set[str]:
+        return self.op.get_fe_loss_keys()
+
+    def get_fe_models(self) -> Set[Model]:
+        return self.op.get_fe_models()
+
+    def fe_retain_graph(self, retain: Optional[bool] = None) -> Optional[bool]:
+        return self.op.fe_retain_graph(retain)
+
+    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
         """Execute the wrapped operator a certain fraction of the time.
 
         Args:
@@ -55,7 +78,7 @@ class Sometimes(NumpyOp):
         Returns:
             The original `data`, or the `data` after running it through the wrapped operator.
         """
-        if self.prob > np.random.uniform():
+        if self.prob > self.prob_fn.sample():
             data = data[:self.inp_idx]  # Cut off the unnecessary inputs
             if not self.op.in_list:
                 data = data[0]

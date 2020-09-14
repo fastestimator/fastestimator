@@ -32,12 +32,16 @@ class OneOf(NumpyOp):
         inputs = numpy_ops[0].inputs
         outputs = numpy_ops[0].outputs
         mode = numpy_ops[0].mode
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.in_list = numpy_ops[0].in_list
+        self.out_list = numpy_ops[0].out_list
         for op in numpy_ops[1:]:
             assert inputs == op.inputs, "All ops within a OneOf must share the same inputs"
+            assert self.in_list == op.in_list, "All ops within OneOf must share the same input configuration"
             assert outputs == op.outputs, "All ops within a OneOf must share the same outputs"
+            assert self.out_list == op.out_list, "All ops within OneOf must share the same output configuration"
             assert mode == op.mode, "All ops within a OneOf must share the same mode"
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        self.numpy_ops = numpy_ops
+        self.ops = numpy_ops
 
     def forward(self, data: Union[np.ndarray, List[np.ndarray]],
                 state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
@@ -50,4 +54,4 @@ class OneOf(NumpyOp):
         Returns:
             The `data` after application of one of the available numpyOps.
         """
-        return random.choice(self.numpy_ops).forward(data, state)
+        return random.choice(self.ops).forward(data, state)

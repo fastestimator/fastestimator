@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Iterable, List, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Set, TypeVar, Union
 
 import tensorflow as tf
 import torch
@@ -22,6 +22,7 @@ from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import FeInputSpec, traceable
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
 
 @traceable()
@@ -48,6 +49,9 @@ class ModelOp(TensorOp):
         self.model = model
         self.trainable = trainable
         self.epoch_spec = None
+
+    def get_fe_models(self) -> Set[Model]:
+        return {self.model}
 
     def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
         training = state['mode'] == "train" and self.trainable

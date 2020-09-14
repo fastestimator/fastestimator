@@ -22,7 +22,7 @@ import fastestimator as fe
 from fastestimator.backend import reduce_mean
 from fastestimator.dataset.data import mscoco
 from fastestimator.layers.tensorflow import InstanceNormalization, ReflectionPadding2D
-from fastestimator.op import LambdaOp
+from fastestimator.op.numpyop import LambdaOp
 from fastestimator.op.numpyop.multivariate import Resize
 from fastestimator.op.numpyop.univariate import Normalize, ReadImage
 from fastestimator.op.tensorop import TensorOp
