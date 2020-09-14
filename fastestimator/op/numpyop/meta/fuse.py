@@ -35,17 +35,17 @@ class Fuse(NumpyOp):
     """
     def __init__(self, ops: Union[NumpyOp, List[NumpyOp]], repeat: int = 1) -> None:
         if repeat < 1:
-            raise ValueError(f"Subnet requires repeat to be >= 1, but got {repeat}")
+            raise ValueError(f"Fuse requires repeat to be >= 1, but got {repeat}")
         self.repeat = repeat
         ops = to_list(ops)
         if len(ops) < 1:
-            raise ValueError("Subnet requires at least one op")
+            raise ValueError("Fuse requires at least one op")
         inputs = []
         outputs = []
         mode = ops[0].mode
         for op in ops:
             if op.mode != mode:
-                raise ValueError(f"All subnet ops must share the same mode, but got {mode} and {op.mode}")
+                raise ValueError(f"All Fuse ops must share the same mode, but got {mode} and {op.mode}")
             for inp in op.inputs:
                 if inp not in inputs and inp not in outputs:
                     inputs.append(inp)
