@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Iterable, List, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Optional, TypeVar, Union
 
 import tensorflow as tf
 import torch
@@ -37,6 +37,12 @@ class Watch(TensorOp):
     def __init__(self, inputs: Union[None, str, Iterable[str]], mode: Union[None, str, Iterable[str]] = None) -> None:
         super().__init__(inputs=inputs, outputs=inputs, mode=mode)
         self.in_list, self.out_list = True, True
+        self.retain_graph = True
+
+    def fe_retain_graph(self, retain: Optional[bool] = None) -> Optional[bool]:
+        if retain is not None:
+            self.retain_graph = retain
+        return self.retain_graph
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
         for idx, tensor in enumerate(data):

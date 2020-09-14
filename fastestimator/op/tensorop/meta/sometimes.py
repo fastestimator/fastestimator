@@ -43,9 +43,9 @@ class Sometimes(TensorOp):
         # overridden when Sometimes chooses not to execute.
         inps = set(tensor_op.inputs)
         outs = set(tensor_op.outputs)
-        extra_inputs = list(outs - inps)
+        self.extra_inputs = list(outs - inps)  # Used by traceability
         self.inp_idx = len(tensor_op.inputs)
-        super().__init__(inputs=tensor_op.inputs + extra_inputs, outputs=tensor_op.outputs, mode=tensor_op.mode)
+        super().__init__(inputs=tensor_op.inputs + self.extra_inputs, outputs=tensor_op.outputs, mode=tensor_op.mode)
         # Note that in_list and out_list will always be true
         self.op = tensor_op
         self.prob = prob

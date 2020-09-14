@@ -38,9 +38,9 @@ class Sometimes(NumpyOp):
         # overridden when Sometimes chooses not to execute.
         inps = set(numpy_op.inputs)
         outs = set(numpy_op.outputs)
-        extra_inputs = list(outs - inps)
+        self.extra_inputs = list(outs - inps)  # Used by traceability
         self.inp_idx = len(numpy_op.inputs)
-        super().__init__(inputs=numpy_op.inputs + extra_inputs, outputs=numpy_op.outputs, mode=numpy_op.mode)
+        super().__init__(inputs=numpy_op.inputs + self.extra_inputs, outputs=numpy_op.outputs, mode=numpy_op.mode)
         # Note that in_list and out_list will always be true
         self.op = numpy_op
         self.prob = prob
