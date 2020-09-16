@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Optional, Union
+from typing import Optional, Union, Any
 
 from pylatex import NoEscape, Package, escape_latex
 from pylatex.base_classes import Container, Environment, LatexObject, Options
@@ -131,8 +131,8 @@ class HrefFEID(ContainerList):
         super().__init__(data=data)
 
 
-class TabularCell(Container):
-    """A class to convert iterable to latex representation.
+class IterJoin(Container):
+    """A class to convert an iterable to a latex representation.
 
     The data of this class can be any type. Usually it is iterable due to its capability to setup interval string.
 
@@ -140,7 +140,7 @@ class TabularCell(Container):
         data: Data of the cell.
         token: String to be added in the interval of data entries.
     """
-    def __init__(self, data: list, token: str):
+    def __init__(self, data: Any, token: str):
         super().__init__(data=data)
         self.token = token
 
@@ -154,19 +154,18 @@ class TabularCell(Container):
 
 
 class WrapText(LatexObject):
-    """A class to convert string or number to wrappable latex representation.
+    """A class to convert strings or numbers to wrappable latex representation.
 
     This class will first convert the data to string, and then to wrappable latex representation if its length is too
-    long. This is to fix the issue that first element and number of Tabularx cells is not wrappable in X column type.
+    long. This is to fix the issue that first string or number is not wrappable in X column type.
 
     Args:
-        data: String data.
-        seq_thld: When length of string is above this number, the string will be converted to wrappable text by being
-            enclosed with seqsplit latex command.
+        data: Input data to be converted.
+        threshold: When the length of <data> is greater than <threshold>, the resulting string will be made wrappable
     """
-    def __init__(self, data: Union[str, int, float], seq_thld: int):
+    def __init__(self, data: Union[str, int, float], threshold: int):
         assert isinstance(data, (str, int, float)), "the self.data type needs to be str, int, float"
-        self.seq_thld = seq_thld
+        self.threshold = threshold
         self.data = str(data)
         super().__init__()
 
@@ -176,7 +175,7 @@ class WrapText(LatexObject):
         Returns:
             A string representation of itself.
         """
-        if len(self.data) > self.seq_thld:
+        if len(self.data) > self.threshold:
             return NoEscape(r'\seqsplit{' + escape_latex(self.data) + '}')
         else:
             return escape_latex(self.data)

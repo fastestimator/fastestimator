@@ -20,7 +20,7 @@ import re
 import shutil
 from datetime import datetime
 from time import time
-from typing import Any, Callable, List, Union
+from typing import Any, Callable, List, Union, Optional, Dict
 
 import numpy as np
 from pylatex import Command, Document, Itemize, MultiColumn, NoEscape, Package, Section, Subsection, Table, Tabularx, \
@@ -29,9 +29,9 @@ from pylatex import Command, Document, Itemize, MultiColumn, NoEscape, Package, 
 import fastestimator as fe
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
-from fastestimator.util.latex_util import TabularCell, WrapText
+from fastestimator.util.latex_util import IterJoin, WrapText
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import to_list, to_number
+from fastestimator.util.util import to_list, to_number, to_set
 
 
 @traceable()
@@ -40,13 +40,15 @@ class TestCase():
 
     Args:
         description: A test description.
-        criteria: Function to perform the test returns True when the test passes and False when it fails. Input
-            variable names will be used as input keys to further derive input value.
-        aggregate: If True, this test is aggregate type and its criteria function will be examined at epoch_end. If
-            False, this test is per-instance type and its test criteria function will be examined at batch_end.
-        fail_threshold: Thershold of failure instance number to judge per-instance test as failed or passed. If failure
-            number is above this value, then the test fails; otherwise it passes. It only has effect when aggregate is
-            equal to False.
+        criteria: A function to perform the test. For an aggregate test, <criteria> needs to return True when the test
+            passes and False when it fails. For a per-instance test, <criteria> needs to return an ndarray of bool,
+            where entries show corresponding test results. (True if the test of that data instance passes; False if it
+            fails).
+        aggregate: If True, this test is aggregate type and its <criteria> function will be examined at epoch_end. If
+            False, this test is per-instance type and its <criteria> function will be examined at batch_end.
+        fail_threshold: Thershold of failure instance number to judge the per-instance test as failed or passed. If
+            the failure number is above this value, then the test fails; otherwise it passes. It only has effect when
+            <aggregate> is equal to False.
     """
     def __init__(self, description: str, criteria: Callable, aggregate: bool = True, fail_threshold: int = 0) -> None:
         self.description = description
@@ -56,8 +58,15 @@ class TestCase():
         if not self.aggregate:
             self.fail_threshold = fail_threshold
 
-    def clean_result(self) -> None:
-        if not self.aggregate:
+        self.init_result()
+
+    def init_result(self) -> None:
+        """Reset test result.
+        """
+        if self.aggregate:
+            self.result = None
+            self.input_val = None
+        else:
             self.result = []
             self.fail_id = []
 
@@ -78,7 +87,7 @@ class ModelEval(Trace):
     def __init__(self,
                  test_cases: Union[TestCase, List[TestCase]],
                  save_path: str,
-                 test_title: str = "Test",
+                 test_title: Optional[str] = None,
                  data_id: str = None) -> None:
 
         self.test_title = test_title
@@ -87,17 +96,13 @@ class ModelEval(Trace):
         self.aggregate_cases = []
         self.data_id = data_id
 
-        all_inputs = set()
+        all_inputs = to_set(self.data_id)
         for case in self.test_cases:
             all_inputs.update(case.criteria_inputs)
-            case.clean_result()
             if case.aggregate:
                 self.aggregate_cases.append(case)
             else:
                 self.instance_cases.append(case)
-
-        if self.data_id:
-            all_inputs.update([data_id])
 
         path = os.path.normpath(save_path)
         path = os.path.abspath(path)
@@ -109,11 +114,18 @@ class ModelEval(Trace):
         os.makedirs(self.save_dir, exist_ok=True)
         os.makedirs(self.src_dir, exist_ok=True)
 
+        # PDF document related
+        self.doc = None
+        self.test_id = None
+
         super().__init__(inputs=all_inputs, mode="test")
 
     def on_begin(self, data: Data) -> None:
         self._sanitize_report_name()
         self._initialize_json_summary()
+
+        for case in self.test_cases:
+            case.init_result()
 
     def on_batch_end(self, data: Data) -> None:
         for case in self.instance_cases:
@@ -169,19 +181,21 @@ class ModelEval(Trace):
         self.json_summary["execution_time(s)"] = time() - self.json_summary["execution_time(s)"]
 
         self._dump_json()
-        self._init_document()
-        self._document_test_result()
+        self._document_pdf()
         self._dump_pdf()
 
     def _initialize_json_summary(self) -> None:
-        """Initialize json summary
+        """Initialize json summary.
         """
         self.json_summary = {
-            "title": self.test_title, "timestamp": str(datetime.now()), "execution_time(s)": time(), "tests": []
+            "title": self.test_title if self.test_title else self.system.summary.name,
+            "timestamp": str(datetime.now()),
+            "execution_time(s)": time(),
+            "tests": []
         }
 
     def _sanitize_report_name(self) -> None:
-        """Sanitize report name and make it class attribute
+        """Sanitize report name and make it class attribute.
         """
         exp_name = self.system.summary.name
         if not exp_name:
@@ -189,15 +203,21 @@ class ModelEval(Trace):
         # Convert the experiment name to a report name (useful for saving multiple experiments into same directory)
         report_name = "".join('_' if c == ' ' else c for c in exp_name
                               if c.isalnum() or c in (' ', '_')).rstrip("_").lower()
-        report_name = re.sub('_{2,}', '_', report_name) + "_ModelEval"
-        self.report_name = report_name or '_ModelEval'
+        self.report_name = re.sub('_{2,}', '_', report_name) + "_ModelEval"
+
+    def _document_pdf(self) -> None:
+        """Document PDF report.
+        """
+        self._init_document()
+        self._document_test_result()
 
     def _init_document(self) -> None:
-        """Initialize latex document
+        """Initialize latex document.
         """
         self.doc = Document(geometry_options=['lmargin=2cm', 'rmargin=2cm', 'tmargin=2cm', 'bmargin=2cm'])
         self.doc.packages.append(Package(name='placeins', options=['section']))
         self.doc.packages.append(Package(name='float'))
+        self.doc.packages.append(Package(name='hyperref', options='hidelinks'))
 
         self.doc.preamble.append(NoEscape(r'\aboverulesep=0ex'))
         self.doc.preamble.append(NoEscape(r'\belowrulesep=0ex'))
@@ -283,12 +303,12 @@ class ModelEval(Trace):
                 tabular.packages.append(package)
 
             # add table heading
-            tabular.add_row(("Total test #", "Total pass #", "Total fail #"), strict=False)
+            tabular.add_row(("Total Tests", "Total Passed ", "Total Failed"), strict=False)
             tabular.add_hline()
 
             tabular.add_row((pass_num + fail_num, pass_num, fail_num), strict=False)
 
-    def _document_instance_table(self, tests: List[dict], with_ID: bool):
+    def _document_instance_table(self, tests: List[Dict[str, Any]], with_ID: bool):
         """Document a result table of per-instance tests.
 
         Args:
@@ -317,27 +337,24 @@ class ModelEval(Trace):
                 row_cells.append(MultiColumn(size=1, align='c|', data="Failure data instance ID"))
 
             tabular.add_row(row_cells)
-            tabular.add_hline()
 
-            for idx, test in enumerate(tests, 1):
-                if idx > 1:
-                    tabular.add_hline()
-
-                des_data = [WrapText(data=x, seq_thld=27) for x in test["description"].split(" ")]
+            for test in tests:
+                tabular.add_hline()
+                des_data = [WrapText(data=x, threshold=27) for x in test["description"].split(" ")]
                 row_cells = [
                     self.test_id,
-                    TabularCell(data=des_data, token=" "),
+                    IterJoin(data=des_data, token=" "),
                     NoEscape(r'$\le $' + str(test["fail_threshold"])),
                     test["fail_number"]
                 ]
                 if with_ID:
-                    id_data = [WrapText(data=x, seq_thld=27) for x in test["fail_id"]]
-                    row_cells.append(TabularCell(data=id_data, token=", "))
+                    id_data = [WrapText(data=x, threshold=27) for x in test["fail_id"]]
+                    row_cells.append(IterJoin(data=id_data, token=", "))
 
                 tabular.add_row(row_cells)
                 self.test_id += 1
 
-    def _document_aggregate_table(self, tests: List[dict]) -> None:
+    def _document_aggregate_table(self, tests: List[Dict[str, Any]]) -> None:
         """Document a result table of aggregate tests.
 
         Args:
@@ -352,20 +369,16 @@ class ModelEval(Trace):
             tabular.add_row((MultiColumn(size=1, align='|c|', data="Test ID"),
                              MultiColumn(size=1, align='c|', data="Test description"),
                              MultiColumn(size=1, align='c|', data="Input value")))
-            tabular.add_hline()
 
-            for idx, test in enumerate(tests, 1):
-                if idx > 1:
-                    tabular.add_hline()
-
+            for test in tests:
+                tabular.add_hline()
                 inp_data = ["{}={}".format(arg, value) for arg, value in test["inputs"].items()]
-                inp_data = [WrapText(data=x, seq_thld=27) for x in inp_data]
-                des_data = [WrapText(data=x, seq_thld=27) for x in test["description"].split(" ")]
-
+                inp_data = [WrapText(data=x, threshold=27) for x in inp_data]
+                des_data = [WrapText(data=x, threshold=27) for x in test["description"].split(" ")]
                 row_cells = [
                     self.test_id,
-                    TabularCell(data=des_data, token=" "),
-                    TabularCell(data=inp_data, token=escape_latex(", \n")),
+                    IterJoin(data=des_data, token=" "),
+                    IterJoin(data=inp_data, token=escape_latex(", \n")),
                 ]
 
                 tabular.add_row(row_cells)
@@ -388,7 +401,7 @@ class ModelEval(Trace):
                                                                         suffix))
 
     def _dump_json(self) -> None:
-        """Dump JSON file
+        """Dump JSON file.
         """
         json_path = os.path.join(self.src_dir, self.report_name + ".json")
         with open(json_path, 'w') as fp:
@@ -448,4 +461,4 @@ class ModelEval(Trace):
             locale.getlocale()
         except ValueError:
             raise OSError("Your system locale is not configured correctly. On mac this can be resolved by adding \
-                'export LC_ALL=en_US.UTF-8' and 'export LANG=en_US.UTF-8' to your ~/.bash_profile")
+                'export LC_ALL=en_US.UTF-8' and 'export LANG=en_US.UTF-8' to your ~/.bash_profile"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                )
