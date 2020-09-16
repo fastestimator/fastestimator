@@ -14,4 +14,5 @@
 # ==============================================================================
 from fastestimator.op.tensorop.meta.fuse import Fuse
 from fastestimator.op.tensorop.meta.one_of import OneOf
+from fastestimator.op.tensorop.meta.repeat import Repeat
 from fastestimator.op.tensorop.meta.sometimes import Sometimes

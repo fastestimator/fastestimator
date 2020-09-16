@@ -23,20 +23,16 @@ from fastestimator.util.util import to_list
 
 @traceable()
 class Fuse(NumpyOp):
-    """Run a sequence of TensorOps one or more times as a single Op.
+    """Run a sequence of NumpyOps as a single Op.
 
     Args:
-        ops: A sequence of TensorOps to run. They must all share the same mode. It also doesn't support scheduled ops at
-            the moment, though the subnet itself may be scheduled.
-        repeat: How many times to repeat the sequence of `tensor_ops`.
+        ops: A sequence of NumpyOps to run. They must all share the same mode. It also doesn't support scheduled ops at
+            the moment, though the Fuse itself may be scheduled.
 
     Raises:
         ValueError: If `repeat` or `ops` are invalid.
     """
-    def __init__(self, ops: Union[NumpyOp, List[NumpyOp]], repeat: int = 1) -> None:
-        if repeat < 1:
-            raise ValueError(f"Fuse requires repeat to be >= 1, but got {repeat}")
-        self.repeat = repeat
+    def __init__(self, ops: Union[NumpyOp, List[NumpyOp]]) -> None:
         ops = to_list(ops)
         if len(ops) < 1:
             raise ValueError("Fuse requires at least one op")
@@ -57,6 +53,5 @@ class Fuse(NumpyOp):
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
         data = {key: elem for key, elem in zip(self.inputs, data)}
-        for i in range(self.repeat):
-            forward_numpyop(self.ops, data, state["mode"])
+        forward_numpyop(self.ops, data, state["mode"])
         return [data[key] for key in self.outputs]

@@ -15,7 +15,7 @@ class TestFuse(unittest.TestCase):
     def test_single_input(self):
         minmax = Minmax(inputs='x', outputs='y', mode='test')
         minmax2 = Minmax(inputs=["y", "z"], outputs="w", mode='test')
-        fuse = Fuse([minmax, minmax2], repeat=2)
+        fuse = Fuse([minmax, minmax2])
         with self.subTest('Check op inputs'):
             self.assertListEqual(fuse.inputs, ['x', 'z'])
         with self.subTest('Check op outputs'):
