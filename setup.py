@@ -55,7 +55,7 @@ def get_dependency():
         'transformers==2.4.1',
         'tensorflow==2.1.0',
         'pytorch-model-summary==0.1.2',
-        'graphviz==0.14',
+        'graphviz==0.14.1',
         'hiddenlayer==0.3',
         'pydot==1.4.1',
         'dot2tex==2.11.3',
