@@ -15,7 +15,7 @@ class TestFuse(unittest.TestCase):
     def test_single_input_tf(self):
         a = LambdaOp(inputs='x', outputs='y', fn=lambda x: x + 1, mode='test')
         b = LambdaOp(inputs=['y', 'z'], outputs='w', fn=lambda x, y: x + y, mode='test')
-        fuse = Fuse([a, b], repeat=2)
+        fuse = Fuse([a, b])
         with self.subTest('Check op inputs'):
             self.assertListEqual(fuse.inputs, ['x', 'z'])
         with self.subTest('Check op outputs'):
@@ -32,7 +32,7 @@ class TestFuse(unittest.TestCase):
     def test_single_input_tf_static(self):
         a = LambdaOp(inputs='x', outputs='y', fn=lambda x: x + 1, mode='test')
         b = LambdaOp(inputs=['y', 'z'], outputs='w', fn=lambda x, y: x + y, mode='test')
-        fuse = Fuse([a, b], repeat=2)
+        fuse = Fuse([a, b])
         with self.subTest('Check op inputs'):
             self.assertListEqual(fuse.inputs, ['x', 'z'])
         with self.subTest('Check op outputs'):

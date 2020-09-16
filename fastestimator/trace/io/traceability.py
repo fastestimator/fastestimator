@@ -45,10 +45,12 @@ from fastestimator.dataset.dataset import FEDataset
 from fastestimator.network import BaseNetwork
 from fastestimator.op.numpyop.meta.fuse import Fuse
 from fastestimator.op.numpyop.meta.one_of import OneOf
+from fastestimator.op.numpyop.meta.repeat import Repeat
 from fastestimator.op.numpyop.meta.sometimes import Sometimes
 from fastestimator.op.op import Op
 from fastestimator.op.tensorop.meta.fuse import Fuse as FuseT
 from fastestimator.op.tensorop.meta.one_of import OneOf as OneOfT
+from fastestimator.op.tensorop.meta.repeat import Repeat as RepeatT
 from fastestimator.op.tensorop.meta.sometimes import Sometimes as SometimesT
 from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.pipeline import Pipeline
@@ -496,7 +498,7 @@ class Traceability(Trace):
         diagram = pydot.Dot(compound='true')  # Compound lets you draw edges which terminate at sub-graphs
         diagram.set('rankdir', 'TB')
         diagram.set('dpi', 300)
-        diagram.set_node_defaults(shape='record')
+        diagram.set_node_defaults(shape='box')
 
         # Make the dataset the first of the pipeline ops
         pipe_ops.insert(0, ds)
@@ -529,7 +531,7 @@ class Traceability(Trace):
             subgraph_name: The name to be associated with this subgraph.
             subgraph_ops: The ops to be wrapped in this subgraph.
         """
-        subgraph = pydot.Cluster(style='dashed', graph_name=subgraph_name)
+        subgraph = pydot.Cluster(style='dashed', graph_name=subgraph_name, color='black')
         subgraph.set('label', subgraph_name)
         subgraph.set('labeljust', 'l')
         for idx, op in enumerate(subgraph_ops):
@@ -557,9 +559,9 @@ class Traceability(Trace):
         """
         node_id = str(id(op))
         if isinstance(op, (Sometimes, SometimesT)) and op.op:
-            wrapper = pydot.Cluster(style='loosely dotted', graph_name=str(id(op)))
+            wrapper = pydot.Cluster(style='dotted', color='red', graph_name=str(id(op)))
             wrapper.set('label', f'Sometimes ({op.prob}):')
-            wrapper.set('labeljust', 'r')
+            wrapper.set('labeljust', 'l')
             edge_srcs = defaultdict(lambda: [])
             if op.extra_inputs:
                 for inp in op.extra_inputs:
@@ -573,7 +575,7 @@ class Traceability(Trace):
                 progenitor.add_edge(
                     pydot.Edge(src=src, dst=dst_id, lhead=wrapper.get_name(), label=f" {', '.join(labels)} "))
         elif isinstance(op, (OneOf, OneOfT)) and op.ops:
-            wrapper = pydot.Cluster(style='loosely dotted', graph_name=str(id(op)))
+            wrapper = pydot.Cluster(style='dotted', color='darkorchid4', graph_name=str(id(op)))
             wrapper.set('label', 'One Of:')
             wrapper.set('labeljust', 'l')
             Traceability._add_node(progenitor, wrapper, op.ops[0], label_last_seen, edges=True)
@@ -581,10 +583,29 @@ class Traceability(Trace):
                 Traceability._add_node(progenitor, wrapper, sub_op, label_last_seen, edges=False)
             diagram.add_subgraph(wrapper)
         elif isinstance(op, (Fuse, FuseT)) and op.ops:
-            Traceability._draw_subgraph(progenitor, diagram, label_last_seen, f'Fuse ({op.repeat}):', op.ops)
-            if op.repeat > 1:
-                for op in op.ops:
-                    Traceability._add_edge(progenitor, op, label_last_seen)
+            Traceability._draw_subgraph(progenitor, diagram, label_last_seen, f'Fuse:', op.ops)
+        elif isinstance(op, (Repeat, RepeatT)) and op.op:
+            wrapper = pydot.Cluster(style='dotted', color='darkgreen', graph_name=str(id(op)))
+            wrapper.set('label', f'Repeat:')
+            wrapper.set('labeljust', 'l')
+            wrapper.add_node(
+                pydot.Node(node_id,
+                           label=f'{op.repeat if isinstance(op.repeat, int) else "?"}',
+                           shape='doublecircle',
+                           width=0.1))
+            # dot2tex doesn't seem to handle edge color conversion correctly, so have to set hex color
+            progenitor.add_edge(pydot.Edge(src=node_id + ":ne", dst=node_id + ":w", color='#006300'))
+            Traceability._add_node(progenitor, wrapper, op.op, label_last_seen)
+            # Add repeat edges
+            edge_srcs = defaultdict(lambda: [])
+            for out in op.outputs:
+                if out in op.inputs and out not in op.repeat_inputs:
+                    edge_srcs[label_last_seen[out]].append(out)
+            for inp in op.repeat_inputs:
+                edge_srcs[label_last_seen[inp]].append(inp)
+            for src, labels in edge_srcs.items():
+                progenitor.add_edge(pydot.Edge(src=src, dst=node_id, constraint=False, label=f" {', '.join(labels)} "))
+            diagram.add_subgraph(wrapper)
         else:
             if isinstance(op, ModelOp):
                 label = f"{op.__class__.__name__} ({FEID(id(op))}): {op.model.model_name}"
@@ -616,9 +637,7 @@ class Traceability(Trace):
                 continue
             edge_srcs[label_last_seen[inp]].append(inp)
         for src, labels in edge_srcs.items():
-            if not progenitor.get_edge(src, dst=node_id):
-                # Edge might already exist in the case of a looping Fuse
-                progenitor.add_edge(pydot.Edge(src=src, dst=node_id, label=f" {', '.join(labels)} "))
+            progenitor.add_edge(pydot.Edge(src=src, dst=node_id, label=f" {', '.join(labels)} "))
         for out in op.outputs:
             label_last_seen[out] = node_id
 
