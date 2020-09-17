@@ -35,14 +35,14 @@ from fastestimator.util.util import to_list, to_number, to_set
 
 
 @traceable()
-class TestCase():
-    """This class defines the test case that ModelEval trace will take to perform auto-testing.
+class TestCase:
+    """This class defines the test case that the ModelEval trace will take to perform auto-testing.
 
     Args:
         description: A test description.
         criteria: A function to perform the test. For an aggregate test, `criteria` needs to return True when the test
-            passes and False when it fails. For a per-instance test, `criteria` needs to return an ndarray of bool,
-            where entries show corresponding test results. (True if the test of that data instance passes; False if it
+            passes and False when it fails. For a per-instance test, `criteria` needs to return a boolean np.ndarray,
+            where entries show corresponding test results (True if the test of that data instance passes; False if it
             fails).
         aggregate: If True, this test is aggregate type and its `criteria` function will be examined at epoch_end. If
             False, this test is per-instance type and its `criteria` function will be examined at batch_end.
@@ -51,9 +51,10 @@ class TestCase():
             `aggregate` is equal to False.
 
     Raises:
-        ValueError: If user set fail_threshold for aggregate test.
+        ValueError: If user set `fail_threshold` for an aggregate test.
     """
-    def __init__(self, description: str, criteria: Callable, aggregate: bool = True, fail_threshold: int = 0) -> None:
+    def __init__(self, description: str, criteria: Callable[..., Union[bool, np.ndarray]], aggregate: bool = True,
+                 fail_threshold: int = 0) -> None:
         self.description = description
         self.criteria = criteria
         self.criteria_inputs = inspect.signature(criteria).parameters.keys()
@@ -63,11 +64,13 @@ class TestCase():
                 raise ValueError("fail_threshold cannot be set in a aggregate test")
         else:
             self.fail_threshold = fail_threshold
-
+        self.result = None
+        self.input_val = None
+        self.fail_id = []
         self.init_result()
 
     def init_result(self) -> None:
-        """Reset test result.
+        """Reset the test result.
         """
         if self.aggregate:
             self.result = None
@@ -78,17 +81,16 @@ class TestCase():
 
 
 @traceable()
-class ModelEval(Trace):
+class TestReport(Trace):
     """Automate testing and report generation.
 
-    This trace will examine all input TestCases in the test mode and generate a PDF report and a JSON test result.
-
+    This trace will evaluate all its `test_cases` during test mode and generate a PDF report and a JSON test result.
 
     Args:
-        test_cases: TestCase object or list of TestCase objects.
-        save_path: Where to save the output directory.
-        test_title: Title of the test.
-        data_id: Data instance ID key. If provided, then per-instance test will return failure instance ID.
+        test_cases: The test(s) to be run.
+        save_path: Where to save the outputs.
+        test_title: The title of the test, or None to use the experiment name.
+        data_id: Data instance ID key. If provided, then per-instances test will include failing instance IDs.
     """
     def __init__(self,
                  test_cases: Union[TestCase, List[TestCase]],
@@ -96,14 +98,17 @@ class ModelEval(Trace):
                  test_title: Optional[str] = None,
                  data_id: str = None) -> None:
 
+        self.check_pdf_dependency()
+
         self.test_title = test_title
-        self.test_cases = to_list(test_cases)
+        self.report_name = None
+
         self.instance_cases = []
         self.aggregate_cases = []
         self.data_id = data_id
 
         all_inputs = to_set(self.data_id)
-        for case in self.test_cases:
+        for case in to_list(test_cases):
             all_inputs.update(case.criteria_inputs)
             if case.aggregate:
                 self.aggregate_cases.append(case)
@@ -120,6 +125,7 @@ class ModelEval(Trace):
         os.makedirs(self.save_dir, exist_ok=True)
         os.makedirs(self.src_dir, exist_ok=True)
 
+        self.json_summary = {}
         # PDF document related
         self.doc = None
         self.test_id = None
@@ -129,38 +135,34 @@ class ModelEval(Trace):
     def on_begin(self, data: Data) -> None:
         self._sanitize_report_name()
         self._initialize_json_summary()
-
-        for case in self.test_cases:
+        for case in self.instance_cases + self.aggregate_cases:
             case.init_result()
 
     def on_batch_end(self, data: Data) -> None:
         for case in self.instance_cases:
             result = case.criteria(*[data[var_name] for var_name in case.criteria_inputs])
             if not isinstance(result, np.ndarray):
-                raise TypeError(f"In test with description \'{case.description}\': "
+                raise TypeError(f"In test with description '{case.description}': "
                                 "Criteria return of per-instance test needs to be ndarray with dtype bool.")
-
             elif result.dtype != np.dtype("bool"):
-                raise TypeError(f"In test with description \'{case.description}\': "
+                raise TypeError(f"In test with description '{case.description}': "
                                 "Criteria return of per-instance test needs to be ndarray with dtype bool.")
-
             result = result.reshape(-1)
             case.result.append(result)
             if self.data_id:
-                data_id = to_number(data[self.data_id]).reshape((-1, ))
+                data_id = to_number(data[self.data_id]).reshape((-1,))
                 if data_id.size != result.size:
-                    raise ValueError(f"In test with description \'{case.description}\': "
+                    raise ValueError(f"In test with description '{case.description}': "
                                      "Array size of criteria return doesn't match ID array size. Size of criteria"
-                                     "return should be equal to the batch_size such that each entry represents test"
-                                     "result of corresponding data instance.")
-
+                                     "return should be equal to the batch_size such that each entry represents the test"
+                                     "result of its corresponding data instance.")
                 case.fail_id.append(data_id[result == False])
 
     def on_epoch_end(self, data: Data) -> None:
         for case in self.aggregate_cases:
             result = case.criteria(*[data[var_name] for var_name in case.criteria_inputs])
             if not isinstance(result, (bool, np.bool_)):
-                raise TypeError(f"In test with description \'{case.description}\': "
+                raise TypeError(f"In test with description '{case.description}': "
                                 "Criteria return of aggregate-case test needs to be a bool.")
             case.result = case.criteria(*[data[var_name] for var_name in case.criteria_inputs])
             case.input_val = {var_name: self._to_serializable(data[var_name]) for var_name in case.criteria_inputs}
@@ -179,9 +181,8 @@ class ModelEval(Trace):
             self.json_summary["tests"].append(case_dict)
 
         for case in self.aggregate_cases:
-            case_dict = {"test_type": "aggregate", "description": case.description}
-            case_dict["passed"] = self._to_serializable(case.result)
-            case_dict["inputs"] = case.input_val
+            case_dict = {"test_type": "aggregate", "description": case.description,
+                         "passed": self._to_serializable(case.result), "inputs": case.input_val}
             self.json_summary["tests"].append(case_dict)
 
         self.json_summary["execution_time(s)"] = time() - self.json_summary["execution_time(s)"]
@@ -194,7 +195,7 @@ class ModelEval(Trace):
         """Initialize json summary.
         """
         self.json_summary = {
-            "title": self.test_title if self.test_title else self.system.summary.name,
+            "title": self.test_title,
             "timestamp": str(datetime.now()),
             "execution_time(s)": time(),
             "tests": []
@@ -202,14 +203,19 @@ class ModelEval(Trace):
 
     def _sanitize_report_name(self) -> None:
         """Sanitize report name and make it class attribute.
+
+        Raises:
+            RuntimeError: If a test title was not provided and the user did not set an experiment name.
         """
-        exp_name = self.system.summary.name
+        exp_name = self.system.summary.name or self.test_title
         if not exp_name:
-            raise RuntimeError("TestReport require an experiment name to be provided in estimator.fit()")
+            raise RuntimeError("TestReport requires an experiment name to be provided in estimator.fit(), or a title")
         # Convert the experiment name to a report name (useful for saving multiple experiments into same directory)
         report_name = "".join('_' if c == ' ' else c for c in exp_name
                               if c.isalnum() or c in (' ', '_')).rstrip("_").lower()
         self.report_name = re.sub('_{2,}', '_', report_name) + "_ModelEval"
+        if self.test_title is None:
+            self.test_title = exp_name
 
     def _document_pdf(self) -> None:
         """Document PDF report.
@@ -251,13 +257,13 @@ class ModelEval(Trace):
         instance_pass_tests, aggregate_pass_tests, instance_fail_tests, aggregate_fail_tests = [], [], [], []
 
         for test in self.json_summary["tests"]:
-            if test["test_type"] == "per-instance" and test["passed"] == True:
+            if test["test_type"] == "per-instance" and test["passed"]:
                 instance_pass_tests.append(test)
-            elif test["test_type"] == "per-instance" and test["passed"] == False:
+            elif test["test_type"] == "per-instance" and not test["passed"]:
                 instance_fail_tests.append(test)
-            elif test["test_type"] == "aggregate" and test["passed"] == True:
+            elif test["test_type"] == "aggregate" and test["passed"]:
                 aggregate_pass_tests.append(test)
-            elif test["test_type"] == "aggregate" and test["passed"] == False:
+            elif test["test_type"] == "aggregate" and not test["passed"]:
                 aggregate_fail_tests.append(test)
 
         with self.doc.create(Section("Test Summary")):
@@ -277,7 +283,7 @@ class ModelEval(Trace):
                         self._document_aggregate_table(tests=aggregate_fail_tests)
                 if len(instance_fail_tests) > 0:
                     with self.doc.create(Subsection("Failed Per-Instance Tests")):
-                        self._document_instance_table(tests=instance_fail_tests, with_ID=self.data_id)
+                        self._document_instance_table(tests=instance_fail_tests, with_id=bool(self.data_id))
 
         if instance_pass_tests or aggregate_pass_tests:
             with self.doc.create(Section("Passed Tests")):
@@ -286,9 +292,9 @@ class ModelEval(Trace):
                         self._document_aggregate_table(tests=aggregate_pass_tests)
                 if instance_pass_tests:
                     with self.doc.create(Subsection("Passed Per-Instance Tests")):
-                        self._document_instance_table(tests=instance_pass_tests, with_ID=self.data_id)
+                        self._document_instance_table(tests=instance_pass_tests, with_id=bool(self.data_id))
 
-        self.doc.append(NoEscape(r'\newpage'))
+        self.doc.append(NoEscape(r'\newpage'))  # For QMS report
 
     def _document_summary_table(self, pass_num: int, fail_num: int) -> None:
         """Document a summary table.
@@ -308,14 +314,14 @@ class ModelEval(Trace):
 
             tabular.add_row((pass_num + fail_num, pass_num, fail_num), strict=False)
 
-    def _document_instance_table(self, tests: List[Dict[str, Any]], with_ID: bool):
+    def _document_instance_table(self, tests: List[Dict[str, Any]], with_id: bool):
         """Document a result table of per-instance tests.
 
         Args:
             tests: List of corresponding test dictionary to make a table.
-            with_ID: Whether the test information includes data ID.
+            with_id: Whether the test information includes data ID.
         """
-        if with_ID:
+        if with_id:
             table_spec = '|c|p{5cm}|c|c|p{5cm}|'
             column_num = 5
         else:
@@ -330,13 +336,13 @@ class ModelEval(Trace):
             # add table heading
             row_cells = [
                 MultiColumn(size=1, align='|c|', data="Test ID"),
-                MultiColumn(size=1, align='c|', data="Test description"),
-                MultiColumn(size=1, align='c|', data="Pass threshold"),
-                MultiColumn(size=1, align='c|', data="Failure count")
+                MultiColumn(size=1, align='c|', data="Test Description"),
+                MultiColumn(size=1, align='c|', data="Pass Threshold"),
+                MultiColumn(size=1, align='c|', data="Failure Count")
             ]
 
-            if with_ID:
-                row_cells.append(MultiColumn(size=1, align='c|', data="Failure data instance ID"))
+            if with_id:
+                row_cells.append(MultiColumn(size=1, align='c|', data="Failure Data Instance ID"))
 
             tabular.add_row(row_cells)
 
@@ -344,7 +350,7 @@ class ModelEval(Trace):
             tabular.add_hline()
             tabular.end_table_header()
             tabular.add_hline()
-            tabular.add_row((MultiColumn(column_num, align='r', data='Continued on Next Page'), ))
+            tabular.add_row((MultiColumn(column_num, align='r', data='Continued on Next Page'),))
             tabular.add_hline()
             tabular.end_table_footer()
             tabular.end_table_last_footer()
@@ -360,7 +366,7 @@ class ModelEval(Trace):
                     NoEscape(r'$\le $' + str(test["fail_threshold"])),
                     test["fail_number"]
                 ]
-                if with_ID:
+                if with_id:
                     id_data = [WrapText(data=x, threshold=27) for x in test["fail_id"]]
                     row_cells.append(IterJoin(data=id_data, token=", "))
 
@@ -380,14 +386,14 @@ class ModelEval(Trace):
 
             # add table heading
             tabular.add_row((MultiColumn(size=1, align='|c|', data="Test ID"),
-                             MultiColumn(size=1, align='c|', data="Test description"),
-                             MultiColumn(size=1, align='c|', data="Input value")))
+                             MultiColumn(size=1, align='c|', data="Test Description"),
+                             MultiColumn(size=1, align='c|', data="Input Value")))
 
             # add table header and footer
             tabular.add_hline()
             tabular.end_table_header()
             tabular.add_hline()
-            tabular.add_row((MultiColumn(3, align='r', data='Continued on Next Page'), ))
+            tabular.add_row((MultiColumn(3, align='r', data='Continued on Next Page'),))
             tabular.add_hline()
             tabular.end_table_footer()
             tabular.end_table_last_footer()
@@ -441,18 +447,18 @@ class ModelEval(Trace):
         """
         if isinstance(obj, np.ndarray):
             shape = obj.shape
-            obj = obj.reshape((-1, ))
-            obj = np.vectorize(ModelEval._element_to_serializable)(obj)
+            obj = obj.reshape((-1,))
+            obj = np.vectorize(TestReport._element_to_serializable)(obj)
             obj = obj.reshape(shape)
             obj = obj.tolist()
 
         else:
-            obj = ModelEval._element_to_serializable(obj)
+            obj = TestReport._element_to_serializable(obj)
 
         return obj
 
     @staticmethod
-    def _element_to_serializable(obj):
+    def _element_to_serializable(obj: Any) -> Any:
         """Convert to JSON serializable type.
 
         This function can handle any object type except ndarray.

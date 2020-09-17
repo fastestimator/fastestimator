@@ -159,7 +159,7 @@ class WrapText(LatexObject):
 
     Args:
         data: Input data to be converted.
-        threshold: When the length of `data` is greater than `threshold`, the resulting string will be made wrappable
+        threshold: When the length of `data` is greater than `threshold`, the resulting string will be made wrappable.
 
     Raises:
         AssertionError: If `data` is not a string, int, or float.

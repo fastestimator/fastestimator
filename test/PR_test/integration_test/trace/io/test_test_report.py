@@ -10,7 +10,7 @@ from fastestimator.dataset import NumpyDataset
 from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.test.unittest_util import OneLayerTorchModel, one_layer_tf_model
 from fastestimator.trace import Trace
-from fastestimator.trace.io.model_eval import ModelEval, TestCase
+from fastestimator.trace.io.test_report import TestCase, TestReport
 from fastestimator.util import to_number
 
 
@@ -27,13 +27,13 @@ class SampleTrace(Trace):
         data.write_without_log(self.outputs[0], np.mean(np.concatenate(self.buffer)))
 
 
-class TestModelEval(unittest.TestCase):
+class TestTestReport(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         dataset = NumpyDataset({
             "x": np.array([[1, 1, 1], [1, -1, -0.5]], dtype=np.float32), "id": np.array([0, 1], dtype=np.int32)
         })
-        cls.pipeline = fe.Pipeline(test_data=dataset, batch_size=1)
+        cls.pipeline = fe.Pipeline(test_data=dataset, batch_size=1, num_process=0)
 
     def test_instance_case_tf(self):
         test_title = "test"
@@ -44,10 +44,10 @@ class TestModelEval(unittest.TestCase):
         model = fe.build(model_fn=one_layer_tf_model, optimizer_fn="adam")
         network = fe.Network(ops=[ModelOp(model=model, inputs="x", outputs="y")])
         test_cases = TestCase(description=test_description, criteria=lambda y: to_number(y) > 0, aggregate=False)
-        traces = ModelEval(test_cases=test_cases, test_title=test_title, save_path=save_path, data_id="id")
+        traces = TestReport(test_cases=test_cases, test_title=test_title, save_path=save_path, data_id="id")
         estimator = fe.Estimator(pipeline=self.pipeline, network=network, epochs=1, traces=traces)
 
-        with patch('fastestimator.trace.io.model_eval.json.dump') as fake:
+        with patch('fastestimator.trace.io.test_report.json.dump') as fake:
             estimator.test(exp_name)
             json_summary = fake.call_args[0][0]
 
@@ -91,10 +91,10 @@ class TestModelEval(unittest.TestCase):
         model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn="adam")
         network = fe.Network(ops=[ModelOp(model=model, inputs="x", outputs="y")])
         test_cases = TestCase(description=test_description, criteria=lambda y: to_number(y) > 0, aggregate=False)
-        traces = ModelEval(test_cases=test_cases, test_title=test_title, save_path=save_path, data_id="id")
+        traces = TestReport(test_cases=test_cases, test_title=test_title, save_path=save_path, data_id="id")
         estimator = fe.Estimator(pipeline=self.pipeline, network=network, epochs=1, traces=traces)
 
-        with patch('fastestimator.trace.io.model_eval.json.dump') as fake:
+        with patch('fastestimator.trace.io.test_report.json.dump') as fake:
             estimator.test(exp_name)
             json_summary = fake.call_args[0][0]
 
@@ -140,11 +140,11 @@ class TestModelEval(unittest.TestCase):
         test_cases = TestCase(description=test_description, criteria=lambda avg: avg > 0)
         traces = [
             SampleTrace(inputs="y", outputs="avg", mode="test"),
-            ModelEval(test_cases=test_cases, test_title=test_title, save_path=save_path, data_id="id")
+            TestReport(test_cases=test_cases, test_title=test_title, save_path=save_path, data_id="id")
         ]
         estimator = fe.Estimator(pipeline=self.pipeline, network=network, epochs=1, traces=traces)
 
-        with patch('fastestimator.trace.io.model_eval.json.dump') as fake:
+        with patch('fastestimator.trace.io.test_report.json.dump') as fake:
             estimator.test(exp_name)
             json_summary = fake.call_args[0][0]
 
@@ -184,11 +184,11 @@ class TestModelEval(unittest.TestCase):
         test_cases = TestCase(description=test_description, criteria=lambda avg: avg > 0)
         traces = [
             SampleTrace(inputs="y", outputs="avg", mode="test"),
-            ModelEval(test_cases=test_cases, test_title=test_title, save_path=save_path, data_id="id")
+            TestReport(test_cases=test_cases, test_title=test_title, save_path=save_path, data_id="id")
         ]
         estimator = fe.Estimator(pipeline=self.pipeline, network=network, epochs=1, traces=traces)
 
-        with patch('fastestimator.trace.io.model_eval.json.dump') as fake:
+        with patch('fastestimator.trace.io.test_report.json.dump') as fake:
             estimator.test(exp_name)
             json_summary = fake.call_args[0][0]
 
