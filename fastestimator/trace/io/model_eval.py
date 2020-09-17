@@ -20,11 +20,11 @@ import re
 import shutil
 from datetime import datetime
 from time import time
-from typing import Any, Callable, List, Union, Optional, Dict
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import numpy as np
-from pylatex import Command, Document, Itemize, MultiColumn, NoEscape, Package, Section, Subsection, Table, Tabularx, \
-    escape_latex
+from pylatex import Command, Document, Itemize, LongTable, MultiColumn, NoEscape, Package, Section, Subsection, Table, \
+    Tabularx, escape_latex
 
 import fastestimator as fe
 from fastestimator.trace.trace import Trace
@@ -40,22 +40,28 @@ class TestCase():
 
     Args:
         description: A test description.
-        criteria: A function to perform the test. For an aggregate test, <criteria> needs to return True when the test
-            passes and False when it fails. For a per-instance test, <criteria> needs to return an ndarray of bool,
+        criteria: A function to perform the test. For an aggregate test, `criteria` needs to return True when the test
+            passes and False when it fails. For a per-instance test, `criteria` needs to return an ndarray of bool,
             where entries show corresponding test results. (True if the test of that data instance passes; False if it
             fails).
-        aggregate: If True, this test is aggregate type and its <criteria> function will be examined at epoch_end. If
-            False, this test is per-instance type and its <criteria> function will be examined at batch_end.
-        fail_threshold: Thershold of failure instance number to judge the per-instance test as failed or passed. If
-            the failure number is above this value, then the test fails; otherwise it passes. It only has effect when
-            <aggregate> is equal to False.
+        aggregate: If True, this test is aggregate type and its `criteria` function will be examined at epoch_end. If
+            False, this test is per-instance type and its `criteria` function will be examined at batch_end.
+        fail_threshold: Threshold of failure instance number to judge the per-instance test as failed or passed. If
+            the failure number is above this value, then the test fails; otherwise it passes. It can only be set when
+            `aggregate` is equal to False.
+
+    Raise:
+        ValueError: If user set fail_threshold for aggregate test.
     """
     def __init__(self, description: str, criteria: Callable, aggregate: bool = True, fail_threshold: int = 0) -> None:
         self.description = description
         self.criteria = criteria
         self.criteria_inputs = inspect.signature(criteria).parameters.keys()
         self.aggregate = aggregate
-        if not self.aggregate:
+        if self.aggregate:
+            if fail_threshold:
+                raise ValueError("fail_threshold cannot be set in a aggregate test")
+        else:
             self.fail_threshold = fail_threshold
 
         self.init_result()
@@ -268,27 +274,21 @@ class ModelEval(Trace):
             with self.doc.create(Section("Failed Tests")):
                 if len(aggregate_fail_tests) > 0:
                     with self.doc.create(Subsection("Failed Aggregate Tests")):
-                        with self.doc.create(Table(position='H')) as table:
-                            table.append(NoEscape(r'\refstepcounter{table}'))
-                            self._document_aggregate_table(tests=aggregate_fail_tests)
+                        self._document_aggregate_table(tests=aggregate_fail_tests)
                 if len(instance_fail_tests) > 0:
                     with self.doc.create(Subsection("Failed Per-Instance Tests")):
-                        with self.doc.create(Table(position='H')) as table:
-                            table.append(NoEscape(r'\refstepcounter{table}'))
-                            self._document_instance_table(tests=instance_fail_tests, with_ID=self.data_id)
+                        self._document_instance_table(tests=instance_fail_tests, with_ID=self.data_id)
 
         if instance_pass_tests or aggregate_pass_tests:
             with self.doc.create(Section("Passed Tests")):
                 if aggregate_pass_tests:
                     with self.doc.create(Subsection("Passed Aggregate Tests")):
-                        with self.doc.create(Table(position='H')) as table:
-                            table.append(NoEscape(r'\refstepcounter{table}'))
-                            self._document_aggregate_table(tests=aggregate_pass_tests)
+                        self._document_aggregate_table(tests=aggregate_pass_tests)
                 if instance_pass_tests:
                     with self.doc.create(Subsection("Passed Per-Instance Tests")):
-                        with self.doc.create(Table(position='H')) as table:
-                            table.append(NoEscape(r'\refstepcounter{table}'))
-                            self._document_instance_table(tests=instance_pass_tests, with_ID=self.data_id)
+                        self._document_instance_table(tests=instance_pass_tests, with_ID=self.data_id)
+
+        self.doc.append(NoEscape(r'\newpage'))
 
     def _document_summary_table(self, pass_num: int, fail_num: int) -> None:
         """Document a summary table.
@@ -316,11 +316,13 @@ class ModelEval(Trace):
             with_ID: Whether the test information includes data ID.
         """
         if with_ID:
-            table_spec = '|c|X|c|c|X|'
+            table_spec = '|c|p{5cm}|c|c|p{5cm}|'
+            column_num = 5
         else:
-            table_spec = '|c|X|c|c|'
+            table_spec = '|c|p{10cm}|c|c|'
+            column_num = 4
 
-        with self.doc.create(Tabularx(table_spec, booktabs=True)) as tabular:
+        with self.doc.create(LongTable(table_spec, pos=['h!'], booktabs=True)) as tabular:
             package = Package('seqsplit')
             if package not in tabular.packages:
                 tabular.packages.append(package)
@@ -338,8 +340,19 @@ class ModelEval(Trace):
 
             tabular.add_row(row_cells)
 
-            for test in tests:
-                tabular.add_hline()
+            # add table header and footer
+            tabular.add_hline()
+            tabular.end_table_header()
+            tabular.add_hline()
+            tabular.add_row((MultiColumn(column_num, align='r', data='Continued on Next Page'), ))
+            tabular.add_hline()
+            tabular.end_table_footer()
+            tabular.end_table_last_footer()
+
+            for idx, test in enumerate(tests):
+                if idx > 0:
+                    tabular.add_hline()
+
                 des_data = [WrapText(data=x, threshold=27) for x in test["description"].split(" ")]
                 row_cells = [
                     self.test_id,
@@ -360,7 +373,7 @@ class ModelEval(Trace):
         Args:
             tests: List of corresponding test dictionary to make a table.
         """
-        with self.doc.create(Tabularx('|c|X|X|', booktabs=True)) as tabular:
+        with self.doc.create(LongTable('|c|p{10cm}|p{5cm}|', booktabs=True)) as tabular:
             package = Package('seqsplit')
             if package not in tabular.packages:
                 tabular.packages.append(package)
@@ -370,8 +383,19 @@ class ModelEval(Trace):
                              MultiColumn(size=1, align='c|', data="Test description"),
                              MultiColumn(size=1, align='c|', data="Input value")))
 
-            for test in tests:
-                tabular.add_hline()
+            # add table header and footer
+            tabular.add_hline()
+            tabular.end_table_header()
+            tabular.add_hline()
+            tabular.add_row((MultiColumn(3, align='r', data='Continued on Next Page'), ))
+            tabular.add_hline()
+            tabular.end_table_footer()
+            tabular.end_table_last_footer()
+
+            for idx, test in enumerate(tests):
+                if idx > 0:
+                    tabular.add_hline()
+
                 inp_data = ["{}={}".format(arg, value) for arg, value in test["inputs"].items()]
                 inp_data = [WrapText(data=x, threshold=27) for x in inp_data]
                 des_data = [WrapText(data=x, threshold=27) for x in test["description"].split(" ")]
@@ -380,14 +404,12 @@ class ModelEval(Trace):
                     IterJoin(data=des_data, token=" "),
                     IterJoin(data=inp_data, token=escape_latex(", \n")),
                 ]
-
                 tabular.add_row(row_cells)
                 self.test_id += 1
 
     def _dump_pdf(self) -> None:
         """Dump PDF summary report.
         """
-        # self.doc.dumps_packages()
         if shutil.which("latexmk") is None and shutil.which("pdflatex") is None:
             # No LaTeX Compiler is available
             self.doc.generate_tex(os.path.join(self.save_dir, self.report_name))
@@ -461,4 +483,4 @@ class ModelEval(Trace):
             locale.getlocale()
         except ValueError:
             raise OSError("Your system locale is not configured correctly. On mac this can be resolved by adding \
-                'export LC_ALL=en_US.UTF-8' and 'export LANG=en_US.UTF-8' to your ~/.bash_profile"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                )
+                'export LC_ALL=en_US.UTF-8' and 'export LANG=en_US.UTF-8' to your ~/.bash_profile")
