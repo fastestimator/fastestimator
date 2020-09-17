@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Optional, Union, Any
+from typing import Iterable, Optional, Union
 
 from pylatex import NoEscape, Package, escape_latex
 from pylatex.base_classes import Container, Environment, LatexObject, Options
@@ -134,13 +134,11 @@ class HrefFEID(ContainerList):
 class IterJoin(Container):
     """A class to convert an iterable to a latex representation.
 
-    The data of this class can be any type. Usually it is iterable due to its capability to setup interval string.
-
     Args:
         data: Data of the cell.
-        token: String to be added in the interval of data entries.
+        token: String to serve as separator among items of `data`.
     """
-    def __init__(self, data: Any, token: str):
+    def __init__(self, data: Iterable, token: str):
         super().__init__(data=data)
         self.token = token
 
@@ -156,12 +154,12 @@ class IterJoin(Container):
 class WrapText(LatexObject):
     """A class to convert strings or numbers to wrappable latex representation.
 
-    This class will first convert the data to string, and then to wrappable latex representation if its length is too
-    long. This is to fix the issue that first string or number is not wrappable in X column type.
+    This class will first convert the data to string, and then to a wrappable latex representation if its length is too
+    long. This fixes an issue which prevents the first element placed into a latex X column from wrapping correctly.
 
     Args:
         data: Input data to be converted.
-        threshold: When the length of <data> is greater than <threshold>, the resulting string will be made wrappable
+        threshold: When the length of `data` is greater than `threshold`, the resulting string will be made wrappable
     """
     def __init__(self, data: Union[str, int, float], threshold: int):
         assert isinstance(data, (str, int, float)), "the self.data type needs to be str, int, float"
