@@ -161,7 +161,7 @@ class WrapText(LatexObject):
         data: Input data to be converted.
         threshold: When the length of `data` is greater than `threshold`, the resulting string will be made wrappable
 
-    Raise:
+    Raises:
         AssertionError: If `data` is not a string, int, or float.
     """
     def __init__(self, data: Union[str, int, float], threshold: int):

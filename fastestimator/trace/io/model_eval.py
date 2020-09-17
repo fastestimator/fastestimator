@@ -50,7 +50,7 @@ class TestCase():
             the failure number is above this value, then the test fails; otherwise it passes. It can only be set when
             `aggregate` is equal to False.
 
-    Raise:
+    Raises:
         ValueError: If user set fail_threshold for aggregate test.
     """
     def __init__(self, description: str, criteria: Callable, aggregate: bool = True, fail_threshold: int = 0) -> None:
