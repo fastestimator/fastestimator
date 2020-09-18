@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:2.1.0-py3
+FROM tensorflow/tensorflow:2.3.0
 
 RUN apt-get update
 
@@ -17,18 +17,21 @@ RUN apt-get install -y \
     texlive-latex-base \
     texlive-latex-extra
 
-# GPU cleaning requirement
-RUN apt-get install -y \
-    lsof
-
 # upgrade essential packages
 RUN pip install --upgrade pip setuptools
 
+# nightly test related packages
 RUN pip install --no-cache-dir \
     ipython \
     ipykernel \
     ipywidgets \
     papermill
+RUN ipython kernel install --user --name nightly_build
+
+# GPU cleaning requirement
+RUN apt-get install -y lsof
+
+# backend dependencies
+RUN pip install torch==1.6.0+cpu torchvision==0.7.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
 
 RUN pip install git+https://github.com/fastestimator/fastestimator.git
-RUN ipython kernel install --user --name nightly_build

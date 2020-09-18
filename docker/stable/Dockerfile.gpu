@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:2.1.0-gpu-py3
+FROM tensorflow/tensorflow:2.3.0-gpu
 
 RUN apt-get update
 
@@ -20,10 +20,19 @@ RUN apt-get install -y \
 # upgrade essential packages
 RUN pip install --upgrade pip setuptools
 
+# nightly test related packages
 RUN pip install --no-cache-dir \
     ipython \
     ipykernel \
     ipywidgets \
     papermill
+RUN ipython kernel install --user --name nightly_build
 
+# GPU cleaning requirement
+RUN apt-get install -y lsof
+
+# backend dependencies
+RUN pip install torch==1.6.0+cu101 torchvision==0.7.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html
+
+# install fastestimator
 RUN pip install fastestimator

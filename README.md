@@ -11,23 +11,27 @@ FastEstimator is a high-level deep learning library built on TensorFlow2 and PyT
 
 ## Installation:
 ### 1. Install Dependencies:
-* Windows (CPU):
-    ``` bash
-    $ pip install torch==1.4.0+cpu torchvision==0.5.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
-    ```
-    * Install Visual C++ 2015 build tools [here](https://go.microsoft.com/fwlink/?LinkId=691126) and install default option.
 
-    * Install latest Visual C++ redistributable [here](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads) and choose x86 for 32 bit OS, x64 for 64 bit OS.
+* Install TensorFlow 2.3.0 from intruction [here](https://www.tensorflow.org/install)
+* Install PyTorch 1.6.0 from intruction [here](https://pytorch.org/get-started/locally/) (for GPU users, choose CUDA 10.1)
 
-* Linux (CPU/GPU):
-    ``` bash
-    $ apt-get install libglib2.0-0 libsm6 libxrender1 libxext6
-    ```
+* Extra Dependencies:
 
-* Mac (CPU):
-    ``` bash
-    $ echo No dependency needed ":)"
-    ```
+    * Windows:
+
+        * Install Visual C++ 2015 build tools [here](https://go.microsoft.com/fwlink/?LinkId=691126) and install default option.
+
+        * Install latest Visual C++ redistributable [here](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads) and choose x86 for 32 bit OS, x64 for 64 bit OS.
+
+    * Linux:
+        ``` bash
+        $ apt-get install libglib2.0-0 libsm6 libxrender1 libxext6
+        ```
+
+    * Mac:
+        ``` bash
+        $ echo No extra dependency needed ":)"
+        ```
 
 ### 2. Install FastEstimator:
 * Stable (Linux/Mac):
