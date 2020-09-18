@@ -53,7 +53,10 @@ class TestCase:
     Raises:
         ValueError: If user set `fail_threshold` for an aggregate test.
     """
-    def __init__(self, description: str, criteria: Callable[..., Union[bool, np.ndarray]], aggregate: bool = True,
+    def __init__(self,
+                 description: str,
+                 criteria: Callable[..., Union[bool, np.ndarray]],
+                 aggregate: bool = True,
                  fail_threshold: int = 0) -> None:
         self.description = description
         self.criteria = criteria
@@ -150,7 +153,7 @@ class TestReport(Trace):
             result = result.reshape(-1)
             case.result.append(result)
             if self.data_id:
-                data_id = to_number(data[self.data_id]).reshape((-1,))
+                data_id = to_number(data[self.data_id]).reshape((-1, ))
                 if data_id.size != result.size:
                     raise ValueError(f"In test with description '{case.description}': "
                                      "Array size of criteria return doesn't match ID array size. Size of criteria"
@@ -181,8 +184,12 @@ class TestReport(Trace):
             self.json_summary["tests"].append(case_dict)
 
         for case in self.aggregate_cases:
-            case_dict = {"test_type": "aggregate", "description": case.description,
-                         "passed": self._to_serializable(case.result), "inputs": case.input_val}
+            case_dict = {
+                "test_type": "aggregate",
+                "description": case.description,
+                "passed": self._to_serializable(case.result),
+                "inputs": case.input_val
+            }
             self.json_summary["tests"].append(case_dict)
 
         self.json_summary["execution_time(s)"] = time() - self.json_summary["execution_time(s)"]
@@ -195,10 +202,7 @@ class TestReport(Trace):
         """Initialize json summary.
         """
         self.json_summary = {
-            "title": self.test_title,
-            "timestamp": str(datetime.now()),
-            "execution_time(s)": time(),
-            "tests": []
+            "title": self.test_title, "timestamp": str(datetime.now()), "execution_time(s)": time(), "tests": []
         }
 
     def _sanitize_report_name(self) -> None:
@@ -350,7 +354,7 @@ class TestReport(Trace):
             tabular.add_hline()
             tabular.end_table_header()
             tabular.add_hline()
-            tabular.add_row((MultiColumn(column_num, align='r', data='Continued on Next Page'),))
+            tabular.add_row((MultiColumn(column_num, align='r', data='Continued on Next Page'), ))
             tabular.add_hline()
             tabular.end_table_footer()
             tabular.end_table_last_footer()
@@ -393,7 +397,7 @@ class TestReport(Trace):
             tabular.add_hline()
             tabular.end_table_header()
             tabular.add_hline()
-            tabular.add_row((MultiColumn(3, align='r', data='Continued on Next Page'),))
+            tabular.add_row((MultiColumn(3, align='r', data='Continued on Next Page'), ))
             tabular.add_hline()
             tabular.end_table_footer()
             tabular.end_table_last_footer()
@@ -446,10 +450,12 @@ class TestReport(Trace):
             JSON serializable object that essentially is equivalent to input obj.
         """
         if isinstance(obj, np.ndarray):
-            shape = obj.shape
-            obj = obj.reshape((-1,))
-            obj = np.vectorize(TestReport._element_to_serializable)(obj)
-            obj = obj.reshape(shape)
+            if obj.size > 0:
+                shape = obj.shape
+                obj = obj.reshape((-1, ))
+                obj = np.vectorize(TestReport._element_to_serializable)(obj)
+                obj = obj.reshape(shape)
+
             obj = obj.tolist()
 
         else:

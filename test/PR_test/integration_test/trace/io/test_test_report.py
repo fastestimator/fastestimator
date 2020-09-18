@@ -38,12 +38,19 @@ class TestTestReport(unittest.TestCase):
     def test_instance_case_tf(self):
         test_title = "test"
         test_description = "each return needs to above 0"
+        test_description2 = "each return needs to above -10"
         save_path = tempfile.mkdtemp()
-        exp_name = "test"
+        exp_name = "exp"
 
         model = fe.build(model_fn=one_layer_tf_model, optimizer_fn="adam")
         network = fe.Network(ops=[ModelOp(model=model, inputs="x", outputs="y")])
-        test_cases = TestCase(description=test_description, criteria=lambda y: to_number(y) > 0, aggregate=False)
+        test_cases = [
+            TestCase(description=test_description,
+                     criteria=lambda y: to_number(y) > 10,
+                     aggregate=False,
+                     fail_threshold=1),
+            TestCase(description=test_description2, criteria=lambda y: to_number(y) > -10, aggregate=False)
+        ]
         traces = TestReport(test_cases=test_cases, test_title=test_title, save_path=save_path, data_id="id")
         estimator = fe.Estimator(pipeline=self.pipeline, network=network, epochs=1, traces=traces)
 
@@ -60,23 +67,41 @@ class TestTestReport(unittest.TestCase):
         with self.subTest("execution_time(s)"):
             self.assertIn("execution_time(s)", json_summary)
 
-        with self.subTest("test_type"):
+        with self.subTest("test_type 1"):
             self.assertEqual(json_summary["tests"][0]["test_type"], "per-instance")
 
-        with self.subTest("description"):
+        with self.subTest("test_type 2"):
+            self.assertEqual(json_summary["tests"][1]["test_type"], "per-instance")
+
+        with self.subTest("description 1"):
             self.assertEqual(json_summary["tests"][0]["description"], test_description)
 
-        with self.subTest("passed"):
+        with self.subTest("description 2"):
+            self.assertEqual(json_summary["tests"][1]["description"], test_description2)
+
+        with self.subTest("passed 1"):
             self.assertEqual(json_summary["tests"][0]["passed"], False)
 
-        with self.subTest("fail_threshold"):
-            self.assertEqual(json_summary["tests"][0]["fail_threshold"], 0)  # its default value should be zero
+        with self.subTest("passed 2"):
+            self.assertEqual(json_summary["tests"][1]["passed"], True)
 
-        with self.subTest("fail_number"):
-            self.assertEqual(json_summary["tests"][0]["fail_number"], 1)
+        with self.subTest("fail_threshold 1"):
+            self.assertEqual(json_summary["tests"][0]["fail_threshold"], 1)
 
-        with self.subTest("fail_id"):
-            self.assertEqual(json_summary["tests"][0]["fail_id"], [1])
+        with self.subTest("fail_threshold 2"):
+            self.assertEqual(json_summary["tests"][1]["fail_threshold"], 0)  # its default value should be zero
+
+        with self.subTest("fail_number 1"):
+            self.assertEqual(json_summary["tests"][0]["fail_number"], 2)
+
+        with self.subTest("fail_number 2"):
+            self.assertEqual(json_summary["tests"][1]["fail_number"], 0)
+
+        with self.subTest("fail_id 1"):
+            self.assertEqual(json_summary["tests"][0]["fail_id"], [0, 1])
+
+        with self.subTest("fail_id 2"):
+            self.assertEqual(json_summary["tests"][1]["fail_id"], [])
 
         with self.subTest("check pdf report"):
             report_path = os.path.join(save_path, exp_name + "_ModelEval.pdf")
@@ -85,12 +110,19 @@ class TestTestReport(unittest.TestCase):
     def test_instance_case_torch(self):
         test_title = "test"
         test_description = "each return needs to above 0"
+        test_description2 = "each return needs to above -10"
         save_path = tempfile.mkdtemp()
-        exp_name = "test"
+        exp_name = "exp"
 
         model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn="adam")
         network = fe.Network(ops=[ModelOp(model=model, inputs="x", outputs="y")])
-        test_cases = TestCase(description=test_description, criteria=lambda y: to_number(y) > 0, aggregate=False)
+        test_cases = [
+            TestCase(description=test_description,
+                     criteria=lambda y: to_number(y) > 10,
+                     aggregate=False,
+                     fail_threshold=1),
+            TestCase(description=test_description2, criteria=lambda y: to_number(y) > -10, aggregate=False)
+        ]
         traces = TestReport(test_cases=test_cases, test_title=test_title, save_path=save_path, data_id="id")
         estimator = fe.Estimator(pipeline=self.pipeline, network=network, epochs=1, traces=traces)
 
@@ -107,23 +139,41 @@ class TestTestReport(unittest.TestCase):
         with self.subTest("execution_time(s)"):
             self.assertIn("execution_time(s)", json_summary)
 
-        with self.subTest("test_type"):
+        with self.subTest("test_type 1"):
             self.assertEqual(json_summary["tests"][0]["test_type"], "per-instance")
 
-        with self.subTest("description"):
+        with self.subTest("test_type 2"):
+            self.assertEqual(json_summary["tests"][1]["test_type"], "per-instance")
+
+        with self.subTest("description 1"):
             self.assertEqual(json_summary["tests"][0]["description"], test_description)
 
-        with self.subTest("passed"):
+        with self.subTest("description 2"):
+            self.assertEqual(json_summary["tests"][1]["description"], test_description2)
+
+        with self.subTest("passed 1"):
             self.assertEqual(json_summary["tests"][0]["passed"], False)
 
-        with self.subTest("fail_threshold"):
-            self.assertEqual(json_summary["tests"][0]["fail_threshold"], 0)  # its default value should be zero
+        with self.subTest("passed 2"):
+            self.assertEqual(json_summary["tests"][1]["passed"], True)
 
-        with self.subTest("fail_number"):
-            self.assertEqual(json_summary["tests"][0]["fail_number"], 1)
+        with self.subTest("fail_threshold 1"):
+            self.assertEqual(json_summary["tests"][0]["fail_threshold"], 1)
 
-        with self.subTest("fail_id"):
-            self.assertEqual(json_summary["tests"][0]["fail_id"], [1])
+        with self.subTest("fail_threshold 2"):
+            self.assertEqual(json_summary["tests"][1]["fail_threshold"], 0)  # its default value should be zero
+
+        with self.subTest("fail_number 1"):
+            self.assertEqual(json_summary["tests"][0]["fail_number"], 2)
+
+        with self.subTest("fail_number 2"):
+            self.assertEqual(json_summary["tests"][1]["fail_number"], 0)
+
+        with self.subTest("fail_id 1"):
+            self.assertEqual(json_summary["tests"][0]["fail_id"], [0, 1])
+
+        with self.subTest("fail_id 2"):
+            self.assertEqual(json_summary["tests"][1]["fail_id"], [])
 
         with self.subTest("check pdf report"):
             report_path = os.path.join(save_path, exp_name + "_ModelEval.pdf")
@@ -132,12 +182,16 @@ class TestTestReport(unittest.TestCase):
     def test_aggregate_case_tf(self):
         test_title = "test"
         test_description = "average value of y need to be above 0"
+        test_description2 = "average value of y need to be above 100"
         save_path = tempfile.mkdtemp()
-        exp_name = "test"
+        exp_name = "exp"
 
         model = fe.build(model_fn=one_layer_tf_model, optimizer_fn="adam")
         network = fe.Network(ops=[ModelOp(model=model, inputs="x", outputs="y")])
-        test_cases = TestCase(description=test_description, criteria=lambda avg: avg > 0)
+        test_cases = [
+            TestCase(description=test_description, criteria=lambda avg: avg > 0),
+            TestCase(description=test_description2, criteria=lambda avg: avg > 100)
+        ]
         traces = [
             SampleTrace(inputs="y", outputs="avg", mode="test"),
             TestReport(test_cases=test_cases, test_title=test_title, save_path=save_path, data_id="id")
@@ -157,17 +211,28 @@ class TestTestReport(unittest.TestCase):
         with self.subTest("execution_time(s)"):
             self.assertIn("execution_time(s)", json_summary)
 
-        with self.subTest("test_type"):
+        with self.subTest("test_type 1"):
             self.assertEqual(json_summary["tests"][0]["test_type"], "aggregate")
+        with self.subTest("test_type 2"):
+            self.assertEqual(json_summary["tests"][1]["test_type"], "aggregate")
 
-        with self.subTest("description"):
+        with self.subTest("description 1"):
             self.assertEqual(json_summary["tests"][0]["description"], test_description)
 
-        with self.subTest("passed"):
+        with self.subTest("description 2"):
+            self.assertEqual(json_summary["tests"][1]["description"], test_description2)
+
+        with self.subTest("passed 1"):
             self.assertEqual(json_summary["tests"][0]["passed"], True)
 
-        with self.subTest("inputs"):
+        with self.subTest("passed 2"):
+            self.assertEqual(json_summary["tests"][1]["passed"], False)
+
+        with self.subTest("inputs 1"):
             self.assertEqual(json_summary["tests"][0]["inputs"], {"avg": 1.75})
+
+        with self.subTest("inputs 2"):
+            self.assertEqual(json_summary["tests"][1]["inputs"], {"avg": 1.75})
 
         with self.subTest("check pdf report"):
             report_path = os.path.join(save_path, exp_name + "_ModelEval.pdf")
@@ -176,12 +241,16 @@ class TestTestReport(unittest.TestCase):
     def test_aggregate_case_torch(self):
         test_title = "test"
         test_description = "average value of y need to be above 0"
+        test_description2 = "average value of y need to be above 100"
         save_path = tempfile.mkdtemp()
-        exp_name = "test"
+        exp_name = "exp"
 
         model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn="adam")
         network = fe.Network(ops=[ModelOp(model=model, inputs="x", outputs="y")])
-        test_cases = TestCase(description=test_description, criteria=lambda avg: avg > 0)
+        test_cases = [
+            TestCase(description=test_description, criteria=lambda avg: avg > 0),
+            TestCase(description=test_description2, criteria=lambda avg: avg > 100)
+        ]
         traces = [
             SampleTrace(inputs="y", outputs="avg", mode="test"),
             TestReport(test_cases=test_cases, test_title=test_title, save_path=save_path, data_id="id")
@@ -201,17 +270,28 @@ class TestTestReport(unittest.TestCase):
         with self.subTest("execution_time(s)"):
             self.assertIn("execution_time(s)", json_summary)
 
-        with self.subTest("test_type"):
+        with self.subTest("test_type 1"):
             self.assertEqual(json_summary["tests"][0]["test_type"], "aggregate")
+        with self.subTest("test_type 2"):
+            self.assertEqual(json_summary["tests"][1]["test_type"], "aggregate")
 
-        with self.subTest("description"):
+        with self.subTest("description 1"):
             self.assertEqual(json_summary["tests"][0]["description"], test_description)
 
-        with self.subTest("passed"):
+        with self.subTest("description 2"):
+            self.assertEqual(json_summary["tests"][1]["description"], test_description2)
+
+        with self.subTest("passed 1"):
             self.assertEqual(json_summary["tests"][0]["passed"], True)
 
-        with self.subTest("inputs"):
+        with self.subTest("passed 2"):
+            self.assertEqual(json_summary["tests"][1]["passed"], False)
+
+        with self.subTest("inputs 1"):
             self.assertEqual(json_summary["tests"][0]["inputs"], {"avg": 1.75})
+
+        with self.subTest("inputs 2"):
+            self.assertEqual(json_summary["tests"][1]["inputs"], {"avg": 1.75})
 
         with self.subTest("check pdf report"):
             report_path = os.path.join(save_path, exp_name + "_ModelEval.pdf")
