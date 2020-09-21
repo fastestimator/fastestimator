@@ -12,7 +12,7 @@ pipeline {
         stage('PR-test') {
             steps {
                 script {
-                    def customImage = docker.build("$IMAGE_TAG", "--no-cache - < docker/nightly/Dockerfile.cpu")
+                    def customImage = docker.build("$IMAGE_TAG", "--no-cache --build-arg InstallFE=False - < docker/nightly/Dockerfile.cpu")
                     try {
                         customImage.inside('-u root') {
                             sh 'pip install --no-cache-dir .'

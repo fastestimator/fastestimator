@@ -42,9 +42,11 @@ class TestUnHadamard(unittest.TestCase):
         output = fromhadamard.forward(
             data=[
                 torch.tensor([[1., -1., -1., 1.], [-1., 1., -1., -1.], [-1., 1., -1., -1.], [-1., 1., -1., -1.],
-                              [-1., 1., 1., 1.]])
+                              [-1., 1., 1., 1.]]).to("cuda:0" if torch.cuda.is_available() else "cpu")
             ],
             state={})[0]
+        if torch.cuda.is_available():
+            output = output.to("cpu")
         output = np.argmax(output, axis=-1)
         self.assertTrue(is_equal(output, torch.tensor([3, 2, 2, 2, 0])))
 
@@ -57,8 +59,11 @@ class TestUnHadamard(unittest.TestCase):
                                1.], [1., -1., 1., -1., 1., -1., 1., -1., 1., -1., 1., -1., 1., -1., 1.,
                                      -1.], [1., -1., 1., -1., 1., -1., 1., -1., -1., 1., -1., 1., -1., 1., -1.,
                                             1.], [-1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.],
-                              [-1., 1., 1., 1., -1., -1., -1., -1., 1., 1., 1., 1., -1., -1., -1., -1.]])
+                              [-1., 1., 1., 1., -1., -1., -1., -1., 1., 1., 1., 1., -1., -1., -1.,
+                               -1.]]).to("cuda:0" if torch.cuda.is_available() else "cpu")
             ],
             state={})[0]
+        if torch.cuda.is_available():
+            output = output.to("cpu")
         output = np.argmax(output, axis=-1)
         self.assertTrue(is_equal(output, torch.tensor([0, 1, 9, 0, 4])))
