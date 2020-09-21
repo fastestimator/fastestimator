@@ -34,5 +34,6 @@ RUN apt-get install -y lsof
 # backend dependencies
 RUN pip install torch==1.6.0+cu101 torchvision==0.7.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html
 
-# install fastestimator
-RUN pip install fastestimator
+# install FastEstimator
+ARG InstallFE=True
+RUN if [ $InstallFE = "True" ]; then pip install fastestimator; fi
