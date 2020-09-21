@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from typing import Union
 
+import pydot
 import tensorflow as tf
 import torch
 
@@ -20,6 +21,14 @@ from fastestimator.trace.io import Traceability
 from fastestimator.trace.metric import Accuracy
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import FeInputSpec
+
+
+def _lacks_graphviz():
+    try:
+        pydot.Dot.create(pydot.Dot())
+    except OSError:
+        return True
+    return False
 
 
 def _build_estimator(model: Union[tf.keras.Model, torch.nn.Module], trace: Traceability, axis: int = -1):
@@ -59,6 +68,7 @@ class TestTraceability(unittest.TestCase):
         cls.tf_dir = os.path.join(cls.root_dir, "TF")
         cls.torch_dir = os.path.join(cls.root_dir, "Torch")
 
+    @unittest.skipIf(_lacks_graphviz(), "The machine does not have GraphViz installed")
     def test_tf_traceability(self):
         if os.path.exists(self.tf_dir) and os.path.isdir(self.tf_dir):
             shutil.rmtree(self.tf_dir)
@@ -84,6 +94,7 @@ class TestTraceability(unittest.TestCase):
         self.assertIn('tf_test_logs.png', figs[2], "A log image should have been generated")
         self.assertIn('tf_test.txt', figs[2], "A raw log file should have been generated")
 
+    @unittest.skipIf(_lacks_graphviz(), "The machine does not have GraphViz installed")
     def test_torch_traceability(self):
         if os.path.exists(self.torch_dir) and os.path.isdir(self.torch_dir):
             shutil.rmtree(self.torch_dir)
