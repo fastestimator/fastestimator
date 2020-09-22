@@ -155,13 +155,7 @@ class Traceability(Trace):
         self.doc.append(NoEscape(r'\newpage'))
 
     def on_end(self, data: Data) -> None:
-        self._document_training_graphs()
-        self.doc.append(NoEscape(r'\newpage'))
-        self._document_fe_graph()
-        self.doc.append(NoEscape(r'\newpage'))
-        self._document_init_params()
-        self._document_models()
-        self._document_sys_config()
+        self._write_body_content()
 
         # Need to move the tikz dependency after the xcolor package
         self.doc.dumps_packages()
@@ -182,6 +176,18 @@ class Traceability(Trace):
         print("FastEstimator-Traceability: Report written to {}{}".format(os.path.join(self.save_dir, self.report_name),
                                                                           suffix))
         self.log_splicer.__exit__()
+
+    def _write_body_content(self) -> None:
+        """Write the main content of the file. Override if you want to build on top of base traceability report.
+        """
+        self._document_training_graphs()
+        self.doc.append(NoEscape(r'\newpage'))
+        self._document_fe_graph()
+        self.doc.append(NoEscape(r'\newpage'))
+        self._document_init_params()
+        self._document_models()
+        self._document_sys_config()
+        self.doc.append(NoEscape(r'\newpage'))
 
     def _document_training_graphs(self) -> None:
         """Add training graphs to the traceability document.

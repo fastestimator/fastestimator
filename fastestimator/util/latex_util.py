@@ -15,7 +15,7 @@
 from typing import Iterable, Optional, Union
 
 from pylatex import NoEscape, Package, escape_latex
-from pylatex.base_classes import Container, Environment, LatexObject, Options
+from pylatex.base_classes import Container, ContainerCommand, Environment, LatexObject, Options
 from pylatex.lists import Enumerate
 from pylatex.utils import bold, dumps_list
 
@@ -92,6 +92,48 @@ class AdjustBox(Environment):
     This class is intentionally not @traceable.
     """
     packages = [Package('adjustbox')]
+
+
+class Form(Environment):
+    """A class to allow Form elements.
+
+    This class is intentionally not @traceable. Only one Form is allowed per document.
+    """
+    _latex_name = 'Form'
+    packages = [Package('hyperref', options='hidelinks')]
+
+
+class TextField(ContainerCommand):
+    """A class to create editable text fields.
+
+    This class is intentionally not @traceable. It can only be used inside of a Form.
+    """
+    _latex_name = "TextField"
+
+
+class TextFieldBox(ContainerList):
+    """A class to wrap TextFields into padded boxes for use in nesting within tables.
+
+    Args:
+        name: The name to assign to this TextField. It should be unique within the document since changes to one box
+            will impact all boxes with the same name.
+    """
+    def __init__(self, name: str):
+        data = [
+            NoEscape(r"\begin{minipage}{\linewidth}"),
+            NoEscape(r"\vspace{10pt}"),
+            TextField(options=[
+                NoEscape(r'width=\linewidth'),
+                NoEscape(r'height=2.5cm'),
+                NoEscape('backgroundcolor={0.97 0.97 0.97}'),
+                'bordercolor=white',
+                'multiline=true',
+                f'name={name}'
+            ]),
+            NoEscape(r"\vspace{10pt}"),
+            NoEscape(r"\end{minipage}")
+        ]
+        super().__init__(data=data)
 
 
 class HrefFEID(ContainerList):
