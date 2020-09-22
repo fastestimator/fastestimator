@@ -25,7 +25,7 @@ from fastestimator.util.wget_util import bar_custom, callback_progress
 wget.callback_progress = callback_progress
 
 
-def load_data(root_dir: Optional[str] = None, seq_length: int = 100) -> Tuple[NumpyDataset, List]:
+def load_data(root_dir: Optional[str] = None, seq_length: int = 100) -> Tuple[NumpyDataset, List[str]]:
     """Load and return the Shakespeare dataset.
 
     Shakespeare dataset is a collection of texts written by Shakespeare.

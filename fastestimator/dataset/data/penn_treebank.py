@@ -26,7 +26,7 @@ wget.callback_progress = callback_progress
 
 
 def load_data(root_dir: Optional[str] = None,
-              seq_length: int = 64) -> Tuple[NumpyDataset, NumpyDataset, NumpyDataset, List]:
+              seq_length: int = 64) -> Tuple[NumpyDataset, NumpyDataset, NumpyDataset, List[str]]:
     """Load and return the Penn TreeBank dataset.
 
     Args:

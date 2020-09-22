@@ -27,7 +27,7 @@ from fastestimator.util.wget_util import bar_custom, callback_progress
 wget.callback_progress = callback_progress
 
 
-def _create_csv(images: List, label_dict: Dict, csv_path: str) -> None:
+def _create_csv(images: List[str], label_dict: Dict[str, int], csv_path: str) -> None:
     """A helper function to create and save csv files.
 
     Args:
