@@ -145,7 +145,8 @@ class Traceability(Trace):
         self.doc.preamble.append(NoEscape(r'\belowrulesep=0ex'))
         self.doc.preamble.append(NoEscape(r'\renewcommand{\arraystretch}{1.2}'))
 
-        self._write_intro_content()
+        self._write_title()
+        self._write_toc()
 
     def on_end(self, data: Data) -> None:
         self._write_body_content()
@@ -170,15 +171,17 @@ class Traceability(Trace):
                                                                           suffix))
         self.log_splicer.__exit__()
 
-    def _write_intro_content(self) -> None:
-        """Write the intro content of the file. Override if you want to build on top of base traceability report.
+    def _write_title(self) -> None:
+        """Write the title content of the file. Override if you want to build on top of base traceability report.
         """
         self.doc.preamble.append(Command('title', self.system.summary.name))
         self.doc.preamble.append(Command('author', f"FastEstimator {fe.__version__}"))
         self.doc.preamble.append(Command('date', NoEscape(r'\today')))
         self.doc.append(NoEscape(r'\maketitle'))
 
-        # TOC
+    def _write_toc(self) -> None:
+        """Write the table of contents. Override if you want to build on top of base traceability report.
+        """
         self.doc.append(NoEscape(r'\tableofcontents'))
         self.doc.append(NoEscape(r'\newpage'))
 
