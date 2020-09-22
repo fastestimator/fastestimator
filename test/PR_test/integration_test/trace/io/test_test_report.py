@@ -104,7 +104,7 @@ class TestTestReport(unittest.TestCase):
             self.assertEqual(json_summary["tests"][1]["fail_id"], [])
 
         with self.subTest("check pdf report"):
-            report_path = os.path.join(save_path, exp_name + "_ModelEval.pdf")
+            report_path = os.path.join(save_path, exp_name + "_TestReport.pdf")
             self.assertTrue(os.path.exists(report_path))
 
     def test_instance_case_torch(self):
@@ -176,7 +176,7 @@ class TestTestReport(unittest.TestCase):
             self.assertEqual(json_summary["tests"][1]["fail_id"], [])
 
         with self.subTest("check pdf report"):
-            report_path = os.path.join(save_path, exp_name + "_ModelEval.pdf")
+            report_path = os.path.join(save_path, exp_name + "_TestReport.pdf")
             self.assertTrue(os.path.exists(report_path))
 
     def test_aggregate_case_tf(self):
@@ -235,7 +235,7 @@ class TestTestReport(unittest.TestCase):
             self.assertEqual(json_summary["tests"][1]["inputs"], {"avg": 1.75})
 
         with self.subTest("check pdf report"):
-            report_path = os.path.join(save_path, exp_name + "_ModelEval.pdf")
+            report_path = os.path.join(save_path, exp_name + "_TestReport.pdf")
             self.assertTrue(os.path.exists(report_path))
 
     def test_aggregate_case_torch(self):
@@ -294,5 +294,5 @@ class TestTestReport(unittest.TestCase):
             self.assertEqual(json_summary["tests"][1]["inputs"], {"avg": 1.75})
 
         with self.subTest("check pdf report"):
-            report_path = os.path.join(save_path, exp_name + "_ModelEval.pdf")
+            report_path = os.path.join(save_path, exp_name + "_TestReport.pdf")
             self.assertTrue(os.path.exists(report_path))
