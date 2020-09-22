@@ -119,10 +119,12 @@ class TextFieldBox(ContainerList):
             will impact all boxes with the same name.
         height: How tall should the TextField box be? Note that it will be wrapped by 10pt space on the top and bottom.
     """
+    packages = [Package('xcolor', options='table')]
+
     def __init__(self, name: str, height: str = '2.5cm'):
         data = [
             NoEscape(r"\begin{minipage}{\linewidth}"),
-            NoEscape(r"\vspace{10pt}"),
+            NoEscape(r"\vspace{3pt}"),
             TextField(options=[
                 NoEscape(r'width=\linewidth'),
                 NoEscape(f'height={height}'),
@@ -131,7 +133,7 @@ class TextFieldBox(ContainerList):
                 'multiline=true',
                 f'name={name}'
             ]),
-            NoEscape(r"\vspace{10pt}"),
+            NoEscape(r"\vspace{3pt}"),
             NoEscape(r"\end{minipage}")
         ]
         super().__init__(data=data)
