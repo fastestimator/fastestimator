@@ -97,10 +97,10 @@ class Traceability(Trace):
         report = os.path.basename(path) or 'report'
         report = report.split('.')[0]
         self.save_dir = os.path.join(root_dir, report)
-        self.figure_dir = os.path.join(self.save_dir, 'resources')
+        self.resource_dir = os.path.join(self.save_dir, 'resources')
         self.report_name = None  # This will be set later by the experiment name
         os.makedirs(self.save_dir, exist_ok=True)
-        os.makedirs(self.figure_dir, exist_ok=True)
+        os.makedirs(self.resource_dir, exist_ok=True)
         # Other member variables
         self.config_tables = []
         # Extra objects will automatically get included in the report since this Trace is @traceable, so we don't need
@@ -119,7 +119,7 @@ class Traceability(Trace):
         report_name = re.sub('_{2,}', '_', report_name)
         self.report_name = report_name or 'report'
         # Send experiment logs into a file
-        log_path = os.path.join(self.figure_dir, f"{report_name}.txt")
+        log_path = os.path.join(self.resource_dir, f"{report_name}.txt")
         if self.system.mode != 'test':
             # If not running in test mode, we need to remove any old log file since it would get appended to
             with contextlib.suppress(FileNotFoundError):
@@ -201,7 +201,7 @@ class Traceability(Trace):
         """Add training graphs to the traceability document.
         """
         with self.doc.create(Section("Training Graphs")):
-            log_path = os.path.join(self.figure_dir, f'{self.report_name}_logs.png')
+            log_path = os.path.join(self.resource_dir, f'{self.report_name}_logs.png')
             visualize_logs(experiments=[self.system.summary],
                            save_path=log_path,
                            verbose=False,
@@ -391,7 +391,7 @@ class Traceability(Trace):
                         # Visual Summary
                         # noinspection PyBroadException
                         try:
-                            file_path = os.path.join(self.figure_dir,
+                            file_path = os.path.join(self.resource_dir,
                                                      "{}_{}.pdf".format(self.report_name, model.model_name))
                             dot = tf.keras.utils.model_to_dot(model, show_shapes=True, expand_nested=True)
                             # LaTeX \maxdim is around 575cm (226 inches), so the image must have max dimension less than
@@ -436,7 +436,7 @@ class Traceability(Trace):
                                 graph.attr(size="100,100")
                                 graph.attr(margin='0')
                                 file_path = graph.render(filename="{}_{}".format(self.report_name, model.model_name),
-                                                         directory=self.figure_dir,
+                                                         directory=self.resource_dir,
                                                          format='pdf',
                                                          cleanup=True)
                             except Exception:

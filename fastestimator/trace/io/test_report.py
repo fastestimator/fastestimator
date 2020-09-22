@@ -36,7 +36,7 @@ from fastestimator.util.util import to_list, to_number, to_set
 
 @traceable()
 class TestCase:
-    """This class defines the test case that the ModelEval trace will take to perform auto-testing.
+    """This class defines the test case that the TestReport trace will take to perform auto-testing.
 
     Args:
         description: A test description.
@@ -124,9 +124,9 @@ class TestReport(Trace):
         report = os.path.basename(path) or 'report'
         report = report.split('.')[0]
         self.save_dir = os.path.join(root_dir, report)
-        self.src_dir = os.path.join(self.save_dir, "resources")
+        self.resource_dir = os.path.join(self.save_dir, "resources")
         os.makedirs(self.save_dir, exist_ok=True)
-        os.makedirs(self.src_dir, exist_ok=True)
+        os.makedirs(self.resource_dir, exist_ok=True)
 
         self.json_summary = {}
         # PDF document related
@@ -195,7 +195,8 @@ class TestReport(Trace):
         self.json_summary["execution_time(s)"] = time() - self.json_summary["execution_time(s)"]
 
         self._dump_json()
-        self._document_pdf()
+        self._init_document()
+        self._write_body_content()
         self._dump_pdf()
 
     def _initialize_json_summary(self) -> None:
@@ -217,15 +218,9 @@ class TestReport(Trace):
         # Convert the experiment name to a report name (useful for saving multiple experiments into same directory)
         report_name = "".join('_' if c == ' ' else c for c in exp_name
                               if c.isalnum() or c in (' ', '_')).rstrip("_").lower()
-        self.report_name = re.sub('_{2,}', '_', report_name) + "_ModelEval"
+        self.report_name = re.sub('_{2,}', '_', report_name) + "_TestReport"
         if self.test_title is None:
             self.test_title = exp_name
-
-    def _document_pdf(self) -> None:
-        """Document PDF report.
-        """
-        self._init_document()
-        self._document_test_result()
 
     def _init_document(self) -> None:
         """Initialize latex document.
@@ -239,20 +234,33 @@ class TestReport(Trace):
         self.doc.preamble.append(NoEscape(r'\belowrulesep=0ex'))
         self.doc.preamble.append(NoEscape(r'\renewcommand{\arraystretch}{1.2}'))
 
-        self.doc.preamble.append(Command('title', self.json_summary["title"]))
-        self.doc.preamble.append(Command('author', f"FastEstimator {fe.__version__}"))
-        self.doc.preamble.append(Command('date', NoEscape(r'\today')))
-        self.doc.append(NoEscape(r'\maketitle'))
-
         # new column type for tabularx
         self.doc.preamble.append(NoEscape(r'\newcolumntype{Y}{>{\centering\arraybackslash}X}'))
 
         # add seqinsert hyphentation
         self.doc.preamble.append(NoEscape(r'\def\seqinsert{\-}'))
 
-        # TOC
+        self._write_title()
+        self._write_toc()
+
+    def _write_title(self) -> None:
+        """Write the title content of the file. Override if you want to build on top of base traceability report.
+        """
+        self.doc.preamble.append(Command('title', self.json_summary["title"]))
+        self.doc.preamble.append(Command('author', f"FastEstimator {fe.__version__}"))
+        self.doc.preamble.append(Command('date', NoEscape(r'\today')))
+        self.doc.append(NoEscape(r'\maketitle'))
+
+    def _write_toc(self) -> None:
+        """Write the table of contents. Override if you want to build on top of base traceability report.
+        """
         self.doc.append(NoEscape(r'\tableofcontents'))
         self.doc.append(NoEscape(r'\newpage'))
+
+    def _write_body_content(self) -> None:
+        """Write the main content of the file. Override if you want to build on top of base traceability report.
+        """
+        self._document_test_result()
 
     def _document_test_result(self) -> None:
         """Document test results including test summary, passed tests, and failed tests.
@@ -435,7 +443,7 @@ class TestReport(Trace):
     def _dump_json(self) -> None:
         """Dump JSON file.
         """
-        json_path = os.path.join(self.src_dir, self.report_name + ".json")
+        json_path = os.path.join(self.resource_dir, self.report_name + ".json")
         with open(json_path, 'w') as fp:
             json.dump(self.json_summary, fp, indent=4)
 
