@@ -145,14 +145,7 @@ class Traceability(Trace):
         self.doc.preamble.append(NoEscape(r'\belowrulesep=0ex'))
         self.doc.preamble.append(NoEscape(r'\renewcommand{\arraystretch}{1.2}'))
 
-        self.doc.preamble.append(Command('title', exp_name))
-        self.doc.preamble.append(Command('author', f"FastEstimator {fe.__version__}"))
-        self.doc.preamble.append(Command('date', NoEscape(r'\today')))
-        self.doc.append(NoEscape(r'\maketitle'))
-
-        # TOC
-        self.doc.append(NoEscape(r'\tableofcontents'))
-        self.doc.append(NoEscape(r'\newpage'))
+        self._write_intro_content()
 
     def on_end(self, data: Data) -> None:
         self._write_body_content()
@@ -176,6 +169,18 @@ class Traceability(Trace):
         print("FastEstimator-Traceability: Report written to {}{}".format(os.path.join(self.save_dir, self.report_name),
                                                                           suffix))
         self.log_splicer.__exit__()
+
+    def _write_intro_content(self) -> None:
+        """Write the intro content of the file. Override if you want to build on top of base traceability report.
+        """
+        self.doc.preamble.append(Command('title', self.system.summary.name))
+        self.doc.preamble.append(Command('author', f"FastEstimator {fe.__version__}"))
+        self.doc.preamble.append(Command('date', NoEscape(r'\today')))
+        self.doc.append(NoEscape(r'\maketitle'))
+
+        # TOC
+        self.doc.append(NoEscape(r'\tableofcontents'))
+        self.doc.append(NoEscape(r'\newpage'))
 
     def _write_body_content(self) -> None:
         """Write the main content of the file. Override if you want to build on top of base traceability report.
