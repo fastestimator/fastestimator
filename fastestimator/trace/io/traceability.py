@@ -34,7 +34,7 @@ import tensorflow as tf
 import torch
 from natsort import humansorted
 from pylatex import Command, Document, Figure, Hyperref, Itemize, Label, LongTable, Marker, MultiColumn, NoEscape, \
-    Package, Section, Subsection, Subsubsection, Tabular, escape_latex
+    Package, Section, Subsection, Subsubsection, Tabularx, escape_latex
 from pylatex.base_classes import Arguments
 from pylatex.utils import bold
 from torch.utils.data import Dataset
@@ -58,7 +58,7 @@ from fastestimator.schedule.schedule import Scheduler, get_current_items, get_si
 from fastestimator.summary.logs.log_plot import visualize_logs
 from fastestimator.trace.trace import Trace, sort_traces
 from fastestimator.util.data import Data
-from fastestimator.util.latex_util import AdjustBox, Center, HrefFEID, Verbatim
+from fastestimator.util.latex_util import AdjustBox, Center, ContainerList, HrefFEID, Verbatim
 from fastestimator.util.traceability_util import FeSummaryTable, traceable
 from fastestimator.util.util import FEID, LogSplicer, Suppressor, prettify_metric_name, to_list
 
@@ -361,11 +361,13 @@ class Traceability(Trace):
                             if isinstance(list(val.values())[0], (int, float, str, bool, type(None))):
                                 val = jsonpickle.dumps(val, unpicklable=False)
                             else:
-                                subtable = Tabular('l|l')
+                                subtable = Tabularx('l|X', width_argument=NoEscape(r'\linewidth'))
                                 for k, v in val.items():
                                     if hasattr(v, '__getstate__'):
                                         v = jsonpickle.dumps(v, unpicklable=False)
                                     subtable.add_row((k, v))
+                                # To nest TabularX, have to wrap it in brackets
+                                subtable = ContainerList(data=[NoEscape("{"), subtable, NoEscape("}")])
                                 val = subtable
                         extra_rows[idx] = (key, val)
             tbl.render_table(self.doc, name_override=name_override, toc_ref=toc_ref, extra_rows=extra_rows)
