@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Optional, Union
+from typing import Callable, Dict, List, Optional, Union
 
 import tensorflow as tf
 import torch
@@ -25,7 +25,9 @@ from fastestimator.backend.reduce_mean import reduce_mean
 def update_model(model: Union[tf.keras.Model, torch.nn.Module],
                  loss: Union[tf.Tensor, torch.Tensor],
                  tape: Optional[tf.GradientTape] = None,
-                 retain_graph: bool = True):
+                 retain_graph: bool = True,
+                 defer: bool = False,
+                 deferred: Optional[Dict[str, List[Callable[[], None]]]] = None) -> None:
     """Update `model` weights based on a given `loss`.
 
     This method can be used with TensorFlow models:
@@ -54,9 +56,14 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
         loss: A loss value to compute gradients from.
         tape: A TensorFlow GradientTape which was recording when the `loss` was computed (iff using TensorFlow).
         retain_graph: Whether to keep the model graph in memory (applicable only for PyTorch).
+        defer: If True, then the model update function will be stored into the `deferred` dictionary rather than
+            applied immediately.
+        deferred: A dictionary in which model update functions are stored.
 
     Raises:
         ValueError: If `model` is an unacceptable data type.
+        RuntimeError: If attempting to modify a PyTorch model which relied on gradients within a different PyTorch model
+            which has in turn already undergone a non-deferred update.
     """
     loss = reduce_mean(loss)
     if isinstance(model, tf.keras.Model):
@@ -72,12 +79,39 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
             # scale down gradient to balance scale-up loss
             if isinstance(model.current_optimizer, mixed_precision.LossScaleOptimizer):
                 gradients = model.current_optimizer.get_unscaled_gradients(gradients)
-            model.current_optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+            if defer:
+                deferred.setdefault(model.model_name, []).append(
+                    lambda: model.current_optimizer.apply_gradients(zip(gradients, model.trainable_variables)))
+            else:
+                model.current_optimizer.apply_gradients(zip(gradients, model.trainable_variables))
     elif isinstance(model, torch.nn.Module):
         trainable_params = [p for p in model.parameters() if p.requires_grad]
-        gradients = get_gradient(loss, trainable_params, retain_graph=retain_graph)
+        try:
+            gradients = get_gradient(loss, trainable_params, retain_graph=retain_graph)
+        except RuntimeError as err:
+            if err.args and isinstance(err.args[0], str) and err.args[0].startswith(
+                    'one of the variables needed for gradient computation has been modified by an inplace operation'):
+                raise RuntimeError(
+                    "When computing gradients for '{}', some variables it relied on during the forward pass had already"
+                    " been updated. Consider setting defer=True in earlier UpdateOps related to models which interact "
+                    "with this one.".format(model.model_name))
+            raise err
         for gradient, parameter in zip(gradients, trainable_params):
-            parameter.grad = gradient
-        model.current_optimizer.step()
+            if parameter.grad is not None:
+                parameter.grad += gradient
+            else:
+                parameter.grad = gradient.clone()
+        if defer:
+            # Only need to call once per model since gradients are getting accumulated
+            deferred[model.model_name] = [lambda: _torch_step(model.current_optimizer)]
+        else:
+            model.current_optimizer.step()
+            model.current_optimizer.zero_grad()
+            deferred.pop(model.model_name, None)  # Don't need those deferred steps anymore
     else:
         raise ValueError("Unrecognized model instance {}".format(type(model)))
+
+
+def _torch_step(optimizer: torch.optim.Optimizer) -> None:
+    optimizer.step()
+    optimizer.zero_grad()
