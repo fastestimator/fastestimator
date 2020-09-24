@@ -51,7 +51,8 @@ class BatchDataset(FEDataset):
         ```
 
     Args:
-        datasets: The dataset(s) to use for batch sampling.
+        datasets: The dataset(s) to use for batch sampling. While these should be FEDatasets, pytorch datasets will
+            technically also work. If you use them, however, you will lose the .split() and .summary() methods.
         num_samples: Number of samples to draw from the `datasets`. May be a single int if used in conjunction with
             `probability`, otherwise a list of ints of len(`datasets`) is required.
         probability: Probability to draw from each dataset. Only allowed if `num_samples` is an integer.
@@ -64,6 +65,7 @@ class BatchDataset(FEDataset):
         self.num_samples = to_list(num_samples)
         self.probability = to_list(probability)
         self.same_feature = False
+        self.all_fe_datasets = False
         self._check_input()
         self.index_maps = []
         self.reset_index_maps()
@@ -99,6 +101,7 @@ class BatchDataset(FEDataset):
             assert len(self.datasets) == len(self.num_samples), "the number of dataset must match num_samples"
         if not self.same_feature:
             assert len(set(self.num_samples)) == 1, "the number of samples must be the same for disjoint features"
+        self.all_fe_datasets = all([isinstance(dataset, FEDataset) for dataset in self.datasets])
 
     def _do_split(self, splits: Sequence[Iterable[int]]) -> List['BatchDataset']:
         """This class overwrites the .split() method instead of _do_split().
@@ -144,7 +147,13 @@ class BatchDataset(FEDataset):
             One or more new datasets which are created by removing elements from the current dataset. The number of
             datasets returned will be equal to the number of `fractions` provided. If only a single value is provided
             then the return will be a single dataset rather than a list of datasets.
+
+        Raises:
+            NotImplementedError: If the user created this dataset using one or more non-FEDataset inputs.
         """
+        if not self.all_fe_datasets:
+            raise NotImplementedError(
+                "BatchDataset.split() is not supported when BatchDataset contains non-FEDataset objects")
         new_datasets = [to_list(ds.split(*fractions)) for ds in self.datasets]
         num_splits = len(new_datasets[0])
         new_datasets = [[ds[i] for ds in new_datasets] for i in range(num_splits)]
@@ -162,6 +171,9 @@ class BatchDataset(FEDataset):
         Returns:
             A summary representation of this dataset.
         """
+        if not self.all_fe_datasets:
+            print("FastEstimator-Warn: BatchDataset summary will be incomplete since non-FEDatasets were used.")
+            return DatasetSummary(num_instances=len(self), keys={})
         summaries = [ds.summary() for ds in self.datasets]
         keys = {k: v for summary in summaries for k, v in summary.keys.items()}
         return DatasetSummary(num_instances=len(self), keys=keys)

@@ -111,9 +111,11 @@ class TestIWD(unittest.TestCase):
         self.assertTrue(np.allclose(b, target))
 
     def test_torch_input(self):
-        n = torch.tensor([[0.5] * 5, [0] + [1] * 4])
+        n = torch.tensor([[0.5] * 5, [0] + [1] * 4]).to("cuda:0" if torch.cuda.is_available() else "cpu")
         target = torch.tensor([[0.2, 0.2, 0.2, 0.2, 0.2], [0.95, 0.0125, 0.0125, 0.0125, 0.0125]])
         b = fe.backend.iwd(n)
+        if torch.cuda.is_available():
+            b = b.to("cpu")
         self.assertTrue(np.allclose(b, target))
 
     def test_torch_input_eps(self):

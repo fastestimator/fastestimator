@@ -2,6 +2,9 @@ def IMAGE_TAG="$BUILD_TAG".toLowerCase()
 
 pipeline {
     agent {label 'master'}
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+    }
     environment {
         IMAGE_TAG="$IMAGE_TAG"
     }
@@ -9,7 +12,7 @@ pipeline {
         stage('PR-test') {
             steps {
                 script {
-                    def customImage = docker.build("$IMAGE_TAG", "--no-cache - < docker/nightly/Dockerfile.cpu")
+                    def customImage = docker.build("$IMAGE_TAG", "--no-cache --build-arg InstallFE=False - < docker/nightly/Dockerfile.cpu")
                     try {
                         customImage.inside('-u root') {
                             sh 'pip install --no-cache-dir .'

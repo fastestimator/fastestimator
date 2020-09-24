@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Optional, Union
+from typing import Iterable, Optional, Union
 
 from pylatex import NoEscape, Package, escape_latex
-from pylatex.base_classes import Container, Environment, Options
+from pylatex.base_classes import Container, ContainerCommand, Environment, LatexObject, Options
 from pylatex.lists import Enumerate
-from pylatex.utils import bold
+from pylatex.utils import bold, dumps_list
 
 from fastestimator.util.util import FEID
 
@@ -94,6 +94,51 @@ class AdjustBox(Environment):
     packages = [Package('adjustbox')]
 
 
+class Form(Environment):
+    """A class to allow Form elements.
+
+    This class is intentionally not @traceable. Only one Form is allowed per document.
+    """
+    _latex_name = 'Form'
+    packages = [Package('hyperref', options='hidelinks')]
+
+
+class TextField(ContainerCommand):
+    """A class to create editable text fields.
+
+    This class is intentionally not @traceable. It can only be used inside of a Form.
+    """
+    _latex_name = "TextField"
+
+
+class TextFieldBox(ContainerList):
+    """A class to wrap TextFields into padded boxes for use in nesting within tables.
+
+    Args:
+        name: The name to assign to this TextField. It should be unique within the document since changes to one box
+            will impact all boxes with the same name.
+        height: How tall should the TextField box be? Note that it will be wrapped by 10pt space on the top and bottom.
+    """
+    packages = [Package('xcolor', options='table')]
+
+    def __init__(self, name: str, height: str = '2.5cm'):
+        data = [
+            NoEscape(r"\begin{minipage}{\linewidth}"),
+            NoEscape(r"\vspace{3pt}"),
+            TextField(options=[
+                NoEscape(r'width=\linewidth'),
+                NoEscape(f'height={height}'),
+                NoEscape('backgroundcolor={0.97 0.97 0.97}'),
+                'bordercolor=white',
+                'multiline=true',
+                f'name={name}'
+            ]),
+            NoEscape(r"\vspace{3pt}"),
+            NoEscape(r"\end{minipage}")
+        ]
+        super().__init__(data=data)
+
+
 class HrefFEID(ContainerList):
     """A class to represent a colored and underlined hyperref based on a given fe_id.
 
@@ -129,3 +174,54 @@ class HrefFEID(ContainerList):
             data.append(bold(escape_latex(name)) if bold_name else escape_latex(name))
         data.append(NoEscape("}}}"))
         super().__init__(data=data)
+
+
+class IterJoin(Container):
+    """A class to convert an iterable to a latex representation.
+
+    Args:
+        data: Data of the cell.
+        token: String to serve as separator among items of `data`.
+    """
+    def __init__(self, data: Iterable, token: str):
+        super().__init__(data=data)
+        self.token = token
+
+    def dumps(self) -> str:
+        """Get a string representation of this cell.
+
+        Returns:
+            A string representation of itself.
+        """
+        return dumps_list(self, token=self.token)
+
+
+class WrapText(LatexObject):
+    """A class to convert strings or numbers to wrappable latex representation.
+
+    This class will first convert the data to string, and then to a wrappable latex representation if its length is too
+    long. This fixes an issue which prevents the first element placed into a latex X column from wrapping correctly.
+
+    Args:
+        data: Input data to be converted.
+        threshold: When the length of `data` is greater than `threshold`, the resulting string will be made wrappable.
+
+    Raises:
+        AssertionError: If `data` is not a string, int, or float.
+    """
+    def __init__(self, data: Union[str, int, float], threshold: int):
+        assert isinstance(data, (str, int, float)), "the self.data type needs to be str, int, float"
+        self.threshold = threshold
+        self.data = str(data)
+        super().__init__()
+
+    def dumps(self) -> str:
+        """Get a string representation of this cell.
+
+        Returns:
+            A string representation of itself.
+        """
+        if len(self.data) > self.threshold:
+            return NoEscape(r'\seqsplit{' + escape_latex(self.data) + '}')
+        else:
+            return escape_latex(self.data)

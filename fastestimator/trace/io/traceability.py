@@ -34,7 +34,7 @@ import tensorflow as tf
 import torch
 from natsort import humansorted
 from pylatex import Command, Document, Figure, Hyperref, Itemize, Label, LongTable, Marker, MultiColumn, NoEscape, \
-    Package, Section, Subsection, Subsubsection, Tabular, escape_latex
+    Package, Section, Subsection, Subsubsection, Tabularx, escape_latex
 from pylatex.base_classes import Arguments
 from pylatex.utils import bold
 from torch.utils.data import Dataset
@@ -58,7 +58,7 @@ from fastestimator.schedule.schedule import Scheduler, get_current_items, get_si
 from fastestimator.summary.logs.log_plot import visualize_logs
 from fastestimator.trace.trace import Trace, sort_traces
 from fastestimator.util.data import Data
-from fastestimator.util.latex_util import AdjustBox, Center, HrefFEID, Verbatim
+from fastestimator.util.latex_util import AdjustBox, Center, ContainerList, HrefFEID, Verbatim
 from fastestimator.util.traceability_util import FeSummaryTable, traceable
 from fastestimator.util.util import FEID, LogSplicer, Suppressor, prettify_metric_name, to_list
 
@@ -97,10 +97,10 @@ class Traceability(Trace):
         report = os.path.basename(path) or 'report'
         report = report.split('.')[0]
         self.save_dir = os.path.join(root_dir, report)
-        self.figure_dir = os.path.join(self.save_dir, 'resources')
+        self.resource_dir = os.path.join(self.save_dir, 'resources')
         self.report_name = None  # This will be set later by the experiment name
         os.makedirs(self.save_dir, exist_ok=True)
-        os.makedirs(self.figure_dir, exist_ok=True)
+        os.makedirs(self.resource_dir, exist_ok=True)
         # Other member variables
         self.config_tables = []
         # Extra objects will automatically get included in the report since this Trace is @traceable, so we don't need
@@ -119,7 +119,7 @@ class Traceability(Trace):
         report_name = re.sub('_{2,}', '_', report_name)
         self.report_name = report_name or 'report'
         # Send experiment logs into a file
-        log_path = os.path.join(self.figure_dir, f"{report_name}.txt")
+        log_path = os.path.join(self.resource_dir, f"{report_name}.txt")
         if self.system.mode != 'test':
             # If not running in test mode, we need to remove any old log file since it would get appended to
             with contextlib.suppress(FileNotFoundError):
@@ -145,23 +145,11 @@ class Traceability(Trace):
         self.doc.preamble.append(NoEscape(r'\belowrulesep=0ex'))
         self.doc.preamble.append(NoEscape(r'\renewcommand{\arraystretch}{1.2}'))
 
-        self.doc.preamble.append(Command('title', exp_name))
-        self.doc.preamble.append(Command('author', f"FastEstimator {fe.__version__}"))
-        self.doc.preamble.append(Command('date', NoEscape(r'\today')))
-        self.doc.append(NoEscape(r'\maketitle'))
-
-        # TOC
-        self.doc.append(NoEscape(r'\tableofcontents'))
-        self.doc.append(NoEscape(r'\newpage'))
+        self._write_title()
+        self._write_toc()
 
     def on_end(self, data: Data) -> None:
-        self._document_training_graphs()
-        self.doc.append(NoEscape(r'\newpage'))
-        self._document_fe_graph()
-        self.doc.append(NoEscape(r'\newpage'))
-        self._document_init_params()
-        self._document_models()
-        self._document_sys_config()
+        self._write_body_content()
 
         # Need to move the tikz dependency after the xcolor package
         self.doc.dumps_packages()
@@ -183,11 +171,37 @@ class Traceability(Trace):
                                                                           suffix))
         self.log_splicer.__exit__()
 
+    def _write_title(self) -> None:
+        """Write the title content of the file. Override if you want to build on top of base traceability report.
+        """
+        self.doc.preamble.append(Command('title', self.system.summary.name))
+        self.doc.preamble.append(Command('author', f"FastEstimator {fe.__version__}"))
+        self.doc.preamble.append(Command('date', NoEscape(r'\today')))
+        self.doc.append(NoEscape(r'\maketitle'))
+
+    def _write_toc(self) -> None:
+        """Write the table of contents. Override if you want to build on top of base traceability report.
+        """
+        self.doc.append(NoEscape(r'\tableofcontents'))
+        self.doc.append(NoEscape(r'\newpage'))
+
+    def _write_body_content(self) -> None:
+        """Write the main content of the file. Override if you want to build on top of base traceability report.
+        """
+        self._document_training_graphs()
+        self.doc.append(NoEscape(r'\newpage'))
+        self._document_fe_graph()
+        self.doc.append(NoEscape(r'\newpage'))
+        self._document_init_params()
+        self._document_models()
+        self._document_sys_config()
+        self.doc.append(NoEscape(r'\newpage'))
+
     def _document_training_graphs(self) -> None:
         """Add training graphs to the traceability document.
         """
         with self.doc.create(Section("Training Graphs")):
-            log_path = os.path.join(self.figure_dir, f'{self.report_name}_logs.png')
+            log_path = os.path.join(self.resource_dir, f'{self.report_name}_logs.png')
             visualize_logs(experiments=[self.system.summary],
                            save_path=log_path,
                            verbose=False,
@@ -347,11 +361,13 @@ class Traceability(Trace):
                             if isinstance(list(val.values())[0], (int, float, str, bool, type(None))):
                                 val = jsonpickle.dumps(val, unpicklable=False)
                             else:
-                                subtable = Tabular('l|l')
+                                subtable = Tabularx('l|X', width_argument=NoEscape(r'\linewidth'))
                                 for k, v in val.items():
                                     if hasattr(v, '__getstate__'):
                                         v = jsonpickle.dumps(v, unpicklable=False)
                                     subtable.add_row((k, v))
+                                # To nest TabularX, have to wrap it in brackets
+                                subtable = ContainerList(data=[NoEscape("{"), subtable, NoEscape("}")])
                                 val = subtable
                         extra_rows[idx] = (key, val)
             tbl.render_table(self.doc, name_override=name_override, toc_ref=toc_ref, extra_rows=extra_rows)
@@ -377,7 +393,7 @@ class Traceability(Trace):
                         # Visual Summary
                         # noinspection PyBroadException
                         try:
-                            file_path = os.path.join(self.figure_dir,
+                            file_path = os.path.join(self.resource_dir,
                                                      "{}_{}.pdf".format(self.report_name, model.model_name))
                             dot = tf.keras.utils.model_to_dot(model, show_shapes=True, expand_nested=True)
                             # LaTeX \maxdim is around 575cm (226 inches), so the image must have max dimension less than
@@ -422,7 +438,7 @@ class Traceability(Trace):
                                 graph.attr(size="100,100")
                                 graph.attr(margin='0')
                                 file_path = graph.render(filename="{}_{}".format(self.report_name, model.model_name),
-                                                         directory=self.figure_dir,
+                                                         directory=self.resource_dir,
                                                          format='pdf',
                                                          cleanup=True)
                             except Exception:

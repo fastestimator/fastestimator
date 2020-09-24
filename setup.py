@@ -51,9 +51,8 @@ def get_dependency():
         'scipy==1.4.1',
         'PyLaTeX==1.3.2',
         'natsort==7.0.1',
-        'tensorflow_probability==0.8.0',
-        'transformers==2.4.1',
-        'tensorflow==2.1.0',
+        'tensorflow_probability==0.11.0',
+        'transformers==3.1.0',
         'pytorch-model-summary==0.1.2',
         'graphviz==0.14.1',
         'hiddenlayer==0.3',
@@ -67,8 +66,6 @@ def get_dependency():
             "pycocotools @ git+https://github.com/philferriere/cocoapi.git#egg=pycocotools&subdirectory=PythonAPI")
     else:
         dependencies.append('pycocotools-fix')
-        dependencies.append('torch==1.4.0')
-        dependencies.append('torchvision==0.5.0')
     return dependencies
 
 
