@@ -1,10 +1,9 @@
-import os
 import csv
-import pandas as pd
+import os
+import tempfile
 import unittest
 from collections import defaultdict
 
-from fastestimator.summary import System
 from fastestimator.test.unittest_util import is_equal, sample_system_object
 from fastestimator.trace.io import CSVLogger
 from fastestimator.util.data import Data
@@ -15,7 +14,7 @@ class TestCSVLogger(unittest.TestCase):
     def setUpClass(cls):
         cls.data = Data({'mode': 'train', 'epoch': 1})
         cls.dict = defaultdict(list, {'mode': ['train'], 'epoch': [0]})
-        cls.csv_path = '/tmp/test_csv_logger.csv'
+        cls.csv_path = os.path.join(tempfile.mkdtemp(), 'test_csv_logger.csv')
 
     def test_on_begin(self):
         csvlogger = CSVLogger(filename=self.csv_path)
