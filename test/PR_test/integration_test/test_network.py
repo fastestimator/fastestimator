@@ -21,6 +21,7 @@ class UnknownCompiledModel:
     def __init__(self, model):
         self.model = model
         self.fe_compiled = True
+        self.model_name = 'unk'
 
 
 class SampleNumpyOp(NumpyOp):
