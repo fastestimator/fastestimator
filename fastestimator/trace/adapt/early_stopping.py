@@ -56,6 +56,7 @@ class EarlyStopping(Trace):
             raise ValueError("compare_mode can only be `min` or `max`")
 
         self.monitored_key = monitor
+        self.fe_monitor_names.add(monitor)
         self.min_delta = abs(min_delta)
         self.wait = 0
         self.best = 0

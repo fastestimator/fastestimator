@@ -68,6 +68,9 @@ class Trace:
     inputs: List[str]
     outputs: List[str]
     mode: Set[str]
+    # You can put keys in here to have them automatically added to EvalEssential without the user having to manually add
+    # them to the Estimator monitor_names. See BestModelSaver for an example.
+    fe_monitor_names: Set[str]
 
     def __init__(self,
                  inputs: Union[None, str, Iterable[str]] = None,
@@ -76,6 +79,7 @@ class Trace:
         self.inputs = to_list(inputs)
         self.outputs = to_list(outputs)
         self.mode = parse_modes(to_set(mode))
+        self.fe_monitor_names = set()  # The use-case here is rare enough that we don't want to add this to the init sig
 
     def on_begin(self, data: Data) -> None:
         """Runs once at the beginning of training or testing.
@@ -221,8 +225,8 @@ class Logger(Trace):
             self._print_message("FastEstimator-Start: step: {}; ".format(start_step), data)
 
     def on_batch_end(self, data: Data) -> None:
-        if self.system.mode == "train" and self.system.log_steps and (
-                self.system.global_step % self.system.log_steps == 0 or self.system.global_step == 1):
+        if self.system.mode == "train" and self.system.log_steps and (self.system.global_step % self.system.log_steps
+                                                                      == 0 or self.system.global_step == 1):
             self._print_message("FastEstimator-Train: step: {}; ".format(self.system.global_step), data)
 
     def on_epoch_end(self, data: Data) -> None:

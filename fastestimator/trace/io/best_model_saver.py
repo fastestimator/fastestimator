@@ -53,6 +53,7 @@ class BestModelSaver(Trace):
         super().__init__(mode="eval",
                          inputs=metric,
                          outputs=["since_best_{}".format(metric), "{}_{}".format(save_best_mode, metric)])
+        self.fe_monitor_names.add(metric)
         self.model = model
         self.model_name = "{}_best_{}".format(self.model.model_name, self.metric)
         self.save_dir = save_dir
