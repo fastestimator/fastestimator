@@ -27,6 +27,7 @@ from fastestimator.backend.load_model import load_model
 from fastestimator.backend.to_tensor import to_tensor
 from fastestimator.op.op import get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.tensorop import TensorOp
+from fastestimator.op.tensorop.model import UpdateOp
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
 from fastestimator.util.traceability_util import trace_model, traceable
 from fastestimator.util.util import NonContext, get_batch_size, to_list
@@ -102,7 +103,10 @@ class BaseNetwork:
         gradient_ops = [op for op in self.epoch_ops if op.fe_retain_graph() is not None]
         for idx, gradient_op in enumerate(gradient_ops):
             gradient_op.fe_retain_graph(idx != len(gradient_ops) - 1)
-        self.epoch_state = {"warmup": warmup, "mode": mode, "req_grad": len(gradient_ops) > 0, "epoch": epoch}
+        self.epoch_state = {
+            "warmup": warmup, "mode": mode, "req_grad": len(gradient_ops) > 0, "epoch": epoch, "deferred": {}
+        }
+        # warmup: bool, mode: str, req_grad: bool, epoch: int, deferred: Dict[str, List[Callable]]]
         for model in self.epoch_models:
             if hasattr(model, "optimizer") and model.optimizer is not None:
                 if isinstance(model.optimizer, Scheduler):
@@ -173,6 +177,10 @@ class BaseNetwork:
             data = op.forward(data, state)
             if op.outputs:
                 write_outputs_by_op(op, batch, data)
+        for fn_list in state['deferred'].values():
+            for fn in fn_list:
+                fn()
+        state['deferred'].clear()
 
     def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:  # Batch, Prediction
         """Run a forward step through the Network on a batch of data.
@@ -236,7 +244,9 @@ def Network(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> BaseNetwork:
     models = _collect_models(ops)
     assert models, "cannot find model in Network ops"
     framework = set()
+    model_names = set()
     for model in models:
+        model_names.add(model.model_name)
         if isinstance(model, tf.keras.Model):
             framework.add("tf")
         elif isinstance(model, torch.nn.Module):
@@ -244,6 +254,7 @@ def Network(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> BaseNetwork:
         else:
             framework.add("unknown")
     assert len(framework) == 1, "please make sure either tensorflow or torch model is used in network"
+    assert len(model_names) == len(models), "all models must have unique model names"
 
     framework = framework.pop()
     if framework == "tf":
@@ -288,8 +299,16 @@ class TorchNetwork(BaseNetwork):
                 if model.current_optimizer and mode == "train":
                     # move optimizer variables to gpu
                     self._move_optimizer_between_device(model.current_optimizer.state, self.device)
+        # Set all of the contiguous final updates to defer their updates by default to enable things like CycleGan
+        # This is not necessary for TF because overriding tf weights does not confuse the gradient tape computation
+        for op in reversed(self.epoch_ops):
+            if isinstance(op, UpdateOp):
+                op._old_defer = op.defer
+                op.defer = True
+            else:
+                break
 
-    def _move_optimizer_between_device(self, data: Dict[str, Any], device: str) -> None:
+    def _move_optimizer_between_device(self, data: Dict[str, Any], device: Union[str, torch.device]) -> None:
         """Move optimizer state between gpu and cpu recursively.
 
         Args:
@@ -317,6 +336,12 @@ class TorchNetwork(BaseNetwork):
                 if model.current_optimizer and self.epoch_state["mode"] == "train":
                     # move optimizer variables to cpu
                     self._move_optimizer_between_device(model.current_optimizer.state, "cpu")
+        # Set the final update ops back to their original defer status
+        for op in reversed(self.epoch_ops):
+            if isinstance(op, UpdateOp):
+                op.defer = op.__dict__.get('_old_defer', op.defer)
+            else:
+                break
 
     def _get_effective_batch_input(self, batch: MutableMapping[str, Any], mode: str) -> Dict[str, Any]:
         """Copy input data from the the CPU onto the GPU(s).
@@ -371,7 +396,7 @@ class TorchNetwork(BaseNetwork):
             }
         return batch, prediction
 
-    def _move_tensor_between_device(self, data: T, device: str) -> T:
+    def _move_tensor_between_device(self, data: T, device: Union[str, torch.device]) -> T:
         """Move tensor between gpu and cpu recursively.
 
         Args:

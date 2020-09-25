@@ -22,7 +22,7 @@ class TestFuse(unittest.TestCase):
             self.assertListEqual(fuse.outputs, ['y', 'w'])
         with self.subTest('Check op mode'):
             self.assertSetEqual(fuse.mode, {'test'})
-        output = fuse.forward(data=self.multi_input_tf, state={"mode": "test"})
+        output = fuse.forward(data=self.multi_input_tf, state={"mode": "test", "deferred": {}})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)
         with self.subTest('Check output image shape'):
@@ -39,7 +39,7 @@ class TestFuse(unittest.TestCase):
             self.assertListEqual(fuse.outputs, ['y', 'w'])
         with self.subTest('Check op mode'):
             self.assertSetEqual(fuse.mode, {'test'})
-        output = fuse.forward(data=self.multi_input_tf, state={"mode": "test"})
+        output = fuse.forward(data=self.multi_input_tf, state={"mode": "test", "deferred": {}})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)
         with self.subTest('Check output image shape'):
