@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import dis
+import functools
 import inspect
 import re
 import types
@@ -1036,6 +1037,7 @@ def traceable(whitelist: Union[str, Tuple[str]] = (), blacklist: Union[str, Tupl
         base_init = getattr(cls, '__init__')
         if hasattr(base_init, '__module__') and base_init.__module__ != 'fastestimator.util.traceability_util':
             # We haven't already overridden this class' init method
+            @functools.wraps(base_init) # to preserve the original class signature
             def init(self, *args, **kwargs):
                 if not hasattr(self, '_fe_state_whitelist'):
                     self._fe_state_whitelist = whitelist
