@@ -35,15 +35,21 @@ class UpdateOp(TensorOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        defer: Whether to defer the actual application of the update until the end of the step. This can be necessary
+            in PyTorch when trying to update multiple models which depend on one another (ex. certain GANs). By default,
+            all UpdateOps which appear contiguously as the last ops of a Network will be deferred. We hope that you will
+            never need to worry about this flag, but it's here for you if you need it.
     """
     def __init__(self,
                  model: Union[tf.keras.Model, torch.nn.Module],
                  loss_name: str,
-                 mode: Union[None, str, Iterable[str]] = "train"):
+                 mode: Union[None, str, Iterable[str]] = "train",
+                 defer: bool = False):
         super().__init__(inputs=loss_name, outputs=None, mode=mode)
         self.model = model
         self.retain_graph = False
         self.weight_decay = isinstance(self.model, tf.keras.Model) and self.model.losses
+        self.defer = defer
         if not hasattr(self.model, "loss_name"):
             self.model.loss_name = {loss_name}
         else:
@@ -64,4 +70,9 @@ class UpdateOp(TensorOp):
         if not state["warmup"]:
             if self.weight_decay:
                 data = data + tf.reduce_sum(self.model.losses)
-            update_model(self.model, data, tape=state['tape'], retain_graph=self.retain_graph)
+            update_model(self.model,
+                         data,
+                         tape=state['tape'],
+                         retain_graph=self.retain_graph,
+                         defer=self.defer,
+                         deferred=state["deferred"])

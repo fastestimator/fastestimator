@@ -133,8 +133,15 @@ class Estimator:
         self.traces_in_use = [trace for trace in self.traces]
         if self.system.log_steps is not None:
             self.traces_in_use.append(Logger())
+        # Look for any monitor names which should be automagically added.
+        trace_outputs = set()
+        extra_monitor_keys = set()
+        for trace in sort_traces(get_current_items(self.traces_in_use, run_modes=run_modes)):
+            trace_outputs.update(trace.outputs)
+            extra_monitor_keys.update(trace.fe_monitor_names - trace_outputs)
+        # Add the essential traces
         if "train" in run_modes:
-            self.traces_in_use.insert(0, TrainEssential(monitor_names=self.monitor_names))
+            self.traces_in_use.insert(0, TrainEssential(monitor_names=self.monitor_names.union(extra_monitor_keys)))
             no_save_warning = True
             for trace in get_current_items(self.traces_in_use, run_modes=run_modes):
                 if isinstance(trace, (ModelSaver, BestModelSaver)):
@@ -142,7 +149,7 @@ class Estimator:
             if no_save_warning:
                 print("FastEstimator-Warn: No ModelSaver Trace detected. Models will not be saved.")
         if "eval" in run_modes and "eval" in self.pipeline.get_modes():
-            self.traces_in_use.insert(1, EvalEssential(monitor_names=self.monitor_names))
+            self.traces_in_use.insert(1, EvalEssential(monitor_names=self.monitor_names.union(extra_monitor_keys)))
         # insert system instance to trace
         for trace in get_current_items(self.traces_in_use, run_modes=run_modes):
             trace.system = self.system

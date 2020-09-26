@@ -1,9 +1,23 @@
+# Copyright 2020 The FastEstimator Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
 import unittest
 
 import tensorflow as tf
 
-from fastestimator.op.tensorop.meta import Repeat
 from fastestimator.op.tensorop import LambdaOp
+from fastestimator.op.tensorop.meta import Repeat
 
 
 class TestRepeat(unittest.TestCase):
@@ -17,7 +31,7 @@ class TestRepeat(unittest.TestCase):
             self.assertListEqual(repeat_op.outputs, ['x', 'y'])
         with self.subTest('Check op mode'):
             self.assertSetEqual(repeat_op.mode, {'eval'})
-        output = repeat_op.forward(data=[tf.ones([1])], state={"mode": "eval"})
+        output = repeat_op.forward(data=[tf.ones([1])], state={"deferred": {}, "mode": "eval"})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)
         with self.subTest('Check output value (x)'):
@@ -35,7 +49,7 @@ class TestRepeat(unittest.TestCase):
             self.assertListEqual(repeat_op.outputs, ['x', 'y'])
         with self.subTest('Check op mode'):
             self.assertSetEqual(repeat_op.mode, {'eval'})
-        output = repeat_op.forward(data=[tf.ones([1])], state={"mode": "eval"})
+        output = repeat_op.forward(data=[tf.ones([1])], state={"deferred": {}, "mode": "eval"})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)
         with self.subTest('Check output value (x)'):
@@ -53,7 +67,7 @@ class TestRepeat(unittest.TestCase):
             self.assertListEqual(repeat_op.outputs, ['x', 'y'])
         with self.subTest('Check op mode'):
             self.assertSetEqual(repeat_op.mode, {'eval'})
-        output = repeat_op.forward(data=[tf.ones([1])], state={"mode": "eval"})
+        output = repeat_op.forward(data=[tf.ones([1])], state={"deferred": {}, "mode": "eval"})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)
         with self.subTest('Check output value (x)'):
@@ -71,7 +85,7 @@ class TestRepeat(unittest.TestCase):
             self.assertListEqual(repeat_op.outputs, ['x', 'y'])
         with self.subTest('Check op mode'):
             self.assertSetEqual(repeat_op.mode, {'eval'})
-        output = repeat_op.forward(data=[tf.ones([1])], state={"mode": "eval"})
+        output = repeat_op.forward(data=[tf.ones([1])], state={"deferred": {}, "mode": "eval"})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)
         with self.subTest('Check output value (x)'):
@@ -89,7 +103,7 @@ class TestRepeat(unittest.TestCase):
             self.assertListEqual(repeat_op.outputs, ['x', 'y'])
         with self.subTest('Check op mode'):
             self.assertSetEqual(repeat_op.mode, {'eval'})
-        output = repeat_op.forward(data=[tf.ones([1]), 10 + tf.ones([1])], state={"mode": "eval"})
+        output = repeat_op.forward(data=[tf.ones([1]), 10 + tf.ones([1])], state={"deferred": {}, "mode": "eval"})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)
         with self.subTest('Check output value (x)'):
@@ -108,7 +122,7 @@ class TestRepeat(unittest.TestCase):
         with self.subTest('Check op mode'):
             self.assertSetEqual(repeat_op.mode, {'eval'})
         x = [tf.ones([1])]
-        output = tf.function(lambda y: repeat_op.forward(data=y, state={"mode": "eval"}))
+        output = tf.function(lambda y: repeat_op.forward(data=y, state={"deferred": {}, "mode": "eval"}))
         output(x)  # build the graph
         output = output(x)
         with self.subTest('Check output type'):
@@ -129,7 +143,7 @@ class TestRepeat(unittest.TestCase):
         with self.subTest('Check op mode'):
             self.assertSetEqual(repeat_op.mode, {'eval'})
         x = [tf.ones([1])]
-        output = tf.function(lambda y: repeat_op.forward(data=y, state={"mode": "eval"}))
+        output = tf.function(lambda y: repeat_op.forward(data=y, state={"deferred": {}, "mode": "eval"}))
         output(x)  # build the graph
         output = output(x)
         with self.subTest('Check output type'):
@@ -150,7 +164,7 @@ class TestRepeat(unittest.TestCase):
         with self.subTest('Check op mode'):
             self.assertSetEqual(repeat_op.mode, {'eval'})
         x = [tf.ones([1])]
-        output = tf.function(lambda y: repeat_op.forward(data=y, state={"mode": "eval"}))
+        output = tf.function(lambda y: repeat_op.forward(data=y, state={"deferred": {}, "mode": "eval"}))
         output(x)  # build the graph
         output = output(x)
         with self.subTest('Check output type'):
@@ -171,7 +185,7 @@ class TestRepeat(unittest.TestCase):
         with self.subTest('Check op mode'):
             self.assertSetEqual(repeat_op.mode, {'eval'})
         x = [tf.ones([1])]
-        output = tf.function(lambda y: repeat_op.forward(data=y, state={"mode": "eval"}))
+        output = tf.function(lambda y: repeat_op.forward(data=y, state={"deferred": {}, "mode": "eval"}))
         output(x)
         output = output(x)
         with self.subTest('Check output type'):
@@ -192,7 +206,7 @@ class TestRepeat(unittest.TestCase):
         with self.subTest('Check op mode'):
             self.assertSetEqual(repeat_op.mode, {'eval'})
         x = [tf.ones([1]), 10 + tf.ones([1])]
-        output = tf.function(lambda y: repeat_op.forward(data=y, state={"mode": "eval"}))
+        output = tf.function(lambda y: repeat_op.forward(data=y, state={"deferred": {}, "mode": "eval"}))
         output(x)
         output = output(x)
         with self.subTest('Check output type'):
@@ -212,7 +226,7 @@ class TestRepeat(unittest.TestCase):
             self.assertListEqual(repeat_op.outputs, ['x', 'y'])
         with self.subTest('Check op mode'):
             self.assertSetEqual(repeat_op.mode, {'eval'})
-        output = repeat_op.forward(data=[tf.ones([1])], state={"mode": "eval"})
+        output = repeat_op.forward(data=[tf.ones([1])], state={"deferred": {}, "mode": "eval"})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)
         with self.subTest('Check output value (x)'):
@@ -230,7 +244,7 @@ class TestRepeat(unittest.TestCase):
             self.assertListEqual(repeat_op.outputs, ['x', 'y'])
         with self.subTest('Check op mode'):
             self.assertSetEqual(repeat_op.mode, {'eval'})
-        output = repeat_op.forward(data=[tf.ones([1])], state={"mode": "eval"})
+        output = repeat_op.forward(data=[tf.ones([1])], state={"deferred": {}, "mode": "eval"})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)
         with self.subTest('Check output value (x)'):
@@ -248,7 +262,7 @@ class TestRepeat(unittest.TestCase):
             self.assertListEqual(repeat_op.outputs, ['x', 'y'])
         with self.subTest('Check op mode'):
             self.assertSetEqual(repeat_op.mode, {'eval'})
-        output = repeat_op.forward(data=[tf.ones([1])], state={"mode": "eval"})
+        output = repeat_op.forward(data=[tf.ones([1])], state={"deferred": {}, "mode": "eval"})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)
         with self.subTest('Check output value (x)'):
@@ -266,7 +280,7 @@ class TestRepeat(unittest.TestCase):
             self.assertListEqual(repeat_op.outputs, ['x', 'y'])
         with self.subTest('Check op mode'):
             self.assertSetEqual(repeat_op.mode, {'eval'})
-        output = repeat_op.forward(data=[tf.ones([1])], state={"mode": "eval"})
+        output = repeat_op.forward(data=[tf.ones([1])], state={"deferred": {}, "mode": "eval"})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)
         with self.subTest('Check output value (x)'):
@@ -284,7 +298,7 @@ class TestRepeat(unittest.TestCase):
             self.assertListEqual(repeat_op.outputs, ['x', 'y'])
         with self.subTest('Check op mode'):
             self.assertSetEqual(repeat_op.mode, {'eval'})
-        output = repeat_op.forward(data=[tf.ones([1]), 10 + tf.ones([1])], state={"mode": "eval"})
+        output = repeat_op.forward(data=[tf.ones([1]), 10 + tf.ones([1])], state={"deferred": {}, "mode": "eval"})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)
         with self.subTest('Check output value (x)'):
