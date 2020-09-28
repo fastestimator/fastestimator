@@ -56,6 +56,9 @@ $ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 
 * **Adversarial Robustness with Error Correcting Codes (and Hinge Loss):** [[paper](https://papers.nips.cc/paper/9070-error-correcting-output-codes-improve-probability-estimation-and-adversarial-robustness-of-deep-neural-networks.pdf)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/adversarial_training/ecc_hinge/ecc_hinge_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/adversarial_training/ecc_hinge/ecc_hinge_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/adversarial_training/ecc_hinge/ecc_hinge.ipynb)]
 
+### Anomaly Detection
+* **Adversarially Learned One-Class Classifier for Novelty Detection:** Adversarial training to detect anomalies using MNIST dataset. [[paper](https://arxiv.org/pdf/1802.09088v2.pdf)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/anomaly_detection/alocc/alocc_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/anomaly_detection/alocc/alocc_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/anomaly_detection/alocc/alocc.ipynb)]
+
 ### Image Classification
 * **CIFAR-10 Fast:** CIFAR-10 Image Classification using ResNet. [[paper](https://arxiv.org/abs/1608.06993)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/cifar10_fast/cifar10_fast_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/cifar10_fast/cifar10_fast_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/cifar10_fast/cifar10_fast.ipynb)]
 
