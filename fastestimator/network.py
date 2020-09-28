@@ -242,7 +242,6 @@ def Network(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> BaseNetwork:
         ValueError: If a model is provided whose type cannot be identified as either TensorFlow or PyTorch.
     """
     models = _collect_models(ops)
-    assert models, "cannot find model in Network ops"
     framework = set()
     model_names = set()
     for model in models:
@@ -253,6 +252,8 @@ def Network(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> BaseNetwork:
             framework.add("torch")
         else:
             framework.add("unknown")
+    if len(framework) == 0:
+        framework.add('tf')  # We will use tf as default framework if no models are found
     assert len(framework) == 1, "please make sure either tensorflow or torch model is used in network"
     assert len(model_names) == len(models), "all models must have unique model names"
 
