@@ -22,7 +22,6 @@ from fastestimator.backend.get_gradient import get_gradient
 from fastestimator.backend.reduce_mean import reduce_mean
 
 
-
 def update_model(model: Union[tf.keras.Model, torch.nn.Module],
                  loss: Union[tf.Tensor, torch.Tensor],
                  tape: Optional[tf.GradientTape] = None,
