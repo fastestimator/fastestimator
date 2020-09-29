@@ -49,6 +49,8 @@ $ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 
 * **Named Entity Recognition**: BERT fine tuning on a German news corpora. [[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/NLP/named_entity_recognition/bert_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/NLP/named_entity_recognition/bert_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/NLP/named_entity_recognition/bert.ipynb)]
 
+* **Language Modeling:** Word level language model on Penn Treebank dataset. [[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/NLP/language_modeling/ptb_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/NLP/language_modeling/ptb_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/NLP/language_modeling/ptb.ipynb)]
+
 ### Adversarial Training
 * **Fast Gradient Sign Method:** Adversarial training on the CIFAR-10 dataset using the Fast Gradient Sign Method. [[paper](https://arxiv.org/abs/1412.6572)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/adversarial_training/fgsm/fgsm_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/adversarial_training/fgsm/fgsm_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/adversarial_training/fgsm/fgsm.ipynb)]
 
