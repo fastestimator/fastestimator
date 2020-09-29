@@ -16,6 +16,7 @@ from typing import Any, Dict, Iterable, List, Optional, Set, TypeVar, Union
 
 import tensorflow as tf
 import torch
+
 from fastestimator.backend.update_model import update_model
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
