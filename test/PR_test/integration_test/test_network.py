@@ -148,7 +148,6 @@ class TestNetworkNetwork(unittest.TestCase):
 
     def test_network_network_case_could_not_work(self):
         ops_dict = {
-            "no model": [SampleTensorOp(inputs="x", outputs="y")],
             "mixed model type": [
                 ModelOp(model=self.torch_model, inputs="x", outputs="y"),
                 ModelOp(model=self.tf_model, inputs="x", outputs="y")
@@ -160,7 +159,7 @@ class TestNetworkNetwork(unittest.TestCase):
                 with self.assertRaises(AssertionError):
                     network = fe.Network(ops=ops)
 
-    def test_network_network_unkown_compiled_model(self):
+    def test_network_network_unknown_compiled_model(self):
         with self.assertRaises(ValueError):
             network = fe.Network(ops=[ModelOp(model=self.unknown_model, inputs="x", outputs="y")])
 
