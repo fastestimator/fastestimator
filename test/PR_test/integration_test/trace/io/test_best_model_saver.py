@@ -52,7 +52,7 @@ class TestBestModelSaver(unittest.TestCase):
         cls.tf_model = fe.build(model_fn=one_layer_tf_model, optimizer_fn='adam', model_name='tf')
         cls.torch_model = fe.build(model_fn=MultiLayerTorchModel, optimizer_fn='adam', model_name='torch')
         cls.data = Data({'loss': 0.5})
-        cls.state = {'mode': 'train', 'epoch': 1, 'warmup': False, 'deferred': {}}
+        cls.state = {'mode': 'train', 'epoch': 1, 'warmup': False, 'deferred': {}, "scaler": None}
         cls.tf_input_data = tf.Variable([[2.0, 1.5, 1.0], [1.0, -1.0, -0.5]])
         cls.tf_y = tf.constant([[-6], [1]])
         cls.torch_input_data = torch.tensor([[1.0, 1.0, 1.0, -0.5], [0.5, 1.0, -1.0, -0.5]], dtype=torch.float32)

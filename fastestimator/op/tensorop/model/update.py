@@ -74,5 +74,6 @@ class UpdateOp(TensorOp):
                          data,
                          tape=state['tape'],
                          retain_graph=self.retain_graph,
+                         scaler=state["scaler"],
                          defer=self.defer,
                          deferred=state["deferred"])
