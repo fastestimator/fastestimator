@@ -16,9 +16,11 @@ from typing import Callable, Dict, List, Optional, Union
 
 import tensorflow as tf
 import torch
+from tensorflow.keras.mixed_precision import experimental as mixed_precision
+
 from fastestimator.backend.get_gradient import get_gradient
 from fastestimator.backend.reduce_mean import reduce_mean
-from tensorflow.keras.mixed_precision import experimental as mixed_precision
+
 
 
 def update_model(model: Union[tf.keras.Model, torch.nn.Module],
