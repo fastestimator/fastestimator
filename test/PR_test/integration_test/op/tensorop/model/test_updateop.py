@@ -26,7 +26,7 @@ from fastestimator.test.unittest_util import MultiLayerTorchModel, is_equal, one
 class TestUpdateOp(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.state = {'mode': 'train', 'epoch': 1, 'warmup': False, "deferred": {}}
+        cls.state = {'mode': 'train', 'epoch': 1, 'warmup': False, "deferred": {}, "scaler": None}
         cls.tf_input_data = tf.Variable([[2.0, 1.5, 1.0], [1.0, -1.0, -0.5]])
         cls.torch_input_data = torch.tensor([[1.0, 1.0, 1.0, -0.5], [0.5, 1.0, -1.0, -0.5]],
                                             dtype=torch.float32,
