@@ -60,3 +60,8 @@ JSON:
 ``` bash
 $ fastestimator train mnist_tf.py --hyperparameters hp.json
 ```
+
+## System argument
+There are some default system arguments in the CLI, here are a list of them:
+* `warmup`: controls whether to perform warmup checking before the actual training starts. Default is True. Users can disable warmup before training by `--warmup False`.
+* `summary`: this is the same argument used in `estimator.fit()` or `estimator.test()`, it allows users to specify experiment name when generating reports. For example, Users can set experiment name by `--summary exp_name`.
