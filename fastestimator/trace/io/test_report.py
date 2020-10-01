@@ -22,16 +22,15 @@ from datetime import datetime
 from time import time
 from typing import Any, Callable, Dict, List, Optional, Union
 
-import numpy as np
-from pylatex import Command, Document, Itemize, LongTable, MultiColumn, NoEscape, Package, Section, Subsection, Table, \
-    Tabularx, escape_latex
-
 import fastestimator as fe
+import numpy as np
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.latex_util import IterJoin, WrapText
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_list, to_number, to_set
+from pylatex import Command, Document, Itemize, LongTable, MultiColumn, NoEscape, Package, Section, Subsection, Table, \
+    Tabularx, escape_latex
 
 
 @traceable()
@@ -237,8 +236,6 @@ class TestReport(Trace):
         # new column type for tabularx
         self.doc.preamble.append(NoEscape(r'\newcolumntype{Y}{>{\centering\arraybackslash}X}'))
 
-        # add seqinsert hyphentation
-        self.doc.preamble.append(NoEscape(r'\def\seqinsert{\-}'))
 
         self._write_title()
         self._write_toc()
@@ -391,7 +388,7 @@ class TestReport(Trace):
         Args:
             tests: List of corresponding test dictionary to make a table.
         """
-        with self.doc.create(LongTable('|c|p{10cm}|p{5cm}|', booktabs=True)) as tabular:
+        with self.doc.create(LongTable('|c|p{8cm}|p{7.3cm}|', booktabs=True)) as tabular:
             package = Package('seqsplit')
             if package not in tabular.packages:
                 tabular.packages.append(package)
@@ -414,7 +411,7 @@ class TestReport(Trace):
                 if idx > 0:
                     tabular.add_hline()
 
-                inp_data = ["{}={}".format(arg, value) for arg, value in test["inputs"].items()]
+                inp_data = [f"{arg}={self.sanitize_value(value)}" for arg, value in test["inputs"].items()]
                 inp_data = [WrapText(data=x, threshold=27) for x in inp_data]
                 des_data = [WrapText(data=x, threshold=27) for x in test["description"].split(" ")]
                 row_cells = [
@@ -504,3 +501,18 @@ class TestReport(Trace):
         except ValueError:
             raise OSError("Your system locale is not configured correctly. On mac this can be resolved by adding \
                 'export LC_ALL=en_US.UTF-8' and 'export LANG=en_US.UTF-8' to your ~/.bash_profile")
+
+    @staticmethod
+    def sanitize_value(value:Union[int, float]) -> str:
+        """Sanitize input value for a better report display.
+
+        Args:
+            value: Value to be sanitized.
+
+        Return:
+            Sanitized string of `value`.
+        """
+        if 1000 > value >= 0.001:
+            return f"{value:.3f}"
+        else:
+            return f"{value:.3e}"
