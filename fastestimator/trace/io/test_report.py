@@ -236,7 +236,6 @@ class TestReport(Trace):
         # new column type for tabularx
         self.doc.preamble.append(NoEscape(r'\newcolumntype{Y}{>{\centering\arraybackslash}X}'))
 
-
         self._write_title()
         self._write_toc()
 
@@ -503,13 +502,13 @@ class TestReport(Trace):
                 'export LC_ALL=en_US.UTF-8' and 'export LANG=en_US.UTF-8' to your ~/.bash_profile")
 
     @staticmethod
-    def sanitize_value(value:Union[int, float]) -> str:
+    def sanitize_value(value: Union[int, float]) -> str:
         """Sanitize input value for a better report display.
 
         Args:
             value: Value to be sanitized.
 
-        Return:
+        Returns:
             Sanitized string of `value`.
         """
         if 1000 > value >= 0.001:
