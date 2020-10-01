@@ -69,7 +69,7 @@ def test(args: Dict[str, Any], unknown: Optional[List[str]]) -> None:
         unknown: The remainder of the command line arguments to be passed along to the get_estimator() method.
     """
     estimator = _get_estimator(args, unknown)
-    estimator.test()
+    estimator.test(summary=args['summary'])
 
 
 def configure_train_parser(subparsers: argparse.PARSER) -> None:
@@ -113,6 +113,7 @@ def configure_test_parser(subparsers: argparse.PARSER) -> None:
                         dest='hyperparameters_json',
                         type=str,
                         help="The path to the hyperparameters JSON file")
+    parser.add_argument('--summary', type=str, help="Experiment name", default=None)
     parser.add_argument_group(
         'hyperparameter arguments',
         'Arguments to be passed through to the get_estimator() call. \
