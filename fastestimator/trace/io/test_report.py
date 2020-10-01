@@ -389,7 +389,7 @@ class TestReport(Trace):
         Args:
             tests: List of corresponding test dictionary to make a table.
         """
-        with self.doc.create(LongTable('|c|p{10cm}|p{5cm}|', booktabs=True)) as tabular:
+        with self.doc.create(LongTable('|c|p{8cm}|p{7.3cm}|', booktabs=True)) as tabular:
             package = Package('seqsplit')
             if package not in tabular.packages:
                 tabular.packages.append(package)
