@@ -237,8 +237,6 @@ class TestReport(Trace):
         # new column type for tabularx
         self.doc.preamble.append(NoEscape(r'\newcolumntype{Y}{>{\centering\arraybackslash}X}'))
 
-        # add seqinsert hyphentation
-        self.doc.preamble.append(NoEscape(r'\def\seqinsert{\-}'))
 
         self._write_title()
         self._write_toc()
@@ -414,7 +412,7 @@ class TestReport(Trace):
                 if idx > 0:
                     tabular.add_hline()
 
-                inp_data = ["{}={}".format(arg, value) for arg, value in test["inputs"].items()]
+                inp_data = [f"{arg}={self.sanitize_value(value)}" for arg, value in test["inputs"].items()]
                 inp_data = [WrapText(data=x, threshold=27) for x in inp_data]
                 des_data = [WrapText(data=x, threshold=27) for x in test["description"].split(" ")]
                 row_cells = [
@@ -504,3 +502,10 @@ class TestReport(Trace):
         except ValueError:
             raise OSError("Your system locale is not configured correctly. On mac this can be resolved by adding \
                 'export LC_ALL=en_US.UTF-8' and 'export LANG=en_US.UTF-8' to your ~/.bash_profile")
+
+    @staticmethod
+    def sanitize_value(value:Union[int, float]):
+        if 1000 > value >= 0.001:
+            return f"{value:.3f}"
+        else:
+            return f"{value:.3e}"
