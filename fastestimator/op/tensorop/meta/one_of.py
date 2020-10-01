@@ -28,10 +28,10 @@ Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
 @traceable()
 class OneOf(TensorOp):
-    """Perform one of several possible NumpyOps.
+    """Perform one of several possible TensorOps.
 
     Args:
-        numpy_ops: A list of ops to choose between with uniform probability.
+        tensor_ops: A list of ops to choose between with uniform probability.
     """
     def __init__(self, *tensor_ops: TensorOp) -> None:
         inputs = tensor_ops[0].inputs
