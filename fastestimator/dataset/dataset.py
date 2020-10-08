@@ -279,7 +279,7 @@ class FEDataset(Dataset):
         return str(self.summary())
 
 
-@traceable()
+@traceable(blacklist=('data', 'summary'))
 class InMemoryDataset(FEDataset):
     """A dataset abstraction to simplify the implementation of datasets which hold their data in memory.
 

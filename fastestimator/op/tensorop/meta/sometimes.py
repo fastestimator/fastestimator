@@ -68,6 +68,20 @@ class Sometimes(TensorOp):
     def fe_retain_graph(self, retain: Optional[bool] = None) -> Optional[bool]:
         return self.op.fe_retain_graph(retain)
 
+    def __getstate__(self) -> Dict[Any, Any]:
+        return self.op.__getstate__() if hasattr(self.op, '__getstate__') else {}
+
+    def __setstate__(self, state: Dict[Any, Any]):
+        # Note that this object will not be compatible with normal pickle routines since it now requires op to
+        # already be instantiated
+        if hasattr(self.op, '__setstate__'):
+            self.op.__setstate__(state)
+        elif hasattr(self.op, '__dict__'):
+            self.op.__dict__.update(state)
+        else:
+            # Might be a None or something else that can't be updated
+            pass
+
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
         """Execute the wrapped operator a certain fraction of the time.
 

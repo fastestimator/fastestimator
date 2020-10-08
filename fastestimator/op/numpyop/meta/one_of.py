@@ -43,6 +43,21 @@ class OneOf(NumpyOp):
             assert mode == op.mode, "All ops within a OneOf must share the same mode"
         self.ops = numpy_ops
 
+    def __getstate__(self) -> List[Dict[Any, Any]]:
+        return [elem.__getstate__() if hasattr(elem, '__getstate__') else {} for elem in self.ops]
+
+    def __setstate__(self, state: List[Dict[Any, Any]]):
+        # Note that this object will not be compatible with normal pickle routines since it now requires ops to
+        # already be instantiated
+        for obj_state, obj in zip(state, self.ops):
+            if hasattr(obj, '__setstate__'):
+                obj.__setstate__(obj_state)
+            elif hasattr(obj, '__dict__'):
+                obj.__dict__.update(obj_state)
+            else:
+                # Might be a None or something else that can't be updated
+                pass
+
     def forward(self, data: Union[np.ndarray, List[np.ndarray]],
                 state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
         """Execute a randomly selected op from the list of `numpy_ops`.

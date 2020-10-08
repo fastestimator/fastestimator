@@ -45,6 +45,20 @@ class Sometimes(NumpyOp):
         self.op = numpy_op
         self.prob = prob
 
+    def __getstate__(self) -> Dict[Any, Any]:
+        return self.op.__getstate__() if hasattr(self.op, '__getstate__') else {}
+
+    def __setstate__(self, state: Dict[Any, Any]):
+        # Note that this object will not be compatible with normal pickle routines since it now requires op to
+        # already be instantiated
+        if hasattr(self.op, '__setstate__'):
+            self.op.__setstate__(state)
+        elif hasattr(self.op, '__dict__'):
+            self.op.__dict__.update(state)
+        else:
+            # Might be a None or something else that can't be updated
+            pass
+
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
         """Execute the wrapped operator a certain fraction of the time.
 

@@ -143,7 +143,7 @@ class MockBetaDistribution:
         elif self.framework == 'torch':
             return torch.Tensor([0.5])
         else:
-            raise ValueError("Unrecognized framework {}".format(framework))
+            raise ValueError("Unrecognized framework {}".format(self.framework))
 
 
 class MockUniformDistribution:
@@ -156,7 +156,7 @@ class MockUniformDistribution:
         elif self.framework == 'torch':
             return torch.Tensor([0.25])
         else:
-            raise ValueError("Unrecognized framework {}".format(framework))
+            raise ValueError("Unrecognized framework {}".format(self.framework))
 
 
 def sample_system_object():

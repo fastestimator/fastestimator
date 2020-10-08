@@ -13,29 +13,77 @@
 # limitations under the License.
 # ==============================================================================
 import os
+import shutil
 import tempfile
 import unittest
-from unittest.mock import Mock
 
-import fastestimator as fe
+from fastestimator.test.unittest_util import sample_system_object, sample_system_object_torch
+
+
+def get_model_names(system):
+    model_names = []
+    for model in system.network.models:
+        model_names.append(model.model_name)
+    return model_names
 
 
 class TestSystem(unittest.TestCase):
-    def test_system_save_state_load_state(self):
-        system = fe.summary.System(pipeline=Mock(), network=Mock(), traces=Mock())
+    def test_save_and_load_state_torch(self):
+        system = sample_system_object_torch()
+        model_names = get_model_names(system)
         global_step = 100
         epoch_idx = 10
-        file_path = os.path.join(tempfile.mkdtemp(), "test.json")
+        save_path = tempfile.mkdtemp()
+
         system.global_step = global_step
         system.epoch_idx = epoch_idx
+        with self.subTest("Check state files were created"):
+            system.save_state(save_dir=save_path)
+            self.assertTrue(os.path.exists(os.path.join(save_path, 'ds.pkl')))
+            self.assertTrue(os.path.exists(os.path.join(save_path, 'nops.pkl')))
+            self.assertTrue(os.path.exists(os.path.join(save_path, 'summary.pkl')))
+            self.assertTrue(os.path.exists(os.path.join(save_path, 'system.json')))
+            self.assertTrue(os.path.exists(os.path.join(save_path, 'tops.pkl')))
+            self.assertTrue(os.path.exists(os.path.join(save_path, 'traces.pkl')))
+            for model_name in model_names:
+                self.assertTrue(os.path.exists(os.path.join(save_path, f'{model_name}.pt')))
+                self.assertTrue(os.path.exists(os.path.join(save_path, f'{model_name}_opt.pt')))
 
-        with self.subTest("check save_state dumped file"):
-            system.save_state(file_path)
-            self.assertTrue(os.path.exists(file_path))
-
-        system.global_step = 0
-        system.epoch_idx = 0
-        with self.subTest("check state after load_state"):
-            system.load_state(file_path)
+        system = sample_system_object_torch()
+        with self.subTest("Check that state loads properly"):
+            system.load_state(save_path)
             self.assertEqual(system.global_step, global_step)
             self.assertEqual(system.epoch_idx, epoch_idx)
+
+        if os.path.exists(save_path):
+            shutil.rmtree(save_path)
+
+    def test_save_and_load_state_tf(self):
+        system = sample_system_object()
+        model_names = get_model_names(system)
+        global_step = 100
+        epoch_idx = 10
+        save_path = tempfile.mkdtemp()
+
+        system.global_step = global_step
+        system.epoch_idx = epoch_idx
+        with self.subTest("Check state files were created"):
+            system.save_state(save_dir=save_path)
+            self.assertTrue(os.path.exists(os.path.join(save_path, 'ds.pkl')))
+            self.assertTrue(os.path.exists(os.path.join(save_path, 'nops.pkl')))
+            self.assertTrue(os.path.exists(os.path.join(save_path, 'summary.pkl')))
+            self.assertTrue(os.path.exists(os.path.join(save_path, 'system.json')))
+            self.assertTrue(os.path.exists(os.path.join(save_path, 'tops.pkl')))
+            self.assertTrue(os.path.exists(os.path.join(save_path, 'traces.pkl')))
+            for model_name in model_names:
+                self.assertTrue(os.path.exists(os.path.join(save_path, f'{model_name}.h5')))
+                self.assertTrue(os.path.exists(os.path.join(save_path, f'{model_name}_opt.pkl')))
+
+        system = sample_system_object()
+        with self.subTest("Check that state loads properly"):
+            system.load_state(save_path)
+            self.assertEqual(system.global_step, global_step)
+            self.assertEqual(system.epoch_idx, epoch_idx)
+
+        if os.path.exists(save_path):
+            shutil.rmtree(save_path)
