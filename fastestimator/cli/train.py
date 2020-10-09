@@ -72,7 +72,7 @@ def test(args: Dict[str, Any], unknown: Optional[List[str]]) -> None:
     estimator.test(summary=args['summary'])
 
 
-def configure_train_parser(subparsers: argparse.PARSER) -> None:
+def configure_train_parser(subparsers: argparse._SubParsersAction) -> None:
     """Add a training parser to an existing argparser.
 
     Args:
@@ -97,7 +97,7 @@ def configure_train_parser(subparsers: argparse.PARSER) -> None:
     parser.set_defaults(func=train)
 
 
-def configure_test_parser(subparsers: argparse.PARSER) -> None:
+def configure_test_parser(subparsers: argparse._SubParsersAction) -> None:
     """Add a testing parser to an existing argparser.
 
     Args:
