@@ -139,7 +139,7 @@ class BatchDataset(FEDataset):
             ```
 
         Args:
-            fractions: Floating point values will be interpreted as percentages, integers as an absolute number of
+            *fractions: Floating point values will be interpreted as percentages, integers as an absolute number of
                 datapoints, and an iterable of integers as the exact indices of the data that should be removed in order
                 to create the new dataset.
 
