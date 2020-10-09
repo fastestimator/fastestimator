@@ -100,7 +100,7 @@ def configure_log_parser(subparsers: argparse._SubParsersAction) -> None:
         default=False,
         help="Save the output image. May be accompanied by a directory into \
                                               which the file is saved. If no output directory is specified, the log \
-                                              directory will be used"                                                                     )
+                                              directory will be used")
     save_x_group.add_argument('--display',
                               dest='save',
                               action='store_false',
