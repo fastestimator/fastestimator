@@ -44,7 +44,7 @@ def logs(args: Dict[str, Any], unknown: List[str]) -> None:
                   args['pretty_names'])
 
 
-def configure_log_parser(subparsers: argparse.PARSER) -> None:
+def configure_log_parser(subparsers: argparse._SubParsersAction) -> None:
     """Add a logging parser to an existing argparser.
 
     Args:
@@ -100,7 +100,7 @@ def configure_log_parser(subparsers: argparse.PARSER) -> None:
         default=False,
         help="Save the output image. May be accompanied by a directory into \
                                               which the file is saved. If no output directory is specified, the log \
-                                              directory will be used")
+                                              directory will be used"                                                                     )
     save_x_group.add_argument('--display',
                               dest='save',
                               action='store_false',
