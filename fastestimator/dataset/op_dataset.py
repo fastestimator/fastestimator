@@ -31,7 +31,7 @@ class OpDataset(Dataset):
 
     Args:
         dataset: The base dataset to wrap.
-        ops: A list of ops to be applied after the base `dataset` __getitem__ is invoked.
+        ops: A list of ops to be applied after the base `dataset` `__getitem__` is invoked.
         mode: What mode the system is currently running in ('train', 'eval', 'test', or 'infer').
     """
     def __init__(self, dataset: Dataset, ops: List[NumpyOp], mode: str) -> None:

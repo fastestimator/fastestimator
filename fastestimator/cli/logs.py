@@ -44,7 +44,7 @@ def logs(args: Dict[str, Any], unknown: List[str]) -> None:
                   args['pretty_names'])
 
 
-def configure_log_parser(subparsers: argparse.PARSER) -> None:
+def configure_log_parser(subparsers: argparse._SubParsersAction) -> None:
     """Add a logging parser to an existing argparser.
 
     Args:
