@@ -80,6 +80,21 @@ class RepeatScheduler(Scheduler[T]):
     def get_all_values(self) -> List[Optional[T]]:
         return self.repeat_list
 
+    def __getstate__(self) -> List[Dict[Any, Any]]:
+        return [elem.__getstate__() if hasattr(elem, '__getstate__') else {} for elem in self.repeat_list]
+
+    def __setstate__(self, state: List[Dict[Any, Any]]):
+        # Note that this object will not be compatible with normal pickle routines since it now requires repeat_list to
+        # already be instantiated
+        for obj_state, obj in zip(state, self.repeat_list):
+            if hasattr(obj, '__setstate__'):
+                obj.__setstate__(obj_state)
+            elif hasattr(obj, '__dict__'):
+                obj.__dict__.update(obj_state)
+            else:
+                # Might be a None or something else that can't be updated
+                pass
+
 
 @traceable()
 class EpochScheduler(Scheduler[T]):
@@ -143,6 +158,22 @@ class EpochScheduler(Scheduler[T]):
                 break
             last_key = key
         return last_key
+
+    def __getstate__(self) -> Dict[int, Dict[Any, Any]]:
+        return {key: elem.__getstate__() for key, elem in self.epoch_dict.items() if hasattr(elem, '__getstate__')}
+
+    def __setstate__(self, state: Dict[int, Dict[Any, Any]]):
+        # Note that this object will not be compatible with normal pickle routines since it now requires repeat_list to
+        # already be instantiated
+        for key, obj_state in state.items():
+            obj = self.epoch_dict[key]
+            if hasattr(obj, '__setstate__'):
+                obj.__setstate__(obj_state)
+            elif hasattr(obj, '__dict__'):
+                obj.__dict__.update(obj_state)
+            else:
+                # Might be a None or something else that can't be updated
+                pass
 
 
 def get_signature_epochs(items: List[Any], total_epochs: int, mode: Optional[str] = None) -> List[int]:

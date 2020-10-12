@@ -166,6 +166,21 @@ class BatchDataset(FEDataset):
             results = results[0]
         return results
 
+    def __getstate__(self) -> List[Dict[Any, Any]]:
+        return [ds.__getstate__() if hasattr(ds, '__getstate__') else {} for ds in self.datasets]
+
+    def __setstate__(self, state: List[Dict[Any, Any]]):
+        # Note that this object will not be compatible with normal pickle routines since it now requires datasets to
+        # already be instantiated
+        for obj_state, obj in zip(state, self.datasets):
+            if hasattr(obj, '__setstate__'):
+                obj.__setstate__(obj_state)
+            elif hasattr(obj, '__dict__'):
+                obj.__dict__.update(obj_state)
+            else:
+                # Might be a None or something else that can't be updated
+                pass
+
     def summary(self) -> DatasetSummary:
         """Generate a summary representation of this dataset.
         Returns:
