@@ -251,7 +251,8 @@ def Network(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> BaseNetwork:
     framework = set()
     model_names = set()
     for model in models:
-        model_names.add(model.model_name)
+        # 'Model' and 'model' should not be considered unique in case you are saving on a non-case-sensitive filesystem
+        model_names.add(model.model_name.lower())
         if isinstance(model, tf.keras.Model):
             framework.add("tf")
         elif isinstance(model, torch.nn.Module):
