@@ -676,6 +676,6 @@ class Traceability(Trace):
         """Init geometry setting of the document.
 
         Return:
-            Initialized Documnt object.
+            Initialized Document object.
         """
         return Document(geometry_options=['lmargin=2cm', 'rmargin=2cm', 'bmargin=2cm'])
