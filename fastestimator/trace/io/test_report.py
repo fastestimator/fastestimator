@@ -224,7 +224,7 @@ class TestReport(Trace):
     def _init_document(self) -> None:
         """Initialize latex document.
         """
-        self.doc = Document(geometry_options=['lmargin=2cm', 'rmargin=2cm', 'tmargin=2cm', 'bmargin=2cm'])
+        self.doc = self._init_document_geometry()
         self.doc.packages.append(Package(name='placeins', options=['section']))
         self.doc.packages.append(Package(name='float'))
         self.doc.packages.append(Package(name='hyperref', options='hidelinks'))
@@ -499,7 +499,7 @@ class TestReport(Trace):
             locale.getlocale()
         except ValueError:
             raise OSError("Your system locale is not configured correctly. On mac this can be resolved by adding \
-                'export LC_ALL=en_US.UTF-8' and 'export LANG=en_US.UTF-8' to your ~/.bash_profile")
+                'export LC_ALL=en_US.UTF-8' and 'export LANG=en_US.UTF-8' to your ~/.bash_profile"                                                                                                  )
 
     @staticmethod
     def sanitize_value(value: Union[int, float]) -> str:
@@ -515,3 +515,13 @@ class TestReport(Trace):
             return f"{value:.3f}"
         else:
             return f"{value:.3e}"
+
+    @staticmethod
+    def _init_document_geometry() -> Document:
+        """Init geometry setting of the document.
+
+        Return:
+            Initialized Documnt object.
+        """
+        return Document(
+            geometry_options=['lmargin=2cm', 'rmargin=2cm', 'bmargin=2cm'])

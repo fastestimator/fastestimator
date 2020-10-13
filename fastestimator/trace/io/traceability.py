@@ -88,7 +88,7 @@ class Traceability(Trace):
             locale.getlocale()
         except ValueError:
             raise OSError("Your system locale is not configured correctly. On mac this can be resolved by adding \
-                'export LC_ALL=en_US.UTF-8' and 'export LANG=en_US.UTF-8' to your ~/.bash_profile")
+                'export LC_ALL=en_US.UTF-8' and 'export LANG=en_US.UTF-8' to your ~/.bash_profile"                                                                                                  )
         super().__init__(inputs="*", mode="!infer")  # Claim wildcard inputs to get this trace sorted last
         # Report assets will get saved into a folder for portability
         path = os.path.normpath(save_path)
@@ -131,7 +131,7 @@ class Traceability(Trace):
         models = self.system.network.models
         n_floats = len(self.config_tables) + len(models)
 
-        self.doc = Document(geometry_options=['lmargin=2cm', 'rmargin=2cm', 'tmargin=2cm', 'bmargin=2cm'])
+        self.doc = self._init_document_geometry()
         # Keep tables/figures in their sections
         self.doc.packages.append(Package(name='placeins', options=['section']))
         self.doc.preamble.append(NoEscape(r'\usetikzlibrary{positioning}'))
@@ -671,3 +671,13 @@ class Traceability(Trace):
         for subgraph in diagram.get_subgraphs():
             nodes.extend(Traceability._get_all_nodes(subgraph))
         return nodes
+
+    @staticmethod
+    def _init_document_geometry() -> Document:
+        """Init geometry setting of the document.
+
+        Return:
+            Initialized Documnt object.
+        """
+        return Document(
+            geometry_options=['lmargin=2cm', 'rmargin=2cm', 'bmargin=2cm'])
