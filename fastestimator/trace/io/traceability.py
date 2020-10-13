@@ -276,7 +276,7 @@ class Traceability(Trace):
                                       model_ids=model_ids,
                                       datasets=datasets)
             start = self._loop_tables(start, classes=Trace, name="Traces", model_ids=model_ids, datasets=datasets)
-            start = self._loop_tables(start, classes=Op, name="Ops", model_ids=model_ids, datasets=datasets)
+            start = self._loop_tables(start, classes=Op, name="Operators", model_ids=model_ids, datasets=datasets)
             start = self._loop_tables(start,
                                       classes=(Dataset, tf.data.Dataset),
                                       name="Datasets",
@@ -380,7 +380,7 @@ class Traceability(Trace):
                 if not isinstance(model, (tf.keras.Model, torch.nn.Module)):
                     continue
                 self.doc.append(NoEscape(r'\FloatBarrier'))
-                with self.doc.create(Subsection(f"{model.model_name}")):
+                with self.doc.create(Subsection(f"{model.model_name.capitalize()}")):
                     if isinstance(model, tf.keras.Model):
                         # Text Summary
                         summary = []
@@ -460,7 +460,7 @@ class Traceability(Trace):
     def _document_sys_config(self) -> None:
         """Add a system config summary to the traceability document.
         """
-        with self.doc.create(Section("System Config")):
+        with self.doc.create(Section("System Configuration")):
             with self.doc.create(Itemize()) as itemize:
                 itemize.add_item(escape_latex(f"FastEstimator {fe.__version__}"))
                 itemize.add_item(escape_latex(f"Python {platform.python_version()}"))
