@@ -25,7 +25,6 @@ from typing import Any, DefaultDict, Dict, List, Set, Tuple, Union
 from unittest.mock import Base, MagicMock
 
 import dot2tex as d2t
-import fastestimator as fe
 import jsonpickle
 import matplotlib
 import numpy as np
@@ -33,6 +32,14 @@ import pydot
 import pytorch_model_summary as pms
 import tensorflow as tf
 import torch
+from natsort import humansorted
+from pylatex import Command, Document, Figure, Hyperref, Itemize, Label, LongTable, Marker, MultiColumn, NoEscape, \
+    Package, Section, Subsection, Subsubsection, Tabularx, escape_latex
+from pylatex.base_classes import Arguments
+from pylatex.utils import bold
+from torch.utils.data import Dataset
+
+import fastestimator as fe
 from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.dataset import FEDataset
 from fastestimator.network import BaseNetwork
@@ -54,12 +61,6 @@ from fastestimator.util.data import Data
 from fastestimator.util.latex_util import AdjustBox, Center, ContainerList, HrefFEID, Verbatim
 from fastestimator.util.traceability_util import FeSummaryTable, traceable
 from fastestimator.util.util import FEID, LogSplicer, Suppressor, prettify_metric_name, to_list
-from natsort import humansorted
-from pylatex import Command, Document, Figure, Hyperref, Itemize, Label, LongTable, Marker, MultiColumn, NoEscape, \
-    Package, Section, Subsection, Subsubsection, Tabularx, escape_latex
-from pylatex.base_classes import Arguments
-from pylatex.utils import bold
-from torch.utils.data import Dataset
 
 
 @traceable()
@@ -87,7 +88,7 @@ class Traceability(Trace):
             locale.getlocale()
         except ValueError:
             raise OSError("Your system locale is not configured correctly. On mac this can be resolved by adding \
-                'export LC_ALL=en_US.UTF-8' and 'export LANG=en_US.UTF-8' to your ~/.bash_profile")
+                'export LC_ALL=en_US.UTF-8' and 'export LANG=en_US.UTF-8' to your ~/.bash_profile"                                                                                                  )
         super().__init__(inputs="*", mode="!infer")  # Claim wildcard inputs to get this trace sorted last
         # Report assets will get saved into a folder for portability
         path = os.path.normpath(save_path)
