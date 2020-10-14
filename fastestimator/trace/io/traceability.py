@@ -88,7 +88,7 @@ class Traceability(Trace):
             locale.getlocale()
         except ValueError:
             raise OSError("Your system locale is not configured correctly. On mac this can be resolved by adding \
-                'export LC_ALL=en_US.UTF-8' and 'export LANG=en_US.UTF-8' to your ~/.bash_profile"                                                                                                  )
+                'export LC_ALL=en_US.UTF-8' and 'export LANG=en_US.UTF-8' to your ~/.bash_profile")
         super().__init__(inputs="*", mode="!infer")  # Claim wildcard inputs to get this trace sorted last
         # Report assets will get saved into a folder for portability
         path = os.path.normpath(save_path)
