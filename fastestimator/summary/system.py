@@ -187,27 +187,18 @@ class System:
         # Save all of the models / optimizer states
         for model in self.network.models:
             save_model(model, save_dir=save_dir, save_optimizer=True)
-        # Save the Summary object
-        with open(os.path.join(save_dir, 'summary.pkl'), 'wb') as file:
-            pickle.dump(self.summary, file)
-        # Save the Traces
-        with open(os.path.join(save_dir, 'traces.pkl'), 'wb') as file:
-            pickle.dump([trace.__getstate__() if hasattr(trace, '__getstate__') else {} for trace in self.traces], file)
-        # Save the TensorOps
-        with open(os.path.join(save_dir, 'tops.pkl'), 'wb') as file:
-            pickle.dump([op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.network.ops], file)
-        # Save the NumpyOps
-        with open(os.path.join(save_dir, 'nops.pkl'), 'wb') as file:
-            pickle.dump([op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.pipeline.ops], file)
-        # Save the Datasets
-        with open(os.path.join(save_dir, 'ds.pkl'), 'wb') as file:
-            pickle.dump(
-                {
-                    key: value.__getstate__()
-                    for key,
-                    value in self.pipeline.data.items() if hasattr(value, '__getstate__')
-                },
-                file)
+        # Save everything else
+        objects = {
+            'summary': self.summary,
+            'traces': [trace.__getstate__() if hasattr(trace, '__getstate__') else {} for trace in self.traces],
+            'tops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.network.ops],
+            'nops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.pipeline.ops],
+            'ds':
+            {key: value.__getstate__()
+             for key, value in self.pipeline.data.items() if hasattr(value, '__getstate__')}
+        }
+        with open(os.path.join(save_dir, 'objects.pkl'), 'wb') as file:
+            pickle.dump(objects, file)
 
     def load_state(self, load_dir: str) -> None:
         """Load training state.
@@ -228,20 +219,17 @@ class System:
         # Reload the models
         for model in self.network.models:
             self._load_model(model, load_dir)
-        # Reload the Summary
-        summary_path = os.path.join(load_dir, 'summary.pkl')
-        if not os.path.exists(summary_path):
-            raise FileNotFoundError(f"Could not find summary file at {summary_path}")
-        with open(summary_path, 'rb') as file:
-            self.summary.__dict__.update(pickle.load(file).__dict__)
-        # Reload the Traces
-        self._load_list(os.path.join(load_dir, 'traces.pkl'), self.traces)
-        # Reload the TensorOps
-        self._load_list(os.path.join(load_dir, 'tops.pkl'), self.network.ops)
-        # Reload the NumpyOps
-        self._load_list(os.path.join(load_dir, 'nops.pkl'), self.pipeline.ops)
-        # Reload the Datasets
-        self._load_dict(os.path.join(load_dir, 'ds.pkl'), self.pipeline.data)
+        # Reload everything else
+        objects_path = os.path.join(load_dir, 'objects.pkl')
+        if not os.path.exists(objects_path):
+            raise FileNotFoundError(f"Could not find the objects summary file at {objects_path}")
+        with open(objects_path, 'rb') as file:
+            objects = pickle.load(file)
+        self.summary.__dict__.update(objects['summary'].__dict__)
+        self._load_list(objects, 'traces', self.traces)
+        self._load_list(objects, 'tops', self.network.ops)
+        self._load_list(objects, 'nops', self.pipeline.ops)
+        self._load_dict(objects, 'ds', self.pipeline.data)
 
     @staticmethod
     def _load_model(model: Model, base_path: str) -> None:
@@ -270,63 +258,58 @@ class System:
         load_model(model, weights_path=weights_path, load_optimizer=True)
 
     @staticmethod
-    def _load_list(state_path: str, in_memory_objects: List[Any]) -> None:
+    def _load_list(states: Dict[str, Any], state_key: str, in_memory_objects: List[Any]) -> None:
         """Load a list of pickled states from the disk.
 
         Args:
-            state_path: The path to the pickle file.
+            states: The states to be restored.
+            state_key: Which state to select from the dictionary.
             in_memory_objects: The existing in memory objects to be updated.
 
         Raises:
             ValueError: If the number of saved states does not match the number of in-memory objects.
-            FileNotFoundError: If the desired state file cannot be found.
         """
-        if not os.path.exists(state_path):
-            raise FileNotFoundError(f"Could not find summary file at {state_path}")
-        with open(state_path, 'rb') as file:
-            states = pickle.load(file)
-            if not isinstance(states, list):
-                raise ValueError(f"Expected {state_path} to contain a list, but found a {type(states)}")
-            if len(states) != len(in_memory_objects):
-                raise ValueError("Expected {} to contain {} objects, but found {} instead".format(
-                    state_path, len(in_memory_objects), len(states)))
-            for obj, state in zip(in_memory_objects, states):
-                if hasattr(obj, '__setstate__'):
-                    obj.__setstate__(state)
-                elif hasattr(obj, '__dict__'):
-                    obj.__dict__.update(state)
-                else:
-                    # Might be a None or something else that can't be updated
-                    pass
+        states = states[state_key]
+        if not isinstance(states, list):
+            raise ValueError(f"Expected {state_key} to contain a list, but found a {type(states)}")
+        if len(states) != len(in_memory_objects):
+            raise ValueError("Expected {} to contain {} objects, but found {} instead".format(
+                state_key, len(in_memory_objects), len(states)))
+        for obj, state in zip(in_memory_objects, states):
+            if hasattr(obj, '__setstate__'):
+                obj.__setstate__(state)
+            elif hasattr(obj, '__dict__'):
+                obj.__dict__.update(state)
+            else:
+                # Might be a None or something else that can't be updated
+                pass
 
     @staticmethod
-    def _load_dict(state_path: str, in_memory_objects: Dict[Any, Any]) -> None:
+    def _load_dict(states: Dict[str, Any], state_key: str, in_memory_objects: Dict[Any, Any]) -> None:
         """Load a dictionary of pickled states from the disk.
 
         Args:
-            state_path: The path to the pickle file.
+            states: The states to be restored.
+            state_key: Which state to select from the dictionary.
             in_memory_objects: The existing in memory objects to be updated.
 
         Raises:
             ValueError: If the configuration of saved states does not match the number of in-memory objects.
             FileNotFoundError: If the desired state file cannot be found.
         """
-        if not os.path.exists(state_path):
-            raise FileNotFoundError(f"Could not find summary file at {state_path}")
-        with open(state_path, 'rb') as file:
-            states = pickle.load(file)
-            if not isinstance(states, dict):
-                raise ValueError(f"Expected {state_path} to contain a dict, but found a {type(states)}")
-            # Note that not being a subset is different from being a superset
-            if not states.keys() <= in_memory_objects.keys():
-                raise ValueError("{} contained unexpected keys: {}".format(state_path,
-                                                                           states.keys() - in_memory_objects.keys()))
-            for key, state in states.items():
-                obj = in_memory_objects[key]
-                if hasattr(obj, '__setstate__'):
-                    obj.__setstate__(state)
-                elif hasattr(obj, '__dict__'):
-                    obj.__dict__.update(state)
-                else:
-                    # Might be a None or something else that can't be updated
-                    pass
+        states = states[state_key]
+        if not isinstance(states, dict):
+            raise ValueError(f"Expected {state_key} to contain a dict, but found a {type(states)}")
+        # Note that not being a subset is different from being a superset
+        if not states.keys() <= in_memory_objects.keys():
+            raise ValueError("{} contained unexpected keys: {}".format(state_key,
+                                                                       states.keys() - in_memory_objects.keys()))
+        for key, state in states.items():
+            obj = in_memory_objects[key]
+            if hasattr(obj, '__setstate__'):
+                obj.__setstate__(state)
+            elif hasattr(obj, '__dict__'):
+                obj.__dict__.update(state)
+            else:
+                # Might be a None or something else that can't be updated
+                pass
