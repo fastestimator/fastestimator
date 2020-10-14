@@ -17,7 +17,10 @@ import shutil
 import tempfile
 import unittest
 
+import tensorflow as tf
+
 from fastestimator.test.unittest_util import sample_system_object, sample_system_object_torch
+from fastestimator.trace.trace import Trace
 
 
 def get_model_names(system):
@@ -25,6 +28,12 @@ def get_model_names(system):
     for model in system.network.models:
         model_names.append(model.model_name)
     return model_names
+
+
+class TestTrace(Trace):
+    def __init__(self, var1):
+        super().__init__()
+        self.var1 = var1
 
 
 class TestSystem(unittest.TestCase):
@@ -39,12 +48,8 @@ class TestSystem(unittest.TestCase):
         system.epoch_idx = epoch_idx
         with self.subTest("Check state files were created"):
             system.save_state(save_dir=save_path)
-            self.assertTrue(os.path.exists(os.path.join(save_path, 'ds.pkl')))
-            self.assertTrue(os.path.exists(os.path.join(save_path, 'nops.pkl')))
-            self.assertTrue(os.path.exists(os.path.join(save_path, 'summary.pkl')))
+            self.assertTrue(os.path.exists(os.path.join(save_path, 'objects.pkl')))
             self.assertTrue(os.path.exists(os.path.join(save_path, 'system.json')))
-            self.assertTrue(os.path.exists(os.path.join(save_path, 'tops.pkl')))
-            self.assertTrue(os.path.exists(os.path.join(save_path, 'traces.pkl')))
             for model_name in model_names:
                 self.assertTrue(os.path.exists(os.path.join(save_path, f'{model_name}.pt')))
                 self.assertTrue(os.path.exists(os.path.join(save_path, f'{model_name}_opt.pt')))
@@ -52,8 +57,8 @@ class TestSystem(unittest.TestCase):
         system = sample_system_object_torch()
         with self.subTest("Check that state loads properly"):
             system.load_state(save_path)
-            self.assertEqual(system.global_step, global_step)
-            self.assertEqual(system.epoch_idx, epoch_idx)
+            self.assertEqual(global_step, system.global_step)
+            self.assertEqual(epoch_idx, system.epoch_idx)
 
         if os.path.exists(save_path):
             shutil.rmtree(save_path)
@@ -69,12 +74,8 @@ class TestSystem(unittest.TestCase):
         system.epoch_idx = epoch_idx
         with self.subTest("Check state files were created"):
             system.save_state(save_dir=save_path)
-            self.assertTrue(os.path.exists(os.path.join(save_path, 'ds.pkl')))
-            self.assertTrue(os.path.exists(os.path.join(save_path, 'nops.pkl')))
-            self.assertTrue(os.path.exists(os.path.join(save_path, 'summary.pkl')))
+            self.assertTrue(os.path.exists(os.path.join(save_path, 'objects.pkl')))
             self.assertTrue(os.path.exists(os.path.join(save_path, 'system.json')))
-            self.assertTrue(os.path.exists(os.path.join(save_path, 'tops.pkl')))
-            self.assertTrue(os.path.exists(os.path.join(save_path, 'traces.pkl')))
             for model_name in model_names:
                 self.assertTrue(os.path.exists(os.path.join(save_path, f'{model_name}.h5')))
                 self.assertTrue(os.path.exists(os.path.join(save_path, f'{model_name}_opt.pkl')))
@@ -82,8 +83,76 @@ class TestSystem(unittest.TestCase):
         system = sample_system_object()
         with self.subTest("Check that state loads properly"):
             system.load_state(save_path)
-            self.assertEqual(system.global_step, global_step)
-            self.assertEqual(system.epoch_idx, epoch_idx)
+            self.assertEqual(global_step, system.global_step)
+            self.assertEqual(epoch_idx, system.epoch_idx)
 
         if os.path.exists(save_path):
             shutil.rmtree(save_path)
+
+    def test_shared_variables_within_traces(self):
+        save_path = tempfile.mkdtemp()
+
+        system = sample_system_object()
+        shared_trace_var = tf.Variable(initial_value=2, trainable=True)
+        system.traces.append(TestTrace(shared_trace_var))
+        system.traces.append(TestTrace(shared_trace_var))
+        shared_trace_var.assign_add(1)
+
+        system.save_state(save_dir=save_path)
+
+        # Re-initialize
+        system = sample_system_object()
+        shared_trace_var = tf.Variable(initial_value=2, trainable=True)
+        system.traces.append(TestTrace(shared_trace_var))
+        system.traces.append(TestTrace(shared_trace_var))
+
+        system.load_state(load_dir=save_path)
+
+        with self.subTest("Check variable value was re-loaded"):
+            self.assertEqual(3, system.traces[-1].var1.numpy())
+            self.assertEqual(3, system.traces[-2].var1.numpy())
+
+        with self.subTest("Check that variable is still shared"):
+            system.traces[-1].var1.assign(5)
+            self.assertEqual(5, system.traces[-1].var1.numpy())
+            self.assertEqual(5, system.traces[-2].var1.numpy())
+
+        # If we ever need this edge case to work, we need to make a default __setstate__ method
+        # with self.subTest("Check that variable is still linked to outside code"):
+        #     shared_trace_var.assign(7)
+        #     self.assertEqual(7, system.traces[-1].var1.numpy())
+        #     self.assertEqual(7, system.traces[-2].var1.numpy())
+
+    def test_shared_variables_over_object_types(self):
+        save_path = tempfile.mkdtemp()
+
+        system = sample_system_object()
+        shared_var = tf.Variable(initial_value=2, trainable=True)
+        system.traces.append(TestTrace(shared_var))
+        system.network.ops[0].fe_test_var_1 = shared_var
+        shared_var.assign_add(1)
+
+        system.save_state(save_dir=save_path)
+
+        # Re-initialize
+        system = sample_system_object()
+        shared_var = tf.Variable(initial_value=2, trainable=True)
+        system.traces.append(TestTrace(shared_var))
+        system.network.ops[0].fe_test_var_1 = shared_var
+
+        system.load_state(load_dir=save_path)
+
+        with self.subTest("Check variable value was re-loaded"):
+            self.assertEqual(3, system.traces[-1].var1.numpy())
+            self.assertEqual(3, system.network.ops[0].fe_test_var_1.numpy())
+
+        with self.subTest("Check that variable is still shared"):
+            system.traces[-1].var1.assign(5)
+            self.assertEqual(5, system.traces[-1].var1.numpy())
+            self.assertEqual(5, system.network.ops[0].fe_test_var_1.numpy())
+
+        # If we ever need this edge case to work, we need to make a default __setstate__ method
+        # with self.subTest("Check that variable is still linked to outside code"):
+        #     shared_trace_var.assign(7)
+        #     self.assertEqual(7, system.traces[-1].var1.numpy())
+        #     self.assertEqual(7, system.network.ops[0].fe_test_var_1.numpy())
