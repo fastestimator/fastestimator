@@ -56,6 +56,7 @@ from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.pipeline import Pipeline
 from fastestimator.schedule.schedule import Scheduler, get_current_items, get_signature_epochs
 from fastestimator.summary.logs.log_plot import visualize_logs
+from fastestimator.trace.io.restore_wizard import RestoreWizard
 from fastestimator.trace.trace import Trace, sort_traces
 from fastestimator.util.data import Data
 from fastestimator.util.latex_util import AdjustBox, Center, ContainerList, HrefFEID, Verbatim
@@ -121,9 +122,15 @@ class Traceability(Trace):
         # Send experiment logs into a file
         log_path = os.path.join(self.resource_dir, f"{report_name}.txt")
         if self.system.mode != 'test':
-            # If not running in test mode, we need to remove any old log file since it would get appended to
-            with contextlib.suppress(FileNotFoundError):
-                os.remove(log_path)
+            # See if there's a RestoreWizard
+            restore = False
+            for trace in self.system.traces:
+                if isinstance(trace, RestoreWizard):
+                    restore = trace.should_restore()
+            if not restore:
+                # If not running in test mode, we need to remove any old log file since it would get appended to
+                with contextlib.suppress(FileNotFoundError):
+                    os.remove(log_path)
         self.log_splicer = LogSplicer(log_path)
         self.log_splicer.__enter__()
         # Get the initialization summary information for the experiment

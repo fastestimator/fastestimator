@@ -273,7 +273,7 @@ class System:
         if not isinstance(states, list):
             raise ValueError(f"Expected {state_key} to contain a list, but found a {type(states)}")
         if len(states) != len(in_memory_objects):
-            raise ValueError("Expected {} to contain {} objects, but found {} instead".format(
+            raise ValueError("Expected saved {} to contain {} objects, but found {} instead".format(
                 state_key, len(in_memory_objects), len(states)))
         for obj, state in zip(in_memory_objects, states):
             if hasattr(obj, '__setstate__'):
@@ -302,8 +302,8 @@ class System:
             raise ValueError(f"Expected {state_key} to contain a dict, but found a {type(states)}")
         # Note that not being a subset is different from being a superset
         if not states.keys() <= in_memory_objects.keys():
-            raise ValueError("{} contained unexpected keys: {}".format(state_key,
-                                                                       states.keys() - in_memory_objects.keys()))
+            raise ValueError("Saved {} contained unexpected keys: {}".format(state_key,
+                                                                             states.keys() - in_memory_objects.keys()))
         for key, state in states.items():
             obj = in_memory_objects[key]
             if hasattr(obj, '__setstate__'):

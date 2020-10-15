@@ -32,7 +32,7 @@ class RestoreWizard(Trace):
         frequency: Saving frequency in epoch(s).
     """
     def __init__(self, directory: str, frequency: int = 1) -> None:
-        super().__init__(mode="train")
+        super().__init__(inputs="*", mode="train")  # inputs to cause this trace to sort to the end of the list
         self.directory = os.path.abspath(os.path.normpath(directory))
         self.frequency = frequency
         # For robust saving, we need to create 2 different directories and have a key file to switch between them
@@ -44,7 +44,7 @@ class RestoreWizard(Trace):
         if fe.fe_deterministic_seed is not None:
             raise RuntimeError("You cannot use RestoreWizard while in deterministic training mode since a restored" +
                                " training can't guarantee that all prngs will be reset to exactly the same position")
-        if not os.path.exists(self.directory) or not os.path.exists(self.key_path):
+        if not self.should_restore():
             self._cleanup(self.dirs)  # Remove any partially completed checkpoints
             print("FastEstimator-RestoreWizard: Backing up to {}".format(self.directory))
         else:
@@ -65,6 +65,14 @@ class RestoreWizard(Trace):
             self.dir_idx = int(not self.dir_idx)
             self._cleanup(self.dirs[self.dir_idx])
             print("FastEstimator-RestoreWizard: Saved milestones to {}".format(directory))
+
+    def should_restore(self) -> bool:
+        """Whether a restore will be performed.
+
+        Returns:
+            True iff the wizard will perform a restore.
+        """
+        return os.path.exists(self.directory) and os.path.exists(self.key_path)
 
     def _load_key(self) -> None:
         """Set the dir_idx based on the key last saved by the restore wizard.
