@@ -38,7 +38,7 @@ class TestBatchDataset(unittest.TestCase):
         # reinstantiate system and load the state
         system = instantiate_system()
         system.load_state(save_path)
-        loaded_var = system.pipeline.data["train"].datasets[0].var = new_var
+        loaded_var = system.pipeline.data["train"].datasets[0].var
 
         self.assertEqual(loaded_var, new_var)
 
@@ -65,6 +65,6 @@ class TestBatchDataset(unittest.TestCase):
         # reinstantiate system and load the state
         system = instantiate_system()
         system.load_state(save_path)
-        loaded_var = system.pipeline.data["train"].datasets[0].var = new_var
+        loaded_var = system.pipeline.data["train"].datasets[0].var
 
         self.assertEqual(loaded_var, new_var)
