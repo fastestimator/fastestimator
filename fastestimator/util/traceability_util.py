@@ -997,6 +997,31 @@ def fe_summary(self) -> List[FeSummaryTable]:
     return [item[1] for item in ordered_items]
 
 
+def __getstate__(self) -> Dict[str, Any]:
+    """Return a summary of this class' state variables (for restore wizard).
+
+    Args:
+        self: The bound class instance.
+
+    Returns:
+        The state variables to be captured during pickling.
+    """
+    state_dict = self.__dict__.copy()
+    if self._fe_state_whitelist:
+        state_dict = {key: state_dict[key] for key in self._fe_state_whitelist}
+    for key in self._fe_state_blacklist:
+        state_dict.pop(key, None)
+    # We can't support complex objects / recursion since lambda functions can't be pickled and collections might
+    # be appended to after the init call over the course of training, preventing nested complex objects from
+    # being perfectly recovered. The memory limit is to avoid saving a copy of the user's entire dataset if it
+    # happens to be held in memory.
+    for key, value in list(state_dict.items()):
+        keep, size = is_restorable(value, memory_limit=0 if key in self._fe_state_whitelist else 1e6)
+        if not keep:
+            state_dict.pop(key)
+    return state_dict
+
+
 def trace_model(model: Model, model_idx: int, model_fn: Any, optimizer_fn: Any, weights_path: Any) -> Model:
     """A function to add traceability information to an FE-compiled model.
 
@@ -1057,9 +1082,13 @@ def traceable(whitelist: Union[str, Tuple[str, ...]] = (), blacklist: Union[str,
             def init(self, *args, **kwargs):
                 if not hasattr(self, '_fe_state_whitelist'):
                     self._fe_state_whitelist = whitelist
+                else:
+                    self._fe_state_whitelist = tuple(set(self._fe_state_whitelist).union(set(whitelist)))
                 if not hasattr(self, '_fe_state_blacklist'):
                     self._fe_state_blacklist = blacklist + (
-                        '_fe_state_whitelist', '_fe_state_blacklist', '_fe_base_init', '_fe_traceability_summary')
+                        '_fe_state_whitelist', '_fe_state_blacklist', '_fe_traceability_summary')
+                else:
+                    self._fe_state_blacklist = tuple(set(self._fe_state_blacklist).union(set(blacklist)))
                 if not hasattr(self, '_fe_traceability_summary'):
                     bound_args = inspect.signature(base_init).bind(self, *args, **kwargs)
                     bound_args.apply_defaults()
@@ -1074,36 +1103,8 @@ def traceable(whitelist: Union[str, Tuple[str, ...]] = (), blacklist: Union[str,
         if base_func is None:
             setattr(cls, 'fe_summary', fe_summary)
 
-        def __getstate__(self) -> Dict[str, Any]:
-            """Return a summary of this class' state variables (for restore wizard).
-
-            Args:
-                self: The bound class instance.
-
-            Returns:
-                The state variables to be captured during pickling.
-            """
-            state_dict = self.__dict__.copy()
-            if self._fe_state_whitelist:
-                state_dict = {key: state_dict[key] for key in whitelist}
-            for key in self._fe_state_blacklist:
-                state_dict.pop(key, None)
-            # We can't support complex objects / recursion since lambda functions can't be pickled and collections might
-            # be appended to after the init call over the course of training, preventing nested complex objects from
-            # being perfectly recovered. The memory limit is to avoid saving a copy of the user's entire dataset if it
-            # happens to be held in memory.
-            for key, value in list(state_dict.items()):
-                keep, size = is_restorable(value, memory_limit=0 if key in self._fe_state_whitelist else 1e6)
-                if not keep:
-                    state_dict.pop(key)
-            return state_dict
-
         base_func = getattr(cls, '__getstate__', None)
-        # If the user specified a whitelist or blacklist then use this default impl. If they didn't specify either, then
-        # check for an existing function and use this default only if the existing one does not exist. Unfortunately we
-        # can't have the base_func always take precedence because then the whitelist/blacklist would not work with class
-        # inheritance.
-        if whitelist or blacklist or base_func is None:
+        if base_func is None:
             setattr(cls, '__getstate__', __getstate__)
 
         return cls
