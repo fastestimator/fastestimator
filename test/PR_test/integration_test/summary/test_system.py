@@ -38,6 +38,12 @@ class TestTrace(Trace):
 
 class TestSystem(unittest.TestCase):
     def test_save_and_load_state_torch(self):
+        """ `save_state` and `load_state` of an entire system are highly dependent on the implementation of __setstate__
+        and __getstate__ of ops, traces, datasets ... etc. The save_state and load_state function should be tested in
+        the testing script of that perticular component
+        (ex: The test of save_state and load_state with EpochScheduler is located in
+             PR_test/integration_test/schedule/test_epoch_scheduler.py)
+        """
         system = sample_system_object_torch()
         model_names = get_model_names(system)
         global_step = 100
@@ -64,6 +70,12 @@ class TestSystem(unittest.TestCase):
             shutil.rmtree(save_path)
 
     def test_save_and_load_state_tf(self):
+        """ `save_state` and `load_state` of an entire system are highly dependent on the implementation of __setstate__
+        and __getstate__ of ops, traces, datasets ... etc. The save_state and load_state function should be tested in
+        the testing script of that perticular component
+        (ex: The test of save_state and load_state with EpochScheduler is located in
+             PR_test/integration_test/schedule/test_epoch_scheduler.py)
+        """
         system = sample_system_object()
         model_names = get_model_names(system)
         global_step = 100
