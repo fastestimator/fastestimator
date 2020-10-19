@@ -31,7 +31,7 @@ class OneOf(TensorOp):
     """Perform one of several possible TensorOps.
 
     Args:
-        tensor_ops: A list of ops to choose between with uniform probability.
+        *tensor_ops: A list of ops to choose between with uniform probability.
     """
     def __init__(self, *tensor_ops: TensorOp) -> None:
         inputs = tensor_ops[0].inputs

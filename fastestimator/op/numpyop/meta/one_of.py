@@ -26,7 +26,7 @@ class OneOf(NumpyOp):
     """Perform one of several possible NumpyOps.
 
     Args:
-        numpy_ops: A list of ops to choose between with uniform probability.
+        *numpy_ops: A list of ops to choose between with uniform probability.
     """
     def __init__(self, *numpy_ops: NumpyOp) -> None:
         inputs = numpy_ops[0].inputs
