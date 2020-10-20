@@ -1022,6 +1022,64 @@ def __getstate__(self) -> Dict[str, Any]:
     return state_dict
 
 
+def __setstate__(self, state: Dict[str, Any]) -> None:
+    """Apply saved state information to this class (for restore wizard).
+
+    Args:
+        self: The bound class instance.
+        state: The new state to be imposed.
+    """
+    for key, replacement_data in state.items():
+        if key not in self.__dict__:
+            self.key = replacement_data
+            continue
+        current_data = self.__dict__[key]
+        self.__dict__[key] = _setdata(current_data, replacement_data)
+
+
+def _setdata(current: Any, new: Any) -> Any:
+    """Replace a `current` value with a `new` value, returning whatever value should be used.
+
+    This method helps to perform in-place modifications of values whenever possible so that shared variables are not
+    broken by the RestoreWizard.
+
+    Args:
+        current: The existing object.
+        new: A new value to be imposed on the `current` object.
+
+    Returns:
+        The object to be stored in place of the `current` one.
+    """
+    if isinstance(current, list) and isinstance(new, (tuple, list)) and len(current) == len(new):
+        for idx, elem in enumerate(current):
+            current[idx] = _setdata(elem, new[idx])
+        return current
+    if isinstance(current, tuple) and isinstance(new, (tuple, list)) and len(current) == len(new):
+        return tuple([_setdata(cu, cr) for cu, cr in zip(current, new)])
+    if isinstance(current, dict) and isinstance(new, dict) and current.keys() == new.keys():
+        for key in current.keys():
+            current[key] = _setdata(current[key], new[key])
+        return current
+    if isinstance(current, tf.Variable) and isinstance(new, tf.Variable) and current.shape == new.shape:
+        current.assign(new)
+        return current
+    if isinstance(current, torch.Tensor) and isinstance(new, torch.Tensor) and current.shape == new.shape:
+        current.copy_(new)
+        return current
+    if isinstance(current, np.ndarray) and isinstance(new, np.ndarray) and current.shape == new.shape:
+        np.copyto(dst=current, src=new)
+        return current
+    if isinstance(new, _RestorableClasses):
+        return new  # This should go before __dict__ since tensors have __dict__s
+    if hasattr(current, '__setstate__'):
+        current.__setstate__(new)
+        return current
+    if hasattr(current, '__dict__'):
+        current.__dict__.update(new)
+        return current
+    return new
+
+
 def trace_model(model: Model, model_idx: int, model_fn: Any, optimizer_fn: Any, weights_path: Any) -> Model:
     """A function to add traceability information to an FE-compiled model.
 
@@ -1106,6 +1164,10 @@ def traceable(whitelist: Union[str, Tuple[str, ...]] = (), blacklist: Union[str,
         base_func = getattr(cls, '__getstate__', None)
         if base_func is None:
             setattr(cls, '__getstate__', __getstate__)
+
+        base_func = getattr(cls, '__setstate__', None)
+        if base_func is None:
+            setattr(cls, '__setstate__', __setstate__)
 
         return cls
 
