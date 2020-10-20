@@ -129,11 +129,10 @@ class TestSystem(unittest.TestCase):
             self.assertEqual(5, system.traces[-1].var1.numpy())
             self.assertEqual(5, system.traces[-2].var1.numpy())
 
-        # If we ever need this edge case to work, we need to make a default __setstate__ method
-        # with self.subTest("Check that variable is still linked to outside code"):
-        #     shared_trace_var.assign(7)
-        #     self.assertEqual(7, system.traces[-1].var1.numpy())
-        #     self.assertEqual(7, system.traces[-2].var1.numpy())
+        with self.subTest("Check that variable is still linked to outside code"):
+            shared_trace_var.assign(7)
+            self.assertEqual(7, system.traces[-1].var1.numpy())
+            self.assertEqual(7, system.traces[-2].var1.numpy())
 
     def test_shared_variables_over_object_types(self):
         save_path = tempfile.mkdtemp()
@@ -163,8 +162,7 @@ class TestSystem(unittest.TestCase):
             self.assertEqual(5, system.traces[-1].var1.numpy())
             self.assertEqual(5, system.network.ops[0].fe_test_var_1.numpy())
 
-        # If we ever need this edge case to work, we need to make a default __setstate__ method
-        # with self.subTest("Check that variable is still linked to outside code"):
-        #     shared_trace_var.assign(7)
-        #     self.assertEqual(7, system.traces[-1].var1.numpy())
-        #     self.assertEqual(7, system.network.ops[0].fe_test_var_1.numpy())
+        with self.subTest("Check that variable is still linked to outside code"):
+            shared_var.assign(7)
+            self.assertEqual(7, system.traces[-1].var1.numpy())
+            self.assertEqual(7, system.network.ops[0].fe_test_var_1.numpy())

@@ -245,6 +245,10 @@ class Estimator:
         try:
             self._run_traces_on_begin(traces=all_traces)
             if "train" in run_modes or "eval" in run_modes:
+                # If the training is re-starting from a restore wizard, it should re-run the last eval epoch
+                if self.system.epoch_idx > 0 and "eval" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
+                    self.system.mode = "eval"
+                    self._run_epoch()
                 for self.system.epoch_idx in range(self.system.epoch_idx + 1, self.system.total_epochs + 1):
                     if "train" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
                         self.system.mode = "train"
