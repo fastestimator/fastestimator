@@ -17,9 +17,14 @@ import shutil
 import tempfile
 import unittest
 
+import numpy as np
 import tensorflow as tf
+import torch
 
-from fastestimator.test.unittest_util import sample_system_object, sample_system_object_torch
+import fastestimator as fe
+from fastestimator.op.tensorop.model import ModelOp
+from fastestimator.test.unittest_util import OneLayerTorchModel, is_equal, one_layer_tf_model, sample_system_object, \
+    sample_system_object_torch
 from fastestimator.trace.trace import Trace
 
 
@@ -34,6 +39,25 @@ class TestTrace(Trace):
     def __init__(self, var1):
         super().__init__()
         self.var1 = var1
+
+
+def test_model(submodel):
+    inp = tf.keras.layers.Input([3])
+    x = submodel(inp)
+    x = x + 1
+    model = tf.keras.models.Model(inputs=inp, outputs=x)
+    return model
+
+
+class TestModel(torch.nn.Module):
+    def __init__(self, submodel):
+        super().__init__()
+        self.submodel = submodel
+
+    def forward(self, x):
+        x = self.submodel(x)
+        x = x + 1
+        return x
 
 
 class TestSystem(unittest.TestCase):
@@ -166,3 +190,91 @@ class TestSystem(unittest.TestCase):
             shared_var.assign(7)
             self.assertEqual(7, system.traces[-1].var1.numpy())
             self.assertEqual(7, system.network.ops[0].fe_test_var_1.numpy())
+
+    def test_shared_variable_over_model_tf(self):
+        def instantiate_system():
+            system = sample_system_object()
+            submodel = one_layer_tf_model()
+            model = fe.build(model_fn=lambda: test_model(submodel), optimizer_fn='adam', model_name='tf')
+            model2 = fe.build(model_fn=lambda: test_model(submodel), optimizer_fn='adam', model_name='tf2')
+            system.network = fe.Network(ops=[
+                ModelOp(model=model, inputs="x_out", outputs="y_pred"),
+                ModelOp(model=model2, inputs="x_out", outputs="y_pred2"),
+            ])
+
+            return system
+
+        system = instantiate_system()
+
+        # make some change
+        new_weight = [np.array([[1.0], [1.0], [1.0]])]
+        system.network.ops[0].model.layers[1].set_weights(new_weight)
+
+        # save the state
+        save_path = tempfile.mkdtemp()
+        system.save_state(save_path)
+
+        # reinstantiate system and load the state
+        system = instantiate_system()
+        shared_variable = system.network.ops[0].model.layers[1]
+        system.load_state(save_path)
+
+        with self.subTest("Check model varaible was re-loaded"):
+            self.assertTrue(is_equal(new_weight, system.network.ops[0].model.layers[1].get_weights()))
+            self.assertTrue(is_equal(new_weight, system.network.ops[1].model.layers[1].get_weights()))
+
+        with self.subTest("Check model variable is still shared"):
+            new_weight = [np.array([[2.0], [2.0], [2.0]])]
+            system.network.ops[0].model.layers[1].set_weights(new_weight)
+            self.assertTrue(
+                is_equal(system.network.ops[0].model.layers[1].get_weights(),
+                         system.network.ops[1].model.layers[1].get_weights()))
+
+        with self.subTest("Check that variable is still linked to outside code"):
+            new_weight = [np.array([[3.0], [3.0], [3.0]])]
+            shared_variable.set_weights(new_weight)
+            self.assertTrue(is_equal(new_weight, system.network.ops[0].model.layers[1].get_weights()))
+
+    def test_shared_variable_over_model_torch(self):
+        def instantiate_system():
+            system = sample_system_object_torch()
+            submodel = OneLayerTorchModel()
+            model = fe.build(model_fn=lambda: TestModel(submodel), optimizer_fn='adam', model_name='torch')
+            model2 = fe.build(model_fn=lambda: TestModel(submodel), optimizer_fn='adam', model_name='torch2')
+            system.network = fe.Network(ops=[
+                ModelOp(model=model, inputs="x_out", outputs="y_pred"),
+                ModelOp(model=model2, inputs="x_out", outputs="y_pred2"),
+            ])
+
+            return system
+
+        system = instantiate_system()
+
+        # make some change
+        new_weight = torch.tensor([[1, 1, 1]], dtype=torch.float32)
+        system.network.ops[0].model.submodel.fc1.weight.data = new_weight
+
+        # save the state
+        save_path = tempfile.mkdtemp()
+        system.save_state(save_path)
+
+        # reinstantiate system and load the state
+        system = instantiate_system()
+        shared_variable = system.network.ops[0].model.submodel.fc1.weight
+        system.load_state(save_path)
+
+        with self.subTest("Check model varaible was re-loaded"):
+            self.assertTrue(is_equal(new_weight, system.network.ops[0].model.submodel.fc1.weight.data))
+            self.assertTrue(is_equal(new_weight, system.network.ops[1].model.submodel.fc1.weight.data))
+
+        with self.subTest("Check model variable is still shared"):
+            new_weight = torch.tensor([[2, 2, 2]], dtype=torch.float32)
+            system.network.ops[0].model.submodel.fc1.weight.data = new_weight
+            self.assertTrue(
+                is_equal(system.network.ops[0].model.submodel.fc1.weight.data,
+                         system.network.ops[1].model.submodel.fc1.weight.data))
+
+        with self.subTest("Check that variable is still linked to outside code"):
+            new_weight = torch.tensor([[3, 3, 3]], dtype=torch.float32)
+            shared_variable.data = new_weight
+            self.assertTrue(is_equal(new_weight, system.network.ops[0].model.submodel.fc1.weight.data))
