@@ -361,11 +361,11 @@ class TestSystem(unittest.TestCase):
             self.assertEqual(var1_new_val, system.network.ops[0].var1.numpy())
 
         with self.subTest("Check trace and tensorop variables are still shared"):
-            var1_new_val = 3
+            var1_new_val = 3.0
             system.traces[0].var1.copy_(torch.tensor(var1_new_val))
-            self.assertEqual(system.traces[0].var1.numpy(), system.network.ops[0].var1.numpy())
+            self.assertEqual(var1_new_val, system.network.ops[0].var1.numpy())
 
         with self.subTest("Check that variable is still linked to outside code"):
-            var1_new_val = 4
+            var1_new_val = 4.0
             var1.copy_(torch.tensor(var1_new_val))
-            self.assertEqual(system.traces[0].var1.numpy(), system.network.ops[0].var1.numpy())
+            self.assertEqual(var1_new_val, system.network.ops[0].var1.numpy())
