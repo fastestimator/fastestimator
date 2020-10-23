@@ -296,7 +296,7 @@ class TestSystem(unittest.TestCase):
                 ModelOp(model=model, inputs="x_out", outputs="y_pred")
             ])
             system.traces.append(TestTrace(var1=var1))
-            
+
             return system
 
         system = instantiate_system()
@@ -332,7 +332,7 @@ class TestSystem(unittest.TestCase):
         def instantiate_system():
             system = sample_system_object_torch()
             model = fe.build(model_fn=fe.architecture.pytorch.LeNet, optimizer_fn='adam', model_name='torch')
-            var1 = torch.Tensor([1.0])
+            var1 = torch.tensor(1.0)
             system.network = fe.Network(ops=[
                 TestTensorOp(inputs="x_out", outputs="x_out", mode="train", var1=var1),
                 ModelOp(model=model, inputs="x_out", outputs="y_pred")
@@ -345,7 +345,7 @@ class TestSystem(unittest.TestCase):
 
         # make some change
         var1_new_val = 2.0
-        system.traces[0].var1[0] = 2.0
+        system.traces[0].var1.copy_(torch.tensor(var1_new_val))
 
         # save the state
         save_path = tempfile.mkdtemp()
@@ -362,10 +362,10 @@ class TestSystem(unittest.TestCase):
 
         with self.subTest("Check trace and tensorop variables are still shared"):
             var1_new_val = 3
-            system.traces[0].var1[0] = 2.0
+            system.traces[0].var1.copy_(torch.tensor(var1_new_val))
             self.assertEqual(system.traces[0].var1.numpy(), system.network.ops[0].var1.numpy())
 
         with self.subTest("Check that variable is still linked to outside code"):
             var1_new_val = 4
-            var1[0] = var1_new_val
+            var1.copy_(torch.tensor(var1_new_val))
             self.assertEqual(system.traces[0].var1.numpy(), system.network.ops[0].var1.numpy())
