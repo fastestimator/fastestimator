@@ -295,8 +295,8 @@ class TestSystem(unittest.TestCase):
                 TestTensorOp(inputs="x_out", outputs="x_out", mode="train", var1=var1),
                 ModelOp(model=model, inputs="x_out", outputs="y_pred")
             ])
-
             system.traces.append(TestTrace(var1=var1))
+            
             return system
 
         system = instantiate_system()
@@ -337,8 +337,8 @@ class TestSystem(unittest.TestCase):
                 TestTensorOp(inputs="x_out", outputs="x_out", mode="train", var1=var1),
                 ModelOp(model=model, inputs="x_out", outputs="y_pred")
             ])
-
             system.traces.append(TestTrace(var1=var1))
+
             return system
 
         system = instantiate_system()
