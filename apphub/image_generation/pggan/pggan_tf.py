@@ -33,7 +33,6 @@ from fastestimator.schedule import EpochScheduler
 from fastestimator.trace import Trace
 from fastestimator.trace.io import ModelSaver
 from fastestimator.util import get_num_devices
-from fastestimator.util.traceability_util import traceable
 
 
 def _nf(stage, fmap_base=8192, fmap_decay=1.0, fmap_max=512):
@@ -311,7 +310,6 @@ class DLoss(TensorOp):
         return tf.reduce_mean(loss)
 
 
-@traceable()  # to make this trace restorable
 class AlphaController(Trace):
     def __init__(self, alpha, fade_start_epochs, duration, batch_scheduler, num_examples):
         super().__init__(inputs=None, outputs=None, mode="train")
