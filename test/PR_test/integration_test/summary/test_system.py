@@ -321,12 +321,12 @@ class TestSystem(unittest.TestCase):
         with self.subTest("Check trace and tensorop variables are still shared"):
             var1_new_val = 3
             system.traces[0].var1.assign(var1_new_val)
-            self.assertEqual(system.traces[0].var1.numpy(), system.network.ops[0].var1.numpy())
+            self.assertEqual(var1_new_val, system.network.ops[0].var1.numpy())
 
         with self.subTest("Check that variable is still linked to outside code"):
             var1_new_val = 4
             var1.assign(var1_new_val)
-            self.assertEqual(system.traces[0].var1.numpy(), system.network.ops[0].var1.numpy())
+            self.assertEqual(var1_new_val, system.network.ops[0].var1.numpy())
 
     def test_shared_torch_variable_among_top_trace(self):
         def instantiate_system():
