@@ -22,6 +22,7 @@ import tensorflow as tf
 import torch
 
 import fastestimator as fe
+from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.test.unittest_util import OneLayerTorchModel, is_equal, one_layer_tf_model, sample_system_object, \
     sample_system_object_torch
@@ -33,6 +34,12 @@ def get_model_names(system):
     for model in system.network.models:
         model_names.append(model.model_name)
     return model_names
+
+
+class TestTensorOp(TensorOp):
+    def __init__(self, inputs, outputs, mode, var1):
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.var1 = var1
 
 
 class TestTrace(Trace):
@@ -278,3 +285,87 @@ class TestSystem(unittest.TestCase):
             new_weight = torch.tensor([[3, 3, 3]], dtype=torch.float32)
             shared_variable.data = new_weight
             self.assertTrue(is_equal(new_weight, system.network.ops[0].model.submodel.fc1.weight.data))
+
+    def test_shared_tf_variable_among_top_trace(self):
+        def instantiate_system():
+            system = sample_system_object()
+            model = fe.build(model_fn=fe.architecture.tensorflow.LeNet, optimizer_fn='adam', model_name='tf')
+            var1 = tf.Variable(initial_value=1, trainable=True)
+            system.network = fe.Network(ops=[
+                TestTensorOp(inputs="x_out", outputs="x_out", mode="train", var1=var1),
+                ModelOp(model=model, inputs="x_out", outputs="y_pred")
+            ])
+            system.traces.append(TestTrace(var1=var1))
+
+            return system
+
+        system = instantiate_system()
+
+        # make some change
+        var1_new_val = 2
+        system.traces[0].var1.assign(var1_new_val)
+
+        # save the state
+        save_path = tempfile.mkdtemp()
+        system.save_state(save_path)
+
+        # reinstantiate system and load the state
+        system = instantiate_system()
+        var1 = system.traces[0].var1
+        system.load_state(save_path)
+
+        with self.subTest("Check both trace and tensorop variables are reloaded"):
+            self.assertEqual(var1_new_val, system.traces[0].var1.numpy())
+            self.assertEqual(var1_new_val, system.network.ops[0].var1.numpy())
+
+        with self.subTest("Check trace and tensorop variables are still shared"):
+            var1_new_val = 3
+            system.traces[0].var1.assign(var1_new_val)
+            self.assertEqual(var1_new_val, system.network.ops[0].var1.numpy())
+
+        with self.subTest("Check that variable is still linked to outside code"):
+            var1_new_val = 4
+            var1.assign(var1_new_val)
+            self.assertEqual(var1_new_val, system.network.ops[0].var1.numpy())
+
+    def test_shared_torch_variable_among_top_trace(self):
+        def instantiate_system():
+            system = sample_system_object_torch()
+            model = fe.build(model_fn=fe.architecture.pytorch.LeNet, optimizer_fn='adam', model_name='torch')
+            var1 = torch.tensor(1.0)
+            system.network = fe.Network(ops=[
+                TestTensorOp(inputs="x_out", outputs="x_out", mode="train", var1=var1),
+                ModelOp(model=model, inputs="x_out", outputs="y_pred")
+            ])
+            system.traces.append(TestTrace(var1=var1))
+
+            return system
+
+        system = instantiate_system()
+
+        # make some change
+        var1_new_val = 2.0
+        system.traces[0].var1.copy_(torch.tensor(var1_new_val))
+
+        # save the state
+        save_path = tempfile.mkdtemp()
+        system.save_state(save_path)
+
+        # reinstantiate system and load the state
+        system = instantiate_system()
+        var1 = system.traces[0].var1
+        system.load_state(save_path)
+
+        with self.subTest("Check both trace and tensorop variables are reloaded"):
+            self.assertEqual(var1_new_val, system.traces[0].var1.numpy())
+            self.assertEqual(var1_new_val, system.network.ops[0].var1.numpy())
+
+        with self.subTest("Check trace and tensorop variables are still shared"):
+            var1_new_val = 3.0
+            system.traces[0].var1.copy_(torch.tensor(var1_new_val))
+            self.assertEqual(var1_new_val, system.network.ops[0].var1.numpy())
+
+        with self.subTest("Check that variable is still linked to outside code"):
+            var1_new_val = 4.0
+            var1.copy_(torch.tensor(var1_new_val))
+            self.assertEqual(var1_new_val, system.network.ops[0].var1.numpy())
