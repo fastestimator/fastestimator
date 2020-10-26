@@ -56,6 +56,7 @@ from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.pipeline import Pipeline
 from fastestimator.schedule.schedule import Scheduler, get_current_items, get_signature_epochs
 from fastestimator.summary.logs.log_plot import visualize_logs
+from fastestimator.trace.io.restore_wizard import RestoreWizard
 from fastestimator.trace.trace import Trace, sort_traces
 from fastestimator.util.data import Data
 from fastestimator.util.latex_util import AdjustBox, Center, ContainerList, HrefFEID, Verbatim
@@ -121,9 +122,15 @@ class Traceability(Trace):
         # Send experiment logs into a file
         log_path = os.path.join(self.resource_dir, f"{report_name}.txt")
         if self.system.mode != 'test':
-            # If not running in test mode, we need to remove any old log file since it would get appended to
-            with contextlib.suppress(FileNotFoundError):
-                os.remove(log_path)
+            # See if there's a RestoreWizard
+            restore = False
+            for trace in self.system.traces:
+                if isinstance(trace, RestoreWizard):
+                    restore = trace.should_restore()
+            if not restore:
+                # If not running in test mode, we need to remove any old log file since it would get appended to
+                with contextlib.suppress(FileNotFoundError):
+                    os.remove(log_path)
         self.log_splicer = LogSplicer(log_path)
         self.log_splicer.__enter__()
         # Get the initialization summary information for the experiment
@@ -131,7 +138,7 @@ class Traceability(Trace):
         models = self.system.network.models
         n_floats = len(self.config_tables) + len(models)
 
-        self.doc = Document(geometry_options=['lmargin=2cm', 'rmargin=2cm', 'tmargin=2cm', 'bmargin=2cm'])
+        self.doc = self._init_document_geometry()
         # Keep tables/figures in their sections
         self.doc.packages.append(Package(name='placeins', options=['section']))
         self.doc.preamble.append(NoEscape(r'\usetikzlibrary{positioning}'))
@@ -276,7 +283,7 @@ class Traceability(Trace):
                                       model_ids=model_ids,
                                       datasets=datasets)
             start = self._loop_tables(start, classes=Trace, name="Traces", model_ids=model_ids, datasets=datasets)
-            start = self._loop_tables(start, classes=Op, name="Ops", model_ids=model_ids, datasets=datasets)
+            start = self._loop_tables(start, classes=Op, name="Operators", model_ids=model_ids, datasets=datasets)
             start = self._loop_tables(start,
                                       classes=(Dataset, tf.data.Dataset),
                                       name="Datasets",
@@ -380,7 +387,7 @@ class Traceability(Trace):
                 if not isinstance(model, (tf.keras.Model, torch.nn.Module)):
                     continue
                 self.doc.append(NoEscape(r'\FloatBarrier'))
-                with self.doc.create(Subsection(f"{model.model_name}")):
+                with self.doc.create(Subsection(f"{model.model_name.capitalize()}")):
                     if isinstance(model, tf.keras.Model):
                         # Text Summary
                         summary = []
@@ -460,7 +467,7 @@ class Traceability(Trace):
     def _document_sys_config(self) -> None:
         """Add a system config summary to the traceability document.
         """
-        with self.doc.create(Section("System Config")):
+        with self.doc.create(Section("System Configuration")):
             with self.doc.create(Itemize()) as itemize:
                 itemize.add_item(escape_latex(f"FastEstimator {fe.__version__}"))
                 itemize.add_item(escape_latex(f"Python {platform.python_version()}"))
@@ -671,3 +678,12 @@ class Traceability(Trace):
         for subgraph in diagram.get_subgraphs():
             nodes.extend(Traceability._get_all_nodes(subgraph))
         return nodes
+
+    @staticmethod
+    def _init_document_geometry() -> Document:
+        """Init geometry setting of the document.
+
+        Return:
+            Initialized Document object.
+        """
+        return Document(geometry_options=['lmargin=2cm', 'rmargin=2cm', 'bmargin=2cm'])

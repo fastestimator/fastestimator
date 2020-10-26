@@ -76,6 +76,9 @@ class Fuse(TensorOp):
     def fe_retain_graph(self, retain: Optional[bool] = None) -> Optional[bool]:
         return self.ops[self.last_retain_idx].fe_retain_graph(retain)
 
+    def __getstate__(self) -> Dict[str, List[Dict[Any, Any]]]:
+        return {'ops': [elem.__getstate__() if hasattr(elem, '__getstate__') else {} for elem in self.ops]}
+
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
         data = {key: elem for key, elem in zip(self.inputs, data)}
         BaseNetwork._forward_batch(data, state, self.ops)

@@ -16,9 +16,10 @@ import dis
 import functools
 import inspect
 import re
+import sys
 import types
 from collections import ChainMap, deque, namedtuple
-from typing import Any, Callable, Dict, List, Mapping, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
@@ -63,6 +64,21 @@ _CommandTable = {
 }
 # If a collection (list, tuple, set, dict) has more than this many entries, its summary will be truncated
 _CollectionSizeLimit = 42
+# The data types that may be restored by the default __getstate__ method. These are not kept inside the is_restorable()
+# method due to a formatting issue, though by externalizing them an end user also has more control if they want to add
+# something that was missed.
+_RestorableClasses = (int,
+                      float,
+                      bool,
+                      str,
+                      type(None),
+                      tf.Tensor,
+                      tf.Variable,
+                      torch.Tensor,
+                      np.ndarray,
+                      np.number,
+                      np.bool_,
+                      np.flexible)
 
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
@@ -981,6 +997,89 @@ def fe_summary(self) -> List[FeSummaryTable]:
     return [item[1] for item in ordered_items]
 
 
+def __getstate__(self) -> Dict[str, Any]:
+    """Return a summary of this class' state variables (for restore wizard).
+
+    Args:
+        self: The bound class instance.
+
+    Returns:
+        The state variables to be captured during pickling.
+    """
+    state_dict = self.__dict__.copy()
+    if self._fe_state_whitelist:
+        state_dict = {key: state_dict[key] for key in self._fe_state_whitelist}
+    for key in self._fe_state_blacklist:
+        state_dict.pop(key, None)
+    # We can't support complex objects / recursion since lambda functions can't be pickled and collections might
+    # be appended to after the init call over the course of training, preventing nested complex objects from
+    # being perfectly recovered. The memory limit is to avoid saving a copy of the user's entire dataset if it
+    # happens to be held in memory.
+    for key, value in list(state_dict.items()):
+        keep, size = is_restorable(value, memory_limit=0 if key in self._fe_state_whitelist else 1e6)
+        if not keep:
+            state_dict.pop(key)
+    return state_dict
+
+
+def __setstate__(self, state: Dict[str, Any]) -> None:
+    """Apply saved state information to this class (for restore wizard).
+
+    Args:
+        self: The bound class instance.
+        state: The new state to be imposed.
+    """
+    for key, replacement_data in state.items():
+        if key not in self.__dict__:
+            self.key = replacement_data
+            continue
+        current_data = self.__dict__[key]
+        self.__dict__[key] = _setdata(current_data, replacement_data)
+
+
+def _setdata(current: Any, new: Any) -> Any:
+    """Replace a `current` value with a `new` value, returning whatever value should be used.
+
+    This method helps to perform in-place modifications of values whenever possible so that shared variables are not
+    broken by the RestoreWizard.
+
+    Args:
+        current: The existing object.
+        new: A new value to be imposed on the `current` object.
+
+    Returns:
+        The object to be stored in place of the `current` one.
+    """
+    if isinstance(current, list) and isinstance(new, (tuple, list)) and len(current) == len(new):
+        for idx, elem in enumerate(current):
+            current[idx] = _setdata(elem, new[idx])
+        return current
+    if isinstance(current, tuple) and isinstance(new, (tuple, list)) and len(current) == len(new):
+        return tuple([_setdata(cu, cr) for cu, cr in zip(current, new)])
+    if isinstance(current, dict) and isinstance(new, dict) and current.keys() == new.keys():
+        for key in current.keys():
+            current[key] = _setdata(current[key], new[key])
+        return current
+    if isinstance(current, tf.Variable) and isinstance(new, tf.Variable) and current.shape == new.shape:
+        current.assign(new)
+        return current
+    if isinstance(current, torch.Tensor) and isinstance(new, torch.Tensor) and current.shape == new.shape:
+        current.copy_(new)
+        return current
+    if isinstance(current, np.ndarray) and isinstance(new, np.ndarray) and current.shape == new.shape:
+        np.copyto(dst=current, src=new)
+        return current
+    if isinstance(new, _RestorableClasses):
+        return new  # This should go before __dict__ since tensors have __dict__s
+    if hasattr(current, '__setstate__'):
+        current.__setstate__(new)
+        return current
+    if hasattr(current, '__dict__'):
+        current.__dict__.update(new)
+        return current
+    return new
+
+
 def trace_model(model: Model, model_idx: int, model_fn: Any, optimizer_fn: Any, weights_path: Any) -> Model:
     """A function to add traceability information to an FE-compiled model.
 
@@ -1014,7 +1113,7 @@ def trace_model(model: Model, model_idx: int, model_fn: Any, optimizer_fn: Any, 
     return model
 
 
-def traceable(whitelist: Union[str, Tuple[str]] = (), blacklist: Union[str, Tuple[str]] = ()) -> Callable:
+def traceable(whitelist: Union[str, Tuple[str, ...]] = (), blacklist: Union[str, Tuple[str, ...]] = ()) -> Callable:
     """A decorator to be placed on classes in order to make them traceable and to enable a deep restore.
 
     Decorated classes will gain the .fe_summary() and .fe_state() methods.
@@ -1037,13 +1136,17 @@ def traceable(whitelist: Union[str, Tuple[str]] = (), blacklist: Union[str, Tupl
         base_init = getattr(cls, '__init__')
         if hasattr(base_init, '__module__') and base_init.__module__ != 'fastestimator.util.traceability_util':
             # We haven't already overridden this class' init method
-            @functools.wraps(base_init) # to preserve the original class signature
+            @functools.wraps(base_init)  # to preserve the original class signature
             def init(self, *args, **kwargs):
                 if not hasattr(self, '_fe_state_whitelist'):
                     self._fe_state_whitelist = whitelist
+                else:
+                    self._fe_state_whitelist = tuple(set(self._fe_state_whitelist).union(set(whitelist)))
                 if not hasattr(self, '_fe_state_blacklist'):
                     self._fe_state_blacklist = blacklist + (
-                        '_fe_state_whitelist', '_fe_state_blacklist', '_fe_base_init')
+                        '_fe_state_whitelist', '_fe_state_blacklist', '_fe_traceability_summary')
+                else:
+                    self._fe_state_blacklist = tuple(set(self._fe_state_blacklist).union(set(blacklist)))
                 if not hasattr(self, '_fe_traceability_summary'):
                     bound_args = inspect.signature(base_init).bind(self, *args, **kwargs)
                     bound_args.apply_defaults()
@@ -1058,27 +1161,62 @@ def traceable(whitelist: Union[str, Tuple[str]] = (), blacklist: Union[str, Tupl
         if base_func is None:
             setattr(cls, 'fe_summary', fe_summary)
 
-        def fe_state(self) -> Mapping[str, Any]:
-            """Return a summary of this class' state variables (for deep restore).
+        base_func = getattr(cls, '__getstate__', None)
+        if base_func is None:
+            setattr(cls, '__getstate__', __getstate__)
 
-            Args:
-                self: The bound class instance.
-
-            Returns:
-                The state variables to be considered for deep restore.
-            """
-            state_dict = {key: value for key, value in self.__dict__.items()}
-            if self._fe_state_whitelist:
-                state_dict = {key: state_dict[key] for key in whitelist}
-            for key in self._fe_state_blacklist:
-                state_dict.pop(key, None)
-            return state_dict
-
-        base_func = getattr(cls, 'fe_state', None)
-        # If the user specified a whitelist or blacklist then use the default impl
-        if whitelist or blacklist or base_func is None:
-            setattr(cls, 'fe_state', fe_state)
+        base_func = getattr(cls, '__setstate__', None)
+        if base_func is None:
+            setattr(cls, '__setstate__', __setstate__)
 
         return cls
 
     return make_traceable
+
+
+def is_restorable(data: Any, memory_limit: int = 0) -> Tuple[bool, int]:
+    """Determine whether a given object can be restored easily via Pickle.
+
+    Args:
+        data: The object in question.
+        memory_limit: The maximum memory size (in bytes) to allow for an object (or 0 for no limit).
+
+    Returns:
+        (result, memory size) where result is True iff `data` is only comprised of 'simple' objects and does not exceed
+        the `memory_limit`. If the result is False, then memory size will be <= the true memory size of the `data`.
+    """
+    if isinstance(data, _RestorableClasses):
+        size = sys.getsizeof(data)
+        if isinstance(data, tf.Tensor):
+            size = sys.getsizeof(data.numpy())
+        elif isinstance(data, torch.Tensor):
+            size = data.element_size() * data.nelement()
+        return True, size
+    elif isinstance(data, dict):
+        size = 0
+        for key, value in data.items():
+            key_stat = is_restorable(key, memory_limit)
+            if key_stat[0] is False:
+                return False, size
+            size += key_stat[1]
+            if 0 < memory_limit < size:
+                return False, size
+            val_stat = is_restorable(value, memory_limit)
+            if val_stat[0] is False:
+                return False, size
+            size += val_stat[1]
+            if 0 < memory_limit < size:
+                return False, size
+        return True, size
+    elif isinstance(data, (list, tuple, set)):
+        size = 0
+        for elem in data:
+            elem_stat = is_restorable(elem, memory_limit)
+            if elem_stat[0] is False:
+                return False, size
+            size += elem_stat[1]
+            if 0 < memory_limit < size:
+                return False, size
+        return True, size
+    else:
+        return False, 0

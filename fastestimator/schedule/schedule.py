@@ -80,6 +80,11 @@ class RepeatScheduler(Scheduler[T]):
     def get_all_values(self) -> List[Optional[T]]:
         return self.repeat_list
 
+    def __getstate__(self) -> Dict[str, List[Dict[Any, Any]]]:
+        return {
+            'repeat_list': [elem.__getstate__() if hasattr(elem, '__getstate__') else {} for elem in self.repeat_list]
+        }
+
 
 @traceable()
 class EpochScheduler(Scheduler[T]):
@@ -143,6 +148,13 @@ class EpochScheduler(Scheduler[T]):
                 break
             last_key = key
         return last_key
+
+    def __getstate__(self) -> Dict[str, Dict[int, Dict[Any, Any]]]:
+        return {
+            'epoch_dict':
+            {key: elem.__getstate__()
+             for key, elem in self.epoch_dict.items() if hasattr(elem, '__getstate__')}
+        }
 
 
 def get_signature_epochs(items: List[Any], total_epochs: int, mode: Optional[str] = None) -> List[int]:

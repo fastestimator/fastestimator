@@ -34,6 +34,7 @@ from fastestimator.schedule.schedule import Scheduler, get_current_items, get_si
 from fastestimator.summary.system import Summary, System
 from fastestimator.trace.io.best_model_saver import BestModelSaver
 from fastestimator.trace.io.model_saver import ModelSaver
+from fastestimator.trace.io.restore_wizard import RestoreWizard
 from fastestimator.trace.io.traceability import Traceability
 from fastestimator.trace.trace import EvalEssential, Logger, Trace, TrainEssential, sort_traces
 from fastestimator.util.data import Data
@@ -244,6 +245,10 @@ class Estimator:
         try:
             self._run_traces_on_begin(traces=all_traces)
             if "train" in run_modes or "eval" in run_modes:
+                # If the training is re-starting from a restore wizard, it should re-run the last eval epoch
+                if self.system.epoch_idx > 0 and "eval" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
+                    self.system.mode = "eval"
+                    self._run_epoch()
                 for self.system.epoch_idx in range(self.system.epoch_idx + 1, self.system.total_epochs + 1):
                     if "train" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
                         self.system.mode = "train"
@@ -346,8 +351,19 @@ class Estimator:
             traces: List of traces.
         """
         data = Data()
+        restore = None
         for trace in traces:
+            # Delay RestoreWizard until the end so that it can overwrite everyone's on_begin methods
+            if isinstance(trace, RestoreWizard):
+                restore = trace
+                continue
+            # Restore does need to run before the logger though
+            if isinstance(trace, Logger) and restore:
+                restore.on_begin(data)
+                restore = None
             trace.on_begin(data)
+        if restore:
+            restore.on_begin(data)
         self._check_early_exit()
 
     def _run_traces_on_epoch_begin(self, traces: Iterable[Trace]) -> None:

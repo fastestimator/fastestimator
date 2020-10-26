@@ -26,7 +26,7 @@ class OneOf(NumpyOp):
     """Perform one of several possible NumpyOps.
 
     Args:
-        numpy_ops: A list of ops to choose between with uniform probability.
+        *numpy_ops: A list of ops to choose between with uniform probability.
     """
     def __init__(self, *numpy_ops: NumpyOp) -> None:
         inputs = numpy_ops[0].inputs
@@ -42,6 +42,9 @@ class OneOf(NumpyOp):
             assert self.out_list == op.out_list, "All ops within OneOf must share the same output configuration"
             assert mode == op.mode, "All ops within a OneOf must share the same mode"
         self.ops = numpy_ops
+
+    def __getstate__(self) -> Dict[str, List[Dict[Any, Any]]]:
+        return {'ops': [elem.__getstate__() if hasattr(elem, '__getstate__') else {} for elem in self.ops]}
 
     def forward(self, data: Union[np.ndarray, List[np.ndarray]],
                 state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:

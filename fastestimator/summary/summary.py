@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 from collections import defaultdict
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastestimator.util.traceability_util import FeSummaryTable
 
@@ -50,3 +50,29 @@ class Summary:
             True iff this `Summary` has a non-None name.
         """
         return bool(self.name)
+
+    def __getstate__(self):
+        """Get a representation of the state of this object.
+
+        This method is invoked by pickle.
+
+        Returns:
+            The information to be recorded by a pickle summary of this object.
+        """
+        state = self.__dict__.copy()
+        del state['system_config']
+        state['history'] = dict(state['history'])
+        return state
+
+    def __setstate__(self, state: Dict[str, Any]) -> None:
+        """Set this objects internal state from a dictionary of variables.
+
+        This method is invoked by pickle.
+
+        Args:
+            state: The saved state to be used by this object.
+        """
+        history = defaultdict(lambda: defaultdict(dict))
+        history.update(state.get('history', {}))
+        state['history'] = history
+        self.__dict__.update(state)

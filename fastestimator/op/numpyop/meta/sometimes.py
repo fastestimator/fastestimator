@@ -45,6 +45,9 @@ class Sometimes(NumpyOp):
         self.op = numpy_op
         self.prob = prob
 
+    def __getstate__(self) -> Dict[str, Dict[Any, Any]]:
+        return {'op': self.op.__getstate__() if hasattr(self.op, '__getstate__') else {}}
+
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
         """Execute the wrapped operator a certain fraction of the time.
 

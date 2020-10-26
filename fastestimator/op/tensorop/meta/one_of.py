@@ -31,7 +31,7 @@ class OneOf(TensorOp):
     """Perform one of several possible TensorOps.
 
     Args:
-        tensor_ops: A list of ops to choose between with uniform probability.
+        *tensor_ops: A list of ops to choose between with uniform probability.
     """
     def __init__(self, *tensor_ops: TensorOp) -> None:
         inputs = tensor_ops[0].inputs
@@ -72,6 +72,9 @@ class OneOf(TensorOp):
         for op in self.ops:
             resp = resp or op.fe_retain_graph(retain)
         return resp
+
+    def __getstate__(self) -> Dict[str, List[Dict[Any, Any]]]:
+        return {'ops': [elem.__getstate__() if hasattr(elem, '__getstate__') else {} for elem in self.ops]}
 
     def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
         """Execute a randomly selected op from the list of `numpy_ops`.

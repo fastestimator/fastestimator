@@ -224,7 +224,7 @@ class TestReport(Trace):
     def _init_document(self) -> None:
         """Initialize latex document.
         """
-        self.doc = Document(geometry_options=['lmargin=2cm', 'rmargin=2cm', 'tmargin=2cm', 'bmargin=2cm'])
+        self.doc = self._init_document_geometry()
         self.doc.packages.append(Package(name='placeins', options=['section']))
         self.doc.packages.append(Package(name='float'))
         self.doc.packages.append(Package(name='hyperref', options='hidelinks'))
@@ -515,3 +515,12 @@ class TestReport(Trace):
             return f"{value:.3f}"
         else:
             return f"{value:.3e}"
+
+    @staticmethod
+    def _init_document_geometry() -> Document:
+        """Init geometry setting of the document.
+
+        Return:
+            Initialized Document object.
+        """
+        return Document(geometry_options=['lmargin=2cm', 'rmargin=2cm', 'bmargin=2cm'])

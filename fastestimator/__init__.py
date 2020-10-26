@@ -17,5 +17,5 @@ from fastestimator.estimator import Estimator, enable_deterministic
 from fastestimator.network import Network, build
 from fastestimator.pipeline import Pipeline
 
-__version__ = '1.1.1'
+__version__ = '1.1.2'
 fe_deterministic_seed = None

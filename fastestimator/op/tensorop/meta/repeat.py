@@ -77,6 +77,9 @@ class Repeat(TensorOp):
             self.retain_graph = retain
         return self.op.fe_retain_graph(retain)
 
+    def __getstate__(self) -> Dict[str, List[Dict[Any, Any]]]:
+        return {'ops': [elem.__getstate__() if hasattr(elem, '__getstate__') else {} for elem in self.ops]}
+
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
         # Set retain to true since might loop over a gradient aware op
         self.op.fe_retain_graph(True)

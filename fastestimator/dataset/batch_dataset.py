@@ -166,6 +166,9 @@ class BatchDataset(FEDataset):
             results = results[0]
         return results
 
+    def __getstate__(self) -> Dict[str, List[Dict[Any, Any]]]:
+        return {'datasets': [ds.__getstate__() if hasattr(ds, '__getstate__') else {} for ds in self.datasets]}
+
     def summary(self) -> DatasetSummary:
         """Generate a summary representation of this dataset.
         Returns:

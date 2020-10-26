@@ -51,6 +51,9 @@ class Fuse(NumpyOp):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.ops = ops
 
+    def __getstate__(self) -> Dict[str, List[Dict[Any, Any]]]:
+        return {'ops': [elem.__getstate__() if hasattr(elem, '__getstate__') else {} for elem in self.ops]}
+
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
         data = {key: elem for key, elem in zip(self.inputs, data)}
         forward_numpyop(self.ops, data, state["mode"])

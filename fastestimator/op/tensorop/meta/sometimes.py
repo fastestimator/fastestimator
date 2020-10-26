@@ -68,6 +68,9 @@ class Sometimes(TensorOp):
     def fe_retain_graph(self, retain: Optional[bool] = None) -> Optional[bool]:
         return self.op.fe_retain_graph(retain)
 
+    def __getstate__(self) -> Dict[str, Dict[Any, Any]]:
+        return {'op': self.op.__getstate__() if hasattr(self.op, '__getstate__') else {}}
+
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
         """Execute the wrapped operator a certain fraction of the time.
 
