@@ -16,7 +16,8 @@ pipeline {
                     try {
                         customImage.inside('-u root') {
                             sh 'pip install --no-cache-dir .'
-                            sh 'python test/run_pr_test.py'
+                            sh 'pip install coverage'
+                            sh 'coverage run --source fastestimator -m unittest test.run_pr_test'
                         }
                     }
                     finally {
