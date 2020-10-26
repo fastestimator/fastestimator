@@ -16,13 +16,27 @@ pipeline {
                     try {
                         customImage.inside('-u root') {
                             sh 'pip install --no-cache-dir .'
-                            sh 'python test/run_pr_test.py'
+                            sh 'pip install coverage'
+                            sh 'coverage run --source fastestimator -m unittest test.run_pr_test'
+                            sh 'coverage html'
                         }
                     }
                     finally {
                         sh 'docker rmi "$IMAGE_TAG"'
                     }
                 }
+            }
+        }
+        stage('Host html') {
+            steps{
+                publishHTML (target :
+                    [allowMissing: true,
+                     alwaysLinkToLastBuild: true,
+                     keepAll: true,
+                     reportDir: 'htmlcov',
+                     reportFiles: 'index.html',
+                     reportName: 'Code Coverage Report',
+                     reportTitles: 'Code Coverage Report'])
             }
         }
     }
