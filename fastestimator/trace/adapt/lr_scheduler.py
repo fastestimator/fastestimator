@@ -26,6 +26,7 @@ import torch
 from fastestimator.backend.feed_forward import feed_forward
 from fastestimator.backend.get_lr import get_lr
 from fastestimator.backend.set_lr import set_lr
+from fastestimator.backend.zscore import zscore
 from fastestimator.network import build
 from fastestimator.summary.system import System
 from fastestimator.trace.trace import Trace
@@ -179,7 +180,7 @@ class ARC:
 
     def _preprocess_val_loss(self, val_loss: list) -> np.ndarray:
         if val_loss:
-            val_loss = self._zscore(val_loss)
+            val_loss = zscore(np.array(val_loss))
             val_loss = cv2.resize(val_loss, (1, 300), interpolation=cv2.INTER_NEAREST)
         else:
             val_loss = np.zeros([300, 1], dtype="float32")
@@ -194,16 +195,10 @@ class ARC:
         target_size = (3 - missing) * 100
         train_loss = np.array(train_loss, dtype="float32")
         train_loss = cv2.resize(train_loss, (1, target_size))
-        train_loss = self._zscore(train_loss)
+        train_loss = zscore(train_loss)
         if train_loss.size < 300:
             train_loss = np.pad(train_loss, ((300 - train_loss.size, 0), (0, 0)), mode='constant', constant_values=0.0)
         return train_loss
-
-    def _zscore(self, data: np.ndarray, epsilon=1e-7):
-        mean = np.mean(data)
-        std = np.std(data)
-        data = (data - mean) / max(std, epsilon)
-        return data
 
     def _merge_list(self, data: list):
         output = []

@@ -57,3 +57,4 @@ from fastestimator.backend.transpose import transpose
 from fastestimator.backend.update_model import update_model
 from fastestimator.backend.watch import watch
 from fastestimator.backend.zeros_like import zeros_like
+from fastestimator.backend.zscore import zscore
