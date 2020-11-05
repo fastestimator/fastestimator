@@ -1,0 +1,18 @@
+FROM tensorflow/tensorflow:2.1.0-py3
+
+RUN apt-get update
+
+# OpenCV dependencies
+RUN apt-get install -y --no-install-recommends \
+    libglib2.0-0 \
+    libsm6 \
+    libxrender1 \
+    libxext6 \
+    libgl1-mesa-glx
+
+# upgrade essential packages
+RUN pip install --upgrade pip setuptools
+
+# install FastEstimator
+ARG InstallFE=True
+RUN if [ $InstallFE = "True" ]; then pip install fastestimator==1.0.8; fi
