@@ -86,15 +86,14 @@ Docker containers create isolated virtual environments that share resources with
 ## Citation
 Please cite FastEstimator in your publications if it helps your research:
 ```
-@misc{dong2019fastestimator,
-    title={FastEstimator: A Deep Learning Library for Fast Prototyping and Productization},
-    author={Xiaomeng Dong and Junpyo Hong and Hsi-Ming Chang and Michael Potter and Aritra Chowdhury and
+@misc{fastestimator,
+  title  = {FastEstimator: A Deep Learning Library for Fast Prototyping and Productization},
+  author = {Xiaomeng Dong and Junpyo Hong and Hsi-Ming Chang and Michael Potter and Aritra Chowdhury and
             Purujit Bahl and Vivek Soni and Yun-Chan Tsai and Rajesh Tamada and Gaurav Kumar and Caroline Favart and
             V. Ratna Saripalli and Gopal Avinash},
-    year={2019},
-    eprint={1910.04875},
-    archivePrefix={arXiv},
-    primaryClass={cs.CV}
+  note   = {NeurIPS Systems for ML Workshop},
+  year   = {2019},
+  url    = {http://learningsys.org/neurips19/assets/papers/10_CameraReadySubmission_FastEstimator_final_camera.pdf}
 }
 ```
 
