@@ -200,7 +200,7 @@ class ARC:
             train_loss = np.pad(train_loss, ((300 - train_loss.size, 0), (0, 0)), mode='constant', constant_values=0.0)
         return train_loss
 
-    def _merge_list(self, data: List[Union[None, float, List[float]]) -> Tuple[List[float], int]:
+    def _merge_list(self, data: List[Union[None, float, List[float]]]) -> Tuple[List[float], int]:
         output = []
         missing = 0
         for item in data:
