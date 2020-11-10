@@ -50,8 +50,8 @@ class LRScheduler(Trace):
 
     Args:
         model: A model instance compiled with fe.build.
-        lr_fn: A lr scheduling function that takes either 'epoch' or 'step' as input or string 'arc'.
-        frequency: The frequency of applying the lr_fn, in integer.
+        lr_fn: A lr scheduling function that takes either 'epoch' or 'step' as input, or the string 'arc'.
+        frequency: The frequency with which to invoke the `lr_fn`, or None for default.
 
     Raises:
         AssertionError: If the `lr_fn` is not configured properly.
@@ -87,26 +87,26 @@ class LRScheduler(Trace):
                 self.frequency = np.clip(int(np.floor(self.system.total_epochs / 10)), 1, 10)
 
     def on_epoch_begin(self, data: Data) -> None:
-        if self.system.mode == "train" and self.schedule_mode == "epoch":
+        if self.system.mode == "train" and self.schedule_mode == "epoch" and (self.system.epoch_idx % self.frequency == 1 or self.frequency == 1):
             if isinstance(self.lr_fn, ARC):
-                if (self.system.epoch_idx % self.frequency == 1 or self.frequency == 1) and self.system.epoch_idx > 1:
+                if self.system.epoch_idx > 1:
                     multiplier = self.lr_fn.predict_next_multiplier()
                     new_lr = np.float32(get_lr(model=self.model) * multiplier)
                     set_lr(self.model, new_lr)
                     print("FastEstimator-ARC: Multiplying LR by {}".format(multiplier))
-            elif self.system.epoch_idx % self.frequency == 0:
+            else:
                 new_lr = np.float32(self.lr_fn(self.system.epoch_idx))
                 set_lr(self.model, new_lr)
 
     def on_batch_begin(self, data: Data) -> None:
         if self.system.mode == "train" and self.schedule_mode == "step" and \
-            self.system.global_step % self.frequency == 0:
+            (self.system.global_step % self.frequency == 1 or self.frequency == 1):
             new_lr = np.float32(self.lr_fn(self.system.global_step))
             set_lr(self.model, new_lr)
 
     def on_batch_end(self, data: Data) -> None:
         if self.system.mode == "train" and isinstance(self.lr_fn, ARC):
-            self.lr_fn.accumulate_single_train_loss(data[next(iter(self.model.loss_name))].numpy())
+            self.lr_fn.accumulate_single_train_loss(data[min(self.model.loss_name)].numpy())
         if self.system.mode == "train" and self.system.log_steps and (
                 self.system.global_step % self.system.log_steps == 0 or self.system.global_step == 1):
             current_lr = np.float32(get_lr(self.model))
@@ -114,7 +114,7 @@ class LRScheduler(Trace):
 
     def on_epoch_end(self, data: Data) -> None:
         if self.system.mode == "eval" and isinstance(self.lr_fn, ARC):
-            self.lr_fn.accumulate_single_eval_loss(data[next(iter(self.model.loss_name))])
+            self.lr_fn.accumulate_single_eval_loss(data[min(self.model.loss_name)])
             if self.system.epoch_idx % self.frequency == 0:
                 self.lr_fn.gather_multiple_eval_losses()
         if self.system.mode == "train" and isinstance(self.lr_fn, ARC) and self.system.epoch_idx % self.frequency == 0:
@@ -124,7 +124,7 @@ class LRScheduler(Trace):
 
 @traceable()
 class ARC:
-    def __init__(self, weights_path) -> None:
+    def __init__(self, weights_path: str) -> None:
         with tf.device("cpu:0"):
             self.model = build(model_fn=self.lstm_stacked, optimizer_fn=None, weights_path=weights_path)
         self.lr_multiplier = {0: 1.618, 1: 1.0, 2: 0.618}
@@ -178,7 +178,7 @@ class ARC:
         action = np.argmax(model_pred)
         return self.lr_multiplier[action]
 
-    def _preprocess_val_loss(self, val_loss: list) -> np.ndarray:
+    def _preprocess_val_loss(self, val_loss: List[float]) -> np.ndarray:
         if val_loss:
             val_loss = zscore(np.array(val_loss))
             val_loss = cv2.resize(val_loss, (1, 300), interpolation=cv2.INTER_NEAREST)
@@ -186,7 +186,7 @@ class ARC:
             val_loss = np.zeros([300, 1], dtype="float32")
         return val_loss
 
-    def _preprocess_train_lr(self, train_lr: list) -> np.ndarray:
+    def _preprocess_train_lr(self, train_lr: List[float]) -> np.ndarray:
         train_lr = np.array(train_lr) / train_lr[-1]
         train_lr = cv2.resize(train_lr, (1, 300), interpolation=cv2.INTER_NEAREST)
         return train_lr
@@ -200,7 +200,7 @@ class ARC:
             train_loss = np.pad(train_loss, ((300 - train_loss.size, 0), (0, 0)), mode='constant', constant_values=0.0)
         return train_loss
 
-    def _merge_list(self, data: list):
+    def _merge_list(self, data: List[Union[None, float, List[float]]) -> Tuple[List[float], int]:
         output = []
         missing = 0
         for item in data:
