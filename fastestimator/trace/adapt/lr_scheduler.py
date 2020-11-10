@@ -191,7 +191,7 @@ class ARC:
         train_lr = cv2.resize(train_lr, (1, 300), interpolation=cv2.INTER_NEAREST)
         return train_lr
 
-    def _preprocess_train_loss(self, train_loss: list, missing: int) -> np.ndarray:
+    def _preprocess_train_loss(self, train_loss: List[float], missing: int) -> np.ndarray:
         target_size = (3 - missing) * 100
         train_loss = np.array(train_loss, dtype="float32")
         train_loss = cv2.resize(train_loss, (1, target_size))
