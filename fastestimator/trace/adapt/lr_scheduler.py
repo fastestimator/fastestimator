@@ -15,7 +15,7 @@
 import inspect
 import os
 from collections import deque
-from typing import Callable, Optional, Union
+from typing import Callable, List, Optional, Tuple, Union
 
 import cv2
 import fastestimator as fe
@@ -87,7 +87,8 @@ class LRScheduler(Trace):
                 self.frequency = np.clip(int(np.floor(self.system.total_epochs / 10)), 1, 10)
 
     def on_epoch_begin(self, data: Data) -> None:
-        if self.system.mode == "train" and self.schedule_mode == "epoch" and (self.system.epoch_idx % self.frequency == 1 or self.frequency == 1):
+        if self.system.mode == "train" and self.schedule_mode == "epoch" and (
+                self.system.epoch_idx % self.frequency == 1 or self.frequency == 1):
             if isinstance(self.lr_fn, ARC):
                 if self.system.epoch_idx > 1:
                     multiplier = self.lr_fn.predict_next_multiplier()
