@@ -23,7 +23,7 @@ from fastestimator.backend.reduce_mean import reduce_mean
 
 
 def update_model(model: Union[tf.keras.Model, torch.nn.Module],
-                 loss: Union[tf.Tensor, torch.Tensor] = None,
+                 loss: Union[None, tf.Tensor, torch.Tensor] = None,
                  gradients: Optional[List[Union[tf.Tensor, torch.Tensor]]] = None,
                  tape: Optional[tf.GradientTape] = None,
                  retain_graph: bool = True,
