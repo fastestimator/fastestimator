@@ -23,7 +23,8 @@ from fastestimator.backend.reduce_mean import reduce_mean
 
 
 def update_model(model: Union[tf.keras.Model, torch.nn.Module],
-                 loss: Union[tf.Tensor, torch.Tensor],
+                 loss: Union[tf.Tensor, torch.Tensor] = None,
+                 gradients: List[Union[tf.Tensor, torch.Tensor]] = None,
                  tape: Optional[tf.GradientTape] = None,
                  retain_graph: bool = True,
                  scaler: Optional[torch.cuda.amp.GradScaler] = None,
@@ -54,7 +55,8 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
 
     Args:
         model: A neural network instance to update.
-        loss: A loss value to compute gradients from.
+        loss: A loss value to compute gradients from, mutually exclusive with gradients.
+        gradients: A list of tensors to update the models, mutually exclusive with loss.
         tape: A TensorFlow GradientTape which was recording when the `loss` was computed (iff using TensorFlow).
         retain_graph: Whether to keep the model graph in memory (applicable only for PyTorch).
         scaler: A PyTorch loss scaler that scales loss when PyTorch mixed precision is used.
@@ -67,16 +69,18 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
         RuntimeError: If attempting to modify a PyTorch model which relied on gradients within a different PyTorch model
             which has in turn already undergone a non-deferred update.
     """
-    loss = reduce_mean(loss)
+    if loss is not None:
+        loss = reduce_mean(loss)
     if isinstance(model, tf.keras.Model):
-        # scale up loss for mixed precision training to avoid underflow
-        if isinstance(model.current_optimizer, mixed_precision.LossScaleOptimizer):
-            loss = model.current_optimizer.get_scaled_loss(loss)
-        # for multi-gpu training, the gradient will be combined by sum, normalize the loss
-        strategy = tf.distribute.get_strategy()
-        if isinstance(strategy, tf.distribute.MirroredStrategy):
-            loss = loss / strategy.num_replicas_in_sync
-        gradients = get_gradient(loss, model.trainable_variables, tape=tape)
+        if loss is not None:
+            # scale up loss for mixed precision training to avoid underflow
+            if isinstance(model.current_optimizer, mixed_precision.LossScaleOptimizer):
+                loss = model.current_optimizer.get_scaled_loss(loss)
+            # for multi-gpu training, the gradient will be combined by sum, normalize the loss
+            strategy = tf.distribute.get_strategy()
+            if isinstance(strategy, tf.distribute.MirroredStrategy):
+                loss = loss / strategy.num_replicas_in_sync
+            gradients = get_gradient(loss, model.trainable_variables, tape=tape)
         with tape.stop_recording():
             # scale down gradient to balance scale-up loss
             if isinstance(model.current_optimizer, mixed_precision.LossScaleOptimizer):
@@ -91,16 +95,18 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
         # scale up loss for mixed precision training to avoid underflow
         if scaler is not None:
             loss = scaler.scale(loss)
-        try:
-            gradients = get_gradient(loss, trainable_params, retain_graph=retain_graph)
-        except RuntimeError as err:
-            if err.args and isinstance(err.args[0], str) and err.args[0].startswith(
-                    'one of the variables needed for gradient computation has been modified by an inplace operation'):
-                raise RuntimeError(
-                    "When computing gradients for '{}', some variables it relied on during the forward pass had already"
-                    " been updated. Consider setting defer=True in earlier UpdateOps related to models which interact "
-                    "with this one.".format(model.model_name))
-            raise err
+        if loss is not None:
+            try:
+                gradients = get_gradient(loss, trainable_params, retain_graph=retain_graph)
+            except RuntimeError as err:
+                if err.args and isinstance(err.args[0], str) and err.args[0].startswith(
+                        'one of the variables needed for gradient computation has been modified by an inplace operation'
+                ):
+                    raise RuntimeError(
+                        "When computing gradients for '{}', some variables it relied on during the forward pass had"
+                        " been updated. Consider setting defer=True in earlier UpdateOps related to models which "
+                        "interact with this one.".format(model.model_name))
+                raise err
         for gradient, parameter in zip(gradients, trainable_params):
             if parameter.grad is not None:
                 parameter.grad += gradient

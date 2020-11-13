@@ -20,6 +20,7 @@ import torch
 from fastestimator.backend.update_model import update_model
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
+from fastestimator.util.util import to_set
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
@@ -43,23 +44,29 @@ class UpdateOp(TensorOp):
     def __init__(self,
                  model: Union[tf.keras.Model, torch.nn.Module],
                  loss_name: str,
+                 gradients: Optional[str] = None,
                  mode: Union[None, str, Iterable[str]] = "train",
                  defer: bool = False):
-        super().__init__(inputs=loss_name, outputs=None, mode=mode)
         self.model = model
         self.retain_graph = False
         self.weight_decay = isinstance(self.model, tf.keras.Model) and self.model.losses
         self.defer = defer
+        self.gradients = gradients
+        self.loss_name = loss_name
         if not hasattr(self.model, "loss_name"):
             self.model.loss_name = {loss_name}
         else:
             self.model.loss_name.add(loss_name)
+        if gradients is None:
+            super().__init__(inputs=loss_name, outputs=None, mode=mode)
+        else:
+            super().__init__(inputs=gradients, outputs=None, mode=mode)
 
     def get_fe_models(self) -> Set[Model]:
         return {self.model}
 
     def get_fe_loss_keys(self) -> Set[str]:
-        return set(self.inputs)
+        return to_set(self.loss_name)
 
     def fe_retain_graph(self, retain: Optional[bool] = None) -> Optional[bool]:
         if retain is not None:
@@ -68,12 +75,21 @@ class UpdateOp(TensorOp):
 
     def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> None:
         if not state["warmup"]:
-            if self.weight_decay:
-                data = data + tf.reduce_sum(self.model.losses)
-            update_model(self.model,
-                         data,
-                         tape=state['tape'],
-                         retain_graph=self.retain_graph,
-                         scaler=state["scaler"],
-                         defer=self.defer,
-                         deferred=state["deferred"])
+            if self.gradients is None:
+                if self.weight_decay:
+                    data = data + tf.reduce_sum(self.model.losses)
+                update_model(self.model,
+                             loss=data,
+                             tape=state['tape'],
+                             retain_graph=self.retain_graph,
+                             scaler=state["scaler"],
+                             defer=self.defer,
+                             deferred=state["deferred"])
+            else:
+                update_model(self.model,
+                             gradients=data,
+                             tape=state['tape'],
+                             retain_graph=self.retain_graph,
+                             scaler=state["scaler"],
+                             defer=self.defer,
+                             deferred=state["deferred"])

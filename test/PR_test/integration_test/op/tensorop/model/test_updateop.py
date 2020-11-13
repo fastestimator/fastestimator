@@ -19,7 +19,13 @@ import tensorflow as tf
 import torch
 
 import fastestimator as fe
-from fastestimator.op.tensorop.model import UpdateOp
+from fastestimator.architecture.pytorch import LeNet as LeNet_torch
+from fastestimator.architecture.tensorflow import LeNet as LeNet_tf
+from fastestimator.dataset.data import mnist
+from fastestimator.op.numpyop.univariate import ExpandDims, Minmax
+from fastestimator.op.tensorop.gradient import GradientOp
+from fastestimator.op.tensorop.loss import CrossEntropy
+from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.test.unittest_util import MultiLayerTorchModel, is_equal, one_layer_tf_model
 
 
@@ -55,3 +61,35 @@ class TestUpdateOp(unittest.TestCase):
         op.forward(data=loss, state=self.state)
         weights_after = model.fc1.weight.data.numpy()
         self.assertFalse(is_equal(weights_before, weights_after))
+
+    def test_tf_model_end_to_end_gradient(self):
+        train_data, _ = mnist.load_data()
+        pipeline = fe.Pipeline(train_data=train_data,
+                               batch_size=4,
+                               ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")])
+
+        model = fe.build(model_fn=LeNet_tf, optimizer_fn="adam")
+        network = fe.Network(ops=[
+            ModelOp(model=model, inputs="x", outputs="y_pred"),
+            CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),
+            GradientOp(model=model, finals="ce", outputs="gradients"),
+            UpdateOp(model=model, gradients="gradients", loss_name="ce")
+        ])
+        estimator = fe.Estimator(pipeline=pipeline, network=network, epochs=2, max_train_steps_per_epoch=10)
+        estimator.fit()
+
+    def test_torch_model_end_to_end_gradient(self):
+        train_data, _ = mnist.load_data()
+        pipeline = fe.Pipeline(train_data=train_data,
+                               batch_size=4,
+                               ops=[ExpandDims(inputs="x", outputs="x", axis=0), Minmax(inputs="x", outputs="x")])
+
+        model = fe.build(model_fn=LeNet_torch, optimizer_fn="adam")
+        network = fe.Network(ops=[
+            ModelOp(model=model, inputs="x", outputs="y_pred"),
+            CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),
+            GradientOp(model=model, finals="ce", outputs="gradients"),
+            UpdateOp(model=model, gradients="gradients", loss_name="ce")
+        ])
+        estimator = fe.Estimator(pipeline=pipeline, network=network, epochs=2, max_train_steps_per_epoch=10)
+        estimator.fit()
