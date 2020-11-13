@@ -30,25 +30,33 @@ class GradientOp(TensorOp):
     """Return the gradients of finals w.r.t. inputs.
 
     Args:
-        inputs: The tensor(s) to compute gradients with respect to.
         finals: The tensor(s) to compute gradients from.
         outputs: The key(s) under which to save the gradients.
+        inputs: The tensor(s) to compute gradients with respect to, mutually exclusive with `model`.
+        model: The model instance to compute gradients with respect to, mutually exclusive with `inputs`.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
     """
     def __init__(self,
-                 inputs: Union[str, List[str]],
                  finals: Union[str, List[str]],
                  outputs: Union[str, List[str]],
+                 inputs: Union[None, str, List[str]] = None,
+                 model: Union[None, tf.keras.Model, torch.nn.Module] = None,
                  mode: Union[None, str, Iterable[str]] = None):
         inputs = to_list(inputs)
         finals = to_list(finals)
         outputs = to_list(outputs)
-        assert len(inputs) == len(finals) == len(outputs), \
-            "GradientOp requires the same number of inputs, finals, and outputs"
+        assert bool(model) != bool(inputs), "Must provide either one of 'inputs' or 'model'"
+        if model is None:
+            assert len(inputs) == len(finals) == len(outputs), \
+                "GradientOp requires the same number of inputs, finals, and outputs"
+        else:
+            assert isinstance(model, (tf.keras.Model, torch.nn.Module)), "Unrecognized model format"
+            assert len(finals) == len(outputs), "GradientOp requires the same number of finals, and outputs"
         inputs.extend(finals)
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.model = model
         self.retain_graph = True
 
     def fe_retain_graph(self, retain: Optional[bool] = None) -> Optional[bool]:
@@ -57,9 +65,18 @@ class GradientOp(TensorOp):
         return self.retain_graph
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
-        initials = data[:len(data) // 2]
-        finals = data[len(data) // 2:]
         results = []
-        for initial, final in zip(initials, finals):
-            results.append(get_gradient(final, initial, tape=state['tape'], retain_graph=self.retain_graph))
+        if self.model is None:
+            initials = data[:len(data) // 2]
+            finals = data[len(data) // 2:]
+            for idx, (initial, final) in enumerate(zip(initials, finals)):
+                retain_graph = self.retain_graph or not idx == len(finals) - 1
+                results.append(get_gradient(final, initial, tape=state['tape'], retain_graph=retain_graph))
+        else:
+            finals = data
+            trainable_params = [p for p in self.model.parameters() if p.requires_grad] if isinstance(
+                self.model, torch.nn.Module) else self.model.trainable_variables
+            for idx, final in enumerate(finals):
+                retain_graph = self.retain_graph or not idx == len(finals) - 1
+                results.append(get_gradient(final, trainable_params, tape=state['tape'], retain_graph=retain_graph))
         return results
