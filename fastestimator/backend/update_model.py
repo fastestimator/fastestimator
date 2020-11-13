@@ -24,7 +24,7 @@ from fastestimator.backend.reduce_mean import reduce_mean
 
 def update_model(model: Union[tf.keras.Model, torch.nn.Module],
                  loss: Union[tf.Tensor, torch.Tensor] = None,
-                 gradients: List[Union[tf.Tensor, torch.Tensor]] = None,
+                 gradients: Optional[List[Union[tf.Tensor, torch.Tensor]]] = None,
                  tape: Optional[tf.GradientTape] = None,
                  retain_graph: bool = True,
                  scaler: Optional[torch.cuda.amp.GradScaler] = None,
@@ -55,8 +55,8 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
 
     Args:
         model: A neural network instance to update.
-        loss: A loss value to compute gradients from, mutually exclusive with gradients.
-        gradients: A list of tensors to update the models, mutually exclusive with loss.
+        loss: A loss value to compute gradients from, mutually exclusive with `gradients`.
+        gradients: A list of tensors to update the models, mutually exclusive with `loss`.
         tape: A TensorFlow GradientTape which was recording when the `loss` was computed (iff using TensorFlow).
         retain_graph: Whether to keep the model graph in memory (applicable only for PyTorch).
         scaler: A PyTorch loss scaler that scales loss when PyTorch mixed precision is used.

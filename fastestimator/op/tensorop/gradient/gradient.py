@@ -32,8 +32,8 @@ class GradientOp(TensorOp):
     Args:
         finals: The tensor(s) to compute gradients from.
         outputs: The key(s) under which to save the gradients.
-        inputs: The tensor(s) to compute gradients with respect to, mutually exclusive with "model".
-        model: The model instance to compute gradients with respect to, mutually exclusive with "inputs".
+        inputs: The tensor(s) to compute gradients with respect to, mutually exclusive with `model`.
+        model: The model instance to compute gradients with respect to, mutually exclusive with `inputs`.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
@@ -41,8 +41,8 @@ class GradientOp(TensorOp):
     def __init__(self,
                  finals: Union[str, List[str]],
                  outputs: Union[str, List[str]],
-                 inputs: Union[str, List[str]] = None,
-                 model: Union[tf.keras.Model, torch.nn.Module] = None,
+                 inputs: Union[None, str, List[str]] = None,
+                 model: Union[None, tf.keras.Model, torch.nn.Module] = None,
                  mode: Union[None, str, Iterable[str]] = None):
         inputs = to_list(inputs)
         finals = to_list(finals)
