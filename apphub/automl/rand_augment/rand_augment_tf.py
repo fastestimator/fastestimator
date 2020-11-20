@@ -257,7 +257,7 @@ def get_estimator(level,
                   batch_size=512,
                   max_train_steps_per_epoch=None,
                   max_eval_steps_per_epoch=None):
-    assert level <= 10, "the level should not be more than 10"
+    assert 0 <= level <= 10, "the level should be between 0 and 10"
     train_data, test_data = load_data()
     aug_ops = [
         OneOf(
@@ -303,6 +303,7 @@ if __name__ == "__main__":
     result = np.zeros(shape=(10, 10))
     for level in range(1, 11):
         for num_augment in range(1, 11):
+            print("Trying level {} and num_augment {}".format(level, num_augment))
             est = get_estimator(level=level, num_augment=num_augment, epochs=50)
             est.fit(summary="exp")
             hist = est.test(summary="exp")
