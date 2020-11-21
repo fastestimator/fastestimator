@@ -331,7 +331,7 @@ if __name__ == "__main__":
         for num_augment in range(1, 11):
             print("Trying level {} and num_augment {}".format(level, num_augment))
             est = get_estimator(level=level, num_augment=num_augment, epochs=50)
-            est.fit(summary="exp")
+            est.fit()
             hist = est.test(summary="exp")
             result[level - 1, num_augment - 1] = hist.history["test"]["accuracy"][4900]
     np.save("result.npy", result)
