@@ -61,6 +61,10 @@ $ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 ### Anomaly Detection
 * **Adversarially Learned One-Class Classifier for Novelty Detection:** Adversarial training to detect anomalies using MNIST dataset. [[paper](https://arxiv.org/pdf/1802.09088v2.pdf)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/anomaly_detection/alocc/alocc_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/anomaly_detection/alocc/alocc_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/anomaly_detection/alocc/alocc.ipynb)]
 
+### AutoML
+* **RandAugment**: Practical automated data augmentation with a reduced search space. [[paper](https://arxiv.org/abs/1909.13719)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/automl/rand_augment/rand_augment_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/automl/rand_augment/rand_augment_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/automl/rand_augment/rand_augment.ipynb)]
+
+
 ### Image Classification
 * **CIFAR-10 Fast:** CIFAR-10 Image Classification using ResNet. [[paper](https://arxiv.org/abs/1608.06993)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/cifar10_fast/cifar10_fast_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/cifar10_fast/cifar10_fast_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/cifar10_fast/cifar10_fast.ipynb)]
 
