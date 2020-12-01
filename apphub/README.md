@@ -70,6 +70,8 @@ $ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 
 * **MNIST:** Convolutional Neural Networks trained on MNIST using LeNet. [[paper](http://yann.lecun.com/exdb/publis/pdf/lecun-01a.pdf)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/mnist/mnist_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/mnist/mnist_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/mnist/mnist.ipynb)]
 
+* **Pyramid Network:** Deep Pyramidal Residual Networks. [[paper](https://arxiv.org/abs/1610.02915)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/pyramidnet/pyramidnet_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/pyramidnet/pyramidnet_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/pyramidnet/pyramidnet.ipynb)]
+
 ### Image Generation
 * **CVAE:** Image feature representation learning and image generation with a Convolutional Variational AutoEncoder on the MNIST dataset. [[paper](https://arxiv.org/abs/1312.6114)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/cvae/cvae_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/cvae/cvae_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_generation/cvae/cvae.ipynb)]
 

@@ -52,6 +52,7 @@ def get_dependency():
         'PyLaTeX==1.3.2',
         'natsort==7.0.1',
         'tensorflow_probability==0.11.1',
+        'tensorflow-addons==0.11.2',
         'transformers==3.1.0',
         'pytorch-model-summary==0.1.2',
         'graphviz==0.14.1',
