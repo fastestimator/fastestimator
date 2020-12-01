@@ -30,7 +30,7 @@ from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver
 
-LATENT_DIM = 50
+LATENT_DIM = 2
 
 
 class SplitOp(TensorOp):
