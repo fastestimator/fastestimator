@@ -34,14 +34,17 @@ class Accuracy(Trace):
         mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        from_logits: Whether y_pred is from logits. If True, a sigmoid will be applied to the prediction.
         output_name: What to call the output from this trace (for example in the logger output).
     """
     def __init__(self,
                  true_key: str,
                  pred_key: str,
                  mode: Union[str, Set[str]] = ("eval", "test"),
+                 from_logits: bool = False,
                  output_name: str = "accuracy") -> None:
         super().__init__(inputs=(true_key, pred_key), mode=mode, outputs=output_name)
+        self.from_logits = from_logits
         self.total = 0
         self.correct = 0
 
@@ -64,6 +67,8 @@ class Accuracy(Trace):
         if y_pred.shape[-1] > 1:
             y_pred = np.argmax(y_pred, axis=-1)
         else:
+            if self.from_logits:
+                y_pred = 1 / (1 + np.exp(-y_pred))
             y_pred = np.round(y_pred)
         assert y_pred.size == y_true.size
         self.correct += np.sum(y_pred.ravel() == y_true.ravel())
