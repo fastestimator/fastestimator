@@ -658,10 +658,10 @@ def show_image(im: Union[np.ndarray, Tensor],
         color = ["m", "r", "c", "g", "y", "b"][stack_depth % 6]
         for box in im:
             # Unpack the box, which may or may not have a label
-            x0 = int(box[0])
-            y0 = int(box[1])
-            width = int(box[2])
-            height = int(box[3])
+            x0 = float(box[0])
+            y0 = float(box[1])
+            width = float(box[2])
+            height = float(box[3])
             label = None if len(box) < 5 else str(box[4])
 
             # Don't draw empty boxes, or invalid box
