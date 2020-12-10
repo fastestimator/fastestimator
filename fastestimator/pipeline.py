@@ -338,12 +338,13 @@ class Pipeline:
             if collate_fn is None and self.pad_value is not None:
                 collate_fn = self._pad_batch_collate
             op_dataset = OpDataset(data, get_current_items(self.ops, mode, epoch), mode)
+            batch_size = None if isinstance(data, BatchDataset) else batch_size
             data = DataLoader(op_dataset,
-                              batch_size=None if isinstance(data, BatchDataset) else batch_size,
+                              batch_size=batch_size,
                               shuffle=False if isinstance(data, BatchDataset) else shuffle,
                               sampler=RandomSampler(op_dataset) if isinstance(data, BatchDataset) and shuffle else None,
                               num_workers=self.num_process,
-                              drop_last=self.drop_last,
+                              drop_last=False if batch_size is None else self.drop_last,
                               worker_init_fn=lambda _: np.random.seed(random.randint(0, 2**32 - 1)),
                               collate_fn=collate_fn)
         return data
