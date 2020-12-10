@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import multiprocessing as mp
 import os
 import random
 import time
@@ -71,7 +72,12 @@ class Pipeline:
         self.data = {x: y for (x, y) in zip(["train", "eval", "test"], [train_data, eval_data, test_data]) if y}
         self.batch_size = batch_size
         self.ops = to_list(ops)
-        self.num_process = num_process if num_process is not None else os.cpu_count() if os.name != 'nt' else 0
+        if mp.get_start_method(allow_none=True) is None and os.name != 'nt':
+            mp.set_start_method('fork')
+        if mp.get_start_method(allow_none=True) != 'fork':
+            print("FastEstimator-Warn: Pipeline multiprocessing is disabled. OS must support the 'fork' start method.")
+            num_process = 0
+        self.num_process = num_process if num_process is not None else os.cpu_count()
         self.drop_last = drop_last
         self.pad_value = pad_value
         self.collate_fn = collate_fn
