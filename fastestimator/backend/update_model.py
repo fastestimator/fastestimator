@@ -29,7 +29,7 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
                  retain_graph: bool = True,
                  scaler: Optional[torch.cuda.amp.GradScaler] = None,
                  defer: bool = False,
-                 deferred: Optional[Dict[str, List[Callable[[], None]]]] = None) -> None:
+                 deferred: Dict[str, List[Callable[[], None]]] = {}) -> None:
     """Update `model` weights based on a given `loss`.
 
     This method can be used with TensorFlow models:
