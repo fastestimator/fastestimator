@@ -22,6 +22,7 @@ def get_tf_model_weight(model):
 
     return weight
 
+
 class TestUpdateModel(unittest.TestCase):
     def test_tf_model_with_loss(self):
         model = fe.build(model_fn=one_layer_tf_model, optimizer_fn="adam")
@@ -40,7 +41,7 @@ class TestUpdateModel(unittest.TestCase):
         model = fe.build(model_fn=one_layer_tf_model, optimizer_fn="adam")
         init_weight = get_tf_model_weight(model)
 
-        x = tf.constant([1,1,1])
+        x = tf.constant([1, 1, 1])
         with tf.GradientTape(persistent=True) as tape:
             y = fe.backend.feed_forward(model, x)
             gradient = fe.backend.get_gradient(target=y, sources=model.trainable_variables, tape=tape)
@@ -74,5 +75,3 @@ class TestUpdateModel(unittest.TestCase):
         new_weight = get_torch_model_weight(model)
 
         self.assertTrue(not is_equal(init_weight, new_weight))
-
-

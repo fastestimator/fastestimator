@@ -29,7 +29,7 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
                  retain_graph: bool = True,
                  scaler: Optional[torch.cuda.amp.GradScaler] = None,
                  defer: bool = False,
-                 deferred: Dict[str, List[Callable[[], None]]] = {}) -> None:
+                 deferred: Optional[Dict[str, List[Callable[[], None]]]] = None) -> None:
     """Update `model` weights based on a given `loss`.
 
     This method can be used with TensorFlow models:
@@ -117,7 +117,9 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
             deferred[model.model_name] = [lambda: _torch_step(model.current_optimizer, scaler)]
         else:
             _torch_step(model.current_optimizer, scaler)
-            deferred.pop(model.model_name, None)  # Don't need those deferred steps anymore
+
+            if deferred:
+                deferred.pop(model.model_name, None)  # Don't need those deferred steps anymore
     else:
         raise ValueError("Unrecognized model instance {}".format(type(model)))
 
