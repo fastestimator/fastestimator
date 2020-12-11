@@ -117,7 +117,9 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
             deferred[model.model_name] = [lambda: _torch_step(model.current_optimizer, scaler)]
         else:
             _torch_step(model.current_optimizer, scaler)
-            deferred.pop(model.model_name, None)  # Don't need those deferred steps anymore
+
+            if deferred:
+                deferred.pop(model.model_name, None)  # Don't need those deferred steps anymore
     else:
         raise ValueError("Unrecognized model instance {}".format(type(model)))
 
