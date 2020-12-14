@@ -44,7 +44,7 @@ class Dice(Trace):
         super().__init__(inputs=(true_key, pred_key), mode=mode, outputs=output_name)
         self.threshold = threshold
         self.smooth = 1e-8
-        self.dice = np.array([])
+        self.dice = []
 
     @property
     def true_key(self) -> str:
