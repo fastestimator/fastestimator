@@ -45,7 +45,7 @@ def get_dependency():
         'matplotlib',
         'requests',
         'tqdm',
-        'h5py',
+        'h5py==2.10.0',
         'jsonpickle',
         'python-docx',
         'scipy==1.4.1',
