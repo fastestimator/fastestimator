@@ -211,6 +211,35 @@ class EvalEssential(Trace):
 
 
 @traceable()
+class TestEssential(Trace):
+    """A trace to collect important information during evaluation.
+
+    Please don't add this trace into an estimator manually. FastEstimator will add it automatically.
+
+    Args:
+        monitor_names: Any keys which should be collected over the course of an test epoch.
+    """
+    def __init__(self, monitor_names: Set[str]) -> None:
+        super().__init__(mode="test", inputs=monitor_names)
+        self.test_results = None
+
+    def on_epoch_begin(self, data: Data) -> None:
+        self.test_results = None
+
+    def on_batch_end(self, data: Data) -> None:
+        if self.test_results is None:
+            self.test_results = {key: [data[key]] for key in self.inputs if key in data}
+        else:
+            for key in self.inputs:
+                if key in data:
+                    self.test_results[key].append(data[key])
+
+    def on_epoch_end(self, data: Data) -> None:
+        for key, value_list in self.test_results.items():
+            data.write_with_log(key, np.mean(np.array(value_list), axis=0))
+
+
+@traceable()
 class Logger(Trace):
     """A Trace that prints log messages.
 
@@ -298,7 +327,7 @@ def sort_traces(traces: List[Trace], available_outputs: Optional[Set[str]] = Non
         trace = trace_deque.popleft()
         ins = set(trace.inputs)
         outs = set(trace.outputs)
-        if not ins or isinstance(trace, (TrainEssential, EvalEssential)):
+        if not ins or isinstance(trace, (TrainEssential, EvalEssential, TestEssential)):
             sorted_traces.append(trace)
             available_outputs |= outs
         elif "*" in ins:

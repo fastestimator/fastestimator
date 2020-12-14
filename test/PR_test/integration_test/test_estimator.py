@@ -113,7 +113,7 @@ class TestEstimatorPrepareTraces(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         train_data, eval_data = mnist.load_data()
-        cls.pipeline = fe.Pipeline(train_data=train_data, eval_data=eval_data)
+        cls.pipeline = fe.Pipeline(train_data=train_data, eval_data=eval_data, test_data=eval_data)
 
         model = fe.build(model_fn=LeNetTf, optimizer_fn="adam")
 
@@ -123,7 +123,7 @@ class TestEstimatorPrepareTraces(unittest.TestCase):
             UpdateOp(model=model, loss_name="ce")
         ])
 
-    def test_estimator_prepare_traces_check_add_trace(self):
+    def test_estimator_prepare_traces_check_add_trace_fit_mode(self):
         est = fe.Estimator(pipeline=self.pipeline, network=self.network, epochs=1)
         est._prepare_traces({"train", "eval"})
 
@@ -136,11 +136,21 @@ class TestEstimatorPrepareTraces(unittest.TestCase):
         with self.subTest("check EvalEssential"):
             self.assertIsInstance(est.traces_in_use[1], fe.trace.EvalEssential)
 
+    def test_estimator_prepare_traces_check_add_trace_test_mode(self):
+        est = fe.Estimator(pipeline=self.pipeline, network=self.network, epochs=1)
+        est._prepare_traces({"test"})
+
+        with self.subTest("check Logger"):
+            self.assertIsInstance(est.traces_in_use[-1], fe.trace.Logger)
+
+        with self.subTest("check TestEssential"):
+            self.assertIsInstance(est.traces_in_use[0], fe.trace.TestEssential)
+
     def test_estimator_prepare_traces_check_all_trace_have_system(self):
         est = fe.Estimator(pipeline=self.pipeline, network=self.network, epochs=1)
-        est._prepare_traces({"train", "eval"})
+        est._prepare_traces({"train", "eval", "test"})
 
-        for trace in get_current_items(est.traces_in_use, run_modes={"train", "eval"}):
+        for trace in get_current_items(est.traces_in_use, run_modes={"train", "eval", "test"}):
             self.assertEqual(trace.system, est.system)
 
 
