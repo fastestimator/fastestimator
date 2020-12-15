@@ -73,4 +73,3 @@ class TestCalibrationError(unittest.TestCase):
         data = Data()
         self.calibration_error.on_epoch_end(data=data)
         self.assertEqual(0.3536, data['calibration_error'])
-
