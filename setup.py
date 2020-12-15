@@ -42,25 +42,26 @@ def get_dependency():
         'wget',
         'pillow',
         'seaborn',
-        'matplotlib',
+        'matplotlib==3.3.3',
         'requests',
         'tqdm',
         'h5py==2.10.0',
         'jsonpickle',
         'python-docx',
         'scipy==1.4.1',
-        'PyLaTeX==1.3.2',
-        'natsort==7.0.1',
+        'PyLaTeX==1.4.1',
+        'natsort==7.1.0',
         'tensorflow_probability==0.11.1',
         'tensorflow-addons==0.11.2',
         'transformers==3.1.0',
         'pytorch-model-summary==0.1.2',
-        'graphviz==0.14.1',
+        'graphviz==0.15',
         'hiddenlayer==0.3',
         'pydot==1.4.1',
         'dot2tex==2.11.3',
         'gdown==3.12.0',
-        'PySocks==1.7.1'
+        'PySocks==1.7.1',
+        'uncertainty-calibration==0.0.7'
     ]
     if os.name == "nt":
         dependencies.append(
