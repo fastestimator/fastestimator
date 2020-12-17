@@ -17,5 +17,14 @@ from fastestimator.estimator import Estimator, enable_deterministic
 from fastestimator.network import Network, build
 from fastestimator.pipeline import Pipeline
 
+# Fix known bugs with libraries which use multi-processing in a way which conflicts with pytorch data loader
+import cv2
+cv2.setNumThreads(0)
+try:
+    import SimpleITK as sitk
+    sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(1)
+except ModuleNotFoundError:
+    pass
+
 __version__ = '1.1.3'
 fe_deterministic_seed = None
