@@ -16,6 +16,7 @@ import time
 from collections import deque
 from typing import Iterable, List, Optional, Set, Union
 
+from natsort import humansorted
 import numpy as np
 
 from fastestimator.backend.get_lr import get_lr
@@ -282,13 +283,16 @@ class Logger(Trace):
         if log_epoch:
             log_message += "epoch: {}; ".format(self.system.epoch_idx)
             self.system.write_summary('epoch', self.system.epoch_idx)
-        for key, val in data.read_logs().items():
+        deferred = []
+        for key, val in humansorted(data.read_logs().items(), key=lambda x: x[0]):
             val = to_number(val)
             self.system.write_summary(key, val)
             if val.size > 1:
-                log_message += "\n{}:\n{};".format(key, np.array2string(val, separator=','))
+                deferred.append("\n{}:\n{};".format(key, np.array2string(val, separator=',')))
             else:
                 log_message += "{}: {}; ".format(key, str(val))
+        for elem in deferred:
+            log_message += elem
         print(log_message)
 
 

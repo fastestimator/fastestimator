@@ -19,6 +19,8 @@ from typing import Union
 import tensorflow as tf
 import torch
 
+from fastestimator.backend.set_lr import set_lr
+
 
 def load_model(model: Union[tf.keras.Model, torch.nn.Module], weights_path: str, load_optimizer: bool = False):
     """Load saved weights for a given model.
@@ -53,8 +55,9 @@ def load_model(model: Union[tf.keras.Model, torch.nn.Module], weights_path: str,
             optimizer_path = "{}_opt.pkl".format(os.path.splitext(weights_path)[0])
             assert os.path.exists(optimizer_path), "cannot find optimizer path: {}".format(optimizer_path)
             with open(optimizer_path, 'rb') as f:
-                weight_values = pickle.load(f)
-            model.current_optimizer.set_weights(weight_values)
+                state_dict = pickle.load(f)
+            model.current_optimizer.set_weights(state_dict['weights'])
+            set_lr(model, state_dict['lr'])
     elif isinstance(model, torch.nn.Module):
         model.load_state_dict(torch.load(weights_path))
         if load_optimizer:

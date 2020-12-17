@@ -19,6 +19,8 @@ from typing import Optional, Union
 import tensorflow as tf
 import torch
 
+from fastestimator.backend.get_lr import get_lr
+
 
 def save_model(model: Union[tf.keras.Model, torch.nn.Module],
                save_dir: str,
@@ -62,7 +64,7 @@ def save_model(model: Union[tf.keras.Model, torch.nn.Module],
             assert model.current_optimizer, "optimizer does not exist"
             optimizer_path = os.path.join(save_dir, "{}_opt.pkl".format(model_name))
             with open(optimizer_path, 'wb') as f:
-                pickle.dump(model.current_optimizer.get_weights(), f)
+                pickle.dump({'weights': model.current_optimizer.get_weights(), 'lr': get_lr(model)}, f)
         return model_path
     elif isinstance(model, torch.nn.Module):
         model_path = os.path.join(save_dir, "{}.pt".format(model_name))
