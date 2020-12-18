@@ -192,6 +192,7 @@ class System:
             'summary': self.summary,
             'traces': [trace.__getstate__() if hasattr(trace, '__getstate__') else {} for trace in self.traces],
             'tops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.network.ops],
+            'pops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.network.postprocessing],
             'nops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.pipeline.ops],
             'ds':
             {key: value.__getstate__()
@@ -228,6 +229,7 @@ class System:
         self.summary.__dict__.update(objects['summary'].__dict__)
         self._load_list(objects, 'traces', self.traces)
         self._load_list(objects, 'tops', self.network.ops)
+        self._load_list(objects, 'pops', self.network.postprocessing)
         self._load_list(objects, 'nops', self.pipeline.ops)
         self._load_dict(objects, 'ds', self.pipeline.data)
 
