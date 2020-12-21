@@ -25,8 +25,8 @@ from tensorflow.python.distribute.values import DistributedValues
 
 from fastestimator.backend.load_model import load_model
 from fastestimator.backend.to_tensor import to_tensor
-from fastestimator.op.numpyop import NumpyOp
-from fastestimator.op.op import Op, get_inputs_by_op, write_outputs_by_op
+from fastestimator.op.numpyop import forward_numpyop, NumpyOp
+from fastestimator.op.op import get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model import UpdateOp
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
@@ -203,7 +203,7 @@ class BaseNetwork:
         return output_keys
 
     @staticmethod
-    def _forward_batch(batch: MutableMapping[str, Any], state: Dict[str, Any], ops: List[Op]) -> None:
+    def _forward_batch(batch: MutableMapping[str, Any], state: Dict[str, Any], ops: List[TensorOp]) -> None:
         """Run a forward pass through the network's Op chain given a `batch` of data.
 
         Args:
@@ -234,7 +234,10 @@ class BaseNetwork:
             (batch_data, prediction_data)
         """
         batch, prediction = self._run_step(batch)
-        self._forward_batch(batch=ChainMap(prediction, batch), state=self.epoch_state, ops=self.epoch_postprocessing)
+        forward_numpyop(ops=self.epoch_postprocessing,
+                        data=ChainMap(prediction, batch),
+                        state=self.epoch_state,
+                        batched=True)
         return batch, prediction
 
     def _run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:  # Batch, Prediction
