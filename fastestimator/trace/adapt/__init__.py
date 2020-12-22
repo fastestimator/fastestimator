@@ -14,5 +14,6 @@
 # ==============================================================================
 from fastestimator.trace.adapt.early_stopping import EarlyStopping
 from fastestimator.trace.adapt.lr_scheduler import LRScheduler
+from fastestimator.trace.adapt.pbm_calibrator import PBMCalibrator
 from fastestimator.trace.adapt.reduce_lr_on_plateau import ReduceLROnPlateau
 from fastestimator.trace.adapt.terminate_on_nan import TerminateOnNaN
