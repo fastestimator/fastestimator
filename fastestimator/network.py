@@ -53,10 +53,12 @@ class BaseNetwork:
             Unlike the NumpyOps found in the pipeline, these ops will run on batches of data rather than single points.
 
     """
-    def __init__(self,
-                 target_type: str,
-                 ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
-                 postprocessing: Iterable[Union[None, NumpyOp, Scheduler[NumpyOp]]] = None) -> None:
+    def __init__(
+        self,
+        target_type: str,
+        ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
+        postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp, Scheduler[NumpyOp]]]] = None
+    ) -> None:
         self.ops = to_list(ops)
         self.target_type = target_type
         for op in get_current_items(self.ops):
@@ -288,16 +290,19 @@ def _collect_models(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> Set[
 
 
 # noinspection PyPep8Naming
-def Network(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
-            postprocessing: Iterable[Union[None, NumpyOp, Scheduler[NumpyOp]]] = None) -> BaseNetwork:
+def Network(
+        ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
+        pops: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp,
+                                                                      Scheduler[NumpyOp]]]] = None) -> BaseNetwork:
     """A function to automatically instantiate the correct Network derived class based on the given `ops`.
 
     Args:
         ops: A collection of Ops defining the graph for this Network. It should contain at least one ModelOp, and all
             models should be either TensorFlow or Pytorch. We currently do not support mixing TensorFlow and Pytorch
             models within the same network.
-        postprocessing: A collection of NumpyOps to be run on the CPU after all of the normal `ops` have been executed.
-            Unlike the NumpyOps found in the pipeline, these ops will run on batches of data rather than single points.
+        pops: Postprocessing Ops. A collection of NumpyOps to be run on the CPU after all of the normal `ops` have been
+            executed. Unlike the NumpyOps found in the pipeline, these ops will run on batches of data rather than
+            single points.
 
     Returns:
         A network instance containing the given `ops`.
@@ -325,9 +330,9 @@ def Network(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
 
     framework = framework.pop()
     if framework == "tf":
-        network = TFNetwork(ops, postprocessing)
+        network = TFNetwork(ops, pops)
     elif framework == "torch":
-        network = TorchNetwork(ops, postprocessing)
+        network = TorchNetwork(ops, pops)
     else:
         raise ValueError("Unknown model type")
     return network
@@ -343,9 +348,11 @@ class TorchNetwork(BaseNetwork):
             Unlike the NumpyOps found in the pipeline, these ops will run on batches of data rather than single points.
 
     """
-    def __init__(self,
-                 ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
-                 postprocessing: Iterable[Union[None, NumpyOp, Scheduler[NumpyOp]]] = None) -> None:
+    def __init__(
+        self,
+        ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
+        postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp, Scheduler[NumpyOp]]]] = None
+    ) -> None:
         super().__init__(target_type='torch', ops=ops, postprocessing=postprocessing)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         if any([model.mixed_precision for model in self.models]):
@@ -526,9 +533,11 @@ class TFNetwork(BaseNetwork):
         postprocessing: A collection of NumpyOps to be run on the CPU after all of the normal `ops` have been executed.
             Unlike the NumpyOps found in the pipeline, these ops will run on batches of data rather than single points.
     """
-    def __init__(self,
-                 ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
-                 postprocessing: Iterable[Union[None, NumpyOp, Scheduler[NumpyOp]]] = None) -> None:
+    def __init__(
+        self,
+        ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
+        postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp, Scheduler[NumpyOp]]]] = None
+    ) -> None:
         super().__init__(target_type='tf', ops=ops, postprocessing=postprocessing)
 
     def load_epoch(self, mode: str, epoch: int, output_keys: Optional[Set[str]] = None, warmup: bool = False) -> None:
