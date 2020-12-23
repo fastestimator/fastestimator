@@ -51,7 +51,7 @@ class Saliency(Trace):
         smoothing: How many rounds of smoothing should be applied to the saliency mask (0 to disable).
         integrating: How many rounds of integration should be applied to the saliency mask (0 to disable). A tuple may
             be used to indicate (# integration, # smoothing) if a different amount of smoothing is desired than was
-            provided by the smoothing variable (useful if you want to compare techniques / save on computation time)/
+            provided by the smoothing variable (useful if you want to compare techniques / save on computation time).
     """
     samples: Dict[str, Union[None, int, Dict[str, Any]]]  # {mode: val}
     n_found: Dict[str, int]  # {mode: val}
@@ -67,7 +67,7 @@ class Saliency(Trace):
                  samples: Union[None, int, Dict[str, Any]] = None,
                  mode: Union[str, Set[str]] = ("eval", "test"),
                  smoothing: int = 25,
-                 integrating: Union[int, Tuple[int, int]] = (25, 7)) -> None:
+                 integrating: Union[int, Tuple[int, int]] = (100, 6)) -> None:
         # Model outputs are required due to inability to statically determine the number of outputs from a pytorch model
         self.class_key = class_key
         self.model_outputs = to_list(model_outputs)

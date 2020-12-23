@@ -24,10 +24,10 @@ from fastestimator.backend.argmax import argmax
 from fastestimator.backend.clip_by_value import clip_by_value
 from fastestimator.backend.percentile import percentile
 from fastestimator.backend.random_normal_like import random_normal_like
+from fastestimator.backend.random_uniform_like import random_uniform_like
 from fastestimator.backend.reduce_max import reduce_max
 from fastestimator.backend.reduce_min import reduce_min
 from fastestimator.backend.reduce_sum import reduce_sum
-from fastestimator.backend.zeros_like import zeros_like
 from fastestimator.network import Network
 from fastestimator.op.tensorop.gather import Gather
 from fastestimator.op.tensorop.gradient.gradient import GradientOp
@@ -155,7 +155,10 @@ class SaliencyNet:
         """
         model_inputs = [batch[ins] for ins in self.model_inputs]
 
-        input_baselines = [zeros_like(ins) + (reduce_max(ins) + reduce_min(ins)) / 2 for ins in model_inputs]
+        # Use a random uniform baseline as advised in https://distill.pub/2020/attribution-baselines/
+        input_baselines = [
+            random_uniform_like(ins, minval=reduce_min(ins), maxval=reduce_max(ins)) for ins in model_inputs
+        ]
         input_diffs = [
             model_input - input_baseline for model_input, input_baseline in zip(model_inputs, input_baselines)
         ]
@@ -217,12 +220,14 @@ class SaliencyNet:
 
         for _ in range(nsamples - 1):
             noisy_batch = {key: batch[key] for key in self.gather_keys}
+            clean_batch = {key: val for key, val in noisy_batch.items()}
             for idx, input_name in enumerate(self.model_inputs):
                 noise = random_normal_like(model_inputs[idx], std=stdevs[idx])
                 x_plus_noise = model_inputs[idx] + noise
+                clean_batch[input_name] = model_inputs[idx]
                 noisy_batch[input_name] = x_plus_noise
             grads_and_preds = self._get_mask(noisy_batch) if not nintegration else self._get_integrated_masks(
-                noisy_batch, nsamples=nintegration)
+                clean_batch, nsamples=nintegration)  # Integration introduces its own noise pattern
             for name in self.outputs:
                 grad = grads_and_preds[name]
                 if magnitude:
