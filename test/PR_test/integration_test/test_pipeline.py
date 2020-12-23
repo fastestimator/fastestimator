@@ -368,6 +368,28 @@ class TestPipelineGetResults(unittest.TestCase):
         }
         self.assertTrue(is_equal(data, ans))
 
+    def test_pipeline_get_result_dict_batch_size(self):
+        pipeline = fe.Pipeline(train_data=self.sample_torch_dataset,
+                               ops=NumpyOpAdd1(inputs="x", outputs="y"),
+                               batch_size={"train": 1})
+        data = pipeline.get_results(mode="train", epoch=1)
+        data["x"] = data["x"].numpy()
+        data["y"] = data["y"].numpy()
+        ans = {"x": np.array([[0]], dtype=np.float32), "y": np.array([[1]], dtype=np.float32)}
+        self.assertTrue(is_equal(data, ans))
+
+    def test_pipeline_get_result_dict_batch_size_scheduler(self):
+        pipeline = fe.Pipeline(train_data=self.sample_torch_dataset,
+                               ops=NumpyOpAdd1(inputs="x", outputs="y"),
+                               batch_size=EpochScheduler({1: {
+                                   "train": 1
+                               }}))
+        data = pipeline.get_results(mode="train", epoch=1)
+        data["x"] = data["x"].numpy()
+        data["y"] = data["y"].numpy()
+        ans = {"x": np.array([[0]], dtype=np.float32), "y": np.array([[1]], dtype=np.float32)}
+        self.assertTrue(is_equal(data, ans))
+
 
 class TestPipelineGetLoader(unittest.TestCase):
     """ This test cover:

@@ -63,7 +63,7 @@ class Pipeline:
                  train_data: Union[None, DataSource, Scheduler[DataSource]] = None,
                  eval_data: Union[None, DataSource, Scheduler[DataSource]] = None,
                  test_data: Union[None, DataSource, Scheduler[DataSource]] = None,
-                 batch_size: Union[None, int, Scheduler[int]] = None,
+                 batch_size: Union[None, int, Scheduler[Union[int, Dict[str, int]]], Dict[str, int]] = None,
                  ops: Union[None, NumpyOp, Scheduler[NumpyOp], List[Union[NumpyOp, Scheduler[NumpyOp]]]] = None,
                  num_process: Optional[int] = None,
                  drop_last: bool = False,
@@ -118,7 +118,7 @@ class Pipeline:
         if isinstance(dataset, Dataset):
             # batch_size check
             for batch_size in get_current_items(to_list(self.batch_size)):
-                assert isinstance(batch_size, int), "unsupported batch_size format: {}".format(type(batch_size))
+                assert isinstance(batch_size, (int, dict)), "unsupported batch_size format: {}".format(type(batch_size))
             # ops check
             for op in get_current_items(self.ops):
                 assert isinstance(op, NumpyOp), "unsupported op format, must provide NumpyOp in Pipeline"
@@ -184,7 +184,10 @@ class Pipeline:
 
             data_len = len(loader.dataset.dataset)
             if self.batch_size:
-                log_interval = log_interval * self.batch_size
+                batch_size = self.batch_size.get_current_value(epoch) if isinstance(self.batch_size,
+                                                                                    Scheduler) else self.batch_size
+                batch_size = batch_size[mode] if isinstance(batch_size, dict) else batch_size
+                log_interval = log_interval * batch_size
 
             print("\nBreakdown of time taken by Pipeline Operations ({} epoch {})".format(mode, epoch))
             for _ in range(log_interval):
@@ -328,6 +331,8 @@ class Pipeline:
             batch_size = self.batch_size
             if isinstance(batch_size, Scheduler):
                 batch_size = batch_size.get_current_value(epoch)
+            if isinstance(batch_size, dict):
+                batch_size = batch_size[mode]
             # batch dataset
             if isinstance(data, BatchDataset):
                 data.pad_value = self.pad_value

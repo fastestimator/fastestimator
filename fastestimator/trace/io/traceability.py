@@ -533,6 +533,8 @@ class Traceability(Trace):
             batch_size = self.system.pipeline.batch_size
             if isinstance(batch_size, Scheduler):
                 batch_size = batch_size.get_current_value(epoch)
+            if isinstance(batch_size, dict):
+                batch_size = batch_size[mode]
             if batch_size is not None:
                 batch_size = f" (Batch Size: {batch_size})"
         self._draw_subgraph(diagram, diagram, label_last_seen, f'Pipeline{batch_size}', pipe_ops)
