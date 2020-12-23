@@ -119,6 +119,11 @@ class Pipeline:
             # batch_size check
             for batch_size in get_current_items(to_list(self.batch_size)):
                 assert isinstance(batch_size, (int, dict)), "unsupported batch_size format: {}".format(type(batch_size))
+                if isinstance(batch_size, dict):
+                    assert all([key in {"train", "eval", "test", "infer"} for key in batch_size.keys()]), \
+                        "batch size dictionaries must be keyed on mode"
+                    assert all([isinstance(val, int) for val in batch_size.values()]), \
+                        "batch size dictionary values must be integers"
             # ops check
             for op in get_current_items(self.ops):
                 assert isinstance(op, NumpyOp), "unsupported op format, must provide NumpyOp in Pipeline"

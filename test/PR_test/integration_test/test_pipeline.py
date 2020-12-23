@@ -390,6 +390,22 @@ class TestPipelineGetResults(unittest.TestCase):
         ans = {"x": np.array([[0]], dtype=np.float32), "y": np.array([[1]], dtype=np.float32)}
         self.assertTrue(is_equal(data, ans))
 
+    def test_pipeline_get_result_dict_batch_size_train_eval(self):
+        pipeline = fe.Pipeline(train_data=self.sample_torch_dataset,
+                               eval_data=self.sample_torch_dataset,
+                               ops=NumpyOpAdd1(inputs="x", outputs="y"),
+                               batch_size={"train": 2, "eval": 1})
+        data_train = pipeline.get_results(mode="train", epoch=1)
+        data_eval = pipeline.get_results(mode="eval", epoch=1)
+        data_train["x"] = data_train["x"].numpy()
+        data_train["y"] = data_train["y"].numpy()
+        data_eval["x"] = data_eval["x"].numpy()
+        data_eval["y"] = data_eval["y"].numpy()
+        ans_train = {"x": np.array([[0], [1]], dtype=np.float32), "y": np.array([[1], [2]], dtype=np.float32)}
+        ans_eval = {"x": np.array([[0]], dtype=np.float32), "y": np.array([[1]], dtype=np.float32)}
+        self.assertTrue(is_equal(data_train, ans_train))
+        self.assertTrue(is_equal(data_eval, ans_eval))
+
 
 class TestPipelineGetLoader(unittest.TestCase):
     """ This test cover:
