@@ -59,9 +59,9 @@ class Repeat(NumpyOp):
         data = {key: elem for key, elem in zip(self.inputs, data)}
         if isinstance(self.repeat, int):
             for i in range(self.repeat):
-                forward_numpyop(self.ops, data, state["mode"])
+                forward_numpyop(self.ops, data, state)
         else:
-            forward_numpyop(self.ops, data, state["mode"])
+            forward_numpyop(self.ops, data, state)
             while self.repeat(*[data[var_name] for var_name in self.repeat_inputs]):
-                forward_numpyop(self.ops, data, state["mode"])
+                forward_numpyop(self.ops, data, state)
         return [data[key] for key in self.outputs]

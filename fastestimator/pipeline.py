@@ -191,19 +191,20 @@ class Pipeline:
                 index = np.random.randint(data_len)
                 items = deepcopy(loader.dataset.dataset[index])
                 if isinstance(loader.dataset.dataset, BatchDataset):
-                    unique_list = []
+                    # BatchDataset may randomly sample the same elements multiple times, so need to avoid reprocessing
+                    unique_samples = set()
                     for item in items:
-                        if id(item) not in unique_list:
+                        if id(item) not in unique_samples:
                             for i, op in enumerate(op_list):
                                 start = time.perf_counter()
-                                forward_numpyop([op], item, loader.dataset.mode)
+                                forward_numpyop([op], item, {'mode': loader.dataset.mode})
                                 duration = time.perf_counter() - start
                                 duration_list[i] += duration
-                            unique_list.append(id(item))
+                            unique_samples.add(id(item))
                 else:
                     for i, op in enumerate(op_list):
                         start = time.perf_counter()
-                        forward_numpyop([op], items, loader.dataset.mode)
+                        forward_numpyop([op], items, {'mode': loader.dataset.mode})
                         duration = time.perf_counter() - start
                         duration_list[i] += duration
 
@@ -276,7 +277,7 @@ class Pipeline:
         """
         data = deepcopy(data)
         ops = get_current_items(self.ops, mode, epoch)
-        forward_numpyop(ops, data, mode)
+        forward_numpyop(ops, data, {'mode': mode})
         for key, value in data.items():
             data[key] = np.expand_dims(value, 0)
         return data

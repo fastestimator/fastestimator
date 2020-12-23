@@ -48,6 +48,11 @@ class SampleTensorOp(TensorOp):
         return data
 
 
+class PlusOneNumpyOp(NumpyOp):
+    def forward(self, data, state):
+        return data + 1
+
+
 def get_torch_lenet_model_weight(model):
     weight = []
     weight.append(deepcopy(model.conv1.weight.data.numpy()))
@@ -393,17 +398,23 @@ class TestNetworkTransform(unittest.TestCase):
     def test_network_transform_one_layer_model_tf(self):
         model = fe.build(model_fn=one_layer_tf_model, optimizer_fn="adam")
         weight = get_tf_model_weight(model)
-        network = fe.Network(ops=[
-            ModelOp(model=model, inputs="x", outputs="y_pred"),
-            MeanSquaredError(inputs=("y_pred", "y"), outputs="ce"),
-            UpdateOp(model=model, loss_name="ce")
-        ])
+        network = fe.Network(
+            ops=[
+                ModelOp(model=model, inputs="x", outputs="y_pred"),
+                MeanSquaredError(inputs=("y_pred", "y"), outputs="ce"),
+                UpdateOp(model=model, loss_name="ce")
+            ],
+            pops=PlusOneNumpyOp(inputs="y_pred", outputs="y_pred_processed"))
         batch = {"x": np.array([[1, 1, 1]]), "y": np.array([[1]])}
         batch = network.transform(data=batch, mode="train")
 
         with self.subTest("output y_pred check"):
             ans = np.array([[6]], dtype=np.float32)  # 1*1 + 1*2 + 1*3
             self.assertTrue(np.array_equal(batch["y_pred"].numpy(), ans))
+
+        with self.subTest("postprocessing y_pred check"):
+            ans = np.array([[7]], dtype=np.float32)  # 1*1 + 1*2 + 1*3 + 1
+            self.assertTrue(np.array_equal(batch["y_pred_processed"], ans))
 
         with self.subTest("output ce check"):
             self.assertEqual(batch["ce"].numpy(), 25)  # (6-1)^2
@@ -415,11 +426,13 @@ class TestNetworkTransform(unittest.TestCase):
     def test_network_transform_one_layer_model_torch(self):
         model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn="adam")
         weight = get_torch_one_layer_model_weight(model)
-        network = fe.Network(ops=[
-            ModelOp(model=model, inputs="x", outputs="y_pred"),
-            MeanSquaredError(inputs=("y_pred", "y"), outputs="ce"),
-            UpdateOp(model=model, loss_name="ce")
-        ])
+        network = fe.Network(
+            ops=[
+                ModelOp(model=model, inputs="x", outputs="y_pred"),
+                MeanSquaredError(inputs=("y_pred", "y"), outputs="ce"),
+                UpdateOp(model=model, loss_name="ce")
+            ],
+            pops=PlusOneNumpyOp(inputs="y_pred", outputs="y_pred_processed"))
         batch = {
             "x": np.array([[
                 1,
@@ -432,6 +445,10 @@ class TestNetworkTransform(unittest.TestCase):
         with self.subTest("output y_pred check"):
             ans = np.array([[6]], dtype=np.float32)  # 1*1 + 1*2 + 1*3
             self.assertTrue(np.array_equal(batch["y_pred"].numpy(), ans))
+
+        with self.subTest("postprocessing y_pred check"):
+            ans = np.array([[7]], dtype=np.float32)  # 1*1 + 1*2 + 1*3 + 1
+            self.assertTrue(np.array_equal(batch["y_pred_processed"], ans))
 
         with self.subTest("output ce check"):
             self.assertEqual(batch["ce"].numpy(), 25)  # (6-1)^2

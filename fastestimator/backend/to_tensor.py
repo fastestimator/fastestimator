@@ -54,7 +54,9 @@ def to_tensor(data: Union[Collection, Tensor, float, int, None], target_type: st
     Returns:
         A collection with the same structure as `data`, but with any tensors converted to the `target_type`.
     """
-    target_instance = {"tf": tf.Tensor, "torch": torch.Tensor, "np": np.ndarray}
+    target_instance = {
+        "tf": (tf.Tensor, tf.Variable, tf.distribute.DistributedValues), "torch": torch.Tensor, "np": np.ndarray
+    }
     conversion_function = {"tf": tf.convert_to_tensor, "torch": torch.from_numpy, "np": np.array}
     if isinstance(data, target_instance[target_type]):
         return data

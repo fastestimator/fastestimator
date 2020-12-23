@@ -70,8 +70,8 @@ class Op:
         self.inputs = to_list(inputs)
         self.outputs = to_list(outputs)
         self.mode = parse_modes(to_set(mode))
-        self.in_list = not isinstance(inputs, str)
-        self.out_list = not isinstance(outputs, str)
+        self.in_list = not isinstance(inputs, (str, type(None)))
+        self.out_list = not isinstance(outputs, (str, type(None)))
 
 
 def get_inputs_by_op(op: Op, store: Mapping[str, Any]) -> Any:

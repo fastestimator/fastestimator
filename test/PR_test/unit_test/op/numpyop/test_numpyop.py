@@ -15,6 +15,7 @@
 import unittest
 
 import numpy as np
+import tensorflow as tf
 
 from fastestimator.op.numpyop import LambdaOp
 from fastestimator.test.unittest_util import is_equal
@@ -30,3 +31,10 @@ class TestLambdaOp(unittest.TestCase):
         op = LambdaOp(fn=np.reshape)
         data = op.forward(data=[np.array([1, 2, 3, 4]), (2, 2)], state={})
         self.assertTrue(is_equal(data, np.array([[1, 2], [3, 4]])))
+
+    def test_batch_forward(self):
+        op = LambdaOp(fn=np.sum)
+        data = tf.convert_to_tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        result = op.forward_batch(data=[data], state={})
+        ans = np.array([6, 15, 24], dtype=np.float32)
+        self.assertTrue(np.array_equal(result, ans))

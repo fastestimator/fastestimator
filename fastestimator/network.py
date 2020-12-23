@@ -25,12 +25,13 @@ from tensorflow.python.distribute.values import DistributedValues
 
 from fastestimator.backend.load_model import load_model
 from fastestimator.backend.to_tensor import to_tensor
+from fastestimator.op.numpyop import forward_numpyop, NumpyOp
 from fastestimator.op.op import get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model import UpdateOp
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
 from fastestimator.util.traceability_util import trace_model, traceable
-from fastestimator.util.util import NonContext, get_batch_size, to_list
+from fastestimator.util.util import NonContext, to_list
 
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 T = TypeVar('T')
@@ -45,16 +46,30 @@ class BaseNetwork:
     Networks are used to define the computation graph surrounding one or more models during training.
 
     Args:
+        target_type: What tensor type is expected by this network ('torch' or 'tf').
         ops: The operators to be executed throughout training / testing / inference. These are likely to contain one or
             more model ops, as well as loss ops and update ops.
+        postprocessing: A collection of NumpyOps to be run on the CPU after all of the normal `ops` have been executed.
+            Unlike the NumpyOps found in the pipeline, these ops will run on batches of data rather than single points.
+
     """
-    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> None:
+    def __init__(
+        self,
+        target_type: str,
+        ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
+        postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp, Scheduler[NumpyOp]]]] = None
+    ) -> None:
         self.ops = to_list(ops)
+        self.target_type = target_type
+        for op in get_current_items(self.ops):
+            op.build(framework=self.target_type)
         self.models = to_list(_collect_models(ops))
+        self.postprocessing = to_list(postprocessing)
         self._verify_inputs()
         self.effective_inputs = dict()
         self.effective_outputs = dict()
         self.epoch_ops = []
+        self.epoch_postprocessing = []
         self.epoch_models = set()
         self.epoch_state = dict()
         self.scaler = None
@@ -66,7 +81,9 @@ class BaseNetwork:
             AssertionError: If any of the ops are not TensorOps.
         """
         for op in get_current_items(self.ops):
-            assert isinstance(op, TensorOp), "unsupported op format, must provide TensorOp in Network"
+            assert isinstance(op, TensorOp), "unsupported op format, Network ops must be TensorOps"
+        for op in get_current_items(self.postprocessing):
+            assert isinstance(op, NumpyOp), "unsupported op format, Network postprocessing must be NumpyOps"
 
     def get_scheduled_items(self, mode: str) -> List[Any]:
         """Get a list of items considered for scheduling.
@@ -78,9 +95,9 @@ class BaseNetwork:
             List of schedulable items in Network.
         """
         if mode == "train":
-            all_items = self.ops + [model.optimizer for model in self.models]
+            all_items = self.ops + [model.optimizer for model in self.models] + self.postprocessing
         else:
-            all_items = self.ops
+            all_items = self.ops + self.postprocessing
         return all_items
 
     def load_epoch(self, mode: str, epoch: int, output_keys: Optional[Set[str]] = None, warmup: bool = False) -> None:
@@ -98,8 +115,10 @@ class BaseNetwork:
         self.effective_inputs[mode] = self.get_effective_input_keys(mode, epoch)
         self.effective_outputs[mode] = self.get_all_output_keys(mode, epoch)
         if output_keys:
-            self.effective_outputs[mode] = self.effective_outputs[mode].intersection(output_keys)
+            self.effective_outputs[mode] = self.effective_outputs[mode].intersection(
+                output_keys) | self._get_effective_postprocessing_input_keys(mode, epoch)
         self.epoch_ops = get_current_items(self.ops, mode, epoch)
+        self.epoch_postprocessing = get_current_items(self.postprocessing, mode, epoch)
         self.epoch_models = set.union(*[op.get_fe_models() for op in self.epoch_ops])
         gradient_ops = [op for op in self.epoch_ops if op.fe_retain_graph() is not None]
         for idx, gradient_op in enumerate(gradient_ops):
@@ -148,7 +167,24 @@ class BaseNetwork:
         """
         input_keys = set()
         produced_keys = set()
-        for op in get_current_items(self.ops, mode, epoch):
+        for op in get_current_items(self.ops + self.postprocessing, mode, epoch):
+            input_keys.update(set(key for key in op.inputs if key not in produced_keys))
+            produced_keys.update(op.outputs)
+        return input_keys
+
+    def _get_effective_postprocessing_input_keys(self, mode: str, epoch: int) -> Set[str]:
+        """Determine which keys need to be provided as input to the postprocessing during the given `epoch`.
+
+        Args:
+            mode: The execution mode to consider. One of 'train', 'eval', 'test', or 'infer'.
+            epoch: The epoch number to consider for determining inputs.
+
+        Returns:
+            The necessary inputs for the postprocessing to execute the given `epoch` and `mode`.
+        """
+        input_keys = set()
+        produced_keys = set()
+        for op in get_current_items(self.postprocessing, mode, epoch):
             input_keys.update(set(key for key in op.inputs if key not in produced_keys))
             produced_keys.update(op.outputs)
         return input_keys
@@ -164,7 +200,7 @@ class BaseNetwork:
             The keys that will be generated by the network's Ops during the `epoch` for the given `mode`.
         """
         output_keys = set()
-        for op in get_current_items(self.ops, mode, epoch):
+        for op in get_current_items(self.ops + self.postprocessing, mode, epoch):
             output_keys.update(op.outputs)
         return output_keys
 
@@ -189,7 +225,25 @@ class BaseNetwork:
         state['deferred'].clear()
 
     def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:  # Batch, Prediction
-        """Run a forward step through the Network on a batch of data.
+        """Run a forward step through the Network on a batch of data, including postprocessing.
+
+        This method expects that Network.load_epoch() has already been invoked. The return data will be on the CPU.
+
+        Args:
+            batch: The batch of data serving as input to the Network.
+
+        Returns:
+            (batch_data, prediction_data)
+        """
+        batch, prediction = self._run_step(batch)
+        forward_numpyop(ops=self.epoch_postprocessing,
+                        data=ChainMap(prediction, batch),
+                        state=self.epoch_state,
+                        batched=True)
+        return batch, prediction
+
+    def _run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:  # Batch, Prediction
+        """Run a forward step through the Network on a batch of data, excluding postprocessing.
 
         Implementations of this method within derived classes should handle bringing the prediction data back from the
         (multi-)GPU environment to the CPU. This method expects that Network.load_epoch() has already been invoked.
@@ -211,9 +265,13 @@ class BaseNetwork:
             epoch: The epoch in which to run the transform.
 
         Returns:
-            (batch_data, prediction_data)
+            prediction_data overlaid on the input `data`.
         """
-        raise NotImplementedError
+        self.load_epoch(mode, epoch, warmup=False)
+        data = to_tensor(data, target_type=self.target_type)
+        data, prediction = self.run_step(data)
+        self.unload_epoch()
+        return {**data, **prediction}
 
 
 def _collect_models(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> Set[Model]:
@@ -232,13 +290,19 @@ def _collect_models(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> Set[
 
 
 # noinspection PyPep8Naming
-def Network(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> BaseNetwork:
+def Network(
+        ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
+        pops: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp,
+                                                                      Scheduler[NumpyOp]]]] = None) -> BaseNetwork:
     """A function to automatically instantiate the correct Network derived class based on the given `ops`.
 
     Args:
         ops: A collection of Ops defining the graph for this Network. It should contain at least one ModelOp, and all
             models should be either TensorFlow or Pytorch. We currently do not support mixing TensorFlow and Pytorch
             models within the same network.
+        pops: Postprocessing Ops. A collection of NumpyOps to be run on the CPU after all of the normal `ops` have been
+            executed. Unlike the NumpyOps found in the pipeline, these ops will run on batches of data rather than
+            single points.
 
     Returns:
         A network instance containing the given `ops`.
@@ -266,9 +330,9 @@ def Network(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> BaseNetwork:
 
     framework = framework.pop()
     if framework == "tf":
-        network = TFNetwork(ops)
+        network = TFNetwork(ops, pops)
     elif framework == "torch":
-        network = TorchNetwork(ops)
+        network = TorchNetwork(ops, pops)
     else:
         raise ValueError("Unknown model type")
     return network
@@ -280,11 +344,16 @@ class TorchNetwork(BaseNetwork):
 
     Args:
         ops: The ops defining the execution graph for this Network.
+        postprocessing: A collection of NumpyOps to be run on the CPU after all of the normal `ops` have been executed.
+            Unlike the NumpyOps found in the pipeline, these ops will run on batches of data rather than single points.
+
     """
-    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> None:
-        super().__init__(ops)
-        for op in get_current_items(self.ops):
-            op.build(framework='torch')
+    def __init__(
+        self,
+        ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
+        postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp, Scheduler[NumpyOp]]]] = None
+    ) -> None:
+        super().__init__(target_type='torch', ops=ops, postprocessing=postprocessing)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         if any([model.mixed_precision for model in self.models]):
             self.scaler = torch.cuda.amp.GradScaler()
@@ -375,7 +444,7 @@ class TorchNetwork(BaseNetwork):
             new_batch = {key: batch[key] for key in self.effective_inputs[mode] if key in batch}
         return new_batch
 
-    def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    def _run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """Run a forward step through the Network on a batch of data.
 
         Implementations of this method within derived classes should handle bringing the prediction data back from the
@@ -395,8 +464,8 @@ class TorchNetwork(BaseNetwork):
             with torch.cuda.amp.autocast() if self.epoch_state["scaler"] is not None else NonContext():
                 self._forward_batch(batch_in, self.epoch_state, self.epoch_ops)
         # if the loss scaler is used for training, update the scaler
-        if not self.epoch_state["warmup"] and self.epoch_state[
-                "mode"] == "train" and self.epoch_state["scaler"] is not None:
+        if not self.epoch_state["warmup"] and self.epoch_state["mode"] == "train" and self.epoch_state[
+                "scaler"] is not None:
             self.epoch_state["scaler"].update()
         # copy data to cpu
         if self.device.type == "cuda":
@@ -454,24 +523,6 @@ class TorchNetwork(BaseNetwork):
         elif isinstance(data, torch.Tensor):
             return data.detach()
 
-    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 1) -> Dict[str, Any]:
-        """Run a forward step through the Network on an element of data.
-
-        Args:
-            data: The element to data to use as input.
-            mode: The mode in which to run the transform. One of 'train', 'eval', 'test', or 'infer'.
-            epoch: The epoch in which to run the transform.
-
-        Returns:
-            (batch_data, prediction_data)
-        """
-        self.load_epoch(mode, epoch, warmup=False)
-        data = to_tensor(data, "torch")
-        data, prediction = self.run_step(data)
-        self.unload_epoch()
-        data.update(prediction)
-        return data
-
 
 @traceable()
 class TFNetwork(BaseNetwork):
@@ -479,11 +530,15 @@ class TFNetwork(BaseNetwork):
 
     Args:
         ops: The ops defining the execution graph for this Network.
+        postprocessing: A collection of NumpyOps to be run on the CPU after all of the normal `ops` have been executed.
+            Unlike the NumpyOps found in the pipeline, these ops will run on batches of data rather than single points.
     """
-    def __init__(self, ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> None:
-        super().__init__(ops)
-        for op in get_current_items(self.ops):
-            op.build(framework='tf')
+    def __init__(
+        self,
+        ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
+        postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp, Scheduler[NumpyOp]]]] = None
+    ) -> None:
+        super().__init__(target_type='tf', ops=ops, postprocessing=postprocessing)
 
     def load_epoch(self, mode: str, epoch: int, output_keys: Optional[Set[str]] = None, warmup: bool = False) -> None:
         """Prepare the network to run a given epoch and mode.
@@ -500,7 +555,7 @@ class TFNetwork(BaseNetwork):
         super().load_epoch(mode, epoch, output_keys, warmup)
         self.epoch_state["epoch"] = tf.convert_to_tensor(self.epoch_state["epoch"])
 
-    def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    def _run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """Run a forward step through the Network on a batch of data.
 
         Implementations of this method within derived classes should handle bringing the prediction data back from the
@@ -656,37 +711,11 @@ class TFNetwork(BaseNetwork):
         Returns:
             (batch_data, prediction_data)
         """
-        self.load_epoch(mode, epoch, warmup=False)
-        data = to_tensor(data, target_type="tf")
-        data, prediction = self.run_step(data)
-        self.unload_epoch()
-        # handle tensorflow multi-gpu inferencing issue, it will replicate data on each device
-        if isinstance(tf.distribute.get_strategy(), tf.distribute.MirroredStrategy):
-            prediction = self._subsample_data(prediction, get_batch_size(data))
-        data.update(prediction)
-        return data
-
-    def _subsample_data(self, data: T, n: int) -> T:
-        """Subsample data by selecting the first n indices recursively.
-
-        Args:
-            data: The data to be subsampled.
-
-        Returns:
-            Subsampled data.
-        """
-        if isinstance(data, dict):
-            return {key: self._subsample_data(val, n) for (key, val) in data.items()}
-        elif isinstance(data, list):
-            return [self._subsample_data(val, n) for val in data]
-        elif isinstance(data, tuple):
-            return tuple([self._subsample_data(val, n) for val in data])
-        elif isinstance(data, set):
-            return set([self._subsample_data(val, n) for val in data])
-        elif hasattr(data, "shape") and list(data.shape) and data.shape[0] > n:
-            return data[0:n]
-        else:
-            return data
+        # Distribute multi-gpu data for processing
+        strategy = tf.distribute.get_strategy()
+        if isinstance(strategy, tf.distribute.MirroredStrategy):
+            data = next(iter(strategy.experimental_distribute_dataset(tf.data.Dataset.from_tensors(data))))
+        return super().transform(data, mode, epoch)
 
 
 def build(model_fn: Callable[[], Union[Model, List[Model]]],

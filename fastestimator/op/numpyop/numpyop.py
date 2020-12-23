@@ -12,19 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Union
+from typing import Any, Callable, Dict, Iterable, List, MutableMapping, TypeVar, Union
 
 import numpy as np
+import tensorflow as tf
+import torch
 
 from fastestimator.op.op import Op, get_inputs_by_op, write_outputs_by_op
 from fastestimator.util.traceability_util import traceable
+from fastestimator.util.util import to_number
+
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
 
 @traceable()
 class NumpyOp(Op):
     """An Operator class which takes and returns numpy data.
 
-    These Operators are used in fe.Pipeline to perform data pre-processing / augmentation.
+    These Operators are used in fe.Pipeline to perform data pre-processing / augmentation. They may also be used in
+    fe.Network to perform postprocessing on data.
     """
     def forward(self, data: Union[np.ndarray, List[np.ndarray]],
                 state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
@@ -41,6 +47,37 @@ class NumpyOp(Op):
             dictionary based on whatever keys this Op declares as its `outputs`.
         """
         return data
+
+    def forward_batch(self, data: Union[Tensor, List[Tensor]],
+                      state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
+        """A method which will be invoked in order to transform a batch of data.
+
+        This method will be invoked on batches of data during network postprocessing. Note that the inputs may be numpy
+        arrays or TF/Torch tensors. Outputs are expected to be Numpy arrays, though this is not enforced. Developers
+        should probably not need to override this implementation unless they are building an op specifically intended
+        for postprocessing.
+
+        Args:
+            data: The arrays from the data dictionary corresponding to whatever keys this Op declares as its `inputs`.
+            state: Information about the current execution context, for example {"mode": "train"}.
+
+        Returns:
+            The `data` after applying whatever transform this Op is responsible for. It will be written into the data
+            dictionary based on whatever keys this Op declares as its `outputs`.
+        """
+        if isinstance(data, List):
+            data = [to_number(elem) for elem in data]
+            batch_size = data[0].shape[0]
+            data = [[elem[i] for elem in data] for i in range(batch_size)]
+        else:
+            data = to_number(data)
+            data = [data[i] for i in range(data.shape[0])]
+        results = [self.forward(elem, state) for elem in data]
+        if self.out_list:
+            results = [np.array(col) for col in [[row[i] for row in results] for i in range(len(results[0]))]]
+        else:
+            results = np.array(results)
+        return results
 
 
 @traceable()
@@ -84,17 +121,19 @@ class LambdaOp(NumpyOp):
         return self.fn(*data)
 
 
-def forward_numpyop(ops: List[NumpyOp], data: MutableMapping[str, Any], mode: str) -> None:
+def forward_numpyop(ops: List[NumpyOp], data: MutableMapping[str, Any], state: Dict[str, Any],
+                    batched: bool = False) -> None:
     """Call the forward function for list of NumpyOps, and modify the data dictionary in place.
 
     Args:
         ops: A list of NumpyOps to execute.
         data: The data dictionary.
-        mode: The current execution mode ("train", "eval", "test", or "infer").
+        state: Information about the current execution context, ex. {"mode": "train"}. Must contain at least the mode.
+        batched: Whether the `data` is batched or not.
     """
     for op in ops:
         op_data = get_inputs_by_op(op, data)
-        op_data = op.forward(op_data, {"mode": mode})
+        op_data = op.forward_batch(op_data, state) if batched else op.forward(op_data, state)
         if isinstance(op, Delete):
             for key in op.inputs:
                 del data[key]

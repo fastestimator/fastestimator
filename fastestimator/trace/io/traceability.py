@@ -517,6 +517,7 @@ class Traceability(Trace):
         pipe_ops = get_current_items(self.system.pipeline.ops, run_modes=mode, epoch=epoch) if isinstance(
             ds, Dataset) else []
         net_ops = get_current_items(self.system.network.ops, run_modes=mode, epoch=epoch)
+        net_post = get_current_items(self.system.network.postprocessing, run_modes=mode, epoch=epoch)
         traces = sort_traces(get_current_items(self.system.traces, run_modes=mode, epoch=epoch))
         diagram = pydot.Dot(compound='true')  # Compound lets you draw edges which terminate at sub-graphs
         diagram.set('rankdir', 'TB')
@@ -535,7 +536,7 @@ class Traceability(Trace):
             if batch_size is not None:
                 batch_size = f" (Batch Size: {batch_size})"
         self._draw_subgraph(diagram, diagram, label_last_seen, f'Pipeline{batch_size}', pipe_ops)
-        self._draw_subgraph(diagram, diagram, label_last_seen, 'Network', net_ops)
+        self._draw_subgraph(diagram, diagram, label_last_seen, 'Network', net_ops + net_post)
         self._draw_subgraph(diagram, diagram, label_last_seen, 'Traces', traces)
         return diagram
 
