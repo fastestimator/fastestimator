@@ -746,10 +746,7 @@ class TFNetwork(BaseNetwork):
             return set([self._fill_batch(val, n) for val in data])
         elif hasattr(data, "shape"):
             paddings = [[0, n]] + [[0, 0] for _ in range(len(data.shape) - 1)]
-            if tf.is_tensor(data):
-                return tf.pad(data, paddings=paddings, mode="symmetric")
-            else:
-                return np.pad(data, pad_width=paddings, mode="symmetric")
+            return np.pad(data, pad_width=paddings, mode="symmetric")
         else:
             return data
 
