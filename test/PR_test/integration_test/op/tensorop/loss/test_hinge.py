@@ -27,7 +27,7 @@ class TestHinge(unittest.TestCase):
         pred = tf.constant([[0.1, 0.9, 0.05, 0.05], [0.1, -0.2, 0.0, -0.7], [0.0, 0.15, 0.8, 0.05],
                             [1.0, -1.0, -1.0, -1.0]])
         hinge = Hinge(inputs=('x1', 'x2'), outputs='x')
-        hinge.build('tf')
+        hinge.build('tf', None)
         output = hinge.forward(data=[pred, true], state={})
         self.assertTrue(np.allclose(output.numpy(), 0.7125))
 
@@ -36,6 +36,6 @@ class TestHinge(unittest.TestCase):
         pred = torch.tensor([[0.1, 0.9, 0.05, 0.05], [0.1, -0.2, 0.0, -0.7], [0.0, 0.15, 0.8, 0.05],
                              [1.0, -1.0, -1.0, -1.0]])
         hinge = Hinge(inputs=('x1', 'x2'), outputs='x')
-        hinge.build('torch')
+        hinge.build('torch', torch.device('cpu'))
         output = hinge.forward(data=[pred, true], state={})
         self.assertTrue(np.allclose(output.numpy(), 0.7125))

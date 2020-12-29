@@ -51,7 +51,8 @@ class Sometimes(TensorOp):
         self.prob = prob
         self.prob_fn = None
 
-    def build(self, framework: str) -> None:
+    def build(self, framework: str, device: Optional[torch.device] = None) -> None:
+        self.op.build(framework, device)
         if framework == 'tf':
             self.prob_fn = tfp.distributions.Uniform()
         elif framework == 'torch':

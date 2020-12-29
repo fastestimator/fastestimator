@@ -50,7 +50,9 @@ class OneOf(TensorOp):
         self.prob_fn = None
         self.invoke_fn = None
 
-    def build(self, framework: str) -> None:
+    def build(self, framework: str, device: Optional[torch.device] = None) -> None:
+        for op in self.ops:
+            op.build(framework, device)
         if framework == 'tf':
             self.prob_fn = tfp.distributions.Uniform(low=0, high=len(self.ops))
             self.invoke_fn = lambda idx, data, state: tf.switch_case(idx, [lambda: op.forward(data, state) for op in

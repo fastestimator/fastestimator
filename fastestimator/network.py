@@ -28,8 +28,8 @@ from fastestimator.backend.load_model import load_model
 from fastestimator.backend.to_tensor import to_tensor
 from fastestimator.op.numpyop import NumpyOp, forward_numpyop
 from fastestimator.op.op import get_inputs_by_op, write_outputs_by_op
-from fastestimator.op.tensorop import TensorOp
-from fastestimator.op.tensorop.model import UpdateOp
+from fastestimator.op.tensorop.tensorop import TensorOp
+from fastestimator.op.tensorop.model.update import UpdateOp
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
 from fastestimator.util.traceability_util import trace_model, traceable
 from fastestimator.util.util import NonContext, get_batch_size, to_list
@@ -57,13 +57,15 @@ class BaseNetwork:
     def __init__(
         self,
         target_type: str,
+        device: Optional[torch.device],
         ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
         postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp, Scheduler[NumpyOp]]]] = None
     ) -> None:
         self.ops = to_list(ops)
         self.target_type = target_type
+        self.device = device
         for op in get_current_items(self.ops):
-            op.build(framework=self.target_type)
+            op.build(framework=self.target_type, device=self.device)
         self.models = to_list(_collect_models(ops))
         self.postprocessing = to_list(postprocessing)
         self._verify_inputs()
@@ -354,8 +356,10 @@ class TorchNetwork(BaseNetwork):
         ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
         postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp, Scheduler[NumpyOp]]]] = None
     ) -> None:
-        super().__init__(target_type='torch', ops=ops, postprocessing=postprocessing)
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        super().__init__(target_type='torch',
+                         device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu"),
+                         ops=ops,
+                         postprocessing=postprocessing)
         if any([model.mixed_precision for model in self.models]):
             self.scaler = torch.cuda.amp.GradScaler()
 
@@ -539,7 +543,7 @@ class TFNetwork(BaseNetwork):
         ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
         postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp, Scheduler[NumpyOp]]]] = None
     ) -> None:
-        super().__init__(target_type='tf', ops=ops, postprocessing=postprocessing)
+        super().__init__(target_type='tf', device=None, ops=ops, postprocessing=postprocessing)
 
     def load_epoch(self, mode: str, epoch: int, output_keys: Optional[Set[str]] = None, warmup: bool = False) -> None:
         """Prepare the network to run a given epoch and mode.

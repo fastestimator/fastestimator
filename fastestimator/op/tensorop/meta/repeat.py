@@ -59,8 +59,8 @@ class Repeat(TensorOp):
     def op(self) -> TensorOp:
         return self.ops[0]
 
-    def build(self, framework: str) -> None:
-        self.op.build(framework)
+    def build(self, framework: str, device: Optional[torch.device] = None) -> None:
+        self.op.build(framework, device)
         if framework == 'tf':
             self.while_fn = self._tf_while
         else:

@@ -45,7 +45,7 @@ class TensorOp(Op):
         """
         return data
 
-    def build(self, framework: str) -> None:
+    def build(self, framework: str, device: Optional[torch.device] = None) -> None:
         """A method which will be invoked during Network instantiation.
 
         This method can be used to augment the natural __init__ method of the TensorOp once the desired backend
@@ -53,6 +53,8 @@ class TensorOp(Op):
 
         Args:
             framework: Which framework this Op will be executing in. One of 'tf' or 'torch'.
+            device: Which device this Op will execute on. Usually 'cuda:0' or 'cpu'. Only populated when the `framework`
+                is 'torch'.
         """
         pass
 

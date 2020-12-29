@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Iterable, List, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Optional, TypeVar, Union
 
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -56,7 +56,7 @@ class MixUpBatch(TensorOp):
         self.shared_beta = shared_beta
         self.in_list, self.out_list = True, True
 
-    def build(self, framework: str) -> None:
+    def build(self, framework: str, device: Optional[torch.device] = None) -> None:
         if framework == 'tf':
             self.beta = tfp.distributions.Beta(self.alpha, self.alpha)
         elif framework == 'torch':
