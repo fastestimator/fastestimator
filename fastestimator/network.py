@@ -728,9 +728,11 @@ class TFNetwork(BaseNetwork):
 
     def _fill_batch(self, data: T, n: int) -> T:
         """Fill data on batch dimension repeating the first n indices at the end.
+
         Args:
             data: The data to be filled.
-            The number of times to be repeated.
+            n: The number of times to be repeated.
+
         Returns:
             Filled data.
         """
@@ -753,9 +755,11 @@ class TFNetwork(BaseNetwork):
 
     def _subsample_data(self, data: T, n: int) -> T:
         """Subsample data by selecting the first n indices recursively.
+
         Args:
             data: The data to be subsampled.
             n: The number of indices to be subsampled.
+
         Returns:
             Subsampled data.
         """
