@@ -18,6 +18,7 @@ from collections import ChainMap
 from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, Set, Tuple, TypeVar, Union
 
 import gdown
+import numpy as np
 import tensorflow as tf
 import torch
 from tensorflow.keras.mixed_precision import experimental as mixed_precision_tf
@@ -25,13 +26,13 @@ from tensorflow.python.distribute.values import DistributedValues
 
 from fastestimator.backend.load_model import load_model
 from fastestimator.backend.to_tensor import to_tensor
-from fastestimator.op.numpyop import forward_numpyop, NumpyOp
+from fastestimator.op.numpyop import NumpyOp, forward_numpyop
 from fastestimator.op.op import get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model import UpdateOp
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
 from fastestimator.util.traceability_util import trace_model, traceable
-from fastestimator.util.util import NonContext, to_list
+from fastestimator.util.util import NonContext, get_batch_size, to_list
 
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 T = TypeVar('T')
@@ -291,9 +292,9 @@ def _collect_models(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> Set[
 
 # noinspection PyPep8Naming
 def Network(
-        ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
-        pops: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp,
-                                                                      Scheduler[NumpyOp]]]] = None) -> BaseNetwork:
+    ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
+    pops: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp, Scheduler[NumpyOp]]]] = None
+) -> BaseNetwork:
     """A function to automatically instantiate the correct Network derived class based on the given `ops`.
 
     Args:
@@ -464,8 +465,8 @@ class TorchNetwork(BaseNetwork):
             with torch.cuda.amp.autocast() if self.epoch_state["scaler"] is not None else NonContext():
                 self._forward_batch(batch_in, self.epoch_state, self.epoch_ops)
         # if the loss scaler is used for training, update the scaler
-        if not self.epoch_state["warmup"] and self.epoch_state["mode"] == "train" and self.epoch_state[
-                "scaler"] is not None:
+        if not self.epoch_state["warmup"] and self.epoch_state[
+                "mode"] == "train" and self.epoch_state["scaler"] is not None:
             self.epoch_state["scaler"].update()
         # copy data to cpu
         if self.device.type == "cuda":
@@ -712,10 +713,65 @@ class TFNetwork(BaseNetwork):
             (batch_data, prediction_data)
         """
         # Distribute multi-gpu data for processing
+        sub_sample = False
         strategy = tf.distribute.get_strategy()
         if isinstance(strategy, tf.distribute.MirroredStrategy):
+            batch_size, num_devices = get_batch_size(data), strategy.num_replicas_in_sync
+            if batch_size < num_devices:
+                data = self._fill_batch(data, num_devices - batch_size)
+                sub_sample = True
             data = next(iter(strategy.experimental_distribute_dataset(tf.data.Dataset.from_tensors(data))))
-        return super().transform(data, mode, epoch)
+        results = super().transform(data, mode, epoch)
+        if sub_sample:
+            results = self._subsample_data(results, batch_size)
+        return results
+
+    def _fill_batch(self, data: T, n: int) -> T:
+        """Fill data on batch dimension repeating the first n indices at the end.
+
+        Args:
+            data: The data to be filled.
+            n: The number of times to be repeated.
+
+        Returns:
+            Filled data.
+        """
+        if isinstance(data, dict):
+            return {key: self._fill_batch(val, n) for (key, val) in data.items()}
+        elif isinstance(data, list):
+            return [self._fill_batch(val, n) for val in data]
+        elif isinstance(data, tuple):
+            return tuple([self._fill_batch(val, n) for val in data])
+        elif isinstance(data, set):
+            return set([self._fill_batch(val, n) for val in data])
+        elif hasattr(data, "shape"):
+            paddings = [[0, n]] + [[0, 0] for _ in range(len(data.shape) - 1)]
+            return np.pad(data, pad_width=paddings, mode="symmetric")
+        else:
+            return data
+
+    def _subsample_data(self, data: T, n: int) -> T:
+        """Subsample data by selecting the first n indices recursively.
+
+        Args:
+            data: The data to be subsampled.
+            n: The number of indices to be subsampled.
+
+        Returns:
+            Subsampled data.
+        """
+        if isinstance(data, dict):
+            return {key: self._subsample_data(val, n) for (key, val) in data.items()}
+        elif isinstance(data, list):
+            return [self._subsample_data(val, n) for val in data]
+        elif isinstance(data, tuple):
+            return tuple([self._subsample_data(val, n) for val in data])
+        elif isinstance(data, set):
+            return set([self._subsample_data(val, n) for val in data])
+        elif hasattr(data, "shape") and list(data.shape) and data.shape[0] > n:
+            return data[0:n]
+        else:
+            return data
 
 
 def build(model_fn: Callable[[], Union[Model, List[Model]]],
