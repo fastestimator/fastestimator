@@ -28,9 +28,6 @@ from fastestimator.test.unittest_util import sample_system_object, sample_system
 class TestSuperLoss(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # binary ce
-        cls.tf_true_binary = tf.constant([[1.0], [2.0], [4.0]])
-        cls.tf_pred_binary = tf.constant([[1.0], [3.0], [4.5]])
         # torch binary ce
         cls.torch_true_binary = torch.tensor([[1], [0], [1], [0]])
         cls.torch_pred_binary = torch.tensor([[0.9], [0.3], [0.8], [0.1]])
@@ -48,18 +45,6 @@ class TestSuperLoss(unittest.TestCase):
     @tf.function
     def do_forward(op, data, state):
         return op.forward(data, state)
-
-    def test_tf_superloss_binary_ce(self):
-        sl = SuperLoss(CrossEntropy(inputs=['y_pred', 'y'], outputs='ce'))
-        sl.build(framework="tf", device=None)
-        output = sl.forward(data=[self.tf_pred_binary, self.tf_true_binary], state=self.state)
-        self.assertTrue(np.allclose(output.numpy(), -19.645401))
-
-    def test_tf_static_superloss_binary_ce(self):
-        sl = SuperLoss(CrossEntropy(inputs=['y_pred', 'y'], outputs='ce'))
-        sl.build(framework="tf", device=None)
-        output = self.do_forward(sl, data=[self.tf_pred_binary, self.tf_true_binary], state=self.state)
-        self.assertTrue(np.allclose(output.numpy(), -19.528599))
 
     def test_tf_superloss_categorical_ce(self):
         sl = SuperLoss(CrossEntropy(inputs=['y_pred', 'y'], outputs='ce'))
