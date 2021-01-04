@@ -65,7 +65,6 @@ class SuperLoss(LossOp):
         if regularization <= 0:
             raise ValueError(f"SuperLoss regularization parameter must be greater than 0, but got {regularization}")
         self.lam = regularization
-        # TODO - verify restore wizard with this
         self.cap = -1.9999998 / e  # Slightly more than -2 / e for numerical stability
         self.initialized = {}
         self.tau = {}
