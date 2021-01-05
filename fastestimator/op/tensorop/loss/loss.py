@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Iterable, List, TypeVar, Union
+from typing import Iterable, Union
 
 from fastestimator.op.tensorop.tensorop import TensorOp
 
@@ -32,9 +32,9 @@ class LossOp(TensorOp):
         average_loss: Whether to average the element-wise loss after the Loss Op.
     """
     def __init__(self,
-                 inputs: Union[str, List[str]] = None,
-                 outputs: List[str] = None,
-                 mode: Union[None, str, Iterable[str]] = None,
+                 inputs: Union[None, str, Iterable[str]] = None,
+                 outputs: Union[None, str, Iterable[str]] = None,
+                 mode: Union[None, str, Iterable[str]] = "!infer",
                  average_loss: bool = True):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.average_loss = average_loss

@@ -63,9 +63,9 @@ class Fuse(TensorOp):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.ops = ops
 
-    def build(self, framework: str) -> None:
+    def build(self, framework: str, device: Optional[torch.device] = None) -> None:
         for op in self.ops:
-            op.build(framework)
+            op.build(framework, device)
 
     def get_fe_models(self) -> Set[Model]:
         return self.models

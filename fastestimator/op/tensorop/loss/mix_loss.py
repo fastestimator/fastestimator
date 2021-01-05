@@ -25,7 +25,7 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 class MixLoss(LossOp):
-    """Loss class to compute mixiup and cutmix losses.
+    """Loss class to compute mix-up and cutmix losses.
 
     This class should be used in conjunction with MixUpBatch and CutMixBatch to perform mix-up training, which helps to
     reduce over-fitting, stabilize GAN training, and harden against adversarial attacks. See

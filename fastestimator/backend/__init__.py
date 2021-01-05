@@ -20,6 +20,7 @@ from fastestimator.backend.categorical_crossentropy import categorical_crossentr
 from fastestimator.backend.check_nan import check_nan
 from fastestimator.backend.clip_by_value import clip_by_value
 from fastestimator.backend.concat import concat
+from fastestimator.backend.exp import exp
 from fastestimator.backend.expand_dims import expand_dims
 from fastestimator.backend.feed_forward import feed_forward
 from fastestimator.backend.gather import gather
@@ -29,12 +30,15 @@ from fastestimator.backend.get_image_dims import get_image_dims
 from fastestimator.backend.get_lr import get_lr
 from fastestimator.backend.hinge import hinge
 from fastestimator.backend.iwd import iwd
+from fastestimator.backend.lambertw import lambertw
 from fastestimator.backend.load_model import load_model
 from fastestimator.backend.matmul import matmul
 from fastestimator.backend.maximum import maximum
 from fastestimator.backend.mean_squared_error import mean_squared_error
+from fastestimator.backend.ones_like import ones_like
 from fastestimator.backend.percentile import percentile
 from fastestimator.backend.permute import permute
+from fastestimator.backend.pow import pow
 from fastestimator.backend.random_normal_like import random_normal_like
 from fastestimator.backend.random_uniform_like import random_uniform_like
 from fastestimator.backend.reduce_max import reduce_max

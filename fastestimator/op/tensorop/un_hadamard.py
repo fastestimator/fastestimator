@@ -62,7 +62,7 @@ class UnHadamard(TensorOp):
         self.labels = None
         self.eps = None
 
-    def build(self, framework: str) -> None:
+    def build(self, framework: str, device: Optional[torch.device] = None) -> None:
         labels = hadamard(self.code_length).astype(np.float32)
         labels[np.arange(0, self.code_length, 2), 0] = -1  # Make first column alternate
         labels = labels[:self.n_classes]
@@ -74,8 +74,8 @@ class UnHadamard(TensorOp):
                      dtype=np.float32),
             target_type=framework)
         if framework == "torch":
-            self.labels = self.labels.to("cuda:0" if torch.cuda.is_available() else "cpu")
-            self.eps = self.eps.to("cuda:0" if torch.cuda.is_available() else "cpu")
+            self.labels = self.labels.to(device)
+            self.eps = self.eps.to(device)
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
         results = []

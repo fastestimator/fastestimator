@@ -48,7 +48,7 @@ def get_dependency():
         'h5py==2.10.0',
         'jsonpickle',
         'python-docx',
-        'scipy==1.4.1',
+        'scipy==1.5.4',
         'PyLaTeX==1.4.1',
         'natsort==7.1.0',
         'tensorflow_probability==0.11.1',

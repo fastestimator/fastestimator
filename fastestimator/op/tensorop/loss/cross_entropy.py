@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Iterable, List, Optional, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import tensorflow as tf
 import torch
@@ -42,8 +42,8 @@ class CrossEntropy(LossOp):
             automatically infer the correct form based on tensor shape.
     """
     def __init__(self,
-                 inputs: Union[None, str, Iterable[str]] = None,
-                 outputs: Union[None, str, Iterable[str]] = None,
+                 inputs: Union[Tuple[str, str], List[str]],
+                 outputs: str,
                  mode: Union[None, str, Iterable[str]] = "!infer",
                  from_logits: bool = False,
                  average_loss: bool = True,
