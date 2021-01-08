@@ -237,7 +237,7 @@ class TestEstimatorConfigureTensor(unittest.TestCase):
         batch = est._configure_tensor(loader, batch)
         self.assertIsInstance(batch["x"], torch.Tensor)
 
-    def test_estimator_configure_tensor_tf_dataset_torch_model(self):
+    def test_estimator_configure_tensor_tf_dataset_tf_model(self):
         loader = get_sample_torch_dataloader()
         pipeline = fe.Pipeline(train_data=loader)
         model = fe.build(model_fn=LeNetTf, optimizer_fn="adam")
