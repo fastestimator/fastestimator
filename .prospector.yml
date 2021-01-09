@@ -2,6 +2,13 @@
 
 ---
 
+output-format: grouped
+
+strictness: veryhigh
+doc-warnings: true
+test-warnings: true
+member-warnings: false
+
 bandit:
   run: false
 
@@ -18,7 +25,6 @@ mypy:
   run: false
 
 pep257:
-  run: true
   # see http://pep257.readthedocs.io/en/latest/error_codes.html
   disable:
     - D203,  # 1 blank line required before class docstring
