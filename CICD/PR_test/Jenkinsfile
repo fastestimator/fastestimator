@@ -7,6 +7,7 @@ pipeline {
     }
     environment {
         IMAGE_TAG="$IMAGE_TAG"
+        CODACY_PROJECT_TOKEN=credentials('codacy_project_api')
     }
     stages {
         stage('PR-test') {
@@ -19,6 +20,7 @@ pipeline {
                             sh 'pip install coverage'
                             sh 'coverage run --source fastestimator -m unittest test.run_pr_test'
                             sh 'coverage html'
+                            sh 'coverage xml'
                         }
                     }
                     finally {
@@ -37,6 +39,16 @@ pipeline {
                      reportFiles: 'index.html',
                      reportName: 'Code Coverage Report',
                      reportTitles: 'Code Coverage Report'])
+            }
+        }
+
+        stage('Update Codacy'){
+            steps{
+                script {
+                    if (!IMAGE_TAG.contains("-pr-")){
+                        sh 'bash <(curl -Ls https://coverage.codacy.com/get.sh) report -r coverage.xml'
+                    }
+                }
             }
         }
     }
