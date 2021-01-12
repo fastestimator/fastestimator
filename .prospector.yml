@@ -1,47 +1,5 @@
-# prospector configuration file
-
----
-
-output-format: grouped
-
-strictness: veryhigh
-doc-warnings: true
-test-warnings: true
-member-warnings: false
-
-bandit:
-  run: false
-
-dodgy:
-  run: true
-
-frosted:
-  run: false
-
-mccabe:
-  run: true
-
-mypy:
-  run: false
-
 pep257:
-  # see http://pep257.readthedocs.io/en/latest/error_codes.html
-  disable:
-    - D203,  # 1 blank line required before class docstring
-    - D213,  # Multi-line docstring summary should start at the second line
-    - D404,  # First word of the docstring should not be This
-
-pep8:
-  run: false
-
-pyflakes:
   run: true
-
-pylint:
-  run: false
-
-pyroma:
-  run: false
-
-vulture:
-  run: false
+  disable:
+    - D213
+    - D207
