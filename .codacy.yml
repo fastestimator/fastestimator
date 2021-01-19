@@ -1,0 +1,4 @@
+engines:
+  duplication:
+    exclude_paths:
+      - apphub/**
