@@ -19,20 +19,28 @@ import tensorflow as tf
 from fastestimator.dataset.numpy_dataset import NumpyDataset
 
 
-def load_data(image_key: str = "x", label_key: str = "y") -> Tuple[NumpyDataset, NumpyDataset]:
-    """Load and return the CIFAR10 dataset.
+def load_data(image_key: str = "x",
+              label_key: str = "y",
+              label_mode: str = "fine") -> Tuple[NumpyDataset, NumpyDataset]:
+    """Load and return the CIFAR100 dataset.
 
-    Please consider using the ciFAIR10 dataset instead. CIFAR10 contains duplicates between its train and test sets.
+    Please consider using the ciFAIR100 dataset instead. CIFAR100 contains duplicates between its train and test sets.
 
     Args:
         image_key: The key for image.
         label_key: The key for label.
+        label_mode: Either "fine" for 100 classes or "coarse" for 20 classes.
 
     Returns:
         (train_data, eval_data)
+
+    Raises:
+        ValueError: If the label_mode is invalid.
     """
-    print("\033[93m {}\033[00m".format("FastEstimator-Warn: Consider using the ciFAIR10 dataset instead."))
-    (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.cifar10.load_data()
+    print("\033[93m {}\033[00m".format("FastEstimator-Warn: Consider using the ciFAIR100 dataset instead."))
+    if label_mode not in ['fine', 'coarse']:
+        raise ValueError("label_mode must be one of either 'fine' or 'coarse'.")
+    (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.cifar100.load_data(label_mode=label_mode)
     train_data = NumpyDataset({image_key: x_train, label_key: y_train})
     eval_data = NumpyDataset({image_key: x_eval, label_key: y_eval})
     return train_data, eval_data

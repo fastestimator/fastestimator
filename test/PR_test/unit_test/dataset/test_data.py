@@ -16,7 +16,6 @@ import os
 import pickle
 import unittest
 import urllib.request
-import warnings
 
 
 def ping(host):
@@ -28,7 +27,6 @@ def ping(host):
         return code == 200
     except urllib.request.HTTPError as e:
         return False
-    return False
 
 
 class TestData(unittest.TestCase):

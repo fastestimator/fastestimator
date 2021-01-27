@@ -15,6 +15,7 @@
 """
 The FastEstimator implementation of cifar10-fast model
 ref: https://github.com/davidcpage/cifar10-fast
+Note that we use the ciFAIR10 dataset instead (https://cvjena.github.io/cifair/)
 """
 import tempfile
 
@@ -22,7 +23,7 @@ import tensorflow as tf
 from tensorflow.python.keras import layers
 
 import fastestimator as fe
-from fastestimator.dataset.data.cifar10 import load_data
+from fastestimator.dataset.data.cifair10 import load_data
 from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import HorizontalFlip, PadIfNeeded, RandomCrop
 from fastestimator.op.numpyop.univariate import CoarseDropout, Normalize, Onehot
