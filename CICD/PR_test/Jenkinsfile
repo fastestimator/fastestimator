@@ -1,4 +1,4 @@
-def IMAGE_TAG="$BUILD_TAG".toLowerCase()
+def IMAGE_TAG = "$BUILD_TAG".toLowerCase()
 
 pipeline {
     agent {label 'master'}
@@ -6,8 +6,8 @@ pipeline {
         timeout(time: 30, unit: 'MINUTES')
     }
     environment {
-        IMAGE_TAG="$IMAGE_TAG"
-        CODACY_PROJECT_TOKEN=credentials('codacy_project_api')
+        IMAGE_TAG = "$IMAGE_TAG"
+        CODACY_PROJECT_TOKEN = credentials('codacy_project_api')
     }
     stages {
         stage('PR-test') {
@@ -48,6 +48,15 @@ pipeline {
                     if (!IMAGE_TAG.contains("-pr-")){
                         sh '/root/.cache/codacy/codacy-coverage-reporter report -r coverage.xml'
                     }
+                }
+            }
+        }
+    }
+    post {
+        failure {
+            script{
+                if (!IMAGE_TAG.contains("-pr-")){
+                    slackSend(channel: "UKNU5HB5K", message: "Oh no! FastEstimator <$BUILD_URL|PR-test#$BUILD_NUMBER> failed :(")
                 }
             }
         }
