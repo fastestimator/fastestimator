@@ -46,7 +46,8 @@ pipeline {
             steps{
                 script {
                     if (!IMAGE_TAG.contains("-pr-")){
-                        sh '/root/.cache/codacy/codacy-coverage-reporter report -r coverage.xml'
+                        sh 'curl https://coverage.codacy.com/get.sh -o get.sh'
+                        sh 'bash get.sh report -r coverage.xml'
                     }
                 }
             }
