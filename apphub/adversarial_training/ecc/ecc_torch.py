@@ -20,7 +20,7 @@ import torch.nn as nn
 import torch.nn.functional as fn
 
 import fastestimator as fe
-from fastestimator.dataset.data import cifar10
+from fastestimator.dataset.data import cifair10
 from fastestimator.layers.pytorch import HadamardCode
 from fastestimator.op.numpyop.univariate import ChannelTranspose, Normalize
 from fastestimator.op.tensorop import Average
@@ -68,7 +68,7 @@ def get_estimator(epsilon=0.04,
                   max_eval_steps_per_epoch=None,
                   save_dir=tempfile.mkdtemp()):
     # step 1
-    train_data, eval_data = cifar10.load_data()
+    train_data, eval_data = cifair10.load_data()
     test_data = eval_data.split(0.5)
     pipeline = fe.Pipeline(
         train_data=train_data,

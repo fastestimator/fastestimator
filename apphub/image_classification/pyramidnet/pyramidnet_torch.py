@@ -19,7 +19,7 @@ import torch
 import torch.nn as nn
 
 import fastestimator as fe
-from fastestimator.dataset.data.cifar10 import load_data
+from fastestimator.dataset.data.cifair10 import load_data
 from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import HorizontalFlip, PadIfNeeded, RandomCrop
 from fastestimator.op.numpyop.univariate import ChannelTranspose, CoarseDropout, Normalize

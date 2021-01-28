@@ -18,7 +18,7 @@ import unittest
 
 import fastestimator as fe
 from fastestimator.architecture.tensorflow import LeNet
-from fastestimator.dataset.data import cifar10
+from fastestimator.dataset.data import cifair10
 from fastestimator.op.numpyop.univariate import Normalize
 from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.test.unittest_util import img_to_rgb_array, check_img_similar
@@ -48,7 +48,7 @@ class TestSalinecy(unittest.TestCase):
 
         batch_size = 32
 
-        train_data, eval_data = cifar10.load_data()
+        train_data, eval_data = cifair10.load_data()
         pipeline = fe.Pipeline(test_data=train_data,
                                batch_size=batch_size,
                                ops=[Normalize(inputs="x", outputs="x")],
