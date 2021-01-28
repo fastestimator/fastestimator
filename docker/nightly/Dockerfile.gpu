@@ -18,7 +18,7 @@ RUN apt-get install -y \
     texlive-latex-extra
 
 # upgrade essential packages
-RUN pip install --upgrade pip setuptools
+RUN pip install --upgrade pip setuptools==51.3.3
 
 # nightly test related packages
 RUN pip install --no-cache-dir \
