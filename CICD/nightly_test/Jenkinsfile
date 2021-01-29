@@ -1,4 +1,4 @@
-def IMAGE_TAG="$BUILD_TAG".toLowerCase()
+def IMAGE_TAG = "$BUILD_TAG".toLowerCase()
 
 pipeline {
     agent {label 'master'}
@@ -6,10 +6,11 @@ pipeline {
         timeout(time: 3, unit: 'HOURS')
     }
     environment {
-        IMAGE_TAG="$IMAGE_TAG"
-        DOCKER_DATASET_PATH='/root/fastestimator_data'
-        LOCAL_DATASET_PATH='/home/ubuntu/fastestimator_data'
-        S3_DATASET_PATH='s3://fastestimator-public/nightly_test'
+        IMAGE_TAG = "$IMAGE_TAG"
+        DOCKER_DATASET_PATH = '/root/fastestimator_data'
+        LOCAL_DATASET_PATH = '/home/ubuntu/fastestimator_data'
+        S3_DATASET_PATH = 's3://fastestimator-public/nightly_test'
+        BUILD_DATE = sh(script: "echo `date +%D`", returnStdout: true).trim()
     }
     stages {
         stage('nightly_test') {
@@ -101,6 +102,18 @@ pipeline {
                     sh 'docker push fastestimator/fastestimator:nightly-gpu'
                     sh 'docker image prune -f'
                 }
+            }
+        }
+    }
+    post {
+        success{
+           script{
+                slackSend(channel: "fastestimator", message: "Congrats! FastEstimator <$BUILD_URL|nightly-test> of $BUILD_DATE passed :)")
+            }
+        }
+        failure {
+            script{
+                slackSend(channel: "fastestimator", message: "Oh no! FastEstimator <$BUILD_URL|nightly-test> of $BUILD_DATE failed :(")
             }
         }
     }
