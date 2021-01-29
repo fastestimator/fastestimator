@@ -108,12 +108,12 @@ pipeline {
     post {
         success{
            script{
-                slackSend(channel: "UKNU5HB5K", message: "Congrats! FastEstimator <$BUILD_URL|nightly-test> of $BUILD_DATE passed :)")
+                slackSend(channel: "fastestimator", message: "Congrats! FastEstimator <$BUILD_URL|nightly-test> of $BUILD_DATE passed :)")
             }
         }
         failure {
             script{
-                slackSend(channel: "UKNU5HB5K", message: "Oh no! FastEstimator <$BUILD_URL|nightly-test> of $BUILD_DATE failed :(")
+                slackSend(channel: "fastestimator", message: "Oh no! FastEstimator <$BUILD_URL|nightly-test> of $BUILD_DATE failed :(")
             }
         }
     }

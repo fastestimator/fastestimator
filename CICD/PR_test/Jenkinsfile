@@ -56,7 +56,7 @@ pipeline {
         failure {
             script{
                 if (!IMAGE_TAG.contains("-pr-")){
-                    slackSend(channel: "UKNU5HB5K", message: "Oh no! FastEstimator <$BUILD_URL|PR-test#$BUILD_NUMBER> failed :(")
+                    slackSend(channel: "fastestimator", message: "Oh no! FastEstimator <$BUILD_URL|PR-test#$BUILD_NUMBER> failed :(")
                 }
             }
         }
