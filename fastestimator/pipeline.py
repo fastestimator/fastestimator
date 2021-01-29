@@ -161,7 +161,12 @@ class Pipeline:
                     all_modes.append(mode)
         return to_set(all_modes)
 
-    def benchmark(self, mode: str = "train", epoch: int = 1, num_steps: int = 1000, log_interval: int = 100) -> None:
+    def benchmark(self,
+                  mode: str = "train",
+                  epoch: int = 1,
+                  num_steps: int = 1000,
+                  log_interval: int = 100,
+                  detailed: bool = True) -> None:
         """Benchmark the pipeline processing speed.
 
         Args:
@@ -169,6 +174,7 @@ class Pipeline:
             epoch: The epoch index to benchmark. Note that epoch indices are 1-indexed.
             num_steps: The maximum number of steps over which to perform the benchmark.
             log_interval: The logging interval.
+            detailed: Whether to display the detailed time used by each operator.
         """
         loader = self.get_loader(mode=mode, epoch=epoch)
         if isinstance(loader, tf.data.Dataset):
@@ -183,7 +189,7 @@ class Pipeline:
             if idx == num_steps:
                 break
         # Pipeline Operations Benchmarking when using FEDataset
-        if isinstance(loader, DataLoader) and isinstance(loader.dataset, OpDataset):
+        if isinstance(loader, DataLoader) and isinstance(loader.dataset, OpDataset) and detailed:
             op_list = loader.dataset.ops
             duration_list = np.zeros(shape=(len(op_list)))
 
