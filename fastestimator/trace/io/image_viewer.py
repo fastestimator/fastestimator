@@ -16,6 +16,8 @@ from typing import Sequence, Set, Union
 
 import matplotlib.pyplot as plt
 
+from fastestimator.summary.logs.log_plot import visualize_logs
+from fastestimator.summary.summary import Summary
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.img_data import ImgData
@@ -46,6 +48,17 @@ class ImageViewer(Trace):
         plt.rcParams['figure.figsize'] = [width, height]
 
     def on_epoch_end(self, data: Data) -> None:
+        self._display_images(data)
+
+    def on_end(self, data: Data) -> None:
+        self._display_images(data)
+
+    def _display_images(self, data: Data) -> None:
+        """A method to render images to the screen.
+
+        Args:
+            data: Data possibly containing images to render.
+        """
         for key in self.inputs:
             if key in data:
                 imgs = data[key]
@@ -55,6 +68,10 @@ class ImageViewer(Trace):
                     plt.axis('off')
                     plt.tight_layout()
                     plt.show()
+                elif isinstance(imgs, Summary):
+                    visualize_logs([imgs])
+                elif isinstance(imgs, (list, tuple)) and all([isinstance(img, Summary) for img in imgs]):
+                    visualize_logs(imgs)
                 else:
                     for idx, img in enumerate(imgs):
                         show_image(img, title="{}_{}".format(key, idx))

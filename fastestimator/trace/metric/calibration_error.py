@@ -18,6 +18,7 @@ from typing import Optional, Set, Union
 import calibration as cal
 import numpy as np
 
+from fastestimator.summary.summary import ValWithError
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.util import to_number
@@ -56,7 +57,6 @@ class CalibrationError(Trace):
         if confidence_interval is not None:
             assert 0 < confidence_interval < 100, \
                 f"CalibrationError 'confidence_interval' must be between 0 and 100, but got {confidence_interval}."
-            output_name = [output_name, f"{output_name}_{confidence_interval}CI"]
             confidence_interval = 1.0 - confidence_interval / 100.0
         self.confidence_interval = confidence_interval
         super().__init__(inputs=[true_key, pred_key], outputs=output_name, mode=mode)
@@ -84,11 +84,13 @@ class CalibrationError(Trace):
     def on_epoch_end(self, data: Data) -> None:
         self.y_true = np.squeeze(np.stack(self.y_true))
         self.y_pred = np.stack(self.y_pred)
-        data.write_with_log(
-            self.outputs[0],
-            round(cal.get_calibration_error(probs=self.y_pred, labels=self.y_true, mode=self.method), 4))
+        mid = round(cal.get_calibration_error(probs=self.y_pred, labels=self.y_true, mode=self.method), 4)
+        low = None
+        high = None
         if self.confidence_interval is not None:
-            low, med, high = cal.get_calibration_error_uncertainties(probs=self.y_pred, labels=self.y_true,
-                                                                     mode=self.method,
-                                                                     alpha=self.confidence_interval)
-            data.write_with_log(self.outputs[1], f"({round(low, 4)}, {round(high, 4)})")
+            low, _, high = cal.get_calibration_error_uncertainties(probs=self.y_pred, labels=self.y_true,
+                                                                   mode=self.method,
+                                                                   alpha=self.confidence_interval)
+            low = round(low, 4)
+            high = round(high, 4)
+        data.write_with_log(self.outputs[0], ValWithError(low, mid, high) if low is not None else mid)

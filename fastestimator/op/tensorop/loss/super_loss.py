@@ -44,19 +44,27 @@ class SuperLoss(LossOp):
         regularization: The regularization parameter to use for the super loss (must by >0, as regularization approaches
             infinity the SuperLoss converges to the regular loss value).
         average_loss: Whether the final loss should be averaged or not.
+        output_confidence: If not None then the confidence scores for each sample will be written into the specified
+            key. This can be useful for finding difficult or mislabeled data.
 
     Raises:
         ValueError: If the provided `loss` has multiple outputs or the `regularization` / `threshold` parameters are
             invalid.
     """
-    def __init__(self, loss: LossOp, threshold: Union[float, str] = 'exp', regularization: float = 1.0,
-                 average_loss: bool = True):
+    def __init__(self,
+                 loss: LossOp,
+                 threshold: Union[float, str] = 'exp',
+                 regularization: float = 1.0,
+                 average_loss: bool = True,
+                 output_confidence: Optional[str] = None):
         if len(loss.outputs) != 1 or loss.out_list:
             raise ValueError("SuperLoss only supports lossOps which have a single output.")
         self.loss = loss
         self.loss.average_loss = False
-        super().__init__(inputs=loss.inputs, outputs=loss.outputs, mode=loss.mode, average_loss=average_loss)
-        self.out_list = False
+        super().__init__(inputs=loss.inputs,
+                         outputs=loss.outputs[0] if not output_confidence else (loss.outputs[0], output_confidence),
+                         mode=loss.mode,
+                         average_loss=average_loss)
         if not isinstance(threshold, str):
             threshold = to_number(threshold).item()
         if not isinstance(threshold, float) and threshold != 'exp':
@@ -72,33 +80,53 @@ class SuperLoss(LossOp):
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
         self.loss.build(framework, device)
         if framework == 'tf':
-            self.initialized = {'train': tf.Variable(False), 'eval': tf.Variable(False), 'test': tf.Variable(False),
-                                'infer': tf.Variable(False)}
+            self.initialized = {
+                'train': tf.Variable(False),
+                'eval': tf.Variable(False),
+                'test': tf.Variable(False),
+                'infer': tf.Variable(False)
+            }
             if self.tau_method == 'exp':
-                self.tau = {'train': tf.Variable(0.0), 'eval': tf.Variable(0.0), 'test': tf.Variable(0.0),
-                            'infer': tf.Variable(0.0)}
+                self.tau = {
+                    'train': tf.Variable(0.0),
+                    'eval': tf.Variable(0.0),
+                    'test': tf.Variable(0.0),
+                    'infer': tf.Variable(0.0)
+                }
             else:
-                self.tau = {'train': tf.Variable(self.tau_method), 'eval': tf.Variable(self.tau_method),
-                            'test': tf.Variable(self.tau_method), 'infer': tf.Variable(self.tau_method)}
+                self.tau = {
+                    'train': tf.Variable(self.tau_method),
+                    'eval': tf.Variable(self.tau_method),
+                    'test': tf.Variable(self.tau_method),
+                    'infer': tf.Variable(self.tau_method)
+                }
             self.cap = tf.constant(self.cap)
         elif framework == 'torch':
-            self.initialized = {'train': torch.tensor(False).to(device), 'eval': torch.tensor(False).to(device),
-                                'test': torch.tensor(False).to(device),
-                                'infer': torch.tensor(False).to(device)}
+            self.initialized = {
+                'train': torch.tensor(False).to(device),
+                'eval': torch.tensor(False).to(device),
+                'test': torch.tensor(False).to(device),
+                'infer': torch.tensor(False).to(device)
+            }
             if self.tau_method == 'exp':
-                self.tau = {'train': torch.tensor(0.0).to(device), 'eval': torch.tensor(0.0).to(device),
-                            'test': torch.tensor(0.0).to(device),
-                            'infer': torch.tensor(0.0).to(device)}
+                self.tau = {
+                    'train': torch.tensor(0.0).to(device),
+                    'eval': torch.tensor(0.0).to(device),
+                    'test': torch.tensor(0.0).to(device),
+                    'infer': torch.tensor(0.0).to(device)
+                }
             else:
-                self.tau = {'train': torch.tensor(self.tau_method).to(device),
-                            'eval': torch.tensor(self.tau_method).to(device),
-                            'test': torch.tensor(self.tau_method).to(device),
-                            'infer': torch.tensor(self.tau_method).to(device)}
+                self.tau = {
+                    'train': torch.tensor(self.tau_method).to(device),
+                    'eval': torch.tensor(self.tau_method).to(device),
+                    'test': torch.tensor(self.tau_method).to(device),
+                    'infer': torch.tensor(self.tau_method).to(device)
+                }
             self.cap = torch.tensor(self.cap).to(device)
         else:
             raise ValueError("unrecognized framework: {}".format(framework))
 
-    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
+    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
         base_loss = self.loss.forward(data, state)
         tau = self._accumulate_tau(base_loss, state['mode'], state['warmup'])
         beta = (base_loss - tau) / self.lam
@@ -108,6 +136,10 @@ class SuperLoss(LossOp):
 
         if self.average_loss:
             super_loss = reduce_mean(super_loss)
+
+        if len(self.outputs) == 2:
+            # User requested that the confidence score be returned
+            return [super_loss, exp(ln_sigma)]
 
         return super_loss
 

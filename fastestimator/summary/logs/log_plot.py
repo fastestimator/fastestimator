@@ -22,9 +22,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 from matplotlib.markers import MarkerStyle
+from natsort import humansorted
 from scipy.ndimage.filters import gaussian_filter1d
 
-from fastestimator.summary.summary import Summary
+from fastestimator.summary.summary import Summary, ValWithError
 from fastestimator.util.util import prettify_metric_name, to_list, to_set
 
 
@@ -76,7 +77,7 @@ class _MetricGroup:
                         else:
                             # Can't disambiguate what should be plotted
                             return False
-                    if not isinstance(elem, (int, float)):
+                    if not isinstance(elem, (int, float, ValWithError)):
                         # Can only plot numeric values over time
                         return False
                     values[idx] = (step, elem)
@@ -165,7 +166,8 @@ def plot_logs(experiments: List[Summary],
     Returns:
         The handle of the pyplot figure.
     """
-    experiments = to_list(experiments)
+    # Sort to keep same colors between multiple runs of visualization
+    experiments = humansorted(to_list(experiments), lambda exp: exp.name)
     n_experiments = len(experiments)
     if n_experiments == 0:
         return plt.subplots(111)[0]
@@ -298,7 +300,7 @@ def plot_logs(experiments: List[Summary],
                     title = f"{experiment.name} ({mode})" if n_experiments > 1 else f"{mode}"
                     if data.shape[0] < 2:
                         # This particular mode only has a single data point, so need to draw a shape instead of a line
-                        xy = (data[0][0], data[0][1])
+                        xy = [data[0][0], data[0][1]]
                         if mode == 'train':
                             style = MarkerStyle(marker='o', fillstyle='full')
                         elif mode == 'eval':
@@ -307,6 +309,21 @@ def plot_logs(experiments: List[Summary],
                             style = MarkerStyle(marker='*', fillstyle='full')
                         else:
                             style = MarkerStyle(marker='s', fillstyle='full')
+                        if isinstance(xy[1], ValWithError):
+                            # We've got error bars
+                            x = xy[0]
+                            y = xy[1]
+                            # Plotting requires positive values for error
+                            y_err = [[max(1e-9, y.y - y.y_min)], [max(1e-9, y.y_max - y.y)]]
+                            axis.errorbar(x=x,
+                                          y=y.y,
+                                          yerr=y_err,
+                                          ecolor=colors[exp_idx + color_offset[mode]],
+                                          elinewidth=1.5,
+                                          capsize=4.0,
+                                          capthick=1.5,
+                                          zorder=3)  # zorder to put markers on top of line segments
+                            xy[1] = y.y
                         s = axis.scatter(xy[0],
                                          xy[1],
                                          s=40,
@@ -314,16 +331,29 @@ def plot_logs(experiments: List[Summary],
                                          marker=style,
                                          linewidth=1.0,
                                          edgecolors='black',
-                                         zorder=3)  # zorder to put markers on top of line segments
+                                         zorder=4)  # zorder to put markers on top of line segments
                         if not has_label[exp_idx][mode]['patch']:
                             labels.append(title)
                             handles.append(s)
                             has_label[exp_idx][mode]['patch'] = True
                     else:
                         # We can draw a line
-                        y = data[:, 1] if smooth_factor == 0 else gaussian_filter1d(data[:, 1], sigma=smooth_factor)
+                        y = data[:, 1]
+                        y_min = None
+                        y_max = None
+                        if isinstance(y[0], ValWithError):
+                            y = np.stack(y)
+                            y_min = y[:, 0]
+                            y_max = y[:, 2]
+                            y = y[:, 1]
+                            if smooth_factor != 0:
+                                y_min = gaussian_filter1d(y_min, sigma=smooth_factor)
+                                y_max = gaussian_filter1d(y_max, sigma=smooth_factor)
+                        if smooth_factor != 0:
+                            y = gaussian_filter1d(y, sigma=smooth_factor)
+                        x = data[:, 0]
                         ln = axis.plot(
-                            data[:, 0],
+                            x,
                             y,
                             color=colors[exp_idx + color_offset[mode]],
                             label=title,
@@ -334,6 +364,13 @@ def plot_logs(experiments: List[Summary],
                             labels.append(title)
                             handles.append(ln[0])
                             has_label[exp_idx][mode]['line'] = True
+                        if y_max is not None and y_min is not None:
+                            axis.fill_between(x.astype(np.float32),
+                                              y_max,
+                                              y_min,
+                                              facecolor=colors[exp_idx + color_offset[mode]],
+                                              alpha=0.3,
+                                              zorder=-1)
             else:
                 # Some kind of image or matrix. Not implemented yet.
                 pass
@@ -374,7 +411,8 @@ def visualize_logs(experiments: List[Summary],
                    pretty_names: bool = False,
                    ignore_metrics: Optional[Set[str]] = None,
                    include_metrics: Optional[Set[str]] = None,
-                   verbose: bool = True):
+                   verbose: bool = True,
+                   dpi: int = 300):
     """A function which will save or display experiment histories for comparison viewing / analysis.
 
     Args:
@@ -386,6 +424,7 @@ def visualize_logs(experiments: List[Summary],
         ignore_metrics: Any metrics to ignore during plotting.
         include_metrics: A whitelist of metric keys (None whitelists all keys).
         verbose: Whether to print out the save location.
+        dpi: The dpi at which to save the figure.
     """
     plot_logs(experiments,
               smooth_factor=smooth_factor,
@@ -404,4 +443,4 @@ def visualize_logs(experiments: List[Summary],
         save_file = os.path.join(root_dir, os.path.basename(save_path) or 'parse_logs.png')
         if verbose:
             print("Saving to {}".format(save_file))
-        plt.savefig(save_file, dpi=300, bbox_inches="tight")
+        plt.savefig(save_file, dpi=dpi, bbox_inches="tight")

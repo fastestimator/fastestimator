@@ -14,7 +14,7 @@
 # ==============================================================================
 from typing import Any, Dict, Generic, Iterable, List, Optional, TypeVar, Union
 
-from fastestimator.util.traceability_util import traceable
+from fastestimator.util.traceability_util import is_restorable, traceable
 from fastestimator.util.util import to_set
 
 T = TypeVar('T')
@@ -82,7 +82,9 @@ class RepeatScheduler(Scheduler[T]):
 
     def __getstate__(self) -> Dict[str, List[Dict[Any, Any]]]:
         return {
-            'repeat_list': [elem.__getstate__() if hasattr(elem, '__getstate__') else {} for elem in self.repeat_list]
+            'repeat_list': [
+                elem if is_restorable(elem)[0] else elem.__getstate__() if hasattr(elem, '__getstate__') else {} for
+                elem in self.repeat_list]
         }
 
 
@@ -152,8 +154,8 @@ class EpochScheduler(Scheduler[T]):
     def __getstate__(self) -> Dict[str, Dict[int, Dict[Any, Any]]]:
         return {
             'epoch_dict':
-            {key: elem.__getstate__()
-             for key, elem in self.epoch_dict.items() if hasattr(elem, '__getstate__')}
+                {key: elem if is_restorable(elem)[0] else elem.__getstate__() if hasattr(elem, '__getstate__') else {}
+                 for key, elem in self.epoch_dict.items()}
         }
 
 

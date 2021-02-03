@@ -13,9 +13,20 @@
 # limitations under the License.
 # ==============================================================================
 from collections import defaultdict
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, NamedTuple, Optional
 
 from fastestimator.util.traceability_util import FeSummaryTable
+
+
+class ValWithError(NamedTuple):
+    """A class to record values with error bars (for special visualization in the logger).
+    """
+    y_min: float
+    y: float
+    y_max: float
+
+    def __str__(self):
+        return f"({self.y_min}, {self.y}, {self.y_max})"
 
 
 class Summary:
@@ -51,7 +62,7 @@ class Summary:
         """
         return bool(self.name)
 
-    def __getstate__(self):
+    def __getstate__(self) -> Dict[str, Any]:
         """Get a representation of the state of this object.
 
         This method is invoked by pickle.

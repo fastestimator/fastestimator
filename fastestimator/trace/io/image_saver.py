@@ -17,6 +17,8 @@ from typing import Sequence, Set, Union
 
 import matplotlib.pyplot as plt
 
+from fastestimator.summary.logs.log_plot import visualize_logs
+from fastestimator.summary.summary import Summary
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.img_data import ImgData
@@ -46,15 +48,27 @@ class ImageSaver(Trace):
         self.dpi = dpi
 
     def on_epoch_end(self, data: Data) -> None:
+        self._save_images(data)
+
+    def on_end(self, data: Data) -> None:
+        self._save_images(data)
+
+    def _save_images(self, data: Data):
         for key in self.inputs:
             if key in data:
                 imgs = data[key]
+                im_path = os.path.join(self.save_dir,
+                                       "{}_{}_epoch_{}.png".format(key, self.system.mode, self.system.epoch_idx))
                 if isinstance(imgs, ImgData):
                     f = imgs.paint_figure()
-                    im_path = os.path.join(self.save_dir,
-                                           "{}_{}_epoch_{}.png".format(key, self.system.mode, self.system.epoch_idx))
                     plt.savefig(im_path, dpi=self.dpi, bbox_inches="tight")
                     plt.close(f)
+                    print("FastEstimator-ImageSaver: saved image to {}".format(im_path))
+                elif isinstance(imgs, Summary):
+                    visualize_logs([imgs], save_path=im_path, dpi=self.dpi, verbose=False)
+                    print("FastEstimator-ImageSaver: saved image to {}".format(im_path))
+                elif isinstance(imgs, (list, tuple)) and all([isinstance(img, Summary) for img in imgs]):
+                    visualize_logs(imgs, save_path=im_path, dpi=self.dpi, verbose=False)
                     print("FastEstimator-ImageSaver: saved image to {}".format(im_path))
                 else:
                     for idx, img in enumerate(imgs):
