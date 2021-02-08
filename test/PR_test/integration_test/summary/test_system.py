@@ -24,6 +24,7 @@ import torch
 import fastestimator as fe
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model import ModelOp
+from fastestimator.summary import Summary
 from fastestimator.test.unittest_util import OneLayerTorchModel, is_equal, one_layer_tf_model, sample_system_object, \
     sample_system_object_torch
 from fastestimator.trace.trace import Trace
@@ -103,7 +104,7 @@ class TestSystem(unittest.TestCase):
     def test_save_and_load_state_tf(self):
         """ `save_state` and `load_state` of an entire system are highly dependent on the implementation of __setstate__
         and __getstate__ of ops, traces, datasets ... etc. The save_state and load_state function should be tested in
-        the testing script of that perticular component
+        the testing script of that particular component
         (ex: The test of save_state and load_state with EpochScheduler is located in
              PR_test/integration_test/schedule/test_epoch_scheduler.py)
         """
@@ -369,3 +370,47 @@ class TestSystem(unittest.TestCase):
             var1_new_val = 4.0
             var1.copy_(torch.tensor(var1_new_val))
             self.assertEqual(var1_new_val, system.network.ops[0].var1.numpy())
+
+    def test_save_and_load_custom_graphs(self):
+        def instantiate_system():
+            system = sample_system_object()
+            return system
+
+        # Make some data
+        example_graph1 = Summary(name="exp1")
+        example_graph1.history['train']['acc'][0] = 0.95
+        example_graph1.history['train']['acc'][10] = 0.87
+
+        example_graph2 = Summary(name="class1")
+        example_graph2.history['eval']['dice'][15] = 0.34
+        example_graph2.history['eval']['dice'][25] = 0.75
+
+        example_graph3 = Summary(name="class2")
+        example_graph3.history['eval']['dice'][15] = 0.21
+        example_graph3.history['eval']['dice'][25] = 0.93
+
+        system = instantiate_system()
+        system.add_graph("sample_single_graph", example_graph1)
+        system.add_graph("sample_list_graph", [example_graph2, example_graph3])
+
+        # Save the state
+        save_path = tempfile.mkdtemp()
+        system.save_state(save_dir=save_path)
+
+        # reinstantiate system and load the state
+        system = instantiate_system()
+        system.load_state(save_path)
+
+        # Check the results
+        with self.subTest('Check that 2 graphs are recovered'):
+            self.assertEqual(2, len(system.custom_graphs))
+        with self.subTest('Check that the single graph is recovered'):
+            self.assertIn("sample_single_graph", system.custom_graphs)
+            self.assertEqual('exp1', system.custom_graphs['sample_single_graph'][0].name)
+            self.assertEqual(0.87, system.custom_graphs['sample_single_graph'][0].history['train']['acc'][10])
+        with self.subTest('Check that multi-graphs are recovered'):
+            self.assertIn("sample_list_graph", system.custom_graphs)
+            self.assertEqual('class1', system.custom_graphs['sample_list_graph'][0].name)
+            self.assertEqual('class2', system.custom_graphs['sample_list_graph'][1].name)
+            self.assertEqual(0.34, system.custom_graphs['sample_list_graph'][0].history['eval']['dice'][15])
+            self.assertEqual(0.21, system.custom_graphs['sample_list_graph'][1].history['eval']['dice'][15])

@@ -68,6 +68,7 @@ class System:
         max_eval_steps_per_epoch: Evaluation will complete after n steps even if loader is not yet exhausted.
         summary: An object to write experiment results to.
         experiment_time: A timestamp indicating when this model was trained.
+        custom_graphs: A place to store extra graphs which are too complicated for the primary history.
     """
 
     mode: Optional[str]
@@ -85,6 +86,7 @@ class System:
     max_eval_steps_per_epoch: Optional[int]
     summary: Summary
     experiment_time: str
+    custom_graphs: Dict[str, List[Summary]]
 
     def __init__(self,
                  network: BaseNetwork,
@@ -111,6 +113,7 @@ class System:
         self.stop_training = False
         self.summary = Summary(None, system_config)
         self.experiment_time = ""
+        self.custom_graphs = {}
         self._initialize_state()
 
     def _initialize_state(self) -> None:
@@ -148,6 +151,7 @@ class System:
         self.batch_idx = None
         self.stop_training = False
         self.summary = Summary(summary_name, system_config)
+        self.custom_graphs = {}
 
     def reset_for_test(self, summary_name: Optional[str] = None) -> None:
         """Partially reset the current `System` object for a new round of testing.
@@ -162,6 +166,9 @@ class System:
         self.stop_training = False
         self.summary.name = summary_name or self.summary.name  # Keep old experiment name if new one not provided
         self.summary.history.pop('test', None)
+        for graph_set in self.custom_graphs.values():
+            for graph in graph_set:
+                graph.history.pop('test', None)
 
     def write_summary(self, key: str, value: Any) -> None:
         """Write an entry into the `Summary` object (iff the experiment was named).
@@ -172,6 +179,20 @@ class System:
         """
         if self.summary:
             self.summary.history[self.mode][key][self.global_step or 0] = value
+
+    def add_graph(self, graph_name: str, graph: Union[Summary, List[Summary]]) -> None:
+        """Write custom summary graphs into the System.
+
+        This can be useful for things like the LabelTracker trace to interact with Traceability reports.
+
+        Args:
+            graph_name: The name of the graph (so that you can override it later if desired).
+            graph: The custom summary to be tracked.
+        """
+        if isinstance(graph, Summary):
+            self.custom_graphs[graph_name] = [graph]
+        else:
+            self.custom_graphs[graph_name] = list(graph)
 
     def save_state(self, save_dir: str) -> None:
         """Load training state.
@@ -190,6 +211,7 @@ class System:
         # Save everything else
         objects = {
             'summary': self.summary,
+            'custom_graphs': self.custom_graphs,
             'traces': [trace.__getstate__() if hasattr(trace, '__getstate__') else {} for trace in self.traces],
             'tops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.network.ops],
             'pops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.network.postprocessing],
@@ -227,6 +249,7 @@ class System:
         with open(objects_path, 'rb') as file:
             objects = pickle.load(file)
         self.summary.__dict__.update(objects['summary'].__dict__)
+        self.custom_graphs = objects['custom_graphs']
         self._load_list(objects, 'traces', self.traces)
         self._load_list(objects, 'tops', self.network.ops)
         self._load_list(objects, 'pops', self.network.postprocessing)

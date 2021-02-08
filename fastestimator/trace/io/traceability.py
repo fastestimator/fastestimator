@@ -216,6 +216,12 @@ class Traceability(Trace):
             with self.doc.create(Figure(position='h!')) as plot:
                 plot.add_image(os.path.relpath(log_path, start=self.save_dir),
                                width=NoEscape(r'1.0\textwidth,height=0.95\textheight,keepaspectratio'))
+            for idx, graph in enumerate(self.system.custom_graphs.values()):
+                graph_path = os.path.join(self.resource_dir, f'{self.report_name}_custom_graph_{idx}.png')
+                visualize_logs(experiments=graph, save_path=graph_path, verbose=False)
+                with self.doc.create(Figure(position='h!')) as plot:
+                    plot.add_image(os.path.relpath(graph_path, start=self.save_dir),
+                                   width=NoEscape(r'1.0\textwidth,height=0.95\textheight,keepaspectratio'))
 
     def _document_fe_graph(self) -> None:
         """Add FE execution graphs into the traceability document.

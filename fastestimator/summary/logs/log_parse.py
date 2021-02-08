@@ -18,7 +18,7 @@ from typing import List, Optional, Set
 
 from fastestimator.dataset.dir_dataset import DirDataset
 from fastestimator.summary.logs.log_plot import visualize_logs
-from fastestimator.summary.summary import Summary
+from fastestimator.summary.summary import Summary, ValWithError
 from fastestimator.util.util import strip_suffix
 
 
@@ -44,12 +44,17 @@ def parse_log_file(file_path: str, file_extension: str) -> Summary:
                 mode = "test"
             if mode is None:
                 continue
-            parsed_line = re.findall(r"([^:;]+):[\s]*([-]?[0-9]+[.]?[0-9]*(e[-]?[0-9]+[.]?[0-9]*)?);", line)
+            num = r"([-]?[0-9]+[.]?[0-9]*(e[-]?[0-9]+[.]?[0-9]*)?)"
+            parsed_line = re.findall(r"([^:;]+):[\s]*(" + num + r"|\(" + num + ", " + num + ", " + num + r"\));", line)
             step = parsed_line[0]
             assert step[0].strip() == "step", \
                 "Log file (%s) seems to be missing step information, or step is not listed first" % file
             for metric in parsed_line[1:]:
-                experiment.history[mode][metric[0].strip()].update({int(step[1]): float(metric[1])})
+                if metric[4]:
+                    val = ValWithError(float(metric[4]), float(metric[6]), float(metric[8]))
+                else:
+                    val = float(metric[1])
+                experiment.history[mode][metric[0].strip()].update({int(step[1]): val})
     return experiment
 
 

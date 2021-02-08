@@ -1057,6 +1057,7 @@ def _setdata(current: Any, new: Any) -> Any:
     if isinstance(current, tuple) and isinstance(new, (tuple, list)) and len(current) == len(new):
         return tuple([_setdata(cu, cr) for cu, cr in zip(current, new)])
     if isinstance(current, dict) and isinstance(new, dict) and current.keys() == new.keys():
+        # Might want to consider removing the key equality requirement, but unclear what ramifications that would have.
         for key in current.keys():
             current[key] = _setdata(current[key], new[key])
         return current

@@ -20,6 +20,7 @@ from natsort import humansorted
 import numpy as np
 
 from fastestimator.backend.get_lr import get_lr
+from fastestimator.summary.summary import ValWithError
 from fastestimator.summary.system import System
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
@@ -285,12 +286,16 @@ class Logger(Trace):
             self.system.write_summary('epoch', self.system.epoch_idx)
         deferred = []
         for key, val in humansorted(data.read_logs().items(), key=lambda x: x[0]):
-            val = to_number(val)
-            self.system.write_summary(key, val)
-            if val.size > 1:
-                deferred.append("\n{}:\n{};".format(key, np.array2string(val, separator=',')))
-            else:
+            if isinstance(val, ValWithError):
                 log_message += "{}: {}; ".format(key, str(val))
+            else:
+                val = to_number(val)
+                if val.size > 1:
+                    deferred.append("\n{}:\n{};".format(key, np.array2string(val, separator=',')))
+                else:
+                    log_message += "{}: {}; ".format(key, str(val))
+            self.system.write_summary(key, val)
+        log_message = log_message.strip()
         for elem in deferred:
             log_message += elem
         print(log_message)
