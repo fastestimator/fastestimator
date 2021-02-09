@@ -12,11 +12,10 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 # ==============================================================================
-import statistics as stats
 from collections import defaultdict
 from typing import Any, Dict, Iterable, Optional, Set, Union
 
-from fastestimator.summary.summary import Summary, ValWithError
+from fastestimator.summary.summary import Summary
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
