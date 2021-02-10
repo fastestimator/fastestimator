@@ -42,7 +42,7 @@ class TestAverageSummaries(unittest.TestCase):
     def test_single_summary(self):
         s1 = Summary('ex2')
         s1.history['train']['acc'][10] = 0.55
-        result = average_summaries(name="ex1", summaries=[])
+        result = average_summaries(name="ex1", summaries=[s1])
         with self.subTest("Should return a summary instance"):
             self.assertTrue(isinstance(result, Summary))
         with self.subTest("Name should be correct"):
