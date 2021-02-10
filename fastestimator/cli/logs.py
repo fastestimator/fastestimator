@@ -33,6 +33,11 @@ def logs(args: Dict[str, Any], unknown: List[str]) -> None:
     if len(unknown) > 0:
         print("error: unrecognized arguments: ", str.join(", ", unknown))
         sys.exit(-1)
+    group_by = args['group_by']
+    if isinstance(group_by, list):
+        group_by = group_by[0]
+    if group_by == '_n':
+        group_by = r'(.*)_[\d]+' + '\\' + args['extension']
     parse_log_dir(args['log_dir'],
                   args['extension'],
                   args['recursive'],
@@ -41,7 +46,8 @@ def logs(args: Dict[str, Any], unknown: List[str]) -> None:
                   args['save_dir'],
                   args['ignore'],
                   args['share_legend'],
-                  args['pretty_names'])
+                  args['pretty_names'],
+                  group_by)
 
 
 def configure_log_parser(subparsers: argparse._SubParsersAction) -> None:
@@ -75,6 +81,14 @@ def configure_log_parser(subparsers: argparse._SubParsersAction) -> None:
                         help="The amount of gaussian smoothing to apply (zero for no smoothing)",
                         default=1)
     parser.add_argument('--pretty_names', help="Clean up the metric names for display", action='store_true')
+    parser.add_argument('--group_by',
+                        metavar='G',
+                        type=str,
+                        nargs=1,
+                        help="A regex pattern to group different logs together and display their mean+-stdev. For "
+                             r"example, you could use --G '(.*)_[\d]+\.txt' to group files of the form "
+                             "<name>_<number>.txt by their <name>. We anticipate this being the common usecase, so you "
+                             "can use --G _n as a shortcut for that functionality.")
 
     legend_group = parser.add_argument_group('legend arguments')
     legend_x_group = legend_group.add_mutually_exclusive_group(required=False)
