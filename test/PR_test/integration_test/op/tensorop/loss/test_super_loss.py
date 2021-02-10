@@ -29,13 +29,16 @@ class TestSuperLoss(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # torch binary ce
-        cls.torch_true_binary = torch.tensor([[1], [0], [1], [0]])
-        cls.torch_pred_binary = torch.tensor([[0.9], [0.3], [0.8], [0.1]])
+        cls.torch_true_binary = torch.tensor([[1], [0], [1], [0]]).to("cuda:0" if torch.cuda.is_available() else "cpu")
+        cls.torch_pred_binary = torch.tensor([[0.9], [0.3], [0.8],
+                                              [0.1]]).to("cuda:0" if torch.cuda.is_available() else "cpu")
         # categorical ce
         cls.tf_true_cat = tf.constant([[0, 1, 0], [1, 0, 0], [0, 0, 1]])
         cls.tf_pred_cat = tf.constant([[0.1, 0.8, 0.1], [0.9, 0.05, 0.05], [0.1, 0.2, 0.7]])
-        cls.torch_true_cat = torch.tensor([[0, 1, 0], [1, 0, 0], [0, 0, 1]])
-        cls.torch_pred_cat = torch.tensor([[0.1, 0.8, 0.1], [0.9, 0.05, 0.05], [0.1, 0.2, 0.7]])
+        cls.torch_true_cat = torch.tensor([[0, 1, 0], [1, 0, 0],
+                                           [0, 0, 1]]).to("cuda:0" if torch.cuda.is_available() else "cpu")
+        cls.torch_pred_cat = torch.tensor([[0.1, 0.8, 0.1], [0.9, 0.05, 0.05],
+                                           [0.1, 0.2, 0.7]]).to("cuda:0" if torch.cuda.is_available() else "cpu")
         # sparse categorical ce
         cls.tf_true_sparse = tf.constant([[0], [1], [0]])
         cls.tf_pred_sparse = tf.constant([[0.1, 0.8, 0.1], [0.9, 0.05, 0.05], [0.1, 0.2, 0.7]])
@@ -72,9 +75,9 @@ class TestSuperLoss(unittest.TestCase):
 
     def test_torch_superloss_binary_ce(self):
         sl = SuperLoss(CrossEntropy(inputs=['y_pred', 'y'], outputs='ce'))
-        sl.build(framework="torch", device=torch.device('cpu'))
+        sl.build(framework="torch", device="cuda:0" if torch.cuda.is_available() else "cpu")
         output = sl.forward(data=[self.torch_pred_binary, self.torch_true_binary], state=self.state)
-        self.assertTrue(np.allclose(output.detach().numpy(), -0.0026238672))
+        self.assertTrue(np.allclose(output.detach().to("cpu").numpy(), -0.0026238672))
 
     def test_tf_superloss_hinge(self):
         true = tf.constant([[-1, 1, 1, -1], [1, 1, 1, 1], [-1, -1, 1, -1], [1, -1, -1, -1]])
@@ -95,13 +98,14 @@ class TestSuperLoss(unittest.TestCase):
         self.assertTrue(np.allclose(output.numpy(), -0.072016776))
 
     def test_torch_superloss_hinge(self):
-        true = torch.tensor([[-1, 1, 1, -1], [1, 1, 1, 1], [-1, -1, 1, -1], [1, -1, -1, -1]])
+        true = torch.tensor([[-1, 1, 1, -1], [1, 1, 1, 1], [-1, -1, 1, -1],
+                             [1, -1, -1, -1]]).to("cuda:0" if torch.cuda.is_available() else "cpu")
         pred = torch.tensor([[0.1, 0.9, 0.05, 0.05], [0.1, -0.2, 0.0, -0.7], [0.0, 0.15, 0.8, 0.05],
-                             [1.0, -1.0, -1.0, -1.0]])
+                             [1.0, -1.0, -1.0, -1.0]]).to("cuda:0" if torch.cuda.is_available() else "cpu")
         sl = SuperLoss(Hinge(inputs=('x1', 'x2'), outputs='x'))
-        sl.build('torch', torch.device('cpu'))
+        sl.build('torch', "cuda:0" if torch.cuda.is_available() else "cpu")
         output = sl.forward(data=[pred, true], state=self.state)
-        self.assertTrue(np.allclose(output.numpy(), -0.072016776))
+        self.assertTrue(np.allclose(output.to("cpu").numpy(), -0.072016776))
 
     def test_save_and_load_state_tf(self):
         def instantiate_system():
@@ -145,7 +149,6 @@ class TestSuperLoss(unittest.TestCase):
             return system
 
         system = instantiate_system()
-
         # make some changes
         system.network.ops[1].forward(data=[self.torch_pred_cat, self.torch_true_cat], state=self.state)
 
@@ -159,8 +162,8 @@ class TestSuperLoss(unittest.TestCase):
 
         loaded_op = system.network.ops[1]
         with self.subTest("Initialization Flags"):
-            self.assertEqual(loaded_op.initialized['train'].numpy(), True)
-            self.assertEqual(loaded_op.initialized['eval'].numpy(), False)
+            self.assertEqual(loaded_op.initialized['train'].to("cpu").numpy(), True)
+            self.assertEqual(loaded_op.initialized['eval'].to("cpu").numpy(), False)
         with self.subTest("Mean Values"):
-            self.assertTrue(np.allclose(loaded_op.tau['train'].numpy(), 0.22839302))
-            self.assertTrue(np.allclose(loaded_op.tau['eval'].numpy(), 0.0))
+            self.assertTrue(np.allclose(loaded_op.tau['train'].to("cpu").numpy(), 0.22839302))
+            self.assertTrue(np.allclose(loaded_op.tau['eval'].to("cpu").numpy(), 0.0))

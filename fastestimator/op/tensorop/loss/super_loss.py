@@ -123,6 +123,7 @@ class SuperLoss(LossOp):
                     'infer': torch.tensor(self.tau_method).to(device)
                 }
             self.cap = torch.tensor(self.cap).to(device)
+            self.lam = torch.tensor(self.lam).to(device)
         else:
             raise ValueError("unrecognized framework: {}".format(framework))
 
