@@ -1,0 +1,40 @@
+FastEstimator-Start: step: 1; logging_interval: 100; num_device: 0;
+FastEstimator-Train: step: 1; ce: -0.007761229;
+FastEstimator-Train: step: 100; ce: -0.69191575; steps/sec: 33.97;
+FastEstimator-Train: step: 200; ce: -0.58108795; steps/sec: 30.91;
+FastEstimator-Train: step: 300; ce: -0.9381177; steps/sec: 29.06;
+FastEstimator-Train: step: 391; epoch: 1; epoch_time: 14.13 sec;
+FastEstimator-BestModelSaver: Saved model to /var/folders/lx/drkxftt117gblvgsp1p39rlc0000gn/T/tmpqschb_zm/model_best_mcc.h5
+FastEstimator-Eval: step: 391; epoch: 1; calibration_error: (0.0639, 0.0696, 0.0769); ce: 1.5280993; max_mcc: 0.44615374307728234; mcc: 0.44615374307728234; since_best_mcc: 0;
+FastEstimator-Train: step: 400; ce: -1.0755897; steps/sec: 26.52;
+FastEstimator-Train: step: 500; ce: -0.9156698; steps/sec: 33.11;
+FastEstimator-Train: step: 600; ce: -0.7433527; steps/sec: 32.45;
+FastEstimator-Train: step: 700; ce: -0.65711534; steps/sec: 31.99;
+FastEstimator-Train: step: 782; epoch: 2; epoch_time: 12.41 sec;
+FastEstimator-BestModelSaver: Saved model to /var/folders/lx/drkxftt117gblvgsp1p39rlc0000gn/T/tmpqschb_zm/model_best_mcc.h5
+FastEstimator-Eval: step: 782; epoch: 2; calibration_error: (0.0519, 0.0573, 0.0644); ce: 1.2763621; max_mcc: 0.5376025056269117; mcc: 0.5376025056269117; since_best_mcc: 0;
+FastEstimator-Train: step: 800; ce: -0.68508905; steps/sec: 28.65;
+FastEstimator-Train: step: 900; ce: -0.77206767; steps/sec: 34.59;
+FastEstimator-Train: step: 1000; ce: -0.6762675; steps/sec: 34.27;
+FastEstimator-Train: step: 1100; ce: -0.86217123; steps/sec: 34.0;
+FastEstimator-Train: step: 1173; epoch: 3; epoch_time: 11.72 sec;
+FastEstimator-BestModelSaver: Saved model to /var/folders/lx/drkxftt117gblvgsp1p39rlc0000gn/T/tmpqschb_zm/model_best_mcc.h5
+FastEstimator-Eval: step: 1173; epoch: 3; calibration_error: (0.0431, 0.0479, 0.053); ce: 1.1614655; max_mcc: 0.5944844764131737; mcc: 0.5944844764131737; since_best_mcc: 0;
+FastEstimator-Train: step: 1200; ce: -0.69104064; steps/sec: 30.71;
+FastEstimator-Train: step: 1300; ce: -0.7520267; steps/sec: 34.2;
+FastEstimator-Train: step: 1400; ce: -0.746927; steps/sec: 33.89;
+FastEstimator-Train: step: 1500; ce: -0.7310774; steps/sec: 32.64;
+FastEstimator-Train: step: 1564; epoch: 4; epoch_time: 11.95 sec;
+FastEstimator-Eval: step: 1564; epoch: 4; calibration_error: (0.0672, 0.0729, 0.0767); ce: 1.2403872; max_mcc: 0.5944844764131737; mcc: 0.5886021899467034; since_best_mcc: 1;
+FastEstimator-Train: step: 1600; ce: -0.88827217; steps/sec: 30.35;
+FastEstimator-Train: step: 1700; ce: -0.9015807; steps/sec: 34.58;
+FastEstimator-Train: step: 1800; ce: -0.7437544; steps/sec: 34.61;
+FastEstimator-Train: step: 1900; ce: -0.7864199; steps/sec: 34.49;
+FastEstimator-Train: step: 1955; epoch: 5; epoch_time: 11.69 sec;
+FastEstimator-BestModelSaver: Saved model to /var/folders/lx/drkxftt117gblvgsp1p39rlc0000gn/T/tmpqschb_zm/model_best_mcc.h5
+FastEstimator-Eval: step: 1955; epoch: 5; calibration_error: (0.0574, 0.0632, 0.071); ce: 1.1354835; max_mcc: 0.6188664032516419; mcc: 0.6188664032516419; since_best_mcc: 0;
+FastEstimator-BestModelSaver: Restoring model from /var/folders/lx/drkxftt117gblvgsp1p39rlc0000gn/T/tmpqschb_zm/model_best_mcc.h5
+FastEstimator-Finish: step: 1955; model_lr: 0.001; total_time: 96.37 sec;
+FastEstimator-Traceability: Report written to /Users/skynet/Development/fastestimator/apphub/image_classification/cifar10/compare/sce_4.pdf
+FastEstimator-Test: step: 1955; epoch: 5; calibration_error: (0.0622, 0.0676, 0.0741); ce: 1.1581695; mcc: 0.6189242242092846;
+FastEstimator-Traceability: Report written to /Users/skynet/Development/fastestimator/apphub/image_classification/cifar10/compare/sce_4.pdf
