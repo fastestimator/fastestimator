@@ -31,6 +31,8 @@ pipeline {
                                     try {
                                         customImage.inside('-u root -v $LOCAL_DATASET_PATH:$DOCKER_DATASET_PATH \
                                                         --gpus all --shm-size 50g') {
+                                            sh 'pip install coverage'
+                                            sh 'coverage run --source fastestimator -m unittest test.run_pr_test'
                                             sh 'bash test/run_nightly_build.sh'
                                         }
                                     }
@@ -58,6 +60,8 @@ pipeline {
                                     try {
                                         customImage.inside('-u root -v $LOCAL_DATASET_PATH:$DOCKER_DATASET_PATH \
                                                         --shm-size 50g') {
+                                            sh 'pip install coverage'
+                                            sh 'coverage run --source fastestimator -m unittest test.run_pr_test'
                                             sh 'bash test/run_nightly_build.sh'
                                         }
                                     }
