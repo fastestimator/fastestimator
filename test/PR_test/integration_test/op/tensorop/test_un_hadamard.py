@@ -52,7 +52,7 @@ class TestUnHadamard(unittest.TestCase):
 
     def test_torch_4class(self):
         fromhadamard = UnHadamard(inputs='y', outputs='y', n_classes=4)
-        fromhadamard.build('torch')
+        fromhadamard.build('torch', "cuda:0" if torch.cuda.is_available() else "cpu")
         output = fromhadamard.forward(
             data=[
                 torch.tensor([[1., -1., -1., 1.], [-1., 1., -1., -1.], [-1., 1., -1., -1.], [-1., 1., -1., -1.],
@@ -66,7 +66,7 @@ class TestUnHadamard(unittest.TestCase):
 
     def test_torch_10class_16code(self):
         fromhadamard = UnHadamard(inputs='y', outputs='y', n_classes=10, code_length=16)
-        fromhadamard.build('torch')
+        fromhadamard.build('torch', "cuda:0" if torch.cuda.is_available() else "cpu")
         output = fromhadamard.forward(
             data=[
                 torch.tensor([[-1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
