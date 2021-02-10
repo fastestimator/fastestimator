@@ -14,11 +14,12 @@
 # ==============================================================================
 import os
 import re
+from collections import defaultdict
 from typing import List, Optional, Set
 
 from fastestimator.dataset.dir_dataset import DirDataset
 from fastestimator.summary.logs.log_plot import visualize_logs
-from fastestimator.summary.summary import Summary, ValWithError
+from fastestimator.summary.summary import Summary, ValWithError, average_summaries
 from fastestimator.util.util import strip_suffix
 
 
@@ -65,7 +66,8 @@ def parse_log_files(file_paths: List[str],
                     save_path: Optional[str] = None,
                     ignore_metrics: Optional[Set[str]] = None,
                     share_legend: bool = True,
-                    pretty_names: bool = False) -> None:
+                    pretty_names: bool = False,
+                    group_by: Optional[str] = None) -> None:
     """Parse one or more log files for graphing.
 
     This function which will iterate through the given log file paths, parse them to extract metrics, remove any
@@ -80,6 +82,8 @@ def parse_log_files(file_paths: List[str],
         ignore_metrics: Any metrics within the log files which will not be visualized.
         share_legend: Whether to have one legend across all graphs (True) or one legend per graph (False).
         pretty_names: Whether to modify the metric names in graph titles (True) or leave them alone (False).
+        group_by: Combine multiple log files by a regex to visualize their mean+-stddev. For example, to group together
+            files like [a_1.txt, a_2.txt] vs [b_1.txt, b_2.txt] you can use: r'(.*)_[\d]+\.txt'.
 
     Raises:
         AssertionError: If no log files are provided.
@@ -89,9 +93,13 @@ def parse_log_files(file_paths: List[str],
     if save and save_path is None:
         save_path = file_paths[0]
 
-    experiments = []
-    for file_path in file_paths:
-        experiments.append(parse_log_file(file_path, log_extension))
+    groups = defaultdict(list)  # {group_name: [experiment(s)]}
+    for path in file_paths:
+        experiment = parse_log_file(path, log_extension)
+        key = (re.findall(group_by, os.path.split(path)[1]))[0] if group_by else experiment.name
+        groups[key].append(experiment)
+    experiments = [average_summaries(name, exps) for name, exps in groups.items()]
+
     visualize_logs(experiments,
                    save_path=save_path,
                    smooth_factor=smooth_factor,
@@ -108,7 +116,8 @@ def parse_log_dir(dir_path: str,
                   save_path: Optional[str] = None,
                   ignore_metrics: Optional[Set[str]] = None,
                   share_legend: bool = True,
-                  pretty_names: bool = False) -> None:
+                  pretty_names: bool = False,
+                  group_by: Optional[str] = None) -> None:
     """A function which will gather all log files within a given folder and pass them along for visualization.
 
     Args:
@@ -121,6 +130,8 @@ def parse_log_dir(dir_path: str,
         ignore_metrics: Any metrics within the log files which will not be visualized.
         share_legend: Whether to have one legend across all graphs (True) or one legend per graph (False).
         pretty_names: Whether to modify the metric names in graph titles (True) or leave them alone (False).
+        group_by: Combine multiple log files by a regex to visualize their mean+-stddev. For example, to group together
+            files like [a_1.txt, a_2.txt] vs [b_1.txt, b_2.txt] you can use: r'(.*)_[\d]+\.txt'.
     """
     loader = DirDataset(root_dir=dir_path, file_extension=log_extension, recursive_search=recursive_search)
     file_paths = list(map(lambda d: d['x'], loader.data.values()))
@@ -132,4 +143,5 @@ def parse_log_dir(dir_path: str,
                     save_path,
                     ignore_metrics,
                     share_legend,
-                    pretty_names)
+                    pretty_names,
+                    group_by)

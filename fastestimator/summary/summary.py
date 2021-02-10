@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import re
+import statistics
 from collections import defaultdict
 from typing import Any, Dict, List, NamedTuple, Optional
 
@@ -87,3 +89,67 @@ class Summary:
         history.update(state.get('history', {}))
         state['history'] = history
         self.__dict__.update(state)
+
+
+def average_summaries(name: str, summaries: List[Summary]) -> Summary:
+    """Average multiple summaries together, storing their metric means +- stdevs.
+
+    Args:
+        name: The name for the new summary.
+        summaries: A list of summaries to be averaged.
+
+    Returns:
+        A single summary object reporting mean+-stddev for each metric. If a particular value has only 1 datapoint, it
+        will not be averaged.
+    """
+    if len(summaries) == 0:
+        return Summary(name=name)
+    if len(summaries) == 1:
+        summaries[0].name = name
+        return summaries[0]
+    consolidated = Summary(name=name)
+    # Find all of the modes, keys, and steps over the various summaries
+    modes = {mode for summary in summaries for mode in summary.history.keys()}
+    keys = {key for summary in summaries for key_pairs in summary.history.values() for key in key_pairs.keys()}
+    steps = {
+        step
+        for summary in summaries for key_pairs in summary.history.values() for val_pair in key_pairs.values()
+        for step in val_pair.keys()
+    }
+    # Average everything
+    for mode in modes:
+        for key in keys:
+            if key == 'epoch':
+                # doesn't make sense to average the epoch over different summaries
+                # TODO - if all summaries have same epoch dict then preserve it
+                continue
+            for step in steps:
+                vals = []
+                for summary in summaries:
+                    history = summary.history
+                    if mode in history and key in history[mode] and step in history[mode][key]:
+                        val = history[mode][key][step]
+                        if isinstance(val, str):
+                            # Can't plot strings over time...
+                            val = [float(s) for s in re.findall(r'(\d+\.\d+|\.?\d+)', val)]
+                            if len(val) == 1:
+                                # We got an unambiguous number
+                                val = val[0]
+                            else:
+                                val = None
+                        elif isinstance(val, ValWithError):
+                            val = val.y
+                        elif not isinstance(val, (int, float)):
+                            val = None
+                        if val is not None:
+                            vals.append(val)
+                if len(vals) > 1:
+                    mean = statistics.mean(vals)
+                    std = statistics.stdev(vals)
+                    val = ValWithError(mean - std, mean, mean + std)
+                elif len(vals) == 1:
+                    val = vals[0]
+                else:
+                    continue
+                consolidated.history[mode][key][step] = val
+    return consolidated
