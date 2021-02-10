@@ -12,5 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from fastestimator.trace.xai.instance_tracker import InstanceTracker
 from fastestimator.trace.xai.label_tracker import LabelTracker
 from fastestimator.trace.xai.saliency import Saliency

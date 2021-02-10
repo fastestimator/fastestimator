@@ -68,7 +68,7 @@ def corrupt_dataset(dataset, n_classes=100, corruption_fraction=0.4):
     dataset['data_labels'] = np.array(corrupted, dtype=np.int).reshape((len(dataset), 1))
 
 
-def get_estimator(epochs=3,
+def get_estimator(epochs=50,
                   batch_size=128,
                   max_train_steps_per_epoch=None,
                   max_eval_steps_per_epoch=None,
