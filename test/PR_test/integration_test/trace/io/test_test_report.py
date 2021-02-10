@@ -18,6 +18,7 @@ import unittest
 from unittest.mock import patch
 
 import numpy as np
+import pydot
 
 import fastestimator as fe
 from fastestimator.dataset import NumpyDataset
@@ -26,6 +27,14 @@ from fastestimator.test.unittest_util import OneLayerTorchModel, one_layer_tf_mo
 from fastestimator.trace import Trace
 from fastestimator.trace.io.test_report import TestCase, TestReport
 from fastestimator.util import to_number
+
+
+def _lacks_graphviz():
+    try:
+        pydot.Dot.create(pydot.Dot())
+    except OSError:
+        return True
+    return False
 
 
 class SampleTrace(Trace):
@@ -49,6 +58,7 @@ class TestTestReport(unittest.TestCase):
         })
         cls.pipeline = fe.Pipeline(test_data=dataset, batch_size=1, num_process=0)
 
+    @unittest.skipIf(_lacks_graphviz(), "The machine does not have GraphViz installed")
     def test_instance_case_tf(self):
         test_title = "test"
         test_description = "each return needs to above 0"
@@ -121,6 +131,7 @@ class TestTestReport(unittest.TestCase):
             report_path = os.path.join(save_path, exp_name + "_TestReport.pdf")
             self.assertTrue(os.path.exists(report_path))
 
+    @unittest.skipIf(_lacks_graphviz(), "The machine does not have GraphViz installed")
     def test_instance_case_torch(self):
         test_title = "test"
         test_description = "each return needs to above 0"
@@ -193,6 +204,7 @@ class TestTestReport(unittest.TestCase):
             report_path = os.path.join(save_path, exp_name + "_TestReport.pdf")
             self.assertTrue(os.path.exists(report_path))
 
+    @unittest.skipIf(_lacks_graphviz(), "The machine does not have GraphViz installed")
     def test_aggregate_case_tf(self):
         test_title = "test"
         test_description = "average value of y need to be above 0"
@@ -252,6 +264,7 @@ class TestTestReport(unittest.TestCase):
             report_path = os.path.join(save_path, exp_name + "_TestReport.pdf")
             self.assertTrue(os.path.exists(report_path))
 
+    @unittest.skipIf(_lacks_graphviz(), "The machine does not have GraphViz installed")
     def test_aggregate_case_torch(self):
         test_title = "test"
         test_description = "average value of y need to be above 0"
