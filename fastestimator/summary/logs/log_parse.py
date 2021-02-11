@@ -87,6 +87,7 @@ def parse_log_files(file_paths: List[str],
 
     Raises:
         AssertionError: If no log files are provided.
+        ValueError: If a log file does not match the `group_by` regex pattern.
     """
     if file_paths is None or len(file_paths) < 1:
         raise AssertionError("must provide at least one log file")
@@ -96,7 +97,10 @@ def parse_log_files(file_paths: List[str],
     groups = defaultdict(list)  # {group_name: [experiment(s)]}
     for path in file_paths:
         experiment = parse_log_file(path, log_extension)
-        key = (re.findall(group_by, os.path.split(path)[1]))[0] if group_by else experiment.name
+        try:
+            key = (re.findall(group_by, os.path.split(path)[1]))[0] if group_by else experiment.name
+        except IndexError:
+            raise ValueError(f"The log {os.path.split(path)[1]} did not match the given regex pattern: {group_by}")
         groups[key].append(experiment)
     experiments = [average_summaries(name, exps) for name, exps in groups.items()]
 
