@@ -57,10 +57,12 @@ class _MetricGroup:
             values = list(sorted(values.items()))
             if len(values) == 1:
                 # We will allow any data types if there's only one value since it will be displayed differently
-                self.state[exp_id][mode] = np.array(values)
+                self.state[exp_id][mode] = np.array(values,
+                                                    dtype=None if isinstance(values[0][1], (int, float)) else object)
                 return True
             else:
                 # We will be plotting something over time
+                val_is_object = False
                 for idx, (step, elem) in enumerate(values):
                     if isinstance(elem, np.ndarray):
                         if elem.ndim == 0 or (elem.ndim == 1 and elem.shape[0] == 1):
@@ -81,7 +83,14 @@ class _MetricGroup:
                         # Can only plot numeric values over time
                         return False
                     values[idx] = (step, elem)
-                self.state[exp_id][mode] = np.array(values)
+                    if isinstance(elem, ValWithError):
+                        val_is_object = True
+                if val_is_object:
+                    # If some points are ValWithError, then they all need to be
+                    for idx, (step, elem) in enumerate(values):
+                        if isinstance(elem, (int, float)):
+                            values[idx] = ValueError(elem, elem, elem)
+                self.state[exp_id][mode] = np.array(values, dtype=object if val_is_object else None)
 
     def ndim(self) -> int:
         """Compute how many dimensions this data require to plot.
