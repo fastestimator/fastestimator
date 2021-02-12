@@ -220,7 +220,7 @@ class Suppressor(object):
     def __enter__(self) -> None:
         # This is not necessary to block printing, but lets the system know what's happening
         self.py_reals = [sys.stdout, sys.stderr]
-        sys.stdout = sys.stderr = None
+        sys.stdout = sys.stderr = self
         # This part does the heavy lifting
         self.fakes = [os.open(os.devnull, os.O_RDWR), os.open(os.devnull, os.O_RDWR)]
         self.reals = [os.dup(1), os.dup(2)]  # [stdout, stderr]
