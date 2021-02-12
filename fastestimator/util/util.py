@@ -217,10 +217,12 @@ class Suppressor(object):
     x()  # "hello"
     ```
     """
-    def __enter__(self):
-        # pylint: disable=attribute-defined-outside-init
+    def __enter__(self) -> None:
+        # This is not necessary to block printing, but lets the system know what's happening
+        self.py_reals = [sys.stdout, sys.stderr]
+        sys.stdout = sys.stderr = None
+        # This part does the heavy lifting
         self.fakes = [os.open(os.devnull, os.O_RDWR), os.open(os.devnull, os.O_RDWR)]
-        # pylint: disable=attribute-defined-outside-init
         self.reals = [os.dup(1), os.dup(2)]  # [stdout, stderr]
         os.dup2(self.fakes[0], 1)
         os.dup2(self.fakes[1], 2)
@@ -230,6 +232,16 @@ class Suppressor(object):
         os.dup2(self.reals[1], 2)
         for fd in self.fakes + self.reals:
             os.close(fd)
+        # Set the python pointers back too
+        sys.stdout, sys.stderr = self.py_reals[0], self.py_reals[1]
+
+    def write(self, dummy: str) -> None:
+        """A function which is invoked during print calls.
+
+        Args:
+            dummy: The string which wanted to be printed.
+        """
+        pass
 
 
 class LogSplicer:
