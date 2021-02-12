@@ -14,6 +14,7 @@
 # ==============================================================================
 """Utilities for FastEstimator."""
 import json
+import os
 import re
 import string
 import sys
@@ -216,25 +217,19 @@ class Suppressor(object):
     x()  # "hello"
     ```
     """
-    def __enter__(self) -> None:
+    def __enter__(self):
         # pylint: disable=attribute-defined-outside-init
-        self.stdout = sys.stdout
-        self.stderr = sys.stderr
-        # pylint: enable=attribute-defined-outside-init
-        sys.stdout = self
-        sys.stderr = self
+        self.fakes = [os.open(os.devnull, os.O_RDWR), os.open(os.devnull, os.O_RDWR)]
+        # pylint: disable=attribute-defined-outside-init
+        self.reals = [os.dup(1), os.dup(2)]  # [stdout, stderr]
+        os.dup2(self.fakes[0], 1)
+        os.dup2(self.fakes[1], 2)
 
     def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
-        sys.stdout = self.stdout
-        sys.stderr = self.stderr
-
-    def write(self, dummy: str) -> None:
-        """A function which is invoked during print calls.
-
-        Args:
-            dummy: The string which wanted to be printed.
-        """
-        pass
+        os.dup2(self.reals[0], 1)
+        os.dup2(self.reals[1], 2)
+        for fd in self.fakes + self.reals:
+            os.close(fd)
 
 
 class LogSplicer:
