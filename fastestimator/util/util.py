@@ -14,6 +14,7 @@
 # ==============================================================================
 """Utilities for FastEstimator."""
 import json
+import os
 import re
 import string
 import sys
@@ -217,16 +218,22 @@ class Suppressor(object):
     ```
     """
     def __enter__(self) -> None:
-        # pylint: disable=attribute-defined-outside-init
-        self.stdout = sys.stdout
-        self.stderr = sys.stderr
-        # pylint: enable=attribute-defined-outside-init
-        sys.stdout = self
-        sys.stderr = self
+        # This is not necessary to block printing, but lets the system know what's happening
+        self.py_reals = [sys.stdout, sys.stderr]
+        sys.stdout = sys.stderr = self
+        # This part does the heavy lifting
+        self.fakes = [os.open(os.devnull, os.O_RDWR), os.open(os.devnull, os.O_RDWR)]
+        self.reals = [os.dup(1), os.dup(2)]  # [stdout, stderr]
+        os.dup2(self.fakes[0], 1)
+        os.dup2(self.fakes[1], 2)
 
     def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
-        sys.stdout = self.stdout
-        sys.stderr = self.stderr
+        os.dup2(self.reals[0], 1)
+        os.dup2(self.reals[1], 2)
+        for fd in self.fakes + self.reals:
+            os.close(fd)
+        # Set the python pointers back too
+        sys.stdout, sys.stderr = self.py_reals[0], self.py_reals[1]
 
     def write(self, dummy: str) -> None:
         """A function which is invoked during print calls.
