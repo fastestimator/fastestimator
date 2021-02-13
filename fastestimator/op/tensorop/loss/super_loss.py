@@ -81,24 +81,24 @@ class SuperLoss(LossOp):
         self.loss.build(framework, device)
         if framework == 'tf':
             self.initialized = {
-                'train': tf.Variable(False),
-                'eval': tf.Variable(False),
-                'test': tf.Variable(False),
-                'infer': tf.Variable(False)
+                'train': tf.Variable(False, aggregation=tf.VariableAggregation.ONLY_FIRST_REPLICA, trainable=False),
+                'eval': tf.Variable(False, aggregation=tf.VariableAggregation.ONLY_FIRST_REPLICA, trainable=False),
+                'test': tf.Variable(False, aggregation=tf.VariableAggregation.ONLY_FIRST_REPLICA, trainable=False),
+                'infer': tf.Variable(False, aggregation=tf.VariableAggregation.ONLY_FIRST_REPLICA, trainable=False)
             }
             if self.tau_method == 'exp':
                 self.tau = {
-                    'train': tf.Variable(0.0),
-                    'eval': tf.Variable(0.0),
-                    'test': tf.Variable(0.0),
-                    'infer': tf.Variable(0.0)
+                    'train': tf.Variable(0.0, trainable=False),
+                    'eval': tf.Variable(0.0, trainable=False),
+                    'test': tf.Variable(0.0, trainable=False),
+                    'infer': tf.Variable(0.0, trainable=False)
                 }
             else:
                 self.tau = {
-                    'train': tf.Variable(self.tau_method),
-                    'eval': tf.Variable(self.tau_method),
-                    'test': tf.Variable(self.tau_method),
-                    'infer': tf.Variable(self.tau_method)
+                    'train': tf.Variable(self.tau_method, trainable=False),
+                    'eval': tf.Variable(self.tau_method, trainable=False),
+                    'test': tf.Variable(self.tau_method, trainable=False),
+                    'infer': tf.Variable(self.tau_method, trainable=False)
                 }
             self.cap = tf.constant(self.cap)
         elif framework == 'torch':
@@ -160,13 +160,30 @@ class SuperLoss(LossOp):
             Either the static value provided at __init__, or an exponential moving average of the loss over time.
         """
         if self.tau_method == 'exp':
-            if self.initialized[mode]:
+            if _read_variable(self.initialized[mode]):
                 _assign(self.tau[mode], self.tau[mode] - 0.1 * (self.tau[mode] - reduce_mean(loss)))
             else:
                 _assign(self.tau[mode], reduce_mean(loss))
                 if not warmup:
                     _assign(self.initialized[mode], ones_like(self.initialized[mode]))
         return self.tau[mode]
+
+
+def _read_variable(variable: Tensor) -> Tensor:
+    """Read a variable.
+
+    For some unknown reason, tf.Variable(False) on a multi-gpu machine will evaluate as True during an if-check, so need
+    to invoke the read method manually.
+
+    Args:
+        variable: The variable to be read.
+
+    Returns:
+        The `variable` value.
+    """
+    if isinstance(variable, torch.Tensor):
+        return variable
+    return variable.read_value()
 
 
 def _assign(variable: Tensor, value: Tensor) -> None:
