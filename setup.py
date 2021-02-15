@@ -61,7 +61,7 @@ def get_dependency():
         'dot2tex==2.11.3',
         'gdown==3.12.0',
         'PySocks==1.7.1',
-        'uncertainty-calibration==0.0.7',
+        'uncertainty-calibration==0.0.8',
         'dill==0.3.3'
     ]
     if os.name == "nt":
