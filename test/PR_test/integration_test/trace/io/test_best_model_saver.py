@@ -52,19 +52,26 @@ class TestBestModelSaver(unittest.TestCase):
         cls.tf_model = fe.build(model_fn=one_layer_tf_model, optimizer_fn='adam', model_name='tf')
         cls.torch_model = fe.build(model_fn=MultiLayerTorchModel, optimizer_fn='adam', model_name='torch')
         cls.data = Data({'loss': 0.5})
-        cls.state = {'mode': 'train', 'epoch': 1, 'warmup': False, 'deferred': {}, "scaler": None}
+        cls.state = {'mode': 'train', 'epoch': 1, 'warmup': False, 'deferred': {}, "scaler": None, "tape": None}
         cls.tf_input_data = tf.Variable([[2.0, 1.5, 1.0], [1.0, -1.0, -0.5]])
         cls.tf_y = tf.constant([[-6], [1]])
         cls.torch_input_data = torch.tensor([[1.0, 1.0, 1.0, -0.5], [0.5, 1.0, -1.0, -0.5]], dtype=torch.float32)
         cls.torch_y = torch.tensor([[5], [7]], dtype=torch.float32)
 
     def test_tf_model(self):
+        def update():
+            with tf.GradientTape(persistent=True) as tape:
+                self.state['tape'] = tape
+                pred = fe.backend.feed_forward(self.tf_model, self.tf_input_data)
+                loss = fe.backend.mean_squared_error(y_pred=pred, y_true=self.tf_y)
+                op.forward(data=loss, state=self.state)
+
         op = UpdateOp(model=self.tf_model, loss_name='loss')
-        with tf.GradientTape(persistent=True) as tape:
-            self.state['tape'] = tape
-            pred = fe.backend.feed_forward(self.tf_model, self.tf_input_data)
-            loss = fe.backend.mean_squared_error(y_pred=pred, y_true=self.tf_y)
-            op.forward(data=loss, state=self.state)
+        strategy = tf.distribute.get_strategy()
+        if isinstance(strategy, tf.distribute.MirroredStrategy):
+            strategy.run(update, args=())
+        else:
+            update()
         bms = BestModelSaver(model=self.tf_model, save_dir=self.save_dir)
         bms.on_epoch_end(data=self.data)
         m2 = fe.build(model_fn=one_layer_model_without_weights, optimizer_fn='adam')
@@ -73,6 +80,9 @@ class TestBestModelSaver(unittest.TestCase):
 
     def test_torch_model(self):
         op = UpdateOp(model=self.torch_model, loss_name='loss')
+        self.torch_model.to("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.torch_input_data = self.torch_input_data.to("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.torch_y = self.torch_y.to("cuda:0" if torch.cuda.is_available() else "cpu")
         pred = fe.backend.feed_forward(self.torch_model, self.torch_input_data)
         loss = fe.backend.mean_squared_error(y_pred=pred, y_true=self.torch_y)
         op.forward(data=loss, state=self.state)
@@ -80,4 +90,5 @@ class TestBestModelSaver(unittest.TestCase):
         bms.on_epoch_end(data=self.data)
         m2 = fe.build(model_fn=MultiLayerTorchModelWithoutWeights, optimizer_fn='adam')
         fe.backend.load_model(m2, os.path.join(self.save_dir, 'torch_best_loss.pt'))
+        self.torch_model.to("cpu")
         self.assertTrue(is_equal(list(m2.parameters()), list(self.torch_model.parameters())))

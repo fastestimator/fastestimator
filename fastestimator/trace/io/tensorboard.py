@@ -241,7 +241,8 @@ class _TorchWriter(_BaseWriter):
     def write_epoch_models(self, mode: str) -> None:
         for model in self.network.epoch_models:
             inputs = model.fe_input_spec.get_dummy_input()
-            self.summary_writers[mode].add_graph(model, input_to_model=inputs)
+            self.summary_writers[mode].add_graph(model.module if torch.cuda.device_count() > 1 else model,
+                                                 input_to_model=inputs)
 
     def write_weights(self, mode: str, models: Iterable[Model], step: int, visualize: bool) -> None:
         for model in models:
