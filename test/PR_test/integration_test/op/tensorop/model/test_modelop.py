@@ -39,6 +39,9 @@ class TestModelOp(unittest.TestCase):
 
     def test_torch_input(self):
         model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn="adam")
+        self.torch_input_data = self.torch_input_data.to("cuda:0" if torch.cuda.is_available() else "cpu")
+        model.to("cuda:0" if torch.cuda.is_available() else "cpu")
         op = ModelOp(inputs='x', outputs='x', model=model)
         output = op.forward(data=self.torch_input_data, state=self.state)
+        output = output.to("cpu")
         self.assertTrue(is_equal(output.detach().numpy(), self.output))
