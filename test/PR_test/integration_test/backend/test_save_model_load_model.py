@@ -19,7 +19,7 @@ import tensorflow as tf
 import torch
 
 import fastestimator as fe
-from fastestimator.test.unittest_util import is_equal, one_layer_tf_model, OneLayerTorchModel
+from fastestimator.test.unittest_util import OneLayerTorchModel, is_equal, one_layer_tf_model
 
 
 def get_model_weight_tf(model):
@@ -31,6 +31,9 @@ def get_model_weight_tf(model):
 
 
 def get_model_weight_lenet_torch(model):
+    if torch.cuda.device_count() > 1:
+        model = model.module
+
     weight = []
     weight.append(model.conv1.weight.data.numpy())
     weight.append(model.conv2.weight.data.numpy())

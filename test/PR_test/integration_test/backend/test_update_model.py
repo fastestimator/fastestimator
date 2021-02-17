@@ -9,6 +9,9 @@ from fastestimator.test.unittest_util import OneLayerTorchModel, is_equal, one_l
 
 
 def get_torch_model_weight(model):
+    if torch.cuda.device_count() > 1:
+        model = model.module
+
     weight = []
     weight.append(deepcopy(model.fc1.weight.data.numpy()))
 
@@ -64,7 +67,7 @@ class TestUpdateModel(unittest.TestCase):
         init_weight = get_torch_model_weight(model)
 
         x = torch.tensor([1.0, 1.0, 1.0])
-        y = fe.backend.feed_forward(model, x)
+        y = fe.backend.feed_forward(model.module if torch.cuda.device_count() > 1 else model, x)
         fe.backend.update_model(model, loss=y)
 
         new_weight = get_torch_model_weight(model)
@@ -76,8 +79,9 @@ class TestUpdateModel(unittest.TestCase):
         init_weight = get_torch_model_weight(model)
 
         x = torch.tensor([1.0, 1.0, 1.0])
-        y = fe.backend.feed_forward(model, x)
-        gradient = fe.backend.get_gradient(target=y, sources=[model.fc1.weight])
+        y = fe.backend.feed_forward(model.module if torch.cuda.device_count() > 1 else model, x)
+        gradient = fe.backend.get_gradient(
+            target=y, sources=[model.module.fc1.weight if torch.cuda.device_count() > 1 else model.fc1.weight])
         fe.backend.update_model(model, gradients=gradient)
 
         new_weight = get_torch_model_weight(model)
