@@ -14,27 +14,32 @@
 # ==============================================================================
 import unittest
 
-import numpy as np
+import fastestimator as fe
 import tensorflow as tf
 import torch
-
-import fastestimator as fe
 from fastestimator.test.unittest_util import is_equal
 
 
 class TestGetGradient(unittest.TestCase):
     def test_get_gradient_tf_tensor_higher_order_false(self):
-        x = tf.Variable([1.0, 2.0, 3.0])
-        with tf.GradientTape(persistent=True) as tape:
-            y = x * x
-            with self.subTest("check gradient"):
-                obj1 = fe.backend.get_gradient(target=y, sources=x, tape=tape)  # [2.0, 4.0, 6.0]
-                obj2 = tf.constant([2.0, 4.0, 6.0])
-                self.assertTrue(is_equal(obj1, obj2))
+        def check_gradient(x):
+            with tf.GradientTape(persistent=True) as tape:
+                y = x * x
+                with self.subTest("check gradient"):
+                    obj1 = fe.backend.get_gradient(target=y, sources=x, tape=tape)  # [2.0, 4.0, 6.0]
+                    obj2 = tf.constant([2.0, 4.0, 6.0])
+                    self.assertTrue(is_equal(obj1, obj2))
 
-            with self.subTest("check gradient of gradient"):
-                obj1 = fe.backend.get_gradient(target=obj1, sources=x, tape=tape)  # None
-                self.assertTrue(is_equal(obj1, None))
+                with self.subTest("check gradient of gradient"):
+                    obj1 = fe.backend.get_gradient(target=obj1, sources=x, tape=tape)  # None
+                    self.assertTrue(is_equal(obj1, None))
+
+        x = tf.Variable([1.0, 2.0, 3.0])
+        strategy = tf.distribute.get_strategy()
+        if isinstance(strategy, tf.distribute.MirroredStrategy):
+            strategy.run(check_gradient, args=(x, ))
+        else:
+            check_gradient(x)
 
     def test_get_gradient_tf_tensor_higher_order_true(self):
         def check_gradient(x):

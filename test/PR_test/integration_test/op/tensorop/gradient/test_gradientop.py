@@ -34,11 +34,17 @@ class TestGradientOp(unittest.TestCase):
         cls.torch_model = OneLayerTorchModel()
 
     def test_tf_input(self):
+        def update_gradient(gradient):
+            with tf.GradientTape(persistent=True) as tape:
+                x = self.tf_data * self.tf_data
+                output = gradient.forward(data=[self.tf_data, x], state={'tape': tape})
+                self.assertTrue(is_equal(output, self.tf_output))
         gradient = GradientOp(inputs='x', finals='x', outputs='y')
-        with tf.GradientTape(persistent=True) as tape:
-            x = self.tf_data * self.tf_data
-            output = gradient.forward(data=[self.tf_data, x], state={'tape': tape})
-        self.assertTrue(is_equal(output, self.tf_output))
+        strategy = tf.distribute.get_strategy()
+        if isinstance(strategy, tf.distribute.MirroredStrategy):
+            strategy.run(update_gradient, args=(gradient, ))
+        else:
+            update_gradient(gradient)
 
     def test_torch_input(self):
         gradient = GradientOp(inputs='x', finals='x', outputs='y')
@@ -47,11 +53,18 @@ class TestGradientOp(unittest.TestCase):
         self.assertTrue(is_equal(output, self.torch_output))
 
     def test_tf_model_input(self):
+        def update_gradient(gradient):
+            with tf.GradientTape(persistent=True) as tape:
+                pred = feed_forward(model=self.tf_model, x=tf.constant([[1.0, 1.0, 1.0], [1.0, -1.0, -0.5]]))
+                output = gradient.forward(data=[pred], state={"tape": tape})
+                self.assertTrue(is_equal(output[0][0].numpy(), np.array([[2.0], [0.0], [0.5]], dtype="float32")))
         gradient = GradientOp(finals="pred", outputs="grad", model=self.tf_model)
-        with tf.GradientTape(persistent=True) as tape:
-            pred = feed_forward(model=self.tf_model, x=tf.constant([[1.0, 1.0, 1.0], [1.0, -1.0, -0.5]]))
-            output = gradient.forward(data=[pred], state={"tape": tape})
-        self.assertTrue(is_equal(output[0][0].numpy(), np.array([[2.0], [0.0], [0.5]], dtype="float32")))
+        strategy = tf.distribute.get_strategy()
+        if isinstance(strategy, tf.distribute.MirroredStrategy):
+            strategy.run(update_gradient, args=(gradient, ))
+        else:
+            update_gradient(gradient)
+
 
     def test_torch_model_input(self):
         gradient = GradientOp(finals="pred", outputs="grad", model=self.torch_model)

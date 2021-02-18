@@ -31,11 +31,17 @@ class TestWatch(unittest.TestCase):
         cls.torch_output = [torch.tensor([1, 2, 4], dtype=torch.float32), torch.tensor([1, 4, 16], dtype=torch.float32)]
 
     def test_tf_input(self):
+        def run_watch():
+            with tf.GradientTape(persistent=True) as tape:
+                x = self.tf_data * self.tf_data
+                output = watch.forward(data=[self.tf_data, x], state={'tape': tape})
+                self.assertTrue(is_equal(output, self.tf_output))
         watch = Watch(inputs='x')
-        with tf.GradientTape(persistent=True) as tape:
-            x = self.tf_data * self.tf_data
-            output = watch.forward(data=[self.tf_data, x], state={'tape': tape})
-        self.assertTrue(is_equal(output, self.tf_output))
+        strategy = tf.distribute.get_strategy()
+        if isinstance(strategy, tf.distribute.MirroredStrategy):
+            strategy.run(run_watch)
+        else:
+            run_watch()
 
     def test_torch_input(self):
         watch = Watch(inputs='x')
