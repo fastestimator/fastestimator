@@ -14,11 +14,9 @@
 # ==============================================================================
 import unittest
 
-import numpy as np
+import fastestimator as fe
 import tensorflow as tf
 import torch
-
-import fastestimator as fe
 from fastestimator.test.unittest_util import is_equal
 
 
@@ -35,6 +33,7 @@ class TestGetGradient(unittest.TestCase):
                 with self.subTest("check gradient of gradient"):
                     obj1 = fe.backend.get_gradient(target=obj1, sources=x, tape=tape)  # None
                     self.assertTrue(is_equal(obj1, None))
+
         x = tf.Variable([1.0, 2.0, 3.0])
         strategy = tf.distribute.get_strategy()
         if isinstance(strategy, tf.distribute.MirroredStrategy):

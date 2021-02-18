@@ -17,7 +17,6 @@ from copy import deepcopy
 
 import tensorflow as tf
 import torch
-import torch.nn as nn
 
 import fastestimator as fe
 from fastestimator.architecture.pytorch import LeNet as LeNet_torch
