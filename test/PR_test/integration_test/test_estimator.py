@@ -18,6 +18,7 @@ from io import StringIO
 import numpy as np
 import tensorflow as tf
 import torch
+from tensorflow.python.autograph.impl.api import StagingError
 from torch.utils.data import DataLoader, Dataset
 
 import fastestimator as fe
@@ -278,8 +279,14 @@ class TestEstimatorWarmup(unittest.TestCase):
 
         est = fe.Estimator(pipeline=pipeline, network=network, epochs=1)
         est._prepare_traces(run_modes={"train", "eval"})
-        with self.assertRaises(KeyError):
-            est._warmup(warmup=True)
+
+        strategy = tf.distribute.get_strategy()
+        if isinstance(strategy, tf.distribute.MirroredStrategy):
+            with self.assertRaises(StagingError):
+                est._warmup(warmup=True)
+        else:
+            with self.assertRaises(KeyError):
+                est._warmup(warmup=True)
 
     def test_estimator_warmup_trace_missing_key(self):
         loader = get_sample_tf_dataset()
@@ -389,9 +396,7 @@ class TestEstimatorFit(unittest.TestCase):
         # determine if running environment is multi-gpu (only needed for tf backend)
         strategy = tf.distribute.get_strategy()
         if isinstance(strategy, tf.distribute.MirroredStrategy):
-            device_count = len(tf.config.list_physical_devices(
-                device_type="GPU"
-            ))
+            device_count = len(tf.config.list_physical_devices(device_type="GPU"))
         else:
             device_count = 1
 
@@ -498,9 +503,7 @@ class TestEstimatorTest(unittest.TestCase):
         # determine if running environment is multi-gpu (only needed in tf backend)
         strategy = tf.distribute.get_strategy()
         if isinstance(strategy, tf.distribute.MirroredStrategy):
-            device_count = len(tf.config.list_physical_devices(
-                device_type="GPU"
-            ))
+            device_count = len(tf.config.list_physical_devices(device_type="GPU"))
         else:
             device_count = 1
 
