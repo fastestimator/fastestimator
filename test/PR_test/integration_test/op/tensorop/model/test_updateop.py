@@ -60,15 +60,24 @@ class TestUpdateOp(unittest.TestCase):
         self.assertFalse(is_equal(weights_before, weights_after))
 
     def test_torch_input(self):
+        def update(op, model):
+            pred = fe.backend.feed_forward(model, self.torch_input_data)
+            loss = fe.backend.mean_squared_error(y_pred=pred, y_true=self.torch_y.to(device))
+            op.forward(data=loss, state=self.state)
         model = fe.build(model_fn=MultiLayerTorchModel, optimizer_fn="adam")
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        model = model.to(device)
-        weights_before = deepcopy(model.module.fc1.weight.cpu().data.numpy())
         op = UpdateOp(model=model, loss_name='loss')
-        pred = fe.backend.feed_forward(model, self.torch_input_data)
-        loss = fe.backend.mean_squared_error(y_pred=pred, y_true=self.torch_y.to(device))
-        op.forward(data=loss, state=self.state)
-        weights_after = model.module.fc1.weight.cpu().data.numpy()
+        if torch.cuda.is_available():
+            device = torch.device('cuda')
+            model = model.to(device)
+            weights_before = deepcopy(model.module.fc1.weight.cpu().data.numpy())
+            update(op, model)
+            weights_after = model.module.fc1.weight.cpu().data.numpy()
+        else:
+            device = torch.device('cpu')
+            model = model.to(device)
+            weights_before = deepcopy(model.fc1.weight.data.numpy())
+            update(op, model)
+            weights_after = model.fc1.weight.data.numpy()
         self.assertFalse(is_equal(weights_before, weights_after))
 
     def test_tf_model_end_to_end_gradient(self):
