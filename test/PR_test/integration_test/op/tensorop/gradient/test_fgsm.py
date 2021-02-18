@@ -31,10 +31,19 @@ class TestFGSM(unittest.TestCase):
         cls.torch_output = torch.tensor([1.01, 2.01, 4])
 
     def test_tf_input(self):
+        def run_single(tf_data, fgsm):
+            with tf.GradientTape(persistent=True) as tape:
+                x = tf_data * tf_data
+                output = fgsm.forward(data=[tf_data, x], state={'tape': tape})
+            return output
+
         fgsm = FGSM(data='x', loss='loss', outputs='y')
-        with tf.GradientTape(persistent=True) as tape:
-            x = self.tf_data * self.tf_data
-            output = fgsm.forward(data=[self.tf_data, x], state={'tape': tape})
+        strategy = tf.distribute.get_strategy()
+        if isinstance(strategy, tf.distribute.MirroredStrategy):
+            output = strategy.run(run_single, args=(self.tf_data, fgsm))
+            output = output.values[0]
+        else:
+            output = run_single(self.tf_data, fgsm)
         self.assertTrue(np.array_equal(output, self.tf_output))
 
     def test_torch_input(self):
