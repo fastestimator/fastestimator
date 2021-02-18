@@ -25,6 +25,7 @@ import fastestimator as fe
 from fastestimator.architecture.pytorch.lenet import LeNet as LeNetTorch
 from fastestimator.architecture.tensorflow.lenet import LeNet as LeNetTf
 from fastestimator.dataset.data import mnist
+from fastestimator.network import TFNetwork
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
@@ -210,7 +211,7 @@ class TestEstimatorConfigureLoader(unittest.TestCase):
 
         with self.subTest("check loader type"):  # it didn't change the data type
             strategy = tf.distribute.get_strategy()
-            if isinstance(strategy, tf.distribute.MirroredStrategy):
+            if isinstance(strategy, tf.distribute.MirroredStrategy) and isinstance(network, TFNetwork):
                 self.assertIsInstance(new_loader, tf.distribute.DistributedDataset)
             else:
                 self.assertIsInstance(new_loader, tf.data.Dataset)
@@ -304,9 +305,7 @@ class TestEstimatorWarmup(unittest.TestCase):
         loader = get_sample_tf_dataset(expand_axis=1)
         pipeline = fe.Pipeline(train_data=loader)  # "x", "y"
         model = fe.build(model_fn=LeNetTorch, optimizer_fn="adam")
-
         network = fe.Network(ops=[ModelOp(model=model, inputs="x", outputs="y_pred")])
-
         est = fe.Estimator(pipeline=pipeline, network=network, epochs=1, traces=[Trace(inputs="y_pred")])
         est._prepare_traces(run_modes={"train", "eval"})
         est._warmup(warmup=True)
