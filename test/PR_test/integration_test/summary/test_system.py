@@ -258,9 +258,17 @@ class TestSystem(unittest.TestCase):
 
         system = instantiate_system()
 
+        # check if multi-gpu system
+        if torch.cuda.device_count() > 1:
+            model_0 = system.network.ops[0].model.module
+            model_1 = system.network.ops[1].model.module
+        else:
+            model_0 = system.network.ops[0].model
+            model_1 = system.network.ops[1].model
+
         # make some change
         new_weight = torch.tensor([[1, 1, 1]], dtype=torch.float32)
-        system.network.ops[0].model.submodel.fc1.weight.data = new_weight
+        model_0.submodel.fc1.weight.data = new_weight
 
         # save the state
         save_path = tempfile.mkdtemp()
@@ -268,24 +276,22 @@ class TestSystem(unittest.TestCase):
 
         # reinstantiate system and load the state
         system = instantiate_system()
-        shared_variable = system.network.ops[0].model.submodel.fc1.weight
+        shared_variable = model_0.submodel.fc1.weight
         system.load_state(save_path)
 
         with self.subTest("Check model varaible was re-loaded"):
-            self.assertTrue(is_equal(new_weight, system.network.ops[0].model.submodel.fc1.weight.data))
-            self.assertTrue(is_equal(new_weight, system.network.ops[1].model.submodel.fc1.weight.data))
+            self.assertTrue(is_equal(new_weight, model_0.submodel.fc1.weight.data))
+            self.assertTrue(is_equal(new_weight, model_1.submodel.fc1.weight.data))
 
         with self.subTest("Check model variable is still shared"):
             new_weight = torch.tensor([[2, 2, 2]], dtype=torch.float32)
-            system.network.ops[0].model.submodel.fc1.weight.data = new_weight
-            self.assertTrue(
-                is_equal(system.network.ops[0].model.submodel.fc1.weight.data,
-                         system.network.ops[1].model.submodel.fc1.weight.data))
+            model_0.submodel.fc1.weight.data = new_weight
+            self.assertTrue(is_equal(model_0.submodel.fc1.weight.data, model_1.submodel.fc1.weight.data))
 
         with self.subTest("Check that variable is still linked to outside code"):
             new_weight = torch.tensor([[3, 3, 3]], dtype=torch.float32)
             shared_variable.data = new_weight
-            self.assertTrue(is_equal(new_weight, system.network.ops[0].model.submodel.fc1.weight.data))
+            self.assertTrue(is_equal(new_weight, model_0.submodel.fc1.weight.data))
 
     def test_shared_tf_variable_among_top_trace(self):
         def instantiate_system():

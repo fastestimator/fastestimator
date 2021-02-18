@@ -54,6 +54,9 @@ class PlusOneNumpyOp(NumpyOp):
 
 
 def get_torch_lenet_model_weight(model):
+    if torch.cuda.device_count() > 1:
+        model = model.module
+
     weight = []
     weight.append(deepcopy(model.conv1.weight.data.numpy()))
     weight.append(deepcopy(model.conv2.weight.data.numpy()))
@@ -73,6 +76,9 @@ def get_tf_model_weight(model):
 
 
 def get_torch_one_layer_model_weight(model):
+    if torch.cuda.device_count() > 1:
+        model = model.module
+
     weight = []
     weight.append(deepcopy(model.fc1.weight.data.numpy()))
 
