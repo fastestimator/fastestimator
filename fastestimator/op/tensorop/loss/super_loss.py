@@ -81,10 +81,10 @@ class SuperLoss(LossOp):
         self.loss.build(framework, device)
         if framework == 'tf':
             self.initialized = {
-                'train': tf.Variable(False, aggregation=tf.VariableAggregation.ONLY_FIRST_REPLICA, trainable=False),
-                'eval': tf.Variable(False, aggregation=tf.VariableAggregation.ONLY_FIRST_REPLICA, trainable=False),
-                'test': tf.Variable(False, aggregation=tf.VariableAggregation.ONLY_FIRST_REPLICA, trainable=False),
-                'infer': tf.Variable(False, aggregation=tf.VariableAggregation.ONLY_FIRST_REPLICA, trainable=False)
+                'train': tf.Variable(False, trainable=False),
+                'eval': tf.Variable(False, trainable=False),
+                'test': tf.Variable(False, trainable=False),
+                'infer': tf.Variable(False, trainable=False)
             }
             if self.tau_method == 'exp':
                 self.tau = {
