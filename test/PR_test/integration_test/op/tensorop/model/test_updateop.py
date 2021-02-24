@@ -47,6 +47,7 @@ class TestUpdateOp(unittest.TestCase):
                 pred = fe.backend.feed_forward(model, self.tf_input_data)
                 loss = fe.backend.mean_squared_error(y_pred=pred, y_true=self.tf_y)
                 op.forward(data=loss, state=self.state)
+
         model = fe.build(one_layer_tf_model, optimizer_fn="adam")
         op = UpdateOp(model=model, loss_name='loss')
         weights_before = model.layers[1].get_weights()
@@ -59,23 +60,30 @@ class TestUpdateOp(unittest.TestCase):
         self.assertFalse(is_equal(weights_before, weights_after))
 
     def test_torch_input(self):
-        def update(op, model):
-            pred = fe.backend.feed_forward(model, self.torch_input_data)
+        def update(x, op, model):
+            pred = fe.backend.feed_forward(model, x)
             loss = fe.backend.mean_squared_error(y_pred=pred, y_true=self.torch_y.to(device))
             op.forward(data=loss, state=self.state)
+
         model = fe.build(model_fn=MultiLayerTorchModel, optimizer_fn="adam")
         op = UpdateOp(model=model, loss_name='loss')
         if torch.cuda.is_available():
             device = torch.device('cuda')
             model = model.to(device)
-            weights_before = deepcopy(model.module.fc1.weight.cpu().data.numpy())
-            update(op, model)
-            weights_after = model.module.fc1.weight.cpu().data.numpy()
+            if torch.cuda.device_count() > 1:
+                weights_before = deepcopy(model.module.fc1.weight.cpu().data.numpy())
+            else:
+                weights_before = deepcopy(model.fc1.weight.cpu().data.numpy())
+            update(self.torch_input_data.to(device), op, model)
+            if torch.cuda.device_count() > 1:
+                weights_after = model.module.fc1.weight.cpu().data.numpy()
+            else:
+                weights_after = model.fc1.weight.cpu().data.numpy()
         else:
             device = torch.device('cpu')
             model = model.to(device)
             weights_before = deepcopy(model.fc1.weight.data.numpy())
-            update(op, model)
+            update(self.torch_input_data, op, model)
             weights_after = model.fc1.weight.data.numpy()
         self.assertFalse(is_equal(weights_before, weights_after))
 
