@@ -15,8 +15,37 @@ pipeline {
     stages {
         stage('nightly_test') {
             parallel {
-                stage('GPU') {
+                stage('Multi-GPU') {
                     agent {label 'nightly_gpu'}
+                    stages {
+                        stage('download dataset') {
+                            steps {
+                                sh 'aws s3 sync $S3_DATASET_PATH $LOCAL_DATASET_PATH --delete'
+                            }
+                        }
+                        stage('run_test') {
+                            steps {
+                                script {
+                                    def customImage = docker.build('$IMAGE_TAG', \
+                                                                   '--no-cache - < docker/nightly/Dockerfile.gpu')
+                                    try {
+                                        customImage.inside('-u root -v $LOCAL_DATASET_PATH:$DOCKER_DATASET_PATH \
+                                                        --gpus all --shm-size 50g') {
+                                            sh 'pip install coverage'
+                                            sh 'coverage run --source fastestimator -m unittest test.run_pr_test'
+                                            sh 'bash test/run_nightly_build.sh'
+                                        }
+                                    }
+                                    finally {
+                                        sh 'docker rmi "$IMAGE_TAG"'
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                stage('Single-GPU') {
+                    agent {label 'nightly_single_gpu'}
                     stages {
                         stage('download dataset') {
                             steps {
