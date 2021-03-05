@@ -176,7 +176,3 @@ def parse_log_dir(dir_path: str,
                     share_legend,
                     pretty_names,
                     group_by)
-
-
-if __name__ == '__main__':
-    parse_log_dir('/Users/skynet/Desktop')

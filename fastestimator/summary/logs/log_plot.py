@@ -89,7 +89,7 @@ class _MetricGroup:
                     # If some points are ValWithError, then they all need to be
                     for idx, (step, elem) in enumerate(values):
                         if isinstance(elem, (int, float)):
-                            values[idx] = ValueError(elem, elem, elem)
+                            values[idx] = (step, ValWithError(elem, elem, elem))
                 self.state[exp_id][mode] = np.array(values, dtype=object if val_is_object else None)
 
     def ndim(self) -> int:
