@@ -45,6 +45,7 @@ def logs(args: Dict[str, Any], unknown: List[str]) -> None:
                   args['save'],
                   args['save_dir'],
                   args['ignore'],
+                  args['include'],
                   args['share_legend'],
                   args['pretty_names'],
                   group_by)
@@ -70,11 +71,17 @@ def configure_log_parser(subparsers: argparse._SubParsersAction) -> None:
                         help="The file type / extension of your logs",
                         default=".txt")
     parser.add_argument('--recursive', action='store_true', help="Recursively search sub-directories for log files")
-    parser.add_argument('--ignore',
-                        metavar='I',
-                        type=str,
-                        nargs='+',
-                        help="The names of metrics to ignore though they may be present in the log files")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--ignore',
+                       metavar='I',
+                       type=str,
+                       nargs='+',
+                       help="The names of metrics to ignore though they may be present in the log files")
+    group.add_argument('--include',
+                       metavar='Y',
+                       type=str,
+                       nargs='+',
+                       help="The names of metrics to include. If provided, any other metrics will be ignored.")
     parser.add_argument('--smooth',
                         metavar='<float>',
                         type=float,

@@ -527,6 +527,7 @@ class TorchNetwork(BaseNetwork):
             return set([self._detach_tensor(val) for val in data])
         elif isinstance(data, torch.Tensor):
             return data.detach()
+        return data
 
 
 @traceable()
