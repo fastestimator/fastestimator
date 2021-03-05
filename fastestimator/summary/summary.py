@@ -15,7 +15,7 @@
 import re
 import statistics
 from collections import defaultdict
-from typing import Any, Dict, List, NamedTuple, Optional
+from typing import Any, Dict, List, NamedTuple, Optional, Union
 
 from fastestimator.util.traceability_util import FeSummaryTable
 
@@ -143,17 +143,12 @@ def average_summaries(name: str, summaries: List[Summary]) -> Summary:
                             val = None
                         if val is not None:
                             vals.append(val)
-                if len(vals) > 1:
-                    if mode == 'test':
-                        # We will consolidate these later
-                        val = vals
-                    else:
-                        mean = statistics.mean(vals)
-                        std = statistics.stdev(vals)
-                        val = ValWithError(mean - std, mean, mean + std)
-                elif len(vals) == 1:
-                    val = vals[0]
+                if mode == 'test':
+                    # We will consolidate these later
+                    val = vals
                 else:
+                    val = _reduce_list(vals)
+                if val is None:
                     continue
                 consolidated.history[mode][key][step] = val
         if mode == 'test':
@@ -167,12 +162,32 @@ def average_summaries(name: str, summaries: List[Summary]) -> Summary:
                     else:
                         vals.append(val)
                 step = max(step_val.keys())
-                if len(vals) > 1:
-                    mean = statistics.mean(vals)
-                    std = statistics.stdev(vals)
-                    val = ValWithError(mean - std, mean, mean + std)
-                else:
-                    val = vals[0]
+                val = _reduce_list(vals)
                 consolidated.history[mode][key].clear()
-                consolidated.history[mode][key][step] = val
+                if val is not None:
+                    consolidated.history[mode][key][step] = val
     return consolidated
+
+
+def _reduce_list(vals: List[Union[int, float]]) -> Union[None, int, float, ValWithError]:
+    """Convert a list of numbers into a consolidated summary of those numbers.
+
+    Args:
+        vals: A list of values to be summarized.
+
+    Returns:
+        None if `vals` is empty, otherwise (mean - std, mean, mean + std) if multiple non-equal values are provided, or
+        else simply the value if only a single (possibly repeated) value is found.
+    """
+    val = None
+    if len(vals) > 1:
+        if vals.count(vals[0]) == len(vals):
+            # If all values are exactly the same, then return single value rather than computing std
+            val = vals[0]
+        else:
+            mean = statistics.mean(vals)
+            std = statistics.stdev(vals)
+            val = ValWithError(mean - std, mean, mean + std)
+    elif len(vals) == 1:
+        val = vals[0]
+    return val
