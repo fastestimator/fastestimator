@@ -89,7 +89,7 @@ class _MetricGroup:
                     # If some points are ValWithError, then they all need to be
                     for idx, (step, elem) in enumerate(values):
                         if isinstance(elem, (int, float)):
-                            values[idx] = ValueError(elem, elem, elem)
+                            values[idx] = (step, ValWithError(elem, elem, elem))
                 self.state[exp_id][mode] = np.array(values, dtype=object if val_is_object else None)
 
     def ndim(self) -> int:
@@ -107,7 +107,11 @@ class _MetricGroup:
                 elif values.ndim == 2:
                     if values.shape[0] == 1:
                         # Metrics with only 1 time point can be displayed as singular values
-                        ndims.append(1)
+                        if isinstance(values[0][1], ValWithError):
+                            # ValWithError, however, will always be displayed grapically
+                            ndims.append(2)
+                        else:
+                            ndims.append(1)
                     else:
                         # A regular time vs metric value plot
                         ndims.append(2)
@@ -337,6 +341,7 @@ def plot_logs(experiments: List[Summary],
                                          xy[1],
                                          s=40,
                                          c=[colors[exp_idx + color_offset[mode]]],
+                                         label=title,
                                          marker=style,
                                          linewidth=1.0,
                                          edgecolors='black',
