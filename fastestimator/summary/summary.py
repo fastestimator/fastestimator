@@ -181,8 +181,9 @@ def _reduce_list(vals: List[Union[int, float]]) -> Union[None, int, float, ValWi
     """
     val = None
     if len(vals) > 1:
-        if vals.count(vals[0]) == len(vals):
-            # If all values are exactly the same, then return single value rather than computing std
+        if vals[0] == vals[1] and vals.count(vals[0]) == len(vals):
+            # If all values are exactly the same, then return single value rather than computing std. The first check is
+            # to give fast short-circuiting
             val = vals[0]
         else:
             mean = statistics.mean(vals)
