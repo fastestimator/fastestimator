@@ -57,7 +57,7 @@ class TestAverageSummaries(unittest.TestCase):
         s1.history['train']['acc'] = {0: 0.2, 10: 0.4, 20: 0.7, 45: ValWithError(0.8, 0.9, 1.0)}
         s2.history['train']['acc'] = {0: 0.3, 10: 0.4, 20: 0.9, 30: 1.0}
 
-        s1.history['test']['mcc'] = {40: 0.834}
+        s1.history['test']['mcc'] = {45: 0.834}
 
         s1.history['eval']['wombats'] = {5: 4, 10: 9}
         s2.history['eval']['wombats'] = {5: '3 wombats', 10: '7 wombats'}
@@ -75,14 +75,12 @@ class TestAverageSummaries(unittest.TestCase):
             self.assertEqual(0.17929, round(s_merge.history['train']['acc'][0].y_min, 5))
             self.assertEqual(0.32071, round(s_merge.history['train']['acc'][0].y_max, 5))
         with self.subTest("Paired datapoints with zero std should be handled correctly"):
-            self.assertEqual(0.4, s_merge.history['train']['acc'][10].y)
-            self.assertEqual(0.4, round(s_merge.history['train']['acc'][10].y_min, 5))
-            self.assertEqual(0.4, round(s_merge.history['train']['acc'][10].y_max, 5))
+            self.assertEqual(0.4, s_merge.history['train']['acc'][10])
         with self.subTest("Partially paired datapoints should be handled correctly"):
             self.assertEqual(0.9, s_merge.history['train']['acc'][45])
             self.assertEqual(1.0, s_merge.history['train']['acc'][30])
         with self.subTest("Unpaired datapoints should be handled correctly"):
-            self.assertEqual(0.834, s_merge.history['test']['mcc'][40])
+            self.assertEqual(0.834, s_merge.history['test']['mcc'][45])
         with self.subTest("String values should be handled correctly"):
             self.assertEqual(3.5, s_merge.history['eval']['wombats'][5].y)
             self.assertEqual(2.79289, round(s_merge.history['eval']['wombats'][5].y_min, 5))
