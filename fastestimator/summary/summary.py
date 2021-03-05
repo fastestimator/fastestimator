@@ -144,12 +144,35 @@ def average_summaries(name: str, summaries: List[Summary]) -> Summary:
                         if val is not None:
                             vals.append(val)
                 if len(vals) > 1:
-                    mean = statistics.mean(vals)
-                    std = statistics.stdev(vals)
-                    val = ValWithError(mean - std, mean, mean + std)
+                    if mode == 'test':
+                        # We will consolidate these later
+                        val = vals
+                    else:
+                        mean = statistics.mean(vals)
+                        std = statistics.stdev(vals)
+                        val = ValWithError(mean - std, mean, mean + std)
                 elif len(vals) == 1:
                     val = vals[0]
                 else:
                     continue
+                consolidated.history[mode][key][step] = val
+        if mode == 'test':
+            # Due to early stopping, the test mode might be invoked at different steps/epochs. These values will be
+            # merged and assigned to the largest available step.
+            for key, step_val in consolidated.history[mode].items():
+                vals = []
+                for step, val in step_val.items():
+                    if isinstance(val, list):
+                        vals.extend(val)
+                    else:
+                        vals.append(val)
+                step = max(step_val.keys())
+                if len(vals) > 1:
+                    mean = statistics.mean(vals)
+                    std = statistics.stdev(vals)
+                    val = ValWithError(mean - std, mean, mean + std)
+                else:
+                    val = vals[0]
+                consolidated.history[mode][key].clear()
                 consolidated.history[mode][key][step] = val
     return consolidated

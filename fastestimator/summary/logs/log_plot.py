@@ -107,7 +107,11 @@ class _MetricGroup:
                 elif values.ndim == 2:
                     if values.shape[0] == 1:
                         # Metrics with only 1 time point can be displayed as singular values
-                        ndims.append(1)
+                        if isinstance(values[0][1], ValWithError):
+                            # ValWithError, however, will always be displayed grapically
+                            ndims.append(2)
+                        else:
+                            ndims.append(1)
                     else:
                         # A regular time vs metric value plot
                         ndims.append(2)
