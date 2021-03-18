@@ -68,7 +68,7 @@ class OpDataset(Dataset):
         else:
             forward_numpyop(self.ops, items, {'mode': self.mode})
         if self.output_keys:
-            for key in set(items.keys()) - self.output_keys:
+            for key in set(items) - self.output_keys:
                 del items[key]
         return items
 
