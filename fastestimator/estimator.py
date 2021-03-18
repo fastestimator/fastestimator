@@ -194,8 +194,20 @@ class Estimator:
             for epoch in signature_epochs:
                 if epoch not in epochs_with_data:
                     continue
+                network_output_keys = self.network.get_all_output_keys(mode, epoch)
+                network_input_keys = self.network.get_effective_input_keys(mode, epoch)
+                trace_input_keys = set()
+                trace_output_keys = {"*"}
+                traces = get_current_items(self.traces_in_use, run_modes=mode, epoch=epoch)
+                for idx, trace in enumerate(traces):
+                    if idx > 0:  # ignore TrainEssential and EvalEssential's inputs for unmet requirement checking
+                        trace_input_keys.update(trace.inputs)
+                    trace_output_keys.update(trace.outputs)
                 # key checking
-                loader = self._configure_loader(self.pipeline.get_loader(mode, epoch))
+                loader = self._configure_loader(
+                    self.pipeline.get_loader(mode,
+                                             epoch,
+                                             output_keys=trace_input_keys - network_output_keys | network_input_keys))
                 with Suppressor():
                     if isinstance(loader, tf.data.Dataset):
                         batch = list(loader.take(1))[0]
@@ -204,14 +216,7 @@ class Estimator:
                 batch = self._configure_tensor(loader, batch)
                 assert isinstance(batch, dict), "please make sure data output format is dictionary"
                 pipeline_output_keys = to_set(batch.keys())
-                network_output_keys = self.network.get_all_output_keys(mode, epoch)
-                trace_input_keys = set()
-                trace_output_keys = {"*"}
-                traces = get_current_items(self.traces_in_use, run_modes=mode, epoch=epoch)
-                for idx, trace in enumerate(traces):
-                    if idx > 0:  # ignore TrainEssential and EvalEssential's inputs for unmet requirement checking
-                        trace_input_keys.update(trace.inputs)
-                    trace_output_keys.update(trace.outputs)
+
                 monitor_names = monitor_names - (pipeline_output_keys | network_output_keys)
                 unmet_requirements = trace_input_keys - (pipeline_output_keys | network_output_keys | trace_output_keys)
                 assert not unmet_requirements, \
@@ -273,16 +278,18 @@ class Estimator:
         trace_input_keys = set()
         for trace in traces:
             trace_input_keys.update(trace.inputs)
-        loader = self._configure_loader(self.pipeline.get_loader(self.system.mode, self.system.epoch_idx))
+        network_input_keys = self.network.get_effective_input_keys(self.system.mode, self.system.epoch_idx)
+        network_output_keys = self.network.get_all_output_keys(self.system.mode, self.system.epoch_idx)
+        loader = self._configure_loader(
+            self.pipeline.get_loader(self.system.mode,
+                                     self.system.epoch_idx,
+                                     output_keys=trace_input_keys - network_output_keys | network_input_keys))
         iterator = iter(loader)
         self.network.load_epoch(mode=self.system.mode, epoch=self.system.epoch_idx, output_keys=trace_input_keys)
         self.system.batch_idx = None
         with Suppressor():
             batch = next(iterator)
-        traces = sort_traces(
-            traces,
-            available_outputs=to_set(batch.keys())
-            | self.network.get_all_output_keys(self.system.mode, self.system.epoch_idx))
+        traces = sort_traces(traces, available_outputs=to_set(batch.keys()) | network_output_keys)
         self._run_traces_on_epoch_begin(traces=traces)
         while True:
             try:

@@ -23,7 +23,7 @@ import torch
 import fastestimator as fe
 from fastestimator.architecture.pytorch import UNet
 from fastestimator.dataset.data import montgomery
-from fastestimator.op.numpyop import Delete, NumpyOp
+from fastestimator.op.numpyop import NumpyOp
 from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import HorizontalFlip, Resize, Rotate
 from fastestimator.op.numpyop.univariate import Minmax, ReadImage, Reshape
@@ -67,7 +67,6 @@ def get_estimator(epochs=20,
                       color_flag='gray',
                       mode='!infer'),
             CombineLeftRightMask(inputs=("mask_left", "mask_right"), outputs="mask", mode='!infer'),
-            Delete(keys=["mask_left", "mask_right"], mode='!infer'),
             Resize(image_in="image", width=512, height=512),
             Resize(image_in="mask", width=512, height=512, mode='!infer'),
             Sometimes(numpy_op=HorizontalFlip(image_in="image", mask_in="mask", mode='train')),

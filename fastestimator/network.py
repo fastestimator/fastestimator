@@ -28,8 +28,8 @@ from fastestimator.backend.load_model import load_model
 from fastestimator.backend.to_tensor import to_tensor
 from fastestimator.op.numpyop import NumpyOp, forward_numpyop
 from fastestimator.op.op import get_inputs_by_op, write_outputs_by_op
-from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.op.tensorop.model.update import UpdateOp
+from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
 from fastestimator.util.traceability_util import trace_model, traceable
 from fastestimator.util.util import NonContext, get_batch_size, to_list
@@ -112,7 +112,7 @@ class BaseNetwork:
         Args:
             mode: The mode to prepare to execute. One of 'train', 'eval', 'test', or 'infer'.
             epoch: The epoch to prepare to execute.
-            output_keys: What keys must be moved from the GPU back to the CPU after executing a step.
+            output_keys: What keys can be moved from the GPU back to the CPU after executing a step.
             warmup: Whether to prepare to execute it warmup mode or not (end users can likely ignore this argument).
         """
         self.effective_inputs[mode] = self.get_effective_input_keys(mode, epoch)
