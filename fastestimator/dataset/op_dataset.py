@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 from copy import deepcopy
-from typing import Any, List, Mapping
+from typing import Any, List, Mapping, Optional, Set
 
 import numpy as np
 from torch.utils.data import Dataset
@@ -35,13 +35,15 @@ class OpDataset(Dataset):
         dataset: The base dataset to wrap.
         ops: A list of ops to be applied after the base `dataset` `__getitem__` is invoked.
         mode: What mode the system is currently running in ('train', 'eval', 'test', or 'infer').
+        output_keys: What keys can be produced from pipeline. If None, all keys will be considered.
     """
-    def __init__(self, dataset: Dataset, ops: List[NumpyOp], mode: str) -> None:
+    def __init__(self, dataset: Dataset, ops: List[NumpyOp], mode: str, output_keys: Optional[Set[str]] = None) -> None:
         self.dataset = dataset
         if isinstance(self.dataset, BatchDataset):
             self.dataset.reset_index_maps()
         self.ops = ops
         self.mode = mode
+        self.output_keys = output_keys
 
     def __getitem__(self, index: int) -> Mapping[str, Any]:
         """Fetch a data instance at a specified index, and apply transformations to it.
@@ -65,6 +67,9 @@ class OpDataset(Dataset):
             items = {key: np.array([item[key] for item in items]) for key in items[0]}
         else:
             forward_numpyop(self.ops, items, {'mode': self.mode})
+        if self.output_keys:
+            for key in set(items.keys()) - self.output_keys:
+                del items[key]
         return items
 
     def __len__(self):

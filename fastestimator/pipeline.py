@@ -321,8 +321,11 @@ class Pipeline:
             results = results[0]
         return results
 
-    def get_loader(self, mode: str, epoch: int = 1,
-                   shuffle: Optional[bool] = None) -> Union[DataLoader, tf.data.Dataset]:
+    def get_loader(self,
+                   mode: str,
+                   epoch: int = 1,
+                   shuffle: Optional[bool] = None,
+                   output_keys: Optional[Set[str]] = None) -> Union[DataLoader, tf.data.Dataset]:
         """Get a data loader from the Pipeline for a given `mode` and `epoch`.
 
         Args:
@@ -330,6 +333,7 @@ class Pipeline:
             epoch: The epoch index for the loader. Note that epoch indices are 1-indexed.
             shuffle: Whether to shuffle the data. If None, the value for shuffle is based on mode. NOTE: This argument
                 is only used with FastEstimator Datasets.
+            output_keys: What keys can be produced from pipeline. If None, all keys will be considered.
 
         Returns:
             A data loader for the given `mode` and `epoch`.
@@ -354,7 +358,7 @@ class Pipeline:
             collate_fn = self.collate_fn
             if collate_fn is None and self.pad_value is not None:
                 collate_fn = self._pad_batch_collate
-            op_dataset = OpDataset(data, get_current_items(self.ops, mode, epoch), mode)
+            op_dataset = OpDataset(data, get_current_items(self.ops, mode, epoch), mode, output_keys)
             batch_size = None if isinstance(data, BatchDataset) else batch_size
             data = DataLoader(op_dataset,
                               batch_size=batch_size,

@@ -22,7 +22,6 @@ from tensorflow.python.keras.models import Model
 import fastestimator as fe
 from fastestimator.backend import reduce_mean
 from fastestimator.dataset.data import cub200
-from fastestimator.op.numpyop import Delete
 from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import HorizontalFlip, LongestMaxSize, PadIfNeeded, ReadMat, ShiftScaleRotate
 from fastestimator.op.numpyop.univariate import Normalize, ReadImage, Reshape
@@ -127,7 +126,6 @@ def get_estimator(batch_size=8,
             ReadImage(inputs="image", outputs="image", parent_path=train_data.parent_path),
             Normalize(inputs="image", outputs="image", mean=1.0, std=1.0, max_pixel_value=127.5),
             ReadMat(file='annotation', keys="seg", parent_path=train_data.parent_path),
-            Delete(keys="annotation"),
             LongestMaxSize(max_size=512, image_in="image", image_out="image", mask_in="seg", mask_out="seg"),
             PadIfNeeded(min_height=512,
                         min_width=512,
