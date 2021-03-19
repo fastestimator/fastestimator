@@ -26,7 +26,6 @@ from fastestimator.op.numpyop.multivariate import HorizontalFlip, PadIfNeeded, R
 from fastestimator.op.numpyop.univariate import ChannelTranspose, CoarseDropout, Normalize, Onehot
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
-from fastestimator.trace import Trace
 from fastestimator.trace.adapt import LRScheduler
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
@@ -46,7 +45,7 @@ def super_schedule(step, lr_max, lr_min, mid, end):
     return lr
 
 
-def linear_increase(step, min_lr=0.0, max_lr=3.0, num_steps=5000):
+def linear_increase(step, min_lr=0.0, max_lr=0.1, num_steps=1000):
     lr = step / num_steps * (max_lr - min_lr) + min_lr
     return lr
 
@@ -119,44 +118,23 @@ class Residual(nn.Module):
         return x
 
 
-class GetMaxLR(Trace):
-    def __init__(self, model, metric, mode):
-        super().__init__(inputs=metric, outputs=None, mode=mode)
-        self.model = model
-        self.metric = metric
-        self.best = 0
-        self.max_lr = None
-
-    def on_epoch_end(self, data):
-        if data[self.metric] > self.best:
-            self.best = data[self.metric]
-            self.max_lr = get_lr(model=self.model)
-
-    def get_max_lr(self):
-        return self.max_lr
-
-    def get_best(self):
-        return self.best
-
-
-def search_max_lr(pipeline, model, network, epochs, max_train_steps_per_epoch):
-    get_max_lr_trace = GetMaxLR(model=model, metric="accuracy", mode="eval")
-
+def search_max_lr(pipeline, model, network, epochs):
     traces = [
-        Accuracy(true_key="y", pred_key="y_pred"),
-        LRScheduler(model=model, lr_fn=lambda step: linear_increase(step)),
-        get_max_lr_trace
+        Accuracy(true_key="y", pred_key="y_pred"), LRScheduler(model=model, lr_fn=lambda step: linear_increase(step))
     ]
     estimator = fe.Estimator(pipeline=pipeline,
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             max_train_steps_per_epoch=max_train_steps_per_epoch)
+                             max_train_steps_per_epoch=10,
+                             log_steps=10)
     print("Running LR range test for super convergence. It will take a while...")
     with Suppressor():
-        estimator.fit()
+        summary = estimator.fit("LR_range_test")
 
-    return get_max_lr_trace.get_max_lr()
+    best_step = max(summary.history["eval"]["accuracy"].items(), key=lambda k: k[1])[0]
+    max_lr = summary.history["train"]["model_lr"][best_step]
+    return max_lr
 
 
 def get_estimator(epochs=24, batch_size=128, lr_epochs=100, max_train_steps_per_epoch=None,
@@ -189,10 +167,8 @@ def get_estimator(epochs=24, batch_size=128, lr_epochs=100, max_train_steps_per_
     lr_max = search_max_lr(pipeline=pipeline,
                            model=model,
                            network=network,
-                           epochs=lr_epochs,
-                           max_train_steps_per_epoch=10)
-
-    lr_min = lr_max / 4
+                           epochs=lr_epochs)
+    lr_min = lr_max / 40
     print(f"The maximum LR: {lr_max}, and minimun LR: {lr_min}")
     mid_step = int(epochs * 0.45 * len(train_data) / batch_size)
     end_step = int(epochs * len(train_data) / batch_size)
