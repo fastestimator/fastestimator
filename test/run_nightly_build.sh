@@ -39,6 +39,12 @@ for file in $(find $dir_path/apphub_scripts -type f); do
             done
         fi
 
+        # clean cache (fix issue of dataloader being killed)
+        rm -r /root/.cache
+
+        # sleep (fix issue of kernel die)
+        sleep 5s
+
         exectime[$file]=$((end-start))
         if [ ! ${result[$file]} -eq 0 ]; then
             echo "---------------- error log of $file-------------------"
@@ -69,6 +75,12 @@ for nb_in in $(find $dir_path/tutorial -type f); do
                 kill -9 $i;
             done
         fi
+
+        # clean cache (fix issue of dataloader being killed)
+        rm -r /root/.cache
+
+        # sleep (fix issue of kernel die)
+        sleep 5s
 
         exectime[$nb_in]=$((end-start))
         if [ ! ${result[$nb_in]} -eq 0 ]; then
