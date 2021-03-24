@@ -39,6 +39,12 @@ for file in $(find $dir_path/apphub_scripts -type f); do
             done
         fi
 
+        # clean cache
+        rm -r /root/.cache
+
+        # sleep to prevent kernel die
+        sleep 5s
+
         exectime[$file]=$((end-start))
         if [ ! ${result[$file]} -eq 0 ]; then
             echo "---------------- error log of $file-------------------"
