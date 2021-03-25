@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2021 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,10 +25,10 @@ def WideResidualNetwork(input_shape: Tuple[int, int, int],
                         dropout: float = 0.0,
                         classes: int = 10,
                         activation: Optional[str] = 'softmax') -> tf.keras.Model:
-    """Creates a Wide Residual Network with specified parameters
+    """Creates a Wide Residual Network with specified parameters.
 
     Args:
-        input_shape: The size of the input tensor (height, width, channels)
+        input_shape: The size of the input tensor (height, width, channels).
         depth: Depth of the network. Compute N = (n - 4) / 6.
                For a depth of 16, n = 16, N = (16 - 4) / 6 = 2
                For a depth of 28, n = 28, N = (28 - 4) / 6 = 4
@@ -39,7 +39,7 @@ def WideResidualNetwork(input_shape: Tuple[int, int, int],
         activation: activation function for last dense layer.
 
     Returns:
-        A Keras Model
+        A Keras Model.
 
     Raises:
         ValueError: If (depth - 4) is not divisible by 6.
@@ -57,14 +57,14 @@ def WideResidualNetwork(input_shape: Tuple[int, int, int],
 
 
 def __conv1_block(inputs: tf.Tensor, n_filters: int) -> tf.Tensor:
-    """Conv block of the network
+    """Conv block of the network.
 
     Args:
-        inputs: input tensor
+        inputs: input tensor.
         n_filters: How many filters for the convolution layer.
 
     Returns:
-        Output tensor of the conv block
+        Output tensor of the conv block.
     """
     x = layers.Conv2D(n_filters, (3, 3), padding='same', kernel_initializer='he_normal', use_bias=False)(inputs)
     x = layers.BatchNormalization(momentum=0.9)(x)
@@ -73,15 +73,15 @@ def __conv1_block(inputs: tf.Tensor, n_filters: int) -> tf.Tensor:
 
 
 def __basic_block(inputs: tf.Tensor, n_filters: int = 16, dropout: float = 0.0) -> tf.Tensor:
-    """Basic block of the network
+    """Basic block of the network.
 
     Args:
-        inputs: input tensor
+        inputs: input tensor.
         n_filters: How many filters for the convolution layer.
         dropout: Adds dropout if value is greater than 0.0.
 
     Returns:
-        Output tensor of the basic block
+        Output tensor of the basic block.
     """
     init = inputs
 
@@ -118,8 +118,8 @@ def __create_wide_residual_network(classes: int,
     """Generates the output tensor of the Wide Residual Network.
 
     Args:
-        classes: Number of output classes
-        img_input: Input tensor or layer
+        classes: Number of output classes.
+        img_input: Input tensor or layer.
         depth: Depth of the network. Compute N = (n - 4) / 6.
                For a depth of 16, n = 16, N = (16 - 4) / 6 = 2
                For a depth of 28, n = 28, N = (28 - 4) / 6 = 4
@@ -129,7 +129,7 @@ def __create_wide_residual_network(classes: int,
         activation: activation function for the last dense layer.
 
     Returns:
-        Output tensor of the network
+        Output tensor of the network.
     """
     width = [16, 16 * widen_factor, 32 * widen_factor, 64 * widen_factor]
     N = (depth - 4) // 6
