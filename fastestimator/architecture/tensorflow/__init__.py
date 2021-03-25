@@ -14,3 +14,4 @@
 # ==============================================================================
 from fastestimator.architecture.tensorflow.lenet import LeNet
 from fastestimator.architecture.tensorflow.unet import UNet
+from fastestimator.architecture.tensorflow.wideresnet import WideResidualNetwork

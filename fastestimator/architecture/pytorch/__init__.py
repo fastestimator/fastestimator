@@ -14,3 +14,4 @@
 # ==============================================================================
 from fastestimator.architecture.pytorch.lenet import LeNet
 from fastestimator.architecture.pytorch.unet import UNet
+from fastestimator.architecture.pytorch.wideresnet import WideResidualNetwork
