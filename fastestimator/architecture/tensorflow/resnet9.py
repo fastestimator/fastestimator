@@ -16,9 +16,19 @@ from typing import Tuple
 
 import tensorflow as tf
 from tensorflow.python.keras import layers
+from tensorflow.python.keras.engine.keras_tensor import KerasTensor
 
 
-def residual(x, num_channel: int):
+def residual(x: KerasTensor, num_channel: int) -> KerasTensor:
+    """A ResNet unit for ResNet9
+
+    Args:
+        x: Input Keras tensor
+        num_channel: The number of layer channel.
+
+    Return:
+        Output Keras tensor
+    """
     x = layers.Conv2D(num_channel, 3, padding='same')(x)
     x = layers.BatchNormalization(momentum=0.8)(x)
     x = layers.LeakyReLU(alpha=0.1)(x)
@@ -29,6 +39,15 @@ def residual(x, num_channel: int):
 
 
 def ResNet9(input_size: Tuple[int, int, int] = (32, 32, 3)) -> tf.keras.Model:
+    """A small 9-layer ResNet Tensorflow model for cifar10 image classification.
+    The model architecture is from https://github.com/davidcpage/cifar10-fast
+
+    Args:
+        input_size: The size of the input tensor (height, width, channels).
+
+    Returns:
+        A TensorFlow ResNet9 model.
+    """
     # prep layers
     inp = layers.Input(shape=input_size)
     x = layers.Conv2D(64, 3, padding='same')(inp)

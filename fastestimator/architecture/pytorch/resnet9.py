@@ -20,7 +20,13 @@ import torch.nn.functional as fn
 
 
 class ResNet9(nn.Module):
-    def __init__(self, input_size:Tuple[int, int, int] = [3, 32, 32]):
+    """A small 9-layer ResNet PyTorch model for cifar10 image classification.
+    The model architecture is from https://github.com/davidcpage/cifar10-fast
+
+    Args:
+        input_size: The size of the input tensor (channels, height, width).
+    """
+    def __init__(self, input_size: Tuple[int, int, int] = [3, 32, 32]):
         super().__init__()
         self.conv0 = nn.Conv2d(input_size[0], 64, 3, padding=(1, 1))
         self.conv0_bn = nn.BatchNorm2d(64, momentum=0.8)
@@ -35,7 +41,7 @@ class ResNet9(nn.Module):
         self.residual3 = Residual(512, 512)
         self.fc1 = nn.Linear(512, 10)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         # prep layer
         x = self.conv0(x)
         x = self.conv0_bn(x)
@@ -70,14 +76,20 @@ class ResNet9(nn.Module):
 
 
 class Residual(nn.Module):
-    def __init__(self, channel_in, channel_out):
+    """A ResNet unit for ResNet9
+
+    Args:
+        channel_in: Number of input channels.
+        channel_out: Numner of output channels.
+    """
+    def __init__(self, channel_in: int, channel_out: int):
         super().__init__()
         self.conv1 = nn.Conv2d(channel_in, channel_out, 3, padding=(1, 1))
         self.conv1_bn = nn.BatchNorm2d(channel_out)
         self.conv2 = nn.Conv2d(channel_out, channel_out, 3, padding=(1, 1))
         self.conv2_bn = nn.BatchNorm2d(channel_out)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv1(x)
         x = self.conv1_bn(x)
         x = fn.leaky_relu(x, negative_slope=0.1)
