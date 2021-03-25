@@ -20,14 +20,14 @@ from tensorflow.python.keras.engine.keras_tensor import KerasTensor
 
 
 def residual(x: KerasTensor, num_channel: int) -> KerasTensor:
-    """A ResNet unit for ResNet9
+    """A ResNet unit for ResNet9.
 
     Args:
-        x: Input Keras tensor
+        x: Input Keras tensor.
         num_channel: The number of layer channel.
 
     Return:
-        Output Keras tensor
+        Output Keras tensor.
     """
     x = layers.Conv2D(num_channel, 3, padding='same')(x)
     x = layers.BatchNormalization(momentum=0.8)(x)
