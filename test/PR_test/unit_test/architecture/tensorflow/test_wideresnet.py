@@ -30,4 +30,4 @@ class TestWideResNet(unittest.TestCase):
 
     def test_wrn_depth(self):
         with self.assertRaises(ValueError):
-            wrn = WideResidualNetwork(input_shape=(32, 32, 3), depth=27)
+            WideResidualNetwork(input_shape=(32, 32, 3), depth=27)

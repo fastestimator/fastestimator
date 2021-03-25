@@ -16,4 +16,4 @@ class TestLenet(unittest.TestCase):
 
     def test_wrn_depth(self):
         with self.assertRaises(AssertionError):
-            wrn = WideResidualNetwork(depth=27)
+            WideResidualNetwork(depth=27)
