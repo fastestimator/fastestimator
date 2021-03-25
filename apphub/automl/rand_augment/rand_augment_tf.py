@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2021 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,11 +16,10 @@ import random
 import tempfile
 
 import numpy as np
-import tensorflow as tf
 from PIL import Image, ImageEnhance, ImageOps, ImageTransform
-from tensorflow.python.keras import layers
 
 import fastestimator as fe
+from fastestimator.architecture.tensorflow import ResNet9
 from fastestimator.dataset.data.cifair10 import load_data
 from fastestimator.op.numpyop import NumpyOp
 from fastestimator.op.numpyop.meta import OneOf
@@ -28,49 +27,6 @@ from fastestimator.op.numpyop.univariate import Normalize
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.metric import Accuracy
-
-
-def residual(x, num_channel):
-    x = layers.Conv2D(num_channel, 3, padding='same')(x)
-    x = layers.BatchNormalization(momentum=0.8)(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-    x = layers.Conv2D(num_channel, 3, padding='same')(x)
-    x = layers.BatchNormalization(momentum=0.8)(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-    return x
-
-
-def my_model():
-    # prep layers
-    inp = layers.Input(shape=(32, 32, 3))
-    x = layers.Conv2D(64, 3, padding='same')(inp)
-    x = layers.BatchNormalization(momentum=0.8)(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-    # layer1
-    x = layers.Conv2D(128, 3, padding='same')(x)
-    x = layers.MaxPool2D()(x)
-    x = layers.BatchNormalization(momentum=0.8)(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-    x = layers.Add()([x, residual(x, 128)])
-    # layer2
-    x = layers.Conv2D(256, 3, padding='same')(x)
-    x = layers.MaxPool2D()(x)
-    x = layers.BatchNormalization(momentum=0.8)(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-    # layer3
-    x = layers.Conv2D(512, 3, padding='same')(x)
-    x = layers.MaxPool2D()(x)
-    x = layers.BatchNormalization(momentum=0.8)(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-    x = layers.Add()([x, residual(x, 512)])
-    # layers4
-    x = layers.GlobalMaxPool2D()(x)
-    x = layers.Flatten()(x)
-    x = layers.Dense(10)(x)
-    x = layers.Activation('softmax', dtype='float32')(x)
-    model = tf.keras.Model(inputs=inp, outputs=x)
-
-    return model
 
 
 class Rotate(NumpyOp):
@@ -284,7 +240,7 @@ def get_estimator(level,
         ops=aug_ops + [
             Normalize(inputs="x", outputs="x", mean=(0.4914, 0.4822, 0.4465), std=(0.2471, 0.2435, 0.2616)),
         ])
-    model = fe.build(model_fn=my_model, optimizer_fn="adam")
+    model = fe.build(model_fn=ResNet9, optimizer_fn="adam")
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="x", outputs="y_pred"),
         CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),

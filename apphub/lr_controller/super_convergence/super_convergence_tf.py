@@ -14,10 +14,8 @@
 # ==============================================================================
 import tempfile
 
-import tensorflow as tf
-from tensorflow.python.keras import layers
-
 import fastestimator as fe
+from fastestimator.architecture.tensorflow import ResNet9
 from fastestimator.backend import get_lr
 from fastestimator.dataset.data.cifair10 import load_data
 from fastestimator.op.numpyop.meta import Sometimes
@@ -47,49 +45,6 @@ def super_schedule(step, lr_max, lr_min, mid, end):
 def linear_increase(step, min_lr=0.0, max_lr=6.0, num_steps=1000):
     lr = step / num_steps * (max_lr - min_lr) + min_lr
     return lr
-
-
-def residual(x, num_channel):
-    x = layers.Conv2D(num_channel, 3, padding='same')(x)
-    x = layers.BatchNormalization(momentum=0.8)(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-    x = layers.Conv2D(num_channel, 3, padding='same')(x)
-    x = layers.BatchNormalization(momentum=0.8)(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-    return x
-
-
-def my_model():
-    # prep layers
-    inp = layers.Input(shape=(32, 32, 3))
-    x = layers.Conv2D(64, 3, padding='same')(inp)
-    x = layers.BatchNormalization(momentum=0.8)(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-    # layer1
-    x = layers.Conv2D(128, 3, padding='same')(x)
-    x = layers.MaxPool2D()(x)
-    x = layers.BatchNormalization(momentum=0.8)(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-    x = layers.Add()([x, residual(x, 128)])
-    # layer2
-    x = layers.Conv2D(256, 3, padding='same')(x)
-    x = layers.MaxPool2D()(x)
-    x = layers.BatchNormalization(momentum=0.8)(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-    # layer3
-    x = layers.Conv2D(512, 3, padding='same')(x)
-    x = layers.MaxPool2D()(x)
-    x = layers.BatchNormalization(momentum=0.8)(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-    x = layers.Add()([x, residual(x, 512)])
-    # layers4
-    x = layers.GlobalMaxPool2D()(x)
-    x = layers.Flatten()(x)
-    x = layers.Dense(10)(x)
-    x = layers.Activation('softmax', dtype='float32')(x)
-    model = tf.keras.Model(inputs=inp, outputs=x)
-
-    return model
 
 
 def search_max_lr(pipeline, model, network, epochs):
@@ -129,7 +84,7 @@ def get_estimator(epochs=24, batch_size=128, lr_epochs=100, max_train_steps_per_
         ])
 
     # step 2: prepare network
-    model = fe.build(model_fn=my_model, optimizer_fn="sgd")
+    model = fe.build(model_fn=ResNet9, optimizer_fn="sgd")
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="x", outputs="y_pred"),
         CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),
@@ -137,17 +92,14 @@ def get_estimator(epochs=24, batch_size=128, lr_epochs=100, max_train_steps_per_
     ])
 
     # get the max learning rate
-    lr_max = search_max_lr(pipeline=pipeline,
-                           model=model,
-                           network=network,
-                           epochs=lr_epochs)
+    lr_max = search_max_lr(pipeline=pipeline, model=model, network=network, epochs=lr_epochs)
     lr_min = lr_max / 40
     print(f"The maximum LR: {lr_max}, and minimun LR: {lr_min}")
     mid_step = int(epochs * 0.45 * len(train_data) / batch_size)
     end_step = int(epochs * len(train_data) / batch_size)
 
     # reinitialize the model
-    model = fe.build(model_fn=my_model, optimizer_fn="sgd")
+    model = fe.build(model_fn=ResNet9, optimizer_fn="sgd")
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="x", outputs="y_pred"),
         CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),
