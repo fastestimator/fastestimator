@@ -19,10 +19,8 @@ Note that we use the ciFAIR10 dataset instead (https://cvjena.github.io/cifair/)
 """
 import tempfile
 
-import tensorflow as tf
-from tensorflow.python.keras import layers
-
 import fastestimator as fe
+from fastestimator.architecture.tensorflow import ResNet9
 from fastestimator.dataset.data.cifair10 import load_data
 from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import HorizontalFlip, PadIfNeeded, RandomCrop
@@ -42,49 +40,6 @@ def lr_schedule(step):
     return lr
 
 
-def residual(x, num_channel):
-    x = layers.Conv2D(num_channel, 3, padding='same')(x)
-    x = layers.BatchNormalization(momentum=0.8)(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-    x = layers.Conv2D(num_channel, 3, padding='same')(x)
-    x = layers.BatchNormalization(momentum=0.8)(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-    return x
-
-
-def my_model():
-    # prep layers
-    inp = layers.Input(shape=(32, 32, 3))
-    x = layers.Conv2D(64, 3, padding='same')(inp)
-    x = layers.BatchNormalization(momentum=0.8)(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-    # layer1
-    x = layers.Conv2D(128, 3, padding='same')(x)
-    x = layers.MaxPool2D()(x)
-    x = layers.BatchNormalization(momentum=0.8)(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-    x = layers.Add()([x, residual(x, 128)])
-    # layer2
-    x = layers.Conv2D(256, 3, padding='same')(x)
-    x = layers.MaxPool2D()(x)
-    x = layers.BatchNormalization(momentum=0.8)(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-    # layer3
-    x = layers.Conv2D(512, 3, padding='same')(x)
-    x = layers.MaxPool2D()(x)
-    x = layers.BatchNormalization(momentum=0.8)(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-    x = layers.Add()([x, residual(x, 512)])
-    # layers4
-    x = layers.GlobalMaxPool2D()(x)
-    x = layers.Flatten()(x)
-    x = layers.Dense(10)(x)
-    x = layers.Activation('softmax', dtype='float32')(x)
-    model = tf.keras.Model(inputs=inp, outputs=x)
-
-    return model
-
-
 def get_estimator(epochs=24, batch_size=512, max_train_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
     # step 1: prepare dataset
     train_data, test_data = load_data()
@@ -102,7 +57,7 @@ def get_estimator(epochs=24, batch_size=512, max_train_steps_per_epoch=None, sav
         ])
 
     # step 2: prepare network
-    model = fe.build(model_fn=my_model, optimizer_fn="adam")
+    model = fe.build(model_fn=ResNet9, optimizer_fn="adam")
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="x", outputs="y_pred"),
         CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),

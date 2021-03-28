@@ -1,3 +1,4 @@
+# How to run the test
 ## Run nightly-test
 
 ```bash
@@ -16,13 +17,13 @@ or
 $ python3 -m unittest discover PR_test
 ```
 
-### Run single test file
+## Run single test file
 
 ```bash
 $ python3 -m unittest <file_path>
 ```
 
-### Run specific test case (unittest.TestCase)
+## Run specific test case (unittest.TestCase)
 
 ```bash
 $ python3 -m unittest <module_path>
@@ -65,3 +66,11 @@ $ python3 -m unittest PR_test.unit_test.backend.test_abs.TestAbs
 
         It will generate a web project called "htmlcov" in your current folder.
         Double click the inside index.html to view the report in browser.
+
+# The principle of FE test
+* If the testing code only involve the tested module, it should be classified as unit test. Otherwise, it is integration
+test.
+
+* One testing file corresponds to single testing target (test/PR_test/unit_test/util/test_data.py -> fastestimator/util/data.py)
+
+* The file structure under test/PR_test/unit_test and test/PR_test/integration_test are the same as fastestimator

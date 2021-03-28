@@ -26,9 +26,14 @@ def UNet(input_size: Tuple[int, int, int] = (128, 128, 1)) -> tf.keras.Model:
     Args:
         input_size: The size of the input tensor (height, width, channels).
 
+    Raises:
+        ValueError: Length of `input_size` is not 3.
+        ValueError: `input_size`[0] or `input_size`[1] is not a multiple of 16.
+
     Returns:
         A TensorFlow LeNet model.
     """
+    _check_input_size(input_size)
     conv_config = {'activation': 'relu', 'padding': 'same', 'kernel_initializer': 'he_normal'}
     up_config = {'size': (2, 2), 'interpolation': 'bilinear'}
     inputs = Input(input_size)
@@ -75,3 +80,13 @@ def UNet(input_size: Tuple[int, int, int] = (128, 128, 1)) -> tf.keras.Model:
     conv10 = Conv2D(1, 1, activation='sigmoid')(conv9)
     model = Model(inputs=inputs, outputs=conv10)
     return model
+
+
+def _check_input_size(input_size):
+    if len(input_size) != 3:
+        raise ValueError("Length of `input_size` is not 3 (channel, height, width)")
+
+    height, width, _ = input_size
+
+    if height < 16 or not (height / 16.0).is_integer() or width < 16 or not (width / 16.0).is_integer():
+        raise ValueError("Both height and width of input_size need to be multiples of 16 (16, 32, 48...)")

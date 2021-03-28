@@ -13,5 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.architecture.pytorch.lenet import LeNet
+from fastestimator.architecture.pytorch.resnet9 import ResNet9
 from fastestimator.architecture.pytorch.unet import UNet
 from fastestimator.architecture.pytorch.wideresnet import WideResidualNetwork

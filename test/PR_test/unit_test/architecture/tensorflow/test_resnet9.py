@@ -1,4 +1,4 @@
-# Copyright 2020 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2021 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,43 +17,41 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
-from fastestimator.architecture.tensorflow import UNet
-from fastestimator.architecture.tensorflow.unet import _check_input_size
+from fastestimator.architecture.tensorflow import ResNet9
+from fastestimator.architecture.tensorflow.resnet9 import _check_input_size
 
 
-class TestUNet(unittest.TestCase):
-    def test_unet_default(self):
-        data = np.ones((1, 128, 128, 1))
+class TestResNet9(unittest.TestCase):
+    def test_resnet9_default(self):
+        data = np.ones((1, 32, 32, 3))
         input_data = tf.constant(data)
-        unet = UNet()
-        output_shape = unet(input_data).numpy().shape
-        self.assertEqual(output_shape, (1, 128, 128, 1))
+        model = ResNet9()
+        output_shape = model(input_data).numpy().shape
+        self.assertEqual(output_shape, (1, 10))
 
-    def test_unet_specific_input_size(self):
+    def test_resnet9_specific_input_size_classes(self):
         size = (16, 16, 1)
+        classes = 5
         data = np.ones((1, ) + size)
         input_data = tf.constant(data)
-        unet = UNet(input_size=size)
-        output_shape = unet(input_data).numpy().shape
-        self.assertEqual(output_shape, (1, ) + size)
+        model = ResNet9(input_size=size, classes=classes)
+        output_shape = model(input_data).numpy().shape
+        self.assertEqual(output_shape, (1, classes))
 
 
 class TestCheckInputSize(unittest.TestCase):
-    def test_check_input_size(self):
+    def test_resnet9_check_input_size(self):
         with self.subTest("length not 3"):
             with self.assertRaises(ValueError):
                 _check_input_size((1, ))
 
-        with self.subTest("width or height is not a multiple of 16"):
+        with self.subTest("width or height is smaller than 16"):
             with self.assertRaises(ValueError):
-                _check_input_size((18, 16, 1))
+                _check_input_size((13, 16, 1))
 
             with self.assertRaises(ValueError):
-                _check_input_size((32, 100, 1))
+                _check_input_size((16, 1, 1))
 
-            with self.assertRaises(ValueError):
-                _check_input_size((48, 0, 1))
-
-        with self.subTest("both are multiples of 16"):
-            _check_input_size((16, 48, 1))
-            _check_input_size((128, 64, 3))
+        with self.subTest("both are not smaller than 16"):
+            _check_input_size((16, 16, 1))
+            _check_input_size((16, 100, 3))

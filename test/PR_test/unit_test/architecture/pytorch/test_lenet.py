@@ -21,9 +21,35 @@ from fastestimator.architecture.pytorch import LeNet
 
 
 class TestLenet(unittest.TestCase):
-    def test_lenet(self):
+    def test_lenet_default(self):
         data = np.ones((1, 1, 28, 28))
         input_data = torch.Tensor(data)
         lenet = LeNet()
         output_shape = lenet(input_data).detach().numpy().shape
         self.assertEqual(output_shape, (1, 10))
+
+    def test_lenet_specific_input_shape_classes(self):
+        size = (1, 18, 18)
+        classes = 3
+        data = np.ones((1, ) + size)
+        input_data = torch.Tensor(data)
+        lenet = LeNet(size, classes=classes)
+        output_shape = lenet(input_data).detach().numpy().shape
+        self.assertEqual(output_shape, (1, classes))
+
+    def test_check_input_shape(self):
+        with self.subTest("length not 3"):
+            with self.assertRaises(ValueError):
+                LeNet._check_input_shape((1, ))
+
+        with self.subTest("width or height is smaller than 18"):
+            with self.assertRaises(ValueError):
+                LeNet._check_input_shape((1, 13, 18))
+
+            with self.assertRaises(ValueError):
+                LeNet._check_input_shape((1, 18, 1))
+
+        with self.subTest("both are not smaller than 18"):
+            LeNet._check_input_shape((1, 18, 18))
+            LeNet._check_input_shape((32, 18, 100))
+            LeNet._check_input_shape((64, 200, 18))

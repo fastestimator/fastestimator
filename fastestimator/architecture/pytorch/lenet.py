@@ -29,8 +29,13 @@ class LeNet(torch.nn.Module):
     Args:
         input_shape: The shape of the model input (channels, height, width).
         classes: The number of outputs the model should generate.
+
+    Raises:
+        ValueError: Length of `input_shape` is not 3.
+        ValueError: `input_shape`[1] or `input_shape`[2] is smaller than 18.
     """
     def __init__(self, input_shape: Tuple[int, int, int] = (1, 28, 28), classes: int = 10) -> None:
+        LeNet._check_input_shape(input_shape)
         super().__init__()
         conv_kernel = 3
         self.pool_kernel = 2
@@ -54,3 +59,13 @@ class LeNet(torch.nn.Module):
         x = fn.relu(self.fc1(x))
         x = fn.softmax(self.fc2(x), dim=-1)
         return x
+
+    @staticmethod
+    def _check_input_shape(input_shape):
+        if len(input_shape) != 3:
+            raise ValueError("Length of `input_shape` is not 3 (channel, height, width)")
+
+        _, height, width = input_shape
+
+        if height < 18 or width < 18:
+            raise ValueError("Both height and width of input_shape need to not smaller than 18")

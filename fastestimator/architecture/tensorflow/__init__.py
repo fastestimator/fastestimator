@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2021 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,5 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.architecture.tensorflow.lenet import LeNet
+from fastestimator.architecture.tensorflow.resnet9 import ResNet9
 from fastestimator.architecture.tensorflow.unet import UNet
 from fastestimator.architecture.tensorflow.wideresnet import WideResidualNetwork

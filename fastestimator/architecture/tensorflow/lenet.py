@@ -28,9 +28,14 @@ def LeNet(input_shape: Tuple[int, int, int] = (28, 28, 1), classes: int = 10) ->
         input_shape: shape of the input data (height, width, channels).
         classes: The number of outputs the model should generate.
 
+    Raises:
+        ValueError: Length of `input_shape` is not 3.
+        ValueError: `input_shape`[0] or `input_shape`[1] is smaller than 18.
+
     Returns:
         A TensorFlow LeNet model.
     """
+    _check_input_shape(input_shape)
     model = Sequential()
     model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=input_shape))
     model.add(layers.MaxPooling2D((2, 2)))
@@ -41,3 +46,13 @@ def LeNet(input_shape: Tuple[int, int, int] = (28, 28, 1), classes: int = 10) ->
     model.add(layers.Dense(64, activation='relu'))
     model.add(layers.Dense(classes, activation='softmax'))
     return model
+
+
+def _check_input_shape(input_shape):
+    if len(input_shape) != 3:
+        raise ValueError("Length of `input_shape` is not 3 (channel, height, width)")
+
+    height, width, _ = input_shape
+
+    if height < 18 or width < 18:
+        raise ValueError("Both height and width of input_shape need to not smaller than 18")
