@@ -82,8 +82,13 @@ class UNet(nn.Module):
 
     Args:
         input_size: The size of the input tensor (channels, height, width).
+
+    Raises:
+        ValueError: Length of `input_size` is not 3.
+        ValueError: `input_size`[1] or `input_size`[2] is not a multiple of 16.
     """
     def __init__(self, input_size: Tuple[int, int, int] = (1, 128, 128)) -> None:
+        UNet._check_input_size(input_size)
         super().__init__()
         self.input_size = input_size
         self.enc1 = UNetEncoderBlock(in_channels=input_size[0], out_channels=64)
@@ -118,3 +123,13 @@ class UNet(nn.Module):
         x_d2 = self.dec2(torch.cat((x_d3, x2), 1))
         x_out = self.dec1(torch.cat((x_d2, x1), 1))
         return x_out
+
+    @staticmethod
+    def _check_input_size(input_size):
+        if len(input_size) != 3:
+            raise ValueError("Length of `input_size` is not 3 (channel, height, width)")
+
+        _, height, width = input_size
+
+        if height < 16 or not (height / 16.0).is_integer() or width < 16 or not (width / 16.0).is_integer():
+            raise ValueError("Both height and width of input_size need to be multiples of 16 (16, 32, 48...)")

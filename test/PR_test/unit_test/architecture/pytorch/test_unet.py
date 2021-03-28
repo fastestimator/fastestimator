@@ -37,7 +37,26 @@ class TestUNet(unittest.TestCase):
         output_shape = unet_decoder_block(self.test_block_data)[0].shape
         self.assertEqual(output_shape, (128, 6, 6))
 
-    def test_unet(self):
+    def test_unet_default(self):
         unet = UNet()
         output_shape = unet(self.test_architecture_data).detach().numpy().shape
         self.assertEqual(output_shape, (1, 1, 128, 128))
+
+    def test_unet_check_input_size(self):
+        with self.subTest("length not 3"):
+            with self.assertRaises(ValueError):
+                UNet._check_input_size((1, ))
+
+        with self.subTest("width or height is not a multiple of 16"):
+            with self.assertRaises(ValueError):
+                UNet._check_input_size((1, 18, 16))
+
+            with self.assertRaises(ValueError):
+                UNet._check_input_size((1, 32, 100))
+
+            with self.assertRaises(ValueError):
+                UNet._check_input_size((1, 0, 48))
+
+        with self.subTest("both are multiples of 16"):
+            UNet._check_input_size((1, 16, 48))
+            UNet._check_input_size((1, 128, 64))

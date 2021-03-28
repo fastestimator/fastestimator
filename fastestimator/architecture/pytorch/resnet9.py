@@ -20,26 +20,33 @@ import torch.nn.functional as fn
 
 
 class ResNet9(nn.Module):
-    """A small 9-layer ResNet PyTorch model for cifar10 image classification.
+    """A 9-layer ResNet PyTorch model for cifar10 image classification.
     The model architecture is from https://github.com/davidcpage/cifar10-fast
 
     Args:
-        input_size: The size of the input tensor (channels, height, width).
+        input_size: The size of the input tensor (channels, height, width). Both width and height of input_size should
+            not be smaller than 16.
+        classes: The number of outputs.
+
+    Raises:
+        ValueError: Length of `input_size` is not 3.
+        ValueError: `input_size`[1] or `input_size`[2] is not a multiple of 16.
     """
-    def __init__(self, input_size: Tuple[int, int, int] = [3, 32, 32]):
+    def __init__(self, input_size: Tuple[int, int, int] = [3, 32, 32], classes: int = 10):
+        ResNet9._check_input_size(input_size)
         super().__init__()
         self.conv0 = nn.Conv2d(input_size[0], 64, 3, padding=(1, 1))
         self.conv0_bn = nn.BatchNorm2d(64, momentum=0.8)
         self.conv1 = nn.Conv2d(64, 128, 3, padding=(1, 1))
         self.conv1_bn = nn.BatchNorm2d(128, momentum=0.8)
-        self.residual1 = Residual(128, 128)
+        self.residual1 = Residual(128)
         self.conv2 = nn.Conv2d(128, 256, 3, padding=(1, 1))
         self.conv2_bn = nn.BatchNorm2d(256, momentum=0.8)
-        self.residual2 = Residual(256, 256)
+        self.residual2 = Residual(256)
         self.conv3 = nn.Conv2d(256, 512, 3, padding=(1, 1))
         self.conv3_bn = nn.BatchNorm2d(512, momentum=0.8)
-        self.residual3 = Residual(512, 512)
-        self.fc1 = nn.Linear(512, 10)
+        self.residual3 = Residual(512)
+        self.fc1 = nn.Linear(512, classes)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # prep layer
@@ -65,29 +72,35 @@ class ResNet9(nn.Module):
         x = fn.leaky_relu(x, negative_slope=0.1)
         x = x + self.residual3(x)
         # layer 4
-        # Storing kernel size as a list in case the user needs to export the model to ONNX
-        # As ONNX doesn't support dynamic kernel size
-        size_array = [int(s) for s in x.size()[2:]]
-        x = fn.max_pool2d(x, kernel_size=size_array)
+        x = nn.AdaptiveMaxPool2d((1, 1))(x)
         x = torch.flatten(x, 1)
         x = self.fc1(x)
         x = fn.softmax(x, dim=-1)
         return x
 
+    @staticmethod
+    def _check_input_size(input_size):
+        if len(input_size) != 3:
+            raise ValueError("Length of `input_size` is not 3 (channel, height, width)")
+
+        _, height, width = input_size
+
+        if height < 16 or width < 16:
+            raise ValueError("Both height and width of input_size need to not smaller than 16")
+
 
 class Residual(nn.Module):
-    """A ResNet unit for ResNet9
+    """A two-layer unit for ResNet9. The output size is the same as input.
 
     Args:
-        channel_in: Number of input channels.
-        channel_out: Numner of output channels.
+        channel: Number of input channels.
     """
-    def __init__(self, channel_in: int, channel_out: int):
+    def __init__(self, channels: int):
         super().__init__()
-        self.conv1 = nn.Conv2d(channel_in, channel_out, 3, padding=(1, 1))
-        self.conv1_bn = nn.BatchNorm2d(channel_out)
-        self.conv2 = nn.Conv2d(channel_out, channel_out, 3, padding=(1, 1))
-        self.conv2_bn = nn.BatchNorm2d(channel_out)
+        self.conv1 = nn.Conv2d(channels, channels, 3, padding=(1, 1))
+        self.conv1_bn = nn.BatchNorm2d(channels)
+        self.conv2 = nn.Conv2d(channels, channels, 3, padding=(1, 1))
+        self.conv2_bn = nn.BatchNorm2d(channels)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv1(x)
