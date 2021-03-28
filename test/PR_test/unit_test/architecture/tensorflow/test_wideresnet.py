@@ -12,7 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.architecture.tensorflow.lenet import LeNet
-from fastestimator.architecture.tensorflow.resnet9 import ResNet9
-from fastestimator.architecture.tensorflow.unet import UNet
-from fastestimator.architecture.tensorflow.wideresnet import WideResidualNetwork
+import unittest
+
+import numpy as np
+import tensorflow as tf
+
+from fastestimator.architecture.tensorflow import WideResidualNetwork
+
+
+class TestWideResNet(unittest.TestCase):
+    def test_wrn(self):
+        data = np.ones((1, 32, 32, 3))
+        input_data = tf.constant(data)
+        wrn = WideResidualNetwork(input_shape=(32, 32, 3), classes=5)
+        output_shape = wrn(input_data).numpy().shape
+        self.assertEqual(output_shape, (1, 5))
+
+    def test_wrn_depth(self):
+        with self.assertRaises(ValueError):
+            WideResidualNetwork(input_shape=(32, 32, 3), depth=27)
