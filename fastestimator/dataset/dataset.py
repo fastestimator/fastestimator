@@ -164,7 +164,8 @@ class FEDataset(Dataset):
             for child in children:
                 child._fe_traceability_summary[parent_id] = deepcopy(table)
 
-    def split(self, *fractions: Union[float, int, Iterable[int]]) -> Union['FEDataset', List['FEDataset']]:
+    def split(self, *fractions: Union[float, int, Iterable[int]],
+              seed: Optional[int] = None) -> Union['FEDataset', List['FEDataset']]:
         """Split this dataset into multiple smaller datasets.
 
         This function enables several types of splitting:
@@ -191,6 +192,8 @@ class FEDataset(Dataset):
             *fractions: Floating point values will be interpreted as percentages, integers as an absolute number of
                 datapoints, and an iterable of integers as the exact indices of the data that should be removed in order
                 to create the new dataset.
+            seed: The random seed to use when splitting the dataset. Useful if you want consistent splits across
+                multiple experiments. This isn't necessary if you are splitting by data index.
 
         Returns:
             One or more new datasets which are created by removing elements from the current dataset. The number of
@@ -233,7 +236,10 @@ class FEDataset(Dataset):
         if method == 'number':
             # TODO - convert to a linear congruential generator for large datasets?
             # https://stackoverflow.com/questions/9755538/how-do-i-create-a-list-of-random-numbers-without-duplicates
-            indices = random.sample(range(original_size), int_sum)
+            if seed is not None:
+                indices = random.Random(seed).sample(range(original_size), int_sum)
+            else:
+                indices = random.sample(range(original_size), int_sum)
             start = 0
             for stop in n_samples:
                 splits.append((indices[i] for i in range(start, start + stop)))

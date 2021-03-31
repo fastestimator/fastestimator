@@ -65,6 +65,8 @@ class LabeledDirDataset(InMemoryDataset):
         idx = 0
         for key, values in data.items():
             label = self.mapping[key]
+            # Sort the values so that deterministic splitting works
+            values.sort()
             for value in values:
                 parsed_data[idx] = {data_key: os.path.join(root_dir, value), label_key: label}
                 idx += 1

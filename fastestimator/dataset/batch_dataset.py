@@ -115,7 +115,8 @@ class BatchDataset(FEDataset):
         """
         raise AssertionError("This method should not have been invoked. Please file a bug report")
 
-    def split(self, *fractions: Union[float, int, Iterable[int]]) -> Union['BatchDataset', List['BatchDataset']]:
+    def split(self, *fractions: Union[float, int, Iterable[int]],
+              seed: Optional[int] = None) -> Union['BatchDataset', List['BatchDataset']]:
         """Split this dataset into multiple smaller datasets.
 
         This function enables several types of splitting:
@@ -142,6 +143,8 @@ class BatchDataset(FEDataset):
             *fractions: Floating point values will be interpreted as percentages, integers as an absolute number of
                 datapoints, and an iterable of integers as the exact indices of the data that should be removed in order
                 to create the new dataset.
+            seed: The random seed to use when splitting the dataset. Useful if you want consistent splits across
+                multiple experiments. This isn't necessary if you are splitting by data index.
 
         Returns:
             One or more new datasets which are created by removing elements from the current dataset. The number of
@@ -154,12 +157,14 @@ class BatchDataset(FEDataset):
         if not self.all_fe_datasets:
             raise NotImplementedError(
                 "BatchDataset.split() is not supported when BatchDataset contains non-FEDataset objects")
-        new_datasets = [to_list(ds.split(*fractions)) for ds in self.datasets]
+        new_datasets = [to_list(ds.split(*fractions, seed=seed)) for ds in self.datasets]
         num_splits = len(new_datasets[0])
         new_datasets = [[ds[i] for ds in new_datasets] for i in range(num_splits)]
         results = [BatchDataset(ds, self.num_samples, self.probability) for ds in new_datasets]
+        if seed is not None:
+            [ds.reset_index_maps(seed=seed) for ds in results]
         # Re-compute personal variables
-        self.reset_index_maps()
+        self.reset_index_maps(seed=seed)
         FEDataset.fix_split_traceabilty(self, results, fractions)
         # Unpack response if only a single split
         if len(results) == 1:
@@ -223,8 +228,13 @@ class BatchDataset(FEDataset):
         random.shuffle(items)
         return items
 
-    def reset_index_maps(self) -> None:
+    def reset_index_maps(self, seed: Optional[int] = None) -> None:
         """Rearrange the index maps of this BatchDataset.
+
+        Args:
+            seed: A random seed to control the shuffling. This is provided for compatibility with the dataset.split
+                method random seed. It's not necessary from a training functionality perspective since shuffling is
+                performed every epoch, but if user wants to visualize a dataset element after the split this will help.
 
         This method is invoked every epoch by OpDataset which allows each epoch to have different random pairings of the
         basis datasets.
@@ -236,5 +246,8 @@ class BatchDataset(FEDataset):
         for dataset, num_sample in zip(self.datasets, num_samples):
             index_map = [list(range(len(dataset))) for _ in range(math.ceil(len(self) * num_sample / len(dataset)))]
             for mapping in index_map:
-                random.shuffle(mapping)
+                if seed is not None:
+                    random.Random(seed).shuffle(mapping)
+                else:
+                    random.shuffle(mapping)
             self.index_maps.append([item for sublist in index_map for item in sublist])
