@@ -46,9 +46,11 @@ class DirDataset(InMemoryDataset):
                     if file_name.startswith(".") or (file_extension is not None
                                                      and not file_name.endswith(file_extension)):
                         continue
-                    data.append((os.path.join(root, file_name), os.path.basename(root)))
+                    data.append(os.path.join(root, file_name))
                 if not recursive_search:
                     break
         except StopIteration:
             raise ValueError("Invalid directory structure for DirDataset at root: {}".format(root_dir))
-        super().__init__({i: {data_key: data[i][0]} for i in range(len(data))})
+        # Sort the data so that deterministic split will work properly
+        data.sort()
+        super().__init__({i: {data_key: data[i]} for i in range(len(data))})
