@@ -115,8 +115,10 @@ class BatchDataset(FEDataset):
         """
         raise AssertionError("This method should not have been invoked. Please file a bug report")
 
-    def split(self, *fractions: Union[float, int, Iterable[int]],
-              seed: Optional[int] = None) -> Union['BatchDataset', List['BatchDataset']]:
+    def split(self,
+              *fractions: Union[float, int, Iterable[int]],
+              seed: Optional[int] = None,
+              stratify: Optional[str] = None) -> Union['BatchDataset', List['BatchDataset']]:
         """Split this dataset into multiple smaller datasets.
 
         This function enables several types of splitting:
@@ -145,6 +147,8 @@ class BatchDataset(FEDataset):
                 to create the new dataset.
             seed: The random seed to use when splitting the dataset. Useful if you want consistent splits across
                 multiple experiments. This isn't necessary if you are splitting by data index.
+            stratify: A class key within the dataset with which to stratify the split (to approximately maintain class
+                balance ratios before and after a split). Incompatible with data index splitting.
 
         Returns:
             One or more new datasets which are created by removing elements from the current dataset. The number of
@@ -157,7 +161,11 @@ class BatchDataset(FEDataset):
         if not self.all_fe_datasets:
             raise NotImplementedError(
                 "BatchDataset.split() is not supported when BatchDataset contains non-FEDataset objects")
-        new_datasets = [to_list(ds.split(*fractions, seed=seed)) for ds in self.datasets]
+        # Only pass the stratify argument to the dataset(s) which have the appropriate key
+        new_datasets = [
+            to_list(ds.split(*fractions, seed=seed, stratify=stratify if stratify in ds[0] else None))
+            for ds in self.datasets
+        ]
         num_splits = len(new_datasets[0])
         new_datasets = [[ds[i] for ds in new_datasets] for i in range(num_splits)]
         results = [BatchDataset(ds, self.num_samples, self.probability) for ds in new_datasets]

@@ -116,6 +116,12 @@ class SiameseDirDataset(LabeledDirDataset):
         self.summary.cache_clear()
         return results
 
+    def _get_stratified_splits(self, split_counts: List[int], seed: Optional[int],
+                               stratify: str) -> Sequence[Iterable[int]]:
+        print("\033[93m {}\033[00m".format(
+            "Warning! SiameseDirDataset does not support stratified splits. Falling back to classical split method."))
+        return self._get_fractional_splits(split_counts=split_counts, seed=seed)
+
     def __getitem__(self, index: int):
         """Extract items from the dataset based on the given `batch_idx`.
 

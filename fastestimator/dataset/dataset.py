@@ -164,8 +164,10 @@ class FEDataset(Dataset):
             for child in children:
                 child._fe_traceability_summary[parent_id] = deepcopy(table)
 
-    def split(self, *fractions: Union[float, int, Iterable[int]],
-              seed: Optional[int] = None) -> Union['FEDataset', List['FEDataset']]:
+    def split(self,
+              *fractions: Union[float, int, Iterable[int]],
+              seed: Optional[int] = None,
+              stratify: Optional[str] = None) -> Union['FEDataset', List['FEDataset']]:
         """Split this dataset into multiple smaller datasets.
 
         This function enables several types of splitting:
@@ -194,11 +196,16 @@ class FEDataset(Dataset):
                 to create the new dataset.
             seed: The random seed to use when splitting the dataset. Useful if you want consistent splits across
                 multiple experiments. This isn't necessary if you are splitting by data index.
+            stratify: A class key within the dataset with which to stratify the split (to approximately maintain class
+                balance ratios before and after a split). Incompatible with data index splitting.
 
         Returns:
             One or more new datasets which are created by removing elements from the current dataset. The number of
             datasets returned will be equal to the number of `fractions` provided. If only a single value is provided
             then the return will be a single dataset rather than a list of datasets.
+
+        Raises:
+            AssertionError: If input arguments are unacceptable.
         """
         assert len(fractions) > 0, "split requires at least one fraction argument"
         original_size = self._split_length()
@@ -232,24 +239,128 @@ class FEDataset(Dataset):
         assert int_sum < original_size, \
             "total split requirements ({}) should sum to less than dataset size ({})".format(int_sum, original_size)
 
-        splits = []
         if method == 'number':
-            # TODO - convert to a linear congruential generator for large datasets?
-            # https://stackoverflow.com/questions/9755538/how-do-i-create-a-list-of-random-numbers-without-duplicates
-            if seed is not None:
-                indices = random.Random(seed).sample(range(original_size), int_sum)
+            if stratify is not None:
+                splits = self._get_stratified_splits(n_samples, seed, stratify)
             else:
-                indices = random.sample(range(original_size), int_sum)
-            start = 0
-            for stop in n_samples:
-                splits.append((indices[i] for i in range(start, start + stop)))
-                start += stop
-        elif method == 'indices':
+                splits = self._get_fractional_splits(n_samples, seed)
+        else:  # method == 'indices':
+            assert stratify is None, "Stratify may only be specified when splitting by count or fraction, not by index"
             splits = fractions
         splits = self._do_split(splits)
         FEDataset.fix_split_traceabilty(self, splits, fractions)
         if len(fractions) == 1:
             return splits[0]
+        return splits
+
+    def _get_stratified_splits(self, split_counts: List[int], seed: Optional[int],
+                               stratify: str) -> Sequence[Iterable[int]]:
+        """Get sequence(s) of indices to split from the current dataset in order to generate new dataset(s).
+
+        Args:
+            split_counts: How many datapoints to include in each split.
+            seed: What random seed, if any, to use when generating the split(s).
+            stratify: A class key within the dataset with which to stratify the split (to approximately maintain class
+                balance ratios before and after a split).
+
+        Returns:
+            Which data indices to include in each split of data. len(return[i]) == split_counts[i].
+        """
+        splits = []
+        original_size = self._split_length()
+        seed_offset = 0
+
+        # Compute the distribution over the stratify key
+        distribution = defaultdict(list)
+        for idx in range(original_size):
+            sample = self[idx]
+            key = sample[stratify]
+            if hasattr(key, "tobytes"):
+                key = key.tobytes()  # Makes numpy arrays hashable
+            distribution[key].append(idx)
+
+        supply = {key: len(values) for key, values in distribution.items()}
+        split_requests = [{key: (n_split * n_tot) / original_size
+                           for key, n_tot in supply.items()} for n_split in split_counts]
+
+        def transfer(source: Dict[Any, int], sink: Dict[Any, int], key: Any, request: int) -> int:
+            allowance = min(request, source[key])
+            source[key] -= allowance
+            sink[key] += allowance
+            return allowance
+
+        # Sample splits proportional to the computed distribution
+        for split_request, target in zip(split_requests, split_counts):
+            split_actual = defaultdict(lambda: 0)
+            total = 0
+            # Step 1: Try to get as close to the target distribution as possible
+            for key, request in split_request.items():
+                request = 1 if 0 < request < 1 else round(request)  # Always want at least 1 sample from a class
+                total += transfer(source=supply, sink=split_actual, key=key, request=request)
+            # Step 2: Correct the error in the total count at the expense of an optimal distribution
+            # |total - target| may be > n_keys due to rounding + supply shortage
+            spare_last = True  # If we have drawn too many things, we will try not to reduce any classes beneath 1
+            while total != target:
+                old_total = total
+                # Repeatedly add or shave 1 off of everything until we get the correct target number
+                for key, requested in sorted(split_actual.items(), key=lambda x: x[1], reverse=True):
+                    # reversed to start with the most abundant class
+                    if total < target:
+                        total += transfer(source=supply, sink=split_actual, key=key, request=1)
+                    elif total > target and (not spare_last or requested > 1):
+                        total -= transfer(source=split_actual, sink=supply, key=key, request=1)
+                    if total == target:
+                        break
+                if old_total == total:
+                    assert spare_last is True, "Cannot stratify the requested split. Please file a bug report."
+                    # We weren't able to modify anything, so no choice but to reduce a 1-sample class to 0-sample
+                    spare_last = False
+            # Step 3: Perform the actual sampling
+            split_indices = []
+            for key, n_samples in split_actual.items():
+                # Dicts have preserved insertion order since python 3.6, so we can increase the seed as we use it
+                # to prevent any unintended patterns from emerging while still having consistency over multiple runs.
+                # This wouldn't work if the order of encounter of a class can change (like in a generator), but in such
+                # cases consistency would be impossible anyways.
+                if seed is not None:
+                    indices = random.Random(seed + seed_offset).sample(distribution[key], n_samples)
+                    seed_offset += 1  # We'll use a different seed each time
+                else:
+                    indices = random.sample(distribution[key], n_samples)
+                split_indices.extend(indices)
+                # Sort to allow deterministic seed to work alongside sets
+                distribution[key] = sorted(list(set(distribution[key]) - set(indices)))
+            if seed is not None:
+                random.Random(seed + seed_offset).shuffle(split_indices)
+                seed_offset += 1
+            else:
+                random.shuffle(split_indices)
+            splits.append(split_indices)
+        return splits
+
+    def _get_fractional_splits(self, split_counts: List[int], seed: Optional[int]) -> Sequence[Iterable[int]]:
+        """Get sequence(s) of indices to split from the current dataset in order to generate new dataset(s).
+
+        Args:
+            split_counts: How many datapoints to include in each split.
+            seed: What random seed, if any, to use when generating the split(s).
+
+        Returns:
+            Which data indices to include in each split of data. len(return[i]) == split_counts[i].
+        """
+        splits = []
+        original_size = self._split_length()
+        int_sum = sum(split_counts)
+        # TODO - convert to a linear congruential generator for large datasets?
+        # https://stackoverflow.com/questions/9755538/how-do-i-create-a-list-of-random-numbers-without-duplicates
+        if seed is not None:
+            indices = random.Random(seed).sample(range(original_size), int_sum)
+        else:
+            indices = random.sample(range(original_size), int_sum)
+        start = 0
+        for stop in split_counts:
+            splits.append((indices[i] for i in range(start, start + stop)))
+            start += stop
         return splits
 
     def _split_length(self) -> int:

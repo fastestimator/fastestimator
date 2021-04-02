@@ -14,7 +14,7 @@
 # ==============================================================================
 import warnings
 from functools import lru_cache
-from typing import Any, Dict, Generator, Iterable, List, Sequence, Sized
+from typing import Any, Dict, Generator, Iterable, List, Optional, Sequence, Sized
 
 from fastestimator.dataset.dataset import DatasetSummary, FEDataset, KeySummary
 from fastestimator.util.traceability_util import traceable
@@ -64,6 +64,12 @@ class GeneratorDataset(FEDataset):
             results.append(GeneratorDataset(self.generator, size))
             self.samples_per_epoch -= size
         return results
+
+    def _get_stratified_splits(self, split_counts: List[int], seed: Optional[int],
+                               stratify: str) -> Sequence[Iterable[int]]:
+        print("\033[93m {}\033[00m".format(
+            "Warning! GeneratorDataset does not support stratified splits. Falling back to classical split method."))
+        return self._get_fractional_splits(split_counts=split_counts, seed=seed)
 
     def summary(self) -> DatasetSummary:
         """Generate a summary representation of this dataset.
