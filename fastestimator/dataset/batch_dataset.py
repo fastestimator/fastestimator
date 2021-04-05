@@ -173,7 +173,7 @@ class BatchDataset(FEDataset):
             [ds.reset_index_maps(seed=seed) for ds in results]
         # Re-compute personal variables
         self.reset_index_maps(seed=seed)
-        FEDataset.fix_split_traceabilty(self, results, fractions)
+        FEDataset.fix_split_traceabilty(self, results, fractions, seed, stratify)
         # Unpack response if only a single split
         if len(results) == 1:
             results = results[0]
