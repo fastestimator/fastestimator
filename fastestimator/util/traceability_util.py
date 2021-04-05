@@ -139,14 +139,16 @@ class FeSplitSummary(LatexObject):
         super().__init__()
         self.data = []
 
-    def add_split(self, parent: Union[FEID, str], fraction: str) -> None:
+    def add_split(self, parent: Union[FEID, str], fraction: str, seed: Optional[int], stratify: Optional[str]) -> None:
         """Record another split on this dataset.
 
         Args:
             parent: The id of the parent involved in the split (or 'self' if you are the parent).
             fraction: The string representation of the split fraction that was used.
+            seed: The random seed used during the split.
+            stratify: The stratify key used during the split.
         """
-        self.data.append((parent, fraction))
+        self.data.append((parent, fraction, seed, stratify))
 
     def dumps(self) -> str:
         """Generate a LaTeX formatted representation of this object.
@@ -155,9 +157,12 @@ class FeSplitSummary(LatexObject):
             A LaTeX string representation of this object.
         """
         return " $\\rightarrow$ ".join([
-            f"{HrefFEID(parent, name='').dumps() if isinstance(parent, FEID) else parent}({escape_latex(fraction)})"
-            for parent,
-            fraction in self.data
+            f"{HrefFEID(parent, name='').dumps() if isinstance(parent, FEID) else parent}({escape_latex(fraction)}" +
+            (f", seed={seed}" if seed is not None else "") +
+            (f", stratify=`{escape_latex(stratify)}'" if stratify is not None else "") + ")" for parent,
+            fraction,
+            seed,
+            stratify in self.data
         ])
 
 
