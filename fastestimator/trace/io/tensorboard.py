@@ -65,11 +65,12 @@ class _BaseWriter:
                                               (SummaryWriter(log_dir=os.path.join(root_log_dir, time_stamp, key))))
         self.network = network
 
-    def write_epoch_models(self, mode: str) -> None:
+    def write_epoch_models(self, mode: str, epoch: int) -> None:
         """Write summary graphs for all of the models in the current epoch.
 
         Args:
             mode: The current mode of execution ('train', 'eval', 'test', 'infer').
+            epoch: The current epoch of execution.
         """
         raise NotImplementedError
 
@@ -200,14 +201,17 @@ class _TfWriter(_BaseWriter):
         self.tf_summary_writers = DefaultKeyDict(
             lambda key: (tf.summary.create_file_writer(os.path.join(root_log_dir, time_stamp, key))))
 
-    def write_epoch_models(self, mode: str) -> None:
+    def write_epoch_models(self, mode: str, epoch: int) -> None:
         with self.tf_summary_writers[mode].as_default(), summary_ops_v2.always_record_summaries():
-            summary_ops_v2.graph(backend.get_graph(), step=0)
+            # Record the overall execution summary
+            # noinspection PyProtectedMember
+            summary_ops_v2.graph(self.network._forward_step_static._concrete_stateful_fn.graph, step=epoch)
+            # Record the individual model summaries
             for model in self.network.epoch_models:
                 summary_writable = (model.__class__.__name__ == 'Sequential'
                                     or (hasattr(model, '_is_graph_network') and model._is_graph_network))
                 if summary_writable:
-                    summary_ops_v2.keras_model(model.model_name, model, step=0)
+                    summary_ops_v2.keras_model(model.model_name, model, step=epoch)
 
     def write_weights(self, mode: str, models: Iterable[Model], step: int, visualize: bool) -> None:
         # Similar to TF implementation, but multiple models
@@ -238,7 +242,7 @@ class _TorchWriter(_BaseWriter):
 
     This class is intentionally not @traceable.
     """
-    def write_epoch_models(self, mode: str) -> None:
+    def write_epoch_models(self, mode: str, epoch: int) -> None:
         for model in self.network.epoch_models:
             inputs = model.fe_input_spec.get_dummy_input()
             self.summary_writers[mode].add_graph(model.module if torch.cuda.device_count() > 1 else model,
@@ -375,7 +379,7 @@ class TensorBoard(Trace):
 
     def on_batch_end(self, data: Data) -> None:
         if self.write_graph and self.system.network.epoch_models.symmetric_difference(self.painted_graphs):
-            self.writer.write_epoch_models(mode=self.system.mode)
+            self.writer.write_epoch_models(mode=self.system.mode, epoch=self.system.epoch_idx)
             self.painted_graphs = self.system.network.epoch_models
         if self.system.mode != 'train':
             return
