@@ -40,6 +40,7 @@ class TestGradientOp(unittest.TestCase):
                 output = gradient.forward(data=[self.tf_data, x], state={'tape': tape})
                 self.assertTrue(is_equal(output, self.tf_output))
         gradient = GradientOp(inputs='x', finals='x', outputs='y')
+        gradient.build("tf")
         strategy = tf.distribute.get_strategy()
         if isinstance(strategy, tf.distribute.MirroredStrategy):
             strategy.run(update_gradient, args=(gradient, ))
@@ -48,6 +49,7 @@ class TestGradientOp(unittest.TestCase):
 
     def test_torch_input(self):
         gradient = GradientOp(inputs='x', finals='x', outputs='y')
+        gradient.build("torch")
         x = self.torch_data * self.torch_data
         output = gradient.forward(data=[self.torch_data, x], state={'tape': None})
         self.assertTrue(is_equal(output, self.torch_output))
@@ -59,6 +61,7 @@ class TestGradientOp(unittest.TestCase):
                 output = gradient.forward(data=[pred], state={"tape": tape})
                 self.assertTrue(is_equal(output[0][0].numpy(), np.array([[2.0], [0.0], [0.5]], dtype="float32")))
         gradient = GradientOp(finals="pred", outputs="grad", model=self.tf_model)
+        gradient.build("tf")
         strategy = tf.distribute.get_strategy()
         if isinstance(strategy, tf.distribute.MirroredStrategy):
             strategy.run(update_gradient, args=(gradient, ))
@@ -68,6 +71,7 @@ class TestGradientOp(unittest.TestCase):
 
     def test_torch_model_input(self):
         gradient = GradientOp(finals="pred", outputs="grad", model=self.torch_model)
+        gradient.build("torch")
         with tf.GradientTape(persistent=True) as tape:
             pred = feed_forward(model=self.torch_model, x=torch.tensor([[1.0, 1.0, 1.0], [1.0, -1.0, -0.5]]))
             output = gradient.forward(data=[pred], state={"tape": tape})

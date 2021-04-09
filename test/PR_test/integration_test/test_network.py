@@ -190,7 +190,7 @@ class TestNetworkBuildOptimizer(unittest.TestCase):
         str_list = ['adadelta', 'adagrad', 'adam', 'adamax', 'rmsprop', 'sgd']
         for opt_name in str_list:
             with self.subTest(optimizer_fn=opt_name):
-                optimizer = fe.network._build_optimizer(optimizer_fn=opt_name, model=self.tf_model, framework="tf")
+                optimizer = fe.network._build_optimizer(optimizer_fn=opt_name, model=self.tf_model, framework="tf", mixed_precision=False)
                 self.assertIsInstance(optimizer, tf.optimizers.Optimizer)
 
     def test_network_build_optimizer_torch_model_optimizer_str(self):
@@ -199,19 +199,26 @@ class TestNetworkBuildOptimizer(unittest.TestCase):
             with self.subTest(optimizer_fn=opt_name):
                 optimizer = fe.network._build_optimizer(optimizer_fn=opt_name,
                                                         model=self.torch_model,
-                                                        framework="torch")
+                                                        framework="torch",
+                                                        mixed_precision=False)
                 self.assertIsInstance(optimizer, torch.optim.Optimizer)
 
     def test_network_build_optimizer_tf_model_optimizer_fn(self):
         fn_list = [tf.optimizers.Adadelta, lambda: tf.optimizers.Adam(lr=0.001)]
         for opt_fn in fn_list:
             with self.subTest(optimizer_fn=opt_fn):
-                optimizer = fe.network._build_optimizer(optimizer_fn=opt_fn, model=self.tf_model, framework="tf")
+                optimizer = fe.network._build_optimizer(optimizer_fn=opt_fn,
+                                                        model=self.tf_model,
+                                                        framework="tf",
+                                                        mixed_precision=False)
                 self.assertIsInstance(optimizer, tf.optimizers.Optimizer)
 
     def test_network_build_optimizer_torch_model_optimizer_fn(self):
         opt_fn = lambda x: torch.optim.SGD(params=x, lr=0.01)
-        optimizer = fe.network._build_optimizer(optimizer_fn=opt_fn, model=self.torch_model, framework="torch")
+        optimizer = fe.network._build_optimizer(optimizer_fn=opt_fn,
+                                                model=self.torch_model,
+                                                framework="torch",
+                                                mixed_precision=False)
         self.assertIsInstance(optimizer, torch.optim.Optimizer)
 
 
@@ -233,7 +240,8 @@ class TestNetworkFeCompile(unittest.TestCase):
                                            optimizer_fn=optimizer,
                                            weight="example_path",
                                            name="test",
-                                           framework="tf")
+                                           framework="tf",
+                                           mixed_precision=False)
 
             _, weight = fake.call_args[0]
             self.assertEqual(weight, "example_path")
@@ -244,7 +252,8 @@ class TestNetworkFeCompile(unittest.TestCase):
                                        optimizer_fn=optimizer,
                                        weight=None,
                                        name="test",
-                                       framework="tf")
+                                       framework="tf",
+                                       mixed_precision=False)
 
         with self.subTest("check optimizer instantiation"):
             for optimizer in model.optimizer.get_all_values():
@@ -265,7 +274,8 @@ class TestNetworkFeCompile(unittest.TestCase):
                                        optimizer_fn=optimizer,
                                        weight=None,
                                        name=None,
-                                       framework="tf")
+                                       framework="tf",
+                                       mixed_precision=False)
 
         with self.subTest("check optimizer instantiation"):
             for optimizer in model.optimizer.get_all_values():
@@ -280,7 +290,8 @@ class TestNetworkFeCompile(unittest.TestCase):
                                        optimizer_fn=optimizer,
                                        weight=None,
                                        name=None,
-                                       framework="tf")
+                                       framework="tf",
+                                       mixed_precision=False)
         with self.subTest("check optimizer instantiation"):
             self.assertIsInstance(model.optimizer, tf.optimizers.Optimizer)
 
@@ -293,7 +304,8 @@ class TestNetworkFeCompile(unittest.TestCase):
                                        optimizer_fn=optimizer,
                                        weight=None,
                                        name=None,
-                                       framework="torch")
+                                       framework="torch",
+                                       mixed_precision=False)
 
         with self.subTest("check optimizer instantiation"):
             for optimizer in model.optimizer.get_all_values():
@@ -308,7 +320,8 @@ class TestNetworkFeCompile(unittest.TestCase):
                                        optimizer_fn=optimizer,
                                        weight=None,
                                        name=None,
-                                       framework="torch")
+                                       framework="torch",
+                                       mixed_precision=False)
 
         with self.subTest("check optimizer instantiation"):
             for optimizer in model.optimizer.get_all_values():
@@ -323,7 +336,8 @@ class TestNetworkFeCompile(unittest.TestCase):
                                        optimizer_fn=optimizer,
                                        weight=None,
                                        name=None,
-                                       framework="torch")
+                                       framework="torch",
+                                       mixed_precision=False)
         with self.subTest("check optimizer instantiation"):
             self.assertIsInstance(model.optimizer, torch.optim.Optimizer)
 
@@ -334,7 +348,8 @@ class TestNetworkFeCompile(unittest.TestCase):
                                        optimizer_fn=optimizer,
                                        weight=None,
                                        name=None,
-                                       framework="torch")
+                                       framework="torch",
+                                       mixed_precision=False)
 
 
 class TestNetworkBuild(unittest.TestCase):

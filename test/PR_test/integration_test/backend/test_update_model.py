@@ -1,6 +1,7 @@
 import unittest
 from copy import deepcopy
 
+import numpy as np
 import tensorflow as tf
 import torch
 
@@ -8,82 +9,83 @@ import fastestimator as fe
 from fastestimator.test.unittest_util import OneLayerTorchModel, is_equal, one_layer_tf_model
 
 
-def get_torch_model_weight(model):
-    if torch.cuda.device_count() > 1:
-        model = model.module
-
-    weight = []
-    weight.append(deepcopy(model.fc1.weight.data.numpy()))
-
-    return weight
-
-
-def get_tf_model_weight(model):
-    weight = []
-    for layer in model.layers:
-        weight.append(layer.get_weights())
-
-    return weight
-
-
 class TestUpdateModel(unittest.TestCase):
-    def test_tf_model_with_loss(self):
-        def update(x, model):
-            with tf.GradientTape(persistent=True) as tape:
-                y = fe.backend.feed_forward(model, x)
-                fe.backend.update_model(model, loss=y, tape=tape)
-
-        model = fe.build(model_fn=one_layer_tf_model, optimizer_fn="adam")
-        init_weight = get_tf_model_weight(model)
-        x = tf.constant([[1, 1, 1]])
-        strategy = tf.distribute.get_strategy()
-        if isinstance(strategy, tf.distribute.MirroredStrategy):
-            strategy.run(update, args=(x, model))
-        else:
-            update(x, model)
-        new_weight = get_tf_model_weight(model)
-        self.assertTrue(not is_equal(init_weight, new_weight))
-
-    def test_tf_model_with_gradient(self):
+    def test_tf_model_with_get_gradient(self):
         def update(x, model):
             with tf.GradientTape(persistent=True) as tape:
                 y = fe.backend.feed_forward(model, x)
                 gradient = fe.backend.get_gradient(target=y, sources=model.trainable_variables, tape=tape)
                 fe.backend.update_model(model, gradients=gradient, tape=tape)
+                return gradient
 
-        model = fe.build(model_fn=one_layer_tf_model, optimizer_fn="adam")
-        init_weight = get_tf_model_weight(model)
+        lr = 0.1
+        model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=lambda: tf.optimizers.SGD(lr))
+        init_weights = [x.numpy() for x in model.trainable_variables]
         x = tf.constant([[1, 1, 1]])
+
         strategy = tf.distribute.get_strategy()
         if isinstance(strategy, tf.distribute.MirroredStrategy):
-            strategy.run(update, args=(x, model))
+            gradients = strategy.run(update, args=(x, model))
         else:
-            update(x, model)
-        new_weight = get_tf_model_weight(model)
-        self.assertTrue(not is_equal(init_weight, new_weight))
+            gradients = update(x, model)
 
-    def test_torch_model_with_loss(self):
-        model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn="adam")
-        init_weight = get_torch_model_weight(model)
+        new_weights = [x.numpy() for x in model.trainable_variables]
+        for init_w, new_w, grad in zip(init_weights, new_weights, gradients):
+            new_w_ans = init_w - grad * lr
+            self.assertTrue(np.allclose(new_w_ans, new_w))
 
-        x = torch.tensor([1.0, 1.0, 1.0])
+    def test_torch_model_with_get_gradient(self):
+        lr = 0.1
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        model = fe.build(model_fn=OneLayerTorchModel,
+                         optimizer_fn=lambda x: torch.optim.SGD(params=x, lr=lr)).to(device)
+        init_weights = [deepcopy(x).cpu().detach().numpy() for x in model.parameters() if x.requires_grad]
+
+        x = torch.tensor([1.0, 1.0, 1.0]).to(torch.device(device))
         y = fe.backend.feed_forward(model.module if torch.cuda.device_count() > 1 else model, x)
-        fe.backend.update_model(model, loss=y)
 
-        new_weight = get_torch_model_weight(model)
+        gradients = fe.backend.get_gradient(target=y, sources=[x for x in model.parameters() if x.requires_grad])
+        fe.backend.update_model(model, gradients=gradients)
 
-        self.assertTrue(not is_equal(init_weight, new_weight))
+        gradients = [x.cpu().detach().numpy() for x in gradients]
+        new_weights = [x.cpu().detach().numpy() for x in model.parameters() if x.requires_grad]
 
-    def test_torch_model_with_gradient(self):
-        model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn="adam")
-        init_weight = get_torch_model_weight(model)
+        for init_w, new_w, grad in zip(init_weights, new_weights, gradients):
+            new_w_ans = init_w - grad * lr
+            self.assertTrue(np.allclose(new_w_ans, new_w))
 
-        x = torch.tensor([1.0, 1.0, 1.0])
-        y = fe.backend.feed_forward(model.module if torch.cuda.device_count() > 1 else model, x)
-        gradient = fe.backend.get_gradient(
-            target=y, sources=[model.module.fc1.weight if torch.cuda.device_count() > 1 else model.fc1.weight])
-        fe.backend.update_model(model, gradients=gradient)
+    def test_tf_model_with_arbitrary_gradient(self):
+        def update(gradients, model):
+            fe.backend.update_model(model, gradients=gradients)
 
-        new_weight = get_torch_model_weight(model)
+        lr = 0.1
+        model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=lambda: tf.optimizers.SGD(lr))
+        init_weights = [x.numpy() for x in model.trainable_variables]
+        gradients = [tf.constant([[1.0], [1.0], [1.0]])]
 
-        self.assertTrue(not is_equal(init_weight, new_weight))
+        strategy = tf.distribute.get_strategy()
+        if isinstance(strategy, tf.distribute.MirroredStrategy):
+            strategy.run(update, args=(gradients, model))
+        else:
+            update(gradients, model)
+
+        new_weights = [x.numpy() for x in model.trainable_variables]
+        for init_w, new_w, grad in zip(init_weights, new_weights, gradients):
+            new_w_ans = init_w - grad * lr
+            self.assertTrue(np.allclose(new_w_ans, new_w))
+
+    def test_torch_model_with_arbitrary_gradient(self):
+        lr = 0.1
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        model = fe.build(model_fn=OneLayerTorchModel,
+                         optimizer_fn=lambda x: torch.optim.SGD(params=x, lr=lr)).to(device)
+        init_weights = [deepcopy(x).cpu().detach().numpy() for x in model.parameters() if x.requires_grad]
+        gradients = [torch.tensor([[1.0, 1.0, 1.0]]).to(torch.device(device))]
+        fe.backend.update_model(model, gradients=gradients)
+
+        gradients = [x.cpu().detach().numpy() for x in gradients]
+        new_weights = [x.cpu().detach().numpy() for x in model.parameters() if x.requires_grad]
+
+        for init_w, new_w, grad in zip(init_weights, new_weights, gradients):
+            new_w_ans = init_w - grad * lr
+            self.assertTrue(np.allclose(new_w_ans, new_w))

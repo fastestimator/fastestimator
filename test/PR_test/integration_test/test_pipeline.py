@@ -241,7 +241,6 @@ class TestPipelineGetModes(unittest.TestCase):
             self.assertEqual(modes, {"train", "eval", "test"})
 
         with self.subTest(epoch=2):
-            # pdb.set_trace()
             modes = pipeline.get_modes(epoch=2)
             self.assertEqual(modes, {"eval", "test"})
 

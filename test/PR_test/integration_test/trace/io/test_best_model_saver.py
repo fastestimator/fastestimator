@@ -67,6 +67,7 @@ class TestBestModelSaver(unittest.TestCase):
                 op.forward(data=loss, state=self.state)
 
         op = UpdateOp(model=self.tf_model, loss_name='loss')
+        op.build("tf")
         strategy = tf.distribute.get_strategy()
         if isinstance(strategy, tf.distribute.MirroredStrategy):
             strategy.run(update, args=())
@@ -80,6 +81,7 @@ class TestBestModelSaver(unittest.TestCase):
 
     def test_torch_model(self):
         op = UpdateOp(model=self.torch_model, loss_name='loss')
+        op.build("torch", "cuda:0" if torch.cuda.is_available() else "cpu")
         self.torch_model.to("cuda:0" if torch.cuda.is_available() else "cpu")
         self.torch_input_data = self.torch_input_data.to("cuda:0" if torch.cuda.is_available() else "cpu")
         self.torch_y = self.torch_y.to("cuda:0" if torch.cuda.is_available() else "cpu")
