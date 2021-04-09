@@ -204,8 +204,9 @@ class _TfWriter(_BaseWriter):
     def write_epoch_models(self, mode: str, epoch: int) -> None:
         with self.tf_summary_writers[mode].as_default(), summary_ops_v2.always_record_summaries():
             # Record the overall execution summary
-            # noinspection PyProtectedMember
-            summary_ops_v2.graph(self.network._forward_step_static._concrete_stateful_fn.graph, step=epoch)
+            if hasattr(self.network._forward_step_static, '_concrete_stateful_fn'):
+                # noinspection PyProtectedMember
+                summary_ops_v2.graph(self.network._forward_step_static._concrete_stateful_fn.graph, step=epoch)
             # Record the individual model summaries
             for model in self.network.epoch_models:
                 summary_writable = (model.__class__.__name__ == 'Sequential'
