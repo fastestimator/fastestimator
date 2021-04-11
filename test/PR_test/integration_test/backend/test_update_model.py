@@ -15,20 +15,18 @@ class TestUpdateModel(unittest.TestCase):
             with tf.GradientTape(persistent=True) as tape:
                 y = fe.backend.feed_forward(model, x)
                 gradient = fe.backend.get_gradient(target=y, sources=model.trainable_variables, tape=tape)
-                fe.backend.update_model(model, gradients=gradient, tape=tape)
+                fe.backend.update_model(model, gradients=gradient)
                 return gradient
 
         lr = 0.1
         model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=lambda: tf.optimizers.SGD(lr))
         init_weights = [x.numpy() for x in model.trainable_variables]
-        x = tf.constant([[1, 1, 1]])
-
+        x = tf.constant([[1, 1, 1], [1, 1, 1]])
         strategy = tf.distribute.get_strategy()
         if isinstance(strategy, tf.distribute.MirroredStrategy):
             gradients = strategy.run(update, args=(x, model))
         else:
             gradients = update(x, model)
-
         new_weights = [x.numpy() for x in model.trainable_variables]
         for init_w, new_w, grad in zip(init_weights, new_weights, gradients):
             new_w_ans = init_w - grad * lr

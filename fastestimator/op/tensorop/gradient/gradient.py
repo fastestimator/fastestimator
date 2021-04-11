@@ -68,7 +68,6 @@ class GradientOp(TensorOp):
         self.framework = framework
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
-
         results = []
         if self.model is None:
             initials = data[:len(data) // 2]
@@ -81,13 +80,9 @@ class GradientOp(TensorOp):
             if self.framework == "tf":
                 trainable_params = self.model.trainable_variables
                 for idx, final in enumerate(finals):
-                    # get_gradient
                     gradient = get_gradient(final, trainable_params, tape=state['tape'])
                     results.append(gradient)
             elif self.framework == "torch":
-                # do scale up
-                # get_gradient
-
                 trainable_params = [p for p in self.model.parameters() if p.requires_grad]
                 for idx, final in enumerate(finals):
                     # get_gradinet

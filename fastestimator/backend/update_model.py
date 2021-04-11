@@ -17,12 +17,9 @@ from typing import Callable, Dict, List, Optional, Union
 import tensorflow as tf
 import torch
 
-from fastestimator.util.util import NonContext
-
 
 def update_model(model: Union[tf.keras.Model, torch.nn.Module],
                  gradients: List[Union[tf.Tensor, torch.Tensor]],
-                 tape: Optional[tf.GradientTape] = None,
                  defer: bool = False,
                  deferred: Optional[Dict[str, List[Callable[[], None]]]] = None) -> None:
     """Update `model` weights based on a given `gradients`.
@@ -36,7 +33,7 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
         pred = fe.backend.feed_forward(m, x)  # [[~0.5, ~0.5], [~0.5, ~0.5], [~0.5, ~0.5]]
         loss = fe.backend.sparse_categorical_crossentropy(y_pred=pred, y_true=y)  # ~2.3
         gradients = fe.backend.get_gradient(target=loss, sources=m.trainable_variables, tape=tape)
-        fe.backend.update_model(m, gradients=gradients, tape=tape)
+        fe.backend.update_model(m, gradients=gradients)
     ```
 
     This method can be used with PyTorch models:
@@ -55,8 +52,6 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
     Args:
         model: A neural network instance to update.
         gradients: A list of tensors to update the models.
-        tape: A TensorFlow GradientTape which was recording when the `loss` was computed (iff using TensorFlow).
-        retain_graph: Whether to keep the model graph in memory (applicable only for PyTorch).
         defer: If True, then the model update function will be stored into the `deferred` dictionary rather than
             applied immediately.
         deferred: A dictionary in which model update functions are stored.
@@ -71,12 +66,11 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
 
     if isinstance(model, tf.keras.Model):
         variables = model.trainable_variables
-        with tape.stop_recording() if tape else NonContext():
-            if defer:
-                deferred.setdefault(model.model_name, []).append(
-                    lambda: model.current_optimizer.apply_gradients(zip(gradients, variables)))
-            else:
-                model.current_optimizer.apply_gradients(zip(gradients, variables))
+        if defer:
+            deferred.setdefault(model.model_name,
+                                []).append(lambda: model.current_optimizer.apply_gradients(zip(gradients, variables)))
+        else:
+            model.current_optimizer.apply_gradients(zip(gradients, variables))
 
     elif isinstance(model, torch.nn.Module):
         trainable_params = [p for p in model.parameters() if p.requires_grad]
@@ -99,7 +93,7 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
 
 def _torch_step(optimizer: torch.optim.Optimizer) -> None:
     assert hasattr(optimizer, "scaler"), ("Pytorch optimizers need to have 'scaler' attribute, Please use fe.build to "
-                                          "compiled the model")
+                                          "compile the model")
     if optimizer.scaler is None:
         optimizer.step()
     else:

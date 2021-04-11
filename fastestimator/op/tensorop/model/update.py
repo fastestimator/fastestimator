@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Iterable, List, Optional, Set, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, TypeVar, Union
 
 import tensorflow as tf
 import torch
@@ -44,7 +44,7 @@ class UpdateOp(TensorOp):
             like "!infer" or "!train".
         merge_grad: The gradient accumulation times before model update. Ex: if `merge_grad` = 3, for every three Op
             calls only the third one updates the model. The first two calls only accumulate its gradients. This default
-            value is one 1 and it will update the model at every step.
+            value is 1 and it will update the model at every step.
         defer: Whether to defer the actual application of the update until the end of the step. This can be necessary
             in PyTorch when trying to update multiple models which depend on one another (ex. certain GANs). By default,
             all UpdateOps which appear contiguously as the last ops of a Network will be deferred. We hope that you will
@@ -52,7 +52,7 @@ class UpdateOp(TensorOp):
 
     Raise:
         ValueError: When model is mixed-precision and `gradients` is provided.
-        ValueError: network framework is not one of "tf" or "torch".
+        ValueError: Network framework is not one of "tf" or "torch".
         RuntimeError: If attempting to modify a PyTorch model which relied on gradients within a different PyTorch model
             which has in turn already undergone a non-deferred update.
     """
@@ -66,7 +66,7 @@ class UpdateOp(TensorOp):
         if gradients is None:
             super().__init__(inputs=loss_name, outputs=None, mode=mode)
         elif model.mixed_precision:
-            raise ValueError("Mixed precision training cannot take input gradients, because the gradient need to be "
+            raise ValueError("Mixed precision training cannot take input gradients, because the gradients need to be "
                              "computed in this module")
         else:
             super().__init__(inputs=gradients, outputs=None, mode=mode)
@@ -86,12 +86,16 @@ class UpdateOp(TensorOp):
         self.framework = None
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
+        if framework not in ["tf", "torch"]:
+            raise ValueError(f"Unrecognized framework {framework}")
+
         self.framework = framework
+
         if self.merge_grad > 1:
             if framework == "tf":
                 self.step = tf.Variable(0, trainable=False)
                 self.grad_sum = [tf.Variable(tf.zeros_like(x), trainable=False) for x in self.model.trainable_variables]
-            elif framework == "torch":
+            else:  # framework == "torch"
                 self.step = torch.tensor(0).to(device)
                 self.grad_sum = [torch.zeros_like(x).to(device) for x in self.model.parameters() if x.requires_grad]
 
@@ -111,24 +115,26 @@ class UpdateOp(TensorOp):
             return
 
         if self.gradients is None:  # data is loss
-            loss = self._loss_preprocess(data, state)
-            gradients = self._get_gradient(loss, state)
-            gradients = self._gradient_postprocess(gradients, state)
+            loss = self._loss_preprocess(data)
+            gradients = self._get_gradient(loss, state["tape"])
+            gradients = self._gradient_postprocess(gradients)
 
         else:  # data is gradients
             gradients = data
 
         if self.merge_grad > 1:
-            self._merge_grad_update(gradients, state)
+            self._merge_grad_update(gradients, deferred=state["deferred"])
         else:
-            update_model(model=self.model,
-                         gradients=gradients,
-                         tape=state["tape"],
-                         defer=self.defer,
-                         deferred=state["deferred"])
+            update_model(model=self.model, gradients=gradients, defer=self.defer, deferred=state["deferred"])
 
-    def _loss_preprocess(self, loss, state):
-        """Loss preprocess for multi-GPU and mixed-precision training
+    def _loss_preprocess(self, loss: Union[Tensor, List[Tensor]]) -> Union[Tensor, List[Tensor]]:
+        """Loss preprocess for multi-GPU and mixed-precision training.
+
+        Args:
+            loss: Unprocessed loss.
+
+        Returns:
+            Processed loss.
         """
         if self.weight_decay:
             loss = loss + tf.reduce_sum(self.model.losses)
@@ -143,21 +149,28 @@ class UpdateOp(TensorOp):
             if isinstance(strategy, tf.distribute.MirroredStrategy):
                 loss = loss / strategy.num_replicas_in_sync
 
-        elif self.framework == "torch":
-            # scale up loss for mixed precision training to avoid underflow
+        else:  # self.framework == "torch"
             if self.model.current_optimizer.scaler is not None:
+                # scale up loss for mixed precision training to avoid underflow
                 loss = self.model.current_optimizer.scaler.scale(loss)
-
-        else:
-            raise ValueError(f"Unrecognized framework {self.framework}")
 
         return loss
 
-    def _get_gradient(self, loss, state):
-        if self.framework == "tf":
-            gradients = get_gradient(loss, self.model.trainable_variables, tape=state['tape'])
+    def _get_gradient(self, loss: Union[Tensor, List[Tensor]],
+                      tape: Optional[tf.GradientTape] = None) -> Union[Tensor, List[Tensor]]:
+        """Get gradient from loss with repect to self.model.
 
-        elif self.framework == "torch":
+        Args:
+            loss: Input loss.
+            tape: A TensorFlow GradientTape which was recording when the `loss` was computed (iff using TensorFlow).
+
+        Returns:
+            Computed gradients.
+        """
+        if self.framework == "tf":
+            gradients = get_gradient(loss, self.model.trainable_variables, tape=tape)
+
+        else:  # self.framework == "torch"
             trainable_params = [p for p in self.model.parameters() if p.requires_grad]
             try:
                 gradients = get_gradient(loss, trainable_params, retain_graph=self.retain_graph)
@@ -171,66 +184,59 @@ class UpdateOp(TensorOp):
                         "interact with this one.".format(self.model.model_name))
                 raise err
 
-        else:
-            raise ValueError(f"Unrecognized framework {self.framework}")
-
         return gradients
 
-    def _gradient_postprocess(self, gradients, state):
-        """ Gradient postprocess for multi-GPU and mixed-precision training
+    def _gradient_postprocess(self, gradients: Union[Tensor, List[Tensor]]) -> Union[Tensor, List[Tensor]]:
+        """Gradient postprocess for multi-GPU and mixed-precision training.
+
+        Args:
+            gradients: Unprocessed gradients.
+
+        Returns:
+            Processed gradients.
         """
         if self.framework == "tf":
-            if self.gradients is not None:  # user provide gradients
-                strategy = tf.distribute.get_strategy()  # need tape.stop_recording() ?
+            if self.gradients is not None:  # when user provide gradients
+                strategy = tf.distribute.get_strategy()
                 # for multi-gpu training, the gradient will be combined by sum, normalize the gradient
                 if isinstance(strategy, tf.distribute.MirroredStrategy):
                     gradients = gradients / strategy.num_replicas_in_sync
 
-            # scale down gradient to balance scale-up loss
             if self.model.mixed_precision:
-                with state["tape"].stop_recording():
-                    gradients = self.model.current_optimizer.get_unscaled_gradients(gradients)
-
-        elif self.framework == "torch":
-            pass
-
-        else:
-            raise ValueError(f"Unrecognized framework {self.framework}")
+                # scale down gradient to balance scale-up loss
+                gradients = self.model.current_optimizer.get_unscaled_gradients(gradients)
 
         return gradients
 
-    def _merge_grad_update(self, gradients, state):
-        current_grad = gradients
+    def _merge_grad_update(self,
+                           gradients: Union[Tensor, List[Tensor]],
+                           deferred: Optional[Dict[str, List[Callable[[], None]]]] = None) -> None:
+        """Accumulate gradients and update the model at certain frequency of invocation.
+
+        Args:
+            gradients: Input gradients.
+            deferred: A dictionary in which model update functions are stored.
+        """
+
+        # add current gradient to the cumulative gradient
+        for gs, g in zip(self.grad_sum, gradients):
+            self._assign_add(gs, g)
+
+        self._assign_add(self.step, 1)
+
+        if self.step % self.merge_grad == 0:
+            update_model(model=self.model, gradients=self.grad_sum, defer=self.defer, deferred=deferred)
+            for gs in self.grad_sum:
+                self._assign_add(gs, -gs)  # zero the gradient in place
+
+    def _assign_add(self, a, b):
+        """In-place addition for both Tensorflow and PyTorch. `a` = `a` + `b`
+
+        Args:
+            a: A tensor where in-place addition happen.
+            b: How much to be added.
+        """
         if self.framework == "tf":
-            self.step.assign_add(1)
-            # add current gradient to the accumulated gradient
-            for gs, g in zip(self.grad_sum, current_grad):
-                gs.assign_add(g)
-            if self.step % self.merge_grad == 0:
-                average_grad = [gs / self.merge_grad for gs in self.grad_sum]
-                # apply update with cumulative gradient
-                update_model(model=self.model,
-                             gradients=average_grad,
-                             tape=state["tape"],
-                             defer=self.defer,
-                             deferred=state["deferred"])
-
-                # zero-out cumulative gradient
-                for gs in self.grad_sum:
-                    gs.assign_sub(gs)
-
-        elif self.framework == "torch":
-            self.step += 1
-            # add current gradient to the accumulated gradient
-            for gs, g in zip(self.grad_sum, current_grad):
-                gs += g
-            if self.step % self.merge_grad == 0:
-                average_grad = [gs / self.merge_grad for gs in self.grad_sum]
-                # apply update with cumulative gradient
-                update_model(model=self.model, gradients=average_grad, defer=self.defer, deferred=state["deferred"])
-
-                # zero-out cumulative gradient
-                for gs in self.grad_sum:
-                    gs -= gs
-        else:
-            raise ValueError(f"Unrecognized framework {self.framework}")
+            a.assign_add(b)
+        else:  # self.framwork == "torch"
+            a += b

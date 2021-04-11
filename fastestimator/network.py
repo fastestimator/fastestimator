@@ -54,7 +54,7 @@ class BaseNetwork:
             Unlike the NumpyOps found in the pipeline, these ops will run on batches of data rather than single points.
 
     Raises:
-        ValueError: Mixed precision setting for all model are not the same.
+        ValueError: Mixed precision settings for all models are not the same.
     """
     def __init__(
         self,
@@ -80,7 +80,7 @@ class BaseNetwork:
         self.mixed_precision = any([model.mixed_precision for model in self.models])
 
         if self.mixed_precision and not all([model.mixed_precision for model in self.models]):
-            raise ValueError("All models need to be either mixed-precision or not")
+            raise ValueError("Cannot mix full precision and mixed-precision models")
 
     def _verify_inputs(self) -> None:
         """Ensure that all ops are TensorOps.
@@ -295,8 +295,8 @@ def _collect_models(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> Set[
 # noinspection PyPep8Naming
 def Network(
         ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
-        pops: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp, Scheduler[NumpyOp]]]] = None
-    ) -> BaseNetwork:
+        pops: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp,
+                                                                      Scheduler[NumpyOp]]]] = None) -> BaseNetwork:
     """A function to automatically instantiate the correct Network derived class based on the given `ops`.
 
     Args:
@@ -880,7 +880,7 @@ def _fe_compile(model: Model,
         weight: A path to weights to be associated with the `model`.
         name: The name of the model.
         framework: Which backend framework should be associated with this model (either 'tf' or 'torch').
-        mixed_precision: Whether to enable mixed-precision training
+        mixed_precision: Whether to enable mixed-precision training.
 
     Returns:
         The `model` combined with its optimizer, weights, and name. Models will also have an 'fe_compiled' flag to
@@ -922,7 +922,8 @@ def _build_optimizer(optimizer_fn: Union[str, Callable, None], model: Model, fra
             default optimizers to be used.
         model: The model to associate the optimizer with.
         framework: Which backend framework should be used ('tf' or 'torch').
-        mixed_precision: Whether to enable mixed-precision training
+        mixed_precision: Whether to enable mixed-precision training.
+
     Returns:
         An optimizer instance, or None if `optimizer_fn` was None.
     """
@@ -973,7 +974,7 @@ def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None], model: Model
         optimizer_fn: The function to be invoked in order to instantiate an optimizer.
         model: The model with which the optimizer should be associated.
         framework: Which backend framework should be used ('tf' or 'torch').
-        mixed_precision: Whether to enable mixed-precision training
+        mixed_precision: Whether to enable mixed-precision training.
 
     Returns:
         An optimizer instance, or None if `optimizer_fn` was None.
@@ -998,7 +999,6 @@ def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None], model: Model
         else:
             try:
                 optimizer = optimizer_fn(model.parameters())
-
             except Exception as e:
                 print("optimizer_fn of Pytorch backend should be callable with single arg. Please sure model and \
                 optimizer_fn are using the same backend")

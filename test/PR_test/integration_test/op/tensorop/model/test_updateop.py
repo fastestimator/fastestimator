@@ -76,8 +76,8 @@ class CheckNetworkWeight(fe.trace.Trace):
     def check_if_update_is_gradients(self):
         for i in range(len(self.previous_weights)):
             diff = self.new_weight[i] - self.previous_weights[i]
-            diff2 = sum([x[i] for x in self.gradients]) / self.merge_grad * -self.lr
-            diff3 = sum([x[i] for x in self.gradients]) / self.merge_grad * -10.0
+            diff2 = sum([x[i] for x in self.gradients]) * -self.lr
+            diff3 = sum([x[i] for x in self.gradients]) * -10.0
             if not np.allclose(diff, diff2, atol=1e-4):
                 return False
         return True
