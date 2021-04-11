@@ -28,18 +28,25 @@ from fastestimator.op.numpyop.univariate import ExpandDims, Minmax
 from fastestimator.op.tensorop.gradient import GradientOp
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
+from fastestimator.schedule import EpochScheduler, RepeatScheduler
 
 
 class CheckNetworkWeight(fe.trace.Trace):
-    def __init__(self, model, grad_key, merge_grad, test_self, lr, framework, activate_epoch=1):
+    def __init__(self, model, grad_key, merge_grad, test_self, framework, lrs, work_intervals=None):
+        if work_intervals:
+            assert len(work_intervals) == len(lrs), "length of work_intervals need to be the same as lrs"
+        else:
+            assert isinstance(lrs, (int, float)), "if work_intervals is None,  lrs need to be a value"
+
         super().__init__(inputs=grad_key)
         self.model = model
         self.grad_key = grad_key
         self.merge_grad = merge_grad
         self.test_self = test_self
-        self.lr = lr
         self.framework = framework
-        self.activate_epoch = activate_epoch
+        self.lrs = lrs
+        self.work_intervals = work_intervals
+
         if self.framework == "tf":
             self.previous_weights = [x.numpy() for x in model.trainable_variables]
         else:
@@ -50,8 +57,6 @@ class CheckNetworkWeight(fe.trace.Trace):
         self.new_weight = None
 
     def on_batch_end(self, data):
-        if self.system.epoch_idx < self.activate_epoch:
-            return
         if self.framework == "tf":
             self.gradients.append([x.numpy() for x in data[self.grad_key]])
             self.new_weight = [x.numpy() for x in self.model.trainable_variables]
@@ -59,11 +64,13 @@ class CheckNetworkWeight(fe.trace.Trace):
             self.gradients.append([x.cpu().detach().numpy() for x in data[self.grad_key]])
             self.new_weight = [deepcopy(x).cpu().detach().numpy() for x in self.model.parameters() if x.requires_grad]
 
-        if self.system.global_step % self.merge_grad == 0:
-            self.test_self.assertTrue(self.check_if_changed())
-            self.test_self.assertTrue(self.check_if_update_is_gradients())
-        else:
-            self.test_self.assertFalse(self.check_if_changed())  # don't change the model weight
+        lr = self.get_lr()  # if lr is False, don't need to do the check
+        if lr:
+            if self.system.global_step % self.merge_grad == 0:
+                self.test_self.assertTrue(self.check_if_changed())
+                self.test_self.assertTrue(self.check_if_update_is_gradients(lr))
+            else:
+                self.test_self.assertFalse(self.check_if_changed())  # don't change the model weight
 
         self.previous_weights = self.new_weight
 
@@ -73,14 +80,24 @@ class CheckNetworkWeight(fe.trace.Trace):
                 return True
         return False
 
-    def check_if_update_is_gradients(self):
+    def check_if_update_is_gradients(self, lr):
         for i in range(len(self.previous_weights)):
             diff = self.new_weight[i] - self.previous_weights[i]
-            diff2 = sum([x[i] for x in self.gradients]) * -self.lr
-            diff3 = sum([x[i] for x in self.gradients]) * -10.0
+            diff2 = sum([x[i] for x in self.gradients]) * -lr
             if not np.allclose(diff, diff2, atol=1e-4):
                 return False
         return True
+
+    def get_lr(self):
+        if not self.work_intervals:
+            return self.lrs
+
+        for lr, interval in zip(self.lrs, self.work_intervals):
+            assert len(interval) == 2
+            if interval[0] <= self.system.epoch_idx < interval[1]:
+                return lr
+
+        return False
 
 
 class TestUpdateOp(unittest.TestCase):
@@ -89,6 +106,11 @@ class TestUpdateOp(unittest.TestCase):
         cls.train_data, _ = mnist.load_data()
 
     def test_tf_end_to_end(self):
+        """This test cover the all combination of:
+            - mixed-precision / not
+            - merge_grad / not
+            - gradient input / loss input
+        """
         def run_test(mixed_precision, merge_grad, gradient):
             lr = 0.1
             pipeline = fe.Pipeline(train_data=self.train_data,
@@ -110,14 +132,14 @@ class TestUpdateOp(unittest.TestCase):
                                    grad_key="grad",
                                    merge_grad=merge_grad,
                                    test_self=self,
-                                   lr=lr,
+                                   lrs=lr,
                                    framework="tf")
             ]
             estimator = fe.Estimator(pipeline=pipeline,
                                      network=network,
                                      epochs=2,
                                      traces=traces,
-                                     max_train_steps_per_epoch=10)
+                                     max_train_steps_per_epoch=2)
             estimator.fit()
 
         for mixed_precision in [True, False]:
@@ -134,6 +156,11 @@ class TestUpdateOp(unittest.TestCase):
                             run_test(mixed_precision, merge_grad, gradient)
 
     def test_torch_end_to_end(self):
+        """This test cover the all combination of:
+            - mixed-precision / not
+            - merge_grad / not
+            - gradient input / loss input
+        """
         def run_test(mixed_precision, merge_grad, gradient):
             lr = 0.1
             pipeline = fe.Pipeline(train_data=self.train_data,
@@ -155,14 +182,234 @@ class TestUpdateOp(unittest.TestCase):
                                    grad_key="grad",
                                    merge_grad=merge_grad,
                                    test_self=self,
-                                   lr=lr,
+                                   lrs=lr,
                                    framework="torch")
             ]
             estimator = fe.Estimator(pipeline=pipeline,
                                      network=network,
                                      epochs=2,
                                      traces=traces,
-                                     max_train_steps_per_epoch=10)
+                                     max_train_steps_per_epoch=2)
+            estimator.fit()
+
+        for mixed_precision in [True, False]:
+            for merge_grad in [1, 2]:
+                for gradient in ["grad", None]:
+                    with self.subTest("mixed_precision: {}, merge_grad: {}, take: {}".format(
+                            mixed_precision, merge_grad, "gradient" if gradient else "loss")):
+
+                        if mixed_precision and gradient:
+                            with self.assertRaises(ValueError):
+                                run_test(mixed_precision, merge_grad, gradient)
+
+                        else:
+                            run_test(mixed_precision, merge_grad, gradient)
+
+
+    def test_tf_multi_optimizer_with_epoch_scheduler(self):
+        """This test cover the all combination of:
+            - mixed-precision / not
+            - merge_grad / not
+            - gradient input / loss input
+        """
+        def run_test(mixed_precision, merge_grad, gradient):
+            lr = 0.1
+            lr2 = 0.01
+            lr3 = 0.001
+            pipeline = fe.Pipeline(train_data=self.train_data,
+                                   batch_size=4,
+                                   ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")])
+
+            optimizer_fn = EpochScheduler({
+                1: lambda: tf.optimizers.SGD(lr), 2: lambda: tf.optimizers.SGD(lr2), 3: lambda: tf.optimizers.SGD(lr3)
+            })
+
+            model = fe.build(model_fn=LeNet_tf, optimizer_fn=optimizer_fn, mixed_precision=mixed_precision)
+            network = fe.Network(ops=[
+                ModelOp(model=model, inputs="x", outputs="y_pred"),
+                CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),
+                GradientOp(model=model, finals="ce", outputs="grad"),
+                UpdateOp(model=model, loss_name="ce", gradients=gradient, merge_grad=merge_grad),
+            ])
+
+            traces = [
+                CheckNetworkWeight(model=model,
+                                   grad_key="grad",
+                                   merge_grad=merge_grad,
+                                   test_self=self,
+                                   framework="tf",
+                                   lrs=[lr, lr2, lr3],
+                                   work_intervals=[[1, 2], [2, 3], [3, 4]])
+            ]
+            estimator = fe.Estimator(pipeline=pipeline,
+                                     network=network,
+                                     epochs=3,
+                                     traces=traces,
+                                     max_train_steps_per_epoch=2)
+            estimator.fit()
+
+        for mixed_precision in [True, False]:
+            for merge_grad in [1, 2]:
+                for gradient in ["grad", None]:
+                    with self.subTest("mixed_precision: {}, merge_grad: {}, take: {}".format(
+                            mixed_precision, merge_grad, "gradient" if gradient else "loss")):
+
+                        if mixed_precision and gradient:
+                            with self.assertRaises(ValueError):
+                                run_test(mixed_precision, merge_grad, gradient)
+
+                        else:
+                            run_test(mixed_precision, merge_grad, gradient)
+
+    def test_torch_multi_optimizer_with_epoch_scheduler(self):
+        """This test cover the all combination of:
+            - mixed-precision / not
+            - merge_grad / not
+            - gradient input / loss input
+        """
+        def run_test(mixed_precision, merge_grad, gradient):
+            lr = 0.1
+            lr2 = 0.01
+            lr3 = 0.001
+            pipeline = fe.Pipeline(train_data=self.train_data,
+                                   batch_size=4,
+                                   ops=[ExpandDims(inputs="x", outputs="x", axis=0), Minmax(inputs="x", outputs="x")])
+
+            optimizer_fn = EpochScheduler({
+                1: lambda x: torch.optim.SGD(params=x, lr=lr),
+                2: lambda x: torch.optim.SGD(params=x, lr=lr2),
+                3: lambda x: torch.optim.SGD(params=x, lr=lr3)
+            })
+
+            model = fe.build(model_fn=LeNet_torch, optimizer_fn=optimizer_fn, mixed_precision=mixed_precision)
+            network = fe.Network(ops=[
+                ModelOp(model=model, inputs="x", outputs="y_pred"),
+                CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),
+                GradientOp(model=model, finals="ce", outputs="grad"),
+                UpdateOp(model=model, loss_name="ce", gradients=gradient, merge_grad=merge_grad),
+            ])
+
+            traces = [
+                CheckNetworkWeight(model=model,
+                                   grad_key="grad",
+                                   merge_grad=merge_grad,
+                                   test_self=self,
+                                   framework="torch",
+                                   lrs=[lr, lr2, lr3],
+                                   work_intervals=[[1, 2], [2, 3], [3, 4]])
+            ]
+            estimator = fe.Estimator(pipeline=pipeline,
+                                     network=network,
+                                     epochs=3,
+                                     traces=traces,
+                                     max_train_steps_per_epoch=2)
+            estimator.fit()
+
+        for mixed_precision in [True, False]:
+            for merge_grad in [1, 2]:
+                for gradient in ["grad", None]:
+                    with self.subTest("mixed_precision: {}, merge_grad: {}, take: {}".format(
+                            mixed_precision, merge_grad, "gradient" if gradient else "loss")):
+
+                        if mixed_precision and gradient:
+                            with self.assertRaises(ValueError):
+                                run_test(mixed_precision, merge_grad, gradient)
+
+                        else:
+                            run_test(mixed_precision, merge_grad, gradient)
+
+    def test_tf_multi_optimizer_with_repeat_scheduler(self):
+        """This test cover the all combination of:
+            - mixed-precision / not
+            - merge_grad / not
+            - gradient input / loss input
+        """
+        def run_test(mixed_precision, merge_grad, gradient):
+            lr = 0.1
+            lr2 = 0.01
+            pipeline = fe.Pipeline(train_data=self.train_data,
+                                   batch_size=4,
+                                   ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")])
+
+            optimizer_fn = RepeatScheduler([lambda: tf.optimizers.SGD(lr), lambda: tf.optimizers.SGD(lr2)])
+
+            model = fe.build(model_fn=LeNet_tf, optimizer_fn=optimizer_fn, mixed_precision=mixed_precision)
+            network = fe.Network(ops=[
+                ModelOp(model=model, inputs="x", outputs="y_pred"),
+                CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),
+                GradientOp(model=model, finals="ce", outputs="grad"),
+                UpdateOp(model=model, loss_name="ce", gradients=gradient, merge_grad=merge_grad),
+            ])
+
+            traces = [
+                CheckNetworkWeight(model=model,
+                                   grad_key="grad",
+                                   merge_grad=merge_grad,
+                                   test_self=self,
+                                   framework="tf",
+                                   lrs=[lr, lr2, lr, lr2],
+                                   work_intervals=[[1, 2], [2, 3], [3, 4], [4, 5]])
+            ]
+            estimator = fe.Estimator(pipeline=pipeline,
+                                     network=network,
+                                     epochs=4,
+                                     traces=traces,
+                                     max_train_steps_per_epoch=2)
+            estimator.fit()
+
+        for mixed_precision in [True, False]:
+            for merge_grad in [1, 2]:
+                for gradient in ["grad", None]:
+                    with self.subTest("mixed_precision: {}, merge_grad: {}, take: {}".format(
+                            mixed_precision, merge_grad, "gradient" if gradient else "loss")):
+
+                        if mixed_precision and gradient:
+                            with self.assertRaises(ValueError):
+                                run_test(mixed_precision, merge_grad, gradient)
+
+                        else:
+                            run_test(mixed_precision, merge_grad, gradient)
+
+    def test_torch_multi_optimizer_with_repeat_scheduler(self):
+        """This test cover the all combination of:
+            - mixed-precision / not
+            - merge_grad / not
+            - gradient input / loss input
+        """
+        def run_test(mixed_precision, merge_grad, gradient):
+            lr = 0.1
+            lr2 = 0.01
+            pipeline = fe.Pipeline(train_data=self.train_data,
+                                   batch_size=4,
+                                   ops=[ExpandDims(inputs="x", outputs="x", axis=0), Minmax(inputs="x", outputs="x")])
+
+            optimizer_fn = RepeatScheduler([
+                lambda x: torch.optim.SGD(params=x, lr=lr),
+                lambda x: torch.optim.SGD(params=x, lr=lr2),
+            ])
+
+            model = fe.build(model_fn=LeNet_torch, optimizer_fn=optimizer_fn, mixed_precision=mixed_precision)
+            network = fe.Network(ops=[
+                ModelOp(model=model, inputs="x", outputs="y_pred"),
+                CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),
+                GradientOp(model=model, finals="ce", outputs="grad"),
+                UpdateOp(model=model, loss_name="ce", gradients=gradient, merge_grad=merge_grad),
+            ])
+
+            traces = [
+                CheckNetworkWeight(model=model,
+                                   grad_key="grad",
+                                   merge_grad=merge_grad,
+                                   test_self=self,
+                                   framework="torch",
+                                   lrs=[lr, lr2, lr, lr2],
+                                   work_intervals=[[1, 2], [2, 3], [3, 4], [4, 5]])
+            ]
+            estimator = fe.Estimator(pipeline=pipeline,
+                                     network=network,
+                                     epochs=4,
+                                     traces=traces,
+                                     max_train_steps_per_epoch=2)
             estimator.fit()
 
         for mixed_precision in [True, False]:

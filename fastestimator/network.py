@@ -554,7 +554,12 @@ class TFNetwork(BaseNetwork):
             warmup: Whether to prepare to execute it warmup mode or not (end users can likely ignore this argument).
         """
         super().load_epoch(mode, epoch, output_keys, warmup)
+        # Don't cause a re-trace just because epoch changed
         self.epoch_state["epoch"] = tf.convert_to_tensor(self.epoch_state["epoch"])
+        # Need to re-trace the TF graph if the optimizer is changing due to scheduling:
+        opt_str = "x".join(
+            [str(id(model.current_optimizer)) for model in self.epoch_models if hasattr(model, 'current_optimizer')])
+        self.epoch_state["_force_tf_retrace"] = hash(opt_str)  # Hash to keep at fixed memory overhead
 
     def _run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """Run a forward step through the Network on a batch of data.
