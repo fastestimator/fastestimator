@@ -37,7 +37,7 @@ class UpdateOp(TensorOp):
         loss_name: The input loss key.
         gradients: The gradients key which the model will update according to. The provided gradients will be directly
             used for model update. If it is None, the gradients will be computed from the input key of `loss_name`, and
-            this will take care of the scaling for mixed-precision training. `Gradients` should be None when the model
+            this will take care of the scaling for mixed-precision training. `gradients` should be None when the model
             is mixed-precision.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
@@ -229,7 +229,7 @@ class UpdateOp(TensorOp):
             for gs in self.grad_sum:
                 self._assign_add(gs, -gs)  # zero the gradient in place
 
-    def _assign_add(self, a, b):
+    def _assign_add(self, a: Tensor, b: Tensor) -> None:
         """In-place addition for both Tensorflow and PyTorch. `a` = `a` + `b`
 
         Args:
