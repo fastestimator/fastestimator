@@ -93,10 +93,10 @@ class UpdateOp(TensorOp):
 
         if self.merge_grad > 1:
             if framework == "tf":
-                self.step = tf.Variable(0, trainable=False)
+                self.step = tf.Variable(0, trainable=False, dtype=tf.int64)
                 self.grad_sum = [tf.Variable(tf.zeros_like(x), trainable=False) for x in self.model.trainable_variables]
             else:  # framework == "torch"
-                self.step = torch.tensor(0).to(device)
+                self.step = torch.tensor(0, dtype=torch.int64).to(device)
                 self.grad_sum = [torch.zeros_like(x).to(device) for x in self.model.parameters() if x.requires_grad]
 
     def get_fe_models(self) -> Set[Model]:
