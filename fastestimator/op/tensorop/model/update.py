@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import warnings
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, TypeVar, Union
 
 import tensorflow as tf
@@ -63,12 +64,16 @@ class UpdateOp(TensorOp):
                  mode: Union[None, str, Iterable[str]] = "train",
                  merge_grad: int = 1,
                  defer: bool = False):
+        self.extra_loss = isinstance(model, tf.keras.Model) and model.losses
         if gradients is None:
             super().__init__(inputs=loss_name, outputs=None, mode=mode)
         elif model.mixed_precision:
             raise ValueError("Mixed precision training cannot take input gradients, because the gradients need to be "
                              "computed in this module")
         else:
+            if self.extra_loss:
+                warnings.warn("Extra model losses are detected and they will be ignored since the gradients are not "
+                              "computed in UpdateOp class.")
             super().__init__(inputs=gradients, outputs=None, mode=mode)
 
         if not hasattr(model, "loss_name"):
@@ -78,7 +83,6 @@ class UpdateOp(TensorOp):
 
         self.model = model
         self.retain_graph = False
-        self.weight_decay = isinstance(self.model, tf.keras.Model) and self.model.losses
         self.defer = defer
         self.gradients = gradients
         self.loss_name = loss_name
@@ -136,7 +140,7 @@ class UpdateOp(TensorOp):
         Returns:
             Processed loss.
         """
-        if self.weight_decay:
+        if self.extra_loss:
             loss = loss + tf.reduce_sum(self.model.losses)
         loss = reduce_mean(loss)
 
