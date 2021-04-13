@@ -35,10 +35,10 @@ class UpdateOp(TensorOp):
     Args:
         model: Model instance compiled by fe.build.
         loss_name: The input loss key.
-        gradients: The gradients key which the model will update according to. The provided gradients will be directly
-            used for model update. If it is None, the gradients will be computed from the input key of `loss_name`, and
-            this will take care of the scaling for mixed-precision training. `gradients` should be None when the model
-            is mixed-precision.
+        gradients: An optional key containing model gradients. These will be directly applied to the model weights
+            during an update. If not provided, gradients will be computed based on the specified loss_name, which will
+            automatically handle any desired mixed-precision scaling. This argument shouldn't be used if mixed-precision
+            training is enabled.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
@@ -233,8 +233,8 @@ class UpdateOp(TensorOp):
         """In-place addition for both Tensorflow and PyTorch. `a` = `a` + `b`
 
         Args:
-            a: A tensor where in-place addition happen.
-            b: How much to be added.
+            a: A tensor where in-place addition happens.
+            b: Amount to be added.
         """
         if self.framework == "tf":
             a.assign_add(b)
