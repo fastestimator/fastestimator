@@ -50,34 +50,98 @@ class TestAccuracy(unittest.TestCase):
         with self.subTest('Check total values'):
             self.assertEqual(self.accuracy.total, 3)
 
-    def test_on_epoch_end(self):
-        self.accuracy.correct = 1
-        self.accuracy.total = 3
-        self.accuracy.on_epoch_end(data=self.data)
-        with self.subTest('Check if accuracy value exists'):
-            self.assertIn('accuracy', self.data)
-        with self.subTest('Check the value of accuracy'):
-            self.assertEqual(round(self.data['accuracy'], 2), 0.33)
+    # def test_on_epoch_end(self):
+    #     self.accuracy.correct = 1
+    #     self.accuracy.total = 3
+    #     self.accuracy.on_epoch_end(data=self.data)
+    #     with self.subTest('Check if accuracy value exists'):
+    #         self.assertIn('accuracy', self.data)
+    #     with self.subTest('Check the value of accuracy'):
+    #         self.assertEqual(round(self.data['accuracy'], 2), 0.33)
 
-    def test_1d_data_on_batch_end(self):
-        self.accuracy.on_batch_end(data=self.data_1d)
-        with self.subTest('Check correct values'):
-            self.assertEqual(self.accuracy.correct, 0)
-        with self.subTest('Check total values'):
-            self.assertEqual(self.accuracy.total, 1)
+    # def test_1d_data_on_batch_end(self):
+    #     self.accuracy.on_batch_end(data=self.data_1d)
+    #     with self.subTest('Check correct values'):
+    #         self.assertEqual(self.accuracy.correct, 0)
+    #     with self.subTest('Check total values'):
+    #         self.assertEqual(self.accuracy.total, 1)
 
-    def test_1d_data_on_epoch_end(self):
-        self.accuracy.correct = 0
-        self.accuracy.total = 1
-        self.accuracy.on_epoch_end(data=self.data_1d)
-        with self.subTest('Check if accuracy value exists'):
-            self.assertIn('accuracy', self.data_1d)
-        with self.subTest('Check the value of accuracy'):
-            self.assertEqual(round(self.data_1d['accuracy'], 2), 0.0)
+    # def test_1d_data_on_epoch_end(self):
+    #     self.accuracy.correct = 0
+    #     self.accuracy.total = 1
+    #     self.accuracy.on_epoch_end(data=self.data_1d)
+    #     with self.subTest('Check if accuracy value exists'):
+    #         self.assertIn('accuracy', self.data_1d)
+    #     with self.subTest('Check the value of accuracy'):
+    #         self.assertEqual(round(self.data_1d['accuracy'], 2), 0.0)
 
-    def test_1d_logit_data_on_batch_end(self):
-        self.accuracy_logit.on_batch_end(data=self.data_1d_logit)
-        with self.subTest('Check correct values'):
-            self.assertEqual(self.accuracy_logit.correct, 1)
-        with self.subTest('Check total values'):
-            self.assertEqual(self.accuracy_logit.total, 1)
+    # def test_1d_logit_data_on_batch_end(self):
+    #     self.accuracy_logit.on_batch_end(data=self.data_1d_logit)
+    #     with self.subTest('Check correct values'):
+    #         self.assertEqual(self.accuracy_logit.correct, 1)
+    #     with self.subTest('Check total values'):
+    #         self.assertEqual(self.accuracy_logit.total, 1)
+
+
+
+# class TestAccuracy(unittest.TestCase):
+#     @classmethod
+#     def setUpClass(cls):
+#         x = np.array([[1, 2], [3, 4]])
+#         x_pred = np.array([[1, 5, 3], [2, 1, 0]])
+#         x_1d = np.array([2.5])
+#         x_pred_1d = np.array([1])
+#         x_1d_logit = np.array([1])
+#         x_pred_1d_logit = np.array([2.5])
+
+#         cls.data = Data({'x': x, 'x_pred': x_pred})
+#         cls.data_1d = Data({'x': x_1d, 'x_pred': x_pred_1d})
+#         cls.data_1d_logit = Data({'x': x_1d_logit, 'x_pred': x_pred_1d_logit})
+#         cls.accuracy = Accuracy(true_key='x', pred_key='x_pred')
+#         cls.accuracy_logit = Accuracy(true_key='x', pred_key='x_pred', from_logits=True)
+
+#     def test_on_epoch_begin(self):
+#         self.accuracy.on_epoch_begin(data=self.data)
+#         with self.subTest('Check initial value of correct'):
+#             self.assertEqual(self.accuracy.correct, 0)
+#         with self.subTest('Check initial value of total'):
+#             self.assertEqual(self.accuracy.total, 0)
+
+#     def test_on_batch_end(self):
+#         self.accuracy.on_batch_end(data=self.data)
+#         with self.subTest('Check correct values'):
+#             self.assertEqual(self.accuracy.correct, 1)
+#         with self.subTest('Check total values'):
+#             self.assertEqual(self.accuracy.total, 3)
+
+#     def test_on_epoch_end(self):
+#         self.accuracy.correct = 1
+#         self.accuracy.total = 3
+#         self.accuracy.on_epoch_end(data=self.data)
+#         with self.subTest('Check if accuracy value exists'):
+#             self.assertIn('accuracy', self.data)
+#         with self.subTest('Check the value of accuracy'):
+#             self.assertEqual(round(self.data['accuracy'], 2), 0.33)
+
+#     def test_1d_data_on_batch_end(self):
+#         self.accuracy.on_batch_end(data=self.data_1d)
+#         with self.subTest('Check correct values'):
+#             self.assertEqual(self.accuracy.correct, 0)
+#         with self.subTest('Check total values'):
+#             self.assertEqual(self.accuracy.total, 1)
+
+#     def test_1d_data_on_epoch_end(self):
+#         self.accuracy.correct = 0
+#         self.accuracy.total = 1
+#         self.accuracy.on_epoch_end(data=self.data_1d)
+#         with self.subTest('Check if accuracy value exists'):
+#             self.assertIn('accuracy', self.data_1d)
+#         with self.subTest('Check the value of accuracy'):
+#             self.assertEqual(round(self.data_1d['accuracy'], 2), 0.0)
+
+#     def test_1d_logit_data_on_batch_end(self):
+#         self.accuracy_logit.on_batch_end(data=self.data_1d_logit)
+#         with self.subTest('Check correct values'):
+#             self.assertEqual(self.accuracy_logit.correct, 1)
+#         with self.subTest('Check total values'):
+#             self.assertEqual(self.accuracy_logit.total, 1)

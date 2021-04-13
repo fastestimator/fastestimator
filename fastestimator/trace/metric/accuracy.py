@@ -66,7 +66,7 @@ class Accuracy(Trace):
             y_true = np.argmax(y_true, axis=-1)
         if y_pred.shape[-1] > 1:
             y_pred = np.argmax(y_pred, axis=-1)
-        else:
+        else:  # binaray classification (pred shape is [batch, 1])
             if self.from_logits:
                 y_pred = 1 / (1 + np.exp(-y_pred))
             y_pred = np.round(y_pred)
