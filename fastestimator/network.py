@@ -20,8 +20,8 @@ from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional
 import gdown
 import numpy as np
 import tensorflow as tf
+import tensorflow.keras.mixed_precision as mixed_precision_tf
 import torch
-from tensorflow.keras.mixed_precision import experimental as mixed_precision_tf
 from tensorflow.python.distribute.values import DistributedValues
 
 from fastestimator.backend.load_model import load_model
@@ -53,6 +53,8 @@ class BaseNetwork:
         postprocessing: A collection of NumpyOps to be run on the CPU after all of the normal `ops` have been executed.
             Unlike the NumpyOps found in the pipeline, these ops will run on batches of data rather than single points.
 
+    Raises:
+        ValueError: Mixed precision settings for all models are not the same.
     """
     def __init__(
         self,
@@ -75,7 +77,10 @@ class BaseNetwork:
         self.epoch_postprocessing = []
         self.epoch_models = set()
         self.epoch_state = dict()
-        self.scaler = None
+        self.mixed_precision = any([model.mixed_precision for model in self.models])
+
+        if self.mixed_precision and not all([model.mixed_precision for model in self.models]):
+            raise ValueError("Cannot mix full precision and mixed-precision models")
 
     def _verify_inputs(self) -> None:
         """Ensure that all ops are TensorOps.
@@ -127,12 +132,7 @@ class BaseNetwork:
         for idx, gradient_op in enumerate(gradient_ops):
             gradient_op.fe_retain_graph(idx != len(gradient_ops) - 1)
         self.epoch_state = {
-            "warmup": warmup,
-            "mode": mode,
-            "req_grad": len(gradient_ops) > 0,
-            "epoch": epoch,
-            "deferred": {},
-            "scaler": self.scaler
+            "warmup": warmup, "mode": mode, "req_grad": len(gradient_ops) > 0, "epoch": epoch, "deferred": {}
         }
         # warmup: bool, mode: str, req_grad: bool, epoch: int, deferred: Dict[str, List[Callable]]]
         for model in self.epoch_models:
@@ -294,9 +294,9 @@ def _collect_models(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> Set[
 
 # noinspection PyPep8Naming
 def Network(
-    ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
-    pops: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp, Scheduler[NumpyOp]]]] = None
-) -> BaseNetwork:
+        ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
+        pops: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp,
+                                                                      Scheduler[NumpyOp]]]] = None) -> BaseNetwork:
     """A function to automatically instantiate the correct Network derived class based on the given `ops`.
 
     Args:
@@ -360,8 +360,6 @@ class TorchNetwork(BaseNetwork):
                          device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu"),
                          ops=ops,
                          postprocessing=postprocessing)
-        if any([model.mixed_precision for model in self.models]):
-            self.scaler = torch.cuda.amp.GradScaler()
 
     def load_epoch(self, mode: str, epoch: int, output_keys: Optional[Set[str]] = None, warmup: bool = False) -> None:
         """Prepare the network to run a given epoch and mode.
@@ -466,12 +464,9 @@ class TorchNetwork(BaseNetwork):
         self.epoch_state["tape"] = NonContext()
         # gpu operation
         with torch.no_grad() if not self.epoch_state["req_grad"] else NonContext():
-            with torch.cuda.amp.autocast() if self.epoch_state["scaler"] is not None else NonContext():
+            with torch.cuda.amp.autocast() if self.mixed_precision else NonContext():
                 self._forward_batch(batch_in, self.epoch_state, self.epoch_ops)
-        # if the loss scaler is used for training, update the scaler
-        if not self.epoch_state["warmup"] and self.epoch_state[
-                "mode"] == "train" and self.epoch_state["scaler"] is not None:
-            self.epoch_state["scaler"].update()
+
         # copy data to cpu
         if self.device.type == "cuda":
             prediction = {
@@ -559,7 +554,12 @@ class TFNetwork(BaseNetwork):
             warmup: Whether to prepare to execute it warmup mode or not (end users can likely ignore this argument).
         """
         super().load_epoch(mode, epoch, output_keys, warmup)
+        # Don't cause a re-trace just because epoch changed
         self.epoch_state["epoch"] = tf.convert_to_tensor(self.epoch_state["epoch"])
+        # Need to re-trace the TF graph if the optimizer is changing due to scheduling:
+        opt_str = "x".join(
+            [str(id(model.current_optimizer)) for model in self.epoch_models if hasattr(model, 'current_optimizer')])
+        self.epoch_state["_force_tf_retrace"] = hash(opt_str)  # Hash to keep at fixed memory overhead
 
     def _run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """Run a forward step through the Network on a batch of data.
@@ -810,7 +810,7 @@ def build(model_fn: Callable[[], Union[Model, List[Model]]],
             automatically generated and assigned.
         weights_path: Path(s) from which to load model weights. If not None, then the number of weight paths provided
             should match the number of models generated by the `model_fn`.
-        mixed_precision: Whether to enable mix precision network operations.
+        mixed_precision: Whether to enable mixed-precision network operations.
 
     Returns:
         models: The model(s) built by FastEstimator.
@@ -831,9 +831,9 @@ def build(model_fn: Callable[[], Union[Model, List[Model]]],
         framework = "tf"
         # tensorflow mix-precision instantiation
         if mixed_precision:
-            mixed_precision_tf.set_policy(mixed_precision_tf.Policy('mixed_float16'))
+            mixed_precision_tf.set_global_policy(mixed_precision_tf.Policy('mixed_float16'))
         else:
-            mixed_precision_tf.set_policy(mixed_precision_tf.Policy('float32'))
+            mixed_precision_tf.set_global_policy(mixed_precision_tf.Policy('float32'))
     elif isinstance(models[0], torch.nn.Module):
         framework = "torch"
     else:
@@ -861,7 +861,7 @@ def build(model_fn: Callable[[], Union[Model, List[Model]]],
         "Found inconsistency in number of models, optimizers, model_name or weights"
     # create optimizer
     for idx, (model, optimizer_def, weight, name) in enumerate(zip(models, optimizer_fn, weights_path, model_name)):
-        models[idx] = trace_model(_fe_compile(model, optimizer_def, weight, name, framework),
+        models[idx] = trace_model(_fe_compile(model, optimizer_def, weight, name, framework, mixed_precision),
                                   model_idx=idx if len(models) > 1 else -1,
                                   model_fn=model_fn,
                                   optimizer_fn=optimizer_def,
@@ -875,7 +875,8 @@ def _fe_compile(model: Model,
                 optimizer_fn: Union[str, Scheduler, Callable, None],
                 weight: Union[str, None],
                 name: str,
-                framework: str) -> Model:
+                framework: str,
+                mixed_precision: bool) -> Model:
     """A function to bundle models with their optimizers.
 
     Args:
@@ -884,6 +885,7 @@ def _fe_compile(model: Model,
         weight: A path to weights to be associated with the `model`.
         name: The name of the model.
         framework: Which backend framework should be associated with this model (either 'tf' or 'torch').
+        mixed_precision: Whether to enable mixed-precision training.
 
     Returns:
         The `model` combined with its optimizer, weights, and name. Models will also have an 'fe_compiled' flag to
@@ -891,14 +893,14 @@ def _fe_compile(model: Model,
     """
     if isinstance(optimizer_fn, EpochScheduler):
         for epoch, optimizer_def in optimizer_fn.epoch_dict.items():
-            optimizer_fn.epoch_dict[epoch] = _build_optimizer(optimizer_def, model, framework)
+            optimizer_fn.epoch_dict[epoch] = _build_optimizer(optimizer_def, model, framework, mixed_precision)
         model.current_optimizer = optimizer_fn.get_current_value(1)
     elif isinstance(optimizer_fn, RepeatScheduler):
         for idx, optimizer_def in enumerate(optimizer_fn.repeat_list):
-            optimizer_fn.repeat_list[idx] = _build_optimizer(optimizer_def, model, framework)
+            optimizer_fn.repeat_list[idx] = _build_optimizer(optimizer_def, model, framework, mixed_precision)
         model.current_optimizer = optimizer_fn.get_current_value(1)
     else:
-        optimizer_fn = _build_optimizer(optimizer_fn, model, framework)
+        optimizer_fn = _build_optimizer(optimizer_fn, model, framework, mixed_precision)
         model.current_optimizer = optimizer_fn
     model.optimizer = optimizer_fn
     model.fe_compiled = True
@@ -916,8 +918,8 @@ def _fe_compile(model: Model,
     return model
 
 
-def _build_optimizer(optimizer_fn: Union[str, Callable, None], model: Model,
-                     framework: str) -> Union[None, tf.optimizers.Optimizer, torch.optim.Optimizer]:
+def _build_optimizer(optimizer_fn: Union[str, Callable, None], model: Model, framework: str,
+                     mixed_precision: bool) -> Union[None, tf.optimizers.Optimizer, torch.optim.Optimizer]:
     """A helper method to instantiate an optimizer.
 
     Args:
@@ -925,13 +927,14 @@ def _build_optimizer(optimizer_fn: Union[str, Callable, None], model: Model,
             default optimizers to be used.
         model: The model to associate the optimizer with.
         framework: Which backend framework should be used ('tf' or 'torch').
+        mixed_precision: Whether to enable mixed-precision training.
 
     Returns:
         An optimizer instance, or None if `optimizer_fn` was None.
     """
     if isinstance(optimizer_fn, str):
         optimizer_fn = _optimizer_fn_from_string(optimizer_fn, framework)
-    optimizer = _optimizer_fn_to_optimizer(optimizer_fn, model, framework)
+    optimizer = _optimizer_fn_to_optimizer(optimizer_fn, model, framework, mixed_precision)
     return optimizer
 
 
@@ -968,14 +971,15 @@ def _optimizer_fn_from_string(name: str, framework: str) -> Callable:
     return optimizer_fn
 
 
-def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None], model: Model,
-                               framework: str) -> Union[None, tf.optimizers.Optimizer, torch.optim.Optimizer]:
+def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None], model: Model, framework: str,
+                               mixed_precision: bool) -> Union[None, tf.optimizers.Optimizer, torch.optim.Optimizer]:
     """A helper function to invoke an optimizer function.
 
     Args:
         optimizer_fn: The function to be invoked in order to instantiate an optimizer.
         model: The model with which the optimizer should be associated.
         framework: Which backend framework should be used ('tf' or 'torch').
+        mixed_precision: Whether to enable mixed-precision training.
 
     Returns:
         An optimizer instance, or None if `optimizer_fn` was None.
@@ -994,8 +998,8 @@ def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None], model: Model
             optimizer._create_hypers()
             optimizer._create_slots(model.trainable_variables)
             # handle mixed precision loss scaling
-            if mixed_precision_tf.global_policy().name != "float32":
-                optimizer = mixed_precision_tf.LossScaleOptimizer(optimizer, loss_scale='dynamic')
+            if mixed_precision:
+                optimizer = mixed_precision_tf.LossScaleOptimizer(optimizer)
             assert isinstance(optimizer, tf.optimizers.Optimizer), "optimizer_fn should generate tensorflow optimizer"
         else:
             try:
@@ -1005,4 +1009,9 @@ def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None], model: Model
                 optimizer_fn are using the same backend")
                 raise ValueError(repr(e))
             assert isinstance(optimizer, torch.optim.Optimizer), "optimizer_fn should generate pytorch optimizer"
+            if mixed_precision:
+                setattr(optimizer, "scaler", torch.cuda.amp.GradScaler())
+            else:
+                setattr(optimizer, "scaler", None)
+
     return optimizer

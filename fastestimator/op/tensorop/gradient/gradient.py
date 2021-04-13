@@ -64,6 +64,9 @@ class GradientOp(TensorOp):
             self.retain_graph = retain
         return self.retain_graph
 
+    def build(self, framework: str, device: Optional[torch.device] = None) -> None:
+        self.framework = framework
+
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
         results = []
         if self.model is None:
@@ -74,9 +77,19 @@ class GradientOp(TensorOp):
                 results.append(get_gradient(final, initial, tape=state['tape'], retain_graph=retain_graph))
         else:
             finals = data
-            trainable_params = [p for p in self.model.parameters() if p.requires_grad] if isinstance(
-                self.model, torch.nn.Module) else self.model.trainable_variables
-            for idx, final in enumerate(finals):
-                retain_graph = self.retain_graph or not idx == len(finals) - 1
-                results.append(get_gradient(final, trainable_params, tape=state['tape'], retain_graph=retain_graph))
+            if self.framework == "tf":
+                trainable_params = self.model.trainable_variables
+                for idx, final in enumerate(finals):
+                    gradient = get_gradient(final, trainable_params, tape=state['tape'])
+                    results.append(gradient)
+            elif self.framework == "torch":
+                trainable_params = [p for p in self.model.parameters() if p.requires_grad]
+                for idx, final in enumerate(finals):
+                    # get_gradinet
+                    retain_graph = self.retain_graph or not idx == len(finals) - 1
+                    gradient = get_gradient(final, trainable_params, retain_graph=retain_graph)
+                    results.append(gradient)
+            else:
+                raise ValueError(f"Unrecognized framework {self.framework}")
+
         return results
