@@ -67,10 +67,10 @@ class UpdateOp(TensorOp):
         self.extra_loss = isinstance(model, tf.keras.Model) and model.losses
         if gradients is None:
             super().__init__(inputs=loss_name, outputs=None, mode=mode)
-        elif model.mixed_precision:
-            raise ValueError("Mixed precision training cannot take input gradients, because the gradients need to be "
-                             "computed in this module")
         else:
+            if model.mixed_precision:
+                raise ValueError("Mixed precision training cannot take input gradients, because the gradients need to "
+                                "be computed in this module")
             if self.extra_loss:
                 warnings.warn("Extra model losses are detected and they will be ignored since the gradients are not "
                               "computed in UpdateOp class.")
