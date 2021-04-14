@@ -1,4 +1,5 @@
-from typing import Any
+from collections import ChainMap
+from typing import Any, Dict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,6 +11,8 @@ import fastestimator as fe
 from fastestimator.dataset.numpy_dataset import NumpyDataset
 from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.summary import System
+from fastestimator.trace import Trace
+from fastestimator.util.data import Data
 
 
 def is_equal(obj1: Any, obj2: Any, assert_type: bool = True, assert_dtype: bool = False) -> bool:
@@ -237,3 +240,36 @@ def fig_to_rgb_array(fig: plt.Figure) -> np.ndarray:
     buf = fig.canvas.tostring_rgb()
     ncols, nrows = fig.canvas.get_width_height()
     return np.frombuffer(buf, dtype=np.uint8).reshape(nrows, ncols, 3)
+
+
+class TraceRun:
+    def __init__(self, trace: Trace, batch: Dict[str, Any], prediction: Dict[str, Any]):
+        self.trace = trace
+        self.batch = batch
+        self.prediction = prediction
+        self.data_on_begin = None
+        self.data_on_end = None
+        self.data_on_epoch_begin = None
+        self.data_on_epoch_end = None
+        self.data_on_batch_begin = None
+        self.data_on_batch_end = None
+
+
+    def run_trace(self):
+        self.data_on_begin = Data()
+        self.trace.on_begin(self.data_on_begin)
+
+        self.data_on_epoch_begin = Data()
+        self.trace.on_epoch_begin(self.data_on_epoch_begin)
+
+        self.data_on_batch_begin = Data(self.batch)
+        self.trace.on_batch_begin(self.data_on_batch_begin)
+
+        self.data_on_batch_end = Data(ChainMap(self.prediction, self.batch))
+        self.trace.on_batch_end(self.data_on_batch_end)
+
+        self.data_on_epoch_end = Data()
+        self.trace.on_epoch_end(self.data_on_epoch_end)
+
+        self.data_on_end = Data()
+        self.trace.on_end(self.data_on_end)
