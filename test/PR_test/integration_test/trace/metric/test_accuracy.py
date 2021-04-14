@@ -14,70 +14,80 @@
 # ==============================================================================
 import unittest
 
-import numpy as np
+import tensorflow as tf
+import torch
 
+from fastestimator.test.unittest_util import TraceRun
 from fastestimator.trace.metric import Accuracy
-from fastestimator.util import Data
 
 
 class TestAccuracy(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        x = np.array([[1, 2], [3, 4]])
-        x_pred = np.array([[1, 5, 3], [2, 1, 0]])
-        x_1d = np.array([2.5])
-        x_pred_1d = np.array([1])
-        x_1d_logit = np.array([1])
-        x_pred_1d_logit = np.array([2.5])
+        cls.acc_key = "acc"
 
-        cls.data = Data({'x': x, 'x_pred': x_pred})
-        cls.data_1d = Data({'x': x_1d, 'x_pred': x_pred_1d})
-        cls.data_1d_logit = Data({'x': x_1d_logit, 'x_pred': x_pred_1d_logit})
-        cls.accuracy = Accuracy(true_key='x', pred_key='x_pred')
-        cls.accuracy_logit = Accuracy(true_key='x', pred_key='x_pred', from_logits=True)
+    def test_tf_one_hot_label(self):
+        trace = Accuracy(true_key="label", pred_key="pred", output_name=self.acc_key)
+        batch = {"label": tf.constant([[1, 0, 0], [0, 1, 0]])}  # one-hot
+        prediction = {"pred": tf.constant([[1, 2, 3], [0.2, 0.5, 0.3]])}
+        sim = TraceRun(trace=trace, batch=batch, prediction=prediction)
+        sim.run_trace()
+        self.assertEqual(sim.data_on_epoch_end[self.acc_key], 0.5)
 
-    def test_on_epoch_begin(self):
-        self.accuracy.on_epoch_begin(data=self.data)
-        with self.subTest('Check initial value of correct'):
-            self.assertEqual(self.accuracy.correct, 0)
-        with self.subTest('Check initial value of total'):
-            self.assertEqual(self.accuracy.total, 0)
+    def test_tf_class_index_label(self):
+        trace = Accuracy(true_key="label", pred_key="pred", output_name=self.acc_key)
+        batch = {"label": tf.constant([0, 1])}  # class index
+        prediction = {"pred": tf.constant([[1, 2, 3], [0.2, 0.5, 0.3]])}
+        sim = TraceRun(trace=trace, batch=batch, prediction=prediction)
+        sim.run_trace()
+        self.assertEqual(sim.data_on_epoch_end[self.acc_key], 0.5)
 
-    def test_on_batch_end(self):
-        self.accuracy.on_batch_end(data=self.data)
-        with self.subTest('Check correct values'):
-            self.assertEqual(self.accuracy.correct, 1)
-        with self.subTest('Check total values'):
-            self.assertEqual(self.accuracy.total, 3)
+    def test_tf_binary_class(self):
+        with self.subTest("from_logit=False"):
+            trace = Accuracy(true_key="label", pred_key="pred", output_name=self.acc_key, from_logits=False)
+            batch = {"label": tf.constant([0, 1])}
+            prediction = {"pred": tf.constant([[0.3], [0.6]])}  # pred > 0.5 => class 1
+            sim = TraceRun(trace=trace, batch=batch, prediction=prediction)
+            sim.run_trace()
+            self.assertEqual(sim.data_on_epoch_end[self.acc_key], 1.0)
 
-    def test_on_epoch_end(self):
-        self.accuracy.correct = 1
-        self.accuracy.total = 3
-        self.accuracy.on_epoch_end(data=self.data)
-        with self.subTest('Check if accuracy value exists'):
-            self.assertIn('accuracy', self.data)
-        with self.subTest('Check the value of accuracy'):
-            self.assertEqual(round(self.data['accuracy'], 2), 0.33)
+        with self.subTest("from_logit=True"):
+            trace = Accuracy(true_key="label", pred_key="pred", output_name=self.acc_key, from_logits=True)
+            batch = {"label": tf.constant([0, 1])}
+            prediction = {"pred": tf.constant([[-1], [1]])}  # 1 / 1 + exp(-pred) > 0.5 => class 1
+            sim = TraceRun(trace=trace, batch=batch, prediction=prediction)
+            sim.run_trace()
+            self.assertEqual(sim.data_on_epoch_end[self.acc_key], 1.0)
 
-    def test_1d_data_on_batch_end(self):
-        self.accuracy.on_batch_end(data=self.data_1d)
-        with self.subTest('Check correct values'):
-            self.assertEqual(self.accuracy.correct, 0)
-        with self.subTest('Check total values'):
-            self.assertEqual(self.accuracy.total, 1)
+    def test_torch_one_hot_label(self):
+        trace = Accuracy(true_key="label", pred_key="pred", output_name=self.acc_key)
+        batch = {"label": torch.tensor([[1, 0, 0], [0, 1, 0]])}  # one-hot
+        prediction = {"pred": torch.tensor([[1, 2, 3], [0.2, 0.5, 0.3]])}
+        sim = TraceRun(trace=trace, batch=batch, prediction=prediction)
+        sim.run_trace()
+        self.assertEqual(sim.data_on_epoch_end[self.acc_key], 0.5)
 
-    def test_1d_data_on_epoch_end(self):
-        self.accuracy.correct = 0
-        self.accuracy.total = 1
-        self.accuracy.on_epoch_end(data=self.data_1d)
-        with self.subTest('Check if accuracy value exists'):
-            self.assertIn('accuracy', self.data_1d)
-        with self.subTest('Check the value of accuracy'):
-            self.assertEqual(round(self.data_1d['accuracy'], 2), 0.0)
+    def test_torch_class_index_label(self):
+        trace = Accuracy(true_key="label", pred_key="pred", output_name=self.acc_key)
+        batch = {"label": torch.tensor([0, 1])}  # class index
+        prediction = {"pred": torch.tensor([[1, 2, 3], [0.2, 0.5, 0.3]])}
+        sim = TraceRun(trace=trace, batch=batch, prediction=prediction)
+        sim.run_trace()
+        self.assertEqual(sim.data_on_epoch_end[self.acc_key], 0.5)
 
-    def test_1d_logit_data_on_batch_end(self):
-        self.accuracy_logit.on_batch_end(data=self.data_1d_logit)
-        with self.subTest('Check correct values'):
-            self.assertEqual(self.accuracy_logit.correct, 1)
-        with self.subTest('Check total values'):
-            self.assertEqual(self.accuracy_logit.total, 1)
+    def test_torch_binary_class(self):
+        with self.subTest("from_logit=False"):
+            trace = Accuracy(true_key="label", pred_key="pred", output_name=self.acc_key, from_logits=False)
+            batch = {"label": torch.tensor([0, 1])}
+            prediction = {"pred": torch.tensor([[0.3], [0.6]])}  # pred > 0.5 => class 1
+            sim = TraceRun(trace=trace, batch=batch, prediction=prediction)
+            sim.run_trace()
+            self.assertEqual(sim.data_on_epoch_end[self.acc_key], 1.0)
+
+        with self.subTest("from_logit=True"):
+            trace = Accuracy(true_key="label", pred_key="pred", output_name=self.acc_key, from_logits=True)
+            batch = {"label": torch.tensor([0, 1])}
+            prediction = {"pred": torch.tensor([[-1], [1]])}  # 1 / 1 + exp(-pred) > 0.5 => class 1
+            sim = TraceRun(trace=trace, batch=batch, prediction=prediction)
+            sim.run_trace()
+            self.assertEqual(sim.data_on_epoch_end[self.acc_key], 1.0)

@@ -1,4 +1,5 @@
-from typing import Any
+from collections import ChainMap
+from typing import Any, Dict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,6 +11,8 @@ import fastestimator as fe
 from fastestimator.dataset.numpy_dataset import NumpyDataset
 from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.summary import System
+from fastestimator.trace import Trace
+from fastestimator.util.data import Data
 
 
 def is_equal(obj1: Any, obj2: Any, assert_type: bool = True, assert_dtype: bool = False) -> bool:
@@ -17,13 +20,13 @@ def is_equal(obj1: Any, obj2: Any, assert_type: bool = True, assert_dtype: bool 
     with elements such as int, float, np.ndarray, tf.Tensor, tf.Varaible, torch.Tensor
 
     Args:
-        obj1: input object 1
-        obj2: input object 2
-        assert_type: whether to assert the same data type
-        assert_dtype: whether to assert the same dtype in case of nd.array, tf.Tensor, torch.Tensor
+        obj1: Input object 1
+        obj2: Input object 2
+        assert_type: Whether to assert the same data type
+        assert_dtype: Whether to assert the same dtype in case of nd.array, tf.Tensor, torch.Tensor
 
     Returns:
-        boolean of whether those two object are equal
+        Boolean of whether those two object are equal
     """
     if assert_type and type(obj1) != type(obj2):
         return False
@@ -192,15 +195,15 @@ def sample_system_object_torch():
 
 
 def check_img_similar(img1: np.ndarray, img2: np.ndarray, ptol: int = 3, ntol: float = 0.01) -> bool:
-    """ check whether img1 and img2 array are similar based on pixel to pixel comparision
+    """Check whether img1 and img2 array are similar based on pixel to pixel comparision
     Args:
-        img1: image 1
-        img2: image 2
-        ptol: pixel value tolerance
-        ntol: number of pixel difference tolerace rate
+        img1: Image 1
+        img2: Image 2
+        ptol: Pixel value tolerance
+        ntol: Number of pixel difference tolerace rate
 
     Returns:
-        boolean of whether the images are similar
+        Boolean of whether the images are similar
     """
     if img1.shape == img2.shape:
         diff = np.abs(img1.astype(np.float32) - img2.astype(np.float32))
@@ -216,24 +219,66 @@ def img_to_rgb_array(path: str) -> np.ndarray:
     """Read png file to numpy array (RGB)
 
     Args:
-        path: image path
+        path: Image path
 
     Returns:
-        image nump yarray
+        Image numpy array
     """
     return np.asarray(Image.open(path).convert('RGB'))
 
 
 def fig_to_rgb_array(fig: plt.Figure) -> np.ndarray:
-    """convert image in plt.Figure to numpy array
+    """Convert image in plt.Figure to numpy array
 
     Args:
-        fig: input figure object
+        fig: Input figure object
 
     Returns:
-        image array
+        Image array
     """
     fig.canvas.draw()
     buf = fig.canvas.tostring_rgb()
     ncols, nrows = fig.canvas.get_width_height()
     return np.frombuffer(buf, dtype=np.uint8).reshape(nrows, ncols, 3)
+
+
+class TraceRun:
+    """Class to simulate the trace calling protocol.
+
+    This serve for testing purpose without using estimator class.
+
+    Args:
+        trace: Target trace to run.
+        batch: Batch data from pipepline.
+        prediction: Batch data from network.
+    """
+    def __init__(self, trace: Trace, batch: Dict[str, Any], prediction: Dict[str, Any]):
+        self.trace = trace
+        self.batch = batch
+        self.prediction = prediction
+        self.data_on_begin = None
+        self.data_on_end = None
+        self.data_on_epoch_begin = None
+        self.data_on_epoch_end = None
+        self.data_on_batch_begin = None
+        self.data_on_batch_end = None
+
+
+    def run_trace(self) -> None:
+        self.data_on_begin = Data()
+        self.trace.on_begin(self.data_on_begin)
+
+        self.data_on_epoch_begin = Data()
+        self.trace.on_epoch_begin(self.data_on_epoch_begin)
+
+        self.data_on_batch_begin = Data(self.batch)
+        self.trace.on_batch_begin(self.data_on_batch_begin)
+
+        self.data_on_batch_end = Data(ChainMap(self.prediction, self.batch))
+        self.trace.on_batch_end(self.data_on_batch_end)
+
+        self.data_on_epoch_end = Data()
+        self.trace.on_epoch_end(self.data_on_epoch_end)
+
+        self.data_on_end = Data()
+        self.trace.on_end(self.data_on_end)
