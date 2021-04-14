@@ -186,12 +186,16 @@ class Estimator:
         all_traces = get_current_items(self.traces_in_use, run_modes={"train", "eval"})
         sort_traces(all_traces)  # This ensures that the traces can sort properly for on_begin and on_end
         monitor_names = self.monitor_names
+        signature_epochs = {}
         for mode in self.pipeline.get_modes() - {"test"}:
             scheduled_items = self.pipeline.get_scheduled_items(mode) + self.network.get_scheduled_items(
                 mode) + self.get_scheduled_items(mode)
-            signature_epochs = get_signature_epochs(scheduled_items, self.system.total_epochs, mode=mode)
+            signature_epochs[mode] = get_signature_epochs(scheduled_items, self.system.total_epochs, mode=mode)
+        if max([len(x) for x in signature_epochs.values()]) < 2:
+            return
+        for mode, signature_epochs_mode in signature_epochs.items():
             epochs_with_data = self.pipeline.get_epochs_with_data(total_epochs=self.system.total_epochs, mode=mode)
-            for epoch in signature_epochs:
+            for epoch in signature_epochs_mode:
                 if epoch not in epochs_with_data:
                     continue
                 network_output_keys = self.network.get_all_output_keys(mode, epoch)
