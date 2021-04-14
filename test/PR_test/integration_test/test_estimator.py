@@ -29,7 +29,7 @@ from fastestimator.network import TFNetwork
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
-from fastestimator.schedule.schedule import get_current_items
+from fastestimator.schedule.schedule import EpochScheduler, get_current_items
 from fastestimator.trace import Trace
 
 
@@ -275,10 +275,13 @@ class TestEstimatorWarmup(unittest.TestCase):
         model = fe.build(model_fn=LeNetTf, optimizer_fn="adam")
 
         network = fe.Network(ops=[
-            ModelOp(model=model, inputs="x_out", outputs="y_pred")  # miss key x_out
+            EpochScheduler({
+                1: ModelOp(model=model, inputs="x_out", outputs="y_pred"),
+                2: ModelOp(model=model, inputs="x_out", outputs="y_pred")
+            })  # miss key x_out
         ])
 
-        est = fe.Estimator(pipeline=pipeline, network=network, epochs=1)
+        est = fe.Estimator(pipeline=pipeline, network=network, epochs=2)
         est._prepare_traces(run_modes={"train", "eval"})
 
         strategy = tf.distribute.get_strategy()
@@ -294,9 +297,14 @@ class TestEstimatorWarmup(unittest.TestCase):
         pipeline = fe.Pipeline(train_data=loader)  # "x", "y"
         model = fe.build(model_fn=LeNetTf, optimizer_fn="adam")
 
-        network = fe.Network(ops=[ModelOp(model=model, inputs="x", outputs="y_pred")])
+        network = fe.Network(ops=[
+            EpochScheduler({
+                1: ModelOp(model=model, inputs="x", outputs="y_pred"),
+                2: ModelOp(model=model, inputs="x", outputs="y_pred")
+            })  # miss key x_out
+        ])
 
-        est = fe.Estimator(pipeline=pipeline, network=network, epochs=1, traces=[Trace(inputs="z")])  # miss key "z"
+        est = fe.Estimator(pipeline=pipeline, network=network, epochs=2, traces=[Trace(inputs="z")])  # miss key "z"
         est._prepare_traces(run_modes={"train", "eval"})
         with self.assertRaises(AssertionError):
             est._warmup(warmup=True)
