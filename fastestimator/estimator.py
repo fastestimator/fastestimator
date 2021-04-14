@@ -340,6 +340,10 @@ class Estimator:
                 new_loader = new_loader.take(self.system.max_eval_steps_per_epoch)
             if isinstance(tf.distribute.get_strategy(), tf.distribute.MirroredStrategy) and isinstance(
                     self.network, TFNetwork) and not isinstance(new_loader, DistributedDataset):
+                # The default autoshard policy is file, changing it to data to avoid warning
+                options = tf.data.Options()
+                options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.DATA
+                new_loader = new_loader.with_options(options)
                 new_loader = tf.distribute.get_strategy().experimental_distribute_dataset(new_loader)
         return new_loader
 
