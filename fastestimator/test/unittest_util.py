@@ -249,8 +249,8 @@ class TraceRun:
 
     Args:
         trace: Target trace to run.
-        batch: Batch data from pipepline
-        prediction: Batch data from network
+        batch: Batch data from pipepline.
+        prediction: Batch data from network.
     """
     def __init__(self, trace: Trace, batch: Dict[str, Any], prediction: Dict[str, Any]):
         self.trace = trace
