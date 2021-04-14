@@ -45,7 +45,7 @@ class TestAccuracy(unittest.TestCase):
     def test_tf_binary_class(self):
         with self.subTest("from_logit=False"):
             trace = Accuracy(true_key="label", pred_key="pred", output_name=self.acc_key, from_logits=False)
-            batch = {"label": tf.constant([[1, 0], [0, 1]])}
+            batch = {"label": tf.constant([0, 1])}
             prediction = {"pred": tf.constant([[0.3], [0.6]])}  # pred > 0.5 => class 1
             sim = TraceRun(trace=trace, batch=batch, prediction=prediction)
             sim.run_trace()
@@ -53,7 +53,7 @@ class TestAccuracy(unittest.TestCase):
 
         with self.subTest("from_logit=True"):
             trace = Accuracy(true_key="label", pred_key="pred", output_name=self.acc_key, from_logits=True)
-            batch = {"label": tf.constant([[1, 0], [0, 1]])}
+            batch = {"label": tf.constant([0, 1])}
             prediction = {"pred": tf.constant([[-1], [1]])}  # 1 / 1 + exp(-pred) > 0.5 => class 1
             sim = TraceRun(trace=trace, batch=batch, prediction=prediction)
             sim.run_trace()
