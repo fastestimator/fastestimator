@@ -15,52 +15,135 @@
 import unittest
 
 import numpy as np
+import tensorflow as tf
+import torch
 
+from fastestimator.test.unittest_util import TraceRun
 from fastestimator.trace.metric import MCC
-from fastestimator.util import Data
+import pdb
+
+def mcc_func(tp, tn, fp, fn):
+    return (tp * tn - fp * fn) / np.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
 
 
 class TestMCC(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        x = np.array([[1, 2], [3, 4]])
-        x_pred = np.array([[1, 5, 3], [2, 1, 0]])
-        x_1d = np.array([2.5])
-        x_pred_1d = np.array([1])
-        cls.data = Data({'x': x, 'x_pred': x_pred})
-        cls.data_1d = Data({'x': x_1d, 'x_pred': x_pred_1d})
-        cls.mcc = MCC(true_key='x', pred_key='x_pred')
+        cls.mcc_key = "mcc"
 
-    def test_on_epoch_begin(self):
-        self.mcc.on_epoch_begin(data=self.data)
-        with self.subTest('Check initial value of y_true'):
-            self.assertEqual(self.mcc.y_true, [])
-        with self.subTest('Check initial value of y_pred'):
-            self.assertEqual(self.mcc.y_pred, [])
+    def test_passing_kwarg(self):
+        with self.subTest("illegal kwargs"):
+            with self.assertRaises(ValueError):
+                # `y_pred` is illegal karg
+                trace = MCC(true_key="label", pred_key="pred", output_name=self.mcc_key, y_pred=None)
 
-    def test_on_batch_end(self):
-        self.mcc.y_true = []
-        self.mcc.y_pred = []
-        self.mcc.on_batch_end(data=self.data)
-        with self.subTest('Check correct values'):
-            self.assertEqual(self.mcc.y_true, [1, 1])
-        with self.subTest('Check total values'):
-            self.assertEqual(self.mcc.y_pred, [1, 0])
+        with self.subTest("check if kwargs pass to matthews_corrcoef"):
+            with unittest.mock.patch("fastestimator.trace.metric.mcc.matthews_corrcoef") as fake:
+                kwargs = {"e1": "extra1", "e2": "extra2"}
+                trace = MCC(true_key="label", pred_key="pred", output_name=self.mcc_key, **kwargs)
+                batch = {"label": tf.constant([0, 1, 0, 1])}
+                pred = {"pred": tf.constant([[0.2], [0.6], [0.8], [0.1]])}  # [[0], [1], [1], [0]]
+                run = TraceRun(trace=trace, batch=batch, prediction=pred)
+                run.run_trace()
 
-    def test_on_epoch_end(self):
-        self.mcc.y_true = [2, 1]
-        self.mcc.y_pred = [1, 0]
-        self.mcc.on_epoch_end(data=self.data)
-        with self.subTest('Check if mcc exists'):
-            self.assertIn('mcc', self.data)
-        with self.subTest('Check the value of mcc'):
-            self.assertEqual(self.data['mcc'], -0.5)
+            fake_kwargs = fake.call_args[1]
+            for key, val in kwargs.items():
+                self.assertTrue(key in fake_kwargs)
+                self.assertEqual(val, fake_kwargs[key])
 
-    def test_1d_data_on_batch_end(self):
-        self.mcc.y_true = []
-        self.mcc.y_pred = []
-        self.mcc.on_batch_end(data=self.data_1d)
-        with self.subTest('Check correct values'):
-            self.assertEqual(self.mcc.y_true, [2.5])
-        with self.subTest('Check total values'):
-            self.assertEqual(self.mcc.y_pred, [1])
+    def test_tf_binary_class(self):
+        with self.subTest("ordinal label"):
+            trace = MCC(true_key="label", pred_key="pred", output_name=self.mcc_key)
+            batch = {"label": tf.constant([0, 1, 0, 1])}
+            pred = {"pred": tf.constant([[0.2], [0.6], [0.8], [0.1]])}  # [[0], [1], [1], [0]]
+            run = TraceRun(trace=trace, batch=batch, prediction=pred)
+            run.run_trace()
+            tp, tn, fp, fn = [1, 1, 1, 1]
+            ans = mcc_func(tp, tn, fp, fn)
+            self.assertEqual(run.data_on_epoch_end[self.mcc_key], ans)
+
+        with self.subTest("one-hot label"):
+            trace = MCC(true_key="label", pred_key="pred", output_name=self.mcc_key)
+            batch = {"label": tf.constant([[1, 0], [0, 1], [0, 1], [0, 1]])}  #  [0, 1, 1, 1]
+            pred = {"pred": tf.constant([[0.2], [0.6], [0.8], [0.1]])}  #  [[0], [1], [1], [0]]
+            run = TraceRun(trace=trace, batch=batch, prediction=pred)
+            run.run_trace()
+            tp, tn, fp, fn = [2, 1, 0, 1]
+            ans = mcc_func(tp, tn, fp, fn)
+            self.assertEqual(run.data_on_epoch_end[self.mcc_key], ans)
+
+    def test_torch_binary_class(self):
+        with self.subTest("ordinal label"):
+            trace = MCC(true_key="label", pred_key="pred", output_name=self.mcc_key)
+            batch = {"label": torch.tensor([0, 1, 0, 1])}
+            pred = {"pred": torch.tensor([[0.2], [0.6], [0.8], [0.1]])}  # [[0], [1], [1], [0]]
+            run = TraceRun(trace=trace, batch=batch, prediction=pred)
+            run.run_trace()
+            tp, tn, fp, fn = [1, 1, 1, 1]
+            ans = mcc_func(tp, tn, fp, fn)
+            self.assertEqual(run.data_on_epoch_end[self.mcc_key], ans)
+
+        with self.subTest("one-hot label"):
+            trace = MCC(true_key="label", pred_key="pred", output_name=self.mcc_key)
+            batch = {"label": torch.tensor([[1, 0], [0, 1], [0, 1], [0, 1]])}  #  [0, 1, 1, 1]
+            pred = {"pred": torch.tensor([[0.2], [0.6], [0.8], [0.1]])}  #  [[0], [1], [1], [0]]
+            run = TraceRun(trace=trace, batch=batch, prediction=pred)
+            run.run_trace()
+            tp, tn, fp, fn = [2, 1, 0, 1]
+            ans = mcc_func(tp, tn, fp, fn)
+            self.assertEqual(run.data_on_epoch_end[self.mcc_key], ans)
+
+    def test_tf_multi_class(self):
+        with self.subTest("ordinal label"):
+            trace = MCC(true_key="label", pred_key="pred", output_name=self.mcc_key)
+            batch = {"label": tf.constant([0, 0, 0, 1, 1, 2])}
+            pred = {
+                "pred":
+                tf.constant([[0.2, 0.1, -0.6], [0.6, 2.0, 0.1], [0.1, 0.1, 0.8], [0.4, 0.1, -0.3], [0.2, 0.7, 0.1],
+                             [0.3, 0.6, 1.5]])  # [[0], [1], [2], [0], [1], [2]]
+            }
+            run = TraceRun(trace=trace, batch=batch, prediction=pred)
+            run.run_trace()
+            self.assertEqual(run.data_on_epoch_end[self.mcc_key], 0.26111648393354675)
+
+
+        with self.subTest("one-hot label"):
+            trace = MCC(true_key="label", pred_key="pred", output_name=self.mcc_key)
+            batch = {
+                "label": tf.constant([[1, 0, 0], [1, 0, 0], [1, 0, 0], [0, 1, 0], [0, 1, 0], [0, 0, 1]])
+            }  # [0, 0, 0, 1, 1, 2]
+            pred = {
+                "pred":
+                tf.constant([[0.2, 0.1, -0.6], [0.6, 2.0, 0.1], [0.1, 0.1, 0.8], [0.4, 0.1, -0.3], [0.2, 0.7, 0.1],
+                             [0.3, 0.6, 1.5]])  # [[0], [1], [2], [0], [1], [2]]
+            }
+            run = TraceRun(trace=trace, batch=batch, prediction=pred)
+            run.run_trace()
+            self.assertEqual(run.data_on_epoch_end[self.mcc_key], 0.26111648393354675)
+
+    def test_torch_multi_class(self):
+        with self.subTest("ordinal label"):
+            trace = MCC(true_key="label", pred_key="pred", output_name=self.mcc_key)
+            batch = {"label": torch.tensor([0, 0, 0, 1, 1, 2])}
+            pred = {
+                "pred":
+                torch.tensor([[0.2, 0.1, -0.6], [0.6, 2.0, 0.1], [0.1, 0.1, 0.8], [0.4, 0.1, -0.3], [0.2, 0.7, 0.1],
+                              [0.3, 0.6, 1.5]])  # [[0], [1], [2], [0], [1], [2]]
+            }
+            run = TraceRun(trace=trace, batch=batch, prediction=pred)
+            run.run_trace()
+            self.assertEqual(run.data_on_epoch_end[self.mcc_key], 0.26111648393354675)
+
+        with self.subTest("one-hot label"):
+            trace = MCC(true_key="label", pred_key="pred", output_name=self.mcc_key)
+            batch = {
+                "label": torch.tensor([[1, 0, 0], [1, 0, 0], [1, 0, 0], [0, 1, 0], [0, 1, 0], [0, 0, 1]])
+            }  # [0, 0, 0, 1, 1, 2]
+            pred = {
+                "pred":
+                torch.tensor([[0.2, 0.1, -0.6], [0.6, 2.0, 0.1], [0.1, 0.1, 0.8], [0.4, 0.1, -0.3], [0.2, 0.7, 0.1],
+                              [0.3, 0.6, 1.5]])  # [[0], [1], [2], [0], [1], [2]]
+            }
+            run = TraceRun(trace=trace, batch=batch, prediction=pred)
+            run.run_trace()
+            self.assertEqual(run.data_on_epoch_end[self.mcc_key], 0.26111648393354675)

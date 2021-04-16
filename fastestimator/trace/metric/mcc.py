@@ -18,7 +18,7 @@ import numpy as np
 from sklearn.metrics import matthews_corrcoef
 
 from fastestimator.trace.trace import Trace
-from fastestimator.util.data import Data
+from fastestimator.util.data import Any, Data, Dict
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
 
@@ -39,13 +39,20 @@ class MCC(Trace):
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
         output_name: What to call the output from this trace (for example in the logger output).
+        **kwargs: Additional keyword arguments that pass to sklearn.metrics.matthews_corrcoef()
+
+    Raises:
+        ValueError: One of ["y_true", "y_pred"] argument exists in `kwargs`.
     """
     def __init__(self,
                  true_key: str,
                  pred_key: str,
                  mode: Union[str, Set[str]] = ("eval", "test"),
-                 output_name: str = "mcc") -> None:
+                 output_name: str = "mcc",
+                 **kwargs) -> None:
+        MCC.check_kwarg(kwargs)
         super().__init__(inputs=(true_key, pred_key), mode=mode, outputs=output_name)
+        self.kwargs = kwargs
         self.y_true = []
         self.y_pred = []
 
@@ -74,4 +81,20 @@ class MCC(Trace):
         self.y_pred.extend(y_pred)
 
     def on_epoch_end(self, data: Data) -> None:
-        data.write_with_log(self.outputs[0], matthews_corrcoef(y_true=self.y_true, y_pred=self.y_pred))
+        data.write_with_log(self.outputs[0], matthews_corrcoef(y_true=self.y_true, y_pred=self.y_pred, **self.kwargs))
+
+    @staticmethod
+    def check_kwarg(kwargs: Dict[str, Any]) -> None:
+        """Check if `kwargs` has any blacklist argument and raise an error if it does.
+
+        Args:
+            kwargs: Keywork arguments to be examined.
+
+        Raises:
+            ValueError: One of ["y_true", "y_pred"] argument exists in `kwargs`.
+        """
+        blacklist = ["y_true", "y_pred"]
+        illegal_kwarg = [x for x in blacklist if x in kwargs]
+        if illegal_kwarg:
+            raise ValueError(f"Argument '{illegal_kwarg}' cannot exist in kwargs, since it will be provided later in "
+                             "this module.")
