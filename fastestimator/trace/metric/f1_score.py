@@ -47,7 +47,7 @@ class F1Score(Trace):
                  mode: Union[str, Set[str]] = ("eval", "test"),
                  output_name: str = "f1_score",
                  **kwargs) -> None:
-        F1Score.check_kwarg(kwargs)
+        F1Score.check_kwargs(kwargs)
         super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode)
         self.binary_classification = None
         self.y_true = []
@@ -87,7 +87,7 @@ class F1Score(Trace):
         data.write_with_log(self.outputs[0], score)
 
     @staticmethod
-    def check_kwarg(kwargs: Dict[str, Any]) -> None:
+    def check_kwargs(kwargs: Dict[str, Any]) -> None:
         """Check if `kwargs` has any blacklist argument and raise an error if it does.
 
         Args:
@@ -99,5 +99,6 @@ class F1Score(Trace):
         blacklist = ["y_true", "y_pred", "average"]
         illegal_kwarg = [x for x in blacklist if x in kwargs]
         if illegal_kwarg:
-            raise ValueError(f"Argument '{illegal_kwarg}' cannot exist in kwargs, since it will be provided later in "
-                              "this module.")
+            raise ValueError(
+                f"Arguments {illegal_kwarg} cannot exist in kwargs, since FastEstimator will later directly use them in"
+                " sklearn.metrics.f1_score()")

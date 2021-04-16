@@ -47,7 +47,7 @@ class ConfusionMatrix(Trace):
                  mode: Union[str, Set[str]] = ("eval", "test"),
                  output_name: str = "confusion_matrix",
                  **kwargs) -> None:
-        ConfusionMatrix.check_kwarg(kwargs)
+        ConfusionMatrix.check_kwargs(kwargs)
         super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode)
         self.num_classes = num_classes
         self.matrix = None
@@ -85,7 +85,7 @@ class ConfusionMatrix(Trace):
         data.write_with_log(self.outputs[0], self.matrix)
 
     @staticmethod
-    def check_kwarg(kwargs: Dict[str, Any]) -> None:
+    def check_kwargs(kwargs: Dict[str, Any]) -> None:
         """Check if `kwargs` has any blacklist argument and raise an error if it does.
 
         Args:
@@ -97,5 +97,6 @@ class ConfusionMatrix(Trace):
         blacklist = ["y_true", "y_pred", "labels"]
         illegal_kwarg = [x for x in blacklist if x in kwargs]
         if illegal_kwarg:
-            raise ValueError(f"Argument '{illegal_kwarg}' cannot exist in kwargs, since it will be provided later in "
-                             "this module.")
+            raise ValueError(
+                f"Arguments {illegal_kwarg} cannot exist in kwargs, since FastEstimator will later directly use them in"
+                " sklearn.metrics.confusion_matrix()")

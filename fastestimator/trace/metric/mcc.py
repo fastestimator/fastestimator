@@ -50,7 +50,7 @@ class MCC(Trace):
                  mode: Union[str, Set[str]] = ("eval", "test"),
                  output_name: str = "mcc",
                  **kwargs) -> None:
-        MCC.check_kwarg(kwargs)
+        MCC.check_kwargs(kwargs)
         super().__init__(inputs=(true_key, pred_key), mode=mode, outputs=output_name)
         self.kwargs = kwargs
         self.y_true = []
@@ -84,7 +84,7 @@ class MCC(Trace):
         data.write_with_log(self.outputs[0], matthews_corrcoef(y_true=self.y_true, y_pred=self.y_pred, **self.kwargs))
 
     @staticmethod
-    def check_kwarg(kwargs: Dict[str, Any]) -> None:
+    def check_kwargs(kwargs: Dict[str, Any]) -> None:
         """Check if `kwargs` has any blacklist argument and raise an error if it does.
 
         Args:
@@ -96,5 +96,6 @@ class MCC(Trace):
         blacklist = ["y_true", "y_pred"]
         illegal_kwarg = [x for x in blacklist if x in kwargs]
         if illegal_kwarg:
-            raise ValueError(f"Argument '{illegal_kwarg}' cannot exist in kwargs, since it will be provided later in "
-                             "this module.")
+            raise ValueError(
+                f"Arguments {illegal_kwarg} cannot exist in kwargs, since FastEstimator will later directly use them in"
+                " sklearn.metrics.matthews_corrcoef()")
