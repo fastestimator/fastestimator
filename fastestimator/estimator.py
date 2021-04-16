@@ -191,7 +191,7 @@ class Estimator:
             scheduled_items = self.pipeline.get_scheduled_items(mode) + self.network.get_scheduled_items(
                 mode) + self.get_scheduled_items(mode)
             signature_epochs[mode] = get_signature_epochs(scheduled_items, self.system.total_epochs, mode=mode)
-        if max([len(x) for x in signature_epochs.values()]) < 2:
+        if max([len(x) for x in signature_epochs.values()]) < 2 and warmup != "debug":
             return
         for mode, signature_epochs_mode in signature_epochs.items():
             epochs_with_data = self.pipeline.get_epochs_with_data(total_epochs=self.system.total_epochs, mode=mode)
