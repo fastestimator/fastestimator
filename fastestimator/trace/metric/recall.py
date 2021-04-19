@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Set, Union
+from typing import Any, Dict, Set, Union
 
 import numpy as np
 from sklearn.metrics import recall_score
@@ -34,16 +34,23 @@ class Recall(Trace):
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
         output_name: Name of the key to store to the state.
+        **kwargs: Additional keyword arguments that pass to sklearn.metrics.recall_score()
+
+    Raises:
+        ValueError: One of ["y_true", "y_pred", "average"] argument exists in `kwargs`.
     """
     def __init__(self,
                  true_key: str,
                  pred_key: str,
                  mode: Union[str, Set[str]] = ("eval", "test"),
-                 output_name: str = "recall") -> None:
+                 output_name: str = "recall",
+                 **kwargs) -> None:
+        Recall.check_kwargs(kwargs)
         super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode)
         self.binary_classification = None
         self.y_true = []
         self.y_pred = []
+        self.kwargs = kwargs
 
     @property
     def true_key(self) -> str:
@@ -72,7 +79,24 @@ class Recall(Trace):
 
     def on_epoch_end(self, data: Data) -> None:
         if self.binary_classification:
-            score = recall_score(self.y_true, self.y_pred, average='binary')
+            score = recall_score(self.y_true, self.y_pred, average='binary', **self.kwargs)
         else:
-            score = recall_score(self.y_true, self.y_pred, average=None)
+            score = recall_score(self.y_true, self.y_pred, average=None, **self.kwargs)
         data.write_with_log(self.outputs[0], score)
+
+    @staticmethod
+    def check_kwargs(kwargs: Dict[str, Any]) -> None:
+        """Check if `kwargs` has any blacklist argument and raise an error if it does.
+
+        Args:
+            kwargs: Keywork arguments to be examined.
+
+        Raises:
+            ValueError: One of ["y_true", "y_pred", "average"] argument exists in `kwargs`.
+        """
+        blacklist = ["y_true", "y_pred", "average"]
+        illegal_kwarg = [x for x in blacklist if x in kwargs]
+        if illegal_kwarg:
+            raise ValueError(
+                f"Arguments {illegal_kwarg} cannot exist in kwargs, since FastEstimator will later directly use them in"
+                " sklearn.metrics.recall_score()")
