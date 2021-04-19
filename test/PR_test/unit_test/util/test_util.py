@@ -107,6 +107,32 @@ class TestToSet(unittest.TestCase):
         self.assertEqual(x, {3, 4})
 
 
+class TestParamToRange(unittest.TestCase):
+    def test_param_to_range_int(self):
+        x = fe.util.param_to_range(3)
+        self.assertEqual(x, (-3, 3))
+
+    def test_param_to_range_float(self):
+        x = fe.util.param_to_range(2.3)
+        self.assertEqual(x, (-2.3, 2.3))
+
+    def test_param_to_range_neg_int(self):
+        x = fe.util.param_to_range(-3)
+        self.assertEqual(x, (-3, 3))
+
+    def test_param_to_range_neg_float(self):
+        x = fe.util.param_to_range(-2.3)
+        self.assertEqual(x, (-2.3, 2.3))
+
+    def test_param_to_range_int_tuple(self):
+        x = fe.util.param_to_range((2, 3))
+        self.assertEqual(x, (2, 3))
+
+    def test_param_to_range_float_tuple(self):
+        x = fe.util.param_to_range((1.2, 3.3))
+        self.assertEqual(x, (1.2, 3.3))
+
+
 class TestNonContext(unittest.TestCase):
     def test_non_context_syntax_work(self):
         a = 5
