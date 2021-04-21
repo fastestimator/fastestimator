@@ -104,13 +104,16 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 def parse_string_to_python(val: str) -> Any:
     """Convert a string into a python object.
+
     ```python
     x = fe.util.parse_string_to_python("5")  # 5
     x = fe.util.parse_string_to_python("[5, 4, 0.3]")  # [5, 4, 0.3]
     x = fe.util.parse_string_to_python("{'a':5, 'b':7}")  # {'a':5, 'b':7}
     ```
+
     Args:
         val: An input string.
+
     Returns:
         A python object version of the input string.
     """
@@ -127,6 +130,7 @@ def parse_string_to_python(val: str) -> Any:
 
 def to_list(data: Any) -> List[Any]:
     """Convert data to a list. A single None value will be converted to the empty list.
+
     ```python
     x = fe.util.to_list(None)  # []
     x = fe.util.to_list([None])  # [None]
@@ -136,8 +140,10 @@ def to_list(data: Any) -> List[Any]:
     x = fe.util.to_list((7))  # [7]
     x = fe.util.to_list({'a': 7})  # [{'a': 7}]
     ```
+
     Args:
         data: Input data, within or without a python container.
+
     Returns:
         The input `data` but inside a list instead of whatever other container type used to hold it.
     """
@@ -153,6 +159,7 @@ def to_list(data: Any) -> List[Any]:
 
 def to_set(data: Any) -> Set[Any]:
     """Convert data to a set. A single None value will be converted to the empty set.
+
     ```python
     x = fe.util.to_set(None)  # set()
     x = fe.util.to_set([None])  # {None}
@@ -161,8 +168,10 @@ def to_set(data: Any) -> Set[Any]:
     x = fe.util.to_set({7})  # {7}
     x = fe.util.to_set((7))  # {7}
     ```
+
     Args:
         data: Input data, within or without a python container. The `data` must be hashable.
+
     Returns:
         The input `data` but inside a set instead of whatever other container type used to hold it.
     """
@@ -179,14 +188,17 @@ def to_set(data: Any) -> Set[Any]:
 def param_to_range(
         data: Union[int, float, Tuple[int, int], Tuple[float, float]]) -> Union[Tuple[int, int], Tuple[float, float]]:
     """Convert a single int or float value to a tuple signifying a range.
+
     ```python
     x = fe.util.param_to_tuple(7)  # (-7, 7)
-    x = fe.util.param_to_tuple([7, 8])  # (7,8})
+    x = fe.util.param_to_tuple([7, 8])  # (7,8))
     x = fe.util.param_to_tuple((3.1, 4.3))  # (3.1, 4.3)
     x = fe.util.to_set((-3.2))  # (-3.2, 3.2)
     ```
+
     Args:
         data: Input data.
+
     Returns:
         The input `data` but in tuple form for a range.
     """
@@ -203,7 +215,9 @@ def param_to_range(
 
 class NonContext(object):
     """A class which is used to make nothing unusual happen.
+
     This class is intentionally not @traceable.
+
     ```python
     a = 5
     with fe.util.NonContext():
@@ -220,7 +234,9 @@ class NonContext(object):
 
 class Suppressor(object):
     """A class which can be used to silence output of function calls.
+
     This class is intentionally not @traceable.
+
     ```python
     x = lambda: print("hello")
     x()  # "hello"
@@ -249,6 +265,7 @@ class Suppressor(object):
 
     def write(self, dummy: str) -> None:
         """A function which is invoked during print calls.
+
         Args:
             dummy: The string which wanted to be printed.
         """
@@ -257,6 +274,7 @@ class Suppressor(object):
 
 class LogSplicer:
     """A class to send stdout information into a file before passing it along to the normal stdout.
+
     Args:
         log_path: The path/filename into which to append the current stdout.
     """
@@ -285,7 +303,9 @@ class LogSplicer:
 
 class Timer(ContextDecorator):
     """A class that can be used to time things.
+
     This class is intentionally not @traceable.
+
     ```python
     x = lambda: list(map(lambda i: i + i/2, list(range(int(1e6)))))
     with fe.util.Timer():
@@ -320,11 +340,14 @@ def draw() -> None:
 
 def prettify_metric_name(metric: str) -> str:
     """Add spaces to camel case words, then swap _ for space, and capitalize each word.
+
     ```python
     x = fe.util.prettify_metric_name("myUgly_loss")  # "My Ugly Loss"
     ```
+
     Args:
         metric: A string to be formatted.
+
     Returns:
         The formatted version of 'metric'.
     """
@@ -333,13 +356,16 @@ def prettify_metric_name(metric: str) -> str:
 
 def strip_suffix(target: Optional[str], suffix: Optional[str]) -> Optional[str]:
     """Remove the given `suffix` from the `target` if it is present there.
+
     ```python
     x = fe.util.strip_suffix("astring.json", ".json")  # "astring"
     x = fe.util.strip_suffix("astring.json", ".yson")  # "astring.json"
     ```
+
     Args:
         target: A string to be formatted.
         suffix: A string to be removed from `target`.
+
     Returns:
         The formatted version of `target`.
     """
@@ -353,13 +379,16 @@ def strip_suffix(target: Optional[str], suffix: Optional[str]) -> Optional[str]:
 
 def strip_prefix(target: Optional[str], prefix: Optional[str]) -> Optional[str]:
     """Remove the given `prefix` from the `target` if it is present there.
+
     ```python
     x = fe.util.strip_prefix("astring.json", "ast")  # "ring.json"
     x = fe.util.strip_prefix("astring.json", "asa")  # "astring.json"
     ```
+
     Args:
         target: A string to be formatted.
         prefix: A string to be removed from `target`.
+
     Returns:
         The formatted version of `target`.
     """
@@ -373,6 +402,7 @@ def strip_prefix(target: Optional[str], prefix: Optional[str]) -> Optional[str]:
 
 def get_type(obj: Any) -> str:
     """A function to try and infer the types of data within containers.
+
     ```python
     x = fe.util.get_type(np.ones((10, 10), dtype='int32'))  # "int32"
     x = fe.util.get_type(tf.ones((10, 10), dtype='float16'))  # "<dtype: 'float16'>"
@@ -380,15 +410,19 @@ def get_type(obj: Any) -> str:
     x = fe.util.get_type([np.ones((10,10)) for i in range(4)])  # "List[float64]"
     x = fe.util.get_type(27)  # "int"
     ```
+
     For container to look into its element's type, its type needs to be either list or tuple, and the return string will
     be List[...]. All container elements need to have the same data type becuase it will only check its first element.
+
     ```python
     x = fe.util.get_type({"a":1, "b":2})  # "dict"
     x = fe.util.get_type([1, "a"]) # "List[int]"
     x = fe.util.get_type([[[1]]]) # "List[List[List[int]]]"
     ```
+
     Args:
         obj: Data which may be wrapped in some kind of container.
+
     Returns:
         A string representation of the data type of the `obj`.
     """
@@ -406,9 +440,11 @@ def get_type(obj: Any) -> str:
 
 def get_shape(obj: Any) -> List[Optional[int]]:
     """A function to find the shapes of an object or sequence of objects.
+
     Lists or Tuples will assume that the zeroth dimension is ragged (shape==None). If entries in the list have
     mismatched ranks, then only the list dimension will be considered as part of the shape. If all ranks are equal, an
     attempt will be made to determine which of the interior dimensions are ragged.
+
     ```python
     x = fe.util.get_shape(np.ones((12,22,11)))  # [12, 22, 11]
     x = fe.util.get_shape([np.ones((12,22,11)), np.ones((18, 5))])  # [None]
@@ -416,8 +452,10 @@ def get_shape(obj: Any) -> List[Optional[int]]:
     x = fe.util.get_shape([np.ones((12,22,11)), np.ones((12, 22, 4))])  # [None, 12, 22, None]
     x = fe.util.get_shape({"a": np.ones((12,22,11))})  # []
     ```
+
     Args:
         obj: Data to infer the shape of.
+
     Returns:
         A list representing the shape of the data.
     """
@@ -442,16 +480,20 @@ def get_shape(obj: Any) -> List[Optional[int]]:
 
 def parse_modes(modes: Set[str]) -> Set[str]:
     """A function to determine which modes to run on based on a set of modes potentially containing blacklist values.
+
     ```python
     m = fe.util.parse_modes({"train"})  # {"train"}
     m = fe.util.parse_modes({"!train"})  # {"eval", "test", "infer"}
     m = fe.util.parse_modes({"train", "eval"})  # {"train", "eval"}
     m = fe.util.parse_modes({"!train", "!infer"})  # {"eval", "test"}
     ```
+
     Args:
         modes: The desired modes to run on (possibly containing blacklisted modes).
+
     Returns:
         The modes to run on (converted to a whitelist).
+
     Raises:
         AssertionError: If invalid modes are detected, or if blacklisted modes and whitelisted modes are mixed.
     """
@@ -470,14 +512,17 @@ def parse_modes(modes: Set[str]) -> Set[str]:
 def pad_batch(batch: List[MutableMapping[str, np.ndarray]], pad_value: Union[float, int]) -> None:
     """A function to pad a batch of data in-place by appending to the ends of the tensors. Tensor type needs to be
     numpy array otherwise would get ignored. (tf.Tensor and torch.Tensor will cause error)
+
     ```python
     data = [{"x": np.ones((2, 2)), "y": 8}, {"x": np.ones((3, 1)), "y": 4}]
     fe.util.pad_batch(data, pad_value=0)
     print(data)  # [{'x': [[1., 1.], [1., 1.], [0., 0.]], 'y': 8}, {'x': [[1., 0.], [1., 0.], [1., 0.]]), 'y': 4}]
     ```
+
     Args:
         batch: A list of data to be padded.
         pad_value: The value to pad with.
+
     Raises:
         AssertionError: If the data within the batch do not have matching rank, or have different keys
     """
@@ -497,17 +542,20 @@ def pad_batch(batch: List[MutableMapping[str, np.ndarray]], pad_value: Union[flo
 def pad_data(data: np.ndarray, target_shape: Tuple[int, ...], pad_value: Union[float, int]) -> np.ndarray:
     """Pad `data` by appending `pad_value`s along it's dimensions until the `target_shape` is reached. All entris of
     target_shape should be larger than the data.shape, and have the same rank.
+
     ```python
     x = np.ones((1,2))
     x = fe.util.pad_data(x, target_shape=(3, 3), pad_value = -2)  # [[1, 1, -2], [-2, -2, -2], [-2, -2, -2]]
     x = fe.util.pad_data(x, target_shape=(3, 3, 3), pad_value = -2) # error
     x = fe.util.pad_data(x, target_shape=(4, 1), pad_value = -2) # error
     ```
+
     Args:
         data: The data to be padded.
         target_shape: The desired shape for `data`. Should have the same rank as `data`, with each dimension being >=
             the size of the `data` dimension.
         pad_value: The value to insert into `data` if padding is required to achieve the `target_shape`.
+
     Returns:
         The `data`, padded to the `target_shape`.
     """
@@ -518,12 +566,15 @@ def pad_data(data: np.ndarray, target_shape: Tuple[int, ...], pad_value: Union[f
 
 def is_number(arg: str) -> bool:
     """Check if a given string can be converted into a number.
+
     ```python
     x = fe.util.is_number("13.7")  # True
     x = fe.util.is_number("ae13.7")  # False
     ```
+
     Args:
         arg: A potentially numeric input string.
+
     Returns:
         True iff `arg` represents a number.
     """
@@ -536,12 +587,15 @@ def is_number(arg: str) -> bool:
 
 class DefaultKeyDict(dict):
     """Like collections.defaultdict but it passes the key argument to the default function.
+
     This class is intentionally not @traceable.
+
     ```python
     d = fe.util.DefaultKeyDict(default=lambda x: x+x, a=4, b=6)
     print(d["a"])  # 4
     print(d["c"])  # "cc"
     ```
+
     Args:
         default: A function which takes a key and returns a default value based on the key.
         **kwargs: Initial key/value pairs for the dictionary.
@@ -557,6 +611,7 @@ class DefaultKeyDict(dict):
 
 def get_num_devices():
     """Determine the number of available GPUs.
+
     Returns:
         The number of available GPUs, or 1 if none are found.
     """
@@ -570,24 +625,30 @@ def show_image(im: Union[np.ndarray, Tensor],
                color_map: str = "inferno",
                stack_depth: int = 0) -> Optional[plt.Figure]:
     """Plots a given image onto an axis. The repeated invocation of this function will cause figure plot overlap.
+
     If `im` is 2D and the length of second dimension are 4 or 5, it will be viewed as bounding box data (x0, y0, w, h,
     <label>).
+
     ```python
     boxes = np.array([[0, 0, 10, 20, "apple"],
                       [10, 20, 30, 50, "dog"],
                       [40, 70, 200, 200, "cat"],
                       [0, 0, 0, 0, "not_shown"],
                       [0, 0, -10, -20, "not_shown2"]])
+
     img = np.zeros((150, 150))
     fig, axis = plt.subplots(1, 1)
     fe.util.show_image(img, fig=fig, axis=axis) # need to plot image first
     fe.util.show_image(boxes, fig=fig, axis=axis)
     ```
+
     Users can also directly plot text
+
     ```python
     fig, axis = plt.subplots(1, 1)
     fe.util.show_image("apple", fig=fig, axis=axis)
     ```
+
     Args:
         axis: The matplotlib axis to plot on, or None for a new plot.
         fig: A reference to the figure to plot on, or None if new plot.
@@ -596,6 +657,7 @@ def show_image(im: Union[np.ndarray, Tensor],
         color_map: Which colormap to use for greyscale images.
         stack_depth: Multiple images can be drawn onto the same axis. When stack depth is greater than zero, the `im`
             will be alpha blended on top of a given axis.
+
     Returns:
         plotted figure. It will be the same object as user have provided in the argument.
     """
@@ -693,8 +755,10 @@ def show_image(im: Union[np.ndarray, Tensor],
 def get_batch_size(data: Dict[str, Any]) -> int:
     """Infer batch size from a batch dictionary. It will ignore all dictionary value with data type that
     doesn't have "shape" attribute.
+
     Args:
         data: The batch dictionary.
+
     Returns:
         batch size.
     """
@@ -706,7 +770,9 @@ def get_batch_size(data: Dict[str, Any]) -> int:
 
 class FEID:
     """An int wrapper class that can change how it's values are printed.
+
     This class is intentionally not @traceable.
+
     Args:
         val: An integer id to be wrapped.
     """
@@ -739,6 +805,7 @@ class FEID:
     @classmethod
     def set_translation_dict(cls, mapping: Dict[int, Any]) -> None:
         """Provide a lookup table to be invoked during value printing.
+
         Args:
             mapping: A mapping of id: printable id.
         """
@@ -748,7 +815,9 @@ class FEID:
 
 class Flag:
     """A mutable wrapper around a boolean.
+
     This class is intentionally not @traceable.
+
     Args:
         val: The initial value for the Flag.
     """
@@ -769,6 +838,7 @@ class Flag:
 
 def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray, int, float]) -> np.ndarray:
     """Convert an input value into a Numpy ndarray.
+
     This method can be used with Python and Numpy data:
     ```python
     b = fe.backend.to_number(5)  # 5 (type==np.ndarray)
@@ -776,18 +846,22 @@ def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray, int, float]) -> n
     n = np.array([1, 2, 3])
     b = fe.backend.to_number(n)  # [1, 2, 3] (type==np.ndarray)
     ```
+
     This method can be used with TensorFlow tensors:
     ```python
     t = tf.constant([1, 2, 3])
     b = fe.backend.to_number(t)  # [1, 2, 3] (type==np.ndarray)
     ```
+
     This method can be used with PyTorch tensors:
     ```python
     p = torch.tensor([1, 2, 3])
     b = fe.backend.to_number(p)  # [1, 2, 3] (type==np.ndarray)
     ```
+
     Args:
         data: The value to be converted into a np.ndarray.
+
     Returns:
         An ndarray corresponding to the given `data`.
     """

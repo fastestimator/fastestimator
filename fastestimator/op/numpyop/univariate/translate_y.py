@@ -27,14 +27,17 @@ from fastestimator.util.util import param_to_range
 class TranslateY(NumpyOp):
     """Randomly shift the image along the Y axis.
 
+    This is a wrapper for functionality provided by the PIL library:
+    https://github.com/python-pillow/Pillow/tree/master/src/PIL.
+
     Args:
         inputs: Key(s) of images to be modified.
         outputs: Key(s) into which to write the modified images.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        shift_limit: Shift factor range for height.
-            If shift_limit is a single float, the range will be (-shift_limit, shift_limit).
+        shift_limit: Shift factor range as a fraction of image height. If shift_limit is a single float, the range will
+            be (-shift_limit, shift_limit).
 
     Image types:
         uint8
@@ -58,4 +61,4 @@ class TranslateY(NumpyOp):
         im = im.transform((width, height),
                           ImageTransform.AffineTransform((1.0, 0.0, 0.0, 0.0, 1.0, displacement)),
                           resample=Image.BICUBIC)
-        return np.copy(np.asarray(im))
+        return np.array(im)

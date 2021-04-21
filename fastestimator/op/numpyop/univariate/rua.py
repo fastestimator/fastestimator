@@ -38,8 +38,11 @@ from fastestimator.util.traceability_util import traceable
 class Rotate(NumpyOp):
     """Rotate the input by an angle selected randomly.
 
+    This is a wrapper for functionality provided by the PIL library:
+    https://github.com/python-pillow/Pillow/tree/master/src/PIL.
+
     Args:
-        level: Factor to set the range for rotation.
+        level: Factor to set the range for rotation. Must be in the range [0, 30].
         inputs: Key(s) of images to be modified.
         outputs: Key(s) into which to write the modified images.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
@@ -65,7 +68,7 @@ class Rotate(NumpyOp):
         im = Image.fromarray(data)
         degree = random.uniform(-self.degree, self.degree)
         im = im.rotate(degree)
-        return np.copy(np.asarray(im))
+        return np.array(im)
 
 
 @traceable()
@@ -93,6 +96,9 @@ class Identity(NumpyOp):
 class Equalize(NumpyOp):
     """Equalize the image histogram.
 
+    This is a wrapper for functionality provided by the PIL library:
+    https://github.com/python-pillow/Pillow/tree/master/src/PIL.
+
     Args:
         level: Placeholder argument to conform to RUA.
         inputs: Key(s) of images to be modified.
@@ -118,7 +124,7 @@ class Equalize(NumpyOp):
     def _apply_equalize(self, data: np.ndarray) -> np.ndarray:
         im = Image.fromarray(data)
         im = ImageOps.equalize(im)
-        return np.copy(np.asarray(im))
+        return np.array(im)
 
 
 @traceable()
@@ -126,7 +132,7 @@ class Posterize(PosterizeAug):
     """Reduce the number of bits for the image.
 
     Args:
-        level: Factor to set the range for number of bits.
+        level: Factor to set the range for number of bits. Must be in the range [0, 30].
         inputs: Key(s) of images to be modified.
         outputs: Key(s) into which to write the modified images.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
@@ -149,7 +155,7 @@ class Solarize(NumpyOp):
     """Invert all pixel values above a threshold.
 
     Args:
-        level: Factor to set the range for the threshold.
+        level: Factor to set the range for the threshold. Must be in the range [0, 30].
         inputs: Key(s) of images to be modified.
         outputs: Key(s) into which to write the modified images.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
@@ -205,7 +211,7 @@ class Sharpness(SharpnessAug):
     """Randomly change the sharpness of an image.
 
     Args:
-        level: Factor to set the range for sharpness.
+        level: Factor to set the range for sharpness. Must be in the range [0, 30].
         inputs: Key(s) of images to be modified.
         outputs: Key(s) into which to write the modified images.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
@@ -228,7 +234,7 @@ class Contrast(ContrastAug):
     """Randomly change the contrast of an image.
 
     Args:
-        level: Factor to set the range for contrast.
+        level: Factor to set the range for contrast. Must be in the range [0, 30].
         inputs: Key(s) of images to be modified.
         outputs: Key(s) into which to write the modified images.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
@@ -251,7 +257,7 @@ class Color(ColorAug):
     """Randomly change the color balance of an image.
 
     Args:
-        level: Factor to set the range for changing color balance.
+        level: Factor to set the range for changing color balance. Must be in the range [0, 30].
         inputs: Key(s) of images to be modified.
         outputs: Key(s) into which to write the modified images.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
@@ -274,7 +280,7 @@ class Brightness(BrightnessAug):
     """Randomly change the brightness of an image.
 
     Args:
-        level: Factor to set the range for brightness.
+        level: Factor to set the range for brightness. Must be in the range [0, 30].
         inputs: Key(s) of images to be modified.
         outputs: Key(s) into which to write the modified images.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
@@ -297,7 +303,7 @@ class ShearX(ShearXAug):
     """Randomly shear the image along the X axis.
 
     Args:
-        level: Factor to set the range for shear.
+        level: Factor to set the range for shear. Must be in the range [0, 30].
         inputs: Key(s) of images to be modified.
         outputs: Key(s) into which to write the modified images.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
@@ -320,7 +326,7 @@ class ShearY(ShearYAug):
     """Randomly shear the image along the Y axis.
 
     Args:
-        level: Factor to set the range for shear.
+        level: Factor to set the range for shear. Must be in the range [0, 30].
         inputs: Key(s) of images to be modified.
         outputs: Key(s) into which to write the modified images.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
@@ -343,7 +349,7 @@ class TranslateX(TranslateXAug):
     """Randomly shift the image along the X axis.
 
     Args:
-        level: Factor to set the range for shift.
+        level: Factor to set the range for shift. Must be in the range [0, 30].
         inputs: Key(s) of images to be modified.
         outputs: Key(s) into which to write the modified images.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
@@ -366,7 +372,7 @@ class TranslateY(TranslateYAug):
     """Randomly shift the image along the Y axis.
 
     Args:
-        level: Factor to set the range for shift.
+        level: Factor to set the range for shift. Must be in the range [0, 30].
         inputs: Key(s) of images to be modified.
         outputs: Key(s) into which to write the modified images.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
@@ -394,7 +400,7 @@ class RUA(NumpyOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        level: Factor to set the range for magnitude of augmentation.
+        level: Factor to set the range for magnitude of augmentation. Must be in the range [0, 30].
 
     Image types:
         uint8

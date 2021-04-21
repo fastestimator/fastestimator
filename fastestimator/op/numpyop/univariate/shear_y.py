@@ -27,14 +27,16 @@ from fastestimator.util.util import param_to_range
 class ShearY(NumpyOp):
     """Randomly shear the image along the Y axis.
 
+    This is a wrapper for functionality provided by the PIL library:
+    https://github.com/python-pillow/Pillow/tree/master/src/PIL.
+
     Args:
         inputs: Key(s) of images to be modified.
         outputs: Key(s) into which to write the modified images.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        shear_coef: Factor range for shear.
-            If shear_coef is a single float, the range will be (-shear_coef, shear_coef).
+        shear_coef: Factor range for shear. If shear_coef is a single float, the range will be (-shear_coef, shear_coef)
 
     Image types:
         uint8
@@ -62,4 +64,4 @@ class ShearY(NumpyOp):
                               (1.0, 0.0, 0.0, shear_coeff, 1.0, -yshift if shear_coeff > 0 else 0.0)),
                           resample=Image.BICUBIC)
         im = im.resize((width, height))
-        return np.copy(np.asarray(im))
+        return np.array(im)

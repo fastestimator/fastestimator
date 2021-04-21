@@ -25,6 +25,9 @@ from fastestimator.util.traceability_util import traceable
 class AutoContrast(NumpyOp):
     """Adjust image contrast automatically.
 
+    This is a wrapper for functionality provided by the PIL library:
+    https://github.com/python-pillow/Pillow/tree/master/src/PIL.
+
     Args:
         inputs: Key(s) of images to be modified.
         outputs: Key(s) into which to write the modified images.
@@ -48,4 +51,4 @@ class AutoContrast(NumpyOp):
     def _apply_autocontrast(self, data: np.ndarray) -> np.ndarray:
         im = Image.fromarray(data)
         im = ImageOps.autocontrast(im)
-        return np.copy(np.asarray(im))
+        return np.array(im)

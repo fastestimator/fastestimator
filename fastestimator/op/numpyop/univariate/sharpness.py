@@ -27,14 +27,18 @@ from fastestimator.util.util import param_to_range
 class Sharpness(NumpyOp):
     """Randomly change the sharpness of an image.
 
+    This is a wrapper for functionality provided by the PIL library:
+    https://github.com/python-pillow/Pillow/tree/master/src/PIL.
+
     Args:
         inputs: Key(s) of images to be modified.
         outputs: Key(s) into which to write the modified images.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        limit: Factor range for changing sharpness.
-            If limit is a single float, the range will be (-limit, limit).
+        limit: Factor range for changing sharpness. If limit is a single float, the range will be (-limit, limit).
+            A factor of 0.0 gives a blurred image, a factor of 1.0 gives the original image, and a factor of 2.0 gives
+            a sharpened image.
 
     Image types:
         uint8
@@ -55,4 +59,4 @@ class Sharpness(NumpyOp):
         im = Image.fromarray(data)
         factor = 1.0 + random.uniform(self.limit[0], self.limit[1])
         im = ImageEnhance.Sharpness(im).enhance(factor)
-        return np.copy(np.asarray(im))
+        return np.array(im)
