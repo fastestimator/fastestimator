@@ -103,7 +103,9 @@ class TestRepeat(unittest.TestCase):
             self.assertListEqual(repeat_op.outputs, ['x', 'y'])
         with self.subTest('Check op mode'):
             self.assertSetEqual(repeat_op.mode, {'eval'})
-        output = repeat_op.forward(data=[tf.ones([1]), 10 + tf.ones([1])], state={"deferred": {}, "mode": "eval"})
+        with tf.GradientTape(persistent=True) as tape:
+            output = repeat_op.forward(data=[tf.ones([1]), 10 + tf.ones([1])],
+                                       state={"deferred": {}, "mode": "eval", "tape": tape})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)
         with self.subTest('Check output value (x)'):
