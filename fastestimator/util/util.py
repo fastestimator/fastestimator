@@ -185,6 +185,34 @@ def to_set(data: Any) -> Set[Any]:
     return data
 
 
+def param_to_range(
+        data: Union[int, float, Tuple[int, int], Tuple[float, float]]) -> Union[Tuple[int, int], Tuple[float, float]]:
+    """Convert a single int or float value to a tuple signifying a range.
+
+    ```python
+    x = fe.util.param_to_tuple(7)  # (-7, 7)
+    x = fe.util.param_to_tuple([7, 8])  # (7,8))
+    x = fe.util.param_to_tuple((3.1, 4.3))  # (3.1, 4.3)
+    x = fe.util.to_set((-3.2))  # (-3.2, 3.2)
+    ```
+
+    Args:
+        data: Input data.
+
+    Returns:
+        The input `data` but in tuple form for a range.
+    """
+    if isinstance(data, (int, float)):
+        if data > 0:
+            data = -data, data
+        else:
+            data = data, -data
+    elif isinstance(data, (list, tuple)):
+        data = tuple(data)
+
+    return data
+
+
 class NonContext(object):
     """A class which is used to make nothing unusual happen.
 

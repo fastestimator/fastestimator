@@ -13,14 +13,18 @@
 # limitations under the License.
 # ==============================================================================
 # see a complete list of effects in albumentation page: https://albumentations-demo.herokuapp.com
+from fastestimator.op.numpyop.univariate.autocontrast import AutoContrast
 from fastestimator.op.numpyop.univariate.binarize import Binarize
 from fastestimator.op.numpyop.univariate.blur import Blur
+from fastestimator.op.numpyop.univariate.brightness import Brightness
 from fastestimator.op.numpyop.univariate.calibate import Calibrate
 from fastestimator.op.numpyop.univariate.channel_dropout import ChannelDropout
 from fastestimator.op.numpyop.univariate.channel_shuffle import ChannelShuffle
 from fastestimator.op.numpyop.univariate.channel_transpose import ChannelTranspose
 from fastestimator.op.numpyop.univariate.clahe import CLAHE
 from fastestimator.op.numpyop.univariate.coarse_dropout import CoarseDropout
+from fastestimator.op.numpyop.univariate.color import Color
+from fastestimator.op.numpyop.univariate.contrast import Contrast
 from fastestimator.op.numpyop.univariate.downscale import Downscale
 from fastestimator.op.numpyop.univariate.equalize import Equalize
 from fastestimator.op.numpyop.univariate.expand_dims import ExpandDims
@@ -50,10 +54,16 @@ from fastestimator.op.numpyop.univariate.random_sun_flare import RandomSunFlare
 from fastestimator.op.numpyop.univariate.read_image import ReadImage
 from fastestimator.op.numpyop.univariate.reshape import Reshape
 from fastestimator.op.numpyop.univariate.rgb_shift import RGBShift
+from fastestimator.op.numpyop.univariate.rua import RUA
+from fastestimator.op.numpyop.univariate.sharpness import Sharpness
+from fastestimator.op.numpyop.univariate.shear_x import ShearX
+from fastestimator.op.numpyop.univariate.shear_y import ShearY
 from fastestimator.op.numpyop.univariate.solarize import Solarize
 from fastestimator.op.numpyop.univariate.to_array import ToArray
 from fastestimator.op.numpyop.univariate.to_float import ToFloat
 from fastestimator.op.numpyop.univariate.to_gray import ToGray
 from fastestimator.op.numpyop.univariate.to_sepia import ToSepia
 from fastestimator.op.numpyop.univariate.tokenize import Tokenize
+from fastestimator.op.numpyop.univariate.translate_x import TranslateX
+from fastestimator.op.numpyop.univariate.translate_y import TranslateY
 from fastestimator.op.numpyop.univariate.word_to_id import WordtoId
