@@ -35,7 +35,8 @@ class Repeat(TensorOp):
         repeat: How many times to repeat the `op`. This can also be a function return, in which case the function input
             names will be matched to keys in the data dictionary, and the `op` will be repeated until the function
             evaluates to False. The function evaluation will happen at the end of a forward call, so the `op` will
-            always be evaluated at least once.
+            always be evaluated at least once. If a function is provided, any TF ops which are wrapped by Repeat will
+            not have access to the gradient tape, nor to previously deferred model update functions.
 
     Raises:
         ValueError: If `repeat` or `op` are invalid.
@@ -124,6 +125,11 @@ class Repeat(TensorOp):
         Returns:
             A reference to the updated data dictionary.
         """
+        # tf.while_loop forces requires all loop vars to be eager tensors (tf 2.4), so have to remove the state
+        # variables which are incompatible. Hopefully this will change in future versions.
+        state = state.copy()
+        state.pop('tape', None)
+        state['deferred'] = {}
         args = ([data[var_name] for var_name in self.repeat_inputs], data, state)
         args = tf.while_loop(self._tf_cond, self._tf_body, args)
         return args[1]
