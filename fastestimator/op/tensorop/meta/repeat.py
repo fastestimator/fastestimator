@@ -38,16 +38,26 @@ class Repeat(TensorOp):
             evaluates to False. The function evaluation will happen at the end of a forward call, so the `op` will
             always be evaluated at least once. If a function is provided, any TF ops which are wrapped by Repeat will
             not have access to the gradient tape, nor to previously deferred model update functions.
+        max_iter: A limit to how many iterations will be run (or None for no limit).
 
     Raises:
-        ValueError: If `repeat` or `op` are invalid.
+        ValueError: If `repeat`, `op`, or max_iter are invalid.
     """
-    def __init__(self, op: TensorOp, repeat: Union[int, Callable[..., bool]] = 1) -> None:
+    def __init__(self, op: TensorOp, repeat: Union[int, Callable[..., bool]] = 1,
+                 max_iter: Optional[int] = None) -> None:
         self.repeat_inputs = []
         extra_reqs = []
+        if max_iter is None:
+            self.max_iter = max_iter
+        else:
+            if max_iter < 1:
+                raise ValueError(f"Repeat requires max_iter to be >=1, but got {max_iter}")
+            self.max_iter = max_iter - 1  # -1 b/c the first invocation happens outside the while loop
         if isinstance(repeat, int):
             if repeat < 1:
                 raise ValueError(f"Repeat requires repeat to be >= 1, but got {repeat}")
+            if max_iter:
+                raise ValueError("Do not set max_iter when repeat is an integer")
         else:
             self.repeat_inputs.extend(inspect.signature(repeat).parameters.keys())
             extra_reqs = list(set(self.repeat_inputs) - set(op.outputs))
@@ -112,8 +122,12 @@ class Repeat(TensorOp):
         Returns:
             A reference to the updated data dictionary.
         """
+        i = 0
         while self.repeat(*[data[var_name] for var_name in self.repeat_inputs]):
+            if self.max_iter and i >= self.max_iter:
+                break
             BaseNetwork._forward_batch(data, state, self.ops)
+            i += 1
         return data
 
     def _tf_while(self, data: Dict[str, Tensor], state: Dict[str, Any]) -> Dict[str, Tensor]:
@@ -128,7 +142,8 @@ class Repeat(TensorOp):
         """
         args = ([data[var_name] for var_name in self.repeat_inputs], data)
         # Use functools.partial since state may contain objects which cannot be cast to tensors (ex. gradient tape)
-        args = tf.while_loop(self._tf_cond, functools.partial(self._tf_body, state=state), args)
+        args = tf.while_loop(self._tf_cond, functools.partial(self._tf_body, state=state), args,
+                             maximum_iterations=self.max_iter)
         return args[1]
 
     def _tf_cond(self, cnd: List[Tensor], data: Dict[str, Tensor]) -> bool:

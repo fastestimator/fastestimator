@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import inspect
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import numpy as np
 
@@ -31,16 +31,26 @@ class Repeat(NumpyOp):
             names will be matched to keys in the data dictionary, and the `op` will be repeated until the function
             evaluates to False. The function evaluation will happen at the end of a forward call, so the `op` will
             always be evaluated at least once.
+        max_iter: A limit to how many iterations will be run (or None for no limit).
 
     Raises:
-        ValueError: If `repeat` or `op` are invalid.
+        ValueError: If `repeat`, `op`, or max_iter are invalid.
     """
-    def __init__(self, op: NumpyOp, repeat: Union[int, Callable[..., bool]] = 1) -> None:
+    def __init__(self, op: NumpyOp, repeat: Union[int, Callable[..., bool]] = 1,
+                 max_iter: Optional[int] = None) -> None:
         self.repeat_inputs = []
         extra_reqs = []
+        if max_iter is None:
+            self.max_iter = max_iter
+        else:
+            if max_iter < 1:
+                raise ValueError(f"Repeat requires max_iter to be >=1, but got {max_iter}")
+            self.max_iter = max_iter - 1  # -1 b/c the first invocation happens outside the while loop
         if isinstance(repeat, int):
             if repeat < 1:
                 raise ValueError(f"Repeat requires repeat to be >= 1, but got {repeat}")
+            if max_iter:
+                raise ValueError("Do not set max_iter when repeat is an integer")
         else:
             self.repeat_inputs.extend(inspect.signature(repeat).parameters.keys())
             extra_reqs = list(set(self.repeat_inputs) - set(op.outputs))
@@ -62,6 +72,10 @@ class Repeat(NumpyOp):
                 forward_numpyop(self.ops, data, state)
         else:
             forward_numpyop(self.ops, data, state)
+            i = 0
             while self.repeat(*[data[var_name] for var_name in self.repeat_inputs]):
+                if self.max_iter and i >= self.max_iter:
+                    break
                 forward_numpyop(self.ops, data, state)
+                i += 1
         return [data[key] for key in self.outputs]
