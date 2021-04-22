@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import functools
 import inspect
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union
 
@@ -125,16 +126,12 @@ class Repeat(TensorOp):
         Returns:
             A reference to the updated data dictionary.
         """
-        # tf.while_loop forces requires all loop vars to be eager tensors (tf 2.4), so have to remove the state
-        # variables which are incompatible. Hopefully this will change in future versions.
-        state = state.copy()
-        state.pop('tape', None)
-        state['deferred'] = {}
-        args = ([data[var_name] for var_name in self.repeat_inputs], data, state)
-        args = tf.while_loop(self._tf_cond, self._tf_body, args)
+        args = ([data[var_name] for var_name in self.repeat_inputs], data)
+        # Use functools.partial since state may contain objects which cannot be cast to tensors (ex. gradient tape)
+        args = tf.while_loop(self._tf_cond, functools.partial(self._tf_body, state=state), args)
         return args[1]
 
-    def _tf_cond(self, cnd: List[Tensor], data: Dict[str, Tensor], state: Dict[str, Any]) -> bool:
+    def _tf_cond(self, cnd: List[Tensor], data: Dict[str, Tensor]) -> bool:
         """A helper function determine whether to keep invoking the while method.
 
         Note that `data` and `state` are unused here, but required since tf.while_loop needs the cond and body to have
@@ -143,7 +140,6 @@ class Repeat(TensorOp):
         Args:
             cnd: A list of arguments to be passed to the condition function.
             data: A data dictionary to be used during looping.
-            state: The state variables to be considered during looping.
 
         Returns:
             Whether to continue looping.
@@ -151,7 +147,7 @@ class Repeat(TensorOp):
         return self.repeat(*cnd)
 
     def _tf_body(self, cnd: List[Tensor], data: Dict[str, Tensor],
-                 state: Dict[str, Any]) -> Tuple[List[Tensor], Dict[str, Tensor], Dict[str, Any]]:
+                 state: Dict[str, Any]) -> Tuple[List[Tensor], Dict[str, Tensor]]:
         """A helper function to execute the body of a while method.
 
         Note that `cnd` is unused here, but required since tf.while_loop needs the cond and body to have the same input
@@ -166,4 +162,4 @@ class Repeat(TensorOp):
             The updated `cnd` values, along with the modified data and state dictionaries.
         """
         BaseNetwork._forward_batch(data, state, self.ops)
-        return [data[var_name] for var_name in self.repeat_inputs], data, state
+        return [data[var_name] for var_name in self.repeat_inputs], data
