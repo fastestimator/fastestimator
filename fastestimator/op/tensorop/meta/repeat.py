@@ -122,7 +122,7 @@ class Repeat(TensorOp):
         Returns:
             A reference to the updated data dictionary.
         """
-        i = 1
+        i = 0
         while self.repeat(*[data[var_name] for var_name in self.repeat_inputs]):
             if self.max_iter and i >= self.max_iter:
                 break
