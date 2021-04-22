@@ -54,6 +54,7 @@ class UpdateOp(TensorOp):
     Raise:
         ValueError: When model is mixed-precision and `gradients` is provided.
         ValueError: Network framework is not one of "tf" or "torch".
+        ValueError: `merge_grad` is larger than 1 in multi-GPU configuration.
         RuntimeError: If attempting to modify a PyTorch model which relied on gradients within a different PyTorch model
             which has in turn already undergone a non-deferred update.
     """
@@ -75,6 +76,9 @@ class UpdateOp(TensorOp):
                 warnings.warn("Extra model losses are detected and they will be ignored since the gradients are not "
                               "computed in UpdateOp class.")
             super().__init__(inputs=gradients, outputs=None, mode=mode)
+
+        if torch.cuda.device_count() > 1 and merge_grad > 1:
+            raise ValueError("Argument 'merge_grad' cannot be larger than 1 in multi-GPU configuration")
 
         if not hasattr(model, "loss_name"):
             model.loss_name = {loss_name}

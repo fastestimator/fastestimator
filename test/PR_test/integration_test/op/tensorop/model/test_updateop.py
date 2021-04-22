@@ -148,7 +148,7 @@ class TestUpdateOp(unittest.TestCase):
                     with self.subTest("mixed_precision: {}, merge_grad: {}, take: {}".format(
                             mixed_precision, merge_grad, "gradient" if gradient else "loss")):
 
-                        if mixed_precision and gradient:
+                        if (mixed_precision and gradient) or (torch.cuda.device_count() > 1 and merge_grad > 1):
                             with self.assertRaises(ValueError):
                                 run_test(mixed_precision, merge_grad, gradient)
 
@@ -198,7 +198,7 @@ class TestUpdateOp(unittest.TestCase):
                     with self.subTest("mixed_precision: {}, merge_grad: {}, take: {}".format(
                             mixed_precision, merge_grad, "gradient" if gradient else "loss")):
 
-                        if mixed_precision and gradient:
+                        if (mixed_precision and gradient) or (torch.cuda.device_count() > 1 and merge_grad > 1):
                             with self.assertRaises(ValueError):
                                 run_test(mixed_precision, merge_grad, gradient)
 
@@ -254,7 +254,7 @@ class TestUpdateOp(unittest.TestCase):
                     with self.subTest("mixed_precision: {}, merge_grad: {}, take: {}".format(
                             mixed_precision, merge_grad, "gradient" if gradient else "loss")):
 
-                        if mixed_precision and gradient:
+                        if (mixed_precision and gradient) or (torch.cuda.device_count() > 1 and merge_grad > 1):
                             with self.assertRaises(ValueError):
                                 run_test(mixed_precision, merge_grad, gradient)
 
@@ -311,7 +311,7 @@ class TestUpdateOp(unittest.TestCase):
                     with self.subTest("mixed_precision: {}, merge_grad: {}, take: {}".format(
                             mixed_precision, merge_grad, "gradient" if gradient else "loss")):
 
-                        if mixed_precision and gradient:
+                        if (mixed_precision and gradient) or (torch.cuda.device_count() > 1 and merge_grad > 1):
                             with self.assertRaises(ValueError):
                                 run_test(mixed_precision, merge_grad, gradient)
 
@@ -363,7 +363,7 @@ class TestUpdateOp(unittest.TestCase):
                     with self.subTest("mixed_precision: {}, merge_grad: {}, take: {}".format(
                             mixed_precision, merge_grad, "gradient" if gradient else "loss")):
 
-                        if mixed_precision and gradient:
+                        if (mixed_precision and gradient) or (torch.cuda.device_count() > 1 and merge_grad > 1):
                             with self.assertRaises(ValueError):
                                 run_test(mixed_precision, merge_grad, gradient)
 
@@ -418,7 +418,7 @@ class TestUpdateOp(unittest.TestCase):
                     with self.subTest("mixed_precision: {}, merge_grad: {}, take: {}".format(
                             mixed_precision, merge_grad, "gradient" if gradient else "loss")):
 
-                        if mixed_precision and gradient:
+                        if (mixed_precision and gradient) or (torch.cuda.device_count() > 1 and merge_grad > 1):
                             with self.assertRaises(ValueError):
                                 run_test(mixed_precision, merge_grad, gradient)
 
