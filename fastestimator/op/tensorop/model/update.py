@@ -242,5 +242,5 @@ class UpdateOp(TensorOp):
         """
         if self.framework == "tf":
             a.assign_add(b)
-        else:  # self.framwork == "torch"
+        else:  # self.framework == "torch"
             a += b
