@@ -125,10 +125,9 @@ class UpdateOp(TensorOp):
         if self.gradients is None:  # data is loss
             loss = self._loss_preprocess(data)
             gradients = self._get_gradient(loss, state["tape"])
-            gradients = self._gradient_postprocess(gradients)
-
         else:  # data is gradients
             gradients = data
+        gradients = self._gradient_postprocess(gradients)
 
         if self.merge_grad > 1:
             self._merge_grad_update(gradients, deferred=state["deferred"])
@@ -208,7 +207,7 @@ class UpdateOp(TensorOp):
                 strategy = tf.distribute.get_strategy()
                 # for multi-gpu training, the gradient will be combined by sum, normalize the gradient
                 if isinstance(strategy, tf.distribute.MirroredStrategy):
-                    gradients = gradients / strategy.num_replicas_in_sync
+                    gradients = [gs / strategy.num_replicas_in_sync for gs in gradients]
 
             if self.model.mixed_precision:
                 # scale down gradient to balance scale-up loss
@@ -233,7 +232,11 @@ class UpdateOp(TensorOp):
         self._assign_add(self.step, 1)
 
         if self.step % self.merge_grad == 0:
-            update_model(model=self.model, gradients=self.grad_sum, defer=self.defer, deferred=deferred)
+            average_grad = [gs / self.merge_grad for gs in self.grad_sum]
+            update_model(model=self.model,
+                         gradients=average_grad,
+                         defer=self.defer,
+                         deferred=deferred)
             for gs in self.grad_sum:
                 self._assign_add(gs, -gs)  # zero the gradient in place
 
