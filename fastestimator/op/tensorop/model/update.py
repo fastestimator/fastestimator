@@ -78,7 +78,8 @@ class UpdateOp(TensorOp):
             super().__init__(inputs=gradients, outputs=None, mode=mode)
 
         if torch.cuda.device_count() > 1 and merge_grad > 1:
-            raise ValueError("Argument 'merge_grad' cannot be larger than 1 in multi-GPU configuration")
+            raise ValueError("Currently FastEstimator doesn't support merge_grad feature in multi-GPU configuration "
+                             "and thus 'merge_grad' cannot be larger than 1")
 
         if not hasattr(model, "loss_name"):
             model.loss_name = {loss_name}
