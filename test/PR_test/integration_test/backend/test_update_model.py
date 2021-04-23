@@ -25,11 +25,15 @@ class TestUpdateModel(unittest.TestCase):
         strategy = tf.distribute.get_strategy()
         if isinstance(strategy, tf.distribute.MirroredStrategy):
             gradients = strategy.run(update, args=(x, model))
+            gradients = [x.values[0].numpy() for x in gradients]  # from PerReplica to numpy
+            # only take the first because other are the same
         else:
             gradients = update(x, model)
+            gradients = [x.numpy() for x in gradients]
+        gradients_factor = max(torch.cuda.device_count(), 1)  # if multi-gpu, the gradient will accumulate
         new_weights = [x.numpy() for x in model.trainable_variables]
         for init_w, new_w, grad in zip(init_weights, new_weights, gradients):
-            new_w_ans = init_w - grad * lr
+            new_w_ans = init_w - grad * lr * gradients_factor
             self.assertTrue(np.allclose(new_w_ans, new_w))
 
     def test_torch_model_with_get_gradient(self):
@@ -66,7 +70,7 @@ class TestUpdateModel(unittest.TestCase):
             strategy.run(update, args=(gradients, model))
         else:
             update(gradients, model)
-
+        gradients = [x.numpy() for x in gradients]  # tensor to numpy
         new_weights = [x.numpy() for x in model.trainable_variables]
         for init_w, new_w, grad in zip(init_weights, new_weights, gradients):
             new_w_ans = init_w - grad * lr

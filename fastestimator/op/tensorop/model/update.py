@@ -54,6 +54,7 @@ class UpdateOp(TensorOp):
     Raise:
         ValueError: When model is mixed-precision and `gradients` is provided.
         ValueError: Network framework is not one of "tf" or "torch".
+        ValueError: `merge_grad` is larger than 1 in multi-GPU configuration.
         RuntimeError: If attempting to modify a PyTorch model which relied on gradients within a different PyTorch model
             which has in turn already undergone a non-deferred update.
     """
@@ -75,6 +76,10 @@ class UpdateOp(TensorOp):
                 warnings.warn("Extra model losses are detected and they will be ignored since the gradients are not "
                               "computed in UpdateOp class.")
             super().__init__(inputs=gradients, outputs=None, mode=mode)
+
+        if torch.cuda.device_count() > 1 and merge_grad > 1:
+            raise ValueError("Currently FastEstimator doesn't support merge_grad feature in multi-GPU configuration "
+                             "and thus 'merge_grad' cannot be larger than 1")
 
         if not hasattr(model, "loss_name"):
             model.loss_name = {loss_name}
@@ -121,10 +126,9 @@ class UpdateOp(TensorOp):
         if self.gradients is None:  # data is loss
             loss = self._loss_preprocess(data)
             gradients = self._get_gradient(loss, state["tape"])
-            gradients = self._gradient_postprocess(gradients)
-
         else:  # data is gradients
             gradients = data
+        gradients = self._gradient_postprocess(gradients)
 
         if self.merge_grad > 1:
             self._merge_grad_update(gradients, deferred=state["deferred"])
@@ -204,7 +208,7 @@ class UpdateOp(TensorOp):
                 strategy = tf.distribute.get_strategy()
                 # for multi-gpu training, the gradient will be combined by sum, normalize the gradient
                 if isinstance(strategy, tf.distribute.MirroredStrategy):
-                    gradients = gradients / strategy.num_replicas_in_sync
+                    gradients = [gs / strategy.num_replicas_in_sync for gs in gradients]
 
             if self.model.mixed_precision:
                 # scale down gradient to balance scale-up loss
@@ -229,7 +233,11 @@ class UpdateOp(TensorOp):
         self._assign_add(self.step, 1)
 
         if self.step % self.merge_grad == 0:
-            update_model(model=self.model, gradients=self.grad_sum, defer=self.defer, deferred=deferred)
+            average_grad = [gs / self.merge_grad for gs in self.grad_sum]
+            update_model(model=self.model,
+                         gradients=average_grad,
+                         defer=self.defer,
+                         deferred=deferred)
             for gs in self.grad_sum:
                 self._assign_add(gs, -gs)  # zero the gradient in place
 
