@@ -65,10 +65,10 @@ class GoldenSection(Search):
         self.integer = integer
         self.arg_name = args.pop()
 
-    def _convert(self, x):
+    def _convert(self, x: Union[float, int]):
         return int(x) if self.integer else x
 
-    def _is_better(self, a, b):
+    def _is_better(self, a: float, b: float):
         return a > b if self.best_mode == "max" else a < b
 
     def _fit(self):
