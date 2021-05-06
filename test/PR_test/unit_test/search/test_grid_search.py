@@ -20,19 +20,19 @@ from fastestimator.search.grid_search import GridSearch
 class TestSearch(unittest.TestCase):
     def test_non_dict_params(self):
         with self.assertRaises(AssertionError):
-            GridSearch(score_fn=lambda index, x: x, params=False)
+            GridSearch(score_fn=lambda search_idx, x: x, params=False)
 
     def test_dict_params_wrong_args(self):
         with self.assertRaises(AssertionError):
-            GridSearch(score_fn=lambda index, x: x, params={"lr": [1, 2, 3]})
+            GridSearch(score_fn=lambda search_idx, x: x, params={"lr": [1, 2, 3]})
 
     def test_correct_output(self):
-        search = GridSearch(score_fn=lambda index, a, b: a + b, params={"a": [1, 2, 3], "b": [4, 5, 6]})
+        search = GridSearch(score_fn=lambda search_idx, a, b: a + b, params={"a": [1, 2, 3], "b": [4, 5, 6]})
         search.fit()
-        self.assertEqual(search.get_best_parameters(), {"a": 3, "b": 6, "index": 9})
+        self.assertEqual(search.get_best_parameters(), {"a": 3, "b": 6, "search_idx": 9})
 
     def test_notebook_restart(self):
-        search = GridSearch(score_fn=lambda index, a, b: a + b, params={"a": [1, 2, 3], "b": [4, 5, 6]})
+        search = GridSearch(score_fn=lambda search_idx, a, b: a + b, params={"a": [1, 2, 3], "b": [4, 5, 6]})
         search.fit()
         search.fit()
-        self.assertEqual(search.index, 9)
+        self.assertEqual(search.search_idx, 9)
