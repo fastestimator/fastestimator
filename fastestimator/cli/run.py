@@ -39,8 +39,17 @@ def run(args: Dict[str, Any], unknown: Optional[List[str]]) -> None:
     module_name = os.path.splitext(os.path.basename(entry_point))[0]
     dir_name = os.path.abspath(os.path.dirname(entry_point))
     sys.path.insert(0, dir_name)
-    spec_module = __import__(module_name, globals(), locals(), ["fastestimator_run"])
-    spec_module.fastestimator_run(**hyperparameters)
+    spec_module = __import__(module_name, globals(), locals())
+    if hasattr(spec_module, "fastestimator_run"):
+        spec_module.fastestimator_run(**hyperparameters)
+    elif hasattr(spec_module, "get_estimator"):
+        est = spec_module.get_estimator(**hyperparameters)
+        if "train" in est.pipeline.data:
+            est.fit()
+        if "test" in est.pipeline.data:
+            est.test()
+    else:
+        raise ValueError("The file {} does not contain 'fastestimator_run' or 'get_estimator'".format(module_name))
 
 
 def configure_run_parser(subparsers: argparse._SubParsersAction) -> None:
