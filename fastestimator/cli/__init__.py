@@ -13,5 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.cli.logs import configure_log_parser
-from fastestimator.cli.main import run
+from fastestimator.cli.main import run_main
+from fastestimator.cli.run import configure_run_parser
 from fastestimator.cli.train import configure_test_parser, configure_train_parser

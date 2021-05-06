@@ -24,11 +24,11 @@ class TestMain(unittest.TestCase):
     * fe.cli.logs.configure_log_parser
     * fe.cli.train.configure_test_parser
     * fe.cli.train.configure_train_parser
-    * fe.cli.run
+    * fe.cli.run_main
     """
     def test_cli_main_run_train(self):
         with patch('fastestimator.cli.train.train') as fake:
-            fe.cli.run(["train", "example_entry.py", "--epochs", "3", "--batch_size", "64"])
+            fe.cli.run_main(["train", "example_entry.py", "--epochs", "3", "--batch_size", "64"])
             args, unknown = fake.call_args[0]
 
             with self.subTest('args["mode"]'):
@@ -48,7 +48,7 @@ class TestMain(unittest.TestCase):
 
     def test_cli_main_run_test(self):
         with patch('fastestimator.cli.train.test') as fake:
-            fe.cli.run(["test", "example_entry.py", "--randon", "200"])
+            fe.cli.run_main(["test", "example_entry.py", "--randon", "200"])
             args, unknown = fake.call_args[0]
 
             with self.subTest('args["mode"]'):
@@ -65,7 +65,7 @@ class TestMain(unittest.TestCase):
 
     def test_cli_main_run_logs(self):
         with patch('fastestimator.cli.logs.logs') as fake:
-            fe.cli.run(["logs", "example_entry.py", "-b", "-v"])
+            fe.cli.run_main(["logs", "example_entry.py", "-b", "-v"])
             args, unknown = fake.call_args[0]
 
             with self.subTest('args["mode"]'):
