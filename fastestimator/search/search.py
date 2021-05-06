@@ -12,29 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from abc import ABC, abstractmethod
 import inspect
 import json
 import os
 from typing import Any, Callable, Dict, List, Tuple
 
 
-class Search:
-    """Base search class that other search classes inherit from.
+class Search(ABC):
+    """Base class which other searches inherit from.
 
-    The base search class takes care of the evaluation logging, saving and loading, it is also able to recover from
+    The base search class takes care of evaluation logging, saving and loading, and is also able to recover from
     interrupted search runs and cache the search history.
 
     Args:
-        score_fn: Objective function that measures the fitness, index must be one of its argument.
-        best_mode: Whether maximal or minimal fitness is desired, must be either 'min' or 'max'.
-        name: The name of the search instance, this is used for saving and loading purpose.
+        score_fn: Objective function that measures search fitness. One of its arguments must be 'search_idx' which will
+            be automatically provided by the search routine. This can help with file saving / logging during the search.
+        best_mode: Whether maximal or minimal fitness is desired. Must be either 'min' or 'max'.
+        name: The name of the search instance. This is used for saving and loading purposes.
 
     Raises:
-        AssertionError: If `best_mode` is not 'min' or 'max', or index is not an input argument of `score_fn`.
+        AssertionError: If `best_mode` is not 'min' or 'max', or search_idx is not an input argument of `score_fn`.
     """
-    def __init__(self, score_fn: Callable[[Any], float], best_mode: str = "max", name: str = "search"):
+    def __init__(self, score_fn: Callable[..., float], best_mode: str = "max", name: str = "search"):
         assert best_mode in ["max", "min"], "best_mode must be either 'max' or 'min'"
-        assert "index" in inspect.signature(score_fn).parameters, "score_fn must take 'index' as one of its input arg"
+        assert "search_idx" in inspect.signature(score_fn).parameters, \
+            "score_fn must take 'search_idx' as one of its input arguments"
         self.score_fn = score_fn
         self.best_mode = best_mode
         self.name = name
@@ -42,67 +45,68 @@ class Search:
         self._initialize_state()
 
     def _initialize_state(self):
-        self.index = 0
-        self.search_result = []
+        self.search_idx = 0
+        self.search_results = []
         self.evaluation_cache = {}
 
     def evaluate(self, **kwargs: Any) -> float:
         """Evaluate the score function and return the score.
 
         Args:
-            kwargs: Any keyword argument.
+            kwargs: Any keyword argument(s) to pass to the score function. Should not contain search_idx as this will be
+                populated manually here.
 
         Returns:
             Fitness score calculated by `score_fn`.
         """
         # evaluation caching
-        if hash(tuple(sorted(kwargs.items()))) in self.evaluation_cache:
-            score = self.evaluation_cache[hash(tuple(sorted(kwargs.items())))]
+        hash_value = hash(tuple(sorted(kwargs.items())))
+        if hash_value in self.evaluation_cache:
+            score = self.evaluation_cache[hash_value]
         else:
-            self.index += 1
-            hash_value = hash(tuple(sorted(kwargs.items())))
-            kwargs["index"] = self.index
+            self.search_idx += 1
+            kwargs["search_idx"] = self.search_idx
             score = self.score_fn(**kwargs)
-            self.search_result.append((kwargs, score))
+            self.search_results.append((kwargs, score))
             self.evaluation_cache[hash_value] = score
             if self.save_dir is not None:
                 self.save(self.save_dir)
         return score
 
-    def get_best_parameters(self, display_index: bool = True) -> Dict[str, Any]:
-        """Get the best parameter from the current search history.
-
-        Args:
-            display_index: Whether to display experiment index in the final parameter output.
+    def get_best_parameters(self) -> Dict[str, Any]:
+        """Get the best parameters from the current search history.
 
         Returns:
-            The parameter (in dictioanry) that corresponds to the best score.
+            The parameters which correspond to the best score.
+
+        Raises:
+            RuntimeError: If the search hasn't been run yet.
         """
+        if not self.search_results:
+            raise RuntimeError("No search has been run yet, so best parameters are not available.")
         if self.best_mode == "max":
-            best_params = max(self.search_result, key=lambda x: x[1])[0]
-        elif self.best_mode == "min":
-            best_params = min(self.search_result, key=lambda x: x[1])[0]
-        if not display_index:
-            best_params.pop('index', None)
+            best_params = max(self.search_results, key=lambda x: x[1])[0]
+        else:  # min
+            best_params = min(self.search_results, key=lambda x: x[1])[0]
         return best_params
 
     def get_search_results(self) -> List[Tuple[Dict[str, Any], float]]:
         """Get the current search history.
 
         Returns:
-            The evluation history list, with each element to be a tuple of parameter and score.
+            The evluation history list, with each element being a tuple of parameters and score.
         """
-        return self.search_result
+        return self.search_results.copy()
 
-    def get_state(self) -> Dict[Any, Any]:
+    def _get_state(self) -> Dict[str, Any]:
         """Get the current state of the search instance, the state is the variables that can be saved or loaded.
 
         Returns:
             The dictionary containing the state variable.
         """
-        return {"index": self.index, "search_result": self.search_result}
+        return {"search_results": self.search_results}
 
-    def save(self, save_dir: str):
+    def save(self, save_dir: str) -> None:
         """Save the state of the instance to a specific directory, it will create `name.json` file in the `save_dir`.
 
         Args:
@@ -110,11 +114,11 @@ class Search:
         """
         file_path = os.path.join(save_dir, "{}.json".format(self.name))
         with open(file_path, 'w') as fp:
-            json.dump(self.get_state(), fp, indent=4)
+            json.dump(self._get_state(), fp, indent=4)
         print("FastEstimator-Search: Saving the search state to {}".format(file_path))
 
-    def load(self, load_dir: str, not_exist_ok: bool = False):
-        """Load the state of search from a given directory, it will look for `name.json` from the `load_dir`.
+    def load(self, load_dir: str, not_exist_ok: bool = False) -> None:
+        """Load the state of search from a given directory. It will look for `name.json` within the `load_dir`.
 
         Args:
             load_dir: The folder path to load the state from.
@@ -122,28 +126,31 @@ class Search:
         """
         self._initialize_state()
         # load from file
+        load_dir = os.path.abspath(os.path.normpath(load_dir))
         file_path = os.path.join(load_dir, "{}.json".format(self.name))
         if os.path.exists(file_path):
             with open(file_path, 'r') as fp:
                 state = json.load(fp)
             # restore all state variables from get_state
-            for key, value in state.items():
-                exec("self.{} = value".format(key))
-            # restore evaluation cache (not a state variable)
-            for kwarg, score in self.search_result:
-                kwarg_no_index = {key: value for key, value in kwarg.items() if key != "index"}
-                self.evaluation_cache[hash(tuple(sorted(kwarg_no_index.items())))] = score
+            self.__dict__.update(state)
+            # restore evaluation cache and search_idx
+            for kwargs, score in self.search_results:
+                kwargs = kwargs.copy()
+                search_idx = kwargs.pop('search_idx')  # This won't appear in the hash later
+                self.search_idx = self.search_idx if self.search_idx > search_idx else search_idx
+                # Each python session uses a unique salt for hash, so can't save the hashes to disk for re-use
+                self.evaluation_cache[hash(tuple(sorted(kwargs.items())))] = score
             print("FastEstimator-Search: Loading the search state from {}".format(file_path))
         elif not not_exist_ok:
             raise ValueError("cannot find file to load in {}".format(file_path))
 
-    def fit(self, save_dir: str = None):
+    def fit(self, save_dir: str = None) -> None:
         """Start the search.
 
         Args:
             save_dir: When `save_dir` is provided, the search results will be backed up to the `save_dir` after each
-                evaluation, in addition, it will load the search state from `save_dir` if possible. This is useful when
-                the search might experience interruption, using the same command can allow for self-recovery.
+                evaluation. It will also attempt to load the search state from `save_dir` if possible. This is useful
+                when the search might experience interruption since it can be restarted using the same command.
         """
         if save_dir is None:
             self._initialize_state()
@@ -152,5 +159,6 @@ class Search:
             self.load(save_dir, not_exist_ok=True)
         self._fit()
 
-    def _fit(self):
+    @abstractmethod
+    def _fit(self) -> None:
         raise NotImplementedError

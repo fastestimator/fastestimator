@@ -20,21 +20,21 @@ from fastestimator.search.golden_section import GoldenSection
 class TestSearch(unittest.TestCase):
     def test_reversed_x_max_x_min(self):
         with self.assertRaises(AssertionError):
-            GoldenSection(score_fn=lambda index, n: (n - 3)**2, x_min=6, x_max=0, max_iter=10)
+            GoldenSection(score_fn=lambda search_idx, n: (n - 3)**2, x_min=6, x_max=0, max_iter=10)
 
     def test_invalid_score_fn(self):
         with self.assertRaises(AssertionError):
-            GoldenSection(score_fn=lambda index, n, q: (n - 3)**2, x_min=0, x_max=6, max_iter=10)
+            GoldenSection(score_fn=lambda search_idx, n, q: (n - 3)**2, x_min=0, x_max=6, max_iter=10)
 
     def test_integer_results(self):
-        search = GoldenSection(score_fn=lambda index, n: (n - 3)**2, x_min=0, x_max=6, max_iter=10, best_mode="min")
+        search = GoldenSection(score_fn=lambda search_idx, n: (n - 3)**2, x_min=0, x_max=6, max_iter=10, best_mode="min")
         search.fit()
-        self.assertEqual(search.get_best_parameters(display_index=False), {"n": 3})
+        self.assertEqual(search.get_best_parameters()["n"], 3)
 
     def test_float_results(self):
         search = GoldenSection(
-            score_fn=lambda index, n: (n - 3)**2, x_min=0, x_max=6, max_iter=10, best_mode="min", integer=False)
+            score_fn=lambda search_idx, n: (n - 3)**2, x_min=0, x_max=6, max_iter=10, best_mode="min", integer=False)
         search.fit()
         answer = 3.0
-        result = search.get_best_parameters(display_index=False)["n"]
+        result = search.get_best_parameters()["n"]
         self.assertTrue(abs(result - answer) < 0.01)

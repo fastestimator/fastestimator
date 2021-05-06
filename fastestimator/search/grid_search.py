@@ -14,36 +14,37 @@
 # ==============================================================================
 import inspect
 import itertools
-from typing import Any, Callable, Dict, List
+from typing import Callable, Dict, List
 
 from fastestimator.search.search import Search
 
 
 class GridSearch(Search):
-    """A search class that performs the grid search.
+    """A class which executes a grid search.
 
-    Grid search can be used to find the optimal combination of one or more hyperparameters based on its score function.
+    Grid search can be used to find the optimal combination of one or more hyperparameters.
 
     ```python
-    search = GridSearch(score_fn=lambda index, a, b: a + b, params={"a": [1, 2, 3], "b": [4, 5, 6]})
+    search = GridSearch(score_fn=lambda search_idx, a, b: a + b, params={"a": [1, 2, 3], "b": [4, 5, 6]})
     search.fit()
-    print(search.get_best_parameters()) # {"a": 3, "b": 6, "index": 9}
+    print(search.get_best_parameters()) # {"a": 3, "b": 6, "search_idx": 9}
     ```
 
     Args:
-        score_fn: Objective function that measures the fitness, index must be one of its argument.
-        params: Dictionary with key name matching `score_fn`'s inputs, value to be the list of options.
-        best_mode: Whether maximal or minimal fitness is desired, must be either 'min' or 'max'.
-        name: The name of the search instance, this is used for saving and loading purpose.
+        score_fn: Objective function that measures search fitness. One of its arguments must be 'search_idx' which will
+            be automatically provided by the search routine. This can help with file saving / logging during the search.
+        params: A dictionary with key names matching the `score_fn`'s inputs. Its values should be lists of options.
+        best_mode: Whether maximal or minimal fitness is desired. Must be either 'min' or 'max'.
+        name: The name of the search instance. This is used for saving and loading purposes.
 
     Raises:
         AssertionError: If `params` is not dictionary, or contains key not used by `score_fn`
     """
     def __init__(self,
-                 score_fn: Callable[[Any], float],
+                 score_fn: Callable[..., float],
                  params: Dict[str, List],
                  best_mode: str = "max",
-                 name: str = "grid-search"):
+                 name: str = "grid_search"):
         assert isinstance(params, dict), "must provide params as a dictionary"
         score_fn_args, params_args = set(inspect.signature(score_fn).parameters.keys()), set(params.keys())
         assert score_fn_args.issuperset(params_args), "unused param {} in score_fn".format(params_args - score_fn_args)
@@ -54,4 +55,4 @@ class GridSearch(Search):
         experiments = (dict(zip(self.params, x)) for x in itertools.product(*self.params.values()))
         for exp in experiments:
             self.evaluate(**exp)
-        print("FastEstimator-Search: grid search finished!")
+        print("FastEstimator-Search: Grid Search Finished!")
