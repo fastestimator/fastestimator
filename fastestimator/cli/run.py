@@ -22,7 +22,7 @@ from fastestimator.cli.cli_util import parse_cli_to_dictionary
 
 
 def run(args: Dict[str, Any], unknown: Optional[List[str]]) -> None:
-    """invoke fastestimator_run function from a file.
+    """Invoke the fastestimator_run function from a file.
 
     Args:
         args: A dictionary containing location of the FE file under the 'entry_point' key, as well as an optional
