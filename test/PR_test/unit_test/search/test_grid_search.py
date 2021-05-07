@@ -29,7 +29,7 @@ class TestSearch(unittest.TestCase):
     def test_correct_output(self):
         search = GridSearch(score_fn=lambda search_idx, a, b: a + b, params={"a": [1, 2, 3], "b": [4, 5, 6]})
         search.fit()
-        self.assertEqual(search.get_best_parameters(), {"a": 3, "b": 6, "search_idx": 9})
+        self.assertEqual(search.get_best_results(), ({"a": 3, "b": 6, "search_idx": 9}, 9))
 
     def test_notebook_restart(self):
         search = GridSearch(score_fn=lambda search_idx, a, b: a + b, params={"a": [1, 2, 3], "b": [4, 5, 6]})
