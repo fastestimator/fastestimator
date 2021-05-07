@@ -55,4 +55,6 @@ class GridSearch(Search):
         experiments = (dict(zip(self.params, x)) for x in itertools.product(*self.params.values()))
         for exp in experiments:
             self.evaluate(**exp)
-        print("FastEstimator-Search: Grid Search Finished!")
+        best_results = self.get_best_results()
+        print("FastEstimator-Search: Grid Search Finished, best parameters: {}, best score: {}".format(
+            best_results[0], best_results[1]))

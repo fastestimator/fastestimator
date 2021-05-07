@@ -29,12 +29,12 @@ class TestSearch(unittest.TestCase):
     def test_integer_results(self):
         search = GoldenSection(score_fn=lambda search_idx, n: (n - 3)**2, x_min=0, x_max=6, max_iter=10, best_mode="min")
         search.fit()
-        self.assertEqual(search.get_best_parameters()["n"], 3)
+        self.assertEqual(search.get_best_results()[0]["n"], 3)
 
     def test_float_results(self):
         search = GoldenSection(
             score_fn=lambda search_idx, n: (n - 3)**2, x_min=0, x_max=6, max_iter=10, best_mode="min", integer=False)
         search.fit()
         answer = 3.0
-        result = search.get_best_parameters()["n"]
+        result = search.get_best_results()[0]["n"]
         self.assertTrue(abs(result - answer) < 0.01)

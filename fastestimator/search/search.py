@@ -71,13 +71,14 @@ class Search(ABC):
             self.evaluation_cache[hash_value] = score
             if self.save_dir is not None:
                 self.save(self.save_dir)
+            print("FastEstimator-Search: Evaluated {}, score: {}".format(kwargs, score))
         return score
 
-    def get_best_parameters(self) -> Dict[str, Any]:
-        """Get the best parameters from the current search history.
+    def get_best_results(self) -> Tuple[Dict[str, Any], float]:
+        """Get the best result from the current search history.
 
         Returns:
-            The parameters which correspond to the best score.
+            The best results in the format of (parameter, score)
 
         Raises:
             RuntimeError: If the search hasn't been run yet.
@@ -85,10 +86,10 @@ class Search(ABC):
         if not self.search_results:
             raise RuntimeError("No search has been run yet, so best parameters are not available.")
         if self.best_mode == "max":
-            best_params = max(self.search_results, key=lambda x: x[1])[0]
+            best_results = max(self.search_results, key=lambda x: x[1])
         else:  # min
-            best_params = min(self.search_results, key=lambda x: x[1])[0]
-        return best_params
+            best_results = min(self.search_results, key=lambda x: x[1])
+        return best_results
 
     def get_search_results(self) -> List[Tuple[Dict[str, Any], float]]:
         """Get the current search history.

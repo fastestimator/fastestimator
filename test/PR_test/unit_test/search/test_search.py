@@ -45,13 +45,13 @@ class TestSearch(unittest.TestCase):
         search = DummySearch(score_fn=lambda search_idx, x: x)
         search.evaluate(x=1)
         search.evaluate(x=2)
-        self.assertEqual(search.get_best_parameters(), {"search_idx": 2, "x": 2})
+        self.assertEqual(search.get_best_results(), ({"search_idx": 2, "x": 2}, 2))
 
     def test_best_param_min(self):
         search = DummySearch(score_fn=lambda search_idx, x: x, best_mode="min")
         search.evaluate(x=1)
         search.evaluate(x=2)
-        self.assertEqual(search.get_best_parameters(), {"search_idx": 1, "x": 1})
+        self.assertEqual(search.get_best_results(), ({"search_idx": 1, "x": 1}, 1))
 
     def test_get_state(self):
         search = DummySearch(score_fn=lambda search_idx, x: x)
