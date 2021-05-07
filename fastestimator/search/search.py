@@ -18,6 +18,7 @@ import json
 import os
 from typing import Any, Callable, Dict, List, Tuple
 
+from fastestimator.network import build
 
 class Search(ABC):
     """Base class which other searches inherit from.
@@ -65,6 +66,7 @@ class Search(ABC):
             score = self.evaluation_cache[hash_value]
         else:
             self.search_idx += 1
+            build.count = 0  # Resetting the build count to refresh the model names
             kwargs["search_idx"] = self.search_idx
             score = self.score_fn(**kwargs)
             self.search_results.append((kwargs, score))
