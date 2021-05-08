@@ -39,8 +39,7 @@ class GoldenSection(Search):
         x_min: Lower limit (inclusive) of the search space.
         x_max: Upper limit (inclusive) of the search space.
         max_iter: Maximum number of iterations to run. The range at a given iteration i is 0.618**i * (x_max - x_min).
-            Note that the scoring function will always be evaluated at least twice: once at x_max and once at x_min.
-            These two evaluations do not count towards max_iter.
+            Note that the scoring function will always be evaluated twice before any iterations begin.
         integer: Whether the optimized variable is a discrete integer.
         best_mode: Whether maximal or minimal fitness is desired. Must be either 'min' or 'max'.
         name: The name of the search instance. This is used for saving and loading purposes.
