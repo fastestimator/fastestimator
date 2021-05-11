@@ -30,7 +30,10 @@ class GaussianBlur(ImageOnlyAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        blur_limit: maximum Gaussian kernel size for blurring the input image. Should be odd and in range [3, inf).
+        blur_limit: Maximum Gaussian kernel size for blurring the input image. Should be odd and in range [3, inf).
+        sigma_limit: Gaussian kernel standard deviation. Must be greater in range [0, inf). If set single value
+            sigma_limit will be in range (0, sigma_limit). If set to 0 sigma will be computed as sigma =
+            0.3*((ksize-1)*0.5 - 1)
 
     Image types:
         uint8, float32
@@ -39,8 +42,10 @@ class GaussianBlur(ImageOnlyAlbumentation):
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
-                 blur_limit: Union[int, Tuple[int, int]] = 7):
-        super().__init__(GaussianBlurAlb(blur_limit=blur_limit, always_apply=True),
+                 blur_limit: Union[int, Tuple[int, int]] = 7,
+                 sigma_limit: Union[float, Tuple[float, float]] = 0.0):
+
+        super().__init__(GaussianBlurAlb(blur_limit=blur_limit, always_apply=True, sigma_limit=sigma_limit),
                          inputs=inputs,
                          outputs=outputs,
                          mode=mode)

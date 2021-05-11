@@ -24,6 +24,7 @@ from fastestimator.op.numpyop.univariate.channel_transpose import ChannelTranspo
 from fastestimator.op.numpyop.univariate.clahe import CLAHE
 from fastestimator.op.numpyop.univariate.coarse_dropout import CoarseDropout
 from fastestimator.op.numpyop.univariate.color import Color
+from fastestimator.op.numpyop.univariate.color_jitter import ColorJitter
 from fastestimator.op.numpyop.univariate.contrast import Contrast
 from fastestimator.op.numpyop.univariate.downscale import Downscale
 from fastestimator.op.numpyop.univariate.equalize import Equalize
