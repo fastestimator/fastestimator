@@ -8,10 +8,15 @@ FastEstimator comes with a set of CLI commands that can help users train and tes
 * [Sending Input Args to `get_estimator`](#t10args)
     * [Using --arg](#t10arg)
     * [Using a JSON file](#t10json)
+    * [System argument](#t10system)
 
 <a id='t10intro'></a>
 ## How Does the CLI Work
-Given a python file, the FastEstimator CLI looks for a `get_estimator` function to get the estimator definition. It then calls either the `fit()` or `test()` functions on the returned estimator instance to train or test the model.
+* `fastestimator train`: the command will look for `get_estimator` function then calls the `fit()` method on the returned estimator instance to start the training.
+* `fastestimator test`: the command will look for `get_estimator` function then calls the `test()` method on the returned estimator instance to start the training.
+* `fastestimator run`: the command will look for `fastestimator_run` function and call the function. If `fastestimator_run` is not available, it will then look for `get_estimator` and call `fit()` and/ or `test` dependending on existence of data.
+
+###
 
 <a id='t10usage'></a>
 ## CLI Usage
@@ -29,9 +34,15 @@ To call `estimator.test()` and start testing on terminal:
 $ fastestimator test mnist_tf.py
 ```
 
+To first call `estimator.fit()` then `estimator.test()`, you can use:
+``` bash
+$ fastestimator run mnist_tf.py
+```
+
+
 <a id='t10args'></a>
-## Sending Input Args to `get_estimator`
-We can also pass arguments to the `get_estimator` function call from the CLI. The following code snippet shows the `get_estimator` method for our MNIST example:
+## Sending Input Args to `get_estimator` or `fastestimator_run`
+We can also pass arguments to the `get_estimator` or `fastestimator_run` function call from the CLI. The following code snippet shows the `get_estimator` method for our MNIST example:
 ```python
 def get_estimator(epochs=2, batch_size=32, ...):
     ...
@@ -60,8 +71,8 @@ JSON:
 ``` bash
 $ fastestimator train mnist_tf.py --hyperparameters hp.json
 ```
-
-## System argument
-There are some default system arguments in the CLI, here are a list of them:
-* `warmup`: controls whether to perform warmup checking before the actual training starts. Default is True. Users can disable warmup before training by `--warmup False`.
-* `summary`: this is the same argument used in `estimator.fit()` or `estimator.test()`, it allows users to specify experiment name when generating reports. For example, Users can set experiment name by `--summary exp_name`.
+<a id='t10system'></a>
+### System argument
+There are some default system arguments in the `fastestimator train` and `fastestimator test` command, here are a list of them:
+* `warmup`:  Only available in `fastestimator train`, it controls whether to perform warmup checking before the actual training starts. Default is True. Users can disable warmup before training by `--warmup False`.
+* `summary`: Available in both `fastestimator train` and `fastestimator test`, this is the same argument used in `estimator.fit()` or `estimator.test()`, it allows users to specify experiment name when generating reports. For example, Users can set experiment name by `--summary exp_name`.
