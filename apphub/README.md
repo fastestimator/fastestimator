@@ -64,7 +64,6 @@ $ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 ### AutoML
 * **RandAugment**: Practical automated data augmentation with a reduced search space. [[paper](https://arxiv.org/abs/1909.13719)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/automl/rand_augment/rand_augment_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/automl/rand_augment/rand_augment_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/automl/rand_augment/rand_augment.ipynb)]
 
-
 ### Contrastive Learing
 * **SimCLR**:  SimCLR of ciFAIR-10 Image Classification [[paper](https://arxiv.org/pdf/2002.05709.pdf)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/contrastive_learning/simclr/simclr_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/contrastive_learning/simclr/simclr_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/contrastive_learning/simclr/simclr.ipynb)]
 
