@@ -154,7 +154,6 @@ def pretrain_model(epochs, batch_size, max_train_steps_per_epoch, save_dir):
         train_data=train_data,
         batch_size=batch_size,
         ops=[
-            ToFloat(inputs="x", outputs="x"),
             PadIfNeeded(min_height=40, min_width=40, image_in="x", image_out="x", mode="train"),
 
             # augmentation 1
@@ -167,6 +166,7 @@ def pretrain_model(epochs, batch_size, max_train_steps_per_epoch, save_dir):
             Sometimes(GaussianBlur(inputs="x_aug", outputs="x_aug", blur_limit=(3, 3), sigma_limit=(0.1, 2.0)),
                       prob=0.5),
             ChannelTranspose(inputs="x_aug", outputs="x_aug"),
+            ToFloat(inputs="x_aug", outputs="x_aug"),
 
             # augmentation 2
             RandomCrop(32, 32, image_in="x", image_out="x_aug2"),
@@ -178,6 +178,7 @@ def pretrain_model(epochs, batch_size, max_train_steps_per_epoch, save_dir):
             Sometimes(GaussianBlur(inputs="x_aug2", outputs="x_aug2", blur_limit=(3, 3), sigma_limit=(0.1, 2.0)),
                       prob=0.5),
             ChannelTranspose(inputs="x_aug2", outputs="x_aug2"),
+            ToFloat(inputs="x_aug2", outputs="x_aug2")
         ])
 
     model_con = fe.build(model_fn=lambda: ResNet9OneLayerHead(length=128), optimizer_fn="adam")
