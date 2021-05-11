@@ -64,7 +64,11 @@ $ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 ### AutoML
 * **RandAugment**: Practical automated data augmentation with a reduced search space. [[paper](https://arxiv.org/abs/1909.13719)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/automl/rand_augment/rand_augment_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/automl/rand_augment/rand_augment_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/automl/rand_augment/rand_augment.ipynb)]
 
-### Curriculum Learning
+
+### Contrastive Learing
+* **SimCLR**:  SimCLR of ciFAIR-10 Image Classification [[paper](https://arxiv.org/pdf/2002.05709.pdf)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/contrastive_learning/simclr/simclr.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/contrastive_learning/simclr/simclr_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/contrastive_learning/simclr/simclr.ipynb)]
+
+### Curriculum Learning [[paper]]
 * **SuperLoss**: Easy and automatic curriculum learning using a special loss. [[paper](https://papers.nips.cc/paper/2020/file/2cfa8f9e50e0f510ede9d12338a5f564-Paper.pdf)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/curriculum_learning/superloss/superloss_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/curriculum_learning/superloss/superloss_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/curriculum_learning/superloss/superloss.ipynb)]
 
 ### Image Classification
