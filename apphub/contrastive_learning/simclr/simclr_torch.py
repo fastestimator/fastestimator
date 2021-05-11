@@ -45,7 +45,6 @@ class ResNet9OneLayerHead(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.encoder(x)
-        # pdb.set_trace()
         x = self.fc1(x)
         return x
 
