@@ -75,4 +75,4 @@ $ fastestimator train mnist_tf.py --hyperparameters hp.json
 ### System argument
 There are some default system arguments in the `fastestimator train` and `fastestimator test` commands. Here are a list of them:
 * `warmup`:  Only available in `fastestimator train`, it controls whether to perform warmup checking before the actual training starts. Default is True. Users can disable warmup before training by `--warmup False`.
-* `summary`: Available in both `fastestimator train` and `fastestimator test`, this is the same argument used in `estimator.fit()` or `estimator.test()`, it allows users to specify experiment name when generating reports. For example, Users can set experiment name by `--summary exp_name`.
+* `summary`: Available in both `fastestimator train` and `fastestimator test`, this is the same argument used in `estimator.fit()` or `estimator.test()`. It allows users to specify experiment name when generating reports. For example, Users can set experiment name by `--summary exp_name`.
