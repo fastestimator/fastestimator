@@ -358,7 +358,12 @@ class Pipeline:
             collate_fn = self.collate_fn
             if collate_fn is None and self.pad_value is not None:
                 collate_fn = self._pad_batch_collate
-            op_dataset = OpDataset(data, get_current_items(self.ops, mode, epoch), mode, output_keys)
+            op_dataset = OpDataset(data,
+                                   get_current_items(self.ops, mode, epoch),
+                                   mode,
+                                   output_keys,
+                                   deep_remainder=False)
+            # Results will be immediately converted to tensors, so don't need deep_remainder
             batch_size = None if isinstance(data, BatchDataset) else batch_size
             data = DataLoader(op_dataset,
                               batch_size=batch_size,
