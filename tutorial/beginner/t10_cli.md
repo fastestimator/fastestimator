@@ -12,9 +12,9 @@ FastEstimator comes with a set of CLI commands that can help users train and tes
 
 <a id='t10intro'></a>
 ## How Does the CLI Work
-* `fastestimator train`: the command will look for `get_estimator` function then calls the `fit()` method on the returned estimator instance to start the training.
-* `fastestimator test`: the command will look for `get_estimator` function then calls the `test()` method on the returned estimator instance to start the training.
-* `fastestimator run`: the command will look for `fastestimator_run` function and call the function. If `fastestimator_run` is not available, it will then look for `get_estimator` and call `fit()` and/ or `test` dependending on existence of data.
+* `fastestimator train`: the command will look for a `get_estimator` function, invoke it, and then call the `fit()` method on the returned estimator instance to start the training.
+* `fastestimator test`: the command will look for a `get_estimator` function, invoke it, and then call the `test()` method on the returned estimator instance to run testing.
+* `fastestimator run`: the command will look for a `fastestimator_run` function and invoke it. If `fastestimator_run` is not available, it will instead look for `get_estimator`, invoke it, and then call `fit()` and/ or `test` depending on what data is available within the estimator's Pipeline.
 
 ###
 
