@@ -42,7 +42,7 @@ $ fastestimator run mnist_tf.py
 
 <a id='t10args'></a>
 ## Sending Input Args to `get_estimator` or `fastestimator_run`
-We can also pass arguments to the `get_estimator` or `fastestimator_run` function call from the CLI. The following code snippet shows the `get_estimator` method for our MNIST example:
+We can also pass arguments to the `get_estimator` or `fastestimator_run` functions from the CLI. The following code snippet shows the `get_estimator` method for our MNIST example:
 ```python
 def get_estimator(epochs=2, batch_size=32, ...):
     ...
