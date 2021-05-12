@@ -992,7 +992,6 @@ def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None], model: Model
             except:
                 raise AssertionError("optimizer_fn of Tensorflow backend should be callable without args. Please "
                                      "make sure model and optimizer_fn are using the same backend")
-
             # initialize optimizer variables
             _ = optimizer.iterations
             optimizer._create_hypers()
@@ -1001,6 +1000,7 @@ def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None], model: Model
             if mixed_precision:
                 optimizer = mixed_precision_tf.LossScaleOptimizer(optimizer)
             assert isinstance(optimizer, tf.optimizers.Optimizer), "optimizer_fn should generate tensorflow optimizer"
+            model.input_spec = None #this is to handle a behavior change in tf 2.4.1 that enforces a input shape check
         else:
             try:
                 optimizer = optimizer_fn(model.parameters())
