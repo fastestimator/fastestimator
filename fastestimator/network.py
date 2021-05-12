@@ -902,6 +902,8 @@ def _fe_compile(model: Model,
     else:
         optimizer_fn = _build_optimizer(optimizer_fn, model, framework, mixed_precision)
         model.current_optimizer = optimizer_fn
+    if framework == "tf":
+        model.input_spec = None  # this is to handle a behavior change in tf 2.4.1 that enforces a input shape check
     model.optimizer = optimizer_fn
     model.fe_compiled = True
 
@@ -992,7 +994,6 @@ def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None], model: Model
             except:
                 raise AssertionError("optimizer_fn of Tensorflow backend should be callable without args. Please "
                                      "make sure model and optimizer_fn are using the same backend")
-
             # initialize optimizer variables
             _ = optimizer.iterations
             optimizer._create_hypers()
