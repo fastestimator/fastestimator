@@ -45,6 +45,7 @@ class _DelayedDeepDict(dict):
         return super().__getitem__(key)
 
     def __delitem__(self, key: str):
+        # The key will still be in the base dictionary, but that can be handled by the finalize later.
         if key in self:
             super().__delitem__(key)
 
