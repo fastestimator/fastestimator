@@ -46,7 +46,8 @@ class _DelayedDeepDict(dict):
 
     def __delitem__(self, key: str):
         # The key will still be in the base dictionary, but that can be handled by the finalize later.
-        if key in self:
+        if key in self or key not in self.base:
+            # 'key not in base' to raise errors when key doesn't exist
             super().__delitem__(key)
 
     def finalize(self, retain: Optional[Set[str]] = None, deep_remainder: bool = True) -> None:
