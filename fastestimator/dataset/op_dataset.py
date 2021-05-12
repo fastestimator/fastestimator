@@ -49,7 +49,7 @@ class _DelayedDeepDict(dict):
         if key in self:
             super().__delitem__(key)
 
-    def finalize(self, retain: Optional[Set[str]] = None, deep_remainder: bool = False) -> None:
+    def finalize(self, retain: Optional[Set[str]] = None, deep_remainder: bool = True) -> None:
         """Finish migrating the data from the original dictionary into this one.
 
         Args:
