@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 from copy import deepcopy
-from typing import Any, List, Mapping, Optional, Set
+from typing import Any, Dict, List, Mapping, Optional, Set
 
 import numpy as np
 from torch.utils.data import Dataset
@@ -22,6 +22,51 @@ from fastestimator.dataset import BatchDataset
 from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import pad_batch
+
+
+class _DelayedDeepDict(dict):
+    """A class to perform delayed deep copying from another dictionary.
+
+    This class is intentionally not @traceable (need quick instantiation).
+
+    This can be useful to reduce memory overhead while protecting the original dictionary entries being overridden. It's
+    currently a private class because it doesn't implement the full dictionary spec in an intuitive way.
+
+    Args:
+        base: The dictionary to be wrapped.
+    """
+    def __init__(self, base: Dict[str, Any]):
+        super().__init__()
+        self.base = base
+
+    def __getitem__(self, key: str) -> Any:
+        if key not in self and key in self.base:
+            self[key] = deepcopy(self.base[key])
+        return super().__getitem__(key)
+
+    def __delitem__(self, key: str):
+        if key in self:
+            super().__delitem__(key)
+
+    def finalize(self, retain: Optional[Set[str]] = None, deep_remainder: bool = False) -> None:
+        """Finish migrating the data from the original dictionary into this one.
+
+        Args:
+            retain: Which keys to keep (or an empty set to keep all available keys).
+            deep_remainder: Whether to deep copy any keys which have not yet been copied.
+        """
+        for key in self.base:
+            if retain and key not in retain:
+                continue
+            if key not in self:
+                if deep_remainder:
+                    self[key] = deepcopy(self.base[key])
+                else:
+                    self[key] = self.base[key]
+        if retain:
+            for key in self.keys() - retain:
+                del self[key]
+        self.base = {}
 
 
 @traceable()
@@ -36,14 +81,22 @@ class OpDataset(Dataset):
         ops: A list of ops to be applied after the base `dataset` `__getitem__` is invoked.
         mode: What mode the system is currently running in ('train', 'eval', 'test', or 'infer').
         output_keys: What keys can be produced from pipeline. If None, all keys will be considered.
+        deep_remainder: Whether data which is not modified by Ops should be deep copied or not. This argument is used to
+            help with RAM management, but end users can almost certainly ignore it.
     """
-    def __init__(self, dataset: Dataset, ops: List[NumpyOp], mode: str, output_keys: Optional[Set[str]] = None) -> None:
+    def __init__(self,
+                 dataset: Dataset,
+                 ops: List[NumpyOp],
+                 mode: str,
+                 output_keys: Optional[Set[str]] = None,
+                 deep_remainder: bool = True) -> None:
         self.dataset = dataset
         if isinstance(self.dataset, BatchDataset):
             self.dataset.reset_index_maps()
         self.ops = ops
         self.mode = mode
         self.output_keys = output_keys
+        self.deep_remainder = deep_remainder
 
     def __getitem__(self, index: int) -> Mapping[str, Any]:
         """Fetch a data instance at a specified index, and apply transformations to it.
@@ -54,23 +107,28 @@ class OpDataset(Dataset):
         Returns:
             The data dictionary from the specified index, with transformations applied.
         """
-        items = deepcopy(self.dataset[index])  # Deepcopy to prevent ops from overwriting values in datasets
         if isinstance(self.dataset, BatchDataset):
             # BatchDataset may randomly sample the same elements multiple times, so need to avoid reprocessing
-            unique_samples = set()
-            for item in items:
-                if id(item) not in unique_samples:
-                    forward_numpyop(self.ops, item, {'mode': self.mode})
-                    unique_samples.add(id(item))
+            unique_samples = {}  # id: idx
+            results = []
+            for idx, data in enumerate(self.dataset[index]):
+                data_id = id(data)
+                if data_id not in unique_samples:
+                    data = _DelayedDeepDict(data)
+                    forward_numpyop(self.ops, data, {'mode': self.mode})
+                    data.finalize(retain=self.output_keys, deep_remainder=self.deep_remainder)
+                    results.append(data)
+                    unique_samples[data_id] = idx
+                else:
+                    results.append(results[unique_samples[data_id]])
             if self.dataset.pad_value is not None:
-                pad_batch(items, self.dataset.pad_value)
-            items = {key: np.array([item[key] for item in items]) for key in items[0]}
+                pad_batch(results, self.dataset.pad_value)
+            results = {key: np.array([item[key] for item in results]) for key in results[0]}
         else:
-            forward_numpyop(self.ops, items, {'mode': self.mode})
-        if self.output_keys:
-            for key in set(items) - self.output_keys:
-                del items[key]
-        return items
+            results = _DelayedDeepDict(self.dataset[index])
+            forward_numpyop(self.ops, results, {'mode': self.mode})
+            results.finalize(retain=self.output_keys, deep_remainder=self.deep_remainder)
+        return results
 
     def __len__(self):
         return len(self.dataset)
