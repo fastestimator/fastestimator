@@ -1012,6 +1012,13 @@ def __getstate__(self) -> Dict[str, Any]:
         The state variables to be captured during pickling.
     """
     state_dict = self.__dict__.copy()
+    # Classes which subclass a @traceable class but are not themselves marked as @traceable will not inherit their
+    # parent whitelist and blacklist. If __getstate__ is being invoked then they'll need at least the basics.
+    if not hasattr(self, '_fe_state_whitelist'):
+        self._fe_state_whitelist = ()
+    if not hasattr(self, '_fe_state_blacklist'):
+        self._fe_state_whitelist = ('_fe_state_whitelist', '_fe_state_blacklist', '_fe_traceability_summary')
+    # Apply the whitelist and blacklist
     if self._fe_state_whitelist:
         state_dict = {key: state_dict[key] for key in self._fe_state_whitelist}
     for key in self._fe_state_blacklist:
