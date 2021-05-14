@@ -1017,7 +1017,7 @@ def __getstate__(self) -> Dict[str, Any]:
     if not hasattr(self, '_fe_state_whitelist'):
         self._fe_state_whitelist = ()
     if not hasattr(self, '_fe_state_blacklist'):
-        self._fe_state_whitelist = ('_fe_state_whitelist', '_fe_state_blacklist', '_fe_traceability_summary')
+        self._fe_state_blacklist = ('_fe_state_whitelist', '_fe_state_blacklist', '_fe_traceability_summary')
     # Apply the whitelist and blacklist
     if self._fe_state_whitelist:
         state_dict = {key: state_dict[key] for key in self._fe_state_whitelist}
