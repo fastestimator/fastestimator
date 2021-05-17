@@ -41,7 +41,15 @@ class _DelayedDeepDict(dict):
 
     def __getitem__(self, key: str) -> Any:
         if key not in self and key in self.base:
-            self[key] = deepcopy(self.base[key])
+            item = self.base[key]
+            if isinstance(item, np.ndarray):
+                # We'll avoid copying ndarrays for speed/memory savings. The forward_numpyop function will copy later if
+                # required.
+                item = item.view()
+                item.flags.writeable = False
+                self[key] = item
+            else:
+                self[key] = deepcopy(item)
         return super().__getitem__(key)
 
     def __delitem__(self, key: str):

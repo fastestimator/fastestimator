@@ -31,7 +31,24 @@ class NumpyOp(Op):
 
     These Operators are used in fe.Pipeline to perform data pre-processing / augmentation. They may also be used in
     fe.Network to perform postprocessing on data.
+
+    Args:
+        inputs: Key(s) from which to retrieve data from the data dictionary.
+        outputs: Key(s) under which to write the outputs of this Op back to the data dictionary.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
     """
+    def __init__(self,
+                 inputs: Union[None, str, Iterable[str]] = None,
+                 outputs: Union[None, str, Iterable[str]] = None,
+                 mode: Union[None, str, Iterable[str]] = None) -> None:
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        # in_place_edits tracks whether the .forward() method of this op will perform in-place edits of numpy arrays.
+        # This is inferred automatically by the system and is used for memory management optimization. If you are
+        # developing a NumpyOp which does in-place edits, the best practice is to set this to True in your init method.
+        self.in_place_edits = False
+
     def forward(self, data: Union[np.ndarray, List[np.ndarray]],
                 state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
         """A method which will be invoked in order to transform data.
@@ -132,8 +149,17 @@ def forward_numpyop(ops: List[NumpyOp], data: MutableMapping[str, Any], state: D
         batched: Whether the `data` is batched or not.
     """
     for op in ops:
-        op_data = get_inputs_by_op(op, data)
-        op_data = op.forward_batch(op_data, state) if batched else op.forward(op_data, state)
+        op_data = get_inputs_by_op(op, data, copy_on_write=op.in_place_edits)
+        try:
+            op_data = op.forward_batch(op_data, state) if batched else op.forward(op_data, state)
+        except ValueError as err:
+            if err.args[0] == 'assignment destination is read-only':
+                # If the numpy error text changes we'll need to make adjustments in the future
+                op.in_place_edits = True
+                op_data = get_inputs_by_op(op, data, copy_on_write=op.in_place_edits)
+                op_data = op.forward_batch(op_data, state) if batched else op.forward(op_data, state)
+            else:
+                raise err
         if isinstance(op, Delete):
             for key in op.inputs:
                 del data[key]
