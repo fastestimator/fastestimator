@@ -74,12 +74,13 @@ class Op:
         self.out_list = not isinstance(outputs, (str, type(None)))
 
 
-def get_inputs_by_op(op: Op, store: Mapping[str, Any]) -> Any:
+def get_inputs_by_op(op: Op, store: Mapping[str, Any], copy_on_write: bool = False) -> Any:
     """Retrieve the necessary input data from the data dictionary in order to run an `op`.
 
     Args:
         op: The op to run.
         store: The system's data dictionary to draw inputs out of.
+        copy_on_write: Whether to copy read-only data to make it writeable before returning it.
 
     Returns:
         Input data to be fed to the `op` forward function.
@@ -89,7 +90,13 @@ def get_inputs_by_op(op: Op, store: Mapping[str, Any]) -> Any:
     else:
         data = None
     if op.inputs:
-        data = [store[key] for key in op.inputs]
+        data = []
+        for key in op.inputs:
+            elem = store[key]
+            if copy_on_write and isinstance(elem, np.ndarray) and not elem.flags.writeable:
+                elem = deepcopy(elem)
+                store[key] = elem
+            data.append(elem)
         if not op.in_list:
             data = data[0]
     return data
