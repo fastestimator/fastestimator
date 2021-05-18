@@ -34,7 +34,7 @@ def get_name():
 def get_dependency():
     dependencies = [
         'numpy',
-        'albumentations',
+        'albumentations==0.5.2',
         'pyfiglet',
         'opencv-python',
         'pandas',
