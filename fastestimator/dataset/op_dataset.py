@@ -77,6 +77,11 @@ class _DelayedDeepDict(dict):
             for key in self.keys() - retain:
                 del self[key]
         self.base = {}
+        # We need to mark all of the arrays as writeable again to avoid warnings from pytorch. Once torch wraps the
+        # arrays, in-place edits on the torch tensors do not impact the numpy arrays anyways.
+        for val in self.values():
+            if isinstance(val, np.ndarray):
+                val.flags.writeable = True
 
 
 @traceable()
