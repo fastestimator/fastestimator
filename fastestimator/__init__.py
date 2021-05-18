@@ -26,5 +26,5 @@ try:
 except ModuleNotFoundError:
     pass
 
-__version__ = '1.1.3'
+__version__ = '1.2.0'
 fe_deterministic_seed = None

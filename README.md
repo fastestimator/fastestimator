@@ -14,8 +14,8 @@ FastEstimator is a high-level deep learning library built on TensorFlow2 and PyT
 
 ## Prerequisites:
 * Python >= 3.6
-* TensorFlow == 2.4.1
-* PyTorch >= 1.7.1
+* TensorFlow == 2.5.0
+* PyTorch == 1.8.1
 
 ## Installation:
 ### 1. Install Dependencies:
@@ -54,12 +54,12 @@ FastEstimator is a high-level deep learning library built on TensorFlow2 and PyT
     $ pip install fastestimator-x.x.x.zip
     ```
 
-* Most Recent (Linux/Mac):
+* Nightly (Linux/Mac):
     ``` bash
     $ pip install fastestimator-nightly
     ```
 
-* Most Recent (Windows):
+* Nightly (Windows):
 
     First download zip file [here](https://github.com/fastestimator/fastestimator/archive/master.zip)
     ``` bash
@@ -70,17 +70,24 @@ FastEstimator is a high-level deep learning library built on TensorFlow2 and PyT
 
 ## Docker Hub
 Docker containers create isolated virtual environments that share resources with a host machine. Docker provides an easy way to set up a FastEstimator environment. You can simply pull our image from [Docker Hub](https://hub.docker.com/r/fastestimator/fastestimator/tags) and get started:
-
-* GPU:
-    ``` bash
-    docker pull fastestimator/fastestimator:latest-gpu
-    ```
-* CPU:
-    ``` bash
-    docker pull fastestimator/fastestimator:latest-cpu
-    ```
-
-
+* Stable:
+    * GPU:
+        ``` bash
+        docker pull fastestimator/fastestimator:latest-gpu
+        ```
+    * CPU:
+        ``` bash
+        docker pull fastestimator/fastestimator:latest-cpu
+        ```
+* Nighly:
+    * GPU:
+        ``` bash
+        docker pull fastestimator/fastestimator:nightly-gpu
+        ```
+    * CPU:
+        ``` bash
+        docker pull fastestimator/fastestimator:nightly-cpu
+        ```
 
 ## Useful Links:
 * [Website](https://www.fastestimator.org): More info about FastEstimator API and news.
