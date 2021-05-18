@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:2.3.1
+FROM tensorflow/tensorflow:2.5.0
 
 RUN apt-get update
 
@@ -32,7 +32,7 @@ RUN ipython kernel install --user --name nightly_build
 RUN apt-get install -y lsof
 
 # backend dependencies
-RUN pip install torch==1.6.0+cpu torchvision==0.7.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
+RUN pip install torch==1.8.1+cpu torchvision==0.9.1+cpu torchaudio==0.8.1 -f https://download.pytorch.org/whl/torch_stable.html
 
 # install FastEstimator
 ARG InstallFE=True
