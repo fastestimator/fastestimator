@@ -28,6 +28,9 @@ RUN pip install --no-cache-dir \
     papermill
 RUN ipython kernel install --user --name nightly_build
 
+# specify notebook version (latest version has ValueError: Duplicate Signature)
+RUN pip install notebook==6.3.0
+
 # GPU cleaning requirement
 RUN apt-get install -y lsof
 
