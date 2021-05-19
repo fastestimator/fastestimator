@@ -23,7 +23,6 @@ import tensorflow as tf
 import torch
 from tensorflow.python.framework import ops as tfops
 from tensorflow.python.keras import backend
-from tensorflow.python.keras.callbacks import keras_model_summary
 from tensorflow.python.ops import summary_ops_v2
 from torch.utils.tensorboard import SummaryWriter
 
@@ -207,13 +206,13 @@ class _TfWriter(_BaseWriter):
             # Record the overall execution summary
             if hasattr(self.network._forward_step_static, '_concrete_stateful_fn'):
                 # noinspection PyProtectedMember
-                summary_ops_v2.graph(self.network._forward_step_static._concrete_stateful_fn.graph)
+                summary_ops_v2.graph(self.network._forward_step_static._concrete_stateful_fn.graph, step=epoch)
             # Record the individual model summaries
             for model in self.network.epoch_models:
                 summary_writable = (model.__class__.__name__ == 'Sequential'
                                     or (hasattr(model, '_is_graph_network') and model._is_graph_network))
                 if summary_writable:
-                    keras_model_summary(model.model_name, model, step=epoch)
+                    summary_ops_v2.keras_model(model.model_name, model, step=epoch)
 
     def write_weights(self, mode: str, models: Iterable[Model], step: int, visualize: bool) -> None:
         # Similar to TF implementation, but multiple models
