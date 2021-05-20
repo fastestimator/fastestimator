@@ -1,5 +1,9 @@
 FROM tensorflow/tensorflow:2.3.0-gpu
 
+# change python library to root owner
+# it fixes "container ID cannot be mapped to a host ID" issue that happens later while upgrading python packages
+RUN chown -R root:root /usr/local/lib/python*
+
 RUN apt-get update
 
 # OpenCV dependencies
