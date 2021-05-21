@@ -45,7 +45,7 @@ pipeline {
         stage('Update Codacy'){
             steps{
                 script {
-                    if (!IMAGE_TAG.contains("-pr-")){
+                    if (!IMAGE_TAG.contains("-pr-") && IMAGE_TAG.contains("-master-")){
                         sh 'curl https://coverage.codacy.com/get.sh -o get.sh'
                         sh 'bash get.sh report -r coverage.xml'
                     }
