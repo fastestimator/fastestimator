@@ -95,6 +95,9 @@ $ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 ### Image Style Transfer
 * **Fast Style Transfer:** Altering the source image style to a target art style using the MSCOCO 2017 dataset. [[paper](https://cs.stanford.edu/people/jcjohns/papers/eccv16/JohnsonECCV16.pdf)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/style_transfer/fst_coco/fst_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/style_transfer/fst_coco/fst_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/style_transfer/fst_coco/fst.ipynb)]
 
+### Learning Rate Scheduling
+* **Super Convergence:** Super-Convergence Learning Rate Schedule on CIFAR10 image classification task. [[paper](https://arxiv.org/pdf/1708.07120.pdf)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/lr_controller/super_convergence/super_convergence_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/lr_controller/super_convergence/super_convergence_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/lr_controller/super_convergence/super_convergence.ipynb)]
+
 ### Tabular Data
 * **DNN:** Classifying breast tumors as benign or malignant with a deep neural network. [[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/tabular/dnn/dnn_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/tabular/dnn/dnn_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/tabular/dnn/dnn.ipynb)]
 
