@@ -23,19 +23,19 @@ import fastestimator as fe
 from fastestimator.test.unittest_util import is_equal
 
 
-class TestGetLr(unittest.TestCase):
-    def test_get_lr_tf(self):
+class TestSetLr(unittest.TestCase):
+    def test_set_lr_tf(self):
         m = fe.build(fe.architecture.tensorflow.LeNet, optimizer_fn=lambda: tf.optimizers.Adam(1e-4))
         fe.backend.set_lr(m, 2e-4)
         self.assertTrue(np.allclose(fe.backend.get_lr(model=m), 2e-4))
 
-    def test_get_lr_tf_weight_decay(self):
+    def test_set_lr_tf_weight_decay(self):
         m = fe.build(fe.architecture.tensorflow.LeNet,
                      optimizer_fn=lambda: tfa.optimizers.SGDW(weight_decay=1e-5, learning_rate=1e-4))
         fe.backend.set_lr(m, 2e-4)
         self.assertTrue(np.allclose(tf.keras.backend.get_value(m.current_optimizer.weight_decay), 2e-5))
 
-    def test_get_lr_torch(self):
+    def test_set_lr_torch(self):
         m = fe.build(fe.architecture.pytorch.LeNet, optimizer_fn=lambda x: torch.optim.Adam(params=x, lr=1e-4))
         fe.backend.set_lr(m, 2e-4)
         self.assertTrue(np.allclose(fe.backend.get_lr(model=m), 2e-4))
