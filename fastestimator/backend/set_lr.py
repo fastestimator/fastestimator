@@ -39,7 +39,7 @@ def set_lr(model: Union[tf.keras.Model, torch.nn.Module], lr: float, weight_deca
     Args:
         model: A neural network instance to modify.
         lr: The learning rate to assign to the `model`.
-        weight_decay: The weight decay parameter, this is only relavent when using `tfa.DecoupledWeightDecayExtension`.
+        weight_decay: The weight decay parameter, this is only relevant when using `tfa.DecoupledWeightDecayExtension`.
 
     Raises:
         ValueError: If `model` is an unacceptable data type.
