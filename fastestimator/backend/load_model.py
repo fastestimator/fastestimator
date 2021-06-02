@@ -59,7 +59,9 @@ def load_model(model: Union[tf.keras.Model, torch.nn.Module], weights_path: str,
                 state_dict = pickle.load(f)
             model.current_optimizer.set_weights(state_dict['weights'])
             weight_decay = None
-            if isinstance(model.current_optimizer, tfa.optimizers.DecoupledWeightDecayExtension):
+            if isinstance(model.current_optimizer, tfa.optimizers.DecoupledWeightDecayExtension) or hasattr(
+                    model.current_optimizer, "inner_optimizer") and isinstance(
+                        model.current_optimizer.inner_optimizer, tfa.optimizers.DecoupledWeightDecayExtension):
                 weight_decay = state_dict['weight_decay']
             set_lr(model, state_dict['lr'], weight_decay=weight_decay)
     elif isinstance(model, torch.nn.Module):

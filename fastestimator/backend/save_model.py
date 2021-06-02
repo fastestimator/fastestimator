@@ -66,7 +66,9 @@ def save_model(model: Union[tf.keras.Model, torch.nn.Module],
             optimizer_path = os.path.join(save_dir, "{}_opt.pkl".format(model_name))
             with open(optimizer_path, 'wb') as f:
                 saved_data = {'weights': model.current_optimizer.get_weights(), 'lr': get_lr(model)}
-                if isinstance(model.current_optimizer, tfa.optimizers.DecoupledWeightDecayExtension):
+                if isinstance(model.current_optimizer, tfa.optimizers.DecoupledWeightDecayExtension) or hasattr(
+                        model.current_optimizer, "inner_optimizer") and isinstance(
+                            model.current_optimizer.inner_optimizer, tfa.optimizers.DecoupledWeightDecayExtension):
                     saved_data['weight_decay'] = tf.keras.backend.get_value(model.current_optimizer.weight_decay)
                 pickle.dump(saved_data, f)
         return model_path
