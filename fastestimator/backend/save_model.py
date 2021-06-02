@@ -17,6 +17,7 @@ import pickle
 from typing import Optional, Union
 
 import tensorflow as tf
+import tensorflow_addons as tfa
 import torch
 
 from fastestimator.backend.get_lr import get_lr
@@ -64,7 +65,12 @@ def save_model(model: Union[tf.keras.Model, torch.nn.Module],
             assert model.current_optimizer, "optimizer does not exist"
             optimizer_path = os.path.join(save_dir, "{}_opt.pkl".format(model_name))
             with open(optimizer_path, 'wb') as f:
-                pickle.dump({'weights': model.current_optimizer.get_weights(), 'lr': get_lr(model)}, f)
+                saved_data = {'weights': model.current_optimizer.get_weights(), 'lr': get_lr(model)}
+                if isinstance(model.current_optimizer, tfa.optimizers.DecoupledWeightDecayExtension) or hasattr(
+                        model.current_optimizer, "inner_optimizer") and isinstance(
+                            model.current_optimizer.inner_optimizer, tfa.optimizers.DecoupledWeightDecayExtension):
+                    saved_data['weight_decay'] = tf.keras.backend.get_value(model.current_optimizer.weight_decay)
+                pickle.dump(saved_data, f)
         return model_path
     elif isinstance(model, torch.nn.Module):
         model_path = os.path.join(save_dir, "{}.pt".format(model_name))
