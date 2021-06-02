@@ -48,9 +48,9 @@ def set_lr(model: Union[tf.keras.Model, torch.nn.Module], lr: float, weight_deca
     if isinstance(model, tf.keras.Model):
         # when using decoupled weight decay like SGDW or AdamW, weight decay factor needs to change together with lr
         # see https://www.tensorflow.org/addons/api_docs/python/tfa/optimizers/DecoupledWeightDecayExtension for detail
-        if isinstance(model.current_optimizer, tfa.optimizers.DecoupledWeightDecayExtension) or
-                hasattr(model.current_optimizer, "inner_optimizer")
-                and isinstance(model.current_optimizer.inner_optimizer, tfa.optimizers.DecoupledWeightDecayExtension):
+        if isinstance(model.current_optimizer, tfa.optimizers.DecoupledWeightDecayExtension) or hasattr(
+                model.current_optimizer, "inner_optimizer") and isinstance(
+                    model.current_optimizer.inner_optimizer, tfa.optimizers.DecoupledWeightDecayExtension):
             if weight_decay is None:
                 weight_decay = tf.keras.backend.get_value(model.current_optimizer.weight_decay) * lr / get_lr(model)
             tf.keras.backend.set_value(model.current_optimizer.weight_decay, weight_decay)
