@@ -14,7 +14,7 @@
 # ==============================================================================
 import os
 import re
-from collections import namedtuple
+from collections import defaultdict, namedtuple
 from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import matplotlib.pyplot as plt
@@ -27,6 +27,7 @@ from tensorflow.python.ops import summary_ops_v2
 from torch.utils.tensorboard import SummaryWriter
 
 from fastestimator.backend.abs import abs
+from fastestimator.backend.concat import concat
 from fastestimator.backend.expand_dims import expand_dims
 from fastestimator.backend.permute import permute
 from fastestimator.backend.reduce_sum import reduce_sum
@@ -303,10 +304,12 @@ class TensorBoard(Trace):
                  write_images: Union[None, str, List[str]] = None,
                  weight_histogram_freq: Union[None, int, str] = None,
                  paint_weights: bool = False,
+                 embedding_freq: Union[None, int, str] = 'epoch',
                  write_embeddings: Union[None, str, List[str]] = None,
                  embedding_labels: Union[None, str, List[str]] = None,
                  embedding_images: Union[None, str, List[str]] = None) -> None:
-        super().__init__(inputs="*")
+        super().__init__(inputs=["*"] + to_list(write_images) + to_list(write_embeddings) + to_list(embedding_labels) +
+                         to_list(embedding_images))
         self.root_log_dir = log_dir
         self.update_freq = self._parse_freq(update_freq)
         self.write_graph = write_graph
@@ -317,6 +320,10 @@ class TensorBoard(Trace):
             self.histogram_freq.is_step = False
             self.histogram_freq.freq = 1
         self.paint_weights = paint_weights
+        if write_embeddings is None and embedding_labels is None and embedding_images is None:
+            # Speed up if-check short-circuiting later
+            embedding_freq = None
+        self.embedding_freq = self._parse_freq(embedding_freq)
         write_embeddings = to_list(write_embeddings)
         embedding_labels = to_list(embedding_labels)
         if embedding_labels:
@@ -337,6 +344,7 @@ class TensorBoard(Trace):
         self.write_embeddings = [(feature, label, img_label) for feature,
                                  label,
                                  img_label in zip(write_embeddings, embedding_labels, embedding_images)]
+        self.collected_embeddings = defaultdict(list)
 
     def _parse_freq(self, freq: Union[None, str, int]) -> Freq:
         """A helper function to convert string based frequency inputs into epochs or steps
@@ -382,6 +390,20 @@ class TensorBoard(Trace):
         if self.write_graph and self.system.network.epoch_models.symmetric_difference(self.painted_graphs):
             self.writer.write_epoch_models(mode=self.system.mode, epoch=self.system.epoch_idx)
             self.painted_graphs = self.system.network.epoch_models
+        # Collect embeddings if present in batch but viewing per epoch. Don't aggregate during training though
+        if self.system.mode != 'train' and self.embedding_freq.freq and not self.embedding_freq.is_step and self.system.epoch_idx % self.embedding_freq.freq == 0:
+            for elem in self.write_embeddings:
+                name, lbl, img = elem
+                if name in data:
+                    self.collected_embeddings[name].append((data.get(name), data.get(lbl), data.get(img)))
+        # Handle embeddings if viewing per step
+        if self.embedding_freq.freq and self.embedding_freq.is_step and self.system.global_step % self.embedding_freq.freq == 0:
+            self.writer.write_embeddings(
+                mode=self.system.mode,
+                step=self.system.global_step,
+                embeddings=filter(
+                    lambda x: x[1] is not None,
+                    map(lambda t: (t[0], data.get(t[0]), data.get(t[1]), data.get(t[2])), self.write_embeddings)))
         if self.system.mode != 'train':
             return
         if self.histogram_freq.freq and self.histogram_freq.is_step and \
@@ -398,12 +420,6 @@ class TensorBoard(Trace):
                 mode=self.system.mode,
                 step=self.system.global_step,
                 images=filter(lambda x: x[1] is not None, map(lambda y: (y, data.get(y)), self.write_images)))
-            self.writer.write_embeddings(
-                mode=self.system.mode,
-                step=self.system.global_step,
-                embeddings=filter(
-                    lambda x: x[1] is not None,
-                    map(lambda t: (t[0], data.get(t[0]), data.get(t[1]), data.get(t[2])), self.write_embeddings)))
 
     def on_epoch_end(self, data: Data) -> None:
         if self.system.mode == 'train' and self.histogram_freq.freq and not self.histogram_freq.is_step and \
@@ -412,6 +428,24 @@ class TensorBoard(Trace):
                                       models=self.system.network.models,
                                       step=self.system.global_step,
                                       visualize=self.paint_weights)
+        # Write out any embeddings which were aggregated over batches
+        for name, val_list in self.collected_embeddings.items():
+            embeddings = None if any(x[0] is None for x in val_list) else concat([x[0] for x in val_list])
+            labels = None if any(x[1] is None for x in val_list) else concat([x[1] for x in val_list])
+            imgs = None if any(x[2] is None for x in val_list) else concat([x[2] for x in val_list])
+            self.writer.write_embeddings(mode=self.system.mode,
+                                         step=self.system.global_step,
+                                         embeddings=[(name, embeddings, labels, imgs)])
+        self.collected_embeddings.clear()
+        # Get any embeddings which were generated externally on epoch end
+        if self.embedding_freq.freq and (self.embedding_freq.is_step
+                                         or self.system.epoch_idx % self.embedding_freq.freq == 0):
+            self.writer.write_embeddings(
+                mode=self.system.mode,
+                step=self.system.global_step,
+                embeddings=filter(
+                    lambda x: x[1] is not None,
+                    map(lambda t: (t[0], data.get(t[0]), data.get(t[1]), data.get(t[2])), self.write_embeddings)))
         if self.update_freq.freq and (self.update_freq.is_step or self.system.epoch_idx % self.update_freq.freq == 0):
             self.writer.write_scalars(mode=self.system.mode,
                                       step=self.system.global_step,
@@ -420,12 +454,6 @@ class TensorBoard(Trace):
                 mode=self.system.mode,
                 step=self.system.global_step,
                 images=filter(lambda x: x[1] is not None, map(lambda y: (y, data.get(y)), self.write_images)))
-            self.writer.write_embeddings(
-                mode=self.system.mode,
-                step=self.system.global_step,
-                embeddings=filter(
-                    lambda x: x[1] is not None,
-                    map(lambda t: (t[0], data.get(t[0]), data.get(t[1]), data.get(t[2])), self.write_embeddings)))
 
     def on_end(self, data: Data) -> None:
         self.writer.close()
