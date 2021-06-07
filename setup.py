@@ -35,7 +35,7 @@ def get_name():
 def get_dependency():
     dependencies = [
         'numpy',
-        'albumentations',
+        'albumentations==0.5.2',
         'pyfiglet',
         'opencv-python',
         'pandas',
@@ -72,7 +72,7 @@ setup(
     packages=find_packages(),
     package_dir={'': '.'},
     long_description="FastEstimator is a high-level deep learning API. With the help of FastEstimator, you can easily \
-                    build a high-performance deep learning model and run it anywhere.",
+                    build a high-performance deep learning model and run it anywhere."                                                                                      ,
     author="FastEstimator Dev",
     url='https://github.com/fastestimator/fastestimator',
     license="Apache License 2.0",
