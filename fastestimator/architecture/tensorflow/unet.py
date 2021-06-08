@@ -31,7 +31,7 @@ def UNet(input_size: Tuple[int, int, int] = (128, 128, 1)) -> tf.keras.Model:
         ValueError: `input_size`[0] or `input_size`[1] is not a multiple of 16.
 
     Returns:
-        A TensorFlow LeNet model.
+        A TensorFlow UNet model.
     """
     _check_input_size(input_size)
     conv_config = {'activation': 'relu', 'padding': 'same', 'kernel_initializer': 'he_normal'}
