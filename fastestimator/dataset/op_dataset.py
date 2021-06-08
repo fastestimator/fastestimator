@@ -35,6 +35,8 @@ class _DelayedDeepDict(dict):
     Args:
         base: The dictionary to be wrapped.
     """
+    warned: Set[str] = set()
+
     def __init__(self, base: Dict[str, Any]):
         super().__init__()
         self.base = base
@@ -75,6 +77,11 @@ class _DelayedDeepDict(dict):
                     self[key] = self.base[key]
         if retain:
             for key in self.keys() - retain:
+                if not key in self.warned:
+                    self.warned.add(key)
+                    print("FastEstimator-Warn: the key '{}' in dataset is deleted due to not being used outside of "
+                          "Pipeline, to prevent this, you can declare the key as inputs of Trace or TensorOp.".format(
+                              key))
                 del self[key]
         self.base = {}
         # We need to mark all of the arrays as writeable again to avoid warnings from pytorch. Once torch wraps the

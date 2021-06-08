@@ -16,7 +16,6 @@ import multiprocessing as mp
 import os
 import random
 import time
-import warnings
 from copy import deepcopy
 from typing import Any, Callable, Dict, List, MutableMapping, Optional, Set, TypeVar, Union
 
@@ -132,11 +131,11 @@ class Pipeline:
             return True
         elif isinstance(dataset, (DataLoader, tf.data.Dataset)):
             if kwargs['batch_size'] is not None:
-                warnings.warn("batch_size will only be used for built-in dataset")
+                print("FastEstimator-Warn: batch_size will only be used for built-in dataset")
             if kwargs['ops'] is not None:
-                warnings.warn("ops will only be used for built-in dataset")
+                print("FastEstimator-Warn: ops will only be used for built-in dataset")
             if kwargs['num_process'] is not None:
-                warnings.warn("num_process will only be used for built-in dataset")
+                print("FastEstimator-Warn: num_process will only be used for built-in dataset")
             return False
         else:
             raise ValueError("Unsupported dataset type: {}".format(type(dataset)))

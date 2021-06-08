@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import warnings
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, TypeVar, Union
 
 import tensorflow as tf
@@ -73,8 +72,8 @@ class UpdateOp(TensorOp):
                 raise ValueError("Mixed precision training cannot take input gradients, because the gradients need to "
                                 "be computed in this module")
             if self.extra_loss:
-                warnings.warn("Extra model losses are detected and they will be ignored since the gradients are not "
-                              "computed in UpdateOp class.")
+                print("FastEstimator-Warn: Extra model losses are detected and they will be ignored since the gradients"
+                " are not computed in UpdateOp class.")
             super().__init__(inputs=gradients, outputs=None, mode=mode)
 
         if torch.cuda.device_count() > 1 and merge_grad > 1:
