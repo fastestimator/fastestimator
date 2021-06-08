@@ -79,8 +79,8 @@ class _DelayedDeepDict(dict):
             for key in self.keys() - retain:
                 if not key in self.warned:
                     self.warned.add(key)
-                    print("FastEstimator-Warn: the key '{}' in dataset is deleted due to not being used outside of "
-                          "Pipeline, to prevent this, you can declare the key as inputs of Trace or TensorOp.".format(
+                    print("FastEstimator-Warn: the key '{}' is being pruned since it is unused outside of the Pipeline."
+                          " To prevent this, you can declare the key as an input of a Trace or TensorOp.".format(
                               key))
                 del self[key]
         self.base = {}
