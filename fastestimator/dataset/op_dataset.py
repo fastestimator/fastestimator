@@ -69,6 +69,9 @@ class _DelayedDeepDict(dict):
         """
         for key in self.base:
             if retain and key not in retain:
+                self.warned.add(key)
+                print("FastEstimator-Warn: the key '{}' is being pruned since it is unused outside of the Pipeline."
+                      " To prevent this, you can declare the key as an input of a Trace or TensorOp.".format(key))
                 continue
             if key not in self:
                 if deep_remainder:
