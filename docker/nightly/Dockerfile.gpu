@@ -24,8 +24,10 @@ RUN apt-get install -y \
 # upgrade essential packages
 RUN pip install --upgrade pip setuptools==51.3.3
 
-# specify notebook version (latest version has ValueError: Duplicate Signature)
-RUN pip install notebook==6.3.0
+# specify jupyter_client version To address "ValueError: Duplicate Signature" (https://github.com/jupyter/jupyter_client/issues/541)
+# the latest release hasn't fixed this issues but the latest master branch seems to has fixed that.
+# Note: need to switch to new official release after it cames out (patch after 6.1.12)
+RUN pip install git+https://github.com/jupyter/jupyter_client.git@master
 
 # nightly test related packages
 RUN pip install --no-cache-dir \
