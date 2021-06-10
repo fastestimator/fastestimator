@@ -69,9 +69,10 @@ class _DelayedDeepDict(dict):
         """
         for key in self.base:
             if retain and key not in retain:
-                self.warned.add(key)
-                print("FastEstimator-Warn: the key '{}' is being pruned since it is unused outside of the Pipeline."
-                      " To prevent this, you can declare the key as an input of a Trace or TensorOp.".format(key))
+                if not key in self.warned:
+                    self.warned.add(key)
+                    print("FastEstimator-Warn: the key '{}' is being pruned since it is unused outside of the Pipeline."
+                          " To prevent this, you can declare the key as an input of a Trace or TensorOp.".format(key))
                 continue
             if key not in self:
                 if deep_remainder:
@@ -83,8 +84,7 @@ class _DelayedDeepDict(dict):
                 if not key in self.warned:
                     self.warned.add(key)
                     print("FastEstimator-Warn: the key '{}' is being pruned since it is unused outside of the Pipeline."
-                          " To prevent this, you can declare the key as an input of a Trace or TensorOp.".format(
-                              key))
+                          " To prevent this, you can declare the key as an input of a Trace or TensorOp.".format(key))
                 del self[key]
         self.base = {}
         # We need to mark all of the arrays as writeable again to avoid warnings from pytorch. Once torch wraps the
