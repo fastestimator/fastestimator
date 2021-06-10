@@ -95,6 +95,7 @@ class FeInputSpec:
     def __init__(self, model_input: Any, model: Model):
         self.shape = to_shape(model_input)
         self.dtype = to_type(model_input)
+        self.device = model_input.device
         self.tensor_func = tf.ones if isinstance(model, tf.keras.Model) else torch.ones
 
     def get_dummy_input(self) -> Any:
@@ -127,7 +128,10 @@ class FeInputSpec:
         elif isinstance(dtype, set):
             return set([self._from_shape_and_type(s, t) for s, t in zip(shape, dtype)])
         else:
-            return self.tensor_func(shape, dtype=dtype)
+            retval = self.tensor_func(shape, dtype=dtype)
+            if isinstance(self.device, torch.device):
+                retval = retval.to(self.device)
+            return retval
 
 
 class FeSplitSummary(LatexObject):
