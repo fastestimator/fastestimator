@@ -17,6 +17,7 @@ import pickle
 from typing import Union
 
 import tensorflow as tf
+import tensorflow_addons as tfa
 import torch
 
 from fastestimator.backend.set_lr import set_lr
@@ -57,7 +58,12 @@ def load_model(model: Union[tf.keras.Model, torch.nn.Module], weights_path: str,
             with open(optimizer_path, 'rb') as f:
                 state_dict = pickle.load(f)
             model.current_optimizer.set_weights(state_dict['weights'])
-            set_lr(model, state_dict['lr'])
+            weight_decay = None
+            if isinstance(model.current_optimizer, tfa.optimizers.DecoupledWeightDecayExtension) or hasattr(
+                    model.current_optimizer, "inner_optimizer") and isinstance(
+                        model.current_optimizer.inner_optimizer, tfa.optimizers.DecoupledWeightDecayExtension):
+                weight_decay = state_dict['weight_decay']
+            set_lr(model, state_dict['lr'], weight_decay=weight_decay)
     elif isinstance(model, torch.nn.Module):
         model.load_state_dict(torch.load(weights_path))
         if load_optimizer:

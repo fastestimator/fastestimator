@@ -49,7 +49,7 @@ class LRScheduler(Trace):
     """
     system: System
 
-    def __init__(self, model: Union[tf.keras.Model, torch.nn.Module], lr_fn: Callable[[int], float]) -> None:
+    def __init__(self, model: Union[tf.keras.Model, torch.nn.Module], lr_fn: Union[str, Callable[[int], float]]) -> None:
         self.model = model
         self.lr_fn = ARC() if lr_fn == "arc" else lr_fn
         assert hasattr(self.lr_fn, "__call__") or isinstance(self.lr_fn, ARC), "lr_fn must be either a function or ARC"
