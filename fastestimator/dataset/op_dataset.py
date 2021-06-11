@@ -40,9 +40,10 @@ class _DelayedDeepDict(dict):
     def __init__(self, base: Dict[str, Any]):
         super().__init__()
         self.base = base
+        self.mask = set()
 
     def __getitem__(self, key: str) -> Any:
-        if key not in self and key in self.base:
+        if key not in self and key in self.base and key not in self.mask:
             item = self.base[key]
             if isinstance(item, np.ndarray):
                 # We'll avoid copying ndarrays for speed/memory savings. The forward_numpyop function will copy later if
@@ -59,6 +60,7 @@ class _DelayedDeepDict(dict):
         if key in self or key not in self.base:
             # 'key not in base' to raise errors when key doesn't exist
             super().__delitem__(key)
+        self.mask.add(key)  # Mask the key so that it cannot be drawn out of the base
 
     def finalize(self, retain: Optional[Set[str]] = None, deep_remainder: bool = True) -> None:
         """Finish migrating the data from the original dictionary into this one.
@@ -68,6 +70,8 @@ class _DelayedDeepDict(dict):
             deep_remainder: Whether to deep copy any keys which have not yet been copied.
         """
         for key in self.base:
+            if key in self.mask:
+                continue
             if retain and key not in retain:
                 if not key in self.warned:
                     self.warned.add(key)
