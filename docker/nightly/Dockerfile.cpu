@@ -30,10 +30,13 @@ RUN pip install --no-cache-dir \
     ipykernel \
     ipywidgets \
     papermill
-RUN ipython kernel install --user --name nightly_build
 
-# specify notebook version (latest version has ValueError: Duplicate Signature)
-RUN pip install notebook==6.3.0
+# specify jupyter_client version To address "ValueError: Duplicate Signature" (https://github.com/jupyter/jupyter_client/issues/541)
+# the latest release hasn't fixed this issues but the latest master branch seems to has fixed that.
+# Note: need to switch to new official release after it cames out (patch after 6.1.12)
+RUN pip install git+https://github.com/fastestimator-util/jupyter_client.git@master
+
+RUN ipython kernel install --user --name nightly_build
 
 # GPU cleaning requirement
 RUN apt-get install -y lsof
