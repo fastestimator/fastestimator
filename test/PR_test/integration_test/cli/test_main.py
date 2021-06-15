@@ -41,7 +41,7 @@ class TestMain(unittest.TestCase):
                 self.assertEqual(args["hyperparameters_json"], None)
 
             with self.subTest('args["warmup"]'):
-                self.assertEqual(args["warmup"], "true")
+                self.assertEqual(args["warmup"], True)
 
             with self.subTest("unknown"):
                 self.assertEqual(unknown, ['--epochs', '3', '--batch_size', '64'])
