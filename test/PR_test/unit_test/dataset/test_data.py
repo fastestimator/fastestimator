@@ -25,7 +25,7 @@ def ping(host):
         req.add_header('User-Agent', agent)
         code = urllib.request.urlopen(req).getcode()
         return code == 200
-    except urllib.request.HTTPError as e:
+    except:
         return False
 
 
@@ -41,7 +41,9 @@ class TestData(unittest.TestCase):
             if isinstance(value, list):
                 for url in value:
                     with self.subTest('{}{} url'.format(key, url)):
-                        self.assertTrue(ping(url))
+                        if not ping(url):
+                            print("Warning!!: {} is not reachable at {}".format(key, url))
             else:
                 with self.subTest('Check if {} url reachable'.format(key)):
-                    self.assertTrue(ping(value))
+                    if not ping(value):
+                        print("Warning!!: {} is not reachable at {}".format(key, value))

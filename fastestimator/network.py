@@ -108,7 +108,12 @@ class BaseNetwork:
             all_items = self.ops + self.postprocessing
         return all_items
 
-    def load_epoch(self, mode: str, epoch: int, output_keys: Optional[Set[str]] = None, warmup: bool = False) -> None:
+    def load_epoch(self,
+                   mode: str,
+                   epoch: int,
+                   output_keys: Optional[Set[str]] = None,
+                   warmup: bool = False,
+                   eager: bool = False) -> None:
         """Prepare the network to run a given epoch and mode.
 
         This method is necessary since schedulers and op mode restrictions may result in different computation graphs
@@ -119,6 +124,8 @@ class BaseNetwork:
             epoch: The epoch to prepare to execute.
             output_keys: What keys can be moved from the GPU back to the CPU after executing a step.
             warmup: Whether to prepare to execute it warmup mode or not (end users can likely ignore this argument).
+            eager: Whether to run the training in eager mode. This is only related to TensorFlow training because
+                PyTorch by nature is always in eager mode.
         """
         self.effective_inputs[mode] = self.get_effective_input_keys(mode, epoch)
         self.effective_outputs[mode] = self.get_all_output_keys(mode, epoch)
@@ -132,7 +139,12 @@ class BaseNetwork:
         for idx, gradient_op in enumerate(gradient_ops):
             gradient_op.fe_retain_graph(idx != len(gradient_ops) - 1)
         self.epoch_state = {
-            "warmup": warmup, "mode": mode, "req_grad": len(gradient_ops) > 0, "epoch": epoch, "deferred": {}
+            "warmup": warmup,
+            "mode": mode,
+            "req_grad": len(gradient_ops) > 0,
+            "epoch": epoch,
+            "deferred": {},
+            "eager": eager
         }
         # warmup: bool, mode: str, req_grad: bool, epoch: int, deferred: Dict[str, List[Callable]]]
         for model in self.epoch_models:
@@ -270,7 +282,7 @@ class BaseNetwork:
         Returns:
             prediction_data overlaid on the input `data`.
         """
-        self.load_epoch(mode, epoch, warmup=False)
+        self.load_epoch(mode, epoch, warmup=False, eager=True)
         data = to_tensor(data, target_type=self.target_type)
         data, prediction = self.run_step(data)
         self.unload_epoch()
@@ -361,7 +373,12 @@ class TorchNetwork(BaseNetwork):
                          ops=ops,
                          postprocessing=postprocessing)
 
-    def load_epoch(self, mode: str, epoch: int, output_keys: Optional[Set[str]] = None, warmup: bool = False) -> None:
+    def load_epoch(self,
+                   mode: str,
+                   epoch: int,
+                   output_keys: Optional[Set[str]] = None,
+                   warmup: bool = False,
+                   eager: bool = False) -> None:
         """Prepare the network to run a given epoch and mode.
 
         This method is necessary since schedulers and op mode restrictions may result in different computation graphs
@@ -372,8 +389,10 @@ class TorchNetwork(BaseNetwork):
             epoch: The epoch to prepare to execute.
             output_keys: What keys must be moved from the GPU back to the CPU after executing a step.
             warmup: Whether to prepare to execute it warmup mode or not (end users can likely ignore this argument).
+            eager: Whether to run the training in eager mode. This is only related to TensorFlow training because
+                PyTorch by nature is always in eager mode.
         """
-        super().load_epoch(mode, epoch, output_keys, warmup)
+        super().load_epoch(mode=mode, epoch=epoch, output_keys=output_keys, warmup=warmup, eager=eager)
         if self.device.type == "cuda":
             for model in self.epoch_models:
                 # move model variables to gpu
@@ -541,7 +560,12 @@ class TFNetwork(BaseNetwork):
     ) -> None:
         super().__init__(target_type='tf', device=None, ops=ops, postprocessing=postprocessing)
 
-    def load_epoch(self, mode: str, epoch: int, output_keys: Optional[Set[str]] = None, warmup: bool = False) -> None:
+    def load_epoch(self,
+                   mode: str,
+                   epoch: int,
+                   output_keys: Optional[Set[str]] = None,
+                   warmup: bool = False,
+                   eager: bool = False) -> None:
         """Prepare the network to run a given epoch and mode.
 
         This method is necessary since schedulers and op mode restrictions may result in different computation graphs
@@ -552,8 +576,10 @@ class TFNetwork(BaseNetwork):
             epoch: The epoch to prepare to execute.
             output_keys: What keys must be moved from the GPU back to the CPU after executing a step.
             warmup: Whether to prepare to execute it warmup mode or not (end users can likely ignore this argument).
+            eager: Whether to run the training in eager mode. This is only related to TensorFlow training because
+                PyTorch by nature is always in eager mode.
         """
-        super().load_epoch(mode, epoch, output_keys, warmup)
+        super().load_epoch(mode=mode, epoch=epoch, output_keys=output_keys, warmup=warmup, eager=eager)
         # Don't cause a re-trace just because epoch changed
         self.epoch_state["epoch"] = tf.convert_to_tensor(self.epoch_state["epoch"])
         # Need to re-trace the TF graph if the optimizer is changing due to scheduling:
@@ -577,7 +603,7 @@ class TFNetwork(BaseNetwork):
         batch_in = self._get_effective_batch_input(batch, mode)
         strategy = tf.distribute.get_strategy()
         if isinstance(strategy, tf.distribute.MirroredStrategy):
-            if self.epoch_state["warmup"] == "debug":
+            if self.epoch_state["eager"]:
                 prediction = strategy.run(
                     self._forward_step_eager,
                     args=(batch_in, self.epoch_state, self.epoch_ops, to_list(self.effective_outputs[mode])))
@@ -588,7 +614,7 @@ class TFNetwork(BaseNetwork):
             batch = self._per_replica_to_global(batch)
             prediction = self._per_replica_to_global(prediction)
         else:
-            if self.epoch_state["warmup"] == "debug":
+            if self.epoch_state["eager"]:
                 prediction = self._forward_step_eager(batch_in,
                                                       self.epoch_state,
                                                       self.epoch_ops,
@@ -1007,7 +1033,7 @@ def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None], model: Model
                 optimizer = optimizer_fn(model.parameters())
             except Exception as e:
                 print("optimizer_fn of Pytorch backend should be callable with single arg. Please sure model and \
-                optimizer_fn are using the same backend")
+                optimizer_fn are using the same backend"                                                                                                                )
                 raise ValueError(repr(e))
             assert isinstance(optimizer, torch.optim.Optimizer), "optimizer_fn should generate pytorch optimizer"
             if mixed_precision:

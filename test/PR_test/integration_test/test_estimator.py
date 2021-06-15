@@ -287,10 +287,10 @@ class TestEstimatorWarmup(unittest.TestCase):
         strategy = tf.distribute.get_strategy()
         if isinstance(strategy, tf.distribute.MirroredStrategy):
             with self.assertRaises(StagingError):
-                est._warmup(warmup=True)
+                est._warmup()
         else:
             with self.assertRaises(KeyError):
-                est._warmup(warmup=True)
+                est._warmup()
 
     def test_estimator_warmup_trace_missing_key(self):
         loader = get_sample_tf_dataset()
@@ -307,7 +307,7 @@ class TestEstimatorWarmup(unittest.TestCase):
         est = fe.Estimator(pipeline=pipeline, network=network, epochs=2, traces=[Trace(inputs="z")])  # miss key "z"
         est._prepare_traces(run_modes={"train", "eval"})
         with self.assertRaises(AssertionError):
-            est._warmup(warmup=True)
+            est._warmup()
 
     def test_estimator_warmup_tf_dataset_torch_model_smoke(self):
         loader = get_sample_tf_dataset(expand_axis=1)
@@ -316,7 +316,7 @@ class TestEstimatorWarmup(unittest.TestCase):
         network = fe.Network(ops=[ModelOp(model=model, inputs="x", outputs="y_pred")])
         est = fe.Estimator(pipeline=pipeline, network=network, epochs=1, traces=[Trace(inputs="y_pred")])
         est._prepare_traces(run_modes={"train", "eval"})
-        est._warmup(warmup=True)
+        est._warmup()
         self.assertTrue(True)
 
     def test_estimator_warmup_torch_dataset_tf_model_smoke(self):
@@ -328,7 +328,7 @@ class TestEstimatorWarmup(unittest.TestCase):
 
         est = fe.Estimator(pipeline=pipeline, network=network, epochs=1, traces=[Trace(inputs="y_pred")])
         est._prepare_traces(run_modes={"train", "eval"})
-        est._warmup(warmup=True)
+        est._warmup()
         self.assertTrue(True)
 
 
