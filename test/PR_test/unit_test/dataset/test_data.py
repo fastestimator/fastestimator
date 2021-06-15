@@ -42,8 +42,8 @@ class TestData(unittest.TestCase):
                 for url in value:
                     with self.subTest('{}{} url'.format(key, url)):
                         if not ping(url):
-                            print("Warning!!: {} is not reachable at {}".format(key, url))
+                            print("\033[93m {} is not reachable at {}\033[00m".format(key, url))
             else:
                 with self.subTest('Check if {} url reachable'.format(key)):
                     if not ping(value):
-                        print("Warning!!: {} is not reachable at {}".format(key, value))
+                        print("\033[93m {} is not reachable at {}\033[00m".format(key, value))
