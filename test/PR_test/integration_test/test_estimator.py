@@ -284,13 +284,9 @@ class TestEstimatorWarmup(unittest.TestCase):
         est = fe.Estimator(pipeline=pipeline, network=network, epochs=2)
         est._prepare_traces(run_modes={"train", "eval"})
 
-        strategy = tf.distribute.get_strategy()
-        if isinstance(strategy, tf.distribute.MirroredStrategy):
-            with self.assertRaises(StagingError):
-                est._warmup()
-        else:
-            with self.assertRaises(KeyError):
-                est._warmup()
+        # in multi-gpu environment it may raise Staging Error instead of KeyError
+        with self.assertRaises((StagingError, KeyError)):
+            est._warmup()
 
     def test_estimator_warmup_trace_missing_key(self):
         loader = get_sample_tf_dataset()
