@@ -16,6 +16,7 @@ import argparse
 import json
 import os
 import sys
+from ast import literal_eval
 from typing import Any, Dict, List, Optional
 
 from fastestimator import Estimator
@@ -56,8 +57,7 @@ def train(args: Dict[str, Any], unknown: Optional[List[str]]) -> None:
         unknown: The remainder of the command line arguments to be passed along to the get_estimator() method.
     """
     estimator = _get_estimator(args, unknown)
-    warmup_option = {"true": True, "false": False, "debug": "debug"}
-    estimator.fit(warmup=warmup_option[args['warmup'].lower()], summary=args['summary'])
+    estimator.fit(warmup=args['warmup'], eager=args['eager'], summary=args['summary'])
 
 
 def test(args: Dict[str, Any], unknown: Optional[List[str]]) -> None:
@@ -69,7 +69,7 @@ def test(args: Dict[str, Any], unknown: Optional[List[str]]) -> None:
         unknown: The remainder of the command line arguments to be passed along to the get_estimator() method.
     """
     estimator = _get_estimator(args, unknown)
-    estimator.test(summary=args['summary'])
+    estimator.test(summary=args['summary'], eager=args['eager'])
 
 
 def configure_train_parser(subparsers: argparse._SubParsersAction) -> None:
@@ -88,7 +88,16 @@ def configure_train_parser(subparsers: argparse._SubParsersAction) -> None:
                         dest='hyperparameters_json',
                         type=str,
                         help="The path to the hyperparameters JSON file")
-    parser.add_argument('--warmup', type=str, help="Warmup setting, can be true, false or debug", default="true")
+    parser.add_argument('--warmup',
+                        type=literal_eval,
+                        help="Warmup setting, can be True or False",
+                        choices=[True, False],
+                        default=True)
+    parser.add_argument('--eager',
+                        type=literal_eval,
+                        help="Eager setting, can be True or False",
+                        choices=[True, False],
+                        default=False)
     parser.add_argument('--summary', type=str, help="Experiment name", default=None)
     parser.add_argument_group(
         'hyperparameter arguments',
@@ -113,6 +122,11 @@ def configure_test_parser(subparsers: argparse._SubParsersAction) -> None:
                         dest='hyperparameters_json',
                         type=str,
                         help="The path to the hyperparameters JSON file")
+    parser.add_argument('--eager',
+                        type=literal_eval,
+                        help="Eager setting, can be True or False",
+                        choices=[True, False],
+                        default=False)
     parser.add_argument('--summary', type=str, help="Experiment name", default=None)
     parser.add_argument_group(
         'hyperparameter arguments',

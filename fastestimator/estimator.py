@@ -101,7 +101,7 @@ class Estimator:
     def traces(self) -> List[Union[Trace, Scheduler[Trace]]]:
         return self.system.traces
 
-    def fit(self, summary: Optional[str] = None, warmup: Union[bool, str] = True) -> Optional[Summary]:
+    def fit(self, summary: Optional[str] = None, warmup: bool = True, eager: bool = False) -> Optional[Summary]:
         """Train the network for the number of epochs specified by the estimator's constructor.
 
         Args:
@@ -110,7 +110,9 @@ class Estimator:
             warmup: Whether to perform warmup before training begins. The warmup procedure will test one step at every
                 epoch where schedulers cause the execution graph to change. This can take some time up front, but can
                 also save significant heartache on epoch 300 when the training unexpectedly fails due to a tensor size
-                mismatch. When set to "debug", the warmup will be performed in eager execution for easier debugging.
+                mismatch.
+            eager: Whether to run the training in eager mode. This is only related to TensorFlow training because
+                PyTorch by nature is always in eager mode.
 
         Returns:
             A summary object containing the training history for this session iff a `summary` name was provided.
@@ -119,8 +121,8 @@ class Estimator:
         self.system.reset(summary, self.fe_summary())
         self._prepare_traces(run_modes={"train", "eval"})
         if warmup:
-            self._warmup(warmup=warmup)
-        self._start(run_modes={"train", "eval"})
+            self._warmup(eager=eager)
+        self._start(run_modes={"train", "eval"}, eager=eager)
         return self.system.summary or None
 
     def _prepare_traces(self, run_modes: Set[str]) -> None:
@@ -157,13 +159,15 @@ class Estimator:
         for trace in get_current_items(self.traces_in_use, run_modes=run_modes):
             trace.system = self.system
 
-    def test(self, summary: Optional[str] = None) -> Optional[Summary]:
+    def test(self, summary: Optional[str] = None, eager: bool = False) -> Optional[Summary]:
         """Run the pipeline / network in test mode for one epoch.
 
         Args:
             summary: A name for the experiment. If provided, the log history will be recorded in-memory and returned as
                 a summary object at the end of training. If None, the default value will be whatever `summary` name was
                 most recently provided to this Estimator's .fit() or .test() methods.
+            eager: Whether to run the training in eager mode. This is only related to TensorFlow training because
+                PyTorch by nature is always in eager mode.
 
         Returns:
             A summary object containing the training history for this session iff the `summary` name is not None (after
@@ -171,31 +175,28 @@ class Estimator:
         """
         self.system.reset_for_test(summary)
         self._prepare_traces(run_modes={"test"})
-        self._start(run_modes={"test"})
+        self._start(run_modes={"test"}, eager=eager)
         return self.system.summary or None
 
-    def _warmup(self, warmup: Union[bool, str]) -> None:
+    def _warmup(self, eager: bool = True) -> None:
         """Perform a test run of each pipeline and network signature epoch to make sure that training won't fail later.
 
         Traces are not executed in the warmup since they are likely to contain state variables which could become
         corrupted by running extra steps.
 
         Args:
-            warmup: Warmup arg specified by estimator.fit.
+            eager: Whether to run the training in eager mode. This is only related to TensorFlow training because
+                PyTorch by nature is always in eager mode.
         """
         all_traces = get_current_items(self.traces_in_use, run_modes={"train", "eval"})
         sort_traces(all_traces)  # This ensures that the traces can sort properly for on_begin and on_end
         monitor_names = self.monitor_names
-        signature_epochs = {}
         for mode in self.pipeline.get_modes() - {"test"}:
             scheduled_items = self.pipeline.get_scheduled_items(mode) + self.network.get_scheduled_items(
                 mode) + self.get_scheduled_items(mode)
-            signature_epochs[mode] = get_signature_epochs(scheduled_items, self.system.total_epochs, mode=mode)
-        if max([len(x) for x in signature_epochs.values()]) < 2 and warmup != "debug":
-            return
-        for mode, signature_epochs_mode in signature_epochs.items():
+            signature_epochs = get_signature_epochs(scheduled_items, self.system.total_epochs, mode=mode)
             epochs_with_data = self.pipeline.get_epochs_with_data(total_epochs=self.system.total_epochs, mode=mode)
-            for epoch in signature_epochs_mode:
+            for epoch in signature_epochs:
                 if epoch not in epochs_with_data:
                     continue
                 network_output_keys = self.network.get_all_output_keys(mode, epoch)
@@ -227,7 +228,7 @@ class Estimator:
                     "found missing key(s) during epoch {} mode {}: {}".format(epoch, mode, unmet_requirements)
                 sort_traces(traces, available_outputs=pipeline_output_keys | network_output_keys)
                 trace_input_keys.update(traces[0].inputs)
-                self.network.load_epoch(mode, epoch, output_keys=trace_input_keys, warmup=warmup)
+                self.network.load_epoch(mode, epoch, output_keys=trace_input_keys, warmup=True, eager=eager)
                 self.network.run_step(batch)
                 self.network.unload_epoch()
         assert not monitor_names, "found missing key(s): {}".format(monitor_names)
@@ -243,7 +244,7 @@ class Estimator:
         """
         return self.traces_in_use
 
-    def _start(self, run_modes: Set[str]) -> None:
+    def _start(self, run_modes: Set[str], eager: bool) -> None:
         """The outer training loop.
 
         This method invokes the trace on_begin method, runs the necessary 'train' and 'eval' epochs, and then invokes
@@ -251,6 +252,8 @@ class Estimator:
 
         Args:
             run_modes: The current execution modes.
+            eager: Whether to run the training in eager mode. This is only related to TensorFlow training because
+                PyTorch by nature is always in eager mode.
         """
         all_traces = sort_traces(get_current_items(self.traces_in_use, run_modes=run_modes))
         try:
@@ -259,24 +262,28 @@ class Estimator:
                 # If the training is re-starting from a restore wizard, it should re-run the last eval epoch
                 if self.system.epoch_idx > 0 and "eval" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
                     self.system.mode = "eval"
-                    self._run_epoch()
+                    self._run_epoch(eager=eager)
                 for self.system.epoch_idx in range(self.system.epoch_idx + 1, self.system.total_epochs + 1):
                     if "train" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
                         self.system.mode = "train"
-                        self._run_epoch()
+                        self._run_epoch(eager=eager)
                     if "eval" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
                         self.system.mode = "eval"
-                        self._run_epoch()
+                        self._run_epoch(eager=eager)
             else:
-                self._run_epoch()
+                self._run_epoch(eager=eager)
         except EarlyStop:
             pass  # On early stopping we still want to run the final traces and return results
         self._run_traces_on_end(traces=all_traces)
 
-    def _run_epoch(self) -> None:
+    def _run_epoch(self, eager: bool) -> None:
         """A method to perform an epoch of activity.
 
         This method requires that the current mode and epoch already be specified within the self.system object.
+
+        Args:
+            eager: Whether to run the training in eager mode. This is only related to TensorFlow training because
+                PyTorch by nature is always in eager mode.
         """
         traces = get_current_items(self.traces_in_use, run_modes=self.system.mode, epoch=self.system.epoch_idx)
         trace_input_keys = set()
@@ -289,7 +296,10 @@ class Estimator:
                                      self.system.epoch_idx,
                                      output_keys=trace_input_keys - network_output_keys | network_input_keys))
         iterator = iter(loader)
-        self.network.load_epoch(mode=self.system.mode, epoch=self.system.epoch_idx, output_keys=trace_input_keys)
+        self.network.load_epoch(mode=self.system.mode,
+                                epoch=self.system.epoch_idx,
+                                output_keys=trace_input_keys,
+                                eager=eager)
         self.system.batch_idx = None
         with Suppressor():
             batch = next(iterator)
