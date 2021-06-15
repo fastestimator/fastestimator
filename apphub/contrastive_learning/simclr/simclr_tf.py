@@ -189,8 +189,7 @@ def pretrain_model(epochs, batch_size, max_train_steps_per_epoch, save_dir):
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             max_train_steps_per_epoch=max_train_steps_per_epoch,
-                             monitor_names="contrastive_accuracy")
+                             max_train_steps_per_epoch=max_train_steps_per_epoch)
     estimator.fit()
 
     return model_con, model_finetune
