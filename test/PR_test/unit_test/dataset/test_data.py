@@ -37,13 +37,18 @@ class TestData(unittest.TestCase):
             cls.data_urls = pickle.load(dataset_url_dict)
 
     def test_dataset_urls(self):
+        failed_urls = set()
         for key, value in self.data_urls.items():
             if isinstance(value, list):
                 for url in value:
                     with self.subTest('{}{} url'.format(key, url)):
                         if not ping(url):
+                            failed_urls.add(key)
                             print("\033[93m {} is not reachable at {}\033[00m".format(key, url))
             else:
                 with self.subTest('Check if {} url reachable'.format(key)):
                     if not ping(value):
+                        failed_urls.add(key)
                         print("\033[93m {} is not reachable at {}\033[00m".format(key, value))
+        if failed_urls:
+            self.skipTest("The following datasets were not available: {}".format(", ".join(failed_urls)))
