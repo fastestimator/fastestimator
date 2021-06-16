@@ -1,4 +1,5 @@
-def IMAGE_TAG = "$BUILD_TAG".toLowerCase()
+// the original regex is [^a-zA-Z0-9\-_\.], but \ is a reserved character for Jenkinsfile and need \\ to escape \ first
+def IMAGE_TAG = "$BUILD_TAG".replaceAll("[^a-zA-Z0-9\\-_\\.]", "").toLowerCase()
 
 pipeline {
     agent {label 'master'}
