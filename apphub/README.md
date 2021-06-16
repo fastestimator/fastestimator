@@ -107,8 +107,5 @@ $ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 ### Multi-task Learning
 * **Uncertainty Weighted Loss:** Train an Uncertainty Network that learns to dynamically adjust the task-related weighted loss using uncertainty metrics. [[paper](https://arxiv.org/abs/1705.07115)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/multi_task_learning/uncertainty_weighted_loss/uncertainty_loss_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/multi_task_learning/uncertainty_weighted_loss/uncertainty_loss_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/multi_task_learning/uncertainty_weighted_loss/uncertainty_loss.ipynb)]
 
-### Neural Architecture Search
-* **Neural Architecture Search without Training (NASWOT):** Search for high performing networks without training by calculating measures at initialization which are indicative of their trained performance. [[paper](https://arxiv.org/pdf/2006.04647.pdf)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/neural_architecture_search/naswot/naswot_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/neural_architecture_search/naswot/naswot_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/neural_architecture_search/naswot/naswot.ipynb)]
-
 ## Contributions
 If you have implementations that we haven't done yet and want to join our efforts to make state-of-the-art AI easier, please consider contributing to our repo. We would really appreciate it!
