@@ -198,7 +198,7 @@ def score_fn(search_idx, uid, batch_data, config_info):
                                          config["N"],
                                          10)
     feature_list = [layer.output for layer in nasbench201_model.layers if "re_lu" in layer.name]
-    model = fe.build(model_fn=lambda: Model(nasbench201_model.input, feature_list), optimizer_fn="adam")
+    model = fe.build(model_fn=lambda: Model(nasbench201_model.input, feature_list), optimizer_fn=None)
 
     # Only a single forward pass through the network is required
     relu_result = fe.backend.feed_forward(model, batch_data["x"])

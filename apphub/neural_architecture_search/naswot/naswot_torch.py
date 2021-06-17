@@ -256,23 +256,17 @@ class NasbenchNetwork(nn.Module):
         self.lastact = nn.Sequential(nn.BatchNorm2d(C_prev), nn.ReLU(inplace=True))
         self.global_pooling = nn.AdaptiveAvgPool2d(1)
         self.classifier = nn.Linear(C_prev, num_classes)
-        self.K = np.zeros((batch_size, batch_size))
+        self.relu_out = {}
 
         for _, module in self.named_modules():
             if 'ReLU' in str(type(module)):
-                module.register_forward_hook(self.counting_forward_hook)
+                module.register_forward_hook(self.relu_hook)
 
-    def counting_forward_hook(self, module, inp, out):
+    def relu_hook(self, module, inp, out):
         try:
-            if isinstance(inp, tuple):
-                inp = inp[0]
-            inp = inp.view(inp.size(0), -1)
-            x = (inp > 0).float()
-            K = x @ x.t()
-            K2 = (1. - x) @ (1. - x.t())
-            self.K = self.K + K.cpu().numpy() + K2.cpu().numpy()
+            self.relu_out[inp[0].device].append(out.view(out.size(0), -1))
         except:
-            pass
+            self.relu_out[inp[0].device] = [out.view(out.size(0), -1)]
 
     def forward(self, inputs):
         feature = self.stem(inputs)
@@ -306,10 +300,31 @@ def score_fn(search_idx, uid, batch_data, config_info, batch_size):
     model = fe.build(
         model_fn=lambda: NasbenchNetwork(
             str2structure(config["architecture"]), config["C"], config["N"], 10, batch_size),
-        optimizer_fn="adam")
+        optimizer_fn=None)
+
+    if torch.cuda.is_available():
+        batch_data["x"] = batch_data["x"].to("cuda")
+        model = model.to("cuda")
 
     _ = fe.backend.feed_forward(model, batch_data["x"])
-    _, score = np.linalg.slogdet(model.K)
+
+    if torch.cuda.device_count() > 1:
+        model = model.module
+
+    key_set = []
+    for key in model.relu_out.keys():
+        key_set.append(key)
+
+    matrix = np.zeros((batch_size, batch_size))
+    for i in range(len(model.relu_out[key_set[0]])):
+        x = np.concatenate([(model.relu_out[key][i] > 0).float().cpu().numpy() for key in key_set], axis=0)
+        x_t = np.transpose(x)
+        mat = x @ x_t
+        mat2 = (1. - x) @ (1. - x_t)
+        matrix = matrix + mat + mat2
+
+    _, score = np.linalg.slogdet(matrix)
+
     return score
 
 
