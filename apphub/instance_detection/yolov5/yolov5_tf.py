@@ -31,6 +31,7 @@ from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import CenterCrop, HorizontalFlip, LongestMaxSize, PadIfNeeded
 from fastestimator.op.numpyop.univariate import ReadImage, ToArray
 from fastestimator.op.tensorop import Average, TensorOp
+from fastestimator.op.tensorop.loss import LossOp
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.schedule import EpochScheduler, cosine_decay
 from fastestimator.trace.adapt import LRScheduler
@@ -39,7 +40,7 @@ from fastestimator.trace.metric import MeanAveragePrecision
 from fastestimator.util import get_num_devices
 
 
-# This dataset selects 4 images and its bboxes
+# This dataset selects 4 images and their bboxes
 class PreMosaicDataset(Dataset):
     def __init__(self, mscoco_ds):
         self.mscoco_ds = mscoco_ds
@@ -285,7 +286,7 @@ def yolov5(input_shape, num_classes, strides=(8, 16, 32)):
     return tf.keras.Model(inputs=inp, outputs=[out_17, out_20, out_23])
 
 
-class ComputeLoss(TensorOp):
+class ComputeLoss(LossOp):
     def __init__(self, inputs, outputs, img_size=640, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.loss_conf = tf.losses.BinaryCrossentropy(reduction="none")

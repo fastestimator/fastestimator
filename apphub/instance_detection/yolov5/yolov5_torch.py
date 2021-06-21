@@ -31,6 +31,7 @@ from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import CenterCrop, HorizontalFlip, LongestMaxSize, PadIfNeeded
 from fastestimator.op.numpyop.univariate import ReadImage, ToArray
 from fastestimator.op.tensorop import Average, TensorOp
+from fastestimator.op.tensorop.loss import LossOp
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.schedule import EpochScheduler, cosine_decay
 from fastestimator.trace.adapt import LRScheduler
@@ -39,7 +40,7 @@ from fastestimator.trace.metric import MeanAveragePrecision
 from fastestimator.util import get_num_devices
 
 
-# This dataset selects 4 images and its bboxes
+# This dataset selects 4 images and their bboxes
 class PreMosaicDataset(Dataset):
     def __init__(self, mscoco_ds):
         self.mscoco_ds = mscoco_ds
@@ -403,7 +404,7 @@ class DecodePred(TensorOp):
         return result
 
 
-class ComputeLoss(TensorOp):
+class ComputeLoss(LossOp):
     def __init__(self, inputs, outputs, img_size=640, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.BCEcls = nn.BCEWithLogitsLoss(reduction="none")
