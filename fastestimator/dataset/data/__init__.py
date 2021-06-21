@@ -13,5 +13,5 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.dataset.data import breast_cancer, cifair10, cifair100, cifar10, cifar100, cub200, food101, \
-    horse2zebra, imdb_review,  mendeley, mitmovie_ner, mnist, montgomery, mscoco, nih_chestxray, omniglot, \
-    penn_treebank, shakespeare, svhn, usps
+    horse2zebra, imdb_review, mendeley, mitmovie_ner, mnist, montgomery, mscoco, nih_chestxray, omniglot, \
+    penn_treebank, shakespeare, svhn, svhn_cropped, usps
