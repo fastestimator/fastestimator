@@ -136,11 +136,12 @@ class OpDataset(Dataset):
         Returns:
             The data dictionary from the specified index, with transformations applied.
         """
-        if isinstance(self.dataset, BatchDataset):
+        item = self.dataset[index]
+        if isinstance(item, list):
             # BatchDataset may randomly sample the same elements multiple times, so need to avoid reprocessing
             unique_samples = {}  # id: idx
             results = []
-            for idx, data in enumerate(self.dataset[index]):
+            for idx, data in enumerate(item):
                 data_id = id(data)
                 if data_id not in unique_samples:
                     data = _DelayedDeepDict(data)
@@ -150,11 +151,11 @@ class OpDataset(Dataset):
                     unique_samples[data_id] = idx
                 else:
                     results.append(results[unique_samples[data_id]])
-            if self.dataset.pad_value is not None:
+            if hasattr(self.dataset, "pad_value") and self.dataset.pad_value is not None:
                 pad_batch(results, self.dataset.pad_value)
-            results = {key: np.array([item[key] for item in results]) for key in results[0]}
+            results = {key: np.array([result[key] for result in results]) for key in results[0]}
         else:
-            results = _DelayedDeepDict(self.dataset[index])
+            results = _DelayedDeepDict(item)
             forward_numpyop(self.ops, results, {'mode': self.mode})
             results.finalize(retain=self.output_keys, deep_remainder=self.deep_remainder)
         return results

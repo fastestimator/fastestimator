@@ -81,7 +81,15 @@ class BatchDataset(FEDataset):
         for num_sample in self.num_samples:
             assert isinstance(num_sample, int) and num_sample > 0, "only accept positive integer type as num_sample"
         # check dataset keys
-        dataset_keys = [set(dataset[0].keys()) for dataset in self.datasets]
+        dataset_keys = []
+        for dataset in self.datasets:
+            sample_data = dataset[0]
+            if isinstance(sample_data, list):
+                keys = [set(sample_data_element.keys()) for sample_data_element in sample_data]
+                dataset_keys.extend(keys)
+            else:
+                keys = set(sample_data.keys())
+                dataset_keys.append(keys)
         for key in dataset_keys:
             assert key, "found no key in datasets"
         is_same_key = all([dataset_keys[0] == key for key in dataset_keys])
@@ -224,7 +232,11 @@ class BatchDataset(FEDataset):
                 num_samples = self.num_samples
             for dataset, num_sample, index_map in zip(self.datasets, num_samples, self.index_maps):
                 for idx in range(num_sample):
-                    items.append(dataset[index_map[batch_idx * num_sample + idx]])
+                    item = dataset[index_map[batch_idx * num_sample + idx]]
+                    if isinstance(item, list):
+                        items.extend(item)
+                    else:
+                        items.append(item)
         else:
             num_sample = self.num_samples[0]
             for idx in range(num_sample):

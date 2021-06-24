@@ -27,7 +27,6 @@ import fastestimator as fe
 from fastestimator.backend.to_shape import to_shape
 from fastestimator.backend.to_tensor import to_tensor
 from fastestimator.backend.to_type import to_type
-from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
 from fastestimator.pipeline import Pipeline
 from fastestimator.schedule.schedule import Scheduler, get_current_items, get_signature_epochs
@@ -340,7 +339,7 @@ class Estimator:
         new_loader = loader
         if isinstance(new_loader, DataLoader) and isinstance(self.network, TFNetwork):
             add_batch = True
-            if hasattr(loader.dataset, "dataset") and isinstance(loader.dataset.dataset, BatchDataset):
+            if hasattr(loader.dataset, "dataset") and loader.dataset.dataset.fe_is_batched:
                 add_batch = False
             batch = to_tensor(loader.dataset[0], target_type="tf")
             data_type = to_type(batch)
