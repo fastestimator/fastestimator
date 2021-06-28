@@ -348,11 +348,11 @@ class Pipeline:
             if isinstance(batch_size, dict):
                 batch_size = batch_size[mode]
             # check whether to batch the data
-            if not hasattr(data, "fe_is_batched"):
+            if not hasattr(data, "fe_batch"):
                 sample_item = data[0]
-                data.fe_is_batched = True if isinstance(sample_item, list) else False
+                data.fe_batch = len(sample_item) if isinstance(sample_item, list) else 0
             # batch dataset
-            if data.fe_is_batched:
+            if data.fe_batch:
                 data.pad_value = self.pad_value
             # shuffle
             if shuffle is None:
@@ -367,7 +367,7 @@ class Pipeline:
                                    output_keys,
                                    deep_remainder=False)
             # Results will be immediately converted to tensors, so don't need deep_remainder
-            batch_size = None if data.fe_is_batched else batch_size
+            batch_size = None if data.fe_batch else batch_size
             data = DataLoader(op_dataset,
                               batch_size=batch_size,
                               shuffle=False if isinstance(data, BatchDataset) else shuffle,

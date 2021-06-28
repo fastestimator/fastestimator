@@ -44,11 +44,13 @@ class NumpyOpAdd1(NumpyOp):
 
 
 class ListData(Dataset):
-    def __init__(self, ds):
+    def __init__(self, ds, key1="x", key2="y"):
         self.ds = ds
+        self.key1 = key1
+        self.key2 = key2
 
     def __getitem__(self, idx):
-        return [{"x": self.ds[idx]["x"], "y": self.ds[idx]["y"]} for _ in range(5)]
+        return [{self.key1: self.ds[idx]["x"], self.key2: self.ds[idx]["y"]} for _ in range(5)]
 
     def __len__(self):
         return len(self.ds)
@@ -433,6 +435,14 @@ class TestPipelineGetResults(unittest.TestCase):
         pipeline = fe.Pipeline(train_data=batch_ds)
         data = pipeline.get_results()
         self.assertEqual(data["x"].size(0), 7)
+
+    def test_pipeline_get_results_batch_list_data_disjoint_keys(self):
+        ds1 = self.sample_torch_dataset
+        ds2 = ListData(ds1, key1="x1", key2="y2")
+        batch_ds = BatchDataset(datasets=(ds1, ds2), num_samples=(5, 1))
+        pipeline = fe.Pipeline(train_data=batch_ds)
+        data = pipeline.get_results()
+        self.assertEqual(data["x"].size(0), 5)
 
 
 class TestPipelineGetLoader(unittest.TestCase):
