@@ -82,7 +82,8 @@ class BatchDataset(FEDataset):
             assert isinstance(num_sample, int) and num_sample > 0, "only accept positive integer type as num_sample"
         # check dataset keys
         dataset_keys = []
-        num_examples = self.num_samples * len(self.datasets) if len(self.num_samples) == 1 else self.num_samples
+        num_examples = self.num_samples * len(self.datasets) if len(
+            self.num_samples) == 1 else [x for x in self.num_samples]
         for idx, dataset in enumerate(self.datasets):
             sample_data = dataset[0]
             if isinstance(sample_data, list):
