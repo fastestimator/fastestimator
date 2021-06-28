@@ -68,7 +68,7 @@ class BatchDataset(FEDataset):
         self.all_fe_datasets = False
         self._check_input()
         self.index_maps = []
-        self.reset_index_maps()
+        self.reset_index_maps(0)
         self.pad_value = None
 
     def _check_input(self) -> None:
@@ -271,6 +271,8 @@ class BatchDataset(FEDataset):
             num_samples = num_samples * len(self.datasets)
         self.index_maps = []
         for dataset, num_sample in zip(self.datasets, num_samples):
+            if hasattr(dataset, "reset_index_maps"):
+                dataset.reset_index_maps(seed)
             index_map = [list(range(len(dataset))) for _ in range(math.ceil(len(self) * num_sample / len(dataset)))]
             for mapping in index_map:
                 if seed is not None:

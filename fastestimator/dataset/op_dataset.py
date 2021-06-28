@@ -112,15 +112,17 @@ class OpDataset(Dataset):
         output_keys: What keys can be produced from pipeline. If None, all keys will be considered.
         deep_remainder: Whether data which is not modified by Ops should be deep copied or not. This argument is used to
             help with RAM management, but end users can almost certainly ignore it.
+        shuffle: Whether to shuffle batched datasets every epoch.
     """
     def __init__(self,
                  dataset: Dataset,
                  ops: List[NumpyOp],
                  mode: str,
                  output_keys: Optional[Set[str]] = None,
-                 deep_remainder: bool = True) -> None:
+                 deep_remainder: bool = True,
+                 shuffle: bool = True) -> None:
         self.dataset = dataset
-        if isinstance(self.dataset, BatchDataset):
+        if hasattr(self.dataset, "reset_index_maps") and shuffle:
             self.dataset.reset_index_maps()
         self.ops = ops
         self.mode = mode

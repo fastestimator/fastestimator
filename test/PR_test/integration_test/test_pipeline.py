@@ -476,11 +476,9 @@ class TestPipelineGetLoader(unittest.TestCase):
 
     def test_pipeline_get_loader_torch_dataset(self):
         pipeline = fe.Pipeline(train_data=self.sample_torch_dataset)
-        loader = pipeline.get_loader(mode="train")
-
+        loader = pipeline.get_loader(mode="train", shuffle=False)
         with self.subTest("check loader type"):
             self.assertIsInstance(loader, torch.utils.data.DataLoader)
-
         with self.subTest("check data"):
             results = []
             for idx, batch in enumerate(loader, start=1):
