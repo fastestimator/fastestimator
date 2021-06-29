@@ -110,8 +110,15 @@ class BatchDataset(FEDataset):
                 assert isinstance(p, float) and p > 0, "must provide positive float for probability distribution"
         else:
             assert len(self.datasets) == len(self.num_samples), "the number of dataset must match num_samples"
-        if not self.same_feature:
+        # set up batch size
+        if self.same_feature:
+            if self.probability:
+                self.fe_batch = sum([n * p for n, p in zip(num_examples, self.probability)])
+            else:
+                self.fe_batch = sum(num_examples)
+        else:
             assert len(set(num_examples)) == 1, "the number of output samples must be the same for disjoint features"
+            self.fe_batch = num_examples[0]
         self.all_fe_datasets = all([isinstance(dataset, FEDataset) for dataset in self.datasets])
 
     def _do_split(self, splits: Sequence[Iterable[int]]) -> List['BatchDataset']:
@@ -251,7 +258,7 @@ class BatchDataset(FEDataset):
                     else:
                         single_ds_items.append(item)
                 unpaired_items.append(single_ds_items)
-            items = [{k: v for d in D for k, v in d.items()} for D in zip(*unpaired_items)]
+            items = [{k: v for d in d_pair for k, v in d.items()} for d_pair in zip(*unpaired_items)]
         random.shuffle(items)
         return items
 

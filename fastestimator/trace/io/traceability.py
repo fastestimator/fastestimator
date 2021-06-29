@@ -535,7 +535,7 @@ class Traceability(Trace):
 
         batch_size = ""
         if isinstance(ds, Dataset):
-            if hasattr(ds, "fe_atch") and ds.fe_batch:
+            if hasattr(ds, "fe_batch") and ds.fe_batch:
                 batch_size = ds.fe_batch
             else:
                 batch_size = self.system.pipeline.batch_size
