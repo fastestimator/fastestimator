@@ -113,7 +113,7 @@ class BatchDataset(FEDataset):
         # set up batch size
         if self.same_feature:
             if self.probability:
-                self.fe_batch = sum([n * p for n, p in zip(num_examples, self.probability)])
+                self.fe_batch = round(sum([n * p for n, p in zip(num_examples, self.probability)]))
             else:
                 self.fe_batch = sum(num_examples)
         else:
