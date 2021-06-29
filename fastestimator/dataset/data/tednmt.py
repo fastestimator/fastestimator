@@ -15,15 +15,38 @@
 import os
 import tarfile
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import wget
+
+from fastestimator.dataset.numpy_dataset import NumpyDataset
 from fastestimator.util.wget_util import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress
 
 
-def load_data(root_dir: Optional[str] = None, translate_option: str = "az_to_en"):
+def _read_data(file_path: str) -> List[str]:
+    with open(file_path) as f:
+        data = f.read().split("\n")
+    # remove empty lines
+    data = [x for x in data if x]
+    return data
+
+
+def _create_dataset(data_path: str, translate_option: str, extension: str) -> NumpyDataset:
+    source, target = translate_option.split("_to_")
+    source = source.replace("_", "-")
+    if extension != "train":
+        source = source.split("-")[0]
+    source_data = _read_data(os.path.join(data_path, source + "." + extension))
+    target_data = _read_data(os.path.join(data_path, target + "." + extension))
+    assert len(target_data) == len(source_data), "Size do not match for {} mode {}".format(translate_option, extension)
+    dataset = NumpyDataset({"source": source_data, "target": target_data})
+    return dataset
+
+
+def load_data(root_dir: Optional[str] = None,
+              translate_option: str = "az_to_en") -> Tuple[NumpyDataset, NumpyDataset, NumpyDataset]:
     """Load and return the neural machine translation dataset from TED talks.
 
     Args:
@@ -34,7 +57,7 @@ def load_data(root_dir: Optional[str] = None, translate_option: str = "az_to_en"
             "pt_to_en", "ru_to_en", "ru_to_pt", "tr_to_en".
 
     Returns:
-        (train_data, eval_data)
+        (train_data, eval_data, test_data)
     """
     # Set up path
     home = str(Path.home())
@@ -55,3 +78,9 @@ def load_data(root_dir: Optional[str] = None, translate_option: str = "az_to_en"
         with tarfile.open(compressed_path) as f:
             f.extractall(root_dir)
     # process data
+    data_path = os.path.join(extracted_path, translate_option)
+    assert os.path.exists(data_path), "folder {} does not exist, please verify translation options".format(data_path)
+    train_ds = _create_dataset(data_path=data_path, translate_option=translate_option, extension="train")
+    eval_ds = _create_dataset(data_path=data_path, translate_option=translate_option, extension="dev")
+    test_ds = _create_dataset(data_path=data_path, translate_option=translate_option, extension="test")
+    return train_ds, eval_ds, test_ds
