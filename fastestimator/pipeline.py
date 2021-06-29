@@ -347,12 +347,17 @@ class Pipeline:
                 batch_size = batch_size.get_current_value(epoch)
             if isinstance(batch_size, dict):
                 batch_size = batch_size[mode]
+            # check whether to batch the data
+            if not hasattr(data, "fe_batch"):
+                sample_item = data[0]
+                data.fe_batch = len(sample_item) if isinstance(sample_item, list) else 0
             # batch dataset
-            if isinstance(data, BatchDataset):
+            if data.fe_batch:
                 data.pad_value = self.pad_value
+            batch_size = None if data.fe_batch else batch_size
             # shuffle
             if shuffle is None:
-                shuffle = mode == "train" and batch_size is not None
+                shuffle = mode == "train"
             # collate_fn
             collate_fn = self.collate_fn
             if collate_fn is None and self.pad_value is not None:
@@ -361,13 +366,12 @@ class Pipeline:
                                    get_current_items(self.ops, mode, epoch),
                                    mode,
                                    output_keys,
-                                   deep_remainder=False)
+                                   deep_remainder=False,
+                                   shuffle=shuffle)
             # Results will be immediately converted to tensors, so don't need deep_remainder
-            batch_size = None if isinstance(data, BatchDataset) else batch_size
             data = DataLoader(op_dataset,
                               batch_size=batch_size,
-                              shuffle=False if isinstance(data, BatchDataset) else shuffle,
-                              sampler=RandomSampler(op_dataset) if isinstance(data, BatchDataset) and shuffle else None,
+                              shuffle=shuffle,
                               num_workers=self.num_process,
                               drop_last=False if batch_size is None else self.drop_last,
                               worker_init_fn=lambda _: np.random.seed(random.randint(0, 2**32 - 1)),

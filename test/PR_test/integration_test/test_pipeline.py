@@ -20,6 +20,7 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 
 import fastestimator as fe
+from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.op.numpyop import NumpyOp
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.schedule import EpochScheduler
@@ -40,6 +41,19 @@ class NumpyOpAdd1(NumpyOp):
     def forward(self, data, state):
 
         return data + 1
+
+
+class ListData(Dataset):
+    def __init__(self, ds, key1="x", key2="y"):
+        self.ds = ds
+        self.key1 = key1
+        self.key2 = key2
+
+    def __getitem__(self, idx):
+        return [{self.key1: self.ds[idx]["x"], self.key2: self.ds[idx]["y"]} for _ in range(5)]
+
+    def __len__(self):
+        return len(self.ds)
 
 
 class TorchCustomDataset(Dataset):
@@ -393,7 +407,9 @@ class TestPipelineGetResults(unittest.TestCase):
         pipeline = fe.Pipeline(train_data=self.sample_torch_dataset,
                                eval_data=self.sample_torch_dataset,
                                ops=NumpyOpAdd1(inputs="x", outputs="y"),
-                               batch_size={"train": 2, "eval": 1})
+                               batch_size={
+                                   "train": 2, "eval": 1
+                               })
         data_train = pipeline.get_results(mode="train", epoch=1)
         data_eval = pipeline.get_results(mode="eval", epoch=1)
         data_train["x"] = data_train["x"].numpy()
@@ -404,6 +420,29 @@ class TestPipelineGetResults(unittest.TestCase):
         ans_eval = {"x": np.array([[0]], dtype=np.float32), "y": np.array([[1]], dtype=np.float32)}
         self.assertTrue(is_equal(data_train, ans_train))
         self.assertTrue(is_equal(data_eval, ans_eval))
+
+    def test_pipeline_get_results_list_data(self):
+        ds = self.sample_torch_dataset
+        ds = ListData(ds)
+        pipeline = fe.Pipeline(train_data=ds)
+        data = pipeline.get_results()
+        self.assertEqual(data["x"].size(0), 5)
+
+    def test_pipeline_get_results_batch_list_data(self):
+        ds1 = self.sample_torch_dataset
+        ds2 = ListData(ds1)
+        batch_ds = BatchDataset(datasets=(ds1, ds2), num_samples=(2, 1))
+        pipeline = fe.Pipeline(train_data=batch_ds)
+        data = pipeline.get_results()
+        self.assertEqual(data["x"].size(0), 7)
+
+    def test_pipeline_get_results_batch_list_data_disjoint_keys(self):
+        ds1 = self.sample_torch_dataset
+        ds2 = ListData(ds1, key1="x1", key2="y2")
+        batch_ds = BatchDataset(datasets=(ds1, ds2), num_samples=(5, 1))
+        pipeline = fe.Pipeline(train_data=batch_ds)
+        data = pipeline.get_results()
+        self.assertEqual(data["x"].size(0), 5)
 
 
 class TestPipelineGetLoader(unittest.TestCase):
@@ -437,11 +476,9 @@ class TestPipelineGetLoader(unittest.TestCase):
 
     def test_pipeline_get_loader_torch_dataset(self):
         pipeline = fe.Pipeline(train_data=self.sample_torch_dataset)
-        loader = pipeline.get_loader(mode="train")
-
+        loader = pipeline.get_loader(mode="train", shuffle=False)
         with self.subTest("check loader type"):
             self.assertIsInstance(loader, torch.utils.data.DataLoader)
-
         with self.subTest("check data"):
             results = []
             for idx, batch in enumerate(loader, start=1):

@@ -68,7 +68,7 @@ class BatchDataset(FEDataset):
         self.all_fe_datasets = False
         self._check_input()
         self.index_maps = []
-        self.reset_index_maps()
+        self.reset_index_maps(0)
         self.pad_value = None
 
     def _check_input(self) -> None:
@@ -81,7 +81,18 @@ class BatchDataset(FEDataset):
         for num_sample in self.num_samples:
             assert isinstance(num_sample, int) and num_sample > 0, "only accept positive integer type as num_sample"
         # check dataset keys
-        dataset_keys = [set(dataset[0].keys()) for dataset in self.datasets]
+        dataset_keys = []
+        num_examples = self.num_samples * len(self.datasets) if len(
+            self.num_samples) == 1 else [x for x in self.num_samples]
+        for idx, dataset in enumerate(self.datasets):
+            sample_data = dataset[0]
+            if isinstance(sample_data, list):
+                keys = [set(sample_data_element.keys()) for sample_data_element in sample_data]
+                keys = set.union(*keys)
+                num_examples[idx] *= len(sample_data)
+            else:
+                keys = set(sample_data.keys())
+            dataset_keys.append(keys)
         for key in dataset_keys:
             assert key, "found no key in datasets"
         is_same_key = all([dataset_keys[0] == key for key in dataset_keys])
@@ -99,8 +110,15 @@ class BatchDataset(FEDataset):
                 assert isinstance(p, float) and p > 0, "must provide positive float for probability distribution"
         else:
             assert len(self.datasets) == len(self.num_samples), "the number of dataset must match num_samples"
-        if not self.same_feature:
-            assert len(set(self.num_samples)) == 1, "the number of samples must be the same for disjoint features"
+        # set up batch size
+        if self.same_feature:
+            if self.probability:
+                self.fe_batch = round(sum([n * p for n, p in zip(num_examples, self.probability)]))
+            else:
+                self.fe_batch = sum(num_examples)
+        else:
+            assert len(set(num_examples)) == 1, "the number of output samples must be the same for disjoint features"
+            self.fe_batch = num_examples[0]
         self.all_fe_datasets = all([isinstance(dataset, FEDataset) for dataset in self.datasets])
 
     def _do_split(self, splits: Sequence[Iterable[int]]) -> List['BatchDataset']:
@@ -215,24 +233,32 @@ class BatchDataset(FEDataset):
         Returns:
             A list of data instance dictionaries corresponding to the current `batch_idx`.
         """
-        items = []
         if self.same_feature:
             if self.probability:
                 index = list(np.random.choice(range(len(self.datasets)), size=self.num_samples, p=self.probability))
                 num_samples = [index.count(i) for i in range(len(self.datasets))]
             else:
                 num_samples = self.num_samples
+            items = []
             for dataset, num_sample, index_map in zip(self.datasets, num_samples, self.index_maps):
                 for idx in range(num_sample):
-                    items.append(dataset[index_map[batch_idx * num_sample + idx]])
+                    item = dataset[index_map[batch_idx * num_sample + idx]]
+                    if isinstance(item, list):
+                        items.extend(item)
+                    else:
+                        items.append(item)
         else:
-            num_sample = self.num_samples[0]
-            for idx in range(num_sample):
-                paired_items = [
-                    dataset[index_map[batch_idx * num_sample + idx]] for dataset,
-                    index_map in zip(self.datasets, self.index_maps)
-                ]
-                items.append({k: v for d in paired_items for k, v in d.items()})
+            unpaired_items = []
+            for dataset, num_sample, index_map in zip(self.datasets, self.num_samples, self.index_maps):
+                single_ds_items = []
+                for idx in range(num_sample):
+                    item = dataset[index_map[batch_idx * num_sample + idx]]
+                    if isinstance(item, list):
+                        single_ds_items.extend(item)
+                    else:
+                        single_ds_items.append(item)
+                unpaired_items.append(single_ds_items)
+            items = [{k: v for d in d_pair for k, v in d.items()} for d_pair in zip(*unpaired_items)]
         random.shuffle(items)
         return items
 
@@ -252,6 +278,8 @@ class BatchDataset(FEDataset):
             num_samples = num_samples * len(self.datasets)
         self.index_maps = []
         for dataset, num_sample in zip(self.datasets, num_samples):
+            if hasattr(dataset, "reset_index_maps"):
+                dataset.reset_index_maps(seed)
             index_map = [list(range(len(dataset))) for _ in range(math.ceil(len(self) * num_sample / len(dataset)))]
             for mapping in index_map:
                 if seed is not None:
