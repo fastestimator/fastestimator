@@ -51,7 +51,8 @@ class ReduceLROnPlateau(Trace):
                  best_mode: str = "min",
                  min_lr: float = 1e-6) -> None:
         if not metric:
-            assert hasattr(model, "loss_name"), "cannot infer model loss name, please put the model to UpdateOp first"
+            assert hasattr(model, "loss_name"), \
+                "ReduceLROnPlateau cannot infer model loss name, you can change metric or put the model to UpdateOp"
             assert len(model.loss_name) == 1, "the model has more than one losses, please provide the metric explicitly"
             metric = next(iter(model.loss_name))
         super().__init__(mode="eval", inputs=metric, outputs=model.model_name + "_lr")
