@@ -48,7 +48,7 @@ class BestModelSaver(Trace):
                  load_best_final: bool = False) -> None:
         if not metric:
             assert hasattr(model, "loss_name"), \
-                "BestModelSaver cannot infer model loss name, you can change metric or put the model to UpdateOp"
+                "BestModelSaver cannot infer model loss name. Provide a metric or use the model in an UpdateOp."
             assert len(model.loss_name) == 1, "the model has more than one losses, please provide the metric explicitly"
             metric = next(iter(model.loss_name))
         super().__init__(mode="eval",
