@@ -62,7 +62,10 @@ def feed_forward(model: Union[tf.keras.Model, torch.nn.Module], x: Union[Tensor,
         model.train(mode=training)
         if not isinstance(x, torch.Tensor):
             x = to_tensor(x, "torch")
-        x = model(x)
+        if isinstance(x, list):
+            x = model(*x)
+        else:
+            x = model(x)
     else:
         raise ValueError("Unrecognized model instance {}".format(type(model)))
     return x
