@@ -851,6 +851,8 @@ def build(model_fn: Callable[[], Union[Model, List[Model]]],
     # framework of model, setting the policy for both tf and pytorch here.
     if mixed_precision:
         mixed_precision_tf.set_global_policy(mixed_precision_tf.Policy('mixed_float16'))
+    else:
+        mixed_precision_tf.set_global_policy(mixed_precision_tf.Policy('float32'))
     if  torch.cuda.device_count() > 1:
         if not isinstance(tf.distribute.get_strategy(), tf.distribute.MirroredStrategy):
             tf.distribute.experimental_set_strategy(tf.distribute.MirroredStrategy())
@@ -905,11 +907,11 @@ def _fe_compile(model: Model,
         framework = "torch"
     else:
         raise ValueError("unrecognized model format: {}".format(type(model)))
-    # mark models with its mixed_precision flag
-    model.mixed_precision = mixed_precision
     # torch multi-gpu handling
     if framework == "torch" and torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
+    # mark models with its mixed_precision flag
+    model.mixed_precision = mixed_precision
     if isinstance(optimizer_fn, EpochScheduler):
         for epoch, optimizer_def in optimizer_fn.epoch_dict.items():
             optimizer_fn.epoch_dict[epoch] = _build_optimizer(optimizer_def, model, framework, mixed_precision)
@@ -1023,7 +1025,7 @@ def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None], model: Model
                 optimizer = optimizer_fn(model.parameters())
             except Exception as e:
                 print("optimizer_fn of Pytorch backend should be callable with single arg. Please sure model and \
-                optimizer_fn are using the same backend"                                                                                                                                                                                                                                )
+                optimizer_fn are using the same backend"                                                                                                                                                                                                                                                                                                                                                                                                        )
                 raise ValueError(repr(e))
             assert isinstance(optimizer, torch.optim.Optimizer), "optimizer_fn should generate pytorch optimizer"
             if mixed_precision:

@@ -240,7 +240,6 @@ class TestNetworkFeCompile(unittest.TestCase):
                                            optimizer_fn=optimizer,
                                            weight="example_path",
                                            name="test",
-                                           framework="tf",
                                            mixed_precision=False)
 
             _, weight = fake.call_args[0]
@@ -252,7 +251,6 @@ class TestNetworkFeCompile(unittest.TestCase):
                                        optimizer_fn=optimizer,
                                        weight=None,
                                        name="test",
-                                       framework="tf",
                                        mixed_precision=False)
 
         with self.subTest("check optimizer instantiation"):
@@ -274,7 +272,6 @@ class TestNetworkFeCompile(unittest.TestCase):
                                        optimizer_fn=optimizer,
                                        weight=None,
                                        name=None,
-                                       framework="tf",
                                        mixed_precision=False)
 
         with self.subTest("check optimizer instantiation"):
@@ -290,7 +287,6 @@ class TestNetworkFeCompile(unittest.TestCase):
                                        optimizer_fn=optimizer,
                                        weight=None,
                                        name=None,
-                                       framework="tf",
                                        mixed_precision=False)
         with self.subTest("check optimizer instantiation"):
             self.assertIsInstance(model.optimizer, tf.optimizers.Optimizer)
@@ -304,7 +300,6 @@ class TestNetworkFeCompile(unittest.TestCase):
                                        optimizer_fn=optimizer,
                                        weight=None,
                                        name=None,
-                                       framework="torch",
                                        mixed_precision=False)
 
         with self.subTest("check optimizer instantiation"):
@@ -320,7 +315,6 @@ class TestNetworkFeCompile(unittest.TestCase):
                                        optimizer_fn=optimizer,
                                        weight=None,
                                        name=None,
-                                       framework="torch",
                                        mixed_precision=False)
 
         with self.subTest("check optimizer instantiation"):
@@ -336,7 +330,6 @@ class TestNetworkFeCompile(unittest.TestCase):
                                        optimizer_fn=optimizer,
                                        weight=None,
                                        name=None,
-                                       framework="torch",
                                        mixed_precision=False)
         with self.subTest("check optimizer instantiation"):
             self.assertIsInstance(model.optimizer, torch.optim.Optimizer)
@@ -348,7 +341,6 @@ class TestNetworkFeCompile(unittest.TestCase):
                                        optimizer_fn=optimizer,
                                        weight=None,
                                        name=None,
-                                       framework="torch",
                                        mixed_precision=False)
 
 

@@ -46,7 +46,7 @@ class MultiLayerTorchModelWithoutWeights(torch.nn.Module):
 class TestModelSaver(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.save_dir = tempfile.gettempdir()
+        cls.save_dir = tempfile.mkdtemp()
 
     def test_tf_model(self):
         model = fe.build(model_fn=one_layer_tf_model, optimizer_fn='adam')
