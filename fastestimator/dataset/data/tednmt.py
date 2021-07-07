@@ -27,9 +27,7 @@ wget.callback_progress = callback_progress
 
 def _read_data(file_path: str) -> List[str]:
     with open(file_path) as f:
-        data = f.read().split("\n")
-    # remove empty lines
-    data = [x for x in data if x]
+        data = [x.strip() for x in f if x.strip()]
     return data
 
 
@@ -40,7 +38,7 @@ def _create_dataset(data_path: str, translate_option: str, extension: str) -> Nu
         source = source.split("-")[0]
     source_data = _read_data(os.path.join(data_path, source + "." + extension))
     target_data = _read_data(os.path.join(data_path, target + "." + extension))
-    assert len(target_data) == len(source_data), "Size do not match for {} mode {}".format(translate_option, extension)
+    assert len(target_data) == len(source_data), "Sizes do not match for {} ({} mode)".format(translate_option, extension)
     dataset = NumpyDataset({"source": source_data, "target": target_data})
     return dataset
 
@@ -52,9 +50,9 @@ def load_data(root_dir: Optional[str] = None,
     Args:
         root_dir: The path to store the downloaded data. When `path` is not provided, the data will be saved into
             `fastestimator_data` under the user's home directory.
-        translate_option: options for translation languages, available options are: "az_to_en", "az_tr_to_en",
+        translate_option: Options for translation languages. Available options are: "az_to_en", "az_tr_to_en",
             "be_ru_to_en", "be_to_en", "es_to_pt", "fr_to_pt", "gl_pt_to_en", "gl_to_en", "he_to_pt", "it_to_pt",
-            "pt_to_en", "ru_to_en", "ru_to_pt", "tr_to_en".
+            "pt_to_en", "ru_to_en", "ru_to_pt", and "tr_to_en".
 
     Returns:
         (train_data, eval_data, test_data)
