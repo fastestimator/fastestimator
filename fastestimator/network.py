@@ -845,35 +845,21 @@ def build(model_fn: Callable[[], Union[Model, List[Model]]],
         names = ["model" if i + build.count == 0 else "model{}".format(i + build.count) for i in range(num_names)]
         build.count += num_names
         return names
-
     if not hasattr(build, "count"):
         build.count = 0
-    models, optimizer_fn = to_list(model_fn()), to_list(optimizer_fn)
-    # fill optimizer
-    if not optimizer_fn:
-        optimizer_fn = [None]
-    # check framework
-    if isinstance(models[0], tf.keras.Model):
-        framework = "tf"
-        # tensorflow mix-precision instantiation
-        if mixed_precision:
-            mixed_precision_tf.set_global_policy(mixed_precision_tf.Policy('mixed_float16'))
-        else:
-            mixed_precision_tf.set_global_policy(mixed_precision_tf.Policy('float32'))
-    elif isinstance(models[0], torch.nn.Module):
-        framework = "torch"
+    # tensorflow models requires setting global policies prior to model creation. Since there is no way to know the
+    # framework of model, setting the policy for both tf and pytorch here.
+    if mixed_precision:
+        mixed_precision_tf.set_global_policy(mixed_precision_tf.Policy('mixed_float16'))
     else:
-        raise ValueError("unrecognized model format: {}".format(type(models[0])))
-    # multi-gpu handling
-    if torch.cuda.device_count() > 1:
-        if framework == "tf" and not isinstance(tf.distribute.get_strategy(), tf.distribute.MirroredStrategy):
+        mixed_precision_tf.set_global_policy(mixed_precision_tf.Policy('float32'))
+    if  torch.cuda.device_count() > 1:
+        if not isinstance(tf.distribute.get_strategy(), tf.distribute.MirroredStrategy):
             tf.distribute.experimental_set_strategy(tf.distribute.MirroredStrategy())
-            models = to_list(model_fn())
-        if framework == "torch":
-            models = [torch.nn.DataParallel(model) for model in models]
-    # mark models with its mixed_precision flag
-    for model in models:
-        model.mixed_precision = mixed_precision
+    models, optimizer_fn = to_list(model_fn()), to_list(optimizer_fn)
+    # fill optimizers if optimizer_fn is None
+    if not optimizer_fn:
+        optimizer_fn = [None] * len(models)
     # generate names
     if not model_name:
         model_name = _generate_model_names(len(models))
@@ -887,7 +873,7 @@ def build(model_fn: Callable[[], Union[Model, List[Model]]],
         "Found inconsistency in number of models, optimizers, model_name or weights"
     # create optimizer
     for idx, (model, optimizer_def, weight, name) in enumerate(zip(models, optimizer_fn, weights_path, model_name)):
-        models[idx] = trace_model(_fe_compile(model, optimizer_def, weight, name, framework, mixed_precision),
+        models[idx] = trace_model(_fe_compile(model, optimizer_def, weight, name, mixed_precision),
                                   model_idx=idx if len(models) > 1 else -1,
                                   model_fn=model_fn,
                                   optimizer_fn=optimizer_def,
@@ -901,7 +887,6 @@ def _fe_compile(model: Model,
                 optimizer_fn: Union[str, Scheduler, Callable, None],
                 weight: Union[str, None],
                 name: str,
-                framework: str,
                 mixed_precision: bool) -> Model:
     """A function to bundle models with their optimizers.
 
@@ -910,13 +895,23 @@ def _fe_compile(model: Model,
         optimizer_fn: The optimizer to be associated with the given `model`.
         weight: A path to weights to be associated with the `model`.
         name: The name of the model.
-        framework: Which backend framework should be associated with this model (either 'tf' or 'torch').
         mixed_precision: Whether to enable mixed-precision training.
 
     Returns:
         The `model` combined with its optimizer, weights, and name. Models will also have an 'fe_compiled' flag to
         indicate that they were built via this function.
     """
+    if isinstance(model, tf.keras.Model):
+        framework = "tf"
+    elif isinstance(model, torch.nn.Module):
+        framework = "torch"
+    else:
+        raise ValueError("unrecognized model format: {}".format(type(model)))
+    # torch multi-gpu handling
+    if framework == "torch" and torch.cuda.device_count() > 1:
+        model = torch.nn.DataParallel(model)
+    # mark models with its mixed_precision flag
+    model.mixed_precision = mixed_precision
     if isinstance(optimizer_fn, EpochScheduler):
         for epoch, optimizer_def in optimizer_fn.epoch_dict.items():
             optimizer_fn.epoch_dict[epoch] = _build_optimizer(optimizer_def, model, framework, mixed_precision)
@@ -932,16 +927,13 @@ def _fe_compile(model: Model,
         model.input_spec = None  # this is to handle a behavior change in tf 2.4.1 that enforces a input shape check
     model.optimizer = optimizer_fn
     model.fe_compiled = True
-
     if weight:
         if weight.startswith(GOOGLE_DRIVE_URL):
             tmp_dir = tempfile.mkdtemp()
             file_name = gdown.download(weight, quiet=False)
             os.rename(os.path.join('./', file_name), os.path.join(tmp_dir, file_name))
             weight = gdown.download(weight, os.path.join(tmp_dir, file_name), quiet=False)
-
         load_model(model, weight)
-
     model.model_name = name
     return model
 
@@ -1033,7 +1025,7 @@ def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None], model: Model
                 optimizer = optimizer_fn(model.parameters())
             except Exception as e:
                 print("optimizer_fn of Pytorch backend should be callable with single arg. Please sure model and \
-                optimizer_fn are using the same backend"                                                                                                                )
+                optimizer_fn are using the same backend"                                                                                                                                                                                                                                                                                                                                                                                                        )
                 raise ValueError(repr(e))
             assert isinstance(optimizer, torch.optim.Optimizer), "optimizer_fn should generate pytorch optimizer"
             if mixed_precision:
