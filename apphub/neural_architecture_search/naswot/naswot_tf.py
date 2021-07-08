@@ -201,7 +201,7 @@ def score_fn(search_idx, uid, batch_data, config_info):
     model = fe.build(model_fn=lambda: Model(nasbench201_model.input, feature_list), optimizer_fn=None)
 
     # Only a single forward pass through the network is required
-    relu_result = fe.backend.feed_forward(model, batch_data["x"])
+    relu_result = fe.backend.feed_forward(model, batch_data["x"], training=False)
     matrix = np.zeros((relu_result[0].shape[0], relu_result[0].shape[0]))
     for sample in relu_result:
         sample = to_number(sample)
