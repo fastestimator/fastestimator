@@ -306,7 +306,7 @@ def score_fn(search_idx, uid, batch_data, config_info, batch_size):
         batch_data["x"] = batch_data["x"].to("cuda")
         model = model.to("cuda")
 
-    _ = fe.backend.feed_forward(model, batch_data["x"])
+    _ = fe.backend.feed_forward(model, batch_data["x"], training=False)
 
     if torch.cuda.device_count() > 1:
         model = model.module

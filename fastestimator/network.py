@@ -702,7 +702,7 @@ class TFNetwork(BaseNetwork):
                 prediction[key] = batch[key]
         return prediction
 
-    @tf.function
+    @tf.function(experimental_relax_shapes=True)
     def _forward_step_static(self,
                              batch: Dict[str, Any],
                              state: Dict[str, Any],

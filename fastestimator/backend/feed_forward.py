@@ -23,7 +23,7 @@ from fastestimator.backend.to_tensor import to_tensor
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
-def feed_forward(model: Union[tf.keras.Model, torch.nn.Module], x: Union[Tensor, np.ndarray],
+def feed_forward(model: Union[tf.keras.Model, torch.nn.Module], *x: Union[Tensor, np.ndarray],
                  training: bool = True) -> Tensor:
     """Run a forward step on a given model.
 
@@ -43,8 +43,8 @@ def feed_forward(model: Union[tf.keras.Model, torch.nn.Module], x: Union[Tensor,
 
     Args:
         model: A neural network to run the forward step through.
-        x: An input tensor for the `model`. This value will be auto-cast to either a tf.Tensor or torch.Tensor as
-            applicable for the `model`.
+        x: One or more input tensor for the `model`. This value will be auto-cast to either a tf.Tensor or torch.Tensor
+            as applicable for the `model`.
         training: Whether this forward step is part of training or not. This may impact the behavior of `model` layers
             such as dropout.
 
@@ -55,14 +55,12 @@ def feed_forward(model: Union[tf.keras.Model, torch.nn.Module], x: Union[Tensor,
         ValueError: If `model` is an unacceptable data type.
     """
     if isinstance(model, tf.keras.Model):
-        if not tf.is_tensor(x):
-            x = to_tensor(x, "tf")
-        x = model(x, training=training)
+        x = to_tensor(x, "tf")
+        x = model(*x, training=training)
     elif isinstance(model, torch.nn.Module):
         model.train(mode=training)
-        if not isinstance(x, torch.Tensor):
-            x = to_tensor(x, "torch")
-        x = model(x)
+        x = to_tensor(x, "torch")
+        x = model(*x)
     else:
         raise ValueError("Unrecognized model instance {}".format(type(model)))
     return x
