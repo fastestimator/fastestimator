@@ -62,9 +62,9 @@ def binary_crossentropy(y_pred: Tensor, y_true: Tensor, from_logits: bool = Fals
     assert isinstance(y_true, torch.Tensor) or tf.is_tensor(y_true), "only support tf.Tensor or torch.Tensor as y_true"
     if tf.is_tensor(y_pred):
         ce = tf.losses.binary_crossentropy(y_pred=y_pred,
-                                           y_true=tf.reshape(y_true, y_pred.shape),
+                                           y_true=tf.reshape(y_true, tf.shape(y_pred)),
                                            from_logits=from_logits)
-        ce = tf.reshape(ce, [ce.shape[0], -1])
+        ce = tf.reshape(ce, [tf.shape(ce)[0], -1])
         ce = tf.reduce_mean(ce, 1)
     else:
         y_true = y_true.to(torch.float)
