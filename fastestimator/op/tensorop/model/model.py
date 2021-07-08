@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Iterable, List, Set, TypeVar, Union
+import inspect
+from typing import Any, Dict, Iterable, List, Optional, Set, TypeVar, Union
 
 import tensorflow as tf
 import torch
@@ -49,6 +50,11 @@ class ModelOp(TensorOp):
         self.model = model
         self.trainable = trainable
         self.epoch_spec = None
+        self.multi_inputs = False
+
+    def build(self, framework: str, device: Optional[torch.device] = None) -> None:
+        if framework == "torch":
+            self.multi_inputs = len(inspect.signature(self.model.forward).parameters.keys()) > 1
 
     def get_fe_models(self) -> Set[Model]:
         return {self.model}
@@ -59,5 +65,8 @@ class ModelOp(TensorOp):
             # Gather model input specs for the sake of TensorBoard and Traceability
             self.model.fe_input_spec = FeInputSpec(data, self.model)
             self.epoch_spec = state['epoch']
-        data = feed_forward(self.model, data, training=training)
+        if self.multi_inputs:
+            data = feed_forward(self.model, *data, training=training)
+        else:
+            data = feed_forward(self.model, data, training=training)
         return data
