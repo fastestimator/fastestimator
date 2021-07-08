@@ -65,6 +65,7 @@ def binary_crossentropy(y_pred: Tensor, y_true: Tensor, from_logits: bool = Fals
                                            y_true=tf.reshape(y_true, tf.shape(y_pred)),
                                            from_logits=from_logits)
         ce = tf.reshape(ce, [tf.shape(ce)[0], -1])
+        ce = tf.reduce_mean(ce, 1)
     else:
         y_true = y_true.to(torch.float)
         if from_logits:
