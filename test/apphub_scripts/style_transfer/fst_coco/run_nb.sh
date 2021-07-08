@@ -20,13 +20,13 @@ dir_path=$(dirname $full_path)
 example_name="fst"
 
 # The training arguments
-# 1. Usually we set the epochs:2, batch_size:2, max_train_steps_per_epoch:1
-# 2. The expression for the above setup is "-p epochs 2 -p batch_size 8 -p max_train_steps_per_epoch 1"
+# 1. Usually we set the epochs:2, batch_size:2, max_train_steps_per_epoch:2
+# 2. The expression for the above setup is "-p epochs 2 -p batch_size 8 -p max_train_steps_per_epoch 2"
 # 3. The arguement will re-declare the variable right after the jupyter notebook cell with "parameters" tag (there \
 # must be one and only cell with "parameters" tag)
 style_img_path="${dir_path}/Vassily_Kandinsky,_1913_-_Composition_7.jpg"
 test_img_path="${dir_path}/panda.jpeg"
-train_info="-p epochs 2 -p batch_size 4 -p max_train_steps_per_epoch 1 -p style_img_path ${style_img_path} \
+train_info="-p epochs 2 -p batch_size 4 -p max_train_steps_per_epoch 2 -p style_img_path ${style_img_path} \
             -p test_img_path ${test_img_path}"
 
 # ==============================================================================================
