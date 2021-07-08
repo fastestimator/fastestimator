@@ -20,11 +20,11 @@ dir_path=$(dirname $full_path)
 example_name="fst"
 
 # The training arguments
-# 1. Usually we set the epochs:2, batch_size:2, max_train_steps_per_epoch:10
-# 2. The expression for the following setup is "--epochs 2 --batch_size 8 --max_train_steps_per_epoch 10"
+# 1. Usually we set the epochs:2, batch_size:2, max_train_steps_per_epoch:1
+# 2. The expression for the following setup is "--epochs 2 --batch_size 8 --max_train_steps_per_epoch 1"
 # 3. The syntax of this expression is different from run_notebook.py
 style_img_path="${dir_path}/Vassily_Kandinsky,_1913_-_Composition_7.jpg"
-train_info="--epochs 2 --batch_size 4 --max_train_steps_per_epoch 10 --style_img_path ${style_img_path}"
+train_info="--epochs 2 --batch_size 4 --max_train_steps_per_epoch 1 --style_img_path ${style_img_path}"
 
 # Do you want to run "fastestimator test"? (bool)
 need_test=0
