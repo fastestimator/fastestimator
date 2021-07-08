@@ -54,7 +54,8 @@ class ModelOp(TensorOp):
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
         if framework == "torch":
-            self.multi_inputs = len(inspect.signature(self.model.forward).parameters.keys()) > 1
+            self.multi_inputs = len(inspect.signature(self.model.forward).parameters.keys()) > 1 and len(
+                self.inputs) > 1
 
     def get_fe_models(self) -> Set[Model]:
         return {self.model}
