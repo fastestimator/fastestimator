@@ -22,7 +22,7 @@ example_name="rand_augment"
 # 2. The expression for the above setup is "-p epochs 2 -p batch_size 8 -p max_train_steps_per_epoch 2"
 # 3. The arguement will re-declare the variable right after the jupyter notebook cell with "parameters" tag (there \
 # must be one and only cell with "parameters" tag)
-train_info="-p epochs 2 -p batch_size 8 -p max_train_steps_per_epoch 2 -p max_eval_steps_per_epoch 2 -p max_level 1 -p max_num_augment 1 -p final_step 20"
+train_info="-p epochs 2 -p batch_size 8 -p max_train_steps_per_epoch 2 -p max_eval_steps_per_epoch 2 -p max_level 1 -p max_num_augment 1 -p final_step 4"
 
 # ==============================================================================================
 

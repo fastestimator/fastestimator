@@ -53,9 +53,12 @@ class ModelOp(TensorOp):
         self.multi_inputs = False
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
-        if framework == "torch":
-            self.multi_inputs = len(inspect.signature(self.model.forward).parameters.keys()) > 1 and len(
-                self.inputs) > 1
+        if framework == "torch" and len(self.inputs) > 1:
+            if hasattr(self.model, "module"):
+                # multi-gpu models have module attribute
+                self.multi_inputs = len(inspect.signature(self.model.module.forward).parameters.keys()) > 1
+            else:
+                self.multi_inputs = len(inspect.signature(self.model.forward).parameters.keys()) > 1
 
     def get_fe_models(self) -> Set[Model]:
         return {self.model}
