@@ -213,7 +213,7 @@ def get_estimator(weight=10.0,
                   data_dir=None):
     train_data, _ = load_data(batch_size=batch_size, root_dir=data_dir)
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
     pipeline = fe.Pipeline(
         train_data=train_data,
         ops=[
