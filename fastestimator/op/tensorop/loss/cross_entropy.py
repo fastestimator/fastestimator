@@ -71,13 +71,20 @@ class CrossEntropy(LossOp):
             assert all(isinstance(value, float) for value in class_weights.values()), \
                 "Please ensure that the values of the class_weight dictionary are of type: float"
 
-            keys_tensor = tf.constant(list(class_weights.keys()))
-            vals_tensor = tf.constant(list(class_weights.values()))
-            tf_weight_dict = tf.lookup.StaticHashTable(tf.lookup.KeyValueTensorInitializer(keys_tensor, vals_tensor),
-                                                       default_value=1.0)
-            self.weight_dict = {"tf": tf_weight_dict, "torch": class_weights}
-        else:
-            self.weight_dict = {"tf": None, "torch": None}
+        self.class_weights = class_weights
+        self.class_dict = None
+
+    def build(self, framework: str, device: Optional[torch.device] = None) -> None:
+        if self.class_weights:
+            if framework == 'tf':
+                keys_tensor = tf.constant(list(self.class_weights.keys()))
+                vals_tensor = tf.constant(list(self.class_weights.values()))
+                self.class_dict = tf.lookup.StaticHashTable(
+                    tf.lookup.KeyValueTensorInitializer(keys_tensor, vals_tensor), default_value=1.0)
+            elif framework == 'torch':
+                self.class_dict = self.class_weights
+            else:
+                raise ValueError("unrecognized framework: {}".format(framework))
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
         y_pred, y_true = data
@@ -91,10 +98,9 @@ class CrossEntropy(LossOp):
             else:
                 form = "binary"
 
-        class_dict = self.weight_dict["tf"] if tf.is_tensor(y_pred) else self.weight_dict["torch"]
         loss = self.cross_entropy_fn[form](y_pred,
                                            y_true,
                                            from_logits=self.from_logits,
                                            average_loss=self.average_loss,
-                                           class_weights=class_dict)
+                                           class_weights=self.class_dict)
         return loss

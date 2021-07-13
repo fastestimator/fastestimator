@@ -88,9 +88,10 @@ def sparse_categorical_crossentropy(y_pred: Tensor,
             ce = torch.nn.NLLLoss(reduction="none")(input=torch.log(y_pred), target=y_true.long())
 
         if class_weights is not None:
-            sample_weights = y_true.detach().clone().cpu().to(
-                torch.float).apply_(lambda x: class_weights.get(int(x), 1.0))
-            ce = ce * sample_weights.reshape(ce.shape).to(ce.device)
+            sample_weights = torch.ones_like(y_true, dtype=torch.float)
+            for key in class_weights.keys():
+                sample_weights[y_true == key] = class_weights[key]
+            ce = ce * sample_weights.reshape(ce.shape)
     if average_loss:
         ce = reduce_mean(ce)
     return ce

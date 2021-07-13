@@ -48,6 +48,7 @@ class TestCrossEntropy(unittest.TestCase):
 
     def test_binary_crossentropy_weights(self):
         ce = CrossEntropy(inputs='x', outputs='x', class_weights=self.tf_binary_weights)
+        ce.build('tf')
         output = ce.forward(data=[self.tf_pred_binary, self.tf_true_binary], state={})
         self.assertTrue(np.allclose(output.numpy(), -56.221874))
 
@@ -58,6 +59,7 @@ class TestCrossEntropy(unittest.TestCase):
 
     def test_categorical_crossentropy_weights(self):
         ce = CrossEntropy(inputs='x', outputs='x', class_weights=self.tf_cat_weights)
+        ce.build('tf')
         output = ce.forward(data=[self.tf_pred_cat, self.tf_true_cat], state={})
         self.assertTrue(np.allclose(output.numpy(), 0.54055756))
 
@@ -68,6 +70,7 @@ class TestCrossEntropy(unittest.TestCase):
 
     def test_sparse_categorical_crossentropy_weights(self):
         ce = CrossEntropy(inputs='x', outputs='x', class_weights=self.tf_sparse_weights)
+        ce.build('tf')
         output = ce.forward(data=[self.tf_pred_sparse, self.tf_true_sparse], state={})
         self.assertTrue(np.allclose(output.numpy(), 3.532212))
 
@@ -78,5 +81,6 @@ class TestCrossEntropy(unittest.TestCase):
 
     def test_torch_input_weights(self):
         ce = CrossEntropy(inputs='x', outputs='x', class_weights=self.torch_binary_weights)
+        ce.build('torch')
         output = ce.forward(data=[self.torch_pred_binary, self.torch_true_binary], state={})
         self.assertTrue(np.allclose(output.detach().numpy(), 0.2797609))
