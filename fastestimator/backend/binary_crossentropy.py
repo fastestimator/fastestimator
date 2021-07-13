@@ -82,7 +82,7 @@ def binary_crossentropy(y_pred: Tensor,
             sample_weights = class_weights.lookup(tf.cast(tf.reshape(y_true, ce.shape), dtype=class_weights.key_dtype))
             ce = ce * sample_weights
 
-        ce = tf.reshape(ce, [ce.shape[0], -1])
+        ce = tf.reshape(ce, [tf.shape(ce)[0], -1])
         ce = tf.reduce_mean(ce, 1)
     else:
         y_true = y_true.to(torch.float)
