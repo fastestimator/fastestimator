@@ -19,10 +19,10 @@ export TF_CPP_MIN_LOG_LEVEL=2
 example_name="simclr"
 
 # The training arguments
-# 1. Usually we set the epochs:2, batch_size:2, max_train_steps_per_epoch:10
-# 2. The expression for the following setup is "--epochs 2 --batch_size 8 --max_train_steps_per_epoch 10"
+# 1. Usually we set the epochs:2, batch_size:2, max_train_steps_per_epoch:2
+# 2. The expression for the following setup is "--epochs 2 --batch_size 8 --max_train_steps_per_epoch 2"
 # 3. The syntax of this expression is different from run_notebook.py
-train_info="--epochs_pretrain 1 --epochs_finetune 1 --batch_size 8 --max_train_steps_per_epoch 10"
+train_info="--epochs_pretrain 1 --epochs_finetune 1 --batch_size 8 --max_train_steps_per_epoch 2"
 # ==============================================================================================
 
 full_path=$(realpath $0)

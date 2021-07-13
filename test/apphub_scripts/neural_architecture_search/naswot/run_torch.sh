@@ -19,8 +19,8 @@ export TF_CPP_MIN_LOG_LEVEL=2
 example_name="naswot"
 
 # The training arguments
-# 1. Usually we set the epochs:2, batch_size:2, max_train_steps_per_epoch:10
-# 2. The expression for the following setup is "--epochs 2 --batch_size 8 --max_train_steps_per_epoch 10"
+# 1. Usually we set the epochs:2, batch_size:2, max_train_steps_per_epoch:2
+# 2. The expression for the following setup is "--epochs 2 --batch_size 8 --max_train_steps_per_epoch 2"
 # 3. The syntax of this expression is different from run_notebook.py
 train_info="--batch_size 128 --num_archs 10"
 # ==============================================================================================

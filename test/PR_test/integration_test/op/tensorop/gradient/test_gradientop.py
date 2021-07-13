@@ -58,7 +58,7 @@ class TestGradientOp(unittest.TestCase):
     def test_tf_model_input(self):
         def update_gradient(gradient):
             with tf.GradientTape(persistent=True) as tape:
-                pred = feed_forward(model=self.tf_model, x=tf.constant([[1.0, 1.0, 1.0], [1.0, -1.0, -0.5]]))
+                pred = feed_forward(self.tf_model, tf.constant([[1.0, 1.0, 1.0], [1.0, -1.0, -0.5]]))
                 output = gradient.forward(data=[pred], state={"tape": tape})
                 self.assertTrue(is_equal(output[0][0].numpy(), np.array([[2.0], [0.0], [0.5]], dtype="float32")))
 
@@ -74,6 +74,6 @@ class TestGradientOp(unittest.TestCase):
         gradient = GradientOp(finals="pred", outputs="grad", model=self.torch_model)
         gradient.build("torch")
         with tf.GradientTape(persistent=True) as tape:
-            pred = feed_forward(model=self.torch_model, x=torch.tensor([[1.0, 1.0, 1.0], [1.0, -1.0, -0.5]]))
+            pred = feed_forward(self.torch_model, torch.tensor([[1.0, 1.0, 1.0], [1.0, -1.0, -0.5]]))
             output = gradient.forward(data=[pred], state={"tape": tape})
         self.assertTrue(is_equal(output[0][0].numpy(), np.array([[2.0, 0.0, 0.5]], dtype="float32")))

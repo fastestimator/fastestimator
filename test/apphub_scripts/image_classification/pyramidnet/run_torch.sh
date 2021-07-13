@@ -18,8 +18,8 @@ set -e
 example_name="pyramidnet"
 
 # The training arguments
-# 1. Usually we set the epochs:2, batch_size:2, max_train_steps_per_epoch:10
-# 2. The expression for the following setup is "--epochs 2 --batch_size 8 --max_train_steps_per_epoch 10"
+# 1. Usually we set the epochs:2, batch_size:2, max_train_steps_per_epoch:2
+# 2. The expression for the following setup is "--epochs 2 --batch_size 8 --max_train_steps_per_epoch 2"
 # 3. The syntax of this expression is different from run_notebook.py
 train_info="--epochs 2 --batch_size 4 --max_train_steps_per_epoch 2 --max_eval_steps_per_epoch 2"
 

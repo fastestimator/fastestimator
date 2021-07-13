@@ -231,7 +231,7 @@ def get_estimator(batch_size=4,
                   data_dir=None):
     train_data, _ = mscoco.load_data(root_dir=data_dir, load_bboxes=False, load_masks=False, load_captions=False)
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
     style_img = cv2.imread(style_img_path)
     assert style_img is not None, "cannot load the style image, please go to the folder with style image"
     style_img = cv2.resize(style_img, (256, 256))
