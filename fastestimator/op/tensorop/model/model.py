@@ -98,8 +98,10 @@ class ModelOp(TensorOp):
         self.trainable = trainable
         self.epoch_spec = None
         self.multi_inputs = False
+        self.device = ''
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
+        self.device = device or ''  # TF will just use empty string for device
         if framework == "torch" and len(self.inputs) > 1:
             if hasattr(self.model, "module"):
                 # multi-gpu models have module attribute
@@ -121,13 +123,11 @@ class ModelOp(TensorOp):
         else:
             data = feed_forward(self.model, data, training=training)
         intermediate_outputs = []
-        if self.intermediate_outputs:
-            data = to_list(data)
         for output in self.intermediate_outputs:
-            intermediate_outputs.append(_unpack_output(output, data[0].device))
+            intermediate_outputs.append(_unpack_output(output, self.device))
             output.clear()  # This will only help with pytorch memory, tf tensors will remain until next forward
         if intermediate_outputs:
-            data = data + intermediate_outputs
+            data = to_list(data) + intermediate_outputs
         return data
 
 
@@ -145,7 +145,7 @@ def _capture_call_tf(input: tf.Tensor, fe_storage: Dict[Union[str, torch.device]
         The output of the given layer for the specified input.
     """
     output = fe_layer.fe_original_call(input, **kwargs)
-    fe_storage[input.device] = output
+    fe_storage[''] = output  # TF multi-gpu doesn't need to store separately per device
     return output
 
 
