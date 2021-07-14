@@ -40,6 +40,11 @@ class CrossEntropy(LossOp):
         average_loss: Whether to average the element-wise loss after the Loss Op.
         form: What form of cross entropy should be performed ('binary', 'categorical', 'sparse', or None). None will
             automatically infer the correct form based on tensor shape.
+        class_weights: Dictionary mapping class indices to a weight for weighting the loss function. Useful when you
+            need to pay more attention to samples from an under-represented class.
+
+    Raises:
+        AssertionError: If `class_weights` or it's keys and values are of unacceptable data types.
     """
     def __init__(self,
                  inputs: Union[Tuple[str, str], List[str]],
@@ -47,7 +52,8 @@ class CrossEntropy(LossOp):
                  mode: Union[None, str, Iterable[str]] = "!infer",
                  from_logits: bool = False,
                  average_loss: bool = True,
-                 form: Optional[str] = None):
+                 form: Optional[str] = None,
+                 class_weights: Optional[Dict[int, float]] = None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode, average_loss=average_loss)
         self.from_logits = from_logits
         self.form = form
@@ -56,6 +62,29 @@ class CrossEntropy(LossOp):
             "categorical": categorical_crossentropy,
             "sparse": sparse_categorical_crossentropy
         }
+
+        if class_weights:
+            assert isinstance(class_weights, dict), \
+                "class_weights should be a dictionary or have None value, got {}".format(type(class_weights))
+            assert all(isinstance(key, int) for key in class_weights.keys()), \
+                "Please ensure that the keys of the class_weight dictionary are of type: int"
+            assert all(isinstance(value, float) for value in class_weights.values()), \
+                "Please ensure that the values of the class_weight dictionary are of type: float"
+
+        self.class_weights = class_weights
+        self.class_dict = None
+
+    def build(self, framework: str, device: Optional[torch.device] = None) -> None:
+        if self.class_weights:
+            if framework == 'tf':
+                keys_tensor = tf.constant(list(self.class_weights.keys()))
+                vals_tensor = tf.constant(list(self.class_weights.values()))
+                self.class_dict = tf.lookup.StaticHashTable(
+                    tf.lookup.KeyValueTensorInitializer(keys_tensor, vals_tensor), default_value=1.0)
+            elif framework == 'torch':
+                self.class_dict = self.class_weights
+            else:
+                raise ValueError("unrecognized framework: {}".format(framework))
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
         y_pred, y_true = data
@@ -68,5 +97,10 @@ class CrossEntropy(LossOp):
                     form = "sparse"
             else:
                 form = "binary"
-        loss = self.cross_entropy_fn[form](y_pred, y_true, from_logits=self.from_logits, average_loss=self.average_loss)
+
+        loss = self.cross_entropy_fn[form](y_pred,
+                                           y_true,
+                                           from_logits=self.from_logits,
+                                           average_loss=self.average_loss,
+                                           class_weights=self.class_dict)
         return loss
