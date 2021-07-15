@@ -79,7 +79,8 @@ def binary_crossentropy(y_pred: Tensor,
                                            y_true=tf.reshape(y_true, tf.shape(y_pred)),
                                            from_logits=from_logits)
         if class_weights is not None:
-            sample_weights = class_weights.lookup(tf.cast(tf.reshape(y_true, ce.shape), dtype=class_weights.key_dtype))
+            sample_weights = class_weights.lookup(
+                tf.cast(tf.reshape(y_true, tf.shape(ce)), dtype=class_weights.key_dtype))
             ce = ce * sample_weights
 
         ce = tf.reshape(ce, [tf.shape(ce)[0], -1])

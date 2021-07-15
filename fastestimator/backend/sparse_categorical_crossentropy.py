@@ -78,7 +78,8 @@ def sparse_categorical_crossentropy(y_pred: Tensor,
     if tf.is_tensor(y_pred):
         ce = tf.losses.sparse_categorical_crossentropy(y_pred=y_pred, y_true=y_true, from_logits=from_logits)
         if class_weights is not None:
-            sample_weights = class_weights.lookup(tf.cast(tf.reshape(y_true, ce.shape), dtype=class_weights.key_dtype))
+            sample_weights = class_weights.lookup(
+                tf.cast(tf.reshape(y_true, tf.shape(ce)), dtype=class_weights.key_dtype))
             ce = ce * sample_weights
     else:
         y_true = y_true.view(-1)
