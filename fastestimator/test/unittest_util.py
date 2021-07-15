@@ -98,6 +98,16 @@ def one_layer_tf_model() -> tf.keras.Model:
     return model
 
 
+def multi_layer_tf_model() -> tf.keras.Model:
+    inp = tf.keras.layers.Input([4])
+    x = tf.keras.layers.Dense(units=2, use_bias=False, name='fc1')(inp)
+    x = tf.keras.layers.Dense(units=1, use_bias=False, name='fc2')(x)
+    model = tf.keras.models.Model(inputs=inp, outputs=x)
+    model.layers[1].set_weights([np.array([[1.0, 2.0], [2.0, 3.0], [3.0, 4.0], [4.0, 6.0]])])
+    model.layers[2].set_weights([np.array([[1.0], [2.0]])])
+    return model
+
+
 class OneLayerTorchModel(torch.nn.Module):
     """Torch Model with one dense layer without activation function.
     * Model input shape: (3,)

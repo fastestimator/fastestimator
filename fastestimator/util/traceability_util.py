@@ -95,7 +95,29 @@ class FeInputSpec:
     def __init__(self, model_input: Any, model: Model):
         self.shape = to_shape(model_input)
         self.dtype = to_type(model_input)
+        self.device = self._get_device(model_input)
         self.tensor_func = tf.ones if isinstance(model, tf.keras.Model) else torch.ones
+
+    def _get_device(self, data: Any) -> Union[None, str, torch.device]:
+        """Get the device on which a tensor or collection of tensors is residing.
+
+        Args:
+            data: A tensor or collection of tensors.
+
+        Returns:
+            The device on which the tensors are residing
+        """
+        if tf.is_tensor(data) or isinstance(data, torch.Tensor):
+            return data.device
+        elif isinstance(data, dict):
+            return self._get_device(list(data.values()))
+        elif isinstance(data, (list, tuple, set)):
+            for val in data:
+                device = self._get_device(val)
+                if device is not None:
+                    return device
+        else:
+            return None
 
     def get_dummy_input(self) -> Any:
         """Get fake input for the model.
@@ -127,7 +149,10 @@ class FeInputSpec:
         elif isinstance(dtype, set):
             return set([self._from_shape_and_type(s, t) for s, t in zip(shape, dtype)])
         else:
-            return self.tensor_func(shape, dtype=dtype)
+            retval = self.tensor_func(shape, dtype=dtype)
+            if isinstance(self.device, torch.device):
+                retval = retval.to(self.device)
+            return retval
 
 
 class FeSplitSummary(LatexObject):

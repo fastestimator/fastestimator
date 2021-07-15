@@ -217,3 +217,9 @@ def get_estimator(data_dir=None,
                              max_train_steps_per_epoch=max_train_steps_per_epoch,
                              max_eval_steps_per_epoch=max_eval_steps_per_epoch)
     return estimator
+
+
+if __name__ == "__main__":
+    est = get_estimator()
+    est.fit()
+    est.test()
