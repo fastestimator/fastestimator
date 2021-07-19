@@ -50,7 +50,7 @@ def point_wise_feed_forward_network(em_dim, dff):
 class MultiHeadAttention(layers.Layer):
     def __init__(self, em_dim, num_heads):
         super().__init__()
-        assert em_dim % num_heads == 0, "model dimension must be multiply of number of heads"
+        assert em_dim % num_heads == 0, "model dimension must be multiple of number of heads"
         self.num_heads = num_heads
         self.em_dim = em_dim
         self.depth = em_dim // self.num_heads
@@ -116,7 +116,7 @@ class PositionEmbedding(layers.Layer):
     def __init__(self, image_size, patch_size, em_dim):
         super().__init__()
         h, w, _ = image_size
-        assert h % patch_size == 0 and w % patch_size == 0, "image size must be an integer multiply of patch size"
+        assert h % patch_size == 0 and w % patch_size == 0, "image size must be an integer multiple of patch size"
         self.position_embedding = tf.Variable(tf.zeros(shape=(1, h * w // patch_size**2 + 1, em_dim)),
                                               trainable=True,
                                               name="position_embedding")

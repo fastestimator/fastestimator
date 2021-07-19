@@ -35,7 +35,7 @@ from fastestimator.trace.metric import Accuracy
 class ViTEmbeddings(nn.Module):
     def __init__(self, image_size=224, patch_size=16, num_channels=3, em_dim=768, drop=0.1) -> None:
         super().__init__()
-        assert image_size % patch_size == 0, "image size must be an integer multiply of patch size"
+        assert image_size % patch_size == 0, "image size must be an integer multiple of patch size"
         self.patch_embedding = nn.Conv2d(num_channels, em_dim, kernel_size=patch_size, stride=patch_size, bias=False)
         self.position_embedding = nn.Parameter(torch.zeros(1, (image_size // patch_size)**2 + 1, em_dim))
         self.cls_token = nn.Parameter(torch.zeros(1, 1, em_dim))
