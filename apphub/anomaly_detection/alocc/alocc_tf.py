@@ -140,7 +140,7 @@ class DLoss(TensorOp):
 class F1AUCScores(Trace):
     """Computes F1-Score and AUC Score for a classification task and reports it back to the logger.
     """
-    def __init__(self, true_key, pred_key, mode=("eval", "test"), output_name=["auc_score", "f1_score"]):
+    def __init__(self, true_key, pred_key, mode=("eval", "test"), output_name=("auc_score", "f1_score")):
         super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode)
         self.y_true = []
         self.y_pred = []
