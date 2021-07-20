@@ -174,7 +174,10 @@ def finetune(pretrained_model,
                                   ff_dim=512),
         optimizer_fn=lambda x: torch.optim.SGD(x, lr=0.01, momentum=0.9, weight_decay=1e-4))
     # load the encoder's weight
-    model.vit_encoder.load_state_dict(pretrained_model.vit_encoder.state_dict())
+    if hasattr(model, "module"):
+        model.module.vit_encoder.load_state_dict(pretrained_model.module.vit_encoder.state_dict())
+    else:
+        model.vit_encoder.load_state_dict(pretrained_model.vit_encoder.state_dict())
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="x", outputs="y_pred"),
         CrossEntropy(inputs=("y_pred", "y"), outputs="ce", from_logits=True),
