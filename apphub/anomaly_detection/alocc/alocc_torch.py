@@ -36,7 +36,7 @@ class reconstructor(nn.Module):
     def __init__(self):
         super().__init__()
         self.encoder = nn.Sequential(
-            nn.Conv2d(1, 32, 5, stride=2, padding=2),  #(self, in_channels, out_channels, kernel_size, stride=1,
+            nn.Conv2d(1, 32, 5, stride=2, padding=2),  # (self, in_channels, out_channels, kernel_size, stride=1,
             nn.BatchNorm2d(32),
             nn.LeakyReLU(negative_slope=0.2, inplace=True),
             nn.Conv2d(32, 64, 5, stride=2, padding=2),
@@ -125,7 +125,7 @@ class DLoss(TensorOp):
 class F1AUCScores(Trace):
     """Computes F1-Score and AUC Score for a classification task and reports it back to the logger.
     """
-    def __init__(self, true_key, pred_key, mode=("eval", "test"), output_name=["auc_score", "f1_score"]):
+    def __init__(self, true_key, pred_key, mode=("eval", "test"), output_name=("auc_score", "f1_score")):
         super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode)
         self.y_true = []
         self.y_pred = []

@@ -174,8 +174,8 @@ def StyleTransferNet(input_shape=(256, 256, 3), num_resblock=5):
 
 
 def LossNet(input_shape=(256, 256, 3),
-            style_layers=["block1_conv2", "block2_conv2", "block3_conv3", "block4_conv3"],
-            content_layers=["block3_conv3"]):
+            style_layers=("block1_conv2", "block2_conv2", "block3_conv3", "block4_conv3"),
+            content_layers=("block3_conv3",)):
     """Creates the network to compute the style loss.
     This network outputs a dictionary with outputs values for style and content, based on a list of layers from VGG16
     for each.

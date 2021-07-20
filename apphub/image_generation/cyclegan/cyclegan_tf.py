@@ -65,7 +65,7 @@ class Buffer(TensorOp):
 
 class BufferUpdate(Trace):
     """Trace to update Image Buffer"""
-    def __init__(self, input_name="fake", buffer_size=50, batch_size=1, mode="train", output_name=["buffer", "index"]):
+    def __init__(self, input_name="fake", buffer_size=50, batch_size=1, mode="train", output_name=("buffer", "index")):
         super().__init__(inputs=input_name, mode=mode, outputs=output_name)
         self.input_key = input_name
         self.buffer_size = buffer_size

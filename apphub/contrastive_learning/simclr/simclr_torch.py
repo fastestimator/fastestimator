@@ -36,7 +36,7 @@ from fastestimator.trace.metric import Accuracy
 
 
 class ResNet9OneLayerHead(nn.Module):
-    def __init__(self, length, input_size=[3, 32, 32]):
+    def __init__(self, length, input_size=(3, 32, 32)):
         super().__init__()
         self.encoder = ResNet9Encoder(input_size)
         self.fc1 = nn.Linear(512, length)
@@ -48,7 +48,7 @@ class ResNet9OneLayerHead(nn.Module):
 
 
 class ResNet9Encoder(nn.Module):
-    def __init__(self, input_size=[3, 32, 32]):
+    def __init__(self, input_size=(3, 32, 32)):
         super().__init__()
         self.conv0 = nn.Conv2d(input_size[0], 64, 3, padding=(1, 1))
         self.conv0_bn = nn.BatchNorm2d(64, momentum=0.8)
