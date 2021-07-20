@@ -22,7 +22,7 @@ import torch
 import fastestimator as fe
 from fastestimator.op.tensorop.loss import CrossEntropy, Hinge, SuperLoss
 from fastestimator.op.tensorop.model import ModelOp
-from fastestimator.test.unittest_util import sample_system_object, sample_system_object_torch
+from fastestimator.test.unittest_util import sample_system_object
 
 
 class TestSuperLoss(unittest.TestCase):

@@ -17,9 +17,7 @@ from pathlib import Path
 from typing import List, Optional, Set, Tuple
 
 import numpy as np
-import requests
 import wget
-from sklearn.model_selection import train_test_split
 
 from fastestimator.dataset.numpy_dataset import NumpyDataset
 from fastestimator.util.wget_util import bar_custom, callback_progress

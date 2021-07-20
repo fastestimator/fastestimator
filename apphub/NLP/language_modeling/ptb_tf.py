@@ -14,9 +14,10 @@
 # ==============================================================================
 import tempfile
 
-import fastestimator as fe
 import numpy as np
 import tensorflow as tf
+
+import fastestimator as fe
 from fastestimator.dataset.data.penn_treebank import load_data
 from fastestimator.op.numpyop import NumpyOp
 from fastestimator.op.tensorop.loss import CrossEntropy

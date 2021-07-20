@@ -15,9 +15,9 @@
 import datetime
 import json
 import os
-import dill as pickle  # Need to use dill since tf.Variable is a weakref object on multi-gpu machines
 from typing import Any, Dict, List, Optional, TYPE_CHECKING, TypeVar, Union
 
+import dill as pickle  # Need to use dill since tf.Variable is a weakref object on multi-gpu machines
 import tensorflow as tf
 import torch
 

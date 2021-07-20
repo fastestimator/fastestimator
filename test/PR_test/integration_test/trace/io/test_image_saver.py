@@ -19,7 +19,7 @@ import unittest
 import matplotlib.pyplot as plt
 import numpy as np
 
-from fastestimator.test.unittest_util import is_equal, sample_system_object
+from fastestimator.test.unittest_util import sample_system_object
 from fastestimator.trace.io import ImageSaver
 from fastestimator.util.data import Data
 from fastestimator.util.img_data import ImgData

@@ -20,7 +20,6 @@ import tensorflow_addons as tfa
 import torch
 
 import fastestimator as fe
-from fastestimator.test.unittest_util import is_equal
 
 
 class TestSetLr(unittest.TestCase):

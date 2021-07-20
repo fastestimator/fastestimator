@@ -21,7 +21,7 @@ from typing import Any, Callable, Dict, List, MutableMapping, Optional, Set, Typ
 
 import numpy as np
 import tensorflow as tf
-from torch.utils.data import DataLoader, Dataset, RandomSampler
+from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.dataloader import default_collate
 
 from fastestimator.dataset.batch_dataset import BatchDataset

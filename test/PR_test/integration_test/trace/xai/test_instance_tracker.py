@@ -15,6 +15,7 @@
 import tempfile
 import unittest
 from collections import defaultdict
+
 import tensorflow as tf
 
 from fastestimator.test.unittest_util import sample_system_object

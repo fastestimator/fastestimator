@@ -14,10 +14,11 @@
 # ==============================================================================
 import unittest
 
-import fastestimator as fe
 import numpy as np
 import tensorflow as tf
 import torch
+
+import fastestimator as fe
 
 
 class TestZscore(unittest.TestCase):

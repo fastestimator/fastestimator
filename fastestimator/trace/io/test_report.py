@@ -22,15 +22,16 @@ from datetime import datetime
 from time import time
 from typing import Any, Callable, Dict, List, Optional, Union
 
-import fastestimator as fe
 import numpy as np
+from pylatex import Command, Document, Itemize, LongTable, MultiColumn, NoEscape, Package, Section, Subsection, Table, \
+    Tabularx, escape_latex
+
+import fastestimator as fe
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.latex_util import IterJoin, WrapText
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_list, to_number, to_set
-from pylatex import Command, Document, Itemize, LongTable, MultiColumn, NoEscape, Package, Section, Subsection, Table, \
-    Tabularx, escape_latex
 
 
 @traceable()

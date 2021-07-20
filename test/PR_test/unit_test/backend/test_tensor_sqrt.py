@@ -19,7 +19,6 @@ import tensorflow as tf
 import torch
 
 from fastestimator.backend import tensor_sqrt
-from fastestimator.test.unittest_util import is_equal
 
 
 class TestTensorSqrt(unittest.TestCase):

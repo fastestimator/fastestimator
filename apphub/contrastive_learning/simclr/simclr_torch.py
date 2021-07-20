@@ -19,11 +19,9 @@ Note that we use the ciFAIR10 dataset instead (https://cvjena.github.io/cifair/)
 """
 import tempfile
 
-import tensorflow as tf
 import torch
 import torch.nn as nn
 import torch.nn.functional as fn
-from tensorflow.keras import layers
 
 import fastestimator as fe
 from fastestimator.dataset.data.cifair10 import load_data
@@ -33,7 +31,7 @@ from fastestimator.op.numpyop.univariate import ChannelTranspose, ColorJitter, G
 from fastestimator.op.tensorop import LambdaOp, TensorOp
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
-from fastestimator.trace.io import BestModelSaver, ModelSaver
+from fastestimator.trace.io import ModelSaver
 from fastestimator.trace.metric import Accuracy
 
 
