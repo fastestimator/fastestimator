@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 import unittest
-from typing import Any
 
 import numpy as np
 import tensorflow as tf

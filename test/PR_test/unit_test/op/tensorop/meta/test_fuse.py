@@ -16,8 +16,8 @@ import unittest
 
 import tensorflow as tf
 
-from fastestimator.op.tensorop.meta import Fuse
 from fastestimator.op.tensorop import LambdaOp
+from fastestimator.op.tensorop.meta import Fuse
 
 
 class TestFuse(unittest.TestCase):

@@ -411,7 +411,6 @@ class InMemoryDataset(FEDataset):
         data: A dictionary like {data_index: {<instance dictionary>}}.
     """
     data: Dict[int, Dict[str, Any]]  # Index-based data dictionary
-    summary: lru_cache
 
     def __init__(self, data: Dict[int, Dict[str, Any]]) -> None:
         self.data = data

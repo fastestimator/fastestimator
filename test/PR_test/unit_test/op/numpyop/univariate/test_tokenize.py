@@ -14,8 +14,6 @@
 # ==============================================================================
 import unittest
 
-import numpy as np
-
 from fastestimator.op.numpyop.univariate import Tokenize
 from fastestimator.test.unittest_util import is_equal
 

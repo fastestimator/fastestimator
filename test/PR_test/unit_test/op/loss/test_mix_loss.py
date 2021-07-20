@@ -14,12 +14,12 @@
 # ==============================================================================
 import unittest
 
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
 import torch
 
-from fastestimator.op.tensorop.loss.mix_loss import MixLoss
 from fastestimator.op.tensorop.loss.cross_entropy import CrossEntropy
+from fastestimator.op.tensorop.loss.mix_loss import MixLoss
 
 
 class TestMixUpBatch(unittest.TestCase):

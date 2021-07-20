@@ -13,9 +13,11 @@
 # limitations under the License.
 # ==============================================================================
 import unittest
-from fastestimator.architecture.tensorflow import LeNet
+
 import numpy as np
+
 import fastestimator as fe
+from fastestimator.architecture.tensorflow import LeNet
 
 
 class TestSaliencyNetGetMask(unittest.TestCase):

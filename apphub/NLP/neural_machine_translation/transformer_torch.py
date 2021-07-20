@@ -160,11 +160,6 @@ class MaskedCrossEntropy(LossOp):
         return loss
 
 
-def lr_fn(step, em_dim, warmupstep=4000):
-    lr = em_dim**-0.5 * min(step**-0.5, step * warmupstep**-1.5)
-    return lr
-
-
 def get_estimator(data_dir=None,
                   model_dir=tempfile.mkdtemp(),
                   epochs=20,
