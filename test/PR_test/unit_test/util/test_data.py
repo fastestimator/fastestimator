@@ -14,12 +14,7 @@
 # ==============================================================================
 import unittest
 
-import numpy as np
-import tensorflow as tf
-import torch
-
 import fastestimator as fe
-import fastestimator.test.unittest_util as fet
 
 
 class TestData(unittest.TestCase):

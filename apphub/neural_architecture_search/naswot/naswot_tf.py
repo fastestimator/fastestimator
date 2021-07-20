@@ -66,7 +66,7 @@ def _resnet_basic_block(inputs, n_filters, stride):
         residual = layers.AveragePooling2D(pool_size=2, strides=stride, padding="valid")(inputs)
         residual = layers.Conv2D(n_filters, 1, 1, padding="valid", use_bias=False)(residual)
     elif inputs.shape[-1] != n_filters:
-        residual = _relu_conv_bn_block(inputs, kernel_size=1, stride=1, padding="valid", dilation=1)
+        residual = _relu_conv_bn_block(inputs, n_filters, kernel_size=1, stride=1, padding="valid", dilation=1)
     else:
         residual = inputs
 

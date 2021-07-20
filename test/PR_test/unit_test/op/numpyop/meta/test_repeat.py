@@ -16,8 +16,8 @@ import unittest
 
 import numpy as np
 
-from fastestimator.op.numpyop.meta import Repeat
 from fastestimator.op.numpyop import LambdaOp
+from fastestimator.op.numpyop.meta import Repeat
 
 
 class TestRepeat(unittest.TestCase):
