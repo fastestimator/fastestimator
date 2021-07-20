@@ -117,7 +117,7 @@ class EigenCAM(Trace):
     def on_epoch_end(self, data: Data) -> None:
         # Keep only the user-specified number of samples
         images = concat(self.images)[:self.n_samples or self.n_found]
-        channels, height, width = get_image_dims(images)
+        _, height, width = get_image_dims(images)
         activations = to_number(concat(self.activations)[:self.n_samples or self.n_found])
         if tf.is_tensor(images):
             activations = np.moveaxis(activations, source=-1, destination=1)  # Activations should be channel first
