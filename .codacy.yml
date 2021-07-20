@@ -2,7 +2,6 @@
 engines:
   duplication:
     exclude_paths:
-      - apphub/**
-prospector:
-  exclude_paths:
-    - **__init__.py
+      - "apphub/**"
+exclude_paths:
+  - "**__init__.py"
