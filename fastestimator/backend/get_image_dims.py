@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import TypeVar
+from typing import Tuple, TypeVar
 
 import numpy as np
 import tensorflow as tf
@@ -21,8 +21,8 @@ import torch
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
 
-def get_image_dims(tensor: Tensor) -> Tensor:
-    """Get the `tensor` height, width and channels.
+def get_image_dims(tensor: Tensor) -> Tuple[int, int, int]:
+    """Get the `tensor` channels, height, and width.
 
     This method can be used with Numpy data:
     ```python
@@ -52,8 +52,14 @@ def get_image_dims(tensor: Tensor) -> Tensor:
         ValueError: If `tensor` is an unacceptable data type.
     """
     assert len(tensor.shape) == 3 or len(tensor.shape) == 4, "Number of dimensions of input must be either 3 or 4"
-    shape_length = len(tensor.shape)
-    if tf.is_tensor(tensor) or isinstance(tensor, np.ndarray):
+    if tf.is_tensor(tensor):
+        shape = tf.shape(tensor)
+        channels, height, width = shape[-1], shape[-3], shape[-2]
+        if hasattr(channels, 'numpy'):
+            # Running in eager mode, so can convert to integer
+            channels, height, width = channels.numpy().item(), height.numpy().item(), width.numpy().item()
+        return channels, height, width
+    elif isinstance(tensor, np.ndarray):
         return tensor.shape[-1], tensor.shape[-3], tensor.shape[-2]
     elif isinstance(tensor, torch.Tensor):
         return tensor.shape[-3], tensor.shape[-2], tensor.shape[-1]

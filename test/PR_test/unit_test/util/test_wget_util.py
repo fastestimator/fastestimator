@@ -12,18 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import io
-import sys
 import unittest
-from unittest.mock import patch
-
-import numpy as np
-import tensorflow as tf
-import torch
-import wget
 
 import fastestimator as fe
-import fastestimator.test.unittest_util as fet
 
 
 class TestWgetUtil(unittest.TestCase):

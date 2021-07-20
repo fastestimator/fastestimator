@@ -21,6 +21,7 @@ import torch
 
 from fastestimator.backend.argmax import argmax
 from fastestimator.backend.concat import concat
+from fastestimator.backend.get_image_dims import get_image_dims
 from fastestimator.backend.reduce_max import reduce_max
 from fastestimator.backend.squeeze import squeeze
 from fastestimator.trace.trace import Trace
@@ -116,10 +117,9 @@ class EigenCAM(Trace):
     def on_epoch_end(self, data: Data) -> None:
         # Keep only the user-specified number of samples
         images = concat(self.images)[:self.n_samples or self.n_found]
-        batch, channels, height, width = images.shape
+        channels, height, width = get_image_dims(images)
         activations = to_number(concat(self.activations)[:self.n_samples or self.n_found])
         if tf.is_tensor(images):
-            channels, height, width = width, channels, height
             activations = np.moveaxis(activations, source=-1, destination=1)  # Activations should be channel first
         args = {}
         labels = None if not self.labels else concat(self.labels)[:self.n_samples or self.n_found]

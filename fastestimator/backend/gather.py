@@ -18,7 +18,6 @@ import numpy as np
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.expand_dims import expand_dims
 from fastestimator.backend.squeeze import squeeze
 from fastestimator.backend.to_tensor import to_tensor
 
