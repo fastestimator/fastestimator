@@ -14,28 +14,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===============================================================================
-full_path=$(realpath $0)
-dir_path=$(dirname $full_path)
+full_path="$(realpath "$0")"
+dir_path="$(dirname "$full_path")"
 
 declare -A exectime
 declare -A result
 
 # run apphub
-for file in $(find $dir_path/apphub_scripts -type f); do
+for file in $(find "$dir_path"/apphub_scripts -type f); do
     if [[ $file == *.sh ]]; then
         if [[ $file == *template* ]]; then
             continue
         fi
-        echo $file
-        start=`date +%s`
-        bash $file
+        echo "$file"
+        start=$(date +%s)
+        bash "$file"
         result[$file]=$?
-        end=`date +%s`
+        end=$(date +%s)
 
         # clean GPU memory
         if ls /dev/nvidia* 1> /dev/null 2>&1; then
             for i in $(lsof /dev/nvidia* | awk 'FNR>1 {print $2}' | sort -u); do
-                kill -9 $i;
+                kill -9 "$i";
             done
         fi
 
@@ -54,25 +54,25 @@ for file in $(find $dir_path/apphub_scripts -type f); do
     fi
 done
 
-rm -rf $dir_path"/tutorial"
-cp -r $(realpath $dir_path/../tutorial) $dir_path
+rm -rf "$dir_path"/tutorial
+cp -r "$(realpath "$dir_path"/../tutorial)" "$dir_path"
 
 # run tutorial
-for nb_in in $(find $dir_path/tutorial -type f); do
+for nb_in in $(find "$dir_path"/tutorial -type f); do
     if [[ $nb_in == *.ipynb ]]; then
-        echo $nb_in
-        nb_out=${nb_in/'.ipynb'/'_out.ipynb'}
-        current_dir=$(dirname $nb_in)
-        stderr_file=${nb_in/'.ipynb'/'_stderr.txt'}
-        start=`date +%s`
-        papermill $nb_in $nb_out -k nightly_build 2>> $stderr_file --cwd $current_dir
+        echo "$nb_in"
+        nb_out="${nb_in/'.ipynb'/'_out.ipynb'}"
+        current_dir="$(dirname "$nb_in")"
+        stderr_file="${nb_in/'.ipynb'/'_stderr.txt'}"
+        start=$(date +%s)
+        papermill "$nb_in" "$nb_out" -k nightly_build 2>> "$stderr_file" --cwd "$current_dir"
         result[$nb_in]=$?
-        end=`date +%s`
+        end=$(date +%s)
 
         # clean GPU memory
         if ls /dev/nvidia* 1> /dev/null 2>&1; then
             for i in $(lsof /dev/nvidia* | awk 'FNR>1 {print $2}' | sort -u); do
-                kill -9 $i;
+                kill -9 "$i";
             done
         fi
 
@@ -94,7 +94,7 @@ done
 
 # print report
 echo "------------------------ report ------------------------"
-for key in ${!exectime[@]}; do
+for key in "${!exectime[@]}"; do
     if [ ${result[$key]} -eq 0 ]; then
         echo "$key: pass, (spend ${exectime[$key]} seconds)"
     else
@@ -105,7 +105,7 @@ done
 # print fail list
 echo "---------------------- fail list -----------------------"
 is_fail=0
-for key in ${!exectime[@]}; do
+for key in "${!exectime[@]}"; do
     if [ ! ${result[$key]} -eq 0 ]; then
         echo "$key"
         is_fail=1

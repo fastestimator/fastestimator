@@ -25,8 +25,8 @@ train_info="--pretrain_epochs 2 --finetune_epochs 1 --batch_size 8 --max_train_s
 
 # ==============================================================================================
 
-full_path=$(realpath $0)
-dir_path=$(dirname $full_path)
+full_path="$(realpath "$0")"
+dir_path="$(dirname "$full_path")"
 
 source_dir="${dir_path/'test/apphub_scripts'/'apphub'}"
 stderr_file="${dir_path}/run_torch_stderr.txt"
