@@ -32,4 +32,4 @@ source_dir="${dir_path/'test/apphub_scripts'/'apphub'}"
 stderr_file="${dir_path}/run_torch_stderr.txt"
 py_file="${source_dir}/${example_name}_torch.py"
 
-fastestimator run $py_file $train_info $@ 2> $stderr_file
+fastestimator run "$py_file" "$train_info" "$@" 2> "$stderr_file"

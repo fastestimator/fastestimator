@@ -36,7 +36,7 @@ class OpticalDistortion(MultiVariateAlbumentation):
         mask_out: The key to write the modified mask (defaults to `mask_in` if None).
         masks_out: The key to write the modified masks (defaults to `masks_in` if None).
         distort_limit: If distort_limit is a single float, the range will be (-distort_limit, distort_limit).
-        shift_limit: If shift_limit is a single float, the range will be (-shift_limit, shift_limit). 
+        shift_limit: If shift_limit is a single float, the range will be (-shift_limit, shift_limit).
         interpolation: Flag that is used to specify the interpolation algorithm. Should be one of:
             cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_CUBIC, cv2.INTER_AREA, cv2.INTER_LANCZOS4.
         border_mode: Flag that is used to specify the pixel extrapolation method. Should be one of:

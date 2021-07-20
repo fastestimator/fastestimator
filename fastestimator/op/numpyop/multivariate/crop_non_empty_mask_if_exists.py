@@ -43,7 +43,7 @@ class CropNonEmptyMaskIfExists(MultiVariateAlbumentation):
         keypoint_params: Parameters defining the type of keypoints ('xy', 'yx', 'xya', 'xys', 'xyas', 'xysa').
         height: Vertical size of crop in pixels.
         width: Horizontal size of crop in pixels.
-        ignore_values: Values to ignore in mask, `0` values are always ignored (e.g. if background value is 5 set 
+        ignore_values: Values to ignore in mask, `0` values are always ignored (e.g. if background value is 5 set
             `ignore_values=[5]` to ignore).
         ignore_channels: Channels to ignore in mask (e.g. if background is a first channel set `ignore_channels=[0]` to
             ignore).
