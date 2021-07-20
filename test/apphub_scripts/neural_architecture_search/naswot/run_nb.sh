@@ -26,12 +26,12 @@ train_info="-p batch_size 128 -p num_archs 10"
 
 # ==============================================================================================
 
-full_path=$(realpath $0)
-dir_path=$(dirname $full_path)
+full_path="$(realpath "$0")"
+dir_path="$(dirname "$full_path")"
 
 source_dir="${dir_path/'test/apphub_scripts'/'apphub'}"
 stderr_file="${dir_path}/run_nb_stderr.txt"
 nb_out="${dir_path}/${example_name}_out.ipynb"
 nb_in="${source_dir}/${example_name}.ipynb"
 
-papermill $nb_in $nb_out $train_info $@ -k nightly_build 2> $stderr_file
+papermill "$nb_in" "$nb_out" "$train_info" "$@" -k nightly_build 2> "$stderr_file"

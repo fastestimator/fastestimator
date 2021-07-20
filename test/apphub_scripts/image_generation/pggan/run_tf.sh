@@ -28,16 +28,16 @@ train_info="--epochs 3 --target_size 8 --max_train_steps_per_epoch 2"
 need_test=0
 # ==============================================================================================
 
-full_path=$(realpath $0)
-dir_path=$(dirname $full_path)
+full_path="$(realpath "$0")"
+dir_path="$(dirname "$full_path")"
 
 source_dir="${dir_path/'test/apphub_scripts'/'apphub'}"
 stderr_file="${dir_path}/run_tf_stderr.txt"
 py_file="${source_dir}/${example_name}_tf.py"
 
-fastestimator train $py_file $train_info $@ 2> $stderr_file
+fastestimator train "$py_file" "$train_info" "$@" 2> "$stderr_file"
 
-if [ $need_test -eq 1 ]; then
-    fastestimator test $py_file $train_info $@ 2>> $stderr_file
+if [ "$need_test" -eq 1 ]; then
+    fastestimator test "$py_file" "$train_info" "$@" 2>> "$stderr_file"
     echo 'run test'
 fi

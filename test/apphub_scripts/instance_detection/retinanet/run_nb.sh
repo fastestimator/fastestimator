@@ -16,8 +16,8 @@
 set -e
 
 example_name="retinanet"
-full_path=$(realpath $0)
-dir_path=$(dirname $full_path)
+full_path="$(realpath "$0")"
+dir_path="$(dirname "$full_path")"
 
 # The training arguments
 # 1. Usually we set the epochs:2, batch_size:2, max_train_steps_per_epoch:2
@@ -35,4 +35,4 @@ stderr_file="${dir_path}/run_nb_stderr.txt"
 nb_out="${dir_path}/${example_name}_out.ipynb"
 nb_in="${source_dir}/${example_name}.ipynb"
 
-papermill $nb_in $nb_out $train_info $@ -k nightly_build 2> $stderr_file
+papermill "$nb_in" "$nb_out" "$train_info" "$@" -k nightly_build 2> "$stderr_file"

@@ -25,11 +25,11 @@ example_name="simclr"
 train_info="--epochs_pretrain 1 --epochs_finetune 1 --batch_size 8 --max_train_steps_per_epoch 2"
 # ==============================================================================================
 
-full_path=$(realpath $0)
-dir_path=$(dirname $full_path)
+full_path="$(realpath "$0")"
+dir_path="$(dirname "$full_path")"
 
 source_dir="${dir_path/'test/apphub_scripts'/'apphub'}"
 stderr_file="${dir_path}/run_tf_stderr.txt"
 py_file="${source_dir}/${example_name}_tf.py"
 
-fastestimator run $py_file $train_info $@ 2> $stderr_file
+fastestimator run "$py_file" "$train_info" "$@" 2> "$stderr_file"

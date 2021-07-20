@@ -16,8 +16,8 @@
 set -e
 export TF_CPP_MIN_LOG_LEVEL=2
 
-full_path=$(realpath $0)
-dir_path=$(dirname $full_path)
+full_path="$(realpath "$0")"
+dir_path="$(dirname "$full_path")"
 example_name="fst"
 
 # The training arguments
@@ -35,9 +35,9 @@ source_dir="${dir_path/'test/apphub_scripts'/'apphub'}"
 stderr_file="${dir_path}/run_tf_stderr.txt"
 py_file="${source_dir}/${example_name}_tf.py"
 
-fastestimator train $py_file $train_info $@ 2> $stderr_file
+fastestimator train "$py_file" "$train_info" "$@" 2> "$stderr_file"
 
-if [ $need_test -eq 1 ]; then
-    fastestimator test $py_file $train_info $@ 2>> $stderr_file
+if [ "$need_test" -eq 1 ]; then
+    fastestimator test "$py_file" "$train_info" "$@" 2>> "$stderr_file"
     echo 'run test'
 fi
