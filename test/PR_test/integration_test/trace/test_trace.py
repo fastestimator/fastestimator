@@ -15,7 +15,6 @@
 import unittest
 
 import fastestimator as fe
-
 from fastestimator.trace import Trace
 
 

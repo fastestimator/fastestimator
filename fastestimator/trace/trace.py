@@ -16,8 +16,8 @@ import time
 from collections import deque
 from typing import Iterable, List, Optional, Set, Union
 
-from natsort import humansorted
 import numpy as np
+from natsort import humansorted
 
 from fastestimator.backend.get_lr import get_lr
 from fastestimator.summary.summary import ValWithError

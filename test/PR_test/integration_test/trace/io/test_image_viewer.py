@@ -13,10 +13,8 @@
 # limitations under the License.
 # ==============================================================================
 import unittest
-from unittest import mock
 from unittest.mock import patch
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 from fastestimator.trace.io import ImageViewer

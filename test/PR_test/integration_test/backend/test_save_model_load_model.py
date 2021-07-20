@@ -18,11 +18,11 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-from tensorflow_addons.optimizers import SGDW
 import torch
+from tensorflow_addons.optimizers import SGDW
 
 import fastestimator as fe
-from fastestimator.test.unittest_util import OneLayerTorchModel, is_equal, one_layer_tf_model
+from fastestimator.test.unittest_util import is_equal
 
 
 def get_model_weight_tf(model):

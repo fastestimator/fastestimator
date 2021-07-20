@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 import random
-import tempfile
 
 import numpy as np
 from PIL import Image, ImageEnhance, ImageOps, ImageTransform

@@ -20,7 +20,7 @@ import torch
 
 from fastestimator.test.unittest_util import TraceRun
 from fastestimator.trace.metric import MCC
-import pdb
+
 
 def mcc_func(tp, tn, fp, fn):
     return (tp * tn - fp * fn) / np.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))

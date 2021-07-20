@@ -14,11 +14,14 @@
 # ==============================================================================
 import tempfile
 
-import fastestimator as fe
 import numpy as np
 import tensorflow as tf
 import torch
 import torch.nn as nn
+from sklearn.metrics import auc, f1_score, roc_curve
+from torch.nn.init import normal_
+
+import fastestimator as fe
 from fastestimator.backend import binary_crossentropy
 from fastestimator.op.numpyop import LambdaOp
 from fastestimator.op.numpyop.univariate import ChannelTranspose, ExpandDims, Normalize
@@ -27,8 +30,6 @@ from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace import Trace
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.util import to_number
-from sklearn.metrics import auc, f1_score, roc_curve
-from torch.nn.init import normal_
 
 
 class reconstructor(nn.Module):

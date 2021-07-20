@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from abc import ABC, abstractmethod
 import inspect
 import json
 import os
+from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Tuple
 
 from fastestimator.network import build
+
 
 class Search(ABC):
     """Base class which other searches inherit from.

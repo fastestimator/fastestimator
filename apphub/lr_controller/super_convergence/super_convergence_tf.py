@@ -16,7 +16,6 @@ import tempfile
 
 import fastestimator as fe
 from fastestimator.architecture.tensorflow import ResNet9
-from fastestimator.backend import get_lr
 from fastestimator.dataset.data.cifair10 import load_data
 from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import HorizontalFlip, PadIfNeeded, RandomCrop

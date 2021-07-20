@@ -19,7 +19,6 @@ import tensorflow as tf
 import torch
 
 import fastestimator as fe
-from fastestimator.test.unittest_util import is_equal
 
 
 class TestGetLr(unittest.TestCase):

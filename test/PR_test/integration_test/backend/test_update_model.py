@@ -6,7 +6,7 @@ import tensorflow as tf
 import torch
 
 import fastestimator as fe
-from fastestimator.test.unittest_util import OneLayerTorchModel, is_equal, one_layer_tf_model
+from fastestimator.test.unittest_util import OneLayerTorchModel, one_layer_tf_model
 
 
 class TestUpdateModel(unittest.TestCase):
