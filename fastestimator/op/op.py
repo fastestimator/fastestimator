@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from copy import deepcopy
 from typing import Any, Iterable, List, Mapping, MutableMapping, Set, Union
+
+import numpy as np
 
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import parse_modes, to_list, to_set

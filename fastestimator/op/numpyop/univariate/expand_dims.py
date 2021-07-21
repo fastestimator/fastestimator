@@ -22,7 +22,7 @@ from fastestimator.util.traceability_util import traceable
 
 @traceable()
 class ExpandDims(NumpyOp):
-    """Expand the dimension of inputs by inserting a new axis to the specified axis position 
+    """Expand the dimension of inputs by inserting a new axis to the specified axis position.
 
     Args:
         inputs: Key(s) of inputs to be modified.
