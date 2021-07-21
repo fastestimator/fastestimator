@@ -26,8 +26,8 @@ example_name="fst"
 # must be one and only cell with "parameters" tag)
 style_img_path="${dir_path}/Vassily_Kandinsky,_1913_-_Composition_7.jpg"
 test_img_path="${dir_path}/panda.jpeg"
-train_info="-p epochs 2 -p batch_size 4 -p max_train_steps_per_epoch 2 -p style_img_path ${style_img_path} \
-            -p test_img_path ${test_img_path}"
+train_info=(-p epochs 2 -p batch_size 4 -p max_train_steps_per_epoch 2 -p style_img_path "${style_img_path}"
+            -p test_img_path "${test_img_path}")
 
 # ==============================================================================================
 

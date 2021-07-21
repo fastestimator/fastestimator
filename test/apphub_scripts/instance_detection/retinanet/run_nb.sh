@@ -25,8 +25,8 @@ dir_path="$(dirname "$full_path")"
 # 3. The arguement will re-declare the variable right after the jupyter notebook cell with "parameters" tag (there \
 # must be one and only cell with "parameters" tag)
 class_json_path="${dir_path}/class.json"
-train_info="-p epochs 2 -p batch_size 8 -p max_train_steps_per_epoch 2 -p max_eval_steps_per_epoch 2 \
-            -p class_json_path ${class_json_path}"
+train_info=(-p epochs 2 -p batch_size 8 -p max_train_steps_per_epoch 2 -p max_eval_steps_per_epoch 2
+            -p class_json_path "${class_json_path}")
 
 # ==============================================================================================
 
