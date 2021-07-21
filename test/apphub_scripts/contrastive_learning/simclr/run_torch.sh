@@ -22,7 +22,7 @@ example_name="simclr"
 # 1. Usually we set the epochs:2, batch_size:2, max_train_steps_per_epoch:2
 # 2. The expression for the following setup is "--epochs 2 --batch_size 8 --max_train_steps_per_epoch 2"
 # 3. The syntax of this expression is different from run_notebook.py
-train_info="--epochs_pretrain 1 --epochs_finetune 1 --batch_size 8 --max_train_steps_per_epoch 2"
+train_info=(--epochs_pretrain 1 --epochs_finetune 1 --batch_size 8 --max_train_steps_per_epoch 2)
 # ==============================================================================================
 
 full_path="$(realpath "$0")"
@@ -32,4 +32,4 @@ source_dir="${dir_path/'test/apphub_scripts'/'apphub'}"
 stderr_file="${dir_path}/run_tf_stderr.txt"
 py_file="${source_dir}/${example_name}_tf.py"
 
-fastestimator run "$py_file" "$train_info" "$@" 2> "$stderr_file"
+fastestimator run "$py_file" "${train_info[@]}" "$@" 2> "$stderr_file"
