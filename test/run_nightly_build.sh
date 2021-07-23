@@ -27,10 +27,17 @@ for file in $(find "$dir_path"/apphub_scripts -type f); do
             continue
         fi
         echo "$file"
+
+        # sleep (fix 'Kernel died' issue: https://github.com/nteract/papermill/issues/511)
+        sleep 5s
+
         start=$(date +%s)
         bash "$file"
         result[$file]=$?
         end=$(date +%s)
+
+        # sleep (fix 'Kernel died' issue: https://github.com/nteract/papermill/issues/511)
+        sleep 5s
 
         # clean GPU memory
         if ls /dev/nvidia* 1> /dev/null 2>&1; then
@@ -43,7 +50,7 @@ for file in $(find "$dir_path"/apphub_scripts -type f); do
         rm -r /root/.cache
 
         # sleep (fix issue of kernel die)
-        sleep 10s
+        sleep 5s
 
         exectime[$file]=$((end-start))
         if [ ! ${result[$file]} -eq 0 ]; then
@@ -61,6 +68,10 @@ cp -r "$(realpath "$dir_path"/../tutorial)" "$dir_path"
 for nb_in in $(find "$dir_path"/tutorial -type f); do
     if [[ $nb_in == *.ipynb ]]; then
         echo "$nb_in"
+
+        # sleep (fix 'Kernel died' issue: https://github.com/nteract/papermill/issues/511)
+        sleep 5s
+
         nb_out="${nb_in/'.ipynb'/'_out.ipynb'}"
         current_dir="$(dirname "$nb_in")"
         stderr_file="${nb_in/'.ipynb'/'_stderr.txt'}"
@@ -68,6 +79,9 @@ for nb_in in $(find "$dir_path"/tutorial -type f); do
         papermill "$nb_in" "$nb_out" -k nightly_build 2>> "$stderr_file" --cwd "$current_dir"
         result[$nb_in]=$?
         end=$(date +%s)
+
+        # sleep (fix 'Kernel died' issue: https://github.com/nteract/papermill/issues/511)
+        sleep 5s
 
         # clean GPU memory
         if ls /dev/nvidia* 1> /dev/null 2>&1; then
@@ -79,8 +93,8 @@ for nb_in in $(find "$dir_path"/tutorial -type f); do
         # clean cache (fix issue of dataloader being killed)
         rm -r /root/.cache
 
-        # sleep (fix issue of kernel die)
-        sleep 10s
+        # sleep (fix 'Kernel died' issue: https://github.com/nteract/papermill/issues/511)
+        sleep 5s
 
         exectime[$nb_in]=$((end-start))
         if [ ! ${result[$nb_in]} -eq 0 ]; then
