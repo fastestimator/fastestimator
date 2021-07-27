@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import time
 import unittest
 from collections import deque
 from copy import deepcopy
@@ -46,6 +47,7 @@ class CheckNetworkWeight(fe.trace.Trace):
             When epoch is not in the work_intervals, the test will be skipped. If None, testing will be active all the
             time.
     """
+
     def __init__(self, model, grad_key, merge_grad, test_self, framework, lrs, work_intervals=None):
         if work_intervals:
             assert len(work_intervals) == len(lrs), "length of work_intervals need to be the same as lrs"
@@ -141,12 +143,16 @@ class TestUpdateOp(unittest.TestCase):
     def setUpClass(cls):
         cls.train_data, _ = mnist.load_data()
 
+    def tearDown(self) -> None:
+        time.sleep(3)  # avoid DataLoader worker (pid(s) XXXX) exited unexpectedly
+
     def test_tf_end_to_end(self):
         """This test cover the all combination of:
             - mixed-precision / not
             - merge_grad / not
             - gradient input / loss input
         """
+
         def run_test(mixed_precision, merge_grad, gradient):
             lr = 0.1
             pipeline = fe.Pipeline(train_data=self.train_data,
@@ -177,6 +183,13 @@ class TestUpdateOp(unittest.TestCase):
                                      traces=traces,
                                      max_train_steps_per_epoch=2)
             estimator.fit(warmup=False)
+            # Try to avoid DataLoader worker (pid(s) XXXX) exited unexpectedly:
+            del estimator
+            del traces
+            del network
+            del model
+            del pipeline
+            time.sleep(3)
 
         for mixed_precision in [True, False]:
             for merge_grad in [1, 2]:
@@ -197,6 +210,7 @@ class TestUpdateOp(unittest.TestCase):
             - merge_grad / not
             - gradient input / loss input
         """
+
         def run_test(mixed_precision, merge_grad, gradient):
             lr = 0.1
             pipeline = fe.Pipeline(train_data=self.train_data,
@@ -227,6 +241,13 @@ class TestUpdateOp(unittest.TestCase):
                                      traces=traces,
                                      max_train_steps_per_epoch=2)
             estimator.fit(warmup=False)
+            # Try to avoid DataLoader worker (pid(s) XXXX) exited unexpectedly:
+            del estimator
+            del traces
+            del network
+            del model
+            del pipeline
+            time.sleep(3)
 
         for mixed_precision in [True, False]:
             for merge_grad in [1, 2]:
@@ -247,6 +268,7 @@ class TestUpdateOp(unittest.TestCase):
             - merge_grad / not
             - gradient input / loss input
         """
+
         def run_test(mixed_precision, merge_grad, gradient):
             lr = 0.1
             lr2 = 0.01
@@ -282,6 +304,13 @@ class TestUpdateOp(unittest.TestCase):
                                      traces=traces,
                                      max_train_steps_per_epoch=2)
             estimator.fit(warmup=False)
+            # Try to avoid DataLoader worker (pid(s) XXXX) exited unexpectedly:
+            del estimator
+            del traces
+            del network
+            del model
+            del pipeline
+            time.sleep(3)
 
         for mixed_precision in [True, False]:
             for merge_grad in [1, 2]:
@@ -302,6 +331,7 @@ class TestUpdateOp(unittest.TestCase):
             - merge_grad / not
             - gradient input / loss input
         """
+
         def run_test(mixed_precision, merge_grad, gradient):
             lr = 0.1
             lr2 = 0.01
@@ -339,6 +369,13 @@ class TestUpdateOp(unittest.TestCase):
                                      traces=traces,
                                      max_train_steps_per_epoch=2)
             estimator.fit(warmup=False)
+            # Try to avoid DataLoader worker (pid(s) XXXX) exited unexpectedly:
+            del estimator
+            del traces
+            del network
+            del model
+            del pipeline
+            time.sleep(3)
 
         for mixed_precision in [True, False]:
             for merge_grad in [1, 2]:
@@ -359,6 +396,7 @@ class TestUpdateOp(unittest.TestCase):
             - merge_grad / not
             - gradient input / loss input
         """
+
         def run_test(mixed_precision, merge_grad, gradient):
             lr = 0.1
             lr2 = 0.01
@@ -391,6 +429,13 @@ class TestUpdateOp(unittest.TestCase):
                                      traces=traces,
                                      max_train_steps_per_epoch=2)
             estimator.fit(warmup=False)
+            # Try to avoid DataLoader worker (pid(s) XXXX) exited unexpectedly:
+            del estimator
+            del traces
+            del network
+            del model
+            del pipeline
+            time.sleep(3)
 
         for mixed_precision in [True, False]:
             for merge_grad in [1, 2]:
@@ -411,6 +456,7 @@ class TestUpdateOp(unittest.TestCase):
             - merge_grad / not
             - gradient input / loss input
         """
+
         def run_test(mixed_precision, merge_grad, gradient):
             lr = 0.1
             lr2 = 0.01
@@ -446,6 +492,13 @@ class TestUpdateOp(unittest.TestCase):
                                      traces=traces,
                                      max_train_steps_per_epoch=2)
             estimator.fit(warmup=False)
+            # Try to avoid DataLoader worker (pid(s) XXXX) exited unexpectedly:
+            del estimator
+            del traces
+            del network
+            del model
+            del pipeline
+            time.sleep(3)
 
         for mixed_precision in [True, False]:
             for merge_grad in [1, 2]:

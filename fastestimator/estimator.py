@@ -322,6 +322,10 @@ class Estimator:
                     batch = next(iterator)
             except StopIteration:
                 break
+        # Force the iterator to start it's shutdown sequence. This is an attempt to avoid the following in unit tests:
+        # RuntimeError: DataLoader worker (pid(s) XXXX) exited unexpectedly
+        del iterator
+        del loader
         self._run_traces_on_epoch_end(traces=traces)
         self.network.unload_epoch()
 
