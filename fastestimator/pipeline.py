@@ -246,6 +246,7 @@ class Pipeline:
                                                     ", ".join(op.inputs).ljust(max_in_len + 1),
                                                     ", ".join(op.outputs).ljust(max_out_len + 1),
                                                     100 * duration_list[i] / total_time))
+        del loader  # close threads
 
     def get_scheduled_items(self, mode: str) -> List[Any]:
         """Get a list of items considered for scheduling.
@@ -316,6 +317,7 @@ class Pipeline:
             results.append(batch)
             if idx == num_steps:
                 break
+        del loader  # Close threads
         if len(results) == 1:
             results = results[0]
         return results

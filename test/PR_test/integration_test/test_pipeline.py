@@ -111,6 +111,9 @@ class TestPipelineInit(unittest.TestCase):
         cls.sample_numpy_op = SampleNumpyOp(inputs="x", outputs="x")
         cls.sample_tensor_op = SampleTensorOp(inputs="x", outputs="x")
 
+    def tearDown(self) -> None:
+        time.sleep(3)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
+
     def test_pipeline_init_tf_dataset_torch_dataloader_have_op_batch_size_num_process(self):
         dataset = {"tf_dataset": self.sample_tf_dataset, "dataloader": self.sample_torch_dataloader}
 
@@ -234,6 +237,9 @@ class TestPipelineGetModes(unittest.TestCase):
     def setUpClass(cls):
         cls.sample_torch_dataset = get_sample_torch_dataset()
 
+    def tearDown(self) -> None:
+        time.sleep(3)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
+
     def test_pipeline_get_modes_no_scheduler(self):
         with self.subTest("train_data"):
             pipeline = fe.Pipeline(train_data=self.sample_torch_dataset)
@@ -277,6 +283,9 @@ class TestPipelineGetEpochsWithData(unittest.TestCase):
     def setUpClass(cls):
         cls.sample_torch_dataset = get_sample_torch_dataset()
 
+    def tearDown(self) -> None:
+        time.sleep(3)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
+
     def test_pipeline_get_epochs_with_data_no_scheduler(self):
         pipeline = fe.Pipeline(train_data=self.sample_torch_dataset)
 
@@ -305,6 +314,9 @@ class TestPipelineBechmark(unittest.TestCase):
         cls.sample_torch_dataset = get_sample_torch_dataset()
         cls.sample_torch_dataloader = get_sample_torch_dataloader()
 
+    def tearDown(self) -> None:
+        time.sleep(3)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
+
     def test_pipeline_bechmark_smoke(self):
         dataset = {
             "tf_dataset": self.sample_tf_dataset,
@@ -320,7 +332,7 @@ class TestPipelineBechmark(unittest.TestCase):
                     pipeline.benchmark()
                 except:
                     self.fail("exception occur")
-                time.sleep(2)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
+                time.sleep(3)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
 
 
 class TestPipelineTransform(unittest.TestCase):
@@ -333,18 +345,19 @@ class TestPipelineTransform(unittest.TestCase):
         cls.sample_data = {"x": np.array([1, 2, 3], dtype=np.float32)}
         cls.sample_dataset = get_sample_torch_dataset()
 
+    def tearDown(self) -> None:
+        time.sleep(3)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
+
     def test_pipeline_transform_no_ops(self):
         pipeline = fe.Pipeline()
         data = pipeline.transform(data=self.sample_data, mode="train")
         ans = {"x": np.array([[1, 2, 3]], dtype=np.float32)}
-        time.sleep(2)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
         self.assertTrue(is_equal(data, ans))
 
     def test_pipeline_transform_with_ops(self):
         pipeline = fe.Pipeline(train_data=self.sample_dataset, ops=[NumpyOpAdd1(inputs="x", outputs="y")])
         data = pipeline.transform(data=self.sample_data, mode="train")
         ans = {"x": np.array([[1, 2, 3]], dtype=np.float32), "y": np.array([[2, 3, 4]], dtype=np.float32)}
-        time.sleep(2)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
         self.assertTrue(is_equal(data, ans))
 
 
@@ -355,6 +368,9 @@ class TestPipelineGetResults(unittest.TestCase):
         cls.sample_torch_dataset = get_sample_torch_dataset()
         cls.sample_torch_dataloader = get_sample_torch_dataloader()
 
+    def tearDown(self) -> None:
+        time.sleep(3)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
+
     def test_pipeline_get_result_tf_dataset_no_op(self):
         pipeline = fe.Pipeline(train_data=self.sample_tf_dataset)
         data = pipeline.get_results(num_steps=1)  # will ignore num_steps
@@ -364,7 +380,6 @@ class TestPipelineGetResults(unittest.TestCase):
             "x": np.array([[0], [1], [2], [3]], dtype=np.float32),
             "y": np.array([[-99], [-98], [-97], [-96]], dtype=np.float32)
         }
-        time.sleep(2)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
         self.assertTrue(is_equal(data, ans))
 
     def test_pipeline_get_result_torch_dataset_no_op(self):
@@ -373,7 +388,6 @@ class TestPipelineGetResults(unittest.TestCase):
         data["x"] = data["x"].numpy()
         data["y"] = data["y"].numpy()
         ans = {"x": np.array([0], dtype=np.float32), "y": np.array([-99], dtype=np.float32)}
-        time.sleep(2)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
         self.assertTrue(is_equal(data, ans))
 
     def test_pipeline_get_result_torch_dataloader_no_op(self):
@@ -385,7 +399,6 @@ class TestPipelineGetResults(unittest.TestCase):
             "x": np.array([[0], [1], [2], [3]], dtype=np.float32),
             "y": np.array([[-99], [-98], [-97], [-96]], dtype=np.float32)
         }
-        time.sleep(2)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
         self.assertTrue(is_equal(data, ans))
 
     def test_pipeline_get_result_dict_batch_size(self):
@@ -396,7 +409,6 @@ class TestPipelineGetResults(unittest.TestCase):
         data["x"] = data["x"].numpy()
         data["y"] = data["y"].numpy()
         ans = {"x": np.array([[0]], dtype=np.float32), "y": np.array([[1]], dtype=np.float32)}
-        time.sleep(2)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
         self.assertTrue(is_equal(data, ans))
 
     def test_pipeline_get_result_dict_batch_size_scheduler(self):
@@ -409,7 +421,6 @@ class TestPipelineGetResults(unittest.TestCase):
         data["x"] = data["x"].numpy()
         data["y"] = data["y"].numpy()
         ans = {"x": np.array([[0]], dtype=np.float32), "y": np.array([[1]], dtype=np.float32)}
-        time.sleep(2)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
         self.assertTrue(is_equal(data, ans))
 
     def test_pipeline_get_result_dict_batch_size_train_eval(self):
@@ -420,9 +431,7 @@ class TestPipelineGetResults(unittest.TestCase):
                                    "train": 2, "eval": 1
                                })
         data_train = pipeline.get_results(mode="train", epoch=1)
-        time.sleep(2)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
         data_eval = pipeline.get_results(mode="eval", epoch=1)
-        time.sleep(2)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
         data_train["x"] = data_train["x"].numpy()
         data_train["y"] = data_train["y"].numpy()
         data_eval["x"] = data_eval["x"].numpy()
@@ -437,7 +446,6 @@ class TestPipelineGetResults(unittest.TestCase):
         ds = ListData(ds)
         pipeline = fe.Pipeline(train_data=ds)
         data = pipeline.get_results()
-        time.sleep(2)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
         self.assertEqual(data["x"].size(0), 5)
 
     def test_pipeline_get_results_batch_list_data(self):
@@ -446,7 +454,6 @@ class TestPipelineGetResults(unittest.TestCase):
         batch_ds = BatchDataset(datasets=(ds1, ds2), num_samples=(2, 1))
         pipeline = fe.Pipeline(train_data=batch_ds)
         data = pipeline.get_results()
-        time.sleep(2)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
         self.assertEqual(data["x"].size(0), 7)
 
     def test_pipeline_get_results_batch_list_data_disjoint_keys(self):
@@ -455,7 +462,6 @@ class TestPipelineGetResults(unittest.TestCase):
         batch_ds = BatchDataset(datasets=(ds1, ds2), num_samples=(5, 1))
         pipeline = fe.Pipeline(train_data=batch_ds)
         data = pipeline.get_results()
-        time.sleep(2)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
         self.assertEqual(data["x"].size(0), 5)
 
 
@@ -476,17 +482,20 @@ class TestPipelineGetLoader(unittest.TestCase):
         cls.sample_torch_dataset = get_sample_torch_dataset()
         cls.sample_torch_dataloader = get_sample_torch_dataloader()
 
+    def tearDown(self) -> None:
+        time.sleep(3)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
+
     def test_pipeline_get_loader_tf_dataset(self):
         pipeline = fe.Pipeline(train_data=self.sample_tf_dataset)
         loader = pipeline.get_loader(mode="train")
-        time.sleep(2)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
         self.assertEqual(loader, self.sample_tf_dataset)
+        del loader  # Shut down threads
 
     def test_pipeline_get_loader_torch_dataloader(self):
         pipeline = fe.Pipeline(train_data=self.sample_torch_dataloader)
         loader = pipeline.get_loader(mode="train")
-        time.sleep(2)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
         self.assertEqual(loader, self.sample_torch_dataloader)
+        del loader  # Shut down threads
 
     def test_pipeline_get_loader_torch_dataset(self):
         pipeline = fe.Pipeline(train_data=self.sample_torch_dataset)
@@ -504,14 +513,13 @@ class TestPipelineGetLoader(unittest.TestCase):
             }, {
                 "x": torch.tensor([1], dtype=torch.float32), "y": torch.tensor([-98], dtype=torch.float32)
             }]
-            time.sleep(2)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
             self.assertTrue(is_equal(results, ans))
+        del loader  # Shut down threads
 
     def test_pipeline_get_loader_torch_dataset_with_batch_size(self):
         with self.subTest(shuffle=False):
             pipeline = fe.Pipeline(train_data=self.sample_torch_dataset, batch_size=2)
             loader = pipeline.get_loader(mode="train", shuffle=False)
-            time.sleep(2)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
             results = []
             for idx, batch in enumerate(loader, start=1):
                 results.append(batch)
@@ -525,13 +533,12 @@ class TestPipelineGetLoader(unittest.TestCase):
                        "x": torch.tensor([[2], [3]], dtype=torch.float32),
                        "y": torch.tensor([[-97], [-96]], dtype=torch.float32)
                    }]
-            time.sleep(2)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
             self.assertTrue(is_equal(results, ans))
+            del loader  # Shut down threads
 
         with self.subTest(shuffle=True):
             pipeline = fe.Pipeline(train_data=self.sample_torch_dataset, batch_size=2)
             loader = pipeline.get_loader(mode="train", shuffle=True)
-            time.sleep(2)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
             results = []
             for idx, batch in enumerate(loader, start=1):
                 results.append(batch)
@@ -545,13 +552,12 @@ class TestPipelineGetLoader(unittest.TestCase):
                              "x": torch.tensor([[2], [3]], dtype=torch.float32),
                              "y": torch.tensor([[-97], [-96]], dtype=torch.float32)
                          }]
-            time.sleep(2)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
             self.assertFalse(is_equal(results, wrong_ans))
+            del loader  # Shut down threads
 
         with self.subTest(shuffle=None):
             pipeline = fe.Pipeline(train_data=self.sample_torch_dataset, batch_size=2)
             loader = pipeline.get_loader(mode="train", shuffle=None)
-            time.sleep(2)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
             results = []
             for idx, batch in enumerate(loader, start=1):
                 results.append(batch)
@@ -565,9 +571,9 @@ class TestPipelineGetLoader(unittest.TestCase):
                              "x": torch.tensor([[2], [3]], dtype=torch.float32),
                              "y": torch.tensor([[-97], [-96]], dtype=torch.float32)
                          }]
-            time.sleep(2)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
             self.assertFalse(is_equal(results,
                                       wrong_ans))  # if shuffle is None and has specify batch_size, it will shuffle
+            del loader  # Shut down threads
 
     def test_pipeline_get_loader_torch_dataset_pad(self):
         """
@@ -580,11 +586,10 @@ class TestPipelineGetLoader(unittest.TestCase):
         dataset = fe.dataset.NumpyDataset({"x": [np.ones((2, 1), dtype=np.float32), np.ones((1, 2), dtype=np.float32)]})
         pipeline = fe.Pipeline(train_data=dataset, pad_value=-1, batch_size=2)
         loader = pipeline.get_loader(mode="train", shuffle=False)
-        time.sleep(2)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
         for idx, batch in enumerate(loader, start=1):
             result = batch
             if idx == 1:
                 break
         ans = {"x": torch.tensor([[[1, -1], [1, -1]], [[1, 1], [-1, -1]]], dtype=torch.float32)}
-        time.sleep(2)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
         self.assertTrue(is_equal(ans, result))
+        del loader  # Shut down threads
