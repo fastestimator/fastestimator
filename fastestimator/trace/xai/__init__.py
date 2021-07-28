@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.trace.xai.eigen_cam import EigenCAM
+from fastestimator.trace.xai.grad_cam import GradCAM
 from fastestimator.trace.xai.instance_tracker import InstanceTracker
 from fastestimator.trace.xai.label_tracker import LabelTracker
 from fastestimator.trace.xai.saliency import Saliency
