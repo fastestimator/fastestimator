@@ -183,13 +183,6 @@ class TestUpdateOp(unittest.TestCase):
                                      traces=traces,
                                      max_train_steps_per_epoch=2)
             estimator.fit(warmup=False)
-            # Try to avoid DataLoader worker (pid(s) XXXX) exited unexpectedly:
-            del estimator
-            del traces
-            del network
-            del model
-            del pipeline
-            time.sleep(3)
 
         for mixed_precision in [True, False]:
             for merge_grad in [1, 2]:
@@ -241,13 +234,6 @@ class TestUpdateOp(unittest.TestCase):
                                      traces=traces,
                                      max_train_steps_per_epoch=2)
             estimator.fit(warmup=False)
-            # Try to avoid DataLoader worker (pid(s) XXXX) exited unexpectedly:
-            del estimator
-            del traces
-            del network
-            del model
-            del pipeline
-            time.sleep(3)
 
         for mixed_precision in [True, False]:
             for merge_grad in [1, 2]:
@@ -304,13 +290,6 @@ class TestUpdateOp(unittest.TestCase):
                                      traces=traces,
                                      max_train_steps_per_epoch=2)
             estimator.fit(warmup=False)
-            # Try to avoid DataLoader worker (pid(s) XXXX) exited unexpectedly:
-            del estimator
-            del traces
-            del network
-            del model
-            del pipeline
-            time.sleep(3)
 
         for mixed_precision in [True, False]:
             for merge_grad in [1, 2]:
@@ -369,13 +348,6 @@ class TestUpdateOp(unittest.TestCase):
                                      traces=traces,
                                      max_train_steps_per_epoch=2)
             estimator.fit(warmup=False)
-            # Try to avoid DataLoader worker (pid(s) XXXX) exited unexpectedly:
-            del estimator
-            del traces
-            del network
-            del model
-            del pipeline
-            time.sleep(3)
 
         for mixed_precision in [True, False]:
             for merge_grad in [1, 2]:
@@ -429,13 +401,6 @@ class TestUpdateOp(unittest.TestCase):
                                      traces=traces,
                                      max_train_steps_per_epoch=2)
             estimator.fit(warmup=False)
-            # Try to avoid DataLoader worker (pid(s) XXXX) exited unexpectedly:
-            del estimator
-            del traces
-            del network
-            del model
-            del pipeline
-            time.sleep(3)
 
         for mixed_precision in [True, False]:
             for merge_grad in [1, 2]:
@@ -492,13 +457,6 @@ class TestUpdateOp(unittest.TestCase):
                                      traces=traces,
                                      max_train_steps_per_epoch=2)
             estimator.fit(warmup=False)
-            # Try to avoid DataLoader worker (pid(s) XXXX) exited unexpectedly:
-            del estimator
-            del traces
-            del network
-            del model
-            del pipeline
-            time.sleep(3)
 
         for mixed_precision in [True, False]:
             for merge_grad in [1, 2]:
