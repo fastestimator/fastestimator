@@ -18,6 +18,7 @@ import random
 import time
 from copy import deepcopy
 from typing import Any, Callable, Dict, List, MutableMapping, Optional, Set, TypeVar, Union
+from weakref import ref
 
 import numpy as np
 import tensorflow as tf
@@ -25,6 +26,7 @@ from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.dataloader import default_collate
 
 from fastestimator.dataset.batch_dataset import BatchDataset
+from fastestimator.dataset.dataloader import FEDataLoader
 from fastestimator.dataset.op_dataset import OpDataset
 from fastestimator.op.numpyop.meta.one_of import OneOf
 from fastestimator.op.numpyop.meta.sometimes import Sometimes
@@ -36,7 +38,7 @@ from fastestimator.util.util import pad_batch, to_list, to_set
 DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
 
 
-@traceable()
+@traceable(blacklist='loaders')
 class Pipeline:
     """A data pipeline class that takes care of data pre-processing.
 
@@ -81,6 +83,7 @@ class Pipeline:
         self.pad_value = pad_value
         self.collate_fn = collate_fn
         self._verify_inputs(**{k: v for k, v in locals().items() if k != 'self'})
+        self.loaders = []
 
     def _verify_inputs(self, **kwargs) -> None:
         """A helper method to ensure that the Pipeline inputs are valid.
@@ -246,7 +249,8 @@ class Pipeline:
                                                     ", ".join(op.inputs).ljust(max_in_len + 1),
                                                     ", ".join(op.outputs).ljust(max_out_len + 1),
                                                     100 * duration_list[i] / total_time))
-        del loader  # close threads
+        if isinstance(loader, FEDataLoader):
+            loader.shutdown()  # Don't call pipeline shutdown since user might have other loaders sitting around
 
     def get_scheduled_items(self, mode: str) -> List[Any]:
         """Get a list of items considered for scheduling.
@@ -317,7 +321,8 @@ class Pipeline:
             results.append(batch)
             if idx == num_steps:
                 break
-        del loader  # Close threads
+        if isinstance(loader, FEDataLoader):
+            loader.shutdown()  # Don't call pipeline shutdown since user might have other loaders sitting around
         if len(results) == 1:
             results = results[0]
         return results
@@ -371,14 +376,32 @@ class Pipeline:
                                    deep_remainder=False,
                                    shuffle=shuffle)
             # Results will be immediately converted to tensors, so don't need deep_remainder
-            data = DataLoader(op_dataset,
-                              batch_size=batch_size,
-                              shuffle=shuffle,
-                              num_workers=self.num_process,
-                              drop_last=False if batch_size is None else self.drop_last,
-                              worker_init_fn=lambda _: np.random.seed(random.randint(0, 2**32 - 1)),
-                              collate_fn=collate_fn)
+            data = FEDataLoader(op_dataset,
+                                batch_size=batch_size,
+                                shuffle=shuffle,
+                                num_workers=self.num_process,
+                                drop_last=False if batch_size is None else self.drop_last,
+                                worker_init_fn=lambda _: np.random.seed(random.randint(0, 2 ** 32 - 1)),
+                                collate_fn=collate_fn)
+            self.loaders.append(ref(data))
         return data
+
+    def shutdown(self) -> None:
+        """A method to close down any threads that have been spun up by this pipeline's data loaders.
+
+        This method only works with data loaders that are managed by FE. If a user provides a Pytorch DataLoader
+        manually this method will not interact with it.
+        """
+        for loader_ref in self.loaders:
+            loader = loader_ref()
+            if loader is None:
+                # Already deleted
+                continue
+            loader.shutdown()
+        self.loaders = []
+
+    def __del__(self):
+        self.shutdown()
 
     def _pad_batch_collate(self, batch: List[MutableMapping[str, Any]]) -> Dict[str, Any]:
         """A collate function which pads a batch of data.

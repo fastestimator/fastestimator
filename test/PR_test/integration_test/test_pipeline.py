@@ -489,13 +489,13 @@ class TestPipelineGetLoader(unittest.TestCase):
         pipeline = fe.Pipeline(train_data=self.sample_tf_dataset)
         loader = pipeline.get_loader(mode="train")
         self.assertEqual(loader, self.sample_tf_dataset)
-        del loader  # Shut down threads
+        pipeline.shutdown()
 
     def test_pipeline_get_loader_torch_dataloader(self):
         pipeline = fe.Pipeline(train_data=self.sample_torch_dataloader)
         loader = pipeline.get_loader(mode="train")
         self.assertEqual(loader, self.sample_torch_dataloader)
-        del loader  # Shut down threads
+        pipeline.shutdown()
 
     def test_pipeline_get_loader_torch_dataset(self):
         pipeline = fe.Pipeline(train_data=self.sample_torch_dataset)
@@ -514,7 +514,7 @@ class TestPipelineGetLoader(unittest.TestCase):
                 "x": torch.tensor([1], dtype=torch.float32), "y": torch.tensor([-98], dtype=torch.float32)
             }]
             self.assertTrue(is_equal(results, ans))
-        del loader  # Shut down threads
+        pipeline.shutdown()
 
     def test_pipeline_get_loader_torch_dataset_with_batch_size(self):
         with self.subTest(shuffle=False):
@@ -534,7 +534,7 @@ class TestPipelineGetLoader(unittest.TestCase):
                        "y": torch.tensor([[-97], [-96]], dtype=torch.float32)
                    }]
             self.assertTrue(is_equal(results, ans))
-            del loader  # Shut down threads
+            pipeline.shutdown()
 
         with self.subTest(shuffle=True):
             pipeline = fe.Pipeline(train_data=self.sample_torch_dataset, batch_size=2)
@@ -553,7 +553,7 @@ class TestPipelineGetLoader(unittest.TestCase):
                              "y": torch.tensor([[-97], [-96]], dtype=torch.float32)
                          }]
             self.assertFalse(is_equal(results, wrong_ans))
-            del loader  # Shut down threads
+            pipeline.shutdown()
 
         with self.subTest(shuffle=None):
             pipeline = fe.Pipeline(train_data=self.sample_torch_dataset, batch_size=2)
@@ -573,7 +573,7 @@ class TestPipelineGetLoader(unittest.TestCase):
                          }]
             self.assertFalse(is_equal(results,
                                       wrong_ans))  # if shuffle is None and has specify batch_size, it will shuffle
-            del loader  # Shut down threads
+            pipeline.shutdown()
 
     def test_pipeline_get_loader_torch_dataset_pad(self):
         """
@@ -592,4 +592,4 @@ class TestPipelineGetLoader(unittest.TestCase):
                 break
         ans = {"x": torch.tensor([[[1, -1], [1, -1]], [[1, 1], [-1, -1]]], dtype=torch.float32)}
         self.assertTrue(is_equal(ans, result))
-        del loader  # Shut down threads
+        pipeline.shutdown()

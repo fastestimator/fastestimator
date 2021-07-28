@@ -1,4 +1,5 @@
 import math
+import time
 import unittest
 
 import numpy as np
@@ -16,7 +17,12 @@ from fastestimator.trace.adapt import LRScheduler
 
 
 class TestLRScheduler(unittest.TestCase):
-    def create_estimator_for_arc(self, model, use_eval, axis):
+
+    def tearDown(self) -> None:
+        time.sleep(3)  # avoid DataLoader worker (pid(s) XXXX) exited unexpectedly
+
+    @staticmethod
+    def create_estimator_for_arc(model, use_eval, axis):
         train_data, eval_data = mnist.load_data()
         pipeline = fe.Pipeline(train_data=train_data,
                                eval_data=eval_data if use_eval else None,

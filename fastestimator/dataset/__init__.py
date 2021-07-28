@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-# FEDataset and OpDataset intentionally not imported here to reduce user confusion with auto-complete
+# FEDataset, OpDataset, and FEDataLoader intentionally not imported here to reduce user confusion with auto-complete
 from fastestimator.dataset import data
 from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.csv_dataset import CSVDataset
