@@ -143,7 +143,7 @@ class GradCAM(Trace):
         components = [images + mask for mask in masks]  # This seems to work even if the image is 1 channel instead of 3
         components = [image / reduce_max(image) for image in components]
 
-        for idx, elem in enumerate(components):
+        for elem in components:
             args[self.grad_key] = elem
 
         result = ImgData(**args)
