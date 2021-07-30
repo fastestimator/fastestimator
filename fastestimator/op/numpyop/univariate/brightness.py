@@ -52,10 +52,10 @@ class Brightness(NumpyOp):
         self.in_list, self.out_list = True, True
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
-        return [self._apply_brightness(elem) for elem in data]
-
-    def _apply_brightness(self, data: np.ndarray) -> np.ndarray:
-        im = Image.fromarray(data)
         factor = 1.0 + random.uniform(self.limit[0], self.limit[1])
+        return [self._apply_brightness(elem, factor) for elem in data]
+
+    def _apply_brightness(self, data: np.ndarray, factor: float) -> np.ndarray:
+        im = Image.fromarray(data)
         im = ImageEnhance.Brightness(im).enhance(factor)
         return np.array(im)

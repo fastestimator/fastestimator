@@ -51,11 +51,11 @@ class ShearY(NumpyOp):
         self.in_list, self.out_list = True, True
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
-        return [self._apply_sheary(elem) for elem in data]
-
-    def _apply_sheary(self, data: np.ndarray) -> np.ndarray:
-        im = Image.fromarray(data)
         shear_coeff = random.uniform(self.shear_coef[0], self.shear_coef[1])
+        return [self._apply_sheary(elem, shear_coeff) for elem in data]
+
+    def _apply_sheary(self, data: np.ndarray, shear_coeff: float) -> np.ndarray:
+        im = Image.fromarray(data)
         width, height = im.size
         yshift = round(abs(shear_coeff) * height)
         newheight = height + yshift

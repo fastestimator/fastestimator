@@ -52,12 +52,13 @@ class TranslateY(NumpyOp):
         self.in_list, self.out_list = True, True
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
-        return [self._apply_translatey(elem) for elem in data]
+        factor = random.uniform(self.shift_limit[0], self.shift_limit[1])
+        return [self._apply_translatey(elem, factor) for elem in data]
 
-    def _apply_translatey(self, data: np.ndarray) -> np.ndarray:
+    def _apply_translatey(self, data: np.ndarray, factor: float) -> np.ndarray:
         im = Image.fromarray(data)
         width, height = im.size
-        displacement = random.uniform(self.shift_limit[0] * height, self.shift_limit[1] * height)
+        displacement = factor * height
         im = im.transform((width, height),
                           ImageTransform.AffineTransform((1.0, 0.0, 0.0, 0.0, 1.0, displacement)),
                           resample=Image.BICUBIC)

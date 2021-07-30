@@ -52,12 +52,13 @@ class TranslateX(NumpyOp):
         self.in_list, self.out_list = True, True
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
-        return [self._apply_translatex(elem) for elem in data]
+        factor = random.uniform(self.shift_limit[0], self.shift_limit[1])
+        return [self._apply_translatex(elem, factor) for elem in data]
 
-    def _apply_translatex(self, data: np.ndarray) -> np.ndarray:
+    def _apply_translatex(self, data: np.ndarray, factor: float) -> np.ndarray:
         im = Image.fromarray(data)
         width, height = im.size
-        displacement = random.uniform(self.shift_limit[0] * width, self.shift_limit[1] * width)
+        displacement = factor * width
         im = im.transform((width, height),
                           ImageTransform.AffineTransform((1.0, 0.0, displacement, 0.0, 1.0, 0.0)),
                           resample=Image.BICUBIC)
