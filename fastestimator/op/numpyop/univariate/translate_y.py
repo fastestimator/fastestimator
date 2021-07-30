@@ -53,9 +53,10 @@ class TranslateY(NumpyOp):
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
         factor = random.uniform(self.shift_limit[0], self.shift_limit[1])
-        return [self._apply_translatey(elem, factor) for elem in data]
+        return [TranslateY._apply_translatey(elem, factor) for elem in data]
 
-    def _apply_translatey(self, data: np.ndarray, factor: float) -> np.ndarray:
+    @staticmethod
+    def _apply_translatey(data: np.ndarray, factor: float) -> np.ndarray:
         im = Image.fromarray(data)
         width, height = im.size
         displacement = factor * height

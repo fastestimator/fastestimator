@@ -53,9 +53,10 @@ class Contrast(NumpyOp):
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
         factor = 1.0 + random.uniform(self.limit[0], self.limit[1])
-        return [self._apply_contrast(elem, factor) for elem in data]
+        return [Contrast._apply_contrast(elem, factor) for elem in data]
 
-    def _apply_contrast(self, data: np.ndarray, factor: float) -> np.ndarray:
+    @staticmethod
+    def _apply_contrast(data: np.ndarray, factor: float) -> np.ndarray:
         im = Image.fromarray(data)
         im = ImageEnhance.Contrast(im).enhance(factor)
         return np.array(im)

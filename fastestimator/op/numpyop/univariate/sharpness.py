@@ -54,9 +54,10 @@ class Sharpness(NumpyOp):
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
         factor = 1.0 + random.uniform(self.limit[0], self.limit[1])
-        return [self._apply_sharpness(elem, factor) for elem in data]
+        return [Sharpness._apply_sharpness(elem, factor) for elem in data]
 
-    def _apply_sharpness(self, data: np.ndarray, factor: float) -> np.ndarray:
+    @staticmethod
+    def _apply_sharpness(data: np.ndarray, factor: float) -> np.ndarray:
         im = Image.fromarray(data)
         im = ImageEnhance.Sharpness(im).enhance(factor)
         return np.array(im)

@@ -52,9 +52,10 @@ class ShearX(NumpyOp):
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
         shear_coeff = random.uniform(self.shear_coef[0], self.shear_coef[1])
-        return [self._apply_shearx(elem, shear_coeff) for elem in data]
+        return [ShearX._apply_shearx(elem, shear_coeff) for elem in data]
 
-    def _apply_shearx(self, data: np.ndarray, shear_coeff: float) -> np.ndarray:
+    @staticmethod
+    def _apply_shearx(data: np.ndarray, shear_coeff: float) -> np.ndarray:
         im = Image.fromarray(data)
         width, height = im.size
         xshift = round(abs(shear_coeff) * width)
