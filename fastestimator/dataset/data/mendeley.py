@@ -39,8 +39,10 @@ def load_data(root_dir: Optional[str] = None) -> Tuple[LabeledDirDataset, Labele
     Returns:
         (train_data, test_data)
     """
-    url = 'https://data.mendeley.com/datasets/rscbjbr9sj/2/files/41d542e7-7f91-47f6-9ff2-dd8e5a5a7861/' \
-          'ChestXRay2017.zip?dl=1'
+    url = 'https://data.mendeley.com/public-files/datasets/rscbjbr9sj/files/f12eaf6d-6023-432f-acc9-80c9d7393433/' \
+          'file_downloaded'
+    user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/' \
+                 '70.0.3538.77 Safari/537.36'
     home = str(Path.home())
 
     if root_dir is None:
@@ -56,7 +58,7 @@ def load_data(root_dir: Optional[str] = None) -> Tuple[LabeledDirDataset, Labele
         # download
         if not os.path.exists(data_compressed_path):
             print("Downloading data to {}".format(root_dir))
-            stream = requests.get(url, stream=True)  # python wget does not work
+            stream = requests.get(url, stream=True, headers={'User-Agent':user_agent})  # python wget does not work
             total_size = int(stream.headers.get('content-length', 0))
             block_size = int(1e6)  # 1 MB
             progress = tqdm(total=total_size, unit='B', unit_scale=True)
