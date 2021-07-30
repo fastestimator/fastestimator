@@ -22,10 +22,11 @@ from fastestimator.op.numpyop.univariate import Brightness
 class TestBrightness(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.single_input = [255 * np.random.rand(28, 28, 3).astype(np.uint8)]
+        cls.single_input = [np.random.randint(0, 256, size=(28, 28, 3)).astype(np.uint8)]
         cls.single_output_shape = (28, 28, 3)
         cls.multi_input = [
-            255 * np.random.rand(28, 28, 3).astype(np.uint8), 255 * np.random.rand(28, 28, 3).astype(np.uint8)
+            np.random.randint(0, 256, size=(28, 28, 3)).astype(np.uint8),
+            np.random.randint(0, 256, size=(28, 28, 3)).astype(np.uint8)
         ]
         cls.multi_output_shape = (28, 28, 3)
 
