@@ -414,6 +414,7 @@ class TestUpdateOp(unittest.TestCase):
 
                         else:
                             run_test(mixed_precision, merge_grad, gradient)
+                    time.sleep(3.0)  # Try to avoid the queue.Empty error
 
     def test_torch_multi_optimizer_with_repeat_scheduler(self):
         """This test cover the all combination of:
