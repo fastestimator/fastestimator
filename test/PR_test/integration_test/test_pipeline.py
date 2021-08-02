@@ -163,19 +163,19 @@ class TestPipelineInit(unittest.TestCase):
             try:
                 pipeline = fe.Pipeline(train_data=data, eval_data=data, test_data=data, ops=[self.sample_numpy_op])
             except:
-                self.fail("exception occur")
+                self.fail("exception occurred")
 
         with self.subTest("with batch_size not None"):
             try:
                 pipeline = fe.Pipeline(train_data=data, eval_data=data, test_data=data, batch_size=10)
             except:
-                self.fail("exception occur")
+                self.fail("exception occurred")
 
         with self.subTest("with num_process not None"):
             try:
                 pipeline = fe.Pipeline(train_data=data, eval_data=data, test_data=data, num_process=1)
             except:
-                self.fail("exception occur")
+                self.fail("exception occurred")
 
     def test_pipeline_init_torch_dataset_scheduler_have_op_batch_size_num_process(self):
         data = EpochScheduler(epoch_dict={1: self.sample_torch_dataset, 2: None})
@@ -184,19 +184,19 @@ class TestPipelineInit(unittest.TestCase):
             try:
                 pipeline = fe.Pipeline(train_data=data, eval_data=data, test_data=data, ops=[self.sample_numpy_op])
             except:
-                self.fail("exception occur")
+                self.fail("exception occurred")
 
         with self.subTest("with batch_size not None"):
             try:
                 pipeline = fe.Pipeline(train_data=data, eval_data=data, test_data=data, batch_size=10)
             except:
-                self.fail("exception occur")
+                self.fail("exception occurred")
 
         with self.subTest("with num_process not None"):
             try:
                 pipeline = fe.Pipeline(train_data=data, eval_data=data, test_data=data, num_process=1)
             except:
-                self.fail("exception occur")
+                self.fail("exception occurred")
 
     def test_pipeline_init_all_dataset_no_op_batch_size_num_process(self):
         dataset = {
@@ -210,7 +210,7 @@ class TestPipelineInit(unittest.TestCase):
                 try:
                     pipeline = fe.Pipeline(train_data=data, eval_data=data, test_data=data)
                 except:
-                    self.fail("exception occur")
+                    self.fail("exception occurred")
 
     def test_pipeline_init_torch_dataset_with_tensorop(self):
         data = self.sample_torch_dataset
@@ -304,7 +304,7 @@ class TestPipelineGetEpochsWithData(unittest.TestCase):
         self.assertEqual(epochs, {1, 2})
 
 
-class TestPipelineBechmark(unittest.TestCase):
+class TestPipelineBenchmark(unittest.TestCase):
     """ This test has dependency on:
     * fe.pipeline.Pipeline.get_loader
     """
@@ -317,7 +317,7 @@ class TestPipelineBechmark(unittest.TestCase):
     def tearDown(self) -> None:
         time.sleep(3)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
 
-    def test_pipeline_bechmark_smoke(self):
+    def test_pipeline_benchmark_smoke(self):
         dataset = {
             "tf_dataset": self.sample_tf_dataset,
             "torch_dataset": self.sample_torch_dataset,
@@ -327,11 +327,11 @@ class TestPipelineBechmark(unittest.TestCase):
         for data_type, data in dataset.items():
             with self.subTest("{}".format(data_type)):
                 pipeline = fe.Pipeline(train_data=data)
-
                 try:
                     pipeline.benchmark()
                 except:
-                    self.fail("exception occur")
+                    self.fail("exception occurred")
+                del pipeline
                 time.sleep(3)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
 
 
