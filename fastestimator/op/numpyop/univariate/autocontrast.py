@@ -46,9 +46,10 @@ class AutoContrast(NumpyOp):
         self.in_list, self.out_list = True, True
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
-        return [self._apply_autocontrast(elem) for elem in data]
+        return [AutoContrast._apply_autocontrast(elem) for elem in data]
 
-    def _apply_autocontrast(self, data: np.ndarray) -> np.ndarray:
+    @staticmethod
+    def _apply_autocontrast(data: np.ndarray) -> np.ndarray:
         im = Image.fromarray(data)
         im = ImageOps.autocontrast(im)
         return np.array(im)
