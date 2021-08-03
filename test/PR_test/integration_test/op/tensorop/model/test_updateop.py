@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import time
 import unittest
 from collections import deque
 from copy import deepcopy
@@ -142,9 +141,6 @@ class TestUpdateOp(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.train_data, _ = mnist.load_data()
-
-    def tearDown(self) -> None:
-        time.sleep(3)  # avoid DataLoader worker (pid(s) XXXX) exited unexpectedly
 
     def test_tf_end_to_end(self):
         """This test cover the all combination of:
@@ -414,7 +410,6 @@ class TestUpdateOp(unittest.TestCase):
 
                         else:
                             run_test(mixed_precision, merge_grad, gradient)
-                    time.sleep(3.0)  # Try to avoid the queue.Empty error
 
     def test_torch_multi_optimizer_with_repeat_scheduler(self):
         """This test cover the all combination of:

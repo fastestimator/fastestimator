@@ -1,5 +1,4 @@
 import math
-import time
 import unittest
 
 import numpy as np
@@ -17,9 +16,6 @@ from fastestimator.trace.adapt import LRScheduler
 
 
 class TestLRScheduler(unittest.TestCase):
-
-    def tearDown(self) -> None:
-        time.sleep(3)  # avoid DataLoader worker (pid(s) XXXX) exited unexpectedly
 
     @staticmethod
     def create_estimator_for_arc(model, use_eval, axis):

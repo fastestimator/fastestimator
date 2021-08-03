@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import time
 import unittest
 
 import numpy as np
@@ -40,7 +39,6 @@ class SampleTensorOp(TensorOp):
 
 class NumpyOpAdd1(NumpyOp):
     def forward(self, data, state):
-
         return data + 1
 
 
@@ -101,7 +99,7 @@ class TestPipelineInit(unittest.TestCase):
 
     This test has dependency:
     * fe.schedule.schedule.get_current_items
-    * fe.schedule.schedule.EpochSceduler
+    * fe.schedule.schedule.EpochScheduler
     """
     @classmethod
     def setUpClass(cls):
@@ -110,9 +108,6 @@ class TestPipelineInit(unittest.TestCase):
         cls.sample_torch_dataloader = get_sample_torch_dataloader()
         cls.sample_numpy_op = SampleNumpyOp(inputs="x", outputs="x")
         cls.sample_tensor_op = SampleTensorOp(inputs="x", outputs="x")
-
-    def tearDown(self) -> None:
-        time.sleep(3)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
 
     def test_pipeline_init_tf_dataset_torch_dataloader_have_op_batch_size_num_process(self):
         dataset = {"tf_dataset": self.sample_tf_dataset, "dataloader": self.sample_torch_dataloader}
@@ -231,14 +226,11 @@ class TestPipelineInit(unittest.TestCase):
 class TestPipelineGetModes(unittest.TestCase):
     """This test include:
     * fe.pipeline.Pipeline.get_modes
-    * fe.schedule.schedule.EpochSceduler
+    * fe.schedule.schedule.EpochScheduler
     """
     @classmethod
     def setUpClass(cls):
         cls.sample_torch_dataset = get_sample_torch_dataset()
-
-    def tearDown(self) -> None:
-        time.sleep(3)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
 
     def test_pipeline_get_modes_no_scheduler(self):
         with self.subTest("train_data"):
@@ -277,14 +269,12 @@ class TestPipelineGetModes(unittest.TestCase):
 class TestPipelineGetEpochsWithData(unittest.TestCase):
     """This test include:
     * fe.pipeline.Pipeline.get_epochs_with_data
-    * fe.schedule.schedule.EpochSceduler
+    * fe.schedule.schedule.EpochScheduler
     """
+
     @classmethod
     def setUpClass(cls):
         cls.sample_torch_dataset = get_sample_torch_dataset()
-
-    def tearDown(self) -> None:
-        time.sleep(3)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
 
     def test_pipeline_get_epochs_with_data_no_scheduler(self):
         pipeline = fe.Pipeline(train_data=self.sample_torch_dataset)
@@ -314,9 +304,6 @@ class TestPipelineBenchmark(unittest.TestCase):
         cls.sample_torch_dataset = get_sample_torch_dataset()
         cls.sample_torch_dataloader = get_sample_torch_dataloader()
 
-    def tearDown(self) -> None:
-        time.sleep(3)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
-
     def test_pipeline_benchmark_smoke(self):
         dataset = {
             "tf_dataset": self.sample_tf_dataset,
@@ -331,8 +318,6 @@ class TestPipelineBenchmark(unittest.TestCase):
                     pipeline.benchmark()
                 except:
                     self.fail("exception occurred")
-                del pipeline
-                time.sleep(3)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
 
 
 class TestPipelineTransform(unittest.TestCase):
@@ -344,9 +329,6 @@ class TestPipelineTransform(unittest.TestCase):
     def setUpClass(cls):
         cls.sample_data = {"x": np.array([1, 2, 3], dtype=np.float32)}
         cls.sample_dataset = get_sample_torch_dataset()
-
-    def tearDown(self) -> None:
-        time.sleep(3)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
 
     def test_pipeline_transform_no_ops(self):
         pipeline = fe.Pipeline()
@@ -367,9 +349,6 @@ class TestPipelineGetResults(unittest.TestCase):
         cls.sample_tf_dataset = get_sample_tf_dataset()
         cls.sample_torch_dataset = get_sample_torch_dataset()
         cls.sample_torch_dataloader = get_sample_torch_dataloader()
-
-    def tearDown(self) -> None:
-        time.sleep(3)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
 
     def test_pipeline_get_result_tf_dataset_no_op(self):
         pipeline = fe.Pipeline(train_data=self.sample_tf_dataset)
@@ -482,98 +461,89 @@ class TestPipelineGetLoader(unittest.TestCase):
         cls.sample_torch_dataset = get_sample_torch_dataset()
         cls.sample_torch_dataloader = get_sample_torch_dataloader()
 
-    def tearDown(self) -> None:
-        time.sleep(3)  # avoid  DataLoader worker (pid #) is killed by signal: Aborted.
-
     def test_pipeline_get_loader_tf_dataset(self):
         pipeline = fe.Pipeline(train_data=self.sample_tf_dataset)
-        loader = pipeline.get_loader(mode="train")
-        self.assertEqual(loader, self.sample_tf_dataset)
-        pipeline.shutdown()
+        with pipeline(mode="train") as loader:
+            self.assertEqual(loader, self.sample_tf_dataset)
 
     def test_pipeline_get_loader_torch_dataloader(self):
         pipeline = fe.Pipeline(train_data=self.sample_torch_dataloader)
-        loader = pipeline.get_loader(mode="train")
-        self.assertEqual(loader, self.sample_torch_dataloader)
-        pipeline.shutdown()
+        with pipeline(mode="train") as loader:
+            self.assertEqual(loader, self.sample_torch_dataloader)
 
     def test_pipeline_get_loader_torch_dataset(self):
         pipeline = fe.Pipeline(train_data=self.sample_torch_dataset)
-        loader = pipeline.get_loader(mode="train", shuffle=False)
-        with self.subTest("check loader type"):
-            self.assertIsInstance(loader, torch.utils.data.DataLoader)
-        with self.subTest("check data"):
-            results = []
-            for idx, batch in enumerate(loader, start=1):
-                results.append(batch)
-                if idx == 2:
-                    break
-            ans = [{
-                "x": torch.tensor([0], dtype=torch.float32), "y": torch.tensor([-99], dtype=torch.float32)
-            }, {
-                "x": torch.tensor([1], dtype=torch.float32), "y": torch.tensor([-98], dtype=torch.float32)
-            }]
-            self.assertTrue(is_equal(results, ans))
-        pipeline.shutdown()
+        with pipeline(mode="train", shuffle=False) as loader:
+            with self.subTest("check loader type"):
+                self.assertIsInstance(loader, torch.utils.data.DataLoader)
+            with self.subTest("check data"):
+                results = []
+                for idx, batch in enumerate(loader, start=1):
+                    results.append(batch)
+                    if idx == 2:
+                        break
+                ans = [{
+                    "x": torch.tensor([0], dtype=torch.float32), "y": torch.tensor([-99], dtype=torch.float32)
+                }, {
+                    "x": torch.tensor([1], dtype=torch.float32), "y": torch.tensor([-98], dtype=torch.float32)
+                }]
+                self.assertTrue(is_equal(results, ans))
 
     def test_pipeline_get_loader_torch_dataset_with_batch_size(self):
         with self.subTest(shuffle=False):
             pipeline = fe.Pipeline(train_data=self.sample_torch_dataset, batch_size=2)
-            loader = pipeline.get_loader(mode="train", shuffle=False)
-            results = []
-            for idx, batch in enumerate(loader, start=1):
-                results.append(batch)
-                if idx == 2:
-                    break
-            ans = [{
-                "x": torch.tensor([[0], [1]], dtype=torch.float32),
-                "y": torch.tensor([[-99], [-98]], dtype=torch.float32)
-            },
-                   {
-                       "x": torch.tensor([[2], [3]], dtype=torch.float32),
-                       "y": torch.tensor([[-97], [-96]], dtype=torch.float32)
-                   }]
-            self.assertTrue(is_equal(results, ans))
-            pipeline.shutdown()
+            with pipeline(mode="train", shuffle=False) as loader:
+                results = []
+                for idx, batch in enumerate(loader, start=1):
+                    results.append(batch)
+                    if idx == 2:
+                        break
+                ans = [{
+                    "x": torch.tensor([[0], [1]], dtype=torch.float32),
+                    "y": torch.tensor([[-99], [-98]], dtype=torch.float32)
+                },
+                    {
+                        "x": torch.tensor([[2], [3]], dtype=torch.float32),
+                        "y": torch.tensor([[-97], [-96]], dtype=torch.float32)
+                    }]
+                self.assertTrue(is_equal(results, ans))
 
         with self.subTest(shuffle=True):
             pipeline = fe.Pipeline(train_data=self.sample_torch_dataset, batch_size=2)
-            loader = pipeline.get_loader(mode="train", shuffle=True)
-            results = []
-            for idx, batch in enumerate(loader, start=1):
-                results.append(batch)
-                if idx == 2:
-                    break
-            wrong_ans = [{
-                "x": torch.tensor([[0], [1]], dtype=torch.float32),
-                "y": torch.tensor([[-99], [-98]], dtype=torch.float32)
-            },
-                         {
-                             "x": torch.tensor([[2], [3]], dtype=torch.float32),
-                             "y": torch.tensor([[-97], [-96]], dtype=torch.float32)
-                         }]
-            self.assertFalse(is_equal(results, wrong_ans))
-            pipeline.shutdown()
+            with pipeline(mode="train", shuffle=True) as loader:
+                results = []
+                for idx, batch in enumerate(loader, start=1):
+                    results.append(batch)
+                    if idx == 2:
+                        break
+                wrong_ans = [{
+                    "x": torch.tensor([[0], [1]], dtype=torch.float32),
+                    "y": torch.tensor([[-99], [-98]], dtype=torch.float32)
+                },
+                    {
+                        "x": torch.tensor([[2], [3]], dtype=torch.float32),
+                        "y": torch.tensor([[-97], [-96]], dtype=torch.float32)
+                    }]
+                self.assertFalse(is_equal(results, wrong_ans))
 
         with self.subTest(shuffle=None):
             pipeline = fe.Pipeline(train_data=self.sample_torch_dataset, batch_size=2)
-            loader = pipeline.get_loader(mode="train", shuffle=None)
-            results = []
-            for idx, batch in enumerate(loader, start=1):
-                results.append(batch)
-                if idx == 2:
-                    break
-            wrong_ans = [{
-                "x": torch.tensor([[0], [1]], dtype=torch.float32),
-                "y": torch.tensor([[-99], [-98]], dtype=torch.float32)
-            },
-                         {
-                             "x": torch.tensor([[2], [3]], dtype=torch.float32),
-                             "y": torch.tensor([[-97], [-96]], dtype=torch.float32)
-                         }]
-            self.assertFalse(is_equal(results,
-                                      wrong_ans))  # if shuffle is None and has specify batch_size, it will shuffle
-            pipeline.shutdown()
+            with pipeline(mode="train", shuffle=None) as loader:
+                results = []
+                for idx, batch in enumerate(loader, start=1):
+                    results.append(batch)
+                    if idx == 2:
+                        break
+                wrong_ans = [{
+                    "x": torch.tensor([[0], [1]], dtype=torch.float32),
+                    "y": torch.tensor([[-99], [-98]], dtype=torch.float32)
+                },
+                    {
+                        "x": torch.tensor([[2], [3]], dtype=torch.float32),
+                        "y": torch.tensor([[-97], [-96]], dtype=torch.float32)
+                    }]
+                self.assertFalse(is_equal(results,
+                                          wrong_ans))  # if shuffle is None and has specify batch_size, it will shuffle
 
     def test_pipeline_get_loader_torch_dataset_pad(self):
         """
@@ -585,11 +555,31 @@ class TestPipelineGetLoader(unittest.TestCase):
         """
         dataset = fe.dataset.NumpyDataset({"x": [np.ones((2, 1), dtype=np.float32), np.ones((1, 2), dtype=np.float32)]})
         pipeline = fe.Pipeline(train_data=dataset, pad_value=-1, batch_size=2)
-        loader = pipeline.get_loader(mode="train", shuffle=False)
-        for idx, batch in enumerate(loader, start=1):
-            result = batch
-            if idx == 1:
-                break
-        ans = {"x": torch.tensor([[[1, -1], [1, -1]], [[1, 1], [-1, -1]]], dtype=torch.float32)}
-        self.assertTrue(is_equal(ans, result))
-        pipeline.shutdown()
+        with pipeline(mode="train", shuffle=False) as loader:
+            for idx, batch in enumerate(loader, start=1):
+                result = batch
+                if idx == 1:
+                    break
+            ans = {"x": torch.tensor([[[1, -1], [1, -1]], [[1, 1], [-1, -1]]], dtype=torch.float32)}
+            self.assertTrue(is_equal(ans, result))
+
+    def test_pipeline_nested_loaders(self):
+        dataset = fe.dataset.NumpyDataset({"x": [np.ones((2, 1), dtype=np.float32), np.ones((1, 2), dtype=np.float32)]})
+        pipeline = fe.Pipeline(train_data=dataset, pad_value=-1, batch_size=2)
+        with self.subTest("With Call"):
+            with self.assertRaises(ValueError):
+                with pipeline(mode='train') as loader1:
+                    with pipeline(mode='eval') as loader2:
+                        pass
+        with self.subTest("Without Call"):
+            with self.assertRaises(ValueError):
+                with pipeline(mode='train') as loader1:
+                    with pipeline as loader2:
+                        pass
+
+    def test_pipeline_nested_call(self):
+        dataset = fe.dataset.NumpyDataset({"x": [np.ones((2, 1), dtype=np.float32), np.ones((1, 2), dtype=np.float32)]})
+        pipeline = fe.Pipeline(train_data=dataset, pad_value=-1, batch_size=2)
+        with self.assertRaises(ValueError):
+            with pipeline(mode='train') as loader1:
+                pipeline(mode='train')

@@ -209,16 +209,15 @@ class Estimator:
                         trace_input_keys.update(trace.inputs)
                     trace_output_keys.update(trace.outputs)
                 # key checking
-                loader = self._configure_loader(
-                    self.pipeline.get_loader(mode,
-                                             epoch,
-                                             output_keys=trace_input_keys - network_output_keys | network_input_keys))
-                with Suppressor():
-                    if isinstance(loader, tf.data.Dataset):
-                        batch = list(loader.take(1))[0]
-                    else:
-                        batch = next(iter(loader))
-                batch = self._configure_tensor(loader, batch)
+                with self.pipeline(mode=mode, epoch=epoch,
+                                   output_keys=trace_input_keys - network_output_keys | network_input_keys) as loader:
+                    loader = self._configure_loader(loader)
+                    with Suppressor():
+                        if isinstance(loader, tf.data.Dataset):
+                            batch = list(loader.take(1))[0]
+                        else:
+                            batch = next(iter(loader))
+                    batch = self._configure_tensor(loader, batch)
                 assert isinstance(batch, dict), "please make sure data output format is dictionary"
                 pipeline_output_keys = to_set(batch.keys())
 
@@ -291,40 +290,38 @@ class Estimator:
             trace_input_keys.update(trace.inputs)
         network_input_keys = self.network.get_effective_input_keys(self.system.mode, self.system.epoch_idx)
         network_output_keys = self.network.get_all_output_keys(self.system.mode, self.system.epoch_idx)
-        loader = self._configure_loader(
-            self.pipeline.get_loader(self.system.mode,
-                                     self.system.epoch_idx,
-                                     output_keys=trace_input_keys - network_output_keys | network_input_keys))
-        iterator = iter(loader)
-        self.network.load_epoch(mode=self.system.mode,
-                                epoch=self.system.epoch_idx,
-                                output_keys=trace_input_keys,
-                                eager=eager)
-        self.system.batch_idx = None
-        with Suppressor():
-            batch = next(iterator)
-        traces = sort_traces(traces, available_outputs=to_set(batch.keys()) | network_output_keys)
-        self._run_traces_on_epoch_begin(traces=traces)
-        while True:
-            try:
-                if self.system.mode == "train":
-                    self.system.update_global_step()
-                self.system.update_batch_idx()
-                batch = self._configure_tensor(loader, batch)
-                self._run_traces_on_batch_begin(batch, traces=traces)
-                batch, prediction = self.network.run_step(batch)
-                self._run_traces_on_batch_end(batch, prediction, traces=traces)
-                if isinstance(loader, DataLoader) and (
-                    (self.system.batch_idx == self.system.max_train_steps_per_epoch and self.system.mode == "train") or
-                    (self.system.batch_idx == self.system.max_eval_steps_per_epoch and self.system.mode == "eval")):
-                    raise StopIteration
-                with Suppressor():
-                    batch = next(iterator)
-            except StopIteration:
-                break
-        # Force the iterator to start it's shutdown sequence. This is an attempt to avoid the following in unit tests:
-        # RuntimeError: DataLoader worker (pid(s) XXXX) exited unexpectedly
-        self.pipeline.shutdown()
+        with self.pipeline(mode=self.system.mode, epoch=self.system.epoch_idx,
+                           output_keys=trace_input_keys - network_output_keys | network_input_keys) as loader:
+            loader = self._configure_loader(loader)
+            iterator = iter(loader)
+            self.network.load_epoch(mode=self.system.mode,
+                                    epoch=self.system.epoch_idx,
+                                    output_keys=trace_input_keys,
+                                    eager=eager)
+            self.system.batch_idx = None
+            with Suppressor():
+                batch = next(iterator)
+            traces = sort_traces(traces, available_outputs=to_set(batch.keys()) | network_output_keys)
+            self._run_traces_on_epoch_begin(traces=traces)
+            while True:
+                try:
+                    if self.system.mode == "train":
+                        self.system.update_global_step()
+                    self.system.update_batch_idx()
+                    batch = self._configure_tensor(loader, batch)
+                    self._run_traces_on_batch_begin(batch, traces=traces)
+                    batch, prediction = self.network.run_step(batch)
+                    self._run_traces_on_batch_end(batch, prediction, traces=traces)
+                    if isinstance(loader, DataLoader) and (
+                            (self.system.batch_idx == self.system.max_train_steps_per_epoch
+                             and self.system.mode == "train") or
+                            (self.system.batch_idx == self.system.max_eval_steps_per_epoch
+                             and self.system.mode == "eval")):
+                        raise StopIteration
+                    with Suppressor():
+                        batch = next(iterator)
+                except StopIteration:
+                    break
         self._run_traces_on_epoch_end(traces=traces)
         self.network.unload_epoch()
 
