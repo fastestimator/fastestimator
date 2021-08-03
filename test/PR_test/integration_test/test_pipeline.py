@@ -570,12 +570,14 @@ class TestPipelineGetLoader(unittest.TestCase):
             with self.assertRaises(ValueError):
                 with pipeline(mode='train') as loader1:
                     with pipeline(mode='eval') as loader2:
-                        pass
+                        print(loader1)
+                        print(loader2)
         with self.subTest("Without Call"):
             with self.assertRaises(ValueError):
                 with pipeline(mode='train') as loader1:
                     with pipeline as loader2:
-                        pass
+                        print(loader1)
+                        print(loader2)
 
     def test_pipeline_nested_call(self):
         dataset = fe.dataset.NumpyDataset({"x": [np.ones((2, 1), dtype=np.float32), np.ones((1, 2), dtype=np.float32)]})
@@ -583,3 +585,4 @@ class TestPipelineGetLoader(unittest.TestCase):
         with self.assertRaises(ValueError):
             with pipeline(mode='train') as loader1:
                 pipeline(mode='train')
+                print(loader1)
