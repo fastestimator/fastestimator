@@ -327,7 +327,7 @@ class RUA(NumpyOp):
         """
         custom_ops = [op for op in choices if not isinstance(op, str)]
         remove_ops = [op for op in choices if isinstance(op, str) and op.startswith("!")]
-        add_ops = [op for op in choices if isinstance(op, str) and not (op.startswith("!") or op is "defaults")]
+        add_ops = [op for op in choices if isinstance(op, str) and not (op.startswith("!") or (op == "defaults"))]
 
         assert len(remove_ops)==0 or len(add_ops)==0, \
             "Either add or remove ops, not both, found {} and {}".format(add_ops, remove_ops)
