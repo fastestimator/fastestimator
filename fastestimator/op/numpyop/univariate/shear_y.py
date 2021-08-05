@@ -50,6 +50,18 @@ class ShearY(NumpyOp):
         self.shear_coef = param_to_range(shear_coef)
         self.in_list, self.out_list = True, True
 
+    def set_rua_level(self, magnitude_coef: float) -> None:
+        """Set the augmentation intentity based on the magnitude_coef.
+
+        This method is specifically designed to be invoked by RUA Op.
+
+        Args:
+            magnitude_coef: Factor to set the range for magnitude of augmentation.
+        """
+        param_mid = (self.shear_coef[1] + self.shear_coef[0]) / 2
+        param_extent = magnitude_coef * ((self.shear_coef[1] - self.shear_coef[0]) / 2)
+        self.shear_coef = (param_mid - param_extent, param_mid + param_extent)
+
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
         shear_coeff = random.uniform(self.shear_coef[0], self.shear_coef[1])
         return [ShearY._apply_sheary(elem, shear_coeff) for elem in data]
