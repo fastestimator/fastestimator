@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import inspect
 import random
 from typing import Any, Dict, List, Union
 
@@ -45,6 +46,25 @@ class OneOf(NumpyOp):
 
     def __getstate__(self) -> Dict[str, List[Dict[Any, Any]]]:
         return {'ops': [elem.__getstate__() if hasattr(elem, '__getstate__') else {} for elem in self.ops]}
+
+    def set_rua_level(self, magnitude_coef: float) -> None:
+        """Set the augmentation intentity based on the magnitude_coef.
+
+        This method is specifically designed to be invoked by RUA Op.
+
+        Args:
+            magnitude_coef: Factor to set the range for magnitude of augmentation.
+
+        Raises:
+            AttributeError: If ops don't have a 'set_rua_level' method.
+        """
+        for op in self.ops:
+            if hasattr(op, "set_rua_level") and inspect.ismethod(getattr(op, "set_rua_level")):
+                op.set_rua_level(magnitude_coef=magnitude_coef)
+            else:
+                raise AttributeError(
+                    "RUA Augmentations should have 'set_rua_level' method but it's not present in Op: {}".format(
+                        op.__class__.__name__))
 
     def forward(self, data: Union[np.ndarray, List[np.ndarray]],
                 state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:

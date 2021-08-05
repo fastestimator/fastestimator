@@ -65,8 +65,8 @@ class NumpyOp(Op):
         """
         return data
 
-    def forward_batch(self, data: Union[Tensor, List[Tensor]],
-                      state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
+    def forward_batch(self, data: Union[Tensor, List[Tensor]], state: Dict[str,
+                                                                           Any]) -> Union[np.ndarray, List[np.ndarray]]:
         """A method which will be invoked in order to transform a batch of data.
 
         This method will be invoked on batches of data during network postprocessing. Note that the inputs may be numpy
@@ -133,6 +133,14 @@ class LambdaOp(NumpyOp):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.fn = fn
         self.in_list = True
+
+    def set_rua_level(self, magnitude_coef: float) -> None:
+        """A method which will be invoked by RUA Op to adjust the augmentation intensity.
+
+        Args:
+            magnitude_coef: Factor to set the range for magnitude of augmentation.
+        """
+        pass
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
         return self.fn(*data)
