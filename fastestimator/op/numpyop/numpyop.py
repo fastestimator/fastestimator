@@ -135,10 +135,10 @@ class LambdaOp(NumpyOp):
         self.in_list = True
 
     def set_rua_level(self, magnitude_coef: float) -> None:
-        """A method which will be invoked by RUA Op to adjust the augmentation intensity.
+        """A method which will be invoked by the RUA Op to adjust the augmentation intensity.
 
         Args:
-            magnitude_coef: Factor to set the range for magnitude of augmentation.
+            magnitude_coef: The desired augmentation intensity (range [0-1]).
         """
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
