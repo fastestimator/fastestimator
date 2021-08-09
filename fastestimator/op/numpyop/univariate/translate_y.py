@@ -54,10 +54,10 @@ class TranslateY(NumpyOp):
     def set_rua_level(self, magnitude_coef: float) -> None:
         """Set the augmentation intentity based on the magnitude_coef.
 
-        This method is specifically designed to be invoked by RUA Op.
+        This method is specifically designed to be invoked by the RUA Op.
 
         Args:
-            magnitude_coef: Factor to set the range for magnitude of augmentation.
+            magnitude_coef: The desired augmentation intensity (range [0-1]).
         """
         param_mid = (self.shift_limit[1] + self.shift_limit[0]) / 2
         param_extent = magnitude_coef * ((self.shift_limit[1] - self.shift_limit[0]) / 2)

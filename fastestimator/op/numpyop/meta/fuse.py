@@ -58,10 +58,10 @@ class Fuse(NumpyOp):
     def set_rua_level(self, magnitude_coef: float) -> None:
         """Set the augmentation intentity based on the magnitude_coef.
 
-        This method is specifically designed to be invoked by RUA Op.
+        This method is specifically designed to be invoked by the RUA Op.
 
         Args:
-            magnitude_coef: Factor to set the range for magnitude of augmentation.
+            magnitude_coef: The desired augmentation intensity (range [0-1]).
 
         Raises:
             AttributeError: If ops don't have a 'set_rua_level' method.
@@ -71,7 +71,7 @@ class Fuse(NumpyOp):
                 op.set_rua_level(magnitude_coef=magnitude_coef)
             else:
                 raise AttributeError(
-                    "RUA Augmentations should have 'set_rua_level' method but it's not present in Op: {}".format(
+                    "RUA Augmentations should have a 'set_rua_level' method but it's not present in Op: {}".format(
                         op.__class__.__name__))
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:

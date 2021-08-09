@@ -66,10 +66,10 @@ class Rotate(NumpyOp):
     def set_rua_level(self, magnitude_coef: float) -> None:
         """Set the augmentation intentity based on the magnitude_coef.
 
-        This method is specifically designed to be invoked by RUA Op.
+        This method is specifically designed to be invoked by the RUA Op.
 
         Args:
-            magnitude_coef: Factor to set the range for magnitude of augmentation.
+            magnitude_coef: The desired augmentation intensity (range [0-1]).
         """
         param_mid = (self.limit[1] + self.limit[0]) / 2
         param_extent = magnitude_coef * ((self.limit[1] - self.limit[0]) / 2)
@@ -104,12 +104,11 @@ class Identity(NumpyOp):
         super().__init__(inputs=to_list(inputs), outputs=to_list(outputs), mode=mode)
 
     def set_rua_level(self, magnitude_coef: float) -> None:
-        """A method which will be invoked by RUA Op to adjust the augmentation intensity.
+        """A method which will be invoked by the RUA Op to adjust the augmentation intensity.
 
         Args:
-            magnitude_coef: Factor to set the range for magnitude of augmentation.
+            magnitude_coef: The desired augmentation intensity (range [0-1]).
         """
-        pass
 
 
 @traceable()
@@ -136,12 +135,11 @@ class Equalize(NumpyOp):
         super().__init__(inputs=to_list(inputs), outputs=to_list(outputs), mode=mode)
 
     def set_rua_level(self, magnitude_coef: float) -> None:
-        """A method which will be invoked by RUA Op to adjust the augmentation intensity.
+        """A method which will be invoked by the RUA Op to adjust the augmentation intensity.
 
         Args:
-            magnitude_coef: Factor to set the range for magnitude of augmentation.
+            magnitude_coef: The desired augmentation intensity (range [0-1]).
         """
-        pass
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
         return [Equalize._apply_equalize(elem) for elem in data]
@@ -184,15 +182,28 @@ class Posterize(PosterizeAug):
     def set_rua_level(self, magnitude_coef: float) -> None:
         """Set the augmentation intentity based on the magnitude_coef.
 
-        This method is specifically designed to be invoked by RUA Op.
+        This method is specifically designed to be invoked by the RUA Op.
 
         Args:
-            magnitude_coef: Factor to set the range for magnitude of augmentation.
+            magnitude_coef: The desired augmentation intensity (range [0-1]).
         """
+        if isinstance(self.num_bits, tuple):
+            if len(self.num_bits) == 3:
+                num_bits = []
+                for i in self.num_bits:
+                    if isinstance(i, tuple):
+                        num_bits.append(tuple([round(8-(magnitude_coef*i[1])), round(8-(magnitude_coef*i[0]))]))
+                    else:
+                        num_bits.append(round(8-(magnitude_coef*i)))
+                self.num_bits = tuple(num_bits)
+            else:
+                self.num_bits = round(8-(magnitude_coef*self.num_bits[1])), round(8-(magnitude_coef*self.num_bits[0]))
+        else:
+            self.num_bits = round(8-(magnitude_coef*self.num_bits))
         super().__init__(inputs=self.inputs,
                          outputs=self.outputs,
                          mode=self.mode,
-                         num_bits=round(8 - (magnitude_coef * self.num_bits)))
+                         num_bits=self.num_bits)
 
 
 @traceable()
@@ -221,10 +232,10 @@ class Solarize(NumpyOp):
     def set_rua_level(self, magnitude_coef: Union[int, float]) -> None:
         """Set the augmentation intentity based on the magnitude_coef.
 
-        This method is specifically designed to be invoked by RUA Op.
+        This method is specifically designed to be invoked by the RUA Op.
 
         Args:
-            magnitude_coef: Factor to set the range for magnitude of augmentation.
+            magnitude_coef: The desired augmentation intensity (range [0-1]).
         """
         if isinstance(self.threshold, tuple):
             self.threshold = magnitude_coef * (self.threshold[1] - self.threshold[0]) + self.threshold[0]
@@ -248,20 +259,19 @@ class Solarize(NumpyOp):
 class RUA(NumpyOp):
     """Apply RUA augmentation strategy.
 
-    Note that all augmentations ops passed to RUA should have a set_rua_level method to modify the magnitude of
-    augmentations based on the level. Custom NumpyOp can be passed to the choices argument along with names of
-    augmentations to add. Passing 'defaults' adds the default list of augmentations along with any custom NumpyOps
-    specified by the user.
-    List of default augmentations available are: 'Rotate', 'Identity', 'AutoContrast', 'Equalize', 'Posterize',
-    'Solarize', 'Sharpness', 'Contrast', 'Color', 'Brightness', 'ShearX', 'ShearY', 'TranslateX' and 'TranslateY'.
+    Note that all augmentation ops passed to RUA should have a set_rua_level method to modify their strength based on
+    the level. Custom NumpyOps can be passed to the `choices` argument along with names of augmentations to add. Passing
+    'defaults' adds the default list of augmentations along with any custom NumpyOps specified by the user.
+    The default augmentations are: 'Rotate', 'Identity', 'AutoContrast', 'Equalize', 'Posterize', 'Solarize',
+    'Sharpness', 'Contrast', 'Color', 'Brightness', 'ShearX', 'ShearY', 'TranslateX' and 'TranslateY'.
     To add specific augmentations from the default list, their names can be passed. Ex: 'Rotate'.
-    To remove specific augmentations from the list, negate of the augmentation name can be provided. Ex: '!Rotate' will
-    load all the augmentations except 'Rotate'.
+    To remove specific augmentations from the list, you can negate their names. Ex: '!Rotate' will load all the
+    augmentations except 'Rotate'.
 
-    Few cases which are not allowed:
-    choices = ['defaults', 'Rotate']        # augmentations from the default list are not allowed along with 'defaults'
+    Example combinations which are not allowed:
+    choices = ['defaults', 'Rotate']        # augmentations from the default list are redundant with 'defaults'.
     choices = ['defaults', '!Rotate']       # negated augmentations automatically load the default list.
-    choices = ['!Solarize', 'Rotate']       # Cannot mix negated and normal augmentations
+    choices = ['!Solarize', 'Rotate']       # Cannot mix negated and normal augmentations.
 
     Args:
         inputs: Key(s) of images to be modified.
@@ -269,7 +279,7 @@ class RUA(NumpyOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        choices: list of augmentations to apply.
+        choices: List of augmentations to apply.
         level: Factor to set the range for magnitude of augmentation. Must be in the range [0, 30].
 
     Image types:
@@ -282,22 +292,22 @@ class RUA(NumpyOp):
                  choices: Union[str, NumpyOp, List[Union[str, NumpyOp]]] = "defaults",
                  level: Union[int, float] = 18):
         super().__init__(inputs=to_list(inputs), outputs=to_list(outputs), mode=mode)
-        self.default_aug_list = [
-            Rotate(inputs=inputs, outputs=outputs, mode=mode, limit=30),
-            Identity(inputs=inputs, outputs=outputs, mode=mode),
-            AutoContrast(inputs=inputs, outputs=outputs, mode=mode),
-            Equalize(inputs=inputs, outputs=outputs, mode=mode),
-            Posterize(inputs=inputs, outputs=outputs, mode=mode, num_bits=7),
-            Solarize(inputs=inputs, outputs=outputs, mode=mode, threshold=256),
-            Sharpness(inputs=inputs, outputs=outputs, mode=mode, limit=0.9),
-            Contrast(inputs=inputs, outputs=outputs, mode=mode, limit=0.9),
-            Color(inputs=inputs, outputs=outputs, mode=mode, limit=0.9),
-            Brightness(inputs=inputs, outputs=outputs, mode=mode, limit=0.9),
-            ShearX(inputs=inputs, outputs=outputs, mode=mode, shear_coef=0.5),
-            ShearY(inputs=inputs, outputs=outputs, mode=mode, shear_coef=0.5),
-            TranslateX(inputs=inputs, outputs=outputs, mode=mode, shift_limit=0.33),
-            TranslateY(inputs=inputs, outputs=outputs, mode=mode, shift_limit=0.33)
-        ]
+        self.default_aug_dict = {
+            "Rotate": Rotate(inputs=inputs, outputs=outputs, mode=mode, limit=30),
+            "Identity": Identity(inputs=inputs, outputs=outputs, mode=mode),
+            "AutoContrast": AutoContrast(inputs=inputs, outputs=outputs, mode=mode),
+            "Equalize": Equalize(inputs=inputs, outputs=outputs, mode=mode),
+            "Posterize": Posterize(inputs=inputs, outputs=outputs, mode=mode, num_bits=7),
+            "Solarize": Solarize(inputs=inputs, outputs=outputs, mode=mode, threshold=256),
+            "Sharpness": Sharpness(inputs=inputs, outputs=outputs, mode=mode, limit=0.9),
+            "Contrast": Contrast(inputs=inputs, outputs=outputs, mode=mode, limit=0.9),
+            "Color": Color(inputs=inputs, outputs=outputs, mode=mode, limit=0.9),
+            "Brightness": Brightness(inputs=inputs, outputs=outputs, mode=mode, limit=0.9),
+            "ShearX": ShearX(inputs=inputs, outputs=outputs, mode=mode, shear_coef=0.5),
+            "ShearY": ShearY(inputs=inputs, outputs=outputs, mode=mode, shear_coef=0.5),
+            "TranslateX": TranslateX(inputs=inputs, outputs=outputs, mode=mode, shift_limit=0.33),
+            "TranslateY": TranslateY(inputs=inputs, outputs=outputs, mode=mode, shift_limit=0.33)
+        }
         aug_options = self._parse_aug_choices(magnitude_coef=(level / 30.), choices=to_list(choices))
 
         # Calculating number of augmentation to apply at each training iteration
@@ -314,8 +324,8 @@ class RUA(NumpyOp):
         """Parse the augmentation choices to determine the final list of augmentations to apply.
 
         Args:
-            magnitude_coef: Factor to set the range for magnitude of augmentation.
-            choices: list of augmentations to apply.
+            magnitude_coef: The desired augmentation intensity (range [0-1]).
+            choices: List of augmentations to apply.
 
         Returns:
             List of augmentations to apply.
@@ -323,41 +333,38 @@ class RUA(NumpyOp):
         Raises:
             AssertionError: If augmentations to add and remove are mixed.
             AttributeError: If augmentation choices don't have a 'set_rua_level' method.
-            ValueError: If 'defaults' is provided with augmentation strings to add or remove, or wrong names provided.
+            ValueError: If 'defaults' is provided with augmentation strings to add or remove, or wrong names are
+                provided.
         """
         custom_ops = [op for op in choices if not isinstance(op, str)]
         remove_ops = [op for op in choices if isinstance(op, str) and op.startswith("!")]
         add_ops = [op for op in choices if isinstance(op, str) and not (op.startswith("!") or (op == "defaults"))]
+        aug_names = list(self.default_aug_dict.keys())
 
         assert len(remove_ops)==0 or len(add_ops)==0, \
-            "Either add or remove ops, not both, found {} and {}".format(add_ops, remove_ops)
+            "RUA supports either add or remove ops, but not both. Found {} and {}".format(add_ops, remove_ops)
 
         if len(remove_ops) > 0:
             if "defaults" in choices:
                 raise ValueError("Can't provide 'defaults' value with ops to remove, found: {}".format(remove_ops))
-            aug_list = self.default_aug_list
-            aug_names = [op.__class__.__name__ for op in aug_list]
             remove_ops = [op[1:] for op in remove_ops]
 
             for op in remove_ops:
                 if op not in aug_names:
                     raise ValueError("Unable to remove {}, list of augmentations available: {}".format(op, aug_names))
 
-            aug_list = [aug for aug in aug_list if aug.__class__.__name__ not in remove_ops]
+            aug_list = [aug for aug_name, aug in self.default_aug_dict.items() if aug_name not in remove_ops]
         else:
             if "defaults" in choices:
                 if len(add_ops) > 0:
                     raise ValueError("Can't pass 'defaults' value with default list's ops, found: {}".format(add_ops))
-                aug_list = self.default_aug_list
+                aug_list = list(self.default_aug_dict.values())
             elif len(add_ops) > 0:
-                aug_list = self.default_aug_list
-                aug_names = [op.__class__.__name__ for op in aug_list]
-
                 for op in add_ops:
                     if op not in aug_names:
                         raise ValueError("Unable to add {}, list of augmentations available: {}".format(op, aug_names))
 
-                aug_list = [aug for aug in aug_list if aug.__class__.__name__ in add_ops]
+                aug_list = [self.default_aug_dict[aug_name] for aug_name in add_ops]
             else:
                 aug_list = []
         aug_list = aug_list + custom_ops
@@ -367,7 +374,7 @@ class RUA(NumpyOp):
                 op.set_rua_level(magnitude_coef=magnitude_coef)
             else:
                 raise AttributeError(
-                    "RUA Augmentations should have 'set_rua_level' method but it's not present in Op: {}".format(
+                    "RUA Augmentations should have a 'set_rua_level' method but it's not present in Op: {}".format(
                         op.__class__.__name__))
 
         return aug_list

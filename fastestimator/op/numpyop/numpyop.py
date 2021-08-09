@@ -140,7 +140,6 @@ class LambdaOp(NumpyOp):
         Args:
             magnitude_coef: Factor to set the range for magnitude of augmentation.
         """
-        pass
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
         return self.fn(*data)

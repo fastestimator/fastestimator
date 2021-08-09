@@ -49,9 +49,8 @@ class AutoContrast(NumpyOp):
         """A method which will be invoked by RUA Op to adjust the augmentation intensity.
 
         Args:
-            magnitude_coef: Factor to set the range for magnitude of augmentation.
+            magnitude_coef: The desired augmentation intensity (range [0-1]).
         """
-        pass
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
         return [AutoContrast._apply_autocontrast(elem) for elem in data]
