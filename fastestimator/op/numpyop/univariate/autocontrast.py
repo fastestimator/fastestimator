@@ -45,6 +45,13 @@ class AutoContrast(NumpyOp):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.in_list, self.out_list = True, True
 
+    def set_rua_level(self, magnitude_coef: float) -> None:
+        """A method which will be invoked by RUA Op to adjust the augmentation intensity.
+
+        Args:
+            magnitude_coef: The desired augmentation intensity (range [0-1]).
+        """
+
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
         return [AutoContrast._apply_autocontrast(elem) for elem in data]
 

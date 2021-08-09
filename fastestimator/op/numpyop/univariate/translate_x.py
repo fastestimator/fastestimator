@@ -51,6 +51,18 @@ class TranslateX(NumpyOp):
         self.shift_limit = param_to_range(shift_limit)
         self.in_list, self.out_list = True, True
 
+    def set_rua_level(self, magnitude_coef: float) -> None:
+        """Set the augmentation intentity based on the magnitude_coef.
+
+        This method is specifically designed to be invoked by the RUA Op.
+
+        Args:
+            magnitude_coef: The desired augmentation intensity (range [0-1]).
+        """
+        param_mid = (self.shift_limit[1] + self.shift_limit[0]) / 2
+        param_extent = magnitude_coef * ((self.shift_limit[1] - self.shift_limit[0]) / 2)
+        self.shift_limit = (param_mid - param_extent, param_mid + param_extent)
+
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
         factor = random.uniform(self.shift_limit[0], self.shift_limit[1])
         return [TranslateX._apply_translatex(elem, factor) for elem in data]

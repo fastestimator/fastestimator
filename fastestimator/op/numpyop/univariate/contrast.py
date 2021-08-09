@@ -51,6 +51,18 @@ class Contrast(NumpyOp):
         self.limit = param_to_range(limit)
         self.in_list, self.out_list = True, True
 
+    def set_rua_level(self, magnitude_coef: float) -> None:
+        """Set the augmentation intentity based on the magnitude_coef.
+
+        This method is specifically designed to be invoked by the RUA Op.
+
+        Args:
+            magnitude_coef: The desired augmentation intensity (range [0-1]).
+        """
+        param_mid = (self.limit[1] + self.limit[0]) / 2
+        param_extent = magnitude_coef * ((self.limit[1] - self.limit[0]) / 2)
+        self.limit = (param_mid - param_extent, param_mid + param_extent)
+
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
         factor = 1.0 + random.uniform(self.limit[0], self.limit[1])
         return [Contrast._apply_contrast(elem, factor) for elem in data]

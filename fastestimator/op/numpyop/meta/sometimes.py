@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import inspect
 from typing import Any, Dict, List
 
 import numpy as np
@@ -47,6 +48,24 @@ class Sometimes(NumpyOp):
 
     def __getstate__(self) -> Dict[str, Dict[Any, Any]]:
         return {'op': self.op.__getstate__() if hasattr(self.op, '__getstate__') else {}}
+
+    def set_rua_level(self, magnitude_coef: float) -> None:
+        """Set the augmentation intentity based on the magnitude_coef.
+
+        This method is specifically designed to be invoked by the RUA Op.
+
+        Args:
+            magnitude_coef: The desired augmentation intensity (range [0-1]).
+
+        Raises:
+            AttributeError: If the 'op' doesn't have a 'set_rua_level' method.
+        """
+        if hasattr(self.op, "set_rua_level") and inspect.ismethod(getattr(self.op, "set_rua_level")):
+            self.op.set_rua_level(magnitude_coef=magnitude_coef)
+        else:
+            raise AttributeError(
+                "RUA Augmentations should have a 'set_rua_level' method but it's not present in Op: {}".format(
+                    self.op.__class__.__name__))
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
         """Execute the wrapped operator a certain fraction of the time.
