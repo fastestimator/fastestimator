@@ -187,23 +187,27 @@ class Posterize(PosterizeAug):
         Args:
             magnitude_coef: The desired augmentation intensity (range [0-1]).
         """
-        if isinstance(self.num_bits, tuple):
-            if len(self.num_bits) == 3:
-                num_bits = []
-                for i in self.num_bits:
-                    if isinstance(i, tuple):
-                        num_bits.append(tuple([round(8-(magnitude_coef*i[1])), round(8-(magnitude_coef*i[0]))]))
-                    else:
-                        num_bits.append(round(8-(magnitude_coef*i)))
-                self.num_bits = tuple(num_bits)
-            else:
-                self.num_bits = round(8-(magnitude_coef*self.num_bits[1])), round(8-(magnitude_coef*self.num_bits[0]))
+        if isinstance(self.num_bits, tuple) and len(self.num_bits)==3:
+            num_bits = []
+            for i in self.num_bits:
+                num_bits.append(Posterize._range_tuple(num_bits=i, magnitude_coef=magnitude_coef))
+            self.num_bits = tuple(num_bits)
         else:
-            self.num_bits = round(8-(magnitude_coef*self.num_bits))
+            self.num_bits = Posterize._range_tuple(num_bits=self.num_bits, magnitude_coef=magnitude_coef)
         super().__init__(inputs=self.inputs,
                          outputs=self.outputs,
                          mode=self.mode,
                          num_bits=self.num_bits)
+
+    @staticmethod
+    def _range_tuple(num_bits: Union[int, Tuple[int, int]], magnitude_coef: float) -> Tuple[int, int]:
+        if isinstance(num_bits, tuple):
+            param_mid = (num_bits[0] + num_bits[1])/2
+            param_extent = magnitude_coef * ((num_bits[1] - num_bits[0])/2)
+            bits_range = (round(param_mid - param_extent), round(param_mid + param_extent))
+        else:
+            bits_range = (round(8-(magnitude_coef*num_bits)), 8)
+        return bits_range
 
 
 @traceable()
@@ -293,7 +297,7 @@ class RUA(NumpyOp):
                  level: Union[int, float] = 18):
         super().__init__(inputs=to_list(inputs), outputs=to_list(outputs), mode=mode)
         self.default_aug_dict = {
-            "Rotate": Rotate(inputs=inputs, outputs=outputs, mode=mode, limit=30),
+            "Rotate": Rotate(inputs=inputs, outputs=outputs, mode=mode, limit=90),
             "Identity": Identity(inputs=inputs, outputs=outputs, mode=mode),
             "AutoContrast": AutoContrast(inputs=inputs, outputs=outputs, mode=mode),
             "Equalize": Equalize(inputs=inputs, outputs=outputs, mode=mode),
