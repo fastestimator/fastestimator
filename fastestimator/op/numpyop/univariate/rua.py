@@ -297,7 +297,7 @@ class RUA(NumpyOp):
                  level: Union[int, float] = 18):
         super().__init__(inputs=to_list(inputs), outputs=to_list(outputs), mode=mode)
         self.default_aug_dict = {
-            "Rotate": Rotate(inputs=inputs, outputs=outputs, mode=mode, limit=30),
+            "Rotate": Rotate(inputs=inputs, outputs=outputs, mode=mode, limit=90),
             "Identity": Identity(inputs=inputs, outputs=outputs, mode=mode),
             "AutoContrast": AutoContrast(inputs=inputs, outputs=outputs, mode=mode),
             "Equalize": Equalize(inputs=inputs, outputs=outputs, mode=mode),
