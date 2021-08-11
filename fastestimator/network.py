@@ -326,6 +326,7 @@ def Network(
         AssertionError: If TensorFlow and PyTorch models are mixed, or if no models are provided.
         ValueError: If a model is provided whose type cannot be identified as either TensorFlow or PyTorch.
     """
+    ops = to_list(ops)
     models = _collect_models(ops)
     framework = set()
     model_names = set()
