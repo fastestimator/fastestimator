@@ -91,7 +91,7 @@ class LabelTracker(Trace):
                     # Skip labels which the user does not want to inspect
                     continue
             if 'std' in self.bounds:
-                mean, std = stats.mean(metric), stats.stdev(metric)
+                mean, std = stats.mean(metric), stats.stdev(metric) if len(metric) > 1 else 0.0
                 val = ValWithError(mean - std, mean, mean + std)
                 key = f"{self.metric_key} ($\\mu \\pm \\sigma$)"
                 # {label: {mode: {key: {step: value}}}}

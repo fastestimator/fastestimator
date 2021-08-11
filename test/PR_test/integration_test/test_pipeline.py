@@ -101,13 +101,12 @@ class TestPipelineInit(unittest.TestCase):
     * fe.schedule.schedule.get_current_items
     * fe.schedule.schedule.EpochScheduler
     """
-    @classmethod
-    def setUpClass(cls):
-        cls.sample_tf_dataset = get_sample_tf_dataset()
-        cls.sample_torch_dataset = get_sample_torch_dataset()
-        cls.sample_torch_dataloader = get_sample_torch_dataloader()
-        cls.sample_numpy_op = SampleNumpyOp(inputs="x", outputs="x")
-        cls.sample_tensor_op = SampleTensorOp(inputs="x", outputs="x")
+    def setUp(self):
+        self.sample_tf_dataset = get_sample_tf_dataset()
+        self.sample_torch_dataset = get_sample_torch_dataset()
+        self.sample_torch_dataloader = get_sample_torch_dataloader()
+        self.sample_numpy_op = SampleNumpyOp(inputs="x", outputs="x")
+        self.sample_tensor_op = SampleTensorOp(inputs="x", outputs="x")
 
     def test_pipeline_init_tf_dataset_torch_dataloader_have_op_batch_size_num_process(self):
         dataset = {"tf_dataset": self.sample_tf_dataset, "dataloader": self.sample_torch_dataloader}
@@ -228,9 +227,8 @@ class TestPipelineGetModes(unittest.TestCase):
     * fe.pipeline.Pipeline.get_modes
     * fe.schedule.schedule.EpochScheduler
     """
-    @classmethod
-    def setUpClass(cls):
-        cls.sample_torch_dataset = get_sample_torch_dataset()
+    def setUp(self):
+        self.sample_torch_dataset = get_sample_torch_dataset()
 
     def test_pipeline_get_modes_no_scheduler(self):
         with self.subTest("train_data"):
@@ -271,10 +269,8 @@ class TestPipelineGetEpochsWithData(unittest.TestCase):
     * fe.pipeline.Pipeline.get_epochs_with_data
     * fe.schedule.schedule.EpochScheduler
     """
-
-    @classmethod
-    def setUpClass(cls):
-        cls.sample_torch_dataset = get_sample_torch_dataset()
+    def setUp(self):
+        self.sample_torch_dataset = get_sample_torch_dataset()
 
     def test_pipeline_get_epochs_with_data_no_scheduler(self):
         pipeline = fe.Pipeline(train_data=self.sample_torch_dataset)
@@ -298,11 +294,10 @@ class TestPipelineBenchmark(unittest.TestCase):
     """ This test has dependency on:
     * fe.pipeline.Pipeline.get_loader
     """
-    @classmethod
-    def setUpClass(cls):
-        cls.sample_tf_dataset = get_sample_tf_dataset()
-        cls.sample_torch_dataset = get_sample_torch_dataset()
-        cls.sample_torch_dataloader = get_sample_torch_dataloader()
+    def setUp(self):
+        self.sample_tf_dataset = get_sample_tf_dataset()
+        self.sample_torch_dataset = get_sample_torch_dataset()
+        self.sample_torch_dataloader = get_sample_torch_dataloader()
 
     def test_pipeline_benchmark_smoke(self):
         dataset = {
@@ -325,10 +320,9 @@ class TestPipelineTransform(unittest.TestCase):
     * fe.schedule.schedule.get_current_items
     * fe.op.numpy.numpy.forward_numpy
     """
-    @classmethod
-    def setUpClass(cls):
-        cls.sample_data = {"x": np.array([1, 2, 3], dtype=np.float32)}
-        cls.sample_dataset = get_sample_torch_dataset()
+    def setUp(self):
+        self.sample_data = {"x": np.array([1, 2, 3], dtype=np.float32)}
+        self.sample_dataset = get_sample_torch_dataset()
 
     def test_pipeline_transform_no_ops(self):
         pipeline = fe.Pipeline()
@@ -344,11 +338,10 @@ class TestPipelineTransform(unittest.TestCase):
 
 
 class TestPipelineGetResults(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.sample_tf_dataset = get_sample_tf_dataset()
-        cls.sample_torch_dataset = get_sample_torch_dataset()
-        cls.sample_torch_dataloader = get_sample_torch_dataloader()
+    def setUp(self):
+        self.sample_tf_dataset = get_sample_tf_dataset()
+        self.sample_torch_dataset = get_sample_torch_dataset()
+        self.sample_torch_dataloader = get_sample_torch_dataloader()
 
     def test_pipeline_get_result_tf_dataset_no_op(self):
         pipeline = fe.Pipeline(train_data=self.sample_tf_dataset)
@@ -455,11 +448,10 @@ class TestPipelineGetLoader(unittest.TestCase):
     * fe.dataset.op_dataset.OpDataset
     * fe.pipeline.Pipeline._pad_batch_collate
     """
-    @classmethod
-    def setUpClass(cls):
-        cls.sample_tf_dataset = get_sample_tf_dataset()
-        cls.sample_torch_dataset = get_sample_torch_dataset()
-        cls.sample_torch_dataloader = get_sample_torch_dataloader()
+    def setUp(self):
+        self.sample_tf_dataset = get_sample_tf_dataset()
+        self.sample_torch_dataset = get_sample_torch_dataset()
+        self.sample_torch_dataloader = get_sample_torch_dataloader()
 
     def test_pipeline_get_loader_tf_dataset(self):
         pipeline = fe.Pipeline(train_data=self.sample_tf_dataset)
