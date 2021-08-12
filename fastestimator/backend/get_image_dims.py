@@ -51,7 +51,8 @@ def get_image_dims(tensor: Tensor) -> Tuple[int, int, int]:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    assert len(tensor.shape) == 3 or len(tensor.shape) == 4, "Number of dimensions of input must be either 3 or 4"
+    assert len(tensor.shape) == 3 or len(tensor.shape) == 4, \
+        f"Number of dimensions of input must be either 3 or 4, but found {len(tensor.shape)} (shape: {tensor.shape})"
     if tf.is_tensor(tensor):
         shape = tf.shape(tensor)
         channels, height, width = shape[-1], shape[-3], shape[-2]
