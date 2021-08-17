@@ -289,7 +289,7 @@ class OneOfMultiVar(OneOf):
             for out in op.outputs:
                 outputs.add(out)
 
-        super(OneOf, self).__init__(inputs=inputs.union(outputs), outputs=outputs, mode=mode)
+        NumpyOp.__init__(self, inputs=inputs.union(outputs), outputs=outputs, mode=mode)
         self.ops = numpy_ops
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
