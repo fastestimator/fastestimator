@@ -52,7 +52,7 @@ class Contrast(NumpyOp):
         self.in_list, self.out_list = True, True
 
     def set_rua_level(self, magnitude_coef: float) -> None:
-        """Set the augmentation intentity based on the magnitude_coef.
+        """Set the augmentation intensity based on the magnitude_coef.
 
         This method is specifically designed to be invoked by the RUA Op.
 
