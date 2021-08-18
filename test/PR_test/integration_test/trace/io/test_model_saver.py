@@ -22,6 +22,7 @@ import torch
 import fastestimator as fe
 from fastestimator.test.unittest_util import MultiLayerTorchModel, is_equal, one_layer_tf_model, sample_system_object
 from fastestimator.trace.io import ModelSaver
+from fastestimator.util.data import Data
 
 
 def one_layer_model_without_weights():
@@ -52,7 +53,7 @@ class TestModelSaver(unittest.TestCase):
         model = fe.build(model_fn=one_layer_tf_model, optimizer_fn='adam')
         model_saver = ModelSaver(model=model, save_dir=self.save_dir)
         model_saver.system = sample_system_object()
-        model_saver.on_epoch_end(data={})
+        model_saver.on_epoch_end(data=Data())
         model_name = "{}_epoch_{}".format(model_saver.model.model_name, model_saver.system.epoch_idx)
         tf_model_path = os.path.join(self.save_dir, model_name + '.h5')
         with self.subTest('Check if model is saved'):
@@ -66,11 +67,11 @@ class TestModelSaver(unittest.TestCase):
         model = fe.build(model_fn=MultiLayerTorchModel, optimizer_fn='adam')
         model_saver = ModelSaver(model=model, save_dir=self.save_dir)
         model_saver.system = sample_system_object()
-        model_name = model_name = "{}_epoch_{}".format(model_saver.model.model_name, model_saver.system.epoch_idx)
+        model_name = "{}_epoch_{}".format(model_saver.model.model_name, model_saver.system.epoch_idx)
         torch_model_path = os.path.join(self.save_dir, model_name + '.pt')
         if os.path.exists(torch_model_path):
             os.remove(torch_model_path)
-        model_saver.on_epoch_end(data={})
+        model_saver.on_epoch_end(data=Data())
         with self.subTest('Check if model is saved'):
             self.assertTrue(os.path.exists(torch_model_path))
         with self.subTest('Validate model weights'):
@@ -83,37 +84,70 @@ class TestModelSaver(unittest.TestCase):
         model = fe.build(model_fn=one_layer_tf_model, optimizer_fn='adam')
         model_saver = ModelSaver(model=model, save_dir=save_dir, max_to_keep=2)
         model_saver.system = sample_system_object()
-        model_saver.on_epoch_end(data={})
+        model_saver.on_epoch_end(data=Data())
         model_saver.system.epoch_idx += 1
-        model_saver.on_epoch_end(data={})
+        model_saver.on_epoch_end(data=Data())
+        model_saver.system.epoch_idx += 1
+        model_saver.on_epoch_end(data=Data())
         model_name = "{}_epoch_{}".format(model_saver.model.model_name, model_saver.system.epoch_idx)
         tf_model_path1 = os.path.join(save_dir, model_name + '.h5')
 
         model_saver.system.epoch_idx += 1
-        model_saver.on_epoch_end(data={})
+        model_saver.on_epoch_end(data=Data())
         model_name = "{}_epoch_{}".format(model_saver.model.model_name, model_saver.system.epoch_idx)
         tf_model_path2 = os.path.join(save_dir, model_name + '.h5')
 
-        with self.subTest('Check only two file are kept'):
+        with self.subTest('Check only two files are kept'):
             self.assertEqual(len(os.listdir(save_dir)), 2)
 
-        with self.subTest('Check two latest model are kept'):
+        with self.subTest('Check two latest models are kept'):
             self.assertTrue(os.path.exists(tf_model_path1))
             self.assertTrue(os.path.exists(tf_model_path2))
+
+    def test_max_to_keep_tf_architecture(self):
+        save_dir = tempfile.mkdtemp()
+        model = fe.build(model_fn=one_layer_tf_model, optimizer_fn='adam')
+        model_saver = ModelSaver(model=model, save_dir=save_dir, max_to_keep=2, save_architecture=True)
+        model_saver.system = sample_system_object()
+        model_saver.on_epoch_end(data=Data())
+        model_saver.system.epoch_idx += 1
+        model_saver.on_epoch_end(data=Data())
+        model_saver.system.epoch_idx += 1
+        model_saver.on_epoch_end(data=Data())
+        model_name = "{}_epoch_{}".format(model_saver.model.model_name, model_saver.system.epoch_idx)
+        tf_model_path1 = os.path.join(save_dir, model_name + '.h5')
+        tf_architecture_path1 = os.path.join(save_dir, model_name)
+
+        model_saver.system.epoch_idx += 1
+        model_saver.on_epoch_end(data=Data())
+        model_name = "{}_epoch_{}".format(model_saver.model.model_name, model_saver.system.epoch_idx)
+        tf_model_path2 = os.path.join(save_dir, model_name + '.h5')
+        tf_architecture_path2 = os.path.join(save_dir, model_name)
+
+        with self.subTest('Check only four files are kept'):
+            self.assertEqual(len(os.listdir(save_dir)), 4)
+
+        with self.subTest('Check two latest models are kept'):
+            self.assertTrue(os.path.exists(tf_model_path1))
+            self.assertTrue(os.path.exists(tf_model_path2))
+            self.assertTrue(os.path.exists(tf_architecture_path1))
+            self.assertTrue(os.path.isdir(tf_architecture_path1))
+            self.assertTrue(os.path.exists(tf_architecture_path2))
+            self.assertTrue(os.path.isdir(tf_architecture_path2))
 
     def test_max_to_keep_torch(self):
         save_dir = tempfile.mkdtemp()
         model = fe.build(model_fn=MultiLayerTorchModel, optimizer_fn='adam')
         model_saver = ModelSaver(model=model, save_dir=save_dir, max_to_keep=2)
         model_saver.system = sample_system_object()
-        model_saver.on_epoch_end(data={})
+        model_saver.on_epoch_end(data=Data())
         model_saver.system.epoch_idx += 1
-        model_saver.on_epoch_end(data={})
+        model_saver.on_epoch_end(data=Data())
         model_name = "{}_epoch_{}".format(model_saver.model.model_name, model_saver.system.epoch_idx)
         torch_model_path1 = os.path.join(save_dir, model_name + '.pt')
 
         model_saver.system.epoch_idx += 1
-        model_saver.on_epoch_end(data={})
+        model_saver.on_epoch_end(data=Data())
         model_name = "{}_epoch_{}".format(model_saver.model.model_name, model_saver.system.epoch_idx)
         torch_model_path2 = os.path.join(save_dir, model_name + '.pt')
 
@@ -124,10 +158,16 @@ class TestModelSaver(unittest.TestCase):
             self.assertTrue(os.path.exists(torch_model_path1))
             self.assertTrue(os.path.exists(torch_model_path2))
 
+    def test_torch_architecture_save(self):
+        model = fe.build(model_fn=MultiLayerTorchModel, optimizer_fn='adam')
+        save_dir = tempfile.mkdtemp()
+        with self.assertRaises(ValueError):
+            ModelSaver(model=model, save_dir=save_dir, save_architecture=True)
+
     def test_max_to_keep_invalid_value(self):
         model = fe.build(model_fn=MultiLayerTorchModel, optimizer_fn='adam')
-        save_dir = "dummy"
+        save_dir = tempfile.mkdtemp()
 
         with self.subTest('Check max_to_keep < 0'):
             with self.assertRaises(ValueError):
-                model_saver = ModelSaver(model=model, save_dir=save_dir, max_to_keep=-2)
+                ModelSaver(model=model, save_dir=save_dir, max_to_keep=-2)

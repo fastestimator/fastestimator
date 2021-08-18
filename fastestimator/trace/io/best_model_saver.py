@@ -35,17 +35,22 @@ class BestModelSaver(Trace):
         metric: Eval metric name to monitor. If None, the model's loss will be used.
         save_best_mode: Can be 'min' or 'max'.
         load_best_final: Whether to automatically reload the best model (if available) after training.
+        save_architecture: Whether to save the full model architecture in addition to the model weights. This option is
+            only available for TensorFlow models at present, and will generate a folder containing several files. The
+            model can then be re-instantiated even without access to the original code by calling:
+            tf.keras.models.load_model(<path to model folder>).
 
     Raises:
         AssertionError: If a `metric` is not provided and it cannot be inferred from the `model`.
-        ValueError: If `save_best_mode` is an unacceptable string.
+        ValueError: If `save_best_mode` is an unacceptable string, or `save_architecture` is used with a PyTorch model.
     """
     def __init__(self,
                  model: Union[tf.keras.Model, torch.nn.Module],
                  save_dir: str,
                  metric: Optional[str] = None,
                  save_best_mode: str = "min",
-                 load_best_final: bool = False) -> None:
+                 load_best_final: bool = False,
+                 save_architecture: bool = False) -> None:
         if not metric:
             assert hasattr(model, "loss_name"), \
                 "BestModelSaver cannot infer model loss name. Provide a metric or use the model in an UpdateOp."
@@ -60,6 +65,9 @@ class BestModelSaver(Trace):
         self.save_dir = save_dir
         self.save_best_mode = save_best_mode
         self.load_best_final = load_best_final
+        self.save_architecture = save_architecture
+        if save_architecture and isinstance(model, torch.nn.Module):
+            raise ValueError("Sorry, architecture saving is not currently enabled for PyTorch")
         self.model_path = None
         self.since_best = 0
         if self.save_best_mode == "min":
@@ -80,7 +88,8 @@ class BestModelSaver(Trace):
             self.best = data[self.metric]
             self.since_best = 0
             if self.save_dir:
-                self.model_path = save_model(self.model, self.save_dir, self.model_name)
+                self.model_path = save_model(model=self.model, save_dir=self.save_dir, model_name=self.model_name,
+                                             save_architecture=self.save_architecture)
                 print("FastEstimator-BestModelSaver: Saved model to {}".format(self.model_path))
         else:
             self.since_best += 1
