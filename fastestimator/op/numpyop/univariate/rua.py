@@ -81,6 +81,15 @@ class Rotate(NumpyOp):
 
     @staticmethod
     def _apply_rotate(data: np.ndarray, degree: float) -> np.ndarray:
+        """Rotate the image.
+
+        Args:
+            data: The image to be modified.
+            degree: Angle for image rotation.
+
+        Returns:
+            The image after applying rotation.
+        """
         im = Image.fromarray(data)
         im = im.rotate(degree)
         return np.array(im)
@@ -146,6 +155,14 @@ class Equalize(NumpyOp):
 
     @staticmethod
     def _apply_equalize(data: np.ndarray) -> np.ndarray:
+        """Equalize the image histogram.
+
+        Args:
+            data: The image to be modified.
+
+        Returns:
+            The image after applying equalize.
+        """
         im = Image.fromarray(data)
         im = ImageOps.equalize(im)
         return np.array(im)
@@ -201,6 +218,15 @@ class Posterize(PosterizeAug):
 
     @staticmethod
     def _range_tuple(num_bits: Union[int, Tuple[int, int]], magnitude_coef: float) -> Tuple[int, int]:
+        """Process num_bits for posterization based on augmentation intensity.
+
+        Args:
+            num_bits: Number of high bits.
+            magnitude_coef: The desired augmentation intensity (range [0-1]).
+
+        Returns:
+            The range of high bits after adjusting augmentation intensity.
+        """
         if isinstance(num_bits, tuple):
             param_mid = (num_bits[0] + num_bits[1])/2
             param_extent = magnitude_coef * ((num_bits[1] - num_bits[0])/2)
@@ -255,6 +281,15 @@ class Solarize(NumpyOp):
 
     @staticmethod
     def _apply_solarize(data: np.ndarray, threshold: int) -> np.ndarray:
+        """Invert all pixel values of the image above a threshold.
+
+        Args:
+            data: The image to be modified.
+            threshold: Solarizing threshold.
+
+        Returns:
+            The image after applying solarize.
+        """
         data = np.where(data < threshold, data, 255 - data)
         return data
 
@@ -289,13 +324,13 @@ class OneOfMultiVar(OneOf):
             for out in op.outputs:
                 outputs.add(out)
 
-        NumpyOp.__init__(self, inputs=inputs.union(outputs), outputs=outputs, mode=mode)
+        # Bypassing OneOf Op's restriction of same input and output key(s) on the list of passed NumpyOps.
+        super(OneOf, self).__init__(inputs=inputs.union(outputs), outputs=outputs, mode=mode)
         self.ops = numpy_ops
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
-        op_idx = random.randint(0, len(self.ops)-1)
         data = {key: elem for key, elem in zip(self.inputs, data)}
-        forward_numpyop([self.ops[op_idx]], data, state)
+        forward_numpyop([random.choice(self.ops)], data, state)
         return [data[key] for key in self.outputs]
 
 
