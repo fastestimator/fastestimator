@@ -26,7 +26,8 @@ from fastestimator.backend.get_lr import get_lr
 def save_model(model: Union[tf.keras.Model, torch.nn.Module],
                save_dir: str,
                model_name: Optional[str] = None,
-               save_optimizer: bool = False):
+               save_optimizer: bool = False,
+               save_architecture: bool = False) -> str:
     """Save `model` weights to a specific directory.
 
     This method can be used with TensorFlow models:
@@ -46,12 +47,14 @@ def save_model(model: Union[tf.keras.Model, torch.nn.Module],
         save_dir: Directory into which to write the `model` weights.
         model_name: The name of the model (used for naming the weights file). If None, model.model_name will be used.
         save_optimizer: Whether to save optimizer. If True, optimizer will be saved in a separate file at same folder.
+        save_architecture: Whether to also save the entire model architecture so that the model can be reloaded without
+            needing access to the code which generated it. This option is only available for TensorFlow models.
 
     Returns:
         The saved model path.
 
     Raises:
-        ValueError: If `model` is an unacceptable data type.
+        ValueError: If `model` is an unacceptable data type, of if a user tries to save architecture of a PyTorch model.
     """
     assert hasattr(model, "fe_compiled") and model.fe_compiled, "model must be built by fe.build"
     if model_name is None:
@@ -61,6 +64,8 @@ def save_model(model: Union[tf.keras.Model, torch.nn.Module],
     if isinstance(model, tf.keras.Model):
         model_path = os.path.join(save_dir, "{}.h5".format(model_name))
         model.save_weights(model_path)
+        if save_architecture:
+            model.save(filepath=os.path.join(save_dir, model_name), include_optimizer=save_optimizer)
         if save_optimizer:
             assert model.current_optimizer, "optimizer does not exist"
             optimizer_path = os.path.join(save_dir, "{}_opt.pkl".format(model_name))
@@ -75,6 +80,8 @@ def save_model(model: Union[tf.keras.Model, torch.nn.Module],
     elif isinstance(model, torch.nn.Module):
         model_path = os.path.join(save_dir, "{}.pt".format(model_name))
         torch.save(model.state_dict(), model_path)
+        if save_architecture:
+            raise ValueError("Sorry, architecture saving is not currently enabled for PyTorch")
         if save_optimizer:
             assert model.current_optimizer, "optimizer does not exist"
             optimizer_path = os.path.join(save_dir, "{}_opt.pt".format(model_name))

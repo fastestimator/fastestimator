@@ -21,7 +21,7 @@ from tensorflow.python.keras.models import Model
 
 # noinspection PyPep8Naming
 def UNet(input_size: Tuple[int, int, int] = (128, 128, 1)) -> tf.keras.Model:
-    """A standard UNet implementation in pytorch
+    """A standard UNet implementation in TensorFlow
 
     Args:
         input_size: The size of the input tensor (height, width, channels).
