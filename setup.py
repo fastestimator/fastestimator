@@ -63,7 +63,7 @@ def get_dependency():
         'PySocks==1.7.1',
         'uncertainty-calibration==0.0.8',
         'dill==0.3.3',
-        'scikit-image==0.18.2'
+        'scikit-image==0.17.2'
     ]
     if os.name == "nt":
         dependencies.append(
