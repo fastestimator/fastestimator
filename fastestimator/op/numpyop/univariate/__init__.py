@@ -50,6 +50,7 @@ from fastestimator.op.numpyop.univariate.random_fog import RandomFog
 from fastestimator.op.numpyop.univariate.random_gamma import RandomGamma
 from fastestimator.op.numpyop.univariate.random_rain import RandomRain
 from fastestimator.op.numpyop.univariate.random_shadow import RandomShadow
+from fastestimator.op.numpyop.univariate.random_shapes import RandomShapes
 from fastestimator.op.numpyop.univariate.random_snow import RandomSnow
 from fastestimator.op.numpyop.univariate.random_sun_flare import RandomSunFlare
 from fastestimator.op.numpyop.univariate.read_image import ReadImage
