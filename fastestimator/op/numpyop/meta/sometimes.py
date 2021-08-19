@@ -50,7 +50,7 @@ class Sometimes(NumpyOp):
         return {'op': self.op.__getstate__() if hasattr(self.op, '__getstate__') else {}}
 
     def set_rua_level(self, magnitude_coef: float) -> None:
-        """Set the augmentation intentity based on the magnitude_coef.
+        """Set the augmentation intensity based on the magnitude_coef.
 
         This method is specifically designed to be invoked by the RUA Op.
 

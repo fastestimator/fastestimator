@@ -33,7 +33,7 @@ from fastestimator.op.numpyop.univariate.shear_y import ShearY
 from fastestimator.op.numpyop.univariate.translate_x import TranslateX
 from fastestimator.op.numpyop.univariate.translate_y import TranslateY
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import param_to_range, to_list
+from fastestimator.util.util import param_to_range, to_list, to_set
 
 
 @traceable()
@@ -81,6 +81,15 @@ class Rotate(NumpyOp):
 
     @staticmethod
     def _apply_rotate(data: np.ndarray, degree: float) -> np.ndarray:
+        """Rotate the image.
+
+        Args:
+            data: The image to be modified.
+            degree: Angle for image rotation.
+
+        Returns:
+            The image after applying rotation.
+        """
         im = Image.fromarray(data)
         im = im.rotate(degree)
         return np.array(im)
@@ -146,6 +155,14 @@ class Equalize(NumpyOp):
 
     @staticmethod
     def _apply_equalize(data: np.ndarray) -> np.ndarray:
+        """Equalize the image histogram.
+
+        Args:
+            data: The image to be modified.
+
+        Returns:
+            The image after applying equalize.
+        """
         im = Image.fromarray(data)
         im = ImageOps.equalize(im)
         return np.array(im)
@@ -180,7 +197,7 @@ class Posterize(PosterizeAug):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode, num_bits=num_bits)
 
     def set_rua_level(self, magnitude_coef: float) -> None:
-        """Set the augmentation intentity based on the magnitude_coef.
+        """Set the augmentation intensity based on the magnitude_coef.
 
         This method is specifically designed to be invoked by the RUA Op.
 
@@ -201,6 +218,15 @@ class Posterize(PosterizeAug):
 
     @staticmethod
     def _range_tuple(num_bits: Union[int, Tuple[int, int]], magnitude_coef: float) -> Tuple[int, int]:
+        """Process num_bits for posterization based on augmentation intensity.
+
+        Args:
+            num_bits: Number of high bits.
+            magnitude_coef: The desired augmentation intensity (range [0-1]).
+
+        Returns:
+            The range of high bits after adjusting augmentation intensity.
+        """
         if isinstance(num_bits, tuple):
             param_mid = (num_bits[0] + num_bits[1])/2
             param_extent = magnitude_coef * ((num_bits[1] - num_bits[0])/2)
@@ -234,7 +260,7 @@ class Solarize(NumpyOp):
         self.threshold = threshold
 
     def set_rua_level(self, magnitude_coef: Union[int, float]) -> None:
-        """Set the augmentation intentity based on the magnitude_coef.
+        """Set the augmentation intensity based on the magnitude_coef.
 
         This method is specifically designed to be invoked by the RUA Op.
 
@@ -255,8 +281,57 @@ class Solarize(NumpyOp):
 
     @staticmethod
     def _apply_solarize(data: np.ndarray, threshold: int) -> np.ndarray:
+        """Invert all pixel values of the image above a threshold.
+
+        Args:
+            data: The image to be modified.
+            threshold: Solarizing threshold.
+
+        Returns:
+            The image after applying solarize.
+        """
         data = np.where(data < threshold, data, 255 - data)
         return data
+
+
+@traceable()
+class OneOfMultiVar(OneOf):
+    """Perform one of several possible NumpyOps.
+
+    Note that OneOfMultiVar accepts both univariate and multivariate ops and allows the list of passed NumpyOps to have
+    different input and output keys. OneOfMultiVar should not be used to wrap an op whose output key(s) do not already
+    exist in the data dictionary. This would result in a problem when future ops / traces attempt to reference the
+    output key, but OneOfMultiVar declined to generate it. If you want to create a default value for a new key, simply
+    use a LambdaOp before invoking the OneOfMultiVar.
+
+    Args:
+        *numpy_ops: A list of ops to choose between with uniform probability.
+    """
+    def __init__(self, *numpy_ops: NumpyOp) -> None:
+        inputs = to_set(numpy_ops[0].inputs)
+        outputs = to_set(numpy_ops[0].outputs)
+        mode = numpy_ops[0].mode
+        self.in_list = numpy_ops[0].in_list
+        self.out_list = numpy_ops[0].out_list
+        for op in numpy_ops[1:]:
+            assert self.in_list == op.in_list, "All ops within OneOf must share the same input configuration"
+            assert self.out_list == op.out_list, "All ops within OneOf must share the same output configuration"
+            assert mode == op.mode, "All ops within a OneOf must share the same mode"
+
+            for inp in op.inputs:
+                inputs.add(inp)
+
+            for out in op.outputs:
+                outputs.add(out)
+
+        # Bypassing OneOf Op's restriction of same input and output key(s) on the list of passed NumpyOps.
+        super(OneOf, self).__init__(inputs=inputs.union(outputs), outputs=outputs, mode=mode)
+        self.ops = numpy_ops
+
+    def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
+        data = {key: elem for key, elem in zip(self.inputs, data)}
+        forward_numpyop([random.choice(self.ops)], data, state)
+        return [data[key] for key in self.outputs]
 
 
 @traceable()
@@ -277,6 +352,10 @@ class RUA(NumpyOp):
     choices = ['defaults', '!Rotate']       # negated augmentations automatically load the default list.
     choices = ['!Solarize', 'Rotate']       # Cannot mix negated and normal augmentations.
 
+    RUA should not have augmentation ops whose output key(s) do not already exist in the data dictionary. This would
+    result in a problem when future ops / traces attempt to reference the output key, but RUA declined to generate it.
+    If you want to create a default value for a new key, simply use a LambdaOp before invoking RUA.
+
     Args:
         inputs: Key(s) of images to be modified.
         outputs: Key(s) into which to write the modified images.
@@ -295,7 +374,6 @@ class RUA(NumpyOp):
                  mode: Union[None, str, Iterable[str]] = None,
                  choices: Union[str, NumpyOp, List[Union[str, NumpyOp]]] = "defaults",
                  level: Union[int, float] = 18):
-        super().__init__(inputs=to_list(inputs), outputs=to_list(outputs), mode=mode)
         self.default_aug_dict = {
             "Rotate": Rotate(inputs=inputs, outputs=outputs, mode=mode, limit=90),
             "Identity": Identity(inputs=inputs, outputs=outputs, mode=mode),
@@ -314,15 +392,24 @@ class RUA(NumpyOp):
         }
         aug_options = self._parse_aug_choices(magnitude_coef=(level / 30.), choices=to_list(choices))
 
+        inputs, outputs = to_set(inputs), to_set(outputs)
+        for op in aug_options:
+            for inp in op.inputs:
+                inputs.add(inp)
+
+            for out in op.outputs:
+                outputs.add(out)
+        super().__init__(inputs=inputs.union(outputs), outputs=outputs, mode=mode)
+
         # Calculating number of augmentation to apply at each training iteration
         N_min = 1
         N_max = min(len(aug_options), 5)
         N = level * (N_max - N_min) / 30 + N_min
         N_guarantee, N_p = int(N), N % 1
 
-        self.ops = [OneOf(*aug_options) for _ in range(N_guarantee)]
+        self.ops = [OneOfMultiVar(*aug_options) for _ in range(N_guarantee)]
         if N_p > 0:
-            self.ops.append(Sometimes(OneOf(*aug_options), prob=N_p))
+            self.ops.append(Sometimes(OneOfMultiVar(*aug_options), prob=N_p))
 
     def _parse_aug_choices(self, magnitude_coef: float, choices: List[Union[str, NumpyOp]]) -> List[NumpyOp]:
         """Parse the augmentation choices to determine the final list of augmentations to apply.
