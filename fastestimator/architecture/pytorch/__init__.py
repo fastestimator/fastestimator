@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from fastestimator.architecture.pytorch.attention_unet import AttentionUNet
 from fastestimator.architecture.pytorch.lenet import LeNet
 from fastestimator.architecture.pytorch.resnet9 import ResNet9
 from fastestimator.architecture.pytorch.unet import UNet
