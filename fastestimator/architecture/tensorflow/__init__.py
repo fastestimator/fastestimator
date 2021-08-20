@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from fastestimator.architecture.tensorflow.attention_unet import AttentionUNet
 from fastestimator.architecture.tensorflow.lenet import LeNet
 from fastestimator.architecture.tensorflow.resnet9 import ResNet9
 from fastestimator.architecture.tensorflow.unet import UNet
