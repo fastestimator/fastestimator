@@ -102,7 +102,7 @@ class _MetricGroup:
         """
         ndims = [0]
         for mode_ds_val in self.state.values():
-            for mode, ds_val in mode_ds_val.items():
+            for _, ds_val in mode_ds_val.items():
                 for _, values in ds_val.items():
                     if values.ndim in (0, 1):
                         # A singular value (this should never happen based on implementation of summary)
