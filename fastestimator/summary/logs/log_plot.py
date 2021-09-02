@@ -16,12 +16,13 @@ import math
 import os
 import re
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, List, Optional, Set, Union
+from typing import Any, Dict, List, Optional, Set, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 from matplotlib.markers import MarkerStyle
+from matplotlib.ticker import EngFormatter
 from natsort import humansorted
 from scipy.ndimage.filters import gaussian_filter1d
 
@@ -34,21 +35,22 @@ class _MetricGroup:
 
     This class is intentionally not @traceable.
     """
-    state: DefaultDict[int, Dict[str, np.ndarray]]
+    state: Dict[int, Dict[str, Dict[str, np.ndarray]]]
 
     def __init__(self):
-        self.state = defaultdict(dict)  # exp_id: {mode: value}
+        self.state = defaultdict(lambda: defaultdict(dict))  # exp_id: {mode: {ds_id: value}}
 
-    def __getitem__(self, exp_id: int) -> Dict[str, np.ndarray]:
+    def __getitem__(self, exp_id: int) -> Dict[str, Dict[str, np.ndarray]]:
         return self.state[exp_id]
 
-    def add(self, exp_id: int, mode: str, values: Dict[int, Any]) -> bool:
+    def add(self, exp_id: int, mode: str, ds_id: str, values: Dict[int, Any]) -> bool:
         """Add a new set of values to the metric group.
 
         Args:
             exp_id: The experiment id associated with these `values`.
             mode: The mode associated with these `values`.
-            values: A dictionary of time: value pairs
+            ds_id: The ds_id associated with these values (or empty string for None).
+            values: A dictionary of time: value pairs.
 
         Returns:
             Whether the add was successful.
@@ -57,8 +59,8 @@ class _MetricGroup:
             values = list(sorted(values.items()))
             if len(values) == 1:
                 # We will allow any data types if there's only one value since it will be displayed differently
-                self.state[exp_id][mode] = np.array(values,
-                                                    dtype=None if isinstance(values[0][1], (int, float)) else object)
+                self.state[exp_id][mode][ds_id] = np.array(
+                    values, dtype=None if isinstance(values[0][1], (int, float)) else object)
                 return True
             else:
                 # We will be plotting something over time
@@ -90,7 +92,7 @@ class _MetricGroup:
                     for idx, (step, elem) in enumerate(values):
                         if isinstance(elem, (int, float)):
                             values[idx] = (step, ValWithError(elem, elem, elem))
-                self.state[exp_id][mode] = np.array(values, dtype=object if val_is_object else None)
+                self.state[exp_id][mode][ds_id] = np.array(values, dtype=object if val_is_object else None)
 
     def ndim(self) -> int:
         """Compute how many dimensions this data require to plot.
@@ -99,39 +101,41 @@ class _MetricGroup:
             The number of dimensions this data requires to plot.
         """
         ndims = [0]
-        for mode_val in self.state.values():
-            for mode, values in mode_val.items():
-                if values.ndim in (0, 1):
-                    # A singular value (this should never happen based on implementation of summary)
-                    ndims.append(1)
-                elif values.ndim == 2:
-                    if values.shape[0] == 1:
-                        # Metrics with only 1 time point can be displayed as singular values
-                        if isinstance(values[0][1], ValWithError):
-                            # ValWithError, however, will always be displayed grapically
-                            ndims.append(2)
+        for mode_ds_val in self.state.values():
+            for mode, ds_val in mode_ds_val.items():
+                for _, values in ds_val.items():
+                    if values.ndim in (0, 1):
+                        # A singular value (this should never happen based on implementation of summary)
+                        ndims.append(1)
+                    elif values.ndim == 2:
+                        if values.shape[0] == 1:
+                            # Metrics with only 1 time point can be displayed as singular values
+                            if isinstance(values[0][1], ValWithError):
+                                # ValWithError, however, will always be displayed grapically
+                                ndims.append(2)
+                            else:
+                                ndims.append(1)
                         else:
-                            ndims.append(1)
+                            # A regular time vs metric value plot
+                            ndims.append(2)
                     else:
-                        # A regular time vs metric value plot
-                        ndims.append(2)
-                else:
-                    # Time vs array value. Not supported yet.
-                    ndims.append(3)
+                        # Time vs array value. Not supported yet.
+                        ndims.append(3)
         return max(ndims)
 
-    def get_val(self, exp_idx: int, mode: str) -> Union[None, str, np.ndarray]:
+    def get_val(self, exp_idx: int, mode: str, ds_id: str) -> Union[None, str, np.ndarray]:
         """Get the value for a given experiment id and mode.
 
         Args:
             exp_idx: The id of the experiment in question.
             mode: The mode under consideration.
+            ds_id: The dataset id associated with this value.
 
         Returns:
             The value associated with the `exp_id` and `mode`, or None if no such value exists. If only a single item
             exists and it is numeric then it will be returned as a string truncated to 5 decimal places.
         """
-        vals = self.state[exp_idx].get(mode, None)
+        vals = self.state[exp_idx].get(mode, {}).get(ds_id, None)
         if vals is None:
             return vals
         if vals.ndim in (0, 1):
@@ -158,6 +162,23 @@ class _MetricGroup:
             Which modes have data for the given `exp_id`.
         """
         return list(self.state[exp_id].keys())
+
+    def ds_ids(self, exp_id: int, mode: Optional[str] = None) -> List[str]:
+        """Get the dataset ids supported by this group for a given experiment.
+
+        If mode is provided, then only the ds_ids present for the particular mode will be returned.
+
+        Args:
+            exp_id: The id of the experiment in question.
+            mode: The mode for which to consider ids, or None to consider over all modes.
+
+        Returns:
+            Which dataset ids have data for the given `exp_id` and `mode`.
+        """
+        if mode is None:
+            mode = self.modes(exp_id)
+        mode = to_list(mode)
+        return [ds for md, dsv in self.state[exp_id].items() if md in mode for ds in dsv.keys()]
 
 
 def plot_logs(experiments: List[Summary],
@@ -192,6 +213,7 @@ def plot_logs(experiments: List[Summary],
     # TODO: epoch should be indicated on the axis (top x axis?). Problem - different epochs per experiment.
     # TODO: figure out how ignore_metrics should interact with mode
 
+    ds_ids = set()
     metric_histories = defaultdict(_MetricGroup)  # metric: MetricGroup
     for idx, experiment in enumerate(experiments):
         history = experiment.history
@@ -200,21 +222,25 @@ def plot_logs(experiments: List[Summary],
                                     key=lambda x: 0 if x[0] == 'train' else 1 if x[0] == 'eval' else 2 if x[0] == 'test'
                                     else 3 if x[0] == 'infer' else 4):
             for metric, step_val in metrics.items():
+                base_metric, ds_id, *_ = f'{metric}|'.split('|')  # Plot acc|ds1 and acc|ds2 on same acc graph
                 if len(step_val) == 0:
                     continue  # Ignore empty metrics
-                if metric in ignore_keys:
+                if metric in ignore_keys or base_metric in ignore_keys:
                     continue
                 if include_keys and metric not in include_keys:
                     continue
-                metric_histories[metric].add(idx, mode, step_val)
+                metric_histories[base_metric].add(idx, mode, ds_id, step_val)
+                ds_ids.add(ds_id)
 
     metric_list = list(sorted(metric_histories.keys()))
     if len(metric_list) == 0:
         return plt.subplots(111)[0]
+    ds_ids = humansorted(ds_ids)  # Sort them to have consistent ordering (and thus symbols) between plot runs
+    n_ds_ids = len(ds_ids)  # Each ds_id will have its own set of legend entries, so need to count them
 
-    # If sharing legend and there is more than 1 plot, then dedicate 1 subplot for the legend
+    # If sharing legend and there is more than 1 plot, then dedicate subplot(s) for the legend
     share_legend = share_legend and (len(metric_list) > 1)
-    n_legends = math.ceil(n_experiments / 4)
+    n_legends = math.ceil(n_experiments * n_ds_ids / 4)
     n_plots = len(metric_list) + (share_legend * n_legends)
 
     # map the metrics into an n x n grid, then remove any extra columns. Final grid will be n x m with m <= n
@@ -256,6 +282,7 @@ def plot_logs(experiments: List[Summary],
         axis.spines['bottom'].set_visible(False)
         axis.spines['left'].set_visible(False)
         axis.tick_params(bottom=False, left=False)
+        axis.xaxis.set_major_formatter(EngFormatter(sep=""))  # Convert 10000 steps to 10k steps
 
     # some of the later rows/columns might be unused or reserved for legends, so disable them
     last_row_idx = math.ceil(len(metric_list) / n_cols) - 1
@@ -290,101 +317,127 @@ def plot_logs(experiments: List[Summary],
 
     handles = []
     labels = []
-    has_label = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: False)))  # exp_id : {mode: {type: True}}
+    # exp_id : {mode: {ds_id: {type: True}}}
+    has_label = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: False))))
     ax_text = defaultdict(lambda: (0.0, 0.9))  # Where to put the text on a given axis
+    # Set up ds_id markers. The empty ds_id will have no extra marker. After that there are 4 configurations of 3-arm
+    # marker, followed by asterisks with growing numbers of arms (starting at 4).
+    ds_id_markers = ['', "1", "2", "3", "4"] + [(ticks, 2, 0) for ticks in range(4, n_ds_ids - 1)]
+    ds_id_markers = {k: v for k, v in zip(ds_ids, ds_id_markers)}
+    # Actually do the plotting
     for exp_idx, experiment in enumerate(experiments):
         for metric, group in metric_histories.items():
             axis = axs[metric_grid_location[metric][0]][metric_grid_location[metric][1]]
             if group.ndim() == 1:
                 # Single value
                 for mode in group.modes(exp_idx):
-                    ax_id = id(axis)
-                    prefix = f"{experiment.name} ({mode})" if n_experiments > 1 else f"{mode}"
-                    axis.text(ax_text[ax_id][0],
-                              ax_text[ax_id][1],
-                              f"{prefix}: {group.get_val(exp_idx, mode)}",
-                              color=colors[exp_idx + color_offset[mode]],
-                              transform=axis.transAxes)
-                    ax_text[ax_id] = (ax_text[ax_id][0], ax_text[ax_id][1] - 0.1)
-                    if ax_text[ax_id][1] < 0:
-                        ax_text[ax_id] = (ax_text[ax_id][0] + 0.5, 0.9)
+                    for ds_id in group.ds_ids(exp_idx, mode):
+                        ds_title = f"{ds_id} " if ds_id else ''
+                        ax_id = id(axis)
+                        prefix = f"{experiment.name} ({ds_title}{mode})" if n_experiments > 1 else f"{ds_title}{mode}"
+                        axis.text(ax_text[ax_id][0],
+                                  ax_text[ax_id][1],
+                                  f"{prefix}: {group.get_val(exp_idx, mode, ds_id)}",
+                                  color=colors[exp_idx + color_offset[mode]],
+                                  transform=axis.transAxes)
+                        ax_text[ax_id] = (ax_text[ax_id][0], ax_text[ax_id][1] - 0.1)
+                        if ax_text[ax_id][1] < 0:
+                            ax_text[ax_id] = (ax_text[ax_id][0] + 0.5, 0.9)
             elif group.ndim() == 2:
-                for mode, data in group[exp_idx].items():
-                    title = f"{experiment.name} ({mode})" if n_experiments > 1 else f"{mode}"
-                    if data.shape[0] < 2:
-                        # This particular mode only has a single data point, so need to draw a shape instead of a line
-                        xy = [data[0][0], data[0][1]]
-                        if mode == 'train':
-                            style = MarkerStyle(marker='o', fillstyle='full')
-                        elif mode == 'eval':
-                            style = MarkerStyle(marker='v', fillstyle='full')
-                        elif mode == 'test':
-                            style = MarkerStyle(marker='*', fillstyle='full')
+                for mode, dsv in group[exp_idx].items():
+                    for ds_id, data in dsv.items():
+                        ds_title = f"{ds_id} " if ds_id else ''
+                        title = f"{experiment.name} ({ds_title}{mode})" if n_experiments > 1 else f"{ds_title}{mode}"
+                        if data.shape[0] < 2:
+                            # This particular mode only has a single data point, so draw a shape instead of a line
+                            xy = [data[0][0], data[0][1]]
+                            if mode == 'train':
+                                style = MarkerStyle(marker='o', fillstyle='full')
+                            elif mode == 'eval':
+                                style = MarkerStyle(marker='D', fillstyle='full')
+                            elif mode == 'test':
+                                style = MarkerStyle(marker='s', fillstyle='full')
+                            else:
+                                style = MarkerStyle(marker='d', fillstyle='full')
+                            if isinstance(xy[1], ValWithError):
+                                # We've got error bars
+                                x = xy[0]
+                                y = xy[1]
+                                # Plotting requires positive values for error
+                                y_err = [[max(1e-9, y.y - y.y_min)], [max(1e-9, y.y_max - y.y)]]
+                                axis.errorbar(x=x,
+                                              y=y.y,
+                                              yerr=y_err,
+                                              ecolor=colors[exp_idx + color_offset[mode]],
+                                              elinewidth=1.5,
+                                              capsize=4.0,
+                                              capthick=1.5,
+                                              zorder=3)  # zorder to put markers on top of line segments
+                                xy[1] = y.y
+                            s = axis.scatter(xy[0],
+                                             xy[1],
+                                             s=45,
+                                             c=[colors[exp_idx + color_offset[mode]]],
+                                             label=title,
+                                             marker=style,
+                                             linewidth=1.0,
+                                             edgecolors='black',
+                                             zorder=4)  # zorder to put markers on top of line segments
+                            if ds_id:
+                                # Overlay the dataset id marker on top of the normal scatter plot marker
+                                s2 = axis.scatter(xy[0],
+                                                  xy[1],
+                                                  s=45,
+                                                  c='white',
+                                                  label=title,
+                                                  marker=ds_id_markers[ds_id],
+                                                  linewidth=1.1,
+                                                  zorder=5)  # zorder to put markers on top of line segments
+                                s = (s, s2)
+                            if not has_label[exp_idx][mode][ds_id]['patch']:
+                                labels.append(title)
+                                handles.append(s)
+                                has_label[exp_idx][mode][ds_id]['patch'] = True
                         else:
-                            style = MarkerStyle(marker='s', fillstyle='full')
-                        if isinstance(xy[1], ValWithError):
-                            # We've got error bars
-                            x = xy[0]
-                            y = xy[1]
-                            # Plotting requires positive values for error
-                            y_err = [[max(1e-9, y.y - y.y_min)], [max(1e-9, y.y_max - y.y)]]
-                            axis.errorbar(x=x,
-                                          y=y.y,
-                                          yerr=y_err,
-                                          ecolor=colors[exp_idx + color_offset[mode]],
-                                          elinewidth=1.5,
-                                          capsize=4.0,
-                                          capthick=1.5,
-                                          zorder=3)  # zorder to put markers on top of line segments
-                            xy[1] = y.y
-                        s = axis.scatter(xy[0],
-                                         xy[1],
-                                         s=40,
-                                         c=[colors[exp_idx + color_offset[mode]]],
-                                         label=title,
-                                         marker=style,
-                                         linewidth=1.0,
-                                         edgecolors='black',
-                                         zorder=4)  # zorder to put markers on top of line segments
-                        if not has_label[exp_idx][mode]['patch']:
-                            labels.append(title)
-                            handles.append(s)
-                            has_label[exp_idx][mode]['patch'] = True
-                    else:
-                        # We can draw a line
-                        y = data[:, 1]
-                        y_min = None
-                        y_max = None
-                        if isinstance(y[0], ValWithError):
-                            y = np.stack(y)
-                            y_min = y[:, 0]
-                            y_max = y[:, 2]
-                            y = y[:, 1]
+                            # We can draw a line
+                            y = data[:, 1]
+                            y_min = None
+                            y_max = None
+                            if isinstance(y[0], ValWithError):
+                                y = np.stack(y)
+                                y_min = y[:, 0]
+                                y_max = y[:, 2]
+                                y = y[:, 1]
+                                if smooth_factor != 0:
+                                    y_min = gaussian_filter1d(y_min, sigma=smooth_factor)
+                                    y_max = gaussian_filter1d(y_max, sigma=smooth_factor)
                             if smooth_factor != 0:
-                                y_min = gaussian_filter1d(y_min, sigma=smooth_factor)
-                                y_max = gaussian_filter1d(y_max, sigma=smooth_factor)
-                        if smooth_factor != 0:
-                            y = gaussian_filter1d(y, sigma=smooth_factor)
-                        x = data[:, 0]
-                        ln = axis.plot(
-                            x,
-                            y,
-                            color=colors[exp_idx + color_offset[mode]],
-                            label=title,
-                            linewidth=1.5,
-                            linestyle='solid' if mode == 'train' else
-                            'dashed' if mode == 'eval' else 'dotted' if mode == 'test' else 'dashdot')
-                        if not has_label[exp_idx][mode]['line']:
-                            labels.append(title)
-                            handles.append(ln[0])
-                            has_label[exp_idx][mode]['line'] = True
-                        if y_max is not None and y_min is not None:
-                            axis.fill_between(x.astype(np.float32),
-                                              y_max,
-                                              y_min,
-                                              facecolor=colors[exp_idx + color_offset[mode]],
-                                              alpha=0.3,
-                                              zorder=-1)
+                                y = gaussian_filter1d(y, sigma=smooth_factor)
+                            x = data[:, 0]
+                            ln = axis.plot(
+                                x,
+                                y,
+                                color=colors[exp_idx + color_offset[mode]],
+                                label=title,
+                                linewidth=1.5,
+                                linestyle='solid' if mode == 'train' else
+                                'dashed' if mode == 'eval' else 'dotted' if mode == 'test' else 'dashdot',
+                                marker=ds_id_markers[ds_id],
+                                markersize=7,
+                                markeredgewidth=1.5,
+                                markeredgecolor='black',
+                                markevery=0.1)
+                            if not has_label[exp_idx][mode][ds_id]['line']:
+                                labels.append(title)
+                                handles.append(ln[0])
+                                has_label[exp_idx][mode][ds_id]['line'] = True
+                            if y_max is not None and y_min is not None:
+                                axis.fill_between(x.astype(np.float32),
+                                                  y_max,
+                                                  y_min,
+                                                  facecolor=colors[exp_idx + color_offset[mode]],
+                                                  alpha=0.3,
+                                                  zorder=-1)
             else:
                 # Some kind of image or matrix. Not implemented yet.
                 pass
