@@ -33,7 +33,8 @@ class OneOf(NumpyOp):
         inputs = numpy_ops[0].inputs
         outputs = numpy_ops[0].outputs
         mode = numpy_ops[0].mode
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        ds_id = numpy_ops[0].ds_id
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.in_list = numpy_ops[0].in_list
         self.out_list = numpy_ops[0].out_list
         for op in numpy_ops[1:]:
@@ -42,6 +43,7 @@ class OneOf(NumpyOp):
             assert outputs == op.outputs, "All ops within a OneOf must share the same outputs"
             assert self.out_list == op.out_list, "All ops within OneOf must share the same output configuration"
             assert mode == op.mode, "All ops within a OneOf must share the same mode"
+            assert ds_id == op.ds_id, "All ops within a OneOf must share the same mode"
         self.ops = numpy_ops
 
     def __getstate__(self) -> Dict[str, List[Dict[Any, Any]]]:

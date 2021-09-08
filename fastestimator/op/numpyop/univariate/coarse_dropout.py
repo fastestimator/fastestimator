@@ -30,6 +30,8 @@ class CoarseDropout(ImageOnlyAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
         max_holes: Maximum number of regions to zero out.
         max_height: Maximum height of the hole.
         max_width: Maximum width of the hole.
@@ -45,6 +47,7 @@ class CoarseDropout(ImageOnlyAlbumentation):
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  max_holes: int = 8,
                  max_height: int = 8,
                  max_width: int = 8,
@@ -63,4 +66,5 @@ class CoarseDropout(ImageOnlyAlbumentation):
                              always_apply=True),
             inputs=inputs,
             outputs=outputs,
-            mode=mode)
+            mode=mode,
+            ds_id=ds_id)

@@ -28,6 +28,8 @@ class ColorJitter(ImageOnlyAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
         brightness: How much to jitter brightness. brightness_factor is chosen uniformly from
             [max(0, 1 - brightness), 1 + brightness] or the given [min, max]. Should be non negative numbers.
         contrast: How much to jitter contrast. contrast_factor is chosen uniformly from
@@ -44,6 +46,7 @@ class ColorJitter(ImageOnlyAlbumentation):
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  brightness: Union[float, Tuple[float]] = 0.2,
                  contrast: Union[float, Tuple[float]] = 0.2,
                  saturation: Union[float, Tuple[float]] = 0.2,
@@ -52,4 +55,5 @@ class ColorJitter(ImageOnlyAlbumentation):
             ColorJitterAlb(brightness=brightness, contrast=contrast, saturation=saturation, hue=hue, always_apply=True),
             inputs=inputs,
             outputs=outputs,
-            mode=mode)
+            mode=mode,
+            ds_id=ds_id)

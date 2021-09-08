@@ -44,12 +44,15 @@ class Fuse(TensorOp):
         inputs = []
         outputs = []
         mode = ops[0].mode
+        ds_id = ops[0].mode
         self.last_retain_idx = 0
         self.models = set()
         self.loss_keys = set()
         for idx, op in enumerate(ops):
             if op.mode != mode:
                 raise ValueError(f"All Fuse ops must share the same mode, but got {mode} and {op.mode}")
+            if op.ds_id != ds_id:
+                raise ValueError(f"All Fuse ops must share the same ds_id, but got {ds_id} and {op.ds_id}")
             for inp in op.inputs:
                 if inp not in inputs and inp not in outputs:
                     inputs.append(inp)
@@ -60,7 +63,7 @@ class Fuse(TensorOp):
                 self.last_retain_idx = idx  # Keep tabs on the last one since it might be set to False
             self.models |= op.get_fe_models()
             self.loss_keys |= op.get_fe_loss_keys()
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.ops = ops
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:

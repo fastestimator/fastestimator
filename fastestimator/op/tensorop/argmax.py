@@ -35,13 +35,16 @@ class Argmax(TensorOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
     """
     def __init__(self,
                  inputs: Union[str, List[str]],
                  outputs: Union[str, List[str]],
                  axis: int = 0,
-                 mode: Union[None, str, Iterable[str]] = "eval"):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+                 mode: Union[None, str, Iterable[str]] = "eval",
+                 ds_id: Union[None, str, Iterable[str]] = None):
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.axis = axis
         self.in_list, self.out_list = True, True
 

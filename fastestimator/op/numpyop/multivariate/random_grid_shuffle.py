@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Optional, Tuple
+from typing import Iterable, Optional, Tuple, Union
 
 from albumentations.augmentations.transforms import RandomGridShuffle as RandomGridShuffleAlb
 
@@ -28,6 +28,8 @@ class RandomGridShuffle(MultiVariateAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
         image_in: The key of an image to be modified.
         mask_in: The key of a mask to be modified (with the same random factors as the image).
         masks_in: The key of masks to be modified (with the same random factors as the image).
@@ -41,7 +43,8 @@ class RandomGridShuffle(MultiVariateAlbumentation):
     """
     def __init__(self,
                  grid: Tuple[int, int] = (3, 3),
-                 mode: Optional[str] = None,
+                 mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  image_in: Optional[str] = None,
                  mask_in: Optional[str] = None,
                  masks_in: Optional[str] = None,
@@ -61,4 +64,5 @@ class RandomGridShuffle(MultiVariateAlbumentation):
                          keypoints_out=None,
                          bbox_params=None,
                          keypoint_params=None,
-                         mode=mode)
+                         mode=mode,
+                         ds_id=ds_id)

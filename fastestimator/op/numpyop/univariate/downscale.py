@@ -31,6 +31,8 @@ class Downscale(ImageOnlyAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
         scale_min: Lower bound on the image scale. Should be < 1.
         scale_max:  Upper bound on the image scale. Should be >= scale_min.
         interpolation: cv2 interpolation method.
@@ -42,6 +44,7 @@ class Downscale(ImageOnlyAlbumentation):
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  scale_min: float = 0.25,
                  scale_max: float = 0.25,
                  interpolation: int = cv2.INTER_NEAREST):
@@ -49,4 +52,5 @@ class Downscale(ImageOnlyAlbumentation):
             DownscaleAlb(scale_min=scale_min, scale_max=scale_max, interpolation=interpolation, always_apply=True),
             inputs=inputs,
             outputs=outputs,
-            mode=mode)
+            mode=mode,
+            ds_id=ds_id)

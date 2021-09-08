@@ -30,6 +30,8 @@ class CLAHE(ImageOnlyAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
         clip_limit: upper threshold value for contrast limiting. If clip_limit is a single float value, the range will
             be (1, clip_limit).
         tile_grid_size: size of grid for histogram equalization.
@@ -41,9 +43,11 @@ class CLAHE(ImageOnlyAlbumentation):
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  clip_limit: Union[float, Tuple[float, float]] = 4.0,
                  tile_grid_size: Tuple[int, int] = (8, 8)):
         super().__init__(CLAHEAlb(clip_limit=clip_limit, tile_grid_size=tile_grid_size, always_apply=True),
                          inputs=inputs,
                          outputs=outputs,
-                         mode=mode)
+                         mode=mode,
+                         ds_id=ds_id)

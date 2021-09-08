@@ -35,15 +35,18 @@ class MeanSquaredError(LossOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
         average_loss: Whether to average the element-wise loss after the Loss Op.
     """
     def __init__(self,
                  inputs: Union[Tuple[str, str], List[str]],
                  outputs: str,
                  mode: Union[None, str, Iterable[str]] = "!infer",
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  average_loss: bool = True):
         self.average_loss = average_loss
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
         y_pred, y_true = data

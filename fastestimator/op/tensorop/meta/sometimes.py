@@ -45,7 +45,10 @@ class Sometimes(TensorOp):
         outs = set(tensor_op.outputs)
         self.extra_inputs = list(outs - inps)  # Used by traceability
         self.inp_idx = len(tensor_op.inputs)
-        super().__init__(inputs=tensor_op.inputs + self.extra_inputs, outputs=tensor_op.outputs, mode=tensor_op.mode)
+        super().__init__(inputs=tensor_op.inputs + self.extra_inputs,
+                         outputs=tensor_op.outputs,
+                         mode=tensor_op.mode,
+                         ds_id=tensor_op.ds_id)
         # Note that in_list and out_list will always be true
         self.op = tensor_op
         self.prob = prob

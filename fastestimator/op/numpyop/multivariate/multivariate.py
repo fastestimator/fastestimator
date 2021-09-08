@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 from collections import OrderedDict
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 import numpy as np
 from albumentations import BboxParams, Compose, DualTransform, KeypointParams
@@ -38,6 +38,8 @@ class MultiVariateAlbumentation(NumpyOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
         image_in: The key of an image to be modified.
         mask_in: The key of a mask to be modified (with the same random factors as the image).
         masks_in: The key of masks to be modified (with the same random factors as the image).
@@ -56,7 +58,8 @@ class MultiVariateAlbumentation(NumpyOp):
     """
     def __init__(self,
                  func: DualTransform,
-                 mode: Optional[str] = None,
+                 mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  image_in: Optional[str] = None,
                  mask_in: Optional[str] = None,
                  masks_in: Optional[str] = None,
@@ -87,7 +90,10 @@ class MultiVariateAlbumentation(NumpyOp):
         if extra_out_keys:
             keys.update(extra_out_keys)
         self.keys_out = OrderedDict([(k, v) for k, v in keys.items() if v is not None])
-        super().__init__(inputs=list(self.keys_in.values()), outputs=list(self.keys_out.values()), mode=mode)
+        super().__init__(inputs=list(self.keys_in.values()),
+                         outputs=list(self.keys_out.values()),
+                         mode=mode,
+                         ds_id=ds_id)
         if isinstance(bbox_params, str):
             bbox_params = BboxParams(bbox_params)
         if isinstance(keypoint_params, str):

@@ -30,6 +30,8 @@ class RandomBrightnessContrast(ImageOnlyAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
         brightness_limit: Factor range for changing brightness.
             If limit is a single float, the range will be (-limit, limit).
         contrast_limit: Factor range for changing contrast.
@@ -43,6 +45,7 @@ class RandomBrightnessContrast(ImageOnlyAlbumentation):
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  brightness_limit: Union[float, Tuple[float, float]] = 0.2,
                  contrast_limit: Union[float, Tuple[float, float]] = 0.2,
                  brightness_by_max: bool = True):
@@ -53,4 +56,5 @@ class RandomBrightnessContrast(ImageOnlyAlbumentation):
                                         always_apply=True),
             inputs=inputs,
             outputs=outputs,
-            mode=mode)
+            mode=mode,
+            ds_id=ds_id)

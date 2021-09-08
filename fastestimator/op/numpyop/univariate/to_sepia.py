@@ -30,6 +30,8 @@ class ToSepia(ImageOnlyAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
 
     Image types:
         uint8, float32
@@ -37,5 +39,6 @@ class ToSepia(ImageOnlyAlbumentation):
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
-                 mode: Union[None, str, Iterable[str]] = None):
-        super().__init__(ToSepiaAlb(always_apply=True), inputs=inputs, outputs=outputs, mode=mode)
+                 mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None):
+        super().__init__(ToSepiaAlb(always_apply=True), inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)

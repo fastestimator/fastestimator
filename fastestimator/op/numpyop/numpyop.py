@@ -38,12 +38,15 @@ class NumpyOp(Op):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
     """
     def __init__(self,
                  inputs: Union[None, str, Iterable[str]] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
-                 mode: Union[None, str, Iterable[str]] = None) -> None:
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+                 mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None) -> None:
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         # in_place_edits tracks whether the .forward() method of this op will perform in-place edits of numpy arrays.
         # This is inferred automatically by the system and is used for memory management optimization. If you are
         # developing a NumpyOp which does in-place edits, the best practice is to set this to True in your init method.
@@ -105,9 +108,14 @@ class Delete(NumpyOp):
 
     Args:
         keys: Existing key(s) to be deleted from the data dictionary.
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
     """
-    def __init__(self, keys: Union[str, List[str]], mode: Union[None, str, Iterable[str]] = None) -> None:
-        super().__init__(inputs=keys, mode=mode)
+    def __init__(self,
+                 keys: Union[str, List[str]],
+                 mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None) -> None:
+        super().__init__(inputs=keys, mode=mode, ds_id=ds_id)
 
     def forward(self, data: Union[np.ndarray, List[np.ndarray]], state: Dict[str, Any]) -> None:
         pass
@@ -124,13 +132,16 @@ class LambdaOp(NumpyOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
     """
     def __init__(self,
                  fn: Callable,
                  inputs: Union[None, str, Iterable[str]] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
-                 mode: Union[None, str, Iterable[str]] = None):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+                 mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None) -> None:
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.fn = fn
         self.in_list = True
 

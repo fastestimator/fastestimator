@@ -55,10 +55,18 @@ class GradCAM(Trace):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
     """
-    def __init__(self, images: str, grads: str, n_components: int = 3, n_samples: Optional[int] = 5,
-                 labels: Optional[str] = None, preds: Optional[str] = None,
-                 label_mapping: Optional[Dict[str, Any]] = None, outputs: str = "gradcam",
+    def __init__(self,
+                 images: str,
+                 grads: str,
+                 n_components: int = 3,
+                 n_samples: Optional[int] = 5,
+                 labels: Optional[str] = None,
+                 preds: Optional[str] = None,
+                 label_mapping: Optional[Dict[str, Any]] = None,
+                 outputs: str = "gradcam",
                  mode: Union[None, str, Iterable[str]] = "!train"):
         self.image_key = images
         self.grad_key = grads

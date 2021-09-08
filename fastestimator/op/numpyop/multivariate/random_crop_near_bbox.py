@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Optional, Union
+from typing import Iterable, Optional, Union
 
 from albumentations import BboxParams, KeypointParams
 from albumentations.augmentations.transforms import RandomCropNearBBox as RandomCropNearBBoxAlb
@@ -29,6 +29,8 @@ class RandomCropNearBBox(MultiVariateAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
         image_in: The key of an image to be modified.
         cropping_bbox_in: The key of the cropping box, in [x1, y1, x2, y2] format.
         mask_in: The key of a mask to be modified (with the same random factors as the image).
@@ -50,7 +52,8 @@ class RandomCropNearBBox(MultiVariateAlbumentation):
     def __init__(self,
                  cropping_bbox_in: str,
                  max_part_shift: float = 0.3,
-                 mode: Optional[str] = None,
+                 mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  image_in: Optional[str] = None,
                  mask_in: Optional[str] = None,
                  masks_in: Optional[str] = None,
@@ -77,4 +80,5 @@ class RandomCropNearBBox(MultiVariateAlbumentation):
                          bbox_params=bbox_params,
                          keypoint_params=keypoint_params,
                          mode=mode,
+                         ds_id=ds_id,
                          extra_in_keys={"cropping_bbox": cropping_bbox_in})

@@ -22,7 +22,7 @@ import torch
 from fastestimator.backend.feed_forward import feed_forward
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import FeInputSpec, traceable
-from fastestimator.util.util import to_list, get_num_devices
+from fastestimator.util.util import get_num_devices, to_list
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
@@ -39,6 +39,8 @@ class ModelOp(TensorOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
         trainable: Indicates whether the model should have its weights tracked for update.
         intermediate_layers: One or more layers inside of the model from which you would also like to extract output.
             This can be useful, for example, for visualizing feature extractor embeddings in conjunction with the
@@ -56,9 +58,10 @@ class ModelOp(TensorOp):
                  inputs: Union[None, str, Iterable[str]] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
                  mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  trainable: bool = True,
                  intermediate_layers: Union[None, str, int, List[Union[str, int]]] = None):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         assert hasattr(model, "fe_compiled"), "must use fe.build to compile the model before use"
         self.intermediate_outputs = []  # [{device: Tensor}]
         intermediate_layers = to_list(intermediate_layers)
@@ -131,8 +134,10 @@ class ModelOp(TensorOp):
         return data
 
 
-def _capture_call_tf(input: tf.Tensor, fe_storage: Dict[Union[str, torch.device], Tensor],
-                     fe_layer: tf.keras.layers.Layer, **kwargs) -> tf.Tensor:
+def _capture_call_tf(input: tf.Tensor,
+                     fe_storage: Dict[Union[str, torch.device], Tensor],
+                     fe_layer: tf.keras.layers.Layer,
+                     **kwargs) -> tf.Tensor:
     """A function to capture the output of a TF model layer.
 
     Args:
@@ -149,7 +154,9 @@ def _capture_call_tf(input: tf.Tensor, fe_storage: Dict[Union[str, torch.device]
     return output
 
 
-def _capture_call_torch(module: torch.nn.Module, input: Tuple[torch.Tensor, ...], output: torch.Tensor,
+def _capture_call_torch(module: torch.nn.Module,
+                        input: Tuple[torch.Tensor, ...],
+                        output: torch.Tensor,
                         fe_storage: Dict[Union[str, torch.device], Tensor]) -> None:
     """A callback function to capture the output of a torch model layer.
 
@@ -175,8 +182,7 @@ def _unpack_output(output_dict: Dict[Union[str, torch.device], Tensor], device: 
         A stacked representation of the tensor(s) in the output_dict.
     """
     if isinstance(device, torch.device):
-        response = torch.vstack(
-            [t[1].to(device) for t in sorted(output_dict.items(), key=lambda x: x[0].index or 0)])
+        response = torch.vstack([t[1].to(device) for t in sorted(output_dict.items(), key=lambda x: x[0].index or 0)])
     else:  # tf
         response = output_dict[device]
     return response

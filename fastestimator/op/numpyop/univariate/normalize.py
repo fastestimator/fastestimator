@@ -30,6 +30,8 @@ class Normalize(ImageOnlyAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
         mean: Mean values to subtract.
         std: The divisor.
         max_pixel_value: Maximum possible pixel value.
@@ -41,10 +43,12 @@ class Normalize(ImageOnlyAlbumentation):
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  mean: Union[float, Tuple[float, ...]] = (0.485, 0.456, 0.406),
                  std: Union[float, Tuple[float, ...]] = (0.229, 0.224, 0.225),
                  max_pixel_value: float = 255.0):
         super().__init__(NormalizeAlb(mean=mean, std=std, max_pixel_value=max_pixel_value, always_apply=True),
                          inputs=inputs,
                          outputs=outputs,
-                         mode=mode)
+                         mode=mode,
+                         ds_id=ds_id)

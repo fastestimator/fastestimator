@@ -40,16 +40,19 @@ class Fuse(NumpyOp):
         inputs = []
         outputs = []
         mode = ops[0].mode
+        ds_id = ops[0].ds_id
         for op in ops:
             if op.mode != mode:
                 raise ValueError(f"All Fuse ops must share the same mode, but got {mode} and {op.mode}")
+            if op.ds_id != ds_id:
+                raise ValueError(f"All Fuse ops must share the same ds_id, but got {ds_id} and {op.ds_id}")
             for inp in op.inputs:
                 if inp not in inputs and inp not in outputs:
                     inputs.append(inp)
             for out in op.outputs:
                 if out not in outputs:
                     outputs.append(out)
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.ops = ops
 
     def __getstate__(self) -> Dict[str, List[Dict[Any, Any]]]:

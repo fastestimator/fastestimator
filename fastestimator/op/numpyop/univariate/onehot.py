@@ -36,14 +36,17 @@ class Onehot(NumpyOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
     """
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  num_classes: int,
                  label_smoothing: float = 0.0,
-                 mode: Union[None, str, Iterable[str]] = None):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+                 mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None):
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.num_classes = num_classes
         self.label_smoothing = label_smoothing
         self.in_list, self.out_list = True, True

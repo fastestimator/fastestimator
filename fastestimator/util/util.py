@@ -509,6 +509,33 @@ def parse_modes(modes: Set[str]) -> Set[str]:
     return modes
 
 
+def check_ds_id(ds_ids: Set[str]) -> Set[str]:
+    """A function to check whether ds_ids inputs are correct inputs.
+
+    ds_ids should either be defined through whitelist, like {"ds1", "ds2"} or blacklist, like {"!ds1", "!ds2"}.
+
+    ```python
+    m = fe.util.parse_ds_id({"ds1"})  # {"ds1"}
+    m = fe.util.parse_ds_id({"!ds1"})  # {"!ds1"}
+    m = fe.util.parse_ds_id({"ds1", "ds2"})  # {"ds1", "ds2"}
+    m = fe.util.parse_ds_id({"!ds1", "!ds2"})  # {"!ds1", "!ds2"}
+    m = fe.util.parse_ds_id({"!ds1", "ds2"})  # Raises Assertion
+    ```
+
+    Args:
+        ds_ids: The desired ds_id to run on (possibly containing blacklisted ds_ids).
+
+    Returns:
+        The ds_ids to run or tp avoid.
+
+    Raises:
+        AssertionError: if blacklisted modes and whitelisted modes are mixed.
+    """
+    negation = set([ds_id.startswith("!") for ds_id in ds_ids])
+    assert len(negation) < 2, "cannot mix !ds_id with ds_id, found {}".format(ds_ids)
+    return ds_ids
+
+
 def pad_batch(batch: List[MutableMapping[str, np.ndarray]], pad_value: Union[float, int]) -> None:
     """A function to pad a batch of data in-place by appending to the ends of the tensors. Tensor type needs to be
     numpy array otherwise would get ignored. (tf.Tensor and torch.Tensor will cause error)

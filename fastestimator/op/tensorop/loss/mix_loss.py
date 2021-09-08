@@ -45,7 +45,11 @@ class MixLoss(LossOp):
         self.loss.average_loss = False
         if len(loss.outputs) != 1:
             raise ValueError("MixLoss only supports lossOps which have a single output.")
-        super().__init__(inputs=[lam] + loss.inputs, outputs=loss.outputs, mode=loss.mode, average_loss=average_loss)
+        super().__init__(inputs=[lam] + loss.inputs,
+                         outputs=loss.outputs,
+                         mode=loss.mode,
+                         ds_id=loss.ds_id,
+                         average_loss=average_loss)
         self.out_list = False
 
     @property

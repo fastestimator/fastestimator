@@ -61,16 +61,17 @@ class Pipeline:
     ops: List[Union[NumpyOp, Scheduler[NumpyOp]]]
 
     def __init__(self,
-                 train_data: Union[None, DataSource, Scheduler[DataSource]] = None,
-                 eval_data: Union[None, DataSource, Scheduler[DataSource]] = None,
-                 test_data: Union[None, DataSource, Scheduler[DataSource]] = None,
+                 train_data: Union[None, DataSource, Scheduler[DataSource], Dict[str, DataSource]] = None,
+                 eval_data: Union[None, DataSource, Scheduler[DataSource], Dict[str, DataSource]] = None,
+                 test_data: Union[None, DataSource, Scheduler[DataSource], Dict[str, DataSource]] = None,
                  batch_size: Union[None, int, Scheduler[Union[int, Dict[str, int]]], Dict[str, int]] = None,
                  ops: Union[None, NumpyOp, Scheduler[NumpyOp], List[Union[NumpyOp, Scheduler[NumpyOp]]]] = None,
                  num_process: Optional[int] = None,
                  drop_last: bool = False,
                  pad_value: Optional[Union[int, float]] = None,
                  collate_fn: Optional[Callable] = None):
-        self.data = {x: y for (x, y) in zip(["train", "eval", "test"], [train_data, eval_data, test_data]) if y}
+        data = {x: y for (x, y) in zip(["train", "eval", "test"], [train_data, eval_data, test_data]) if y}
+        self.data = self._register_ds_ids(data)
         self.batch_size = batch_size
         self.ops = to_list(ops)
         if mp.get_start_method(allow_none=True) is None and os.name != 'nt':
@@ -91,6 +92,17 @@ class Pipeline:
         self.ctx_output_keys = None
         self.ctx_loader = None
 
+    def _register_ds_ids(self, data: Dict[str, Union[DataSource, Scheduler[DataSource], Dict[str, DataSource]]]):
+        """Associate dataset of each mode with a `ds_id`.
+
+        Args:
+            data: A dictionary with mode as key, dataset as value.
+        """
+        for mode, dataset in data.items():
+            if not isinstance(dataset, dict):
+                data[mode] = {None: dataset}
+        return data
+
     def _verify_inputs(self, **kwargs) -> None:
         """A helper method to ensure that the Pipeline inputs are valid.
 
@@ -102,7 +114,7 @@ class Pipeline:
                 Dataset.
         """
         fe_dataset = False
-        for dataset in get_current_items(self.data.values()):
+        for dataset in get_current_items(set(d for ds in self.data.values() for d in ds.values())):
             fe_dataset = self._verify_dataset(dataset, **kwargs) or fe_dataset
         if not fe_dataset:
             assert kwargs['batch_size'] is None, "Pipeline only supports batch_size with built-in (FE) datasets"
@@ -162,16 +174,38 @@ class Pipeline:
             all_modes = set(self.data.keys())
         else:
             all_modes = []
-            for mode, dataset in self.data.items():
+            for mode, datasets in self.data.items():
+                for dataset in datasets.items():
+                    if isinstance(dataset, Scheduler):
+                        dataset = dataset.get_current_value(epoch)
+                    if dataset:
+                        all_modes.append(mode)
+        return to_set(all_modes)
+
+    def get_ds_ids(self, epoch: int, mode: str) -> List[Union[str, None]]:
+        """Get the ds_ids for a given epoch and mode.
+
+        Args:
+            epoch: The current epoch index
+            mode: The current execution mode.
+
+        Returns:
+            The ds_ids of current epoch and mode.
+        """
+        ds_ids = []
+        if mode in self.data:
+            datasets = self.data[mode]
+            for ds_id, dataset in datasets.items():
                 if isinstance(dataset, Scheduler):
                     dataset = dataset.get_current_value(epoch)
                 if dataset:
-                    all_modes.append(mode)
-        return to_set(all_modes)
+                    ds_ids.append(ds_id)
+        return ds_ids
 
     def benchmark(self,
                   mode: str = "train",
                   epoch: int = 1,
+                  ds_id: Union[None, str] = None,
                   num_steps: int = 1000,
                   log_interval: int = 100,
                   detailed: bool = True) -> None:
@@ -180,81 +214,84 @@ class Pipeline:
         Args:
             mode: The execution mode to benchmark. This can be 'train', 'eval' or 'test'.
             epoch: The epoch index to benchmark. Note that epoch indices are 1-indexed.
+            ds_id: The ds_id to benchmark. If None, all ds_ids will be used.
             num_steps: The maximum number of steps over which to perform the benchmark.
             log_interval: The logging interval.
             detailed: Whether to display the detailed time used by each operator.
         """
-        with self(mode=mode, epoch=epoch) as loader:
-            if isinstance(loader, tf.data.Dataset):
-                loader = loader.take(num_steps)
-            start = time.perf_counter()
-            for idx, _ in enumerate(loader, start=1):
-                if idx % log_interval == 0:
-                    duration = time.perf_counter() - start
-                    iters_per_sec = log_interval / duration
-                    print("FastEstimator: Step: {}, Epoch: {}, Steps/sec: {}".format(idx, epoch, iters_per_sec))
-                    start = time.perf_counter()
-                if idx == num_steps:
-                    break
-            # Pipeline Operations Benchmarking when using FEDataset
-            if isinstance(loader, DataLoader) and isinstance(loader.dataset, OpDataset) and detailed:
-                op_list = loader.dataset.ops
-                duration_list = np.zeros(shape=(len(op_list)))
+        if ds_id is None:
+            ds_ids = self.get_ds_ids(epoch=epoch, mode=mode)
+        else:
+            ds_ids = [ds_id]
+        idx = 0
+        for ds_id in ds_ids:
+            if idx >= num_steps:
+                break
+            with self(mode=mode, epoch=epoch, ds_id=ds_id) as loader:
+                if isinstance(loader, tf.data.Dataset):
+                    loader = loader.take(num_steps)
+                start = time.perf_counter()
+                for idx, _ in enumerate(loader, start=idx + 1):
+                    if idx % log_interval == 0:
+                        duration = time.perf_counter() - start
+                        iters_per_sec = log_interval / duration
+                        print("FastEstimator: Step: {}, Epoch: {}, Steps/sec: {}".format(idx, epoch, iters_per_sec))
+                        start = time.perf_counter()
+                    if idx >= num_steps:
+                        break
+                # Pipeline Operations Benchmarking when using FEDataset
+                if isinstance(loader, DataLoader) and isinstance(loader.dataset, OpDataset) and detailed:
+                    op_list = loader.dataset.ops
+                    duration_list = np.zeros(shape=(len(op_list)))
+                    data_len = len(loader.dataset.dataset)
+                    print("\nBreakdown of time taken by Pipeline Operations (mode:{} epoch:{}, ds_id:{})".format(
+                        mode, epoch, ds_id))
+                    for _ in range(log_interval):
+                        index = np.random.randint(data_len)
+                        items = deepcopy(loader.dataset.dataset[index])
+                        if isinstance(loader.dataset.dataset, BatchDataset):
+                            # BatchDataset may randomly sample the same elements multiple times, need to avoid reprocessing
+                            unique_samples = set()
+                            for item in items:
+                                if id(item) not in unique_samples:
+                                    for i, op in enumerate(op_list):
+                                        start = time.perf_counter()
+                                        forward_numpyop([op], item, {'mode': loader.dataset.mode})
+                                        duration = time.perf_counter() - start
+                                        duration_list[i] += duration
+                                    unique_samples.add(id(item))
+                        else:
+                            for i, op in enumerate(op_list):
+                                start = time.perf_counter()
+                                forward_numpyop([op], items, {'mode': loader.dataset.mode})
+                                duration = time.perf_counter() - start
+                                duration_list[i] += duration
 
-                data_len = len(loader.dataset.dataset)
-                if self.batch_size:
-                    batch_size = self.batch_size.get_current_value(epoch) if isinstance(self.batch_size,
-                                                                                        Scheduler) else self.batch_size
-                    batch_size = batch_size[mode] if isinstance(batch_size, dict) else batch_size
-                    log_interval = log_interval * batch_size
+                    total_time = np.sum(duration_list)
+                    op_names = ["Op"]
 
-                print("\nBreakdown of time taken by Pipeline Operations ({} epoch {})".format(mode, epoch))
-                for _ in range(log_interval):
-                    index = np.random.randint(data_len)
-                    items = deepcopy(loader.dataset.dataset[index])
-                    if isinstance(loader.dataset.dataset, BatchDataset):
-                        # BatchDataset may randomly sample the same elements multiple times, need to avoid reprocessing
-                        unique_samples = set()
-                        for item in items:
-                            if id(item) not in unique_samples:
-                                for i, op in enumerate(op_list):
-                                    start = time.perf_counter()
-                                    forward_numpyop([op], item, {'mode': loader.dataset.mode})
-                                    duration = time.perf_counter() - start
-                                    duration_list[i] += duration
-                                unique_samples.add(id(item))
-                    else:
-                        for i, op in enumerate(op_list):
-                            start = time.perf_counter()
-                            forward_numpyop([op], items, {'mode': loader.dataset.mode})
-                            duration = time.perf_counter() - start
-                            duration_list[i] += duration
+                    for op in op_list:
+                        if isinstance(op, Sometimes) and op.op:
+                            op_names.append(op.__class__.__name__ + " (" + op.op.__class__.__name__ + ")")
+                        elif isinstance(op, OneOf) and op.ops:
+                            op_names.append(op.__class__.__name__ + " (" +
+                                            ", ".join([sub_op.__class__.__name__ for sub_op in op.ops]) + ")")
+                        else:
+                            op_names.append(op.__class__.__name__)
 
-                total_time = np.sum(duration_list)
-                op_names = ["Op"]
-
-                for op in op_list:
-                    if isinstance(op, Sometimes) and op.op:
-                        op_names.append(op.__class__.__name__ + " (" + op.op.__class__.__name__ + ")")
-                    elif isinstance(op, OneOf) and op.ops:
-                        op_names.append(op.__class__.__name__ + " (" +
-                                        ", ".join([sub_op.__class__.__name__ for sub_op in op.ops]) + ")")
-                    else:
-                        op_names.append(op.__class__.__name__)
-
-                max_op_len = max(len(op_name) for op_name in op_names)
-                max_in_len = max([len(", ".join(op.inputs)) for op in op_list] + [len("Inputs")])
-                max_out_len = max([len(", ".join(op.outputs)) for op in op_list] + [len("Outputs")])
-                print("{}: {}: {}: {}".format("Op".ljust(max_op_len + 1),
-                                              "Inputs".ljust(max_in_len + 1),
-                                              "Outputs".ljust(max_out_len + 1),
-                                              "Time".rjust(5)))
-                print("-" * (max_op_len + max_in_len + max_out_len + 15))
-                for i, op in enumerate(op_list):
-                    print("{}: {}: {}: {:5.2f}%".format(op_names[i + 1].ljust(max_op_len + 1),
-                                                        ", ".join(op.inputs).ljust(max_in_len + 1),
-                                                        ", ".join(op.outputs).ljust(max_out_len + 1),
-                                                        100 * duration_list[i] / total_time))
+                    max_op_len = max(len(op_name) for op_name in op_names)
+                    max_in_len = max([len(", ".join(op.inputs)) for op in op_list] + [len("Inputs")])
+                    max_out_len = max([len(", ".join(op.outputs)) for op in op_list] + [len("Outputs")])
+                    print("{}: {}: {}: {}".format("Op".ljust(max_op_len + 1),
+                                                  "Inputs".ljust(max_in_len + 1),
+                                                  "Outputs".ljust(max_out_len + 1),
+                                                  "Time".rjust(5)))
+                    print("-" * (max_op_len + max_in_len + max_out_len + 15))
+                    for i, op in enumerate(op_list):
+                        print("{}: {}: {}: {:5.2f}%".format(op_names[i + 1].ljust(max_op_len + 1),
+                                                            ", ".join(op.inputs).ljust(max_in_len + 1),
+                                                            ", ".join(op.outputs).ljust(max_out_len + 1),
+                                                            100 * duration_list[i] / total_time))
 
     def get_scheduled_items(self, mode: str) -> List[Any]:
         """Get a list of items considered for scheduling.
@@ -265,7 +302,7 @@ class Pipeline:
         Returns:
             List of schedulable items in Pipeline.
         """
-        all_items = self.ops + [self.batch_size] + [self.data[mode]]
+        all_items = self.ops + [self.batch_size] + list(self.data[mode].values())
         return all_items
 
     def get_epochs_with_data(self, total_epochs: int, mode: str) -> Set[int]:
@@ -279,32 +316,43 @@ class Pipeline:
             Set of epoch indices.
         """
         epochs_with_data = set()
-        dataset = self.data[mode]
-        if isinstance(dataset, Scheduler):
-            epochs_with_data = set(epoch for epoch in range(1, total_epochs + 1) if dataset.get_current_value(epoch))
-        elif dataset:
-            epochs_with_data = set(range(1, total_epochs + 1))
+        datasets = self.data[mode]
+        for dataset in datasets.values():
+            if isinstance(dataset, Scheduler):
+                epochs_with_data_ds = set(epoch for epoch in range(1, total_epochs + 1)
+                                          if dataset.get_current_value(epoch))
+                epochs_with_data = epochs_with_data | epochs_with_data_ds
+            elif dataset:
+                epochs_with_data_ds = set(range(1, total_epochs + 1))
+                epochs_with_data = epochs_with_data | epochs_with_data_ds
+                break
         return epochs_with_data
 
-    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 1) -> Dict[str, Any]:
+    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 1, ds_id: Union[None,
+                                                                                      str] = None) -> Dict[str, Any]:
         """Apply all pipeline operations on a given data instance for the specified `mode` and `epoch`.
 
         Args:
             data: Input data in dictionary format.
             mode: The execution mode in which to run. This can be "train", "eval", "test" or "infer".
             epoch: The epoch index to run. Note that epoch indices are 1-indexed.
+            ds_id: The current dataset id. If None, ops with all ds_id will be considered.
 
         Returns:
             The transformed data.
         """
         data = deepcopy(data)
-        ops = get_current_items(self.ops, mode, epoch)
+        ops = get_current_items(self.ops, mode, epoch, ds_id=ds_id)
         forward_numpyop(ops, data, {'mode': mode})
         for key, value in data.items():
             data[key] = np.expand_dims(value, 0)
         return data
 
-    def get_results(self, mode: str = "train", epoch: int = 1, num_steps: int = 1,
+    def get_results(self,
+                    mode: str = "train",
+                    epoch: int = 1,
+                    ds_id: Union[None, str] = None,
+                    num_steps: int = 1,
                     shuffle: bool = False) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
         """Get sample Pipeline outputs.
 
@@ -313,12 +361,13 @@ class Pipeline:
             epoch: The epoch index to run. Note that epoch indices are 1-indexed.
             num_steps: Number of steps (batches) to get.
             shuffle: Whether to use shuffling.
+            ds_id: The current dataset id. If None, ops with all ds_id will be considered.
 
         Returns:
             A list of batches of Pipeline outputs.
         """
         results = []
-        with self(mode=mode, epoch=epoch, shuffle=shuffle) as loader:
+        with self(mode=mode, epoch=epoch, ds_id=ds_id, shuffle=shuffle) as loader:
             if isinstance(loader, tf.data.Dataset):
                 loader = loader.take(num_steps)
             for idx, batch in enumerate(loader, start=1):
@@ -329,7 +378,11 @@ class Pipeline:
                 results = results[0]
             return results
 
-    def __call__(self, mode: str, epoch: int = 1, shuffle: Optional[bool] = None,
+    def __call__(self,
+                 mode: str,
+                 epoch: int = 1,
+                 ds_id: Union[None, str] = None,
+                 shuffle: Optional[bool] = None,
                  output_keys: Optional[Set[str]] = None) -> 'Pipeline':
         """Prepare this Pipeline for a given `mode` and `epoch`.
 
@@ -345,6 +398,7 @@ class Pipeline:
         Args:
             mode: The execution mode for the loader. This can be 'train', 'eval' or 'test'.
             epoch: The epoch index for the loader. Note that epoch indices are 1-indexed.
+            ds_id: The dataset id to consider for the loader.
             shuffle: Whether to shuffle the data. If None, the value for shuffle is based on mode. NOTE: This argument
                 is only used with FastEstimator Datasets.
             output_keys: What keys can be produced from pipeline. If None, all keys will be considered.
@@ -361,6 +415,7 @@ class Pipeline:
             raise ValueError("You cannot invoke a Pipeline's __call__ method while it already has an active loader.")
         self.ctx_mode = mode
         self.ctx_epoch = epoch
+        self.ctx_ds_id = ds_id
         self.ctx_shuffle = mode == 'train' if shuffle is None else shuffle
         self.ctx_output_keys = output_keys
         self.ctx_lock.release()
@@ -387,7 +442,7 @@ class Pipeline:
         acquired = self.ctx_lock.acquire(blocking=False)
         if not acquired:
             raise ValueError("You cannot generate a new loader from this Pipeline before closing its other loader.")
-        data = self.data[self.ctx_mode]
+        data = self.data[self.ctx_mode][self.ctx_ds_id]
         if isinstance(data, Scheduler):
             data = data.get_current_value(self.ctx_epoch)
         if isinstance(data, Dataset):
@@ -410,7 +465,7 @@ class Pipeline:
             if collate_fn is None and self.pad_value is not None:
                 collate_fn = self._pad_batch_collate
             op_dataset = OpDataset(data,
-                                   get_current_items(self.ops, self.ctx_mode, self.ctx_epoch),
+                                   get_current_items(self.ops, self.ctx_mode, self.ctx_epoch, self.ctx_ds_id),
                                    self.ctx_mode,
                                    self.ctx_output_keys,
                                    deep_remainder=False,
@@ -421,7 +476,7 @@ class Pipeline:
                                 shuffle=self.ctx_shuffle,
                                 num_workers=self.num_process,
                                 drop_last=False if batch_size is None else self.drop_last,
-                                worker_init_fn=lambda _: np.random.seed(random.randint(0, 2 ** 32 - 1)),
+                                worker_init_fn=lambda _: np.random.seed(random.randint(0, 2**32 - 1)),
                                 collate_fn=collate_fn)
             self.ctx_loader = data
         return data

@@ -49,6 +49,8 @@ class Rotate(NumpyOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
         limit: Range from which the angle can be picked. If limit is a single int the range is considered from
             (0, limit).
 
@@ -59,8 +61,9 @@ class Rotate(NumpyOp):
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  limit: Union[int, Tuple[int, int]] = 30):
-        super().__init__(inputs=to_list(inputs), outputs=to_list(outputs), mode=mode)
+        super().__init__(inputs=to_list(inputs), outputs=to_list(outputs), mode=mode, ds_id=ds_id)
         self.limit = param_to_range(limit)
 
     def set_rua_level(self, magnitude_coef: float) -> None:
@@ -105,12 +108,15 @@ class Identity(NumpyOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
     """
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
-                 mode: Union[None, str, Iterable[str]] = None):
-        super().__init__(inputs=to_list(inputs), outputs=to_list(outputs), mode=mode)
+                 mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None):
+        super().__init__(inputs=to_list(inputs), outputs=to_list(outputs), mode=mode, ds_id=ds_id)
 
     def set_rua_level(self, magnitude_coef: float) -> None:
         """A method which will be invoked by the RUA Op to adjust the augmentation intensity.
@@ -133,6 +139,8 @@ class Equalize(NumpyOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
 
     Image types:
         uint8
@@ -140,8 +148,9 @@ class Equalize(NumpyOp):
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
-                 mode: Union[None, str, Iterable[str]] = None):
-        super().__init__(inputs=to_list(inputs), outputs=to_list(outputs), mode=mode)
+                 mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None):
+        super().__init__(inputs=to_list(inputs), outputs=to_list(outputs), mode=mode, ds_id=ds_id)
 
     def set_rua_level(self, magnitude_coef: float) -> None:
         """A method which will be invoked by the RUA Op to adjust the augmentation intensity.
@@ -178,6 +187,8 @@ class Posterize(PosterizeAug):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
         num_bits: Number of high bits. If num_bits is a single value, the range will be [num_bits, num_bits]. A triplet
             of ints will be interpreted as [r, g, b], and a triplet of pairs as [[r1, r1], [g1, g2], [b1, b2]]. Must be
             in the range [0, 8].
@@ -189,12 +200,13 @@ class Posterize(PosterizeAug):
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  num_bits: Union[int,
                                  Tuple[int, int],
                                  Tuple[int, int, int],
                                  Tuple[Tuple[int, int], Tuple[int, int], Tuple[int, int]]] = 7):
         self.num_bits = num_bits
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode, num_bits=num_bits)
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id, num_bits=num_bits)
 
     def set_rua_level(self, magnitude_coef: float) -> None:
         """Set the augmentation intensity based on the magnitude_coef.
@@ -246,6 +258,8 @@ class Solarize(NumpyOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
         threshold: Range for the solarizing threshold. If threshold is a single value 't', the range will be [0, t].
 
     Image types:
@@ -255,8 +269,9 @@ class Solarize(NumpyOp):
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  threshold: Union[int, Tuple[int, int], float, Tuple[float, float]] = 256):
-        super().__init__(inputs=to_list(inputs), outputs=to_list(outputs), mode=mode)
+        super().__init__(inputs=to_list(inputs), outputs=to_list(outputs), mode=mode, ds_id=ds_id)
         self.threshold = threshold
 
     def set_rua_level(self, magnitude_coef: Union[int, float]) -> None:
@@ -311,6 +326,7 @@ class OneOfMultiVar(OneOf):
         inputs = to_set(numpy_ops[0].inputs)
         outputs = to_set(numpy_ops[0].outputs)
         mode = numpy_ops[0].mode
+        ds_id = numpy_ops[0].ds_id
         self.in_list = numpy_ops[0].in_list
         self.out_list = numpy_ops[0].out_list
         for op in numpy_ops[1:]:
@@ -325,7 +341,7 @@ class OneOfMultiVar(OneOf):
                 outputs.add(out)
 
         # Bypassing OneOf Op's restriction of same input and output key(s) on the list of passed NumpyOps.
-        super(OneOf, self).__init__(inputs=inputs.union(outputs), outputs=outputs, mode=mode)
+        super(OneOf, self).__init__(inputs=inputs.union(outputs), outputs=outputs, mode=mode, ds_id=ds_id)
         self.ops = numpy_ops
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
@@ -362,6 +378,8 @@ class RUA(NumpyOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
         choices: List of augmentations to apply.
         level: Factor to set the range for magnitude of augmentation. Must be in the range [0, 30].
 
@@ -372,23 +390,24 @@ class RUA(NumpyOp):
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  choices: Union[str, NumpyOp, List[Union[str, NumpyOp]]] = "defaults",
                  level: Union[int, float] = 18):
         self.default_aug_dict = {
-            "Rotate": Rotate(inputs=inputs, outputs=outputs, mode=mode, limit=90),
-            "Identity": Identity(inputs=inputs, outputs=outputs, mode=mode),
-            "AutoContrast": AutoContrast(inputs=inputs, outputs=outputs, mode=mode),
-            "Equalize": Equalize(inputs=inputs, outputs=outputs, mode=mode),
-            "Posterize": Posterize(inputs=inputs, outputs=outputs, mode=mode, num_bits=7),
-            "Solarize": Solarize(inputs=inputs, outputs=outputs, mode=mode, threshold=256),
-            "Sharpness": Sharpness(inputs=inputs, outputs=outputs, mode=mode, limit=0.9),
-            "Contrast": Contrast(inputs=inputs, outputs=outputs, mode=mode, limit=0.9),
-            "Color": Color(inputs=inputs, outputs=outputs, mode=mode, limit=0.9),
-            "Brightness": Brightness(inputs=inputs, outputs=outputs, mode=mode, limit=0.9),
-            "ShearX": ShearX(inputs=inputs, outputs=outputs, mode=mode, shear_coef=0.5),
-            "ShearY": ShearY(inputs=inputs, outputs=outputs, mode=mode, shear_coef=0.5),
-            "TranslateX": TranslateX(inputs=inputs, outputs=outputs, mode=mode, shift_limit=0.33),
-            "TranslateY": TranslateY(inputs=inputs, outputs=outputs, mode=mode, shift_limit=0.33)
+            "Rotate": Rotate(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id,limit=90),
+            "Identity": Identity(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id),
+            "AutoContrast": AutoContrast(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id),
+            "Equalize": Equalize(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id),
+            "Posterize": Posterize(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id,num_bits=7),
+            "Solarize": Solarize(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id,threshold=256),
+            "Sharpness": Sharpness(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id,limit=0.9),
+            "Contrast": Contrast(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id,limit=0.9),
+            "Color": Color(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id,limit=0.9),
+            "Brightness": Brightness(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id,limit=0.9),
+            "ShearX": ShearX(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id,shear_coef=0.5),
+            "ShearY": ShearY(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id,shear_coef=0.5),
+            "TranslateX": TranslateX(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id,shift_limit=0.33),
+            "TranslateY": TranslateY(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id,shift_limit=0.33)
         }
         aug_options = self._parse_aug_choices(magnitude_coef=(level / 30.), choices=to_list(choices))
 
@@ -399,7 +418,7 @@ class RUA(NumpyOp):
 
             for out in op.outputs:
                 outputs.add(out)
-        super().__init__(inputs=inputs.union(outputs), outputs=outputs, mode=mode)
+        super().__init__(inputs=inputs.union(outputs), outputs=outputs, mode=mode, ds_id=ds_id)
 
         # Calculating number of augmentation to apply at each training iteration
         N_min = 1

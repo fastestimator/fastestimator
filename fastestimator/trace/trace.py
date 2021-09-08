@@ -40,21 +40,29 @@ class Trace:
 
         on_begin                                            on_begin
             |                                                   |
-        on_epoch_begin (train)  <------<                    on_epoch_begin (test)  <------<
-            |                          |                        |                         |
-        on_batch_begin (train) <----<  |                    on_batch_begin (test) <----<  |
-            |                       |  |                        |                      |  |
-        on_batch_end (train) >-----^   |                    on_batch_end (test) >------^  |
-            |                          ^                        |                         |
-        on_epoch_end (train)           |                    on_epoch_end (test) >---------^
-            |                          |                        |
-        on_epoch_begin (eval)          |                    on_end
-            |                          ^
-        on_batch_begin (eval) <----<   |
-            |                      |   |
-        on_batch_end (eval) >-----^    |
-            |                          |
-        on_epoch_end (eval) >----------^
+        on_epoch_begin (train)  <-------<                   on_epoch_begin (test) <----------<
+            |                           |                       |                            |
+        on_ds_begin (train)  <--------< |                   on_ds_begin (test) <----------<  |
+            |                         | |                       |                         |  |
+        on_batch_begin (train) <----< | |                   on_batch_begin (test) <----<  |  |
+            |                       | | |                       |                      |  |  |
+        on_batch_end (train) >------^ | |                   on_batch_end (test) >------^  |  |
+            |                         | |                       |                         |  |
+        on_ds_end (train) >-----------^ |                   on_ds_end (test) >------------^  |
+                                        |                       |                            |
+        on_epoch_end (train)            |                   on_epoch_end (test) >------------^
+            |                           |                       |
+        on_epoch_begin (eval)           |                   on_end
+            |                           |
+        on_ds_begin (eval) <----------< |
+            |                         | |
+        on_batch_begin (eval) <----<  | |
+            |                      |  | |
+        on_batch_end (eval) >------^  | |
+            |                         | |
+        on_ds_end (eval) >------------^ |
+            |                           |
+        on_epoch_end (eval) >-----------^
             |
         on_end
     ```
@@ -77,7 +85,8 @@ class Trace:
     def __init__(self,
                  inputs: Union[None, str, Iterable[str]] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
-                 mode: Union[None, str, Iterable[str]] = None) -> None:
+                 mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None) -> None:
         self.inputs = to_list(inputs)
         self.outputs = to_list(outputs)
         self.mode = parse_modes(to_set(mode))
