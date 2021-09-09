@@ -46,7 +46,6 @@ class CheckNetworkWeight(fe.trace.Trace):
             When epoch is not in the work_intervals, the test will be skipped. If None, testing will be active all the
             time.
     """
-
     def __init__(self, model, grad_key, merge_grad, test_self, framework, lrs, work_intervals=None):
         if work_intervals:
             assert len(work_intervals) == len(lrs), "length of work_intervals need to be the same as lrs"
@@ -148,12 +147,12 @@ class TestUpdateOp(unittest.TestCase):
             - merge_grad / not
             - gradient input / loss input
         """
-
         def run_test(mixed_precision, merge_grad, gradient):
             lr = 0.1
             pipeline = fe.Pipeline(train_data=self.train_data,
                                    batch_size=4,
-                                   ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")])
+                                   ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")],
+                                   num_process=0)
 
             model = fe.build(model_fn=LeNet_tf,
                              optimizer_fn=lambda: tf.optimizers.SGD(lr),
@@ -199,12 +198,12 @@ class TestUpdateOp(unittest.TestCase):
             - merge_grad / not
             - gradient input / loss input
         """
-
         def run_test(mixed_precision, merge_grad, gradient):
             lr = 0.1
             pipeline = fe.Pipeline(train_data=self.train_data,
                                    batch_size=4,
-                                   ops=[ExpandDims(inputs="x", outputs="x", axis=0), Minmax(inputs="x", outputs="x")])
+                                   ops=[ExpandDims(inputs="x", outputs="x", axis=0), Minmax(inputs="x", outputs="x")],
+                                   num_process=0)
 
             model = fe.build(model_fn=LeNet_torch,
                              optimizer_fn=lambda x: torch.optim.SGD(params=x, lr=lr),
@@ -240,7 +239,6 @@ class TestUpdateOp(unittest.TestCase):
                         if (mixed_precision and gradient) or (torch.cuda.device_count() > 1 and merge_grad > 1):
                             with self.assertRaises(ValueError):
                                 run_test(mixed_precision, merge_grad, gradient)
-
                         else:
                             run_test(mixed_precision, merge_grad, gradient)
 
@@ -250,14 +248,14 @@ class TestUpdateOp(unittest.TestCase):
             - merge_grad / not
             - gradient input / loss input
         """
-
         def run_test(mixed_precision, merge_grad, gradient):
             lr = 0.1
             lr2 = 0.01
             lr3 = 0.001
             pipeline = fe.Pipeline(train_data=self.train_data,
                                    batch_size=4,
-                                   ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")])
+                                   ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")],
+                                   num_process=0)
 
             optimizer_fn = EpochScheduler({
                 1: lambda: tf.optimizers.SGD(lr), 2: lambda: tf.optimizers.SGD(lr2), 3: lambda: tf.optimizers.SGD(lr3)
@@ -306,14 +304,14 @@ class TestUpdateOp(unittest.TestCase):
             - merge_grad / not
             - gradient input / loss input
         """
-
         def run_test(mixed_precision, merge_grad, gradient):
             lr = 0.1
             lr2 = 0.01
             lr3 = 0.001
             pipeline = fe.Pipeline(train_data=self.train_data,
                                    batch_size=4,
-                                   ops=[ExpandDims(inputs="x", outputs="x", axis=0), Minmax(inputs="x", outputs="x")])
+                                   ops=[ExpandDims(inputs="x", outputs="x", axis=0), Minmax(inputs="x", outputs="x")],
+                                   num_process=0)
 
             optimizer_fn = EpochScheduler({
                 1: lambda x: torch.optim.SGD(params=x, lr=lr),
@@ -364,13 +362,13 @@ class TestUpdateOp(unittest.TestCase):
             - merge_grad / not
             - gradient input / loss input
         """
-
         def run_test(mixed_precision, merge_grad, gradient):
             lr = 0.1
             lr2 = 0.01
             pipeline = fe.Pipeline(train_data=self.train_data,
                                    batch_size=4,
-                                   ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")])
+                                   ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")],
+                                   num_process=0)
 
             optimizer_fn = RepeatScheduler([lambda: tf.optimizers.SGD(lr), lambda: tf.optimizers.SGD(lr2)])
 
@@ -417,18 +415,16 @@ class TestUpdateOp(unittest.TestCase):
             - merge_grad / not
             - gradient input / loss input
         """
-
         def run_test(mixed_precision, merge_grad, gradient):
             lr = 0.1
             lr2 = 0.01
             pipeline = fe.Pipeline(train_data=self.train_data,
                                    batch_size=4,
-                                   ops=[ExpandDims(inputs="x", outputs="x", axis=0), Minmax(inputs="x", outputs="x")])
+                                   ops=[ExpandDims(inputs="x", outputs="x", axis=0), Minmax(inputs="x", outputs="x")],
+                                   num_process=0)
 
-            optimizer_fn = RepeatScheduler([
-                lambda x: torch.optim.SGD(params=x, lr=lr),
-                lambda x: torch.optim.SGD(params=x, lr=lr2)
-            ])
+            optimizer_fn = RepeatScheduler(
+                [lambda x: torch.optim.SGD(params=x, lr=lr), lambda x: torch.optim.SGD(params=x, lr=lr2)])
 
             model = fe.build(model_fn=LeNet_torch, optimizer_fn=optimizer_fn, mixed_precision=mixed_precision)
             network = fe.Network(ops=[
