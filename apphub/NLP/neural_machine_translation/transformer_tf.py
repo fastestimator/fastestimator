@@ -43,7 +43,10 @@ def scaled_dot_product_attention(q, k, v, mask):
     matmul_qk = tf.matmul(q, k, transpose_b=True)
     dk = tf.cast(tf.shape(k)[-1], tf.float32)
     scaled_attention_logits = matmul_qk / tf.math.sqrt(dk)
-    scaled_attention_logits += (mask * -1e9)  # this is to make the softmax of masked cells to be 0
+    num_heads, inp_length = tf.shape(scaled_attention_logits)[1], tf.shape(scaled_attention_logits)[2]
+    num_heads_mask, inp_length_mask = tf.shape(mask)[1], tf.shape(mask)[2]
+    # This manual tiling is to fix a auto-broadcasting issue with tensorflow
+    scaled_attention_logits += tf.tile(mask * -1e9, [1, num_heads // num_heads_mask, inp_length // inp_length_mask, 1])
     attention_weights = tf.nn.softmax(scaled_attention_logits, axis=-1)
     output = tf.matmul(attention_weights, v)
     return output
