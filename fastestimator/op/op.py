@@ -65,6 +65,7 @@ class Op:
     inputs: List[str]
     outputs: List[str]
     mode: Set[str]
+    ds_id: Set[str]
     in_list: bool  # Whether inputs should be presented as a list or an individual value
     out_list: bool  # Whether outputs will be returned as a list or an individual value
 

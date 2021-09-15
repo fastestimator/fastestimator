@@ -24,7 +24,7 @@ from fastestimator.summary.summary import ValWithError
 from fastestimator.summary.system import System
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import parse_modes, to_list, to_number, to_set
+from fastestimator.util.util import check_ds_id, parse_modes, to_list, to_number, to_set
 
 
 @traceable()
@@ -37,35 +37,27 @@ class Trace:
 
     ``` plot
             Training:                                       Testing:
-
         on_begin                                            on_begin
             |                                                   |
-        on_epoch_begin (train)  <-------<                   on_epoch_begin (test) <----------<
-            |                           |                       |                            |
-        on_ds_begin (train)  <--------< |                   on_ds_begin (test) <----------<  |
-            |                         | |                       |                         |  |
-        on_batch_begin (train) <----< | |                   on_batch_begin (test) <----<  |  |
-            |                       | | |                       |                      |  |  |
-        on_batch_end (train) >------^ | |                   on_batch_end (test) >------^  |  |
-            |                         | |                       |                         |  |
-        on_ds_end (train) >-----------^ |                   on_ds_end (test) >------------^  |
-                                        |                       |                            |
-        on_epoch_end (train)            |                   on_epoch_end (test) >------------^
-            |                           |                       |
-        on_epoch_begin (eval)           |                   on_end
-            |                           |
-        on_ds_begin (eval) <----------< |
-            |                         | |
-        on_batch_begin (eval) <----<  | |
-            |                      |  | |
-        on_batch_end (eval) >------^  | |
-            |                         | |
-        on_ds_end (eval) >------------^ |
-            |                           |
-        on_epoch_end (eval) >-----------^
+        on_epoch_begin (train)  <------<                    on_epoch_begin (test)  <------<
+            |                          |                        |                         |
+        on_batch_begin (train) <----<  |                    on_batch_begin (test) <----<  |
+            |                       |  |                        |                      |  |
+        on_batch_end (train) >-----^   |                    on_batch_end (test) >------^  |
+            |                          ^                        |                         |
+        on_epoch_end (train)           |                    on_epoch_end (test) >---------^
+            |                          |                        |
+        on_epoch_begin (eval)          |                    on_end
+            |                          ^
+        on_batch_begin (eval) <----<   |
+            |                      |   |
+        on_batch_end (eval) >-----^    |
+            |                          |
+        on_epoch_end (eval) >----------^
             |
         on_end
     ```
+
 
     Args:
         inputs: A set of keys that this trace intends to read from the state dictionary as inputs.
@@ -73,11 +65,14 @@ class Trace:
         mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
     """
     system: System
     inputs: List[str]
     outputs: List[str]
     mode: Set[str]
+    ds_id: Set[str]
     # You can put keys in here to have them automatically added to EvalEssential without the user having to manually add
     # them to the Estimator monitor_names. See BestModelSaver for an example.
     fe_monitor_names: Set[str]
@@ -90,6 +85,7 @@ class Trace:
         self.inputs = to_list(inputs)
         self.outputs = to_list(outputs)
         self.mode = parse_modes(to_set(mode))
+        self.ds_id = check_ds_id(to_set(ds_id))
         self.fe_monitor_names = set()  # The use-case here is rare enough that we don't want to add this to the init sig
 
     def on_begin(self, data: Data) -> None:

@@ -186,7 +186,7 @@ def get_signature_epochs(items: List[Any], total_epochs: int, mode: Optional[str
 def get_current_items(items: Iterable[Union[T, Scheduler[T]]],
                       run_modes: Optional[Union[str, Iterable[str]]] = None,
                       epoch: Optional[int] = None,
-                      ds_id: Optional[Union[str, Iterable[str]]] = None) -> List[T]:
+                      ds_id: Optional[str] = None) -> List[T]:
     """Select items which should be executed for given mode and epoch.
 
     Args:

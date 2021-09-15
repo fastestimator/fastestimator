@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import gc
 import multiprocessing as mp
 import os
 import random
@@ -485,6 +486,9 @@ class Pipeline:
         if self.ctx_loader is not None:
             self.ctx_loader.shutdown()
             self.ctx_loader = None
+        # Manually triggering gc here seems to be necessary in order to avoid problems with repeated invocations of FE
+        # killing one another through multi-processing.
+        gc.collect()
         self.ctx_lock.release()
 
     def _pad_batch_collate(self, batch: List[MutableMapping[str, Any]]) -> Dict[str, Any]:

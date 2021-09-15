@@ -328,7 +328,6 @@ class Estimator:
                 with Suppressor():
                     batch = next(iterator)
                 ds_traces = sort_traces(ds_traces, available_outputs=to_set(batch.keys()) | network_output_keys)
-                self._run_traces_on_ds_begin(traces=ds_traces)
                 while True:
                     try:
                         if self.system.mode == "train":
@@ -348,7 +347,6 @@ class Estimator:
                             batch = next(iterator)
                     except StopIteration:
                         break
-            self._run_traces_on_ds_end(traces=ds_traces)
             self.network.unload_epoch()
         self._run_traces_on_epoch_end(traces=epoch_traces)
 
@@ -431,17 +429,6 @@ class Estimator:
             trace.on_epoch_begin(data)
         self._check_early_exit()
 
-    def _run_traces_on_ds_begin(self, traces: Iterable[Trace]) -> None:
-        """Invoke the on_ds_begin methods of given traces.
-
-        Args:
-            traces: List of traces.
-        """
-        data = Data()
-        for trace in traces:
-            trace.on_ds_begin(data)
-        self._check_early_exit()
-
     def _run_traces_on_batch_begin(self, batch: Dict[str, Any], traces: Iterable[Trace]) -> None:
         """Invoke the on_batch_begin methods of given traces.
 
@@ -466,17 +453,6 @@ class Estimator:
         data = Data(ChainMap(prediction, batch))
         for trace in traces:
             trace.on_batch_end(data)
-        self._check_early_exit()
-
-    def _run_traces_on_ds_end(self, traces: Iterable[Trace]) -> None:
-        """Invoke the on_ds_end methods of given traces.
-
-        Args:
-            traces: List of traces.
-        """
-        data = Data()
-        for trace in traces:
-            trace.on_ds_end(data)
         self._check_early_exit()
 
     def _run_traces_on_epoch_end(self, traces: Iterable[Trace]) -> None:

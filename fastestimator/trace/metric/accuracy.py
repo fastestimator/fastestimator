@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Set, Union
+from typing import Iterable, Set, Union
 
 import numpy as np
 
@@ -34,6 +34,8 @@ class Accuracy(Trace):
         mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except a particular one, you can pass like "!ds1".
         from_logits: Whether y_pred is from logits. If True, a sigmoid will be applied to the prediction.
         output_name: What to call the output from this trace (for example in the logger output).
     """
@@ -41,9 +43,10 @@ class Accuracy(Trace):
                  true_key: str,
                  pred_key: str,
                  mode: Union[str, Set[str]] = ("eval", "test"),
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  from_logits: bool = False,
                  output_name: str = "accuracy") -> None:
-        super().__init__(inputs=(true_key, pred_key), mode=mode, outputs=output_name)
+        super().__init__(inputs=(true_key, pred_key), mode=mode, outputs=output_name, ds_id=ds_id)
         self.from_logits = from_logits
         self.total = 0
         self.correct = 0
