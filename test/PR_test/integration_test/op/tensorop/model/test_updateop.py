@@ -151,8 +151,7 @@ class TestUpdateOp(unittest.TestCase):
             lr = 0.1
             pipeline = fe.Pipeline(train_data=self.train_data,
                                    batch_size=4,
-                                   ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")],
-                                   num_process=0)
+                                   ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")])
 
             model = fe.build(model_fn=LeNet_tf,
                              optimizer_fn=lambda: tf.optimizers.SGD(lr),
@@ -202,8 +201,7 @@ class TestUpdateOp(unittest.TestCase):
             lr = 0.1
             pipeline = fe.Pipeline(train_data=self.train_data,
                                    batch_size=4,
-                                   ops=[ExpandDims(inputs="x", outputs="x", axis=0), Minmax(inputs="x", outputs="x")],
-                                   num_process=0)
+                                   ops=[ExpandDims(inputs="x", outputs="x", axis=0), Minmax(inputs="x", outputs="x")])
 
             model = fe.build(model_fn=LeNet_torch,
                              optimizer_fn=lambda x: torch.optim.SGD(params=x, lr=lr),
@@ -254,8 +252,7 @@ class TestUpdateOp(unittest.TestCase):
             lr3 = 0.001
             pipeline = fe.Pipeline(train_data=self.train_data,
                                    batch_size=4,
-                                   ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")],
-                                   num_process=0)
+                                   ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")])
 
             optimizer_fn = EpochScheduler({
                 1: lambda: tf.optimizers.SGD(lr), 2: lambda: tf.optimizers.SGD(lr2), 3: lambda: tf.optimizers.SGD(lr3)
@@ -310,8 +307,7 @@ class TestUpdateOp(unittest.TestCase):
             lr3 = 0.001
             pipeline = fe.Pipeline(train_data=self.train_data,
                                    batch_size=4,
-                                   ops=[ExpandDims(inputs="x", outputs="x", axis=0), Minmax(inputs="x", outputs="x")],
-                                   num_process=0)
+                                   ops=[ExpandDims(inputs="x", outputs="x", axis=0), Minmax(inputs="x", outputs="x")])
 
             optimizer_fn = EpochScheduler({
                 1: lambda x: torch.optim.SGD(params=x, lr=lr),
@@ -367,8 +363,7 @@ class TestUpdateOp(unittest.TestCase):
             lr2 = 0.01
             pipeline = fe.Pipeline(train_data=self.train_data,
                                    batch_size=4,
-                                   ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")],
-                                   num_process=0)
+                                   ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")])
 
             optimizer_fn = RepeatScheduler([lambda: tf.optimizers.SGD(lr), lambda: tf.optimizers.SGD(lr2)])
 
@@ -420,8 +415,7 @@ class TestUpdateOp(unittest.TestCase):
             lr2 = 0.01
             pipeline = fe.Pipeline(train_data=self.train_data,
                                    batch_size=4,
-                                   ops=[ExpandDims(inputs="x", outputs="x", axis=0), Minmax(inputs="x", outputs="x")],
-                                   num_process=0)
+                                   ops=[ExpandDims(inputs="x", outputs="x", axis=0), Minmax(inputs="x", outputs="x")])
 
             optimizer_fn = RepeatScheduler(
                 [lambda x: torch.optim.SGD(params=x, lr=lr), lambda x: torch.optim.SGD(params=x, lr=lr2)])
