@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import gc
 import os
 import tempfile
 from collections import ChainMap
@@ -863,6 +864,13 @@ def build(model_fn: Callable[[], Union[Model, List[Model]]],
 
     if not hasattr(build, "count"):
         build.count = 0
+    # The following garbage collection is needed for if a TF model was running, but then died due to an exception being
+    # thrown, but the exception was then caught, whereupon the user wanted to switch to a pytorch model instead. Absent
+    # this collection, you would see: "Failed setting context: CUDA_ERROR_NOT_INITIALIZED: initialization error". This
+    # would be followed by the death of the pytorch multi-processor which would report something like the following:
+    # RuntimeError: DataLoader worker (pid 4225) is killed by signal: Aborted.
+    # RuntimeError: DataLoader worker (pid(s) 4225, 4226, 4227) exited unexpectedly
+    gc.collect()
     # tensorflow models requires setting global policies prior to model creation. Since there is no way to know the
     # framework of model, setting the policy for both tf and pytorch here.
     if mixed_precision:
