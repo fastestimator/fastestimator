@@ -112,7 +112,7 @@ class BaseNetwork:
     def load_epoch(self,
                    mode: str,
                    epoch: int,
-                   ds_id: Optional[str] = None,
+                   ds_id: Union[str, None],
                    output_keys: Optional[Set[str]] = None,
                    warmup: bool = False,
                    eager: bool = False) -> None:
@@ -191,8 +191,7 @@ class BaseNetwork:
             produced_keys.update(op.outputs)
         return input_keys
 
-    def _get_effective_postprocessing_input_keys(self, mode: str, epoch: int, ds_id: Optional[
-                                                                                           str] = None) -> Set[str]:
+    def _get_effective_postprocessing_input_keys(self, mode: str, epoch: int, ds_id: Optional[str] = None) -> Set[str]:
         """Determine which keys need to be provided as input to the postprocessing during the given `epoch`.
 
         Args:
@@ -291,7 +290,7 @@ class BaseNetwork:
         Returns:
             prediction_data overlaid on the input `data`.
         """
-        self.load_epoch(mode, epoch, ds_id=ds_id, warmup=False, eager=True)
+        self.load_epoch(mode, epoch, ds_id, warmup=False, eager=True)
         data = to_tensor(data, target_type=self.target_type)
         data, prediction = self.run_step(data)
         self.unload_epoch()
@@ -386,7 +385,7 @@ class TorchNetwork(BaseNetwork):
     def load_epoch(self,
                    mode: str,
                    epoch: int,
-                   ds_id: Optional[str] = None,
+                   ds_id: Union[str, None],
                    output_keys: Optional[Set[str]] = None,
                    warmup: bool = False,
                    eager: bool = False) -> None:
@@ -575,7 +574,7 @@ class TFNetwork(BaseNetwork):
     def load_epoch(self,
                    mode: str,
                    epoch: int,
-                   ds_id: Union[None, str] = None,
+                   ds_id: Union[None, str],
                    output_keys: Optional[Set[str]] = None,
                    warmup: bool = False,
                    eager: bool = False) -> None:
@@ -746,8 +745,7 @@ class TFNetwork(BaseNetwork):
                 prediction[key] = batch[key]
         return prediction
 
-    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 1, ds_id: Optional[
-                                                                                      str] = None) -> Dict[str, Any]:
+    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 1, ds_id: Optional[str] = None) -> Dict[str, Any]:
         """Run a forward step through the Network on an element of data.
 
         Args:

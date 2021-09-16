@@ -24,7 +24,7 @@ from fastestimator.summary.summary import ValWithError
 from fastestimator.summary.system import System
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import check_ds_id, parse_modes, to_list, to_number, to_set
+from fastestimator.util.util import check_ds_id, check_io_names, parse_modes, to_list, to_number, to_set
 
 
 @traceable()
@@ -82,8 +82,8 @@ class Trace:
                  outputs: Union[None, str, Iterable[str]] = None,
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None) -> None:
-        self.inputs = to_list(inputs)
-        self.outputs = to_list(outputs)
+        self.inputs = check_io_names(to_list(inputs))
+        self.outputs = check_io_names(to_list(outputs))
         self.mode = parse_modes(to_set(mode))
         self.ds_id = check_ds_id(to_set(ds_id))
         self.fe_monitor_names = set()  # The use-case here is rare enough that we don't want to add this to the init sig

@@ -60,9 +60,13 @@ class Pipeline:
         collate_fn: Function to merge data into one batch with input being list of elements.
     """
     ops: List[Union[NumpyOp, Scheduler[NumpyOp]]]
+    data: Dict[str, Dict[Optional[str], Union[DataSource, Scheduler[DataSource]]]]  #  {"mode": {"ds_id": ds}}
 
     def __init__(self,
-                 train_data: Union[None, DataSource, Scheduler[DataSource], Dict[str, Union[DataSource, Scheduler[DataSource]]] = None,
+                 train_data: Union[None,
+                                   DataSource,
+                                   Scheduler[DataSource],
+                                   Dict[str, Union[DataSource, Scheduler[DataSource]]]] = None,
                  eval_data: Union[None, DataSource, Scheduler[DataSource], Dict[str, DataSource]] = None,
                  test_data: Union[None, DataSource, Scheduler[DataSource], Dict[str, DataSource]] = None,
                  batch_size: Union[None, int, Scheduler[Union[int, Dict[str, int]]], Dict[str, int]] = None,
@@ -92,15 +96,27 @@ class Pipeline:
         self.ctx_shuffle = True
         self.ctx_output_keys = None
         self.ctx_loader = None
+        self.ctx_ds_id = None
 
-    def _register_ds_ids(self, data: Dict[str, Union[DataSource, Scheduler[DataSource], Dict[str, Union[DataSource, Scheduler[DataSource]]]]]):
+    @staticmethod
+    def _register_ds_ids(data: Dict[str,
+                                    Union[DataSource,
+                                          Scheduler[DataSource],
+                                          Dict[str, Union[DataSource, Scheduler[DataSource]]]]]):
         """Associate dataset of each mode with a `ds_id`.
 
         Args:
             data: A dictionary with mode as key, dataset as value.
         """
+        forbidden_ds_id_chars = {":", "!", ";", "|"}
         for mode, dataset in data.items():
-            if not isinstance(dataset, dict):
+            if isinstance(dataset, dict):
+                for ds_name in dataset:
+                    assert isinstance(ds_name, str) and len(ds_name) > 0, \
+                        "dataset id must be a string, found {}".format(ds_name)
+                    assert not any(char in ds_name for char in forbidden_ds_id_chars), \
+                        "dataset id should not contain forbidden characters like ':', ';', '!', '|', found {} in pipeline".format(ds_name)
+            else:
                 data[mode] = {None: dataset}
         return data
 
@@ -215,7 +231,7 @@ class Pipeline:
         Args:
             mode: The execution mode to benchmark. This can be 'train', 'eval' or 'test'.
             epoch: The epoch index to benchmark. Note that epoch indices are 1-indexed.
-            ds_id: The ds_id to benchmark. If None, all ds_ids will be used.
+            ds_id: The ds_id to benchmark. If None, all ds_ids will be benchmarked.
             num_steps: The maximum number of steps over which to perform the benchmark.
             log_interval: The logging interval.
             detailed: Whether to display the detailed time used by each operator.
@@ -224,19 +240,18 @@ class Pipeline:
             ds_ids = self.get_ds_ids(epoch=epoch, mode=mode)
         else:
             ds_ids = [ds_id]
-        idx = 0
+
         for ds_id in ds_ids:
-            if idx >= num_steps:
-                break
             with self(mode=mode, epoch=epoch, ds_id=ds_id) as loader:
                 if isinstance(loader, tf.data.Dataset):
                     loader = loader.take(num_steps)
                 start = time.perf_counter()
-                for idx, _ in enumerate(loader, start=idx + 1):
+                for idx, _ in enumerate(loader, start=1):
                     if idx % log_interval == 0:
                         duration = time.perf_counter() - start
                         iters_per_sec = log_interval / duration
-                        print("FastEstimator: Step: {}, Epoch: {}, Steps/sec: {}".format(idx, epoch, iters_per_sec))
+                        print("FastEstimator-Benchmark: Dataset: {}, Step: {}, Epoch: {}, Steps/sec: {}".format(
+                            ds_id, idx, epoch, iters_per_sec))
                         start = time.perf_counter()
                     if idx >= num_steps:
                         break
@@ -245,7 +260,7 @@ class Pipeline:
                     op_list = loader.dataset.ops
                     duration_list = np.zeros(shape=(len(op_list)))
                     data_len = len(loader.dataset.dataset)
-                    print("\nBreakdown of time taken by Pipeline Operations (mode:{} epoch:{}, ds_id:{})".format(
+                    print("Breakdown of time taken by Pipeline Operations (mode:{} epoch:{}, ds_id:{})".format(
                         mode, epoch, ds_id))
                     for _ in range(log_interval):
                         index = np.random.randint(data_len)
@@ -293,6 +308,7 @@ class Pipeline:
                                                             ", ".join(op.inputs).ljust(max_in_len + 1),
                                                             ", ".join(op.outputs).ljust(max_out_len + 1),
                                                             100 * duration_list[i] / total_time))
+                print("\n")  # to make printing more obvious
 
     def get_scheduled_items(self, mode: str) -> List[Any]:
         """Get a list of items considered for scheduling.

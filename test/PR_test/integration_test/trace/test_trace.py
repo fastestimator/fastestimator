@@ -90,3 +90,17 @@ class TestTraceSortTraces(unittest.TestCase):
         with self.subTest("available_output=None"):
             with self.assertRaises(AssertionError):
                 sorted_traces = fe.trace.sort_traces([trace1, trace2, trace3, trace4])
+
+
+class TestTraceNames(unittest.TestCase):
+    def test_forbidden_names_semi(self):
+        with self.assertRaises(AssertionError):
+            fe.trace.Trace(inputs="x:")
+        with self.assertRaises(AssertionError):
+            fe.trace.Trace(outputs="x:")
+
+    def test_forbidden_names_colon(self):
+        with self.assertRaises(AssertionError):
+            fe.trace.Trace(inputs="x;")
+        with self.assertRaises(AssertionError):
+            fe.trace.Trace(outputs="x;")

@@ -478,6 +478,14 @@ def get_shape(obj: Any) -> List[Optional[int]]:
     return result
 
 
+def check_io_names(names: List[Optional[str]]) -> List[Optional[str]]:
+    forbidden_chars = {":", ";"}
+    for name in names:
+        assert not any(char in name for char in forbidden_chars), \
+            "inputs/outputs name cannot contain characters like ':', ';', found {}".format(name)
+    return names
+
+
 def parse_modes(modes: Set[str]) -> Set[str]:
     """A function to determine which modes to run on based on a set of modes potentially containing blacklist values.
 
@@ -533,6 +541,11 @@ def check_ds_id(ds_ids: Set[str]) -> Set[str]:
     """
     negation = set([ds_id.startswith("!") for ds_id in ds_ids])
     assert len(negation) < 2, "cannot mix !ds_id with ds_id, found {}".format(ds_ids)
+    forbidden_ds_id_chars = {":", ";", "|"}
+    for ds_id in ds_ids:
+        assert isinstance(ds_id, str) and len(ds_id) > 0, "dataset id must be a string, found {}".format(ds_id)
+        assert not any(char in ds_id for char in forbidden_ds_id_chars), \
+            "dataset id should not contain forbidden characters like ':', ';', '|', found {}".format(ds_id)
     return ds_ids
 
 

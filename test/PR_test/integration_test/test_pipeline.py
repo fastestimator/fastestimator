@@ -723,3 +723,41 @@ class TestPipelineGetLoader(unittest.TestCase):
             with pipeline(mode='train') as loader1:
                 pipeline(mode='train')
                 print(loader1)
+
+
+class TestPipelineNames(unittest.TestCase):
+    def test_forbidden_names_none(self):
+        data = NumpyDataset({"x": np.array([[0, 255], [255, 0]])})
+        train_ds = {None: data}
+        with self.assertRaises(AssertionError):
+            fe.Pipeline(train_data=train_ds)
+
+    def test_forbidden_names_esc(self):
+        data = NumpyDataset({"x": np.array([[0, 255], [255, 0]])})
+        train_ds = {"!ds1": data}
+        with self.assertRaises(AssertionError):
+            fe.Pipeline(train_data=train_ds)
+
+    def test_forbidden_names_semi(self):
+        data = NumpyDataset({"x": np.array([[0, 255], [255, 0]])})
+        train_ds = {"ds1;": data}
+        with self.assertRaises(AssertionError):
+            fe.Pipeline(train_data=train_ds)
+
+    def test_forbidden_names_colon(self):
+        data = NumpyDataset({"x": np.array([[0, 255], [255, 0]])})
+        train_ds = {"ds1:": data}
+        with self.assertRaises(AssertionError):
+            fe.Pipeline(train_data=train_ds)
+
+    def test_forbidden_names_empty(self):
+        data = NumpyDataset({"x": np.array([[0, 255], [255, 0]])})
+        train_ds = {"": data}
+        with self.assertRaises(AssertionError):
+            fe.Pipeline(train_data=train_ds)
+
+    def test_forbidden_names_pipe(self):
+        data = NumpyDataset({"x": np.array([[0, 255], [255, 0]])})
+        train_ds = {"ds|ds1": data}
+        with self.assertRaises(AssertionError):
+            fe.Pipeline(train_data=train_ds)

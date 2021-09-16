@@ -235,7 +235,7 @@ class Estimator:
                     trace_input_keys.update(traces[0].inputs)
                     self.network.load_epoch(mode,
                                             epoch,
-                                            ds_id=ds_id,
+                                            ds_id,
                                             output_keys=trace_input_keys,
                                             warmup=True,
                                             eager=eager)
