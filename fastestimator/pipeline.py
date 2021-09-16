@@ -93,7 +93,7 @@ class Pipeline:
         self.ctx_output_keys = None
         self.ctx_loader = None
 
-    def _register_ds_ids(self, data: Dict[str, Union[DataSource, Scheduler[DataSource], Dict[str, DataSource]]]):
+    def _register_ds_ids(self, data: Dict[str, Union[DataSource, Scheduler[DataSource], Dict[str, Union[DataSource, Scheduler[DataSource]]]]]):
         """Associate dataset of each mode with a `ds_id`.
 
         Args:
@@ -187,11 +187,11 @@ class Pipeline:
         """Get the ds_ids for a given epoch and mode.
 
         Args:
-            epoch: The current epoch index
+            epoch: The current epoch index.
             mode: The current execution mode.
 
         Returns:
-            The ds_ids of current epoch and mode.
+            The ds_ids of the current epoch and mode.
         """
         ds_ids = []
         if mode in self.data:
@@ -206,7 +206,7 @@ class Pipeline:
     def benchmark(self,
                   mode: str = "train",
                   epoch: int = 1,
-                  ds_id: Union[None, str] = None,
+                  ds_id: Optional[str] = None,
                   num_steps: int = 1000,
                   log_interval: int = 100,
                   detailed: bool = True) -> None:
@@ -352,7 +352,7 @@ class Pipeline:
     def get_results(self,
                     mode: str = "train",
                     epoch: int = 1,
-                    ds_id: Union[None, str] = None,
+                    ds_id: Optional[str] = None,
                     num_steps: int = 1,
                     shuffle: bool = False) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
         """Get sample Pipeline outputs.
@@ -382,7 +382,7 @@ class Pipeline:
     def __call__(self,
                  mode: str,
                  epoch: int = 1,
-                 ds_id: Union[None, str] = None,
+                 ds_id: Optional[str] = None,
                  shuffle: Optional[bool] = None,
                  output_keys: Optional[Set[str]] = None) -> 'Pipeline':
         """Prepare this Pipeline for a given `mode` and `epoch`.
