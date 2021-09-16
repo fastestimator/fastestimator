@@ -21,9 +21,12 @@ import torch
 
 import fastestimator as fe
 from fastestimator.architecture.pytorch import LeNet as LeNetTorch
+from fastestimator.architecture.tensorflow import LeNet
 from fastestimator.architecture.tensorflow import LeNet as LeNetTf
+from fastestimator.dataset.data import mnist
 from fastestimator.network import TFNetwork, TorchNetwork
 from fastestimator.op.numpyop import NumpyOp
+from fastestimator.op.numpyop.univariate import ExpandDims, Minmax
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.loss import CrossEntropy, MeanSquaredError
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
@@ -190,7 +193,10 @@ class TestNetworkBuildOptimizer(unittest.TestCase):
         str_list = ['adadelta', 'adagrad', 'adam', 'adamax', 'rmsprop', 'sgd']
         for opt_name in str_list:
             with self.subTest(optimizer_fn=opt_name):
-                optimizer = fe.network._build_optimizer(optimizer_fn=opt_name, model=self.tf_model, framework="tf", mixed_precision=False)
+                optimizer = fe.network._build_optimizer(optimizer_fn=opt_name,
+                                                        model=self.tf_model,
+                                                        framework="tf",
+                                                        mixed_precision=False)
                 self.assertIsInstance(optimizer, tf.optimizers.Optimizer)
 
     def test_network_build_optimizer_torch_model_optimizer_str(self):
@@ -515,3 +521,102 @@ class TestNetworkTransform(unittest.TestCase):
         with self.subTest("check whether model weight changed"):
             weight2 = get_torch_lenet_model_weight(model)
             self.assertFalse(is_equal(weight, weight2))
+
+    def test_multi_whitelist(self):
+        train_data, eval_data = mnist.load_data()
+        test_data = eval_data.split(0.5)
+        pipeline = fe.Pipeline(train_data=train_data,
+                               eval_data=eval_data,
+                               test_data=test_data,
+                               batch_size=32,
+                               ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")])
+        model = fe.build(model_fn=LeNet, optimizer_fn="adam")
+        network = fe.Network(ops=[
+            ModelOp(model=model, inputs="x", outputs="y_pred"),
+            CrossEntropy(inputs=("y_pred", "y"), outputs="ce", ds_id=("ds_1", "ds_2"))
+        ])
+        pipeline_data = pipeline.transform(data=train_data[0], mode="train")
+        data1 = network.transform(data=pipeline_data, mode="train", ds_id="ds_1")
+        assert "ce" in data1
+        data2 = network.transform(data=pipeline_data, mode="train", ds_id="ds_2")
+        assert "ce" in data2
+        data3 = network.transform(data=pipeline_data, mode="train", ds_id="ds_3")
+        assert "ce" not in data3
+
+    def test_multi_blacklist(self):
+        train_data, eval_data = mnist.load_data()
+        test_data = eval_data.split(0.5)
+        pipeline = fe.Pipeline(train_data=train_data,
+                               eval_data=eval_data,
+                               test_data=test_data,
+                               batch_size=32,
+                               ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")])
+        model = fe.build(model_fn=LeNet, optimizer_fn="adam")
+        network = fe.Network(ops=[
+            ModelOp(model=model, inputs="x", outputs="y_pred"),
+            CrossEntropy(inputs=("y_pred", "y"), outputs="ce", ds_id=("!ds_1", "!ds_2"))
+        ])
+        pipeline_data = pipeline.transform(data=train_data[0], mode="train")
+        data1 = network.transform(data=pipeline_data, mode="eval", ds_id="ds_1")
+        assert "ce" not in data1
+        data2 = network.transform(data=pipeline_data, mode="eval", ds_id="ds_2")
+        assert "ce" not in data2
+        data3 = network.transform(data=pipeline_data, mode="eval", ds_id="ds_3")
+        assert "ce" in data3
+
+    def test_single_blacklist(self):
+        train_data, eval_data = mnist.load_data()
+        test_data = eval_data.split(0.5)
+        pipeline = fe.Pipeline(train_data=train_data,
+                               eval_data=eval_data,
+                               test_data=test_data,
+                               batch_size=32,
+                               ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")])
+        model = fe.build(model_fn=LeNet, optimizer_fn="adam")
+        network = fe.Network(ops=[
+            ModelOp(model=model, inputs="x", outputs="y_pred"),
+            CrossEntropy(inputs=("y_pred", "y"), outputs="ce", ds_id="!ds_1")
+        ])
+        pipeline_data = pipeline.transform(data=train_data[0], mode="train")
+        data1 = network.transform(data=pipeline_data, mode="test", ds_id="ds_1")
+        assert "ce" not in data1
+        data2 = network.transform(data=pipeline_data, mode="test", ds_id="ds_2")
+        assert "ce" in data2
+
+    def test_single_whitelist(self):
+        train_data, eval_data = mnist.load_data()
+        test_data = eval_data.split(0.5)
+        pipeline = fe.Pipeline(train_data=train_data,
+                               eval_data=eval_data,
+                               test_data=test_data,
+                               batch_size=32,
+                               ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")])
+        model = fe.build(model_fn=LeNet, optimizer_fn="adam")
+        network = fe.Network(ops=[
+            ModelOp(model=model, inputs="x", outputs="y_pred"),
+            CrossEntropy(inputs=("y_pred", "y"), outputs="ce", ds_id="ds_1")
+        ])
+        pipeline_data = pipeline.transform(data=train_data[0], mode="train")
+        data1 = network.transform(data=pipeline_data, mode="test", ds_id="ds_1")
+        assert "ce" in data1
+        data2 = network.transform(data=pipeline_data, mode="test", ds_id="ds_2")
+        assert "ce" not in data2
+
+    def test_mode_ds_id_interaction(self):
+        train_data, eval_data = mnist.load_data()
+        test_data = eval_data.split(0.5)
+        pipeline = fe.Pipeline(train_data=train_data,
+                               eval_data=eval_data,
+                               test_data=test_data,
+                               batch_size=32,
+                               ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")])
+        model = fe.build(model_fn=LeNet, optimizer_fn="adam")
+        network = fe.Network(ops=[
+            ModelOp(model=model, inputs="x", outputs="y_pred"),
+            CrossEntropy(inputs=("y_pred", "y"), outputs="ce", ds_id="ds_1")
+        ])
+        pipeline_data = pipeline.transform(data=train_data[0], mode="train")
+        data1 = network.transform(data=pipeline_data, mode="infer", ds_id="ds_1")
+        assert "ce" not in data1
+        data2 = network.transform(data=pipeline_data, mode="infer", ds_id="ds_2")
+        assert "ce" not in data2

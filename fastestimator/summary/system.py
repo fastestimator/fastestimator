@@ -222,9 +222,12 @@ class System:
             'tops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.network.ops],
             'pops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.network.postprocessing],
             'nops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.pipeline.ops],
-            'ds':
-            {key: value.__getstate__()
-             for key, value in self.pipeline.data.items() if hasattr(value, '__getstate__')}
+            'ds': {
+                mode: {key: value.__getstate__()
+                       for key, value in ds.items() if hasattr(value, '__getstate__')}
+                for mode,
+                ds in self.pipeline.data.items()
+            }
         }
         with open(os.path.join(save_dir, 'objects.pkl'), 'wb') as file:
             pickle.dump(objects, file)
@@ -315,8 +318,7 @@ class System:
                 # Might be a None or something else that can't be updated
                 pass
 
-    @staticmethod
-    def _load_dict(states: Dict[str, Any], state_key: str, in_memory_objects: Dict[Any, Any]) -> None:
+    def _load_dict(self, states: Dict[str, Any], state_key: str, in_memory_objects: Dict[Any, Any]) -> None:
         """Load a dictionary of pickled states from the disk.
 
         Args:
@@ -341,6 +343,8 @@ class System:
                 obj.__setstate__(state)
             elif hasattr(obj, '__dict__'):
                 obj.__dict__.update(state)
+            elif isinstance(obj, dict):
+                [self._load_dict(states, k, obj) for k in states]
             else:
                 # Might be a None or something else that can't be updated
                 pass

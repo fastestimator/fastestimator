@@ -44,7 +44,7 @@ class Fuse(TensorOp):
         inputs = []
         outputs = []
         mode = ops[0].mode
-        ds_id = ops[0].mode
+        ds_id = ops[0].ds_id
         self.last_retain_idx = 0
         self.models = set()
         self.loss_keys = set()

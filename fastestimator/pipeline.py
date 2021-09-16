@@ -176,7 +176,7 @@ class Pipeline:
         else:
             all_modes = []
             for mode, datasets in self.data.items():
-                for dataset in datasets.items():
+                for dataset in datasets.values():
                     if isinstance(dataset, Scheduler):
                         dataset = dataset.get_current_value(epoch)
                     if dataset:

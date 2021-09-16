@@ -79,7 +79,7 @@ class TestEpochScheduler(unittest.TestCase):
 
         # make some changes
         new_var = 2
-        system.pipeline.data["train"].get_current_value(1).var = new_var
+        system.pipeline.data["train"][None].get_current_value(1).var = new_var
 
         # save the state
         save_path = tempfile.mkdtemp()
@@ -89,7 +89,7 @@ class TestEpochScheduler(unittest.TestCase):
         system = instantiate_system()
         system.load_state(save_path)
 
-        loaded_var = system.pipeline.data["train"].get_current_value(1).var
+        loaded_var = system.pipeline.data["train"][None].get_current_value(1).var
         self.assertEqual(loaded_var, new_var)
 
     def test_save_and_load_state_with_ds_scheduler_torch(self):
@@ -105,7 +105,7 @@ class TestEpochScheduler(unittest.TestCase):
 
         # make some changes
         new_var = 2
-        system.pipeline.data["train"].get_current_value(1).var = new_var
+        system.pipeline.data["train"][None].get_current_value(1).var = new_var
 
         # save the state
         save_path = tempfile.mkdtemp()
@@ -115,7 +115,7 @@ class TestEpochScheduler(unittest.TestCase):
         system = instantiate_system()
         system.load_state(save_path)
 
-        loaded_var = system.pipeline.data["train"].get_current_value(1).var
+        loaded_var = system.pipeline.data["train"][None].get_current_value(1).var
         self.assertEqual(loaded_var, new_var)
 
     def test_save_and_load_state_with_top_scheduler_tf(self):
@@ -284,9 +284,9 @@ class TestEpochScheduler(unittest.TestCase):
 
         # make some changes
         new_var1 = 4
-        system.pipeline.data["train"].get_current_value(1).var = new_var1
+        system.pipeline.data["train"][None].get_current_value(1).var = new_var1
         new_var2 = 99
-        system.pipeline.data["train"].get_current_value(2).var = new_var2
+        system.pipeline.data["train"][None].get_current_value(2).var = new_var2
 
         # save the state
         save_path = tempfile.mkdtemp()
@@ -297,17 +297,19 @@ class TestEpochScheduler(unittest.TestCase):
         system.load_state(save_path)
 
         with self.subTest('Check that epoch dict is still populated'):
-            self.assertEqual(3, len(system.pipeline.data['train'].epoch_dict))
+            self.assertEqual(3, len(system.pipeline.data['train'][None].epoch_dict))
         with self.subTest('Check that classes are still intact'):
-            self.assertTrue(isinstance(system.pipeline.data['train'].get_current_value(1), TestNonTraceableDataset))
-            self.assertTrue(isinstance(system.pipeline.data['train'].get_current_value(2), TestNonTraceableDataset))
-            self.assertTrue(system.pipeline.data['train'].get_current_value(3) is None)
+            self.assertTrue(
+                isinstance(system.pipeline.data['train'][None].get_current_value(1), TestNonTraceableDataset))
+            self.assertTrue(
+                isinstance(system.pipeline.data['train'][None].get_current_value(2), TestNonTraceableDataset))
+            self.assertTrue(system.pipeline.data['train'][None].get_current_value(3) is None)
         with self.subTest('Check that the 1st epoch dict entry was not restored'):
             # Since the dataset is not traceable changes shouldn't get restored
-            loaded_var = system.pipeline.data["train"].get_current_value(1).var
+            loaded_var = system.pipeline.data["train"][None].get_current_value(1).var
             self.assertEqual(loaded_var, 3)
         with self.subTest('Check that the 2nd epoch dict entry was not restored'):
-            loaded_var = system.pipeline.data["train"].get_current_value(2).var
+            loaded_var = system.pipeline.data["train"][None].get_current_value(2).var
             self.assertEqual(loaded_var, 7)
 
     def test_save_and_load_state_with_hybrid_entries(self):
@@ -328,9 +330,9 @@ class TestEpochScheduler(unittest.TestCase):
 
         # make some changes
         new_var1 = 4
-        system.pipeline.data["train"].get_current_value(1).var = new_var1
+        system.pipeline.data["train"][None].get_current_value(1).var = new_var1
         new_var2 = 99
-        system.pipeline.data["train"].get_current_value(2).var = new_var2
+        system.pipeline.data["train"][None].get_current_value(2).var = new_var2
 
         # save the state
         save_path = tempfile.mkdtemp()
@@ -341,14 +343,15 @@ class TestEpochScheduler(unittest.TestCase):
         system.load_state(save_path)
 
         with self.subTest('Check that epoch dict is still populated'):
-            self.assertEqual(2, len(system.pipeline.data['train'].epoch_dict))
+            self.assertEqual(2, len(system.pipeline.data['train'][None].epoch_dict))
         with self.subTest('Check that classes are still intact'):
-            self.assertTrue(isinstance(system.pipeline.data['train'].get_current_value(1), TestNonTraceableDataset))
-            self.assertTrue(isinstance(system.pipeline.data['train'].get_current_value(2), TestDataset))
+            self.assertTrue(
+                isinstance(system.pipeline.data['train'][None].get_current_value(1), TestNonTraceableDataset))
+            self.assertTrue(isinstance(system.pipeline.data['train'][None].get_current_value(2), TestDataset))
         with self.subTest('Check that the 1st epoch dict entry was not restored'):
             # Since the dataset is not traceable changes shouldn't get restored
-            loaded_var = system.pipeline.data["train"].get_current_value(1).var
+            loaded_var = system.pipeline.data["train"][None].get_current_value(1).var
             self.assertEqual(loaded_var, 3)
         with self.subTest('Check that the 2nd epoch dict entry was restored'):
-            loaded_var = system.pipeline.data["train"].get_current_value(2).var
+            loaded_var = system.pipeline.data["train"][None].get_current_value(2).var
             self.assertEqual(loaded_var, new_var2)

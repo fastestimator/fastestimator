@@ -29,7 +29,7 @@ class TestBatchDataset(unittest.TestCase):
 
         # make some change
         new_var = 2
-        system.pipeline.data["train"].datasets[0].var = new_var
+        system.pipeline.data["train"][None].datasets[0].var = new_var
 
         # save the state
         save_path = tempfile.mkdtemp()
@@ -38,7 +38,7 @@ class TestBatchDataset(unittest.TestCase):
         # reinstantiate system and load the state
         system = instantiate_system()
         system.load_state(save_path)
-        loaded_var = system.pipeline.data["train"].datasets[0].var
+        loaded_var = system.pipeline.data["train"][None].datasets[0].var
 
         self.assertEqual(loaded_var, new_var)
 
@@ -56,7 +56,7 @@ class TestBatchDataset(unittest.TestCase):
 
         # make some change
         new_var = 2
-        system.pipeline.data["train"].datasets[0].var = new_var
+        system.pipeline.data["train"][None].datasets[0].var = new_var
 
         # save the state
         save_path = tempfile.mkdtemp()
@@ -65,6 +65,6 @@ class TestBatchDataset(unittest.TestCase):
         # reinstantiate system and load the state
         system = instantiate_system()
         system.load_state(save_path)
-        loaded_var = system.pipeline.data["train"].datasets[0].var
+        loaded_var = system.pipeline.data["train"][None].datasets[0].var
 
         self.assertEqual(loaded_var, new_var)
