@@ -62,7 +62,7 @@ class Pipeline:
     ops: List[Union[NumpyOp, Scheduler[NumpyOp]]]
 
     def __init__(self,
-                 train_data: Union[None, DataSource, Scheduler[DataSource], Dict[str, DataSource]] = None,
+                 train_data: Union[None, DataSource, Scheduler[DataSource], Dict[str, Union[DataSource, Scheduler[DataSource]]] = None,
                  eval_data: Union[None, DataSource, Scheduler[DataSource], Dict[str, DataSource]] = None,
                  test_data: Union[None, DataSource, Scheduler[DataSource], Dict[str, DataSource]] = None,
                  batch_size: Union[None, int, Scheduler[Union[int, Dict[str, int]]], Dict[str, int]] = None,
