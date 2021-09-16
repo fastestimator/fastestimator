@@ -562,6 +562,25 @@ class TestPipelineGetResults(unittest.TestCase):
         data3 = pipeline.get_results(mode="test", ds_id="ds_2")
         assert data3["x"].numpy().max() == 1.0
 
+    def test_multi_train_scheduler(self):
+        train_ds = NumpyDataset({"x": np.array([[0, 255], [255, 0]])})
+        train_ds2 = NumpyDataset({"x": np.array([[0, 256], [256, 0]])})
+        train_data1 = train_ds
+        train_data2 = EpochScheduler({1: train_ds, 2: None})
+        train_data3 = EpochScheduler({1: train_ds, 2: train_ds2})
+        train_dataset_overall = {"ds_1": train_data1, "ds_2": train_data2, "ds_3": train_data3}
+        pipeline = fe.Pipeline(train_data=train_dataset_overall,
+                               batch_size=1,
+                               ops=Minmax(inputs="x", outputs="x", ds_id=("ds_1", "ds_2")))
+        data1 = pipeline.get_results(mode="train", ds_id="ds_3", epoch=1)
+        assert data1["x"].numpy().max() == 255
+        data2 = pipeline.get_results(mode="train", ds_id="ds_3", epoch=2)
+        assert data2["x"].numpy().max() == 256
+        data3 = pipeline.get_results(mode="train", ds_id="ds_1", epoch=1)
+        assert data3["x"].numpy().max() == 1.0
+        data4 = pipeline.get_results(mode="train", ds_id="ds_2", epoch=2)
+        assert data4 == []
+
 
 class TestPipelineGetLoader(unittest.TestCase):
     """ This test cover:

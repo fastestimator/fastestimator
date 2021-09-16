@@ -371,12 +371,13 @@ class Pipeline:
         with self(mode=mode, epoch=epoch, ds_id=ds_id, shuffle=shuffle) as loader:
             if isinstance(loader, tf.data.Dataset):
                 loader = loader.take(num_steps)
-            for idx, batch in enumerate(loader, start=1):
-                results.append(batch)
-                if idx == num_steps:
-                    break
-            if len(results) == 1:
-                results = results[0]
+            if loader:
+                for idx, batch in enumerate(loader, start=1):
+                    results.append(batch)
+                    if idx == num_steps:
+                        break
+                if len(results) == 1:
+                    results = results[0]
             return results
 
     def __call__(self,

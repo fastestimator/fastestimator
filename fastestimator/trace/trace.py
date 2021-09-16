@@ -37,6 +37,7 @@ class Trace:
 
     ``` plot
             Training:                                       Testing:
+
         on_begin                                            on_begin
             |                                                   |
         on_epoch_begin (train)  <------<                    on_epoch_begin (test)  <------<
@@ -57,7 +58,6 @@ class Trace:
             |
         on_end
     ```
-
 
     Args:
         inputs: A set of keys that this trace intends to read from the state dictionary as inputs.

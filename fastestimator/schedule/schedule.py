@@ -233,6 +233,7 @@ def get_current_items(items: Iterable[Union[T, Scheduler[T]]],
                     ds_id_match = True
                 elif ds_id in item_.ds_id:
                     ds_id_match = True  # whitelist check
+                # if any of ds_id starts with "!", then they will all start with "!"
                 elif any([x.startswith("!") for x in item_.ds_id]) and all([ds_id != x[1:] for x in item_.ds_id]):
                     ds_id_match = True  # blacklist check
             if item_ and mode_match and ds_id_match:
