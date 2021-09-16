@@ -47,7 +47,7 @@ class OneOf(TensorOp):
             assert outputs == op.outputs, "All ops within a OneOf must share the same outputs"
             assert self.out_list == op.out_list, "All ops within OneOf must share the same output configuration"
             assert mode == op.mode, "All ops within a OneOf must share the same mode"
-            assert ds_id == op.ds_id, "All ops within a OneOf must share the same mode"
+            assert ds_id == op.ds_id, "All ops within a OneOf must share the same ds_id"
         self.ops = tensor_ops
         self.prob_fn = None
         self.invoke_fn = None

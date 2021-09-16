@@ -526,7 +526,7 @@ def check_ds_id(ds_ids: Set[str]) -> Set[str]:
         ds_ids: The desired ds_id to run on (possibly containing blacklisted ds_ids).
 
     Returns:
-        The ds_ids to run or tp avoid.
+        The ds_ids to run or to avoid.
 
     Raises:
         AssertionError: if blacklisted modes and whitelisted modes are mixed.

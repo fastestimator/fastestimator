@@ -112,7 +112,7 @@ class BaseNetwork:
     def load_epoch(self,
                    mode: str,
                    epoch: int,
-                   ds_id: Union[None, str] = None,
+                   ds_id: Optional[str] = None,
                    output_keys: Optional[Set[str]] = None,
                    warmup: bool = False,
                    eager: bool = False) -> None:
@@ -173,7 +173,7 @@ class BaseNetwork:
             loss_keys |= op.get_fe_loss_keys()
         return loss_keys
 
-    def get_effective_input_keys(self, mode: str, epoch: int, ds_id: Union[None, str] = None) -> Set[str]:
+    def get_effective_input_keys(self, mode: str, epoch: int, ds_id: Optional[str] = None) -> Set[str]:
         """Determine which keys need to be provided as input to the network during the given `epoch`.
 
         Args:
@@ -191,7 +191,7 @@ class BaseNetwork:
             produced_keys.update(op.outputs)
         return input_keys
 
-    def _get_effective_postprocessing_input_keys(self, mode: str, epoch: int, ds_id: Union[None,
+    def _get_effective_postprocessing_input_keys(self, mode: str, epoch: int, ds_id: Optional[
                                                                                            str] = None) -> Set[str]:
         """Determine which keys need to be provided as input to the postprocessing during the given `epoch`.
 
@@ -386,7 +386,7 @@ class TorchNetwork(BaseNetwork):
     def load_epoch(self,
                    mode: str,
                    epoch: int,
-                   ds_id: Union[None, str] = None,
+                   ds_id: Optional[str] = None,
                    output_keys: Optional[Set[str]] = None,
                    warmup: bool = False,
                    eager: bool = False) -> None:
@@ -746,7 +746,7 @@ class TFNetwork(BaseNetwork):
                 prediction[key] = batch[key]
         return prediction
 
-    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 1, ds_id: Union[None,
+    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 1, ds_id: Optional[
                                                                                       str] = None) -> Dict[str, Any]:
         """Run a forward step through the Network on an element of data.
 

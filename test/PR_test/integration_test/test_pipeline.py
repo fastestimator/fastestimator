@@ -322,7 +322,7 @@ class TestPipelineBenchmark(unittest.TestCase):
         pipeline = fe.Pipeline(train_data=ds)
         pipeline.benchmark()
 
-    def test_multi_train(self):
+    def test_multi_eval(self):
         ds = {"ds_1": self.sample_torch_dataset, "ds_2": self.sample_torch_dataset}
         pipeline = fe.Pipeline(eval_data=ds)
         pipeline.benchmark(mode="eval")
