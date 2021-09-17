@@ -21,6 +21,7 @@ from fastestimator.op.numpyop.multivariate.elastic_transform import ElasticTrans
 from fastestimator.op.numpyop.multivariate.flip import Flip
 from fastestimator.op.numpyop.multivariate.grid_distortion import GridDistortion
 from fastestimator.op.numpyop.multivariate.horizontal_flip import HorizontalFlip
+from fastestimator.op.numpyop.multivariate.iaa_crop_and_pad import IAACropAndPad
 from fastestimator.op.numpyop.multivariate.longest_max_size import LongestMaxSize
 from fastestimator.op.numpyop.multivariate.mask_dropout import MaskDropout
 from fastestimator.op.numpyop.multivariate.optical_distortion import OpticalDistortion
