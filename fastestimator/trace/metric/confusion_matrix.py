@@ -12,17 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Set, Union
+from typing import Any, Dict, Union, Iterable
 
 import numpy as np
 from sklearn.metrics import confusion_matrix
 
+from fastestimator.trace.meta.per_ds import per_ds
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
 
 
+@per_ds
 @traceable()
 class ConfusionMatrix(Trace):
     """Computes the confusion matrix between y_true (rows) and y_predicted (columns).
@@ -34,6 +36,8 @@ class ConfusionMatrix(Trace):
         mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Trace in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         output_name: Name of the key to store to the state.
         **kwargs: Additional keyword arguments that pass to sklearn.metrics.confusion_matrix()
 
@@ -44,11 +48,12 @@ class ConfusionMatrix(Trace):
                  true_key: str,
                  pred_key: str,
                  num_classes: int,
-                 mode: Union[str, Set[str]] = ("eval", "test"),
+                 mode: Union[None, str, Iterable[str]] = ("eval", "test"),
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  output_name: str = "confusion_matrix",
                  **kwargs) -> None:
         ConfusionMatrix.check_kwargs(kwargs)
-        super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode)
+        super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode, ds_id=ds_id)
         self.num_classes = num_classes
         self.matrix = None
         self.kwargs = kwargs

@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import inspect
-from typing import Callable, Union
+from typing import Callable, Union, Iterable
 
 import numpy as np
 import tensorflow as tf
@@ -43,13 +43,18 @@ class LRScheduler(Trace):
     Args:
         model: A model instance compiled with fe.build.
         lr_fn: A lr scheduling function that takes either 'epoch' or 'step' as input, or the string 'arc'.
+        ds_id: What dataset id(s) to execute this Trace in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
 
     Raises:
         AssertionError: If the `lr_fn` is not configured properly.
     """
     system: System
 
-    def __init__(self, model: Union[tf.keras.Model, torch.nn.Module], lr_fn: Union[str, Callable[[int], float]]) -> None:
+    def __init__(self,
+                 model: Union[tf.keras.Model, torch.nn.Module],
+                 lr_fn: Union[str, Callable[[int], float]],
+                 ds_id: Union[None, str, Iterable[str]] = None) -> None:
         self.model = model
         self.lr_fn = ARC() if lr_fn == "arc" else lr_fn
         assert hasattr(self.lr_fn, "__call__") or isinstance(self.lr_fn, ARC), "lr_fn must be either a function or ARC"
@@ -87,8 +92,8 @@ class LRScheduler(Trace):
     def on_batch_end(self, data: Data) -> None:
         if self.system.mode == "train" and isinstance(self.lr_fn, ARC):
             self.lr_fn.accumulate_single_train_loss(data[min(self.model.loss_name)].numpy())
-        if self.system.mode == "train" and self.system.log_steps and (
-                self.system.global_step % self.system.log_steps == 0 or self.system.global_step == 1):
+        if self.system.mode == "train" and self.system.log_steps and (self.system.global_step % self.system.log_steps
+                                                                      == 0 or self.system.global_step == 1):
             current_lr = np.float32(get_lr(self.model))
             data.write_with_log(self.outputs[0], current_lr)
 

@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import os
-from typing import Sequence, Set, Union
+from typing import Sequence, Union, Iterable
 
 import matplotlib.pyplot as plt
 
@@ -37,13 +37,16 @@ class ImageSaver(Trace):
         mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Trace in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
     def __init__(self,
                  inputs: Union[str, Sequence[str]],
                  save_dir: str = os.getcwd(),
                  dpi: int = 300,
-                 mode: Union[str, Set[str]] = ("eval", "test")) -> None:
-        super().__init__(inputs=inputs, mode=mode)
+                 mode: Union[None, str, Iterable[str]] = ("eval", "test"),
+                 ds_id: Union[None, str, Iterable[str]] = None) -> None:
+        super().__init__(inputs=inputs, mode=mode, ds_id=ds_id)
         self.save_dir = save_dir
         self.dpi = dpi
 

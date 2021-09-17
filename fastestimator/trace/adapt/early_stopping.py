@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Optional
+from typing import Optional, Union, Iterable
 
 import numpy as np
 
@@ -37,6 +37,8 @@ class EarlyStopping(Trace):
         mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Trace in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
 
     Raises:
         ValueError: If `compare` is an invalid value or more than one `monitor` is provided.
@@ -47,8 +49,9 @@ class EarlyStopping(Trace):
                  patience: int = 0,
                  compare: str = 'min',
                  baseline: Optional[float] = None,
-                 mode: str = 'eval') -> None:
-        super().__init__(inputs=monitor, mode=mode)
+                 mode: str = 'eval',
+                 ds_id: Union[None, str, Iterable[str]] = None) -> None:
+        super().__init__(inputs=monitor, mode=mode, ds_id=ds_id)
 
         if len(self.inputs) != 1:
             raise ValueError("EarlyStopping supports only one monitor key")

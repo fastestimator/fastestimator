@@ -15,7 +15,7 @@
 import os
 import shutil
 from collections import deque
-from typing import Optional, Union
+from typing import Optional, Union, Iterable
 
 import tensorflow as tf
 import torch
@@ -39,6 +39,8 @@ class ModelSaver(Trace):
             only available for TensorFlow models at present, and will generate a folder containing several files. The
             model can then be re-instantiated even without access to the original code by calling:
             tf.keras.models.load_model(<path to model folder>).
+        ds_id: What dataset id(s) to execute this Trace in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
 
     Raises:
         ValueError: If `max_to_keep` is negative, or if save_architecture is used with a PyTorch model.
@@ -48,8 +50,9 @@ class ModelSaver(Trace):
                  save_dir: str,
                  frequency: int = 1,
                  max_to_keep: Optional[int] = None,
-                 save_architecture: bool = False) -> None:
-        super().__init__(mode="train")
+                 save_architecture: bool = False,
+                 ds_id: Union[None, str, Iterable[str]] = None) -> None:
+        super().__init__(mode="train", ds_id=ds_id)
         self.model = model
         self.save_dir = save_dir
         self.frequency = frequency
@@ -64,7 +67,9 @@ class ModelSaver(Trace):
         # No model will be saved when save_dir is None, which makes smoke test easier.
         if self.save_dir and self.system.epoch_idx % self.frequency == 0:
             model_name = "{}_epoch_{}".format(self.model.model_name, self.system.epoch_idx)
-            model_path = save_model(model=self.model, save_dir=self.save_dir, model_name=model_name,
+            model_path = save_model(model=self.model,
+                                    save_dir=self.save_dir,
+                                    model_name=model_name,
                                     save_architecture=self.save_architecture)
             print("FastEstimator-ModelSaver: Saved model to {}".format(model_path))
             rm_path = self.file_queue[self.file_queue.maxlen - 1] if self.file_queue.maxlen else None
