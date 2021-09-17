@@ -55,8 +55,8 @@ class GradCAM(Trace):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
-            ds_ids except a particular one, you can pass like "!ds1".
+        ds_id: What dataset id(s) to execute this Trace in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
     def __init__(self,
                  images: str,
@@ -67,7 +67,8 @@ class GradCAM(Trace):
                  preds: Optional[str] = None,
                  label_mapping: Optional[Dict[str, Any]] = None,
                  outputs: str = "gradcam",
-                 mode: Union[None, str, Iterable[str]] = "!train"):
+                 mode: Union[None, str, Iterable[str]] = "!train",
+                 ds_id: Union[None, str, Iterable[str]] = None):
         self.image_key = images
         self.grad_key = grads
         self.true_label_key = labels
@@ -77,7 +78,7 @@ class GradCAM(Trace):
         self.n_samples = n_samples
         # TODO - handle non-hashable labels
         self.label_mapping = {val: key for key, val in label_mapping.items()} if label_mapping else None
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.images = []
         self.grads = []
         self.labels = []

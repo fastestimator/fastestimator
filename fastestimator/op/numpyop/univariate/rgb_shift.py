@@ -30,8 +30,8 @@ class RGBShift(ImageOnlyAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
-            ds_ids except a particular one, you can pass like "!ds1".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         r_shift_limit: range for changing values for the red channel. If r_shift_limit is a single int, the range
             will be (-r_shift_limit, r_shift_limit).
         g_shift_limit: range for changing values for the green channel. If g_shift_limit is a single int, the range

@@ -16,12 +16,14 @@ from typing import Iterable, Set, Union
 
 import numpy as np
 
+from fastestimator.trace.meta.per_ds import per_ds
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
 
 
+@per_ds
 @traceable()
 class Accuracy(Trace):
     """A trace which computes the accuracy for a given set of predictions.
@@ -34,8 +36,8 @@ class Accuracy(Trace):
         mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
-            ds_ids except a particular one, you can pass like "!ds1".
+        ds_id: What dataset id(s) to execute this Trace in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         from_logits: Whether y_pred is from logits. If True, a sigmoid will be applied to the prediction.
         output_name: What to call the output from this trace (for example in the logger output).
     """

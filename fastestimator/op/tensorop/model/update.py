@@ -42,8 +42,8 @@ class UpdateOp(TensorOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
-            ds_ids except a particular one, you can pass like "!ds1".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         merge_grad: The gradient accumulation times before model update. Ex: if `merge_grad` = 3, for every three Op
             calls only the third one updates the model. The first two calls only accumulate its gradients. This default
             value is 1 and it will update the model at every step.

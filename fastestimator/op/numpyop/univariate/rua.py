@@ -49,8 +49,8 @@ class Rotate(NumpyOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
-            ds_ids except a particular one, you can pass like "!ds1".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         limit: Range from which the angle can be picked. If limit is a single int the range is considered from
             (0, limit).
 
@@ -108,8 +108,8 @@ class Identity(NumpyOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
-            ds_ids except a particular one, you can pass like "!ds1".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
@@ -139,8 +139,8 @@ class Equalize(NumpyOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
-            ds_ids except a particular one, you can pass like "!ds1".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
 
     Image types:
         uint8
@@ -187,8 +187,8 @@ class Posterize(PosterizeAug):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
-            ds_ids except a particular one, you can pass like "!ds1".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         num_bits: Number of high bits. If num_bits is a single value, the range will be [num_bits, num_bits]. A triplet
             of ints will be interpreted as [r, g, b], and a triplet of pairs as [[r1, r1], [g1, g2], [b1, b2]]. Must be
             in the range [0, 8].
@@ -258,8 +258,8 @@ class Solarize(NumpyOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
-            ds_ids except a particular one, you can pass like "!ds1".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         threshold: Range for the solarizing threshold. If threshold is a single value 't', the range will be [0, t].
 
     Image types:
@@ -378,8 +378,8 @@ class RUA(NumpyOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
-            ds_ids except a particular one, you can pass like "!ds1".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         choices: List of augmentations to apply.
         level: Factor to set the range for magnitude of augmentation. Must be in the range [0, 30].
 
