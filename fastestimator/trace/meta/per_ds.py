@@ -34,12 +34,37 @@ class DSData(Data):
         super().write_without_log(key=f'{key}|{self.ds_id}', value=value)
 
 
-def per_ds(cls: type(Trace)):
-    class PerDS(cls, PerDSTrace):
-        @functools.wraps(cls.__init__)
+def per_ds(clz: type(Trace)):
+    """A class annotation which will convert regular traces into dataset-sensitive traces.
+
+    Args:
+        clz: The base class to be converted.
+
+    Returns:
+        A dataset aware version of the class. Note that if the annotated class instance has a 'per_ds' member variable
+        which is set to False, or has outputs containing the '|' character, then a normal (non-ds-aware) instance will
+        be returned instead.
+    """
+    class PerDS(clz, PerDSTrace):
+        @functools.wraps(clz.__new__)
+        def __new__(cls, *args, **kwargs):
+            # We will dynamically determine whether to return a base object or a PerDS variant
+            # If any of the outputs already use the | character then we cannot make this a PerDS variant
+            base_obj = clz.__new__(clz)
+            base_obj.__init__(*args, **kwargs)
+            for output in base_obj.outputs:
+                if '|' in output:
+                    return base_obj
+            # If the user set per_ds to False in the constructor then we will not make this a PerDS variant
+            if hasattr(base_obj, 'per_ds') and base_obj.per_ds is False:
+                return base_obj
+            # Otherwise we are good to go with the PerDS variant
+            return super().__new__(cls)
+
+        @functools.wraps(clz.__init__)
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
-            self.fe_per_ds_trace = cls.__new__(cls)
+            self.fe_per_ds_trace = clz.__new__(clz)
             self.fe_per_ds_trace.__init__(*args, **kwargs)
 
         def get_outputs(self, ds_ids: Union[None, str, List[str]]) -> List[str]:
@@ -76,7 +101,7 @@ def per_ds(cls: type(Trace)):
             super().on_end(data)
             self.fe_per_ds_trace.on_end(data)
 
-    PerDS.__name__ = cls.__name__
-    PerDS.__qualname__ = cls.__qualname__
-    PerDS.__module__ = cls.__module__
+    PerDS.__name__ = clz.__name__
+    PerDS.__qualname__ = clz.__qualname__
+    # PerDS.__module__ = clz.__module__  # We don't override the module so that debugging is more clear
     return PerDS

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Iterable, Set, Union
+from typing import Iterable, Union
 
 import numpy as np
 
@@ -40,18 +40,23 @@ class Accuracy(Trace):
             ds_ids except for a particular one, you can pass an argument like "!ds1".
         from_logits: Whether y_pred is from logits. If True, a sigmoid will be applied to the prediction.
         output_name: What to call the output from this trace (for example in the logger output).
+        per_ds: Whether to automatically compute this metric individually for every ds_id it runs on, in addition to
+            computing an aggregate across all ds_ids on which it runs. This is automatically False if `output_name`
+            contains a '|' character.
     """
     def __init__(self,
                  true_key: str,
                  pred_key: str,
-                 mode: Union[str, Set[str]] = ("eval", "test"),
+                 mode: Union[None, str, Iterable[str]] = ("eval", "test"),
                  ds_id: Union[None, str, Iterable[str]] = None,
                  from_logits: bool = False,
-                 output_name: str = "accuracy") -> None:
+                 output_name: str = "accuracy",
+                 per_ds: bool = True) -> None:
         super().__init__(inputs=(true_key, pred_key), mode=mode, outputs=output_name, ds_id=ds_id)
         self.from_logits = from_logits
         self.total = 0
         self.correct = 0
+        self.per_ds = per_ds
 
     @property
     def true_key(self) -> str:

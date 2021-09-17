@@ -38,6 +38,9 @@ class Dice(Trace):
         ds_id: What dataset id(s) to execute this Trace in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
         output_name: What to call the output from this trace (for example in the logger output).
+        per_ds: Whether to automatically compute this metric individually for every ds_id it runs on, in addition to
+            computing an aggregate across all ds_ids on which it runs. This is automatically False if `output_name`
+            contains a '|' character.
     """
     def __init__(self,
                  true_key: str,
@@ -45,11 +48,13 @@ class Dice(Trace):
                  threshold: float = 0.5,
                  mode: Union[None, str, Iterable[str]] = ("eval", "test"),
                  ds_id: Union[None, str, Iterable[str]] = None,
-                 output_name: str = "Dice") -> None:
+                 output_name: str = "Dice",
+                 per_ds: bool = True) -> None:
         super().__init__(inputs=(true_key, pred_key), mode=mode, outputs=output_name, ds_id=ds_id)
         self.threshold = threshold
         self.smooth = 1e-8
         self.dice = []
+        self.per_ds = per_ds
 
     @property
     def true_key(self) -> str:

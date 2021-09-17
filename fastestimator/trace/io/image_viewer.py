@@ -38,18 +38,14 @@ class ImageViewer(Trace):
             like "!infer" or "!train".
         width: The width in inches of the figure.
         height: The height in inches of the figure.
-        ds_id: What dataset id(s) to execute this Trace in. To execute regardless of ds_id, pass None. To execute in all
-            ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
     def __init__(
         self,
         inputs: Union[str, Sequence[str]],
         mode: Union[None, str, Iterable[str]] = ("eval", "test"),
         width: int = 12,
-        height: int = 6,
-        ds_id: Union[None, str, Iterable[str]] = None,
-    ) -> None:
-        super().__init__(inputs=inputs, mode=mode, ds_id=ds_id)
+        height: int = 6) -> None:
+        super().__init__(inputs=inputs, mode=mode)
         plt.rcParams['figure.figsize'] = [width, height]
 
     def on_epoch_end(self, data: Data) -> None:

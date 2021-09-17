@@ -64,7 +64,7 @@ class LRScheduler(Trace):
             arg = list(inspect.signature(lr_fn).parameters.keys())
             assert len(arg) == 1 and arg[0] in {"step", "epoch"}, "the lr_fn input arg must be either 'step' or 'epoch'"
             self.schedule_mode = arg[0]
-        super().__init__(outputs=self.model.model_name + "_lr")
+        super().__init__(outputs=self.model.model_name + "_lr", ds_id=ds_id)
 
     def on_begin(self, data: Data) -> None:
         if isinstance(self.lr_fn, ARC):

@@ -46,6 +46,9 @@ class CalibrationError(Trace):
             whereas 'top-label' computes the error based on only the most confident predictions.
         confidence_interval: The calibration error confidence interval to be reported (estimated empirically). Should be
             in the range (0, 100), or else None to omit this extra calculation.
+        per_ds: Whether to automatically compute this metric individually for every ds_id it runs on, in addition to
+            computing an aggregate across all ds_ids on which it runs. This is automatically False if `output_name`
+            contains a '|' character.
     """
     def __init__(self,
                  true_key: str,
@@ -54,7 +57,8 @@ class CalibrationError(Trace):
                  ds_id: Union[None, str, Iterable[str]] = None,
                  output_name: str = "calibration_error",
                  method: str = "marginal",
-                 confidence_interval: Optional[int] = None):
+                 confidence_interval: Optional[int] = None,
+                 per_ds: bool = True):
         self.y_true = []
         self.y_pred = []
         assert method in ('marginal', 'top-label'), \
@@ -66,6 +70,7 @@ class CalibrationError(Trace):
             confidence_interval = 1.0 - confidence_interval / 100.0
         self.confidence_interval = confidence_interval
         super().__init__(inputs=[true_key, pred_key], outputs=output_name, mode=mode, ds_id=ds_id)
+        self.per_ds = per_ds
 
     @property
     def true_key(self) -> str:

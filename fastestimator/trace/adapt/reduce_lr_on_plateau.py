@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Optional, Union, Iterable
+from typing import Optional, Union
 
 import numpy as np
 import tensorflow as tf
@@ -37,8 +37,6 @@ class ReduceLROnPlateau(Trace):
         factor: Reduce factor for the learning rate.
         best_mode: Higher is better ("max") or lower is better ("min").
         min_lr: Minimum learning rate.
-        ds_id: What dataset id(s) to execute this Trace in. To execute regardless of ds_id, pass None. To execute in all
-            ds_ids except for a particular one, you can pass an argument like "!ds1".
 
     Raises:
         AssertionError: If the loss cannot be inferred from the `model` and a `metric` was not provided.
@@ -51,14 +49,13 @@ class ReduceLROnPlateau(Trace):
                  patience: int = 10,
                  factor: float = 0.1,
                  best_mode: str = "min",
-                 min_lr: float = 1e-6,
-                 ds_id: Union[None, str, Iterable[str]] = None) -> None:
+                 min_lr: float = 1e-6) -> None:
         if not metric:
             assert hasattr(model, "loss_name"), \
                 "ReduceLROnPlateau cannot infer model loss name. Provide a metric or use the model in an UpdateOp."
             assert len(model.loss_name) == 1, "the model has more than one losses, please provide the metric explicitly"
             metric = next(iter(model.loss_name))
-        super().__init__(mode="eval", inputs=metric, outputs=model.model_name + "_lr", ds_id=ds_id)
+        super().__init__(mode="eval", inputs=metric, outputs=model.model_name + "_lr")
         self.fe_monitor_names.add(metric)
         self.model = model
         self.patience = patience

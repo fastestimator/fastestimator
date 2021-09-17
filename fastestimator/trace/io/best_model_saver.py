@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Optional, Union, Iterable
+from typing import Optional, Union
 
 import numpy as np
 import tensorflow as tf
@@ -39,8 +39,6 @@ class BestModelSaver(Trace):
             only available for TensorFlow models at present, and will generate a folder containing several files. The
             model can then be re-instantiated even without access to the original code by calling:
             tf.keras.models.load_model(<path to model folder>).
-        ds_id: What dataset id(s) to execute this Trace in. To execute regardless of ds_id, pass None. To execute in all
-            ds_ids except for a particular one, you can pass an argument like "!ds1".
 
     Raises:
         AssertionError: If a `metric` is not provided and it cannot be inferred from the `model`.
@@ -52,8 +50,7 @@ class BestModelSaver(Trace):
                  metric: Optional[str] = None,
                  save_best_mode: str = "min",
                  load_best_final: bool = False,
-                 save_architecture: bool = False,
-                 ds_id: Union[None, str, Iterable[str]] = None) -> None:
+                 save_architecture: bool = False) -> None:
         if not metric:
             assert hasattr(model, "loss_name"), \
                 "BestModelSaver cannot infer model loss name. Provide a metric or use the model in an UpdateOp."
@@ -61,8 +58,7 @@ class BestModelSaver(Trace):
             metric = next(iter(model.loss_name))
         super().__init__(mode="eval",
                          inputs=metric,
-                         outputs=["since_best_{}".format(metric), "{}_{}".format(save_best_mode, metric)],
-                         ds_id=ds_id)
+                         outputs=["since_best_{}".format(metric), "{}_{}".format(save_best_mode, metric)])
         self.fe_monitor_names.add(metric)
         self.model = model
         self.model_name = "{}_best_{}".format(self.model.model_name, self.metric)

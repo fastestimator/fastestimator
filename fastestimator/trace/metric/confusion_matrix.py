@@ -39,6 +39,9 @@ class ConfusionMatrix(Trace):
         ds_id: What dataset id(s) to execute this Trace in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
         output_name: Name of the key to store to the state.
+        per_ds: Whether to automatically compute this metric individually for every ds_id it runs on, in addition to
+            computing an aggregate across all ds_ids on which it runs. This is automatically False if `output_name`
+            contains a '|' character.
         **kwargs: Additional keyword arguments that pass to sklearn.metrics.confusion_matrix()
 
     Raises:
@@ -51,12 +54,14 @@ class ConfusionMatrix(Trace):
                  mode: Union[None, str, Iterable[str]] = ("eval", "test"),
                  ds_id: Union[None, str, Iterable[str]] = None,
                  output_name: str = "confusion_matrix",
+                 per_ds: bool = True,
                  **kwargs) -> None:
         ConfusionMatrix.check_kwargs(kwargs)
         super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode, ds_id=ds_id)
         self.num_classes = num_classes
         self.matrix = None
         self.kwargs = kwargs
+        self.per_ds = per_ds
 
     @property
     def true_key(self) -> str:
