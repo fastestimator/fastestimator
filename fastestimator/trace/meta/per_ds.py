@@ -39,8 +39,6 @@ def per_ds(cls: type(Trace)):
         @functools.wraps(cls.__init__)
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
-            # if self.ds_id is None:
-            #     pass  # TODO - maybe only generate extra trace in this case?
             self.fe_per_ds_trace = cls.__new__(cls)
             self.fe_per_ds_trace.__init__(*args, **kwargs)
 

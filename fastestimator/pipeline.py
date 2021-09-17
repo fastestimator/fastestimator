@@ -60,7 +60,7 @@ class Pipeline:
         collate_fn: Function to merge data into one batch with input being list of elements.
     """
     ops: List[Union[NumpyOp, Scheduler[NumpyOp]]]
-    data: Dict[str, Dict[Optional[str], Union[DataSource, Scheduler[DataSource]]]]  #  {"mode": {"ds_id": ds}}
+    data: Dict[str, Dict[Optional[str], Union[DataSource, Scheduler[DataSource]]]]  # {"mode": {"ds_id": ds}}
 
     def __init__(self,
                  train_data: Union[None,
@@ -99,10 +99,9 @@ class Pipeline:
         self.ctx_ds_id = None
 
     @staticmethod
-    def _register_ds_ids(data: Dict[str,
-                                    Union[DataSource,
-                                          Scheduler[DataSource],
-                                          Dict[str, Union[DataSource, Scheduler[DataSource]]]]]):
+    def _register_ds_ids(
+        data: Dict[str, Union[DataSource, Scheduler[DataSource], Dict[str, Union[DataSource, Scheduler[DataSource]]]]]
+    ) -> Dict[str, Dict[Optional[str], Union[DataSource, Scheduler[DataSource]]]]:
         """Associate dataset of each mode with a `ds_id`.
 
         Args:
@@ -115,7 +114,8 @@ class Pipeline:
                     assert isinstance(ds_name, str) and len(ds_name) > 0, \
                         "dataset id must be a string, found {}".format(ds_name)
                     assert not any(char in ds_name for char in forbidden_ds_id_chars), \
-                        "dataset id should not contain forbidden characters like ':', ';', '!', '|', found {} in pipeline".format(ds_name)
+                        "dataset id should not contain forbidden characters like ':', ';', '!', '|', " + \
+                        "found {} in pipeline".format(ds_name)
             else:
                 data[mode] = {None: dataset}
         return data
@@ -266,7 +266,7 @@ class Pipeline:
                         index = np.random.randint(data_len)
                         items = deepcopy(loader.dataset.dataset[index])
                         if isinstance(loader.dataset.dataset, BatchDataset):
-                            # BatchDataset may randomly sample the same elements multiple times, need to avoid reprocessing
+                            # BatchDataset may randomly sample the same elements multiple times, lets avoid reprocessing
                             unique_samples = set()
                             for item in items:
                                 if id(item) not in unique_samples:
