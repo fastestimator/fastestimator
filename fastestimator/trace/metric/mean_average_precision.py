@@ -48,7 +48,7 @@ class MeanAveragePrecision(Trace):
         output_name: What to call the outputs from this trace (for example in the logger output).
         per_ds: Whether to automatically compute this metric individually for every ds_id it runs on, in addition to
             computing an aggregate across all ds_ids on which it runs. This is automatically False if `output_name`
-            contains a '|' character.
+            contains a "|" character.
 
     Returns:
         Mean Average Precision.

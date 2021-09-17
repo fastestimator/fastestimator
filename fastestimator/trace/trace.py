@@ -14,7 +14,7 @@
 # ==============================================================================
 import time
 from collections import deque
-from typing import Iterable, List, Optional, Set, Union
+from typing import Iterable, List, Set, Union
 
 import numpy as np
 from natsort import humansorted
@@ -320,7 +320,8 @@ class Logger(Trace):
         print(log_message)
 
 
-def sort_traces(traces: List[Trace], ds_ids: List[str], available_outputs: Optional[Set[str]] = None) -> List[Trace]:
+def sort_traces(traces: List[Trace], ds_ids: List[str], available_outputs: Union[None, str,
+                                                                                 Set[str]] = None) -> List[Trace]:
     """Sort traces to attempt to resolve any dependency issues.
 
     This is essentially a topological sort, but it doesn't seem worthwhile to convert the data into a graph
@@ -395,7 +396,6 @@ def sort_traces(traces: List[Trace], ds_ids: List[str], available_outputs: Optio
 
 
 class PerDSTrace(Trace):
-
     def on_ds_begin(self, data: Data) -> None:
         """Runs at the beginning of each dataset.
 

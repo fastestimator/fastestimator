@@ -273,8 +273,10 @@ class TraceRun:
         self.data_on_batch_begin = None
         self.data_on_batch_end = None
 
-
     def run_trace(self) -> None:
+        system = sample_system_object()
+        self.trace.system = system
+
         self.data_on_begin = Data()
         self.trace.on_begin(self.data_on_begin)
 

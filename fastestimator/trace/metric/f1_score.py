@@ -42,7 +42,7 @@ class F1Score(Trace):
         output_name: Name of the key to store back to the state.
         per_ds: Whether to automatically compute this metric individually for every ds_id it runs on, in addition to
             computing an aggregate across all ds_ids on which it runs. This is automatically False if `output_name`
-            contains a '|' character.
+            contains a "|" character.
         **kwargs: Additional keyword arguments that pass to sklearn.metrics.f1_score()
 
     Raises:
