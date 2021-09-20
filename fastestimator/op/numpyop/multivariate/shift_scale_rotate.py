@@ -30,8 +30,8 @@ class ShiftScaleRotate(MultiVariateAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
-            ds_ids except a particular one, you can pass like "!ds1".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         image_in: The key of an image to be modified.
         mask_in: The key of a mask to be modified (with the same random factors as the image).
         masks_in: The key of masks to be modified (with the same random factors as the image).

@@ -14,7 +14,7 @@
 # ==============================================================================
 import os
 from collections import defaultdict
-from typing import List, Optional, Set, Union
+from typing import List, Optional, Union, Iterable
 
 import pandas as pd
 
@@ -37,7 +37,7 @@ class CSVLogger(Trace):
     def __init__(self,
                  filename: str,
                  monitor_names: Optional[Union[List[str], str]] = None,
-                 mode: Union[str, Set[str]] = ("eval", "test")) -> None:
+                 mode: Union[None, str, Iterable[str]] = ("eval", "test")) -> None:
         super().__init__(inputs="*" if monitor_names is None else monitor_names, mode=mode)
         self.filename = filename
         self.data = None

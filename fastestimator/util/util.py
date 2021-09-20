@@ -483,6 +483,8 @@ def check_io_names(names: List[Optional[str]]) -> List[Optional[str]]:
     for name in names:
         assert not any(char in name for char in forbidden_chars), \
             "inputs/outputs name cannot contain characters like ':', ';', found {}".format(name)
+        assert len(name) > 0, "inputs/outputs cannot be an empty string"
+        assert len(name.split('|')) < 3, f"inputs/outputs cannot contain more than one '|' character, found {name}"
     return names
 
 

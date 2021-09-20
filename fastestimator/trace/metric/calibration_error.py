@@ -12,18 +12,21 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 # ==============================================================================
-
-from typing import Optional, Set, Union
+from typing import Optional, Iterable, Union
 
 import calibration as cal
 import numpy as np
 
 from fastestimator.summary.summary import ValWithError
+from fastestimator.trace.meta.per_ds import per_ds
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
+from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
 
 
+@per_ds
+@traceable()
 class CalibrationError(Trace):
     """A trace which computes the calibration error for a given set of predictions.
 
@@ -36,19 +39,26 @@ class CalibrationError(Trace):
         mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Trace in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         output_name: What to call the output from this trace (for example in the logger output).
         method: Either 'marginal' or 'top-label'. 'marginal' calibration averages the calibration error over each class,
             whereas 'top-label' computes the error based on only the most confident predictions.
         confidence_interval: The calibration error confidence interval to be reported (estimated empirically). Should be
             in the range (0, 100), or else None to omit this extra calculation.
+        per_ds: Whether to automatically compute this metric individually for every ds_id it runs on, in addition to
+            computing an aggregate across all ds_ids on which it runs. This is automatically False if `output_name`
+            contains a "|" character.
     """
     def __init__(self,
                  true_key: str,
                  pred_key: str,
-                 mode: Union[str, Set[str]] = ("eval", "test"),
+                 mode: Union[None, str, Iterable[str]] = ("eval", "test"),
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  output_name: str = "calibration_error",
                  method: str = "marginal",
-                 confidence_interval: Optional[int] = None):
+                 confidence_interval: Optional[int] = None,
+                 per_ds: bool = True):
         self.y_true = []
         self.y_pred = []
         assert method in ('marginal', 'top-label'), \
@@ -59,7 +69,8 @@ class CalibrationError(Trace):
                 f"CalibrationError 'confidence_interval' must be between 0 and 100, but got {confidence_interval}."
             confidence_interval = 1.0 - confidence_interval / 100.0
         self.confidence_interval = confidence_interval
-        super().__init__(inputs=[true_key, pred_key], outputs=output_name, mode=mode)
+        super().__init__(inputs=[true_key, pred_key], outputs=output_name, mode=mode, ds_id=ds_id)
+        self.per_ds = per_ds
 
     @property
     def true_key(self) -> str:

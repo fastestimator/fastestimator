@@ -39,8 +39,8 @@ class ModelOp(TensorOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
-            ds_ids except a particular one, you can pass like "!ds1".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         trainable: Indicates whether the model should have its weights tracked for update.
         intermediate_layers: One or more layers inside of the model from which you would also like to extract output.
             This can be useful, for example, for visualizing feature extractor embeddings in conjunction with the

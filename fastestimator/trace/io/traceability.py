@@ -21,7 +21,7 @@ import shutil
 import sys
 import types
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, List, Set, Tuple, Union
+from typing import Any, DefaultDict, Dict, List, Set, Tuple, Union, Optional
 from unittest.mock import Base, MagicMock
 
 import dot2tex as d2t
@@ -36,6 +36,7 @@ from natsort import humansorted
 from pylatex import Command, Document, Figure, Hyperref, Itemize, Label, LongTable, Marker, MultiColumn, NoEscape, \
     Package, Section, Subsection, Subsubsection, Tabularx, escape_latex
 from pylatex.base_classes import Arguments
+from pylatex.section import Paragraph
 from pylatex.utils import bold
 from torch.utils.data import Dataset
 
@@ -60,7 +61,7 @@ from fastestimator.trace.trace import Trace, sort_traces
 from fastestimator.util.data import Data
 from fastestimator.util.latex_util import AdjustBox, Center, ContainerList, HrefFEID, Verbatim
 from fastestimator.util.traceability_util import FeSummaryTable, traceable
-from fastestimator.util.util import FEID, LogSplicer, Suppressor, prettify_metric_name, to_list
+from fastestimator.util.util import FEID, LogSplicer, Suppressor, prettify_metric_name, to_list, NonContext
 
 
 @traceable()
@@ -242,13 +243,19 @@ class Traceability(Trace):
                             with self.doc.create(
                                     Subsubsection(f"Epoch {epoch}",
                                                   label=Label(Marker(name=f"{mode}{epoch}", prefix="ssubsec")))):
-                                diagram = self._draw_diagram(mode, epoch)
-                                ltx = d2t.dot2tex(diagram.to_string(), figonly=True)
-                                args = Arguments(**{'max width': r'\textwidth, max height=0.9\textheight'})
-                                args.escape = False
-                                with self.doc.create(Center()):
-                                    with self.doc.create(AdjustBox(arguments=args)) as box:
-                                        box.append(NoEscape(ltx))
+                                ds_ids = self.system.pipeline.get_ds_ids(epoch=epoch, mode=mode)
+                                for ds_id in ds_ids:
+                                    with NonContext() if ds_id is None else self.doc.create(
+                                            Paragraph(f"Dataset {ds_id}",
+                                                      label=Label(Marker(name=f"{mode}{epoch}{ds_id}",
+                                                                         prefix="para")))):
+                                        diagram = self._draw_diagram(mode, epoch, ds_id)
+                                        ltx = d2t.dot2tex(diagram.to_string(), figonly=True)
+                                        args = Arguments(**{'max width': r'\textwidth, max height=0.9\textheight'})
+                                        args.escape = False
+                                        with self.doc.create(Center()):
+                                            with self.doc.create(AdjustBox(arguments=args)) as box:
+                                                box.append(NoEscape(ltx))
 
     def _document_init_params(self) -> None:
         """Add initialization parameters to the traceability document.
@@ -506,24 +513,26 @@ class Traceability(Trace):
                                         color='black!5' if color else 'white')
                         color = not color
 
-    def _draw_diagram(self, mode: str, epoch: int) -> pydot.Dot:
+    def _draw_diagram(self, mode: str, epoch: int, ds_id: Optional[str]) -> pydot.Dot:
         """Draw a summary diagram of the FastEstimator Ops / Traces.
 
         Args:
             mode: The execution mode to summarize ('train', 'eval', 'test', or 'infer').
             epoch: The epoch to summarize.
+            ds_id: The ds_id to summarize.
 
         Returns:
             A pydot digraph representing the execution flow.
         """
-        ds = self.system.pipeline.data[mode]
+        ds = self.system.pipeline.data[mode][ds_id]
         if isinstance(ds, Scheduler):
             ds = ds.get_current_value(epoch)
-        pipe_ops = get_current_items(self.system.pipeline.ops, run_modes=mode, epoch=epoch) if isinstance(
+        pipe_ops = get_current_items(self.system.pipeline.ops, run_modes=mode, epoch=epoch, ds_id=ds_id) if isinstance(
             ds, Dataset) else []
-        net_ops = get_current_items(self.system.network.ops, run_modes=mode, epoch=epoch)
-        net_post = get_current_items(self.system.network.postprocessing, run_modes=mode, epoch=epoch)
-        traces = sort_traces(get_current_items(self.system.traces, run_modes=mode, epoch=epoch))
+        net_ops = get_current_items(self.system.network.ops, run_modes=mode, epoch=epoch, ds_id=ds_id)
+        net_post = get_current_items(self.system.network.postprocessing, run_modes=mode, epoch=epoch, ds_id=ds_id)
+        traces = sort_traces(get_current_items(self.system.traces, run_modes=mode, epoch=epoch, ds_id=ds_id),
+                             ds_ids=self.system.pipeline.get_ds_ids(epoch=epoch, mode=mode))
         diagram = pydot.Dot(compound='true')  # Compound lets you draw edges which terminate at sub-graphs
         diagram.set('rankdir', 'TB')
         diagram.set('dpi', 300)
@@ -545,17 +554,18 @@ class Traceability(Trace):
                     batch_size = batch_size[mode]
         if batch_size is not None:
             batch_size = f" (Batch Size: {batch_size})"
-        self._draw_subgraph(diagram, diagram, label_last_seen, f'Pipeline{batch_size}', pipe_ops)
-        self._draw_subgraph(diagram, diagram, label_last_seen, 'Network', net_ops + net_post)
-        self._draw_subgraph(diagram, diagram, label_last_seen, 'Traces', traces)
+        self._draw_subgraph(diagram, diagram, label_last_seen, f'Pipeline{batch_size}', pipe_ops, ds_id)
+        self._draw_subgraph(diagram, diagram, label_last_seen, 'Network', net_ops + net_post, ds_id)
+        self._draw_subgraph(diagram, diagram, label_last_seen, 'Traces', traces, ds_id)
         return diagram
 
-    @staticmethod
-    def _draw_subgraph(progenitor: pydot.Dot,
+    def _draw_subgraph(self,
+                       progenitor: pydot.Dot,
                        diagram: Union[pydot.Dot, pydot.Cluster],
                        label_last_seen: DefaultDict[str, str],
                        subgraph_name: str,
-                       subgraph_ops: List[Union[Op, Trace, Any]]) -> None:
+                       subgraph_ops: List[Union[Op, Trace, Any]],
+                       ds_id: Optional[str]) -> None:
         """Draw a subgraph of ops into an existing `diagram`.
 
         Args:
@@ -564,23 +574,25 @@ class Traceability(Trace):
             label_last_seen: A mapping of {data_dict_key: node_id} indicating the last node which generated the key.
             subgraph_name: The name to be associated with this subgraph.
             subgraph_ops: The ops to be wrapped in this subgraph.
+            ds_id: The ds_id to be associated with this subgraph.
         """
         subgraph = pydot.Cluster(style='dashed', graph_name=subgraph_name, color='black')
         subgraph.set('label', subgraph_name)
         subgraph.set('labeljust', 'l')
         for idx, op in enumerate(subgraph_ops):
             node_id = str(id(op))
-            Traceability._add_node(progenitor, subgraph, op, label_last_seen)
+            self._add_node(progenitor, subgraph, op, label_last_seen, ds_id)
             if isinstance(op, Trace) and idx > 0:
                 # Invisibly connect traces in order so that they aren't all just squashed horizontally into the image
                 progenitor.add_edge(pydot.Edge(src=str(id(subgraph_ops[idx - 1])), dst=node_id, style='invis'))
         diagram.add_subgraph(subgraph)
 
-    @staticmethod
-    def _add_node(progenitor: pydot.Dot,
+    def _add_node(self,
+                  progenitor: pydot.Dot,
                   diagram: Union[pydot.Dot, pydot.Cluster],
                   op: Union[Op, Trace, Any],
                   label_last_seen: DefaultDict[str, str],
+                  ds_id: Optional[str],
                   edges: bool = True) -> None:
         """Draw a node onto a diagram based on a given op.
 
@@ -589,6 +601,7 @@ class Traceability(Trace):
             diagram: The diagram to be appended to.
             op: The op (or trace) to be visualized.
             label_last_seen: A mapping of {data_dict_key: node_id} indicating the last node which generated the key.
+            ds_id: The ds_id under which the node is currently running.
             edges: Whether to write Edges to/from this Node.
         """
         node_id = str(id(op))
@@ -602,9 +615,9 @@ class Traceability(Trace):
                     if inp == '*':
                         continue
                     edge_srcs[label_last_seen[inp]].append(inp)
-            Traceability._add_node(progenitor, wrapper, op.op, label_last_seen)
+            self._add_node(progenitor, wrapper, op.op, label_last_seen, ds_id)
             diagram.add_subgraph(wrapper)
-            dst_id = Traceability._get_all_nodes(wrapper)[0].get_name()
+            dst_id = self._get_all_nodes(wrapper)[0].get_name()
             for src, labels in edge_srcs.items():
                 progenitor.add_edge(
                     pydot.Edge(src=src, dst=dst_id, lhead=wrapper.get_name(), label=f" {', '.join(labels)} "))
@@ -612,12 +625,12 @@ class Traceability(Trace):
             wrapper = pydot.Cluster(style='dotted', color='darkorchid4', graph_name=str(id(op)))
             wrapper.set('label', 'One Of:')
             wrapper.set('labeljust', 'l')
-            Traceability._add_node(progenitor, wrapper, op.ops[0], label_last_seen, edges=True)
+            self._add_node(progenitor, wrapper, op.ops[0], label_last_seen, ds_id, edges=True)
             for sub_op in op.ops[1:]:
-                Traceability._add_node(progenitor, wrapper, sub_op, label_last_seen, edges=False)
+                self._add_node(progenitor, wrapper, sub_op, label_last_seen, ds_id, edges=False)
             diagram.add_subgraph(wrapper)
         elif isinstance(op, (Fuse, FuseT)) and op.ops:
-            Traceability._draw_subgraph(progenitor, diagram, label_last_seen, f'Fuse:', op.ops)
+            self._draw_subgraph(progenitor, diagram, label_last_seen, f'Fuse:', op.ops, ds_id)
         elif isinstance(op, (Repeat, RepeatT)) and op.op:
             wrapper = pydot.Cluster(style='dotted', color='darkgreen', graph_name=str(id(op)))
             wrapper.set('label', f'Repeat:')
@@ -629,7 +642,7 @@ class Traceability(Trace):
                            width=0.1))
             # dot2tex doesn't seem to handle edge color conversion correctly, so have to set hex color
             progenitor.add_edge(pydot.Edge(src=node_id + ":ne", dst=node_id + ":w", color='#006300'))
-            Traceability._add_node(progenitor, wrapper, op.op, label_last_seen)
+            self._add_node(progenitor, wrapper, op.op, label_last_seen, ds_id)
             # Add repeat edges
             edge_srcs = defaultdict(lambda: [])
             for out in op.outputs:
@@ -653,26 +666,35 @@ class Traceability(Trace):
             diagram.add_node(pydot.Node(node_id, label=label, texlbl=texlbl))
             if isinstance(op, (Op, Trace)) and edges:
                 # Need the instance check since subgraph_ops might contain a tf dataset or torch dataloader
-                Traceability._add_edge(progenitor, op, label_last_seen)
+                self._add_edge(progenitor, op, label_last_seen, ds_id)
 
-    @staticmethod
-    def _add_edge(progenitor: pydot.Dot, op: Union[Trace, Op], label_last_seen: Dict[str, str]):
+    def _add_edge(self,
+                  progenitor: pydot.Dot,
+                  op: Union[Trace, Op],
+                  label_last_seen: Dict[str, str],
+                  ds_id: Optional[str]):
         """Draw edges into a given Node.
 
         Args:
             progenitor: The very top level diagram onto which Edges should be written.
             op: The op (or trace) to be visualized.
             label_last_seen: A mapping of {data_dict_key: node_id} indicating the last node which generated the key.
+            ds_id: The ds_id under which the node is currently running.
         """
         node_id = str(id(op))
         edge_srcs = defaultdict(lambda: [])
+        global_ds_ids = {key for vals in self.system.pipeline.data.values() for key in vals.keys() if key is not None}
         for inp in op.inputs:
             if inp == '*':
                 continue
+            base, candidate_id, *_ = f"{inp}|".split('|')
+            if candidate_id in global_ds_ids and candidate_id != ds_id:
+                continue  # Skip inputs which will be provided in other ds_id plots
             edge_srcs[label_last_seen[inp]].append(inp)
         for src, labels in edge_srcs.items():
             progenitor.add_edge(pydot.Edge(src=src, dst=node_id, label=f" {', '.join(labels)} "))
-        for out in op.outputs:
+        outputs = op.get_outputs(ds_ids=ds_id) if isinstance(op, Trace) else op.outputs
+        for out in outputs:
             label_last_seen[out] = node_id
 
     @staticmethod

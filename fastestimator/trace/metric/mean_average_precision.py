@@ -14,17 +14,19 @@
 # ==============================================================================
 """COCO Mean average precisin (mAP) implementation."""
 from collections import defaultdict
-from typing import Dict, List
+from typing import Dict, List, Union, Iterable
 
 import numpy as np
 from pycocotools import mask as maskUtils
 
+from fastestimator.trace.meta.per_ds import per_ds
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
 
 
+@per_ds
 @traceable()
 class MeanAveragePrecision(Trace):
     """Calculate COCO mean average precision.
@@ -34,8 +36,19 @@ class MeanAveragePrecision(Trace):
     The value of 'bbox' has shape (batch_size, num_bbox, 5). The 5 is [x1, y1, w, h, label].
 
     Args:
+        true_key: Name of the key that corresponds to ground truth in the batch dictionary.
+        pred_key: Name of the key that corresponds to predicted score in the batch dictionary.
+        mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
         num_classes: Maximum `int` value for your class label. In COCO dataset we only used 80 classes, but the maxium
             value of the class label is `90`. In this case `num_classes` should be `90`.
+        ds_id: What dataset id(s) to execute this Trace in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
+        output_name: What to call the outputs from this trace (for example in the logger output).
+        per_ds: Whether to automatically compute this metric individually for every ds_id it runs on, in addition to
+            computing an aggregate across all ds_ids on which it runs. This is automatically False if `output_name`
+            contains a "|" character.
 
     Returns:
         Mean Average Precision.
@@ -44,9 +57,11 @@ class MeanAveragePrecision(Trace):
                  num_classes: int,
                  true_key='bbox',
                  pred_key: str = 'pred',
-                 mode: str = "eval",
-                 output_name=("mAP", "AP50", "AP75")) -> None:
-        super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode)
+                 mode: Union[None, str, Iterable[str]] = ("eval", "test"),
+                 ds_id: Union[None, str, Iterable[str]] = None,
+                 output_name=("mAP", "AP50", "AP75"),
+                 per_ds: bool = True) -> None:
+        super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode, ds_id=ds_id)
 
         assert len(self.outputs) == 3, 'MeanAvgPrecision trace adds 3 fields mAP AP50 AP75 to state dict'
 
@@ -55,6 +70,7 @@ class MeanAveragePrecision(Trace):
         self.categories = range(num_classes)
         self.max_detection = 100
         self.image_ids = []
+        self.per_ds = per_ds
 
         # eval
         self.evalimgs = {}

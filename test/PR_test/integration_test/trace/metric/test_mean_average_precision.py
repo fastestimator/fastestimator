@@ -16,6 +16,7 @@ import unittest
 
 import numpy as np
 
+from fastestimator.test.unittest_util import sample_system_object
 from fastestimator.trace.metric import MeanAveragePrecision
 from fastestimator.util import Data
 
@@ -28,6 +29,7 @@ class TestMeanAveragePrecision(unittest.TestCase):
         cls.data = Data({'x': x, 'x_pred': x_pred})
         cls.map = MeanAveragePrecision(true_key='x', pred_key='x_pred', num_classes=3)
         cls.iou_element_shape = (5, 5)
+        cls.map.system = sample_system_object()
 
     def test_on_epoch_begin(self):
         self.map.on_epoch_begin(data=self.data)

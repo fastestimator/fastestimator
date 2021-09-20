@@ -36,8 +36,8 @@ class MixUpBatch(TensorOp):
         inputs: Key of the input to be mixed up.
         outputs: Key to store the mixed-up outputs.
         mode: What mode to execute in. Probably 'train'.
-        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
-            ds_ids except a particular one, you can pass like "!ds1".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         alpha: The alpha value defining the beta distribution to be drawn from during training.
         shared_beta: Sample a single beta for a batch or element wise beta for each image.
 

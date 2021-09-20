@@ -30,8 +30,8 @@ class MultiplicativeNoise(ImageOnlyAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
-            ds_ids except a particular one, you can pass like "!ds1".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         multiplier: If a single float, the image will be multiplied by this number. If tuple of floats then `multiplier`
             will be in the range [multiplier[0], multiplier[1]).
         per_channel: Whether to sample different multipliers for each channel of the image.

@@ -28,8 +28,8 @@ class ColorJitter(ImageOnlyAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        ds_id: What dataset id to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
-            ds_ids except a particular one, you can pass like "!ds1".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         brightness: How much to jitter brightness. brightness_factor is chosen uniformly from
             [max(0, 1 - brightness), 1 + brightness] or the given [min, max]. Should be non negative numbers.
         contrast: How much to jitter contrast. contrast_factor is chosen uniformly from
