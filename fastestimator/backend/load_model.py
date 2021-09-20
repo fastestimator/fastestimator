@@ -65,7 +65,7 @@ def load_model(model: Union[tf.keras.Model, torch.nn.Module], weights_path: str,
                 weight_decay = state_dict['weight_decay']
             set_lr(model, state_dict['lr'], weight_decay=weight_decay)
     elif isinstance(model, torch.nn.Module):
-        model.load_state_dict(torch.load(weights_path))
+        model.load_state_dict(torch.load(weights_path, map_location='cpu' if torch.cuda.device_count() == 0 else None))
         if load_optimizer:
             assert model.current_optimizer, "optimizer does not exist"
             optimizer_path = "{}_opt.pt".format(os.path.splitext(weights_path)[0])
