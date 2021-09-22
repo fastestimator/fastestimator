@@ -630,7 +630,7 @@ class Traceability(Trace):
                 self._add_node(progenitor, wrapper, sub_op, label_last_seen, ds_id, edges=False)
             diagram.add_subgraph(wrapper)
         elif isinstance(op, (Fuse, FuseT)) and op.ops:
-            self._draw_subgraph(progenitor, diagram, label_last_seen, f'Fuse:', op.ops, ds_id)
+            self._draw_subgraph(progenitor, diagram, label_last_seen, 'Fuse:', op.ops, ds_id)
         elif isinstance(op, (Repeat, RepeatT)) and op.op:
             wrapper = pydot.Cluster(style='dotted', color='darkgreen', graph_name=str(id(op)))
             wrapper.set('label', f'Repeat:')
@@ -687,7 +687,7 @@ class Traceability(Trace):
         for inp in op.inputs:
             if inp == '*':
                 continue
-            base, candidate_id, *_ = f"{inp}|".split('|')
+            _, candidate_id, *_ = f"{inp}|".split('|')
             if candidate_id in global_ds_ids and candidate_id != ds_id:
                 continue  # Skip inputs which will be provided in other ds_id plots
             edge_srcs[label_last_seen[inp]].append(inp)

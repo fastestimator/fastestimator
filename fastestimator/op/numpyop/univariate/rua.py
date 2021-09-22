@@ -67,7 +67,7 @@ class Rotate(NumpyOp):
         self.limit = param_to_range(limit)
 
     def set_rua_level(self, magnitude_coef: float) -> None:
-        """Set the augmentation intentity based on the magnitude_coef.
+        """Set the augmentation intensity based on the magnitude_coef.
 
         This method is specifically designed to be invoked by the RUA Op.
 
@@ -216,7 +216,7 @@ class Posterize(PosterizeAug):
         Args:
             magnitude_coef: The desired augmentation intensity (range [0-1]).
         """
-        if isinstance(self.num_bits, tuple) and len(self.num_bits)==3:
+        if isinstance(self.num_bits, tuple) and len(self.num_bits) == 3:
             num_bits = []
             for i in self.num_bits:
                 num_bits.append(Posterize._range_tuple(num_bits=i, magnitude_coef=magnitude_coef))
@@ -226,6 +226,7 @@ class Posterize(PosterizeAug):
         super().__init__(inputs=self.inputs,
                          outputs=self.outputs,
                          mode=self.mode,
+                         ds_id=self.ds_id,
                          num_bits=self.num_bits)
 
     @staticmethod
