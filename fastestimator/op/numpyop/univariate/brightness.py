@@ -36,6 +36,8 @@ class Brightness(NumpyOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         limit: Factor range for changing brightness. If limit is a single float, the range will be (-limit, limit).
             A factor of 0.0 gives a black image and a factor of 1.0 gives the original image.
 
@@ -46,8 +48,9 @@ class Brightness(NumpyOp):
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  limit: float = 0.54):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.limit = param_to_range(limit)
         self.in_list, self.out_list = True, True
 

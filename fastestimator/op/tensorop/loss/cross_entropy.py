@@ -36,6 +36,8 @@ class CrossEntropy(LossOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         from_logits: Whether y_pred is logits (without softmax).
         average_loss: Whether to average the element-wise loss after the Loss Op.
         form: What form of cross entropy should be performed ('binary', 'categorical', 'sparse', or None). None will
@@ -50,11 +52,12 @@ class CrossEntropy(LossOp):
                  inputs: Union[Tuple[str, str], List[str]],
                  outputs: str,
                  mode: Union[None, str, Iterable[str]] = "!infer",
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  from_logits: bool = False,
                  average_loss: bool = True,
                  form: Optional[str] = None,
                  class_weights: Optional[Dict[int, float]] = None):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode, average_loss=average_loss)
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id, average_loss=average_loss)
         self.from_logits = from_logits
         self.form = form
         self.cross_entropy_fn = {

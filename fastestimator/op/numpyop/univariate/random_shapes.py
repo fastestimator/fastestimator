@@ -33,6 +33,8 @@ class RandomShapes(NumpyOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         max_shapes: The maximum number of shapes to add to the image.
         max_size: The maximum size of the shapes to generate.
         intensity_range: The allowable pixel values for the shapes.
@@ -46,11 +48,12 @@ class RandomShapes(NumpyOp):
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  max_shapes: int = 3,
                  max_size: Optional[int] = None,
                  intensity_range: Tuple[int, int] = (0, 254),
                  transparency_range: Tuple[float, float] = (0.1, 0.9)):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.max_shapes = max_shapes
         self.max_size = max_size
         assert 0 <= intensity_range[0] <= intensity_range[1] <= 254, "Intensity_range should be in [0, 254]"

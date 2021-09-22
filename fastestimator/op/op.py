@@ -18,7 +18,7 @@ from typing import Any, Iterable, List, Mapping, MutableMapping, Set, Union
 import numpy as np
 
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import parse_modes, to_list, to_set
+from fastestimator.util.util import check_ds_id, check_io_names, parse_modes, to_list, to_set
 
 
 @traceable()
@@ -59,20 +59,25 @@ class Op:
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
     inputs: List[str]
     outputs: List[str]
     mode: Set[str]
+    ds_id: Set[str]
     in_list: bool  # Whether inputs should be presented as a list or an individual value
     out_list: bool  # Whether outputs will be returned as a list or an individual value
 
     def __init__(self,
                  inputs: Union[None, str, Iterable[str]] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
-                 mode: Union[None, str, Iterable[str]] = None) -> None:
-        self.inputs = to_list(inputs)
-        self.outputs = to_list(outputs)
+                 mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None) -> None:
+        self.inputs = check_io_names(to_list(inputs))
+        self.outputs = check_io_names(to_list(outputs))
         self.mode = parse_modes(to_set(mode))
+        self.ds_id = check_ds_id(to_set(ds_id))
         self.in_list = not isinstance(inputs, (str, type(None)))
         self.out_list = not isinstance(outputs, (str, type(None)))
 

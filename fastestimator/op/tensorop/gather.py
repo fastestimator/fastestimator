@@ -39,17 +39,20 @@ class Gather(TensorOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
     def __init__(self,
                  inputs: Union[str, List[str]],
                  outputs: Union[str, List[str]],
                  indices: Union[None, str, List[str]] = None,
-                 mode: Union[None, str, Iterable[str]] = "eval"):
+                 mode: Union[None, str, Iterable[str]] = "eval",
+                 ds_id: Union[None, str, Iterable[str]] = None):
         indices = to_list(indices)
         self.num_indices = len(indices)
         combined_inputs = indices
         combined_inputs.extend(to_list(inputs))
-        super().__init__(inputs=combined_inputs, outputs=outputs, mode=mode)
+        super().__init__(inputs=combined_inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.in_list, self.out_list = True, True
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:

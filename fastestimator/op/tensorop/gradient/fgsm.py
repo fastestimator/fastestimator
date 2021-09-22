@@ -44,6 +44,8 @@ class FGSM(TensorOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
     def __init__(self,
                  data: str,
@@ -52,8 +54,9 @@ class FGSM(TensorOp):
                  epsilon: float = 0.01,
                  clip_low: Optional[float] = None,
                  clip_high: Optional[float] = None,
-                 mode: Union[None, str, Iterable[str]] = None):
-        super().__init__(inputs=[data, loss], outputs=outputs, mode=mode)
+                 mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None):
+        super().__init__(inputs=[data, loss], outputs=outputs, mode=mode, ds_id=ds_id)
         self.epsilon = epsilon
         self.clip_low = clip_low
         self.clip_high = clip_high

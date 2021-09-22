@@ -30,6 +30,8 @@ class RandomSunFlare(ImageOnlyAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         flare_roi: region of the image where flare will appear (x_min, y_min, x_max, y_max). All values should be
             in range [0, 1].
         angle_lower: should be in range [0, `angle_upper`].
@@ -48,6 +50,7 @@ class RandomSunFlare(ImageOnlyAlbumentation):
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  flare_roi: Tuple[float, float, float, float] = (0, 0, 1, 0.5),
                  angle_lower: float = 0.0,
                  angle_upper: float = 1.0,
@@ -66,4 +69,5 @@ class RandomSunFlare(ImageOnlyAlbumentation):
                               always_apply=True),
             inputs=inputs,
             outputs=outputs,
-            mode=mode)
+            mode=mode,
+            ds_id=ds_id)

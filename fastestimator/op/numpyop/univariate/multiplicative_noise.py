@@ -30,6 +30,8 @@ class MultiplicativeNoise(ImageOnlyAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         multiplier: If a single float, the image will be multiplied by this number. If tuple of floats then `multiplier`
             will be in the range [multiplier[0], multiplier[1]).
         per_channel: Whether to sample different multipliers for each channel of the image.
@@ -43,6 +45,7 @@ class MultiplicativeNoise(ImageOnlyAlbumentation):
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  multiplier: Union[float, Tuple[float, float]] = (0.9, 1.1),
                  per_channel: bool = False,
                  elementwise: bool = False):
@@ -53,4 +56,5 @@ class MultiplicativeNoise(ImageOnlyAlbumentation):
                                    always_apply=True),
             inputs=inputs,
             outputs=outputs,
-            mode=mode)
+            mode=mode,
+            ds_id=ds_id)

@@ -41,7 +41,10 @@ class Sometimes(NumpyOp):
         outs = set(numpy_op.outputs)
         self.extra_inputs = list(outs - inps)  # Used by traceability
         self.inp_idx = len(numpy_op.inputs)
-        super().__init__(inputs=numpy_op.inputs + self.extra_inputs, outputs=numpy_op.outputs, mode=numpy_op.mode)
+        super().__init__(inputs=numpy_op.inputs + self.extra_inputs,
+                         outputs=numpy_op.outputs,
+                         mode=numpy_op.mode,
+                         ds_id=numpy_op.ds_id)
         # Note that in_list and out_list will always be true
         self.op = numpy_op
         self.prob = prob

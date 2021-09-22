@@ -34,6 +34,8 @@ class Hadamard(NumpyOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
 
     Raises:
         ValueError: If an unequal number of `inputs` and `outputs` are provided, or if `code_length` is invalid.
@@ -43,8 +45,9 @@ class Hadamard(NumpyOp):
                  outputs: Union[str, List[str]],
                  n_classes: int,
                  code_length: Optional[int] = None,
-                 mode: Union[None, str, Iterable[str]] = None) -> None:
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+                 mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None) -> None:
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.in_list, self.out_list = True, True
         if len(self.inputs) != len(self.outputs):
             raise ValueError("Hadamard requires the same number of input and output keys.")

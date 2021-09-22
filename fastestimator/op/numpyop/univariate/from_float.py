@@ -31,6 +31,8 @@ class FromFloat(ImageOnlyAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         max_value: The maximum value to serve as the multiplier. If None it will be inferred by dtype.
         dtype: The data type to cast the output as.
 
@@ -41,9 +43,11 @@ class FromFloat(ImageOnlyAlbumentation):
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  max_value: Optional[float] = None,
                  dtype: Union[str, np.dtype] = "uint16"):
         super().__init__(FromFloatAlb(max_value=max_value, dtype=dtype, always_apply=True),
                          inputs=inputs,
                          outputs=outputs,
-                         mode=mode)
+                         mode=mode,
+                         ds_id=ds_id)

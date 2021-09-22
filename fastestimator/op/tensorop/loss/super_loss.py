@@ -64,6 +64,7 @@ class SuperLoss(LossOp):
         super().__init__(inputs=loss.inputs,
                          outputs=loss.outputs[0] if not output_confidence else (loss.outputs[0], output_confidence),
                          mode=loss.mode,
+                         ds_id=loss.ds_id,
                          average_loss=average_loss)
         if not isinstance(threshold, str):
             threshold = to_number(threshold).item()

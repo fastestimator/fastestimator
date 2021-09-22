@@ -88,7 +88,9 @@ class BestModelSaver(Trace):
             self.best = data[self.metric]
             self.since_best = 0
             if self.save_dir:
-                self.model_path = save_model(model=self.model, save_dir=self.save_dir, model_name=self.model_name,
+                self.model_path = save_model(model=self.model,
+                                             save_dir=self.save_dir,
+                                             model_name=self.model_name,
                                              save_architecture=self.save_architecture)
                 print("FastEstimator-BestModelSaver: Saved model to {}".format(self.model_path))
         else:

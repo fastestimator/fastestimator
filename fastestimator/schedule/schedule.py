@@ -83,8 +83,9 @@ class RepeatScheduler(Scheduler[T]):
     def __getstate__(self) -> Dict[str, List[Dict[Any, Any]]]:
         return {
             'repeat_list': [
-                elem if is_restorable(elem)[0] else elem.__getstate__() if hasattr(elem, '__getstate__') else {} for
-                elem in self.repeat_list]
+                elem if is_restorable(elem)[0] else elem.__getstate__() if hasattr(elem, '__getstate__') else {}
+                for elem in self.repeat_list
+            ]
         }
 
 
@@ -153,9 +154,11 @@ class EpochScheduler(Scheduler[T]):
 
     def __getstate__(self) -> Dict[str, Dict[int, Dict[Any, Any]]]:
         return {
-            'epoch_dict':
-                {key: elem if is_restorable(elem)[0] else elem.__getstate__() if hasattr(elem, '__getstate__') else {}
-                 for key, elem in self.epoch_dict.items()}
+            'epoch_dict': {
+                key: elem if is_restorable(elem)[0] else elem.__getstate__() if hasattr(elem, '__getstate__') else {}
+                for key,
+                elem in self.epoch_dict.items()
+            }
         }
 
 
@@ -182,7 +185,8 @@ def get_signature_epochs(items: List[Any], total_epochs: int, mode: Optional[str
 
 def get_current_items(items: Iterable[Union[T, Scheduler[T]]],
                       run_modes: Optional[Union[str, Iterable[str]]] = None,
-                      epoch: Optional[int] = None) -> List[T]:
+                      epoch: Optional[int] = None,
+                      ds_id: Optional[str] = None) -> List[T]:
     """Select items which should be executed for given mode and epoch.
 
     Args:
@@ -190,6 +194,7 @@ def get_current_items(items: Iterable[Union[T, Scheduler[T]]],
         run_modes: The desired execution mode. One or more of "train", "eval", "test", or "infer". If None, items of
             all modes will be returned.
         epoch: The desired execution epoch. If None, items across all epochs will be returned.
+        ds_id: The desired execution dataset id. If None, items across all ds_ids will be returned.
 
     Returns:
         The items which should be executed.
@@ -205,7 +210,32 @@ def get_current_items(items: Iterable[Union[T, Scheduler[T]]],
         else:
             item = [item]
         for item_ in item:
-            if item_ and (not run_modes or not hasattr(item_, "mode") or not item_.mode
-                          or item_.mode.intersection(run_modes)):
+            # mode matching
+            mode_match = False
+            if not run_modes:
+                mode_match = True
+            if not hasattr(item_, "mode"):
+                mode_match = True
+            else:
+                if not item_.mode:
+                    mode_match = True
+                elif item_.mode.intersection(run_modes):
+                    mode_match = True
+
+            # ds_id matching
+            ds_id_match = False
+            if not ds_id:
+                ds_id_match = True
+            if not hasattr(item_, "ds_id"):
+                ds_id_match = True
+            else:
+                if not item_.ds_id:
+                    ds_id_match = True
+                elif ds_id in item_.ds_id:
+                    ds_id_match = True  # whitelist check
+                # if any of ds_id starts with "!", then they will all start with "!"
+                elif any([x.startswith("!") for x in item_.ds_id]) and all([ds_id != x[1:] for x in item_.ds_id]):
+                    ds_id_match = True  # blacklist check
+            if item_ and mode_match and ds_id_match:
                 selected_items.append(item_)
     return selected_items

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Optional, Union
+from typing import Iterable, Optional, Union
 
 import cv2
 from albumentations import BboxParams, KeypointParams
@@ -30,6 +30,8 @@ class LongestMaxSize(MultiVariateAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         image_in: The key of an image to be modified.
         mask_in: The key of a mask to be modified (with the same random factors as the image).
         masks_in: The key of masks to be modified (with the same random factors as the image).
@@ -52,7 +54,8 @@ class LongestMaxSize(MultiVariateAlbumentation):
     def __init__(self,
                  max_size: int = 1024,
                  interpolation: int = cv2.INTER_LINEAR,
-                 mode: Optional[str] = None,
+                 mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  image_in: Optional[str] = None,
                  mask_in: Optional[str] = None,
                  masks_in: Optional[str] = None,
@@ -78,4 +81,5 @@ class LongestMaxSize(MultiVariateAlbumentation):
                          keypoints_out=keypoints_out,
                          bbox_params=bbox_params,
                          keypoint_params=keypoint_params,
-                         mode=mode)
+                         mode=mode,
+                         ds_id=ds_id)

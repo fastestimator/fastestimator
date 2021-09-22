@@ -33,6 +33,8 @@ class GaussianNoise(ImageOnlyAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         var_limit: Variance range for noise. If var_limit is a single float, the range will be (0, var_limit).
         mean: Mean of the noise.
 
@@ -43,9 +45,11 @@ class GaussianNoise(ImageOnlyAlbumentation):
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  var_limit: Union[float, Tuple[float, float]] = (10.0, 50.0),
                  mean: float = 0.0):
         super().__init__(GaussNoiseAlb(var_limit=var_limit, mean=mean, always_apply=True),
                          inputs=inputs,
                          outputs=outputs,
-                         mode=mode)
+                         mode=mode,
+                         ds_id=ds_id)

@@ -21,7 +21,10 @@ from torch.utils.data import DataLoader, Dataset
 
 import fastestimator as fe
 from fastestimator.dataset.batch_dataset import BatchDataset
+from fastestimator.dataset.data import mnist
+from fastestimator.dataset.numpy_dataset import NumpyDataset
 from fastestimator.op.numpyop import NumpyOp
+from fastestimator.op.numpyop.univariate import Minmax
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.schedule import EpochScheduler
 from fastestimator.test.unittest_util import is_equal
@@ -314,6 +317,21 @@ class TestPipelineBenchmark(unittest.TestCase):
                 except:
                     self.fail("exception occurred")
 
+    def test_multi_ds(self):
+        ds = {"ds_1": self.sample_torch_dataset, "ds_2": self.sample_torch_dataset}
+        pipeline = fe.Pipeline(train_data=ds)
+        pipeline.benchmark()
+
+    def test_multi_eval(self):
+        ds = {"ds_1": self.sample_torch_dataset, "ds_2": self.sample_torch_dataset}
+        pipeline = fe.Pipeline(eval_data=ds)
+        pipeline.benchmark(mode="eval")
+
+    def test_multi_test(self):
+        ds = {"ds_1": self.sample_torch_dataset, "ds_2": self.sample_torch_dataset}
+        pipeline = fe.Pipeline(test_data=ds)
+        pipeline.benchmark(mode="test")
+
 
 class TestPipelineTransform(unittest.TestCase):
     """ This test has dependency on:
@@ -335,6 +353,77 @@ class TestPipelineTransform(unittest.TestCase):
         data = pipeline.transform(data=self.sample_data, mode="train")
         ans = {"x": np.array([[1, 2, 3]], dtype=np.float32), "y": np.array([[2, 3, 4]], dtype=np.float32)}
         self.assertTrue(is_equal(data, ans))
+
+    def test_multi_train(self):
+        train_data, eval_data = mnist.load_data()
+        test_data = eval_data.split(0.5)
+        train_ds = {"ds_1": train_data, "ds_2": train_data, "ds_3": train_data}
+        pipeline = fe.Pipeline(train_data=train_ds,
+                               eval_data=eval_data,
+                               test_data=test_data,
+                               batch_size=1,
+                               ops=Minmax(inputs="x", outputs="x", ds_id=("ds_1", "ds_2")))
+        sample_data = train_data[0]
+
+        data1 = pipeline.transform(data=sample_data, mode="train", ds_id="ds_1")
+        assert data1["x"].max() == 1.0
+        data2 = pipeline.transform(data=sample_data, mode="train", ds_id="ds_2")
+        assert data2["x"].max() == 1.0
+        data3 = pipeline.transform(data=sample_data, mode="train", ds_id="ds_3")
+        assert data3["x"].max() == 255
+
+    def test_multi_eval(self):
+        train_data, eval_data = mnist.load_data()
+        test_data = eval_data.split(0.5)
+        eval_ds = {"ds_1": eval_data, "ds_2": eval_data, "ds_3": eval_data}
+        pipeline = fe.Pipeline(train_data=train_data,
+                               eval_data=eval_ds,
+                               test_data=test_data,
+                               batch_size=1,
+                               ops=Minmax(inputs="x", outputs="x", ds_id=("!ds_1", "!ds_2")))
+        sample_data = eval_data[0]
+        data1 = pipeline.transform(data=sample_data, mode="eval", ds_id="ds_1")
+        assert data1["x"].max() == 255
+        data2 = pipeline.transform(data=sample_data, mode="eval", ds_id="ds_2")
+        assert data2["x"].max() == 255
+        data3 = pipeline.transform(data=sample_data, mode="eval", ds_id="ds_3")
+        assert data3["x"].max() == 1.0
+
+    def test_multi_test(self):
+        train_data, eval_data = mnist.load_data()
+        test_data = eval_data.split(0.5)
+        test_ds = {"ds_1": test_data, "ds_2": test_data, "ds_3": test_data}
+        pipeline = fe.Pipeline(train_data=train_data,
+                               eval_data=eval_data,
+                               test_data=test_ds,
+                               batch_size=1,
+                               ops=Minmax(inputs="x", outputs="x", ds_id="!ds_1"))
+        sample_data = test_data[0]
+        data1 = pipeline.transform(data=sample_data, mode="test", ds_id="ds_1")
+        assert data1["x"].max() == 255
+        data2 = pipeline.transform(data=sample_data, mode="test", ds_id="ds_2")
+        assert data2["x"].max() == 1.0
+        data3 = pipeline.transform(data=sample_data, mode="test", ds_id="ds_3")
+        assert data3["x"].max() == 1.0
+
+    def test_multi_infer(self):
+        train_data, eval_data = mnist.load_data()
+        test_data = eval_data.split(0.5)
+        test_ds = {"ds_1": test_data, "ds_2": test_data, "ds_3": test_data}
+        pipeline = fe.Pipeline(train_data=train_data,
+                               eval_data=eval_data,
+                               test_data=test_ds,
+                               batch_size=1,
+                               ops=[Minmax(inputs="x", outputs="x", ds_id="!ds_1")])
+        sample_data = test_data[0]
+        data1 = pipeline.transform(data=sample_data, mode="infer", ds_id="ds_1")
+        assert data1["x"].max() == 255
+        data2 = pipeline.transform(data=sample_data, mode="infer", ds_id="ds_2")
+        assert data2["x"].max() == 1.0
+        data3 = pipeline.transform(data=sample_data, mode="infer", ds_id="ds_3")
+        assert data3["x"].max() == 1.0
+        data4 = pipeline.transform(data=sample_data, mode="infer")
+        assert data4["x"].max() == 1.0
 
 
 class TestPipelineGetResults(unittest.TestCase):
@@ -436,6 +525,62 @@ class TestPipelineGetResults(unittest.TestCase):
         data = pipeline.get_results()
         self.assertEqual(data["x"].size(0), 5)
 
+    def test_multi_train(self):
+        train_data = NumpyDataset({"x": np.array([[0, 255], [255, 0]])})
+        train_ds = {"ds_1": train_data, "ds_2": train_data, "ds_3": train_data}
+        pipeline = fe.Pipeline(train_data=train_ds,
+                               batch_size=1,
+                               ops=Minmax(inputs="x", outputs="x", ds_id=("ds_1", "ds_2")))
+        data1 = pipeline.get_results(mode="train", ds_id="ds_3")
+        assert data1["x"].numpy().max() == 255
+        data2 = pipeline.get_results(mode="train", ds_id="ds_1")
+        assert data2["x"].numpy().max() == 1.0
+        data3 = pipeline.get_results(mode="train", ds_id="ds_2")
+        assert data3["x"].numpy().max() == 1.0
+
+    def test_multi_eval(self):
+        eval_data = NumpyDataset({"x": np.array([[0, 255], [255, 0]])})
+        eval_ds = {"ds_1": eval_data, "ds_2": eval_data, "ds_3": eval_data}
+        pipeline = fe.Pipeline(eval_data=eval_ds,
+                               batch_size=1,
+                               ops=Minmax(inputs="x", outputs="x", ds_id=("!ds_1", "!ds_2")))
+        data1 = pipeline.get_results(mode="eval", ds_id="ds_3")
+        assert data1["x"].numpy().max() == 1.0
+        data2 = pipeline.get_results(mode="eval", ds_id="ds_1")
+        assert data2["x"].numpy().max() == 255
+        data3 = pipeline.get_results(mode="eval", ds_id="ds_2")
+        assert data3["x"].numpy().max() == 255
+
+    def test_multi_test(self):
+        test_data = NumpyDataset({"x": np.array([[0, 255], [255, 0]])})
+        test_ds = {"ds_1": test_data, "ds_2": test_data, "ds_3": test_data}
+        pipeline = fe.Pipeline(test_data=test_ds, batch_size=1, ops=Minmax(inputs="x", outputs="x", ds_id="!ds_1"))
+        data1 = pipeline.get_results(mode="test", ds_id="ds_3")
+        assert data1["x"].numpy().max() == 1.0
+        data2 = pipeline.get_results(mode="test", ds_id="ds_1")
+        assert data2["x"].numpy().max() == 255
+        data3 = pipeline.get_results(mode="test", ds_id="ds_2")
+        assert data3["x"].numpy().max() == 1.0
+
+    def test_multi_train_scheduler(self):
+        train_ds = NumpyDataset({"x": np.array([[0, 255], [255, 0]])})
+        train_ds2 = NumpyDataset({"x": np.array([[0, 256], [256, 0]])})
+        train_data1 = train_ds
+        train_data2 = EpochScheduler({1: train_ds, 2: None})
+        train_data3 = EpochScheduler({1: train_ds, 2: train_ds2})
+        train_dataset_overall = {"ds_1": train_data1, "ds_2": train_data2, "ds_3": train_data3}
+        pipeline = fe.Pipeline(train_data=train_dataset_overall,
+                               batch_size=1,
+                               ops=Minmax(inputs="x", outputs="x", ds_id=("ds_1", "ds_2")))
+        data1 = pipeline.get_results(mode="train", ds_id="ds_3", epoch=1)
+        assert data1["x"].numpy().max() == 255
+        data2 = pipeline.get_results(mode="train", ds_id="ds_3", epoch=2)
+        assert data2["x"].numpy().max() == 256
+        data3 = pipeline.get_results(mode="train", ds_id="ds_1", epoch=1)
+        assert data3["x"].numpy().max() == 1.0
+        data4 = pipeline.get_results(mode="train", ds_id="ds_2", epoch=2)
+        assert data4 == []
+
 
 class TestPipelineGetLoader(unittest.TestCase):
     """ This test cover:
@@ -494,10 +639,10 @@ class TestPipelineGetLoader(unittest.TestCase):
                     "x": torch.tensor([[0], [1]], dtype=torch.float32),
                     "y": torch.tensor([[-99], [-98]], dtype=torch.float32)
                 },
-                    {
-                        "x": torch.tensor([[2], [3]], dtype=torch.float32),
-                        "y": torch.tensor([[-97], [-96]], dtype=torch.float32)
-                    }]
+                       {
+                           "x": torch.tensor([[2], [3]], dtype=torch.float32),
+                           "y": torch.tensor([[-97], [-96]], dtype=torch.float32)
+                       }]
                 self.assertTrue(is_equal(results, ans))
 
         with self.subTest(shuffle=True):
@@ -512,10 +657,10 @@ class TestPipelineGetLoader(unittest.TestCase):
                     "x": torch.tensor([[0], [1]], dtype=torch.float32),
                     "y": torch.tensor([[-99], [-98]], dtype=torch.float32)
                 },
-                    {
-                        "x": torch.tensor([[2], [3]], dtype=torch.float32),
-                        "y": torch.tensor([[-97], [-96]], dtype=torch.float32)
-                    }]
+                             {
+                                 "x": torch.tensor([[2], [3]], dtype=torch.float32),
+                                 "y": torch.tensor([[-97], [-96]], dtype=torch.float32)
+                             }]
                 self.assertFalse(is_equal(results, wrong_ans))
 
         with self.subTest(shuffle=None):
@@ -530,10 +675,10 @@ class TestPipelineGetLoader(unittest.TestCase):
                     "x": torch.tensor([[0], [1]], dtype=torch.float32),
                     "y": torch.tensor([[-99], [-98]], dtype=torch.float32)
                 },
-                    {
-                        "x": torch.tensor([[2], [3]], dtype=torch.float32),
-                        "y": torch.tensor([[-97], [-96]], dtype=torch.float32)
-                    }]
+                             {
+                                 "x": torch.tensor([[2], [3]], dtype=torch.float32),
+                                 "y": torch.tensor([[-97], [-96]], dtype=torch.float32)
+                             }]
                 self.assertFalse(is_equal(results,
                                           wrong_ans))  # if shuffle is None and has specify batch_size, it will shuffle
 
@@ -578,3 +723,41 @@ class TestPipelineGetLoader(unittest.TestCase):
             with pipeline(mode='train') as loader1:
                 pipeline(mode='train')
                 print(loader1)
+
+
+class TestPipelineNames(unittest.TestCase):
+    def test_forbidden_names_none(self):
+        data = NumpyDataset({"x": np.array([[0, 255], [255, 0]])})
+        train_ds = {None: data}
+        with self.assertRaises(AssertionError):
+            fe.Pipeline(train_data=train_ds)
+
+    def test_forbidden_names_esc(self):
+        data = NumpyDataset({"x": np.array([[0, 255], [255, 0]])})
+        train_ds = {"!ds1": data}
+        with self.assertRaises(AssertionError):
+            fe.Pipeline(train_data=train_ds)
+
+    def test_forbidden_names_semi(self):
+        data = NumpyDataset({"x": np.array([[0, 255], [255, 0]])})
+        train_ds = {"ds1;": data}
+        with self.assertRaises(AssertionError):
+            fe.Pipeline(train_data=train_ds)
+
+    def test_forbidden_names_colon(self):
+        data = NumpyDataset({"x": np.array([[0, 255], [255, 0]])})
+        train_ds = {"ds1:": data}
+        with self.assertRaises(AssertionError):
+            fe.Pipeline(train_data=train_ds)
+
+    def test_forbidden_names_empty(self):
+        data = NumpyDataset({"x": np.array([[0, 255], [255, 0]])})
+        train_ds = {"": data}
+        with self.assertRaises(AssertionError):
+            fe.Pipeline(train_data=train_ds)
+
+    def test_forbidden_names_pipe(self):
+        data = NumpyDataset({"x": np.array([[0, 255], [255, 0]])})
+        train_ds = {"ds|ds1": data}
+        with self.assertRaises(AssertionError):
+            fe.Pipeline(train_data=train_ds)
