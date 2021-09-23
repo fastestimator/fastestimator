@@ -51,12 +51,12 @@ class IAACropAndPad(MultiVariateAlbumentation):
         uint8, float32
     """
     def __init__(self,
-                 px: Optional[Union[int, Tuple[int, int]]] = None,
-                 percent: Optional[Union[float, Tuple[float, float]]] = None,
+                 px: Union[None, int, Tuple[int, int]] = None,
+                 percent: Union[None, float, Tuple[float, float]] = None,
                  pad_mode: Union[int, str] = 'constant',
                  pad_cval: Union[int, Tuple[float], List[int]] = 0,
                  keep_size: bool = True,
-                 mode: Optional[str] = None,
+                 mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
                  image_in: Optional[str] = None,
                  mask_in: Optional[str] = None,
