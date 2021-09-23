@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import List, Optional, Tuple, Union
+from typing import Iterable, List, Optional, Tuple, Union
 
 from albumentations.imgaug.transforms import IAACropAndPad as IAACropAndPadAlb
 
@@ -28,6 +28,8 @@ class IAACropAndPad(MultiVariateAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         image_in: The key of an image to be modified.
         mask_in: The key of a mask to be modified (with the same random factors as the image).
         masks_in: The key of masks to be modified (with the same random factors as the image).
@@ -55,6 +57,7 @@ class IAACropAndPad(MultiVariateAlbumentation):
                  pad_cval: Union[int, Tuple[float], List[int]] = 0,
                  keep_size: bool = True,
                  mode: Optional[str] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  image_in: Optional[str] = None,
                  mask_in: Optional[str] = None,
                  masks_in: Optional[str] = None,
@@ -80,4 +83,5 @@ class IAACropAndPad(MultiVariateAlbumentation):
             keypoints_out=None,
             bbox_params=None,
             keypoint_params=None,
-            mode=mode)
+            mode=mode,
+            ds_id=ds_id)

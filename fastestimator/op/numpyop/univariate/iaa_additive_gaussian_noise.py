@@ -30,6 +30,8 @@ class IAAAdditiveGaussianNoise(ImageOnlyAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         loc: mean of the normal distribution that generates the noise. Default: 0.
         scale: standard deviation of the normal distribution that generates the noise. Default: (0.01 * 255, 0.05 * 255)
 
@@ -40,10 +42,12 @@ class IAAAdditiveGaussianNoise(ImageOnlyAlbumentation):
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  loc: int = 0,
                  scale:Tuple[float, float] =(2.5500000000000003, 12.75)):
         super().__init__(
             IAAAdditiveGaussianNoiseAlb(loc=loc, scale=scale, always_apply=True),
             inputs=inputs,
             outputs=outputs,
-            mode=mode)
+            mode=mode,
+            ds_id=ds_id)
