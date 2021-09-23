@@ -63,7 +63,7 @@ class UpdateOp(TensorOp):
                  model: Union[tf.keras.Model, torch.nn.Module],
                  loss_name: str,
                  gradients: Optional[str] = None,
-                 mode: Union[None, str, Iterable[str]] = None,
+                 mode: Union[None, str, Iterable[str]] = "train",
                  ds_id: Union[None, str, Iterable[str]] = None,
                  merge_grad: int = 1,
                  defer: bool = False):

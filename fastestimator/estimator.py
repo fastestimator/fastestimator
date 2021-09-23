@@ -352,7 +352,7 @@ class Estimator:
                     except StopIteration:
                         break
                 self._run_traces_on_ds_end(traces=per_ds_traces, data=end_epoch_data)
-            self.network.unload_epoch()
+                self.network.unload_epoch()
         self._run_traces_on_epoch_end(traces=epoch_traces, data=end_epoch_data)
 
     def _configure_loader(self, loader: Union[DataLoader, tf.data.Dataset]) -> Union[DataLoader, tf.data.Dataset]:

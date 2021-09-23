@@ -46,7 +46,7 @@ class Gather(TensorOp):
                  inputs: Union[str, List[str]],
                  outputs: Union[str, List[str]],
                  indices: Union[None, str, List[str]] = None,
-                 mode: Union[None, str, Iterable[str]] = "eval",
+                 mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None):
         indices = to_list(indices)
         self.num_indices = len(indices)
