@@ -42,7 +42,7 @@ class Argmax(TensorOp):
                  inputs: Union[str, List[str]],
                  outputs: Union[str, List[str]],
                  axis: int = 0,
-                 mode: Union[None, str, Iterable[str]] = "eval",
+                 mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.axis = axis

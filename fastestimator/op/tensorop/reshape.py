@@ -42,7 +42,7 @@ class Reshape(TensorOp):
                  inputs: Union[str, List[str]],
                  outputs: Union[str, List[str]],
                  shape: Union[int, Tuple[int, ...]],
-                 mode: Union[None, str, Iterable[str]] = "!infer",
+                 mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None) -> None:
         super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.shape = list(shape)
