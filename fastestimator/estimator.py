@@ -36,7 +36,8 @@ from fastestimator.trace.io.best_model_saver import BestModelSaver
 from fastestimator.trace.io.model_saver import ModelSaver
 from fastestimator.trace.io.restore_wizard import RestoreWizard
 from fastestimator.trace.io.traceability import Traceability
-from fastestimator.trace.trace import EvalEssential, Logger, TestEssential, Trace, TrainEssential, PerDSTrace, sort_traces
+from fastestimator.trace.trace import EvalEssential, Logger, PerDSTrace, TestEssential, Trace, TrainEssential, \
+    sort_traces
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import Suppressor, draw, to_list, to_set
@@ -233,12 +234,7 @@ class Estimator:
                         "found missing key(s) during epoch {} mode {} ds_id {}: {}".format(epoch, mode, ds_id, unmet_requirements)
                     sort_traces(traces, ds_ids=ds_ids, available_outputs=pipeline_output_keys | network_output_keys)
                     trace_input_keys.update(traces[0].inputs)
-                    self.network.load_epoch(mode,
-                                            epoch,
-                                            ds_id,
-                                            output_keys=trace_input_keys,
-                                            warmup=True,
-                                            eager=eager)
+                    self.network.load_epoch(mode, epoch, ds_id, output_keys=trace_input_keys, warmup=True, eager=eager)
                     self.network.run_step(batch)
                     self.network.unload_epoch()
         assert not monitor_names, "found missing key(s): {}".format(monitor_names)
@@ -297,7 +293,8 @@ class Estimator:
         """
         ds_ids = self.pipeline.get_ds_ids(self.system.epoch_idx, self.system.mode)
         epoch_traces = sort_traces(
-            get_current_items(self.traces_in_use, run_modes=self.system.mode, epoch=self.system.epoch_idx), ds_ids=ds_ids)
+            get_current_items(self.traces_in_use, run_modes=self.system.mode, epoch=self.system.epoch_idx),
+            ds_ids=ds_ids)
         self._run_traces_on_epoch_begin(traces=epoch_traces)
         self.system.batch_idx = None
         end_epoch_data = Data()  # We will aggregate data over on_ds_end and put it into on_epoch_end for printing
@@ -316,20 +313,22 @@ class Estimator:
             network_output_keys = self.network.get_all_output_keys(mode=self.system.mode,
                                                                    epoch=self.system.epoch_idx,
                                                                    ds_id=self.system.ds_id)
+            self.network.load_epoch(mode=self.system.mode,
+                                    epoch=self.system.epoch_idx,
+                                    ds_id=self.system.ds_id,
+                                    output_keys=trace_input_keys,
+                                    eager=eager)
             with self.pipeline(mode=self.system.mode,
                                epoch=self.system.epoch_idx,
                                ds_id=self.system.ds_id,
                                output_keys=trace_input_keys - network_output_keys | network_input_keys) as loader:
                 loader = self._configure_loader(loader)
                 iterator = iter(loader)
-                self.network.load_epoch(mode=self.system.mode,
-                                        epoch=self.system.epoch_idx,
-                                        ds_id=self.system.ds_id,
-                                        output_keys=trace_input_keys,
-                                        eager=eager)
                 with Suppressor():
                     batch = next(iterator)
-                ds_traces = sort_traces(ds_traces, available_outputs=to_set(batch.keys()) | network_output_keys, ds_ids=ds_ids)
+                ds_traces = sort_traces(ds_traces,
+                                        available_outputs=to_set(batch.keys()) | network_output_keys,
+                                        ds_ids=ds_ids)
                 per_ds_traces = [trace for trace in ds_traces if isinstance(trace, PerDSTrace)]
                 self._run_traces_on_ds_begin(traces=per_ds_traces)
                 while True:
@@ -352,7 +351,7 @@ class Estimator:
                     except StopIteration:
                         break
                 self._run_traces_on_ds_end(traces=per_ds_traces, data=end_epoch_data)
-                self.network.unload_epoch()
+            self.network.unload_epoch()
         self._run_traces_on_epoch_end(traces=epoch_traces, data=end_epoch_data)
 
     def _configure_loader(self, loader: Union[DataLoader, tf.data.Dataset]) -> Union[DataLoader, tf.data.Dataset]:
