@@ -16,6 +16,7 @@ import unittest
 
 import numpy as np
 
+from fastestimator.test.unittest_util import sample_system_object
 from fastestimator.trace.metric import Dice
 from fastestimator.util import Data
 
@@ -28,6 +29,7 @@ class TestDice(unittest.TestCase):
         cls.data = Data({'x': x, 'x_pred': x_pred})
         cls.dice_output = [1.4999999987500001, 2.3999999972, 2.3999999972]
         cls.dice = Dice(true_key='x', pred_key='x_pred')
+        cls.dice.system = sample_system_object()
 
     def test_on_epoch_begin(self):
         self.dice.on_epoch_begin(data=self.data)

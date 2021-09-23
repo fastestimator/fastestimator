@@ -30,6 +30,8 @@ class RandomRain(ImageOnlyAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         slant_lower: Should be in range [-20, 20].
         slant_upper: Should be in range [-20, 20].
         drop_length: Should be in range [0, 100].
@@ -46,6 +48,7 @@ class RandomRain(ImageOnlyAlbumentation):
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  slant_lower: int = -10,
                  slant_upper: int = 10,
                  drop_length: int = 20,
@@ -66,4 +69,5 @@ class RandomRain(ImageOnlyAlbumentation):
                           always_apply=True),
             inputs=inputs,
             outputs=outputs,
-            mode=mode)
+            mode=mode,
+            ds_id=ds_id)

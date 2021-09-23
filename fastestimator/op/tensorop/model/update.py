@@ -42,6 +42,8 @@ class UpdateOp(TensorOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         merge_grad: The gradient accumulation times before model update. Ex: if `merge_grad` = 3, for every three Op
             calls only the third one updates the model. The first two calls only accumulate its gradients. This default
             value is 1 and it will update the model at every step.
@@ -61,20 +63,21 @@ class UpdateOp(TensorOp):
                  model: Union[tf.keras.Model, torch.nn.Module],
                  loss_name: str,
                  gradients: Optional[str] = None,
-                 mode: Union[None, str, Iterable[str]] = "train",
+                 mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  merge_grad: int = 1,
                  defer: bool = False):
         self.extra_loss = isinstance(model, tf.keras.Model) and model.losses
         if gradients is None:
-            super().__init__(inputs=loss_name, outputs=None, mode=mode)
+            super().__init__(inputs=loss_name, outputs=None, mode=mode, ds_id=ds_id)
         else:
             if model.mixed_precision:
                 raise ValueError("Mixed precision training cannot take input gradients, because the gradients need to "
-                                "be computed in this module")
+                                 "be computed in this module")
             if self.extra_loss:
                 print("FastEstimator-Warn: Extra model losses are detected and they will be ignored since the gradients"
-                " are not computed in UpdateOp class.")
-            super().__init__(inputs=gradients, outputs=None, mode=mode)
+                      " are not computed in UpdateOp class.")
+            super().__init__(inputs=gradients, outputs=None, mode=mode, ds_id=ds_id)
 
         if torch.cuda.device_count() > 1 and merge_grad > 1:
             raise ValueError("Currently FastEstimator doesn't support merge_grad feature in multi-GPU configuration "
@@ -233,10 +236,7 @@ class UpdateOp(TensorOp):
 
         if self.step % self.merge_grad == 0:
             average_grad = [gs / self.merge_grad for gs in self.grad_sum]
-            update_model(model=self.model,
-                         gradients=average_grad,
-                         defer=self.defer,
-                         deferred=deferred)
+            update_model(model=self.model, gradients=average_grad, defer=self.defer, deferred=deferred)
             for gs in self.grad_sum:
                 self._assign_add(gs, -gs)  # zero the gradient in place
 

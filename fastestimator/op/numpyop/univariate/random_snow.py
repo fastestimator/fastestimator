@@ -30,6 +30,8 @@ class RandomSnow(ImageOnlyAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         snow_point_lower: Lower bound of the amount of snow. Should be in the range [0, 1].
         snow_point_upper: Upper bound of the amount of snow. Should be in the range [0, 1].
         brightness_coeff: A larger number will lead to a more snow on the image. Should be >= 0.
@@ -41,6 +43,7 @@ class RandomSnow(ImageOnlyAlbumentation):
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  snow_point_lower: float = 0.1,
                  snow_point_upper: float = 0.3,
                  brightness_coeff: float = 2.5):
@@ -51,4 +54,5 @@ class RandomSnow(ImageOnlyAlbumentation):
                           always_apply=True),
             inputs=inputs,
             outputs=outputs,
-            mode=mode)
+            mode=mode,
+            ds_id=ds_id)

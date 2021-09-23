@@ -57,7 +57,7 @@ class Data(ChainMap[str, Any]):
         """Write a given `value` into the `Data` dictionary with the intent that it not be logged.
 
         Args:
-            key: The ey to associate with the new entry.
+            key: The key to associate with the new entry.
             value: The new entry to be written.
         """
         self.maps[1][key] = value

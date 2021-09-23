@@ -37,13 +37,16 @@ class GradientOp(TensorOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
     def __init__(self,
                  finals: Union[str, List[str]],
                  outputs: Union[str, List[str]],
                  inputs: Union[None, str, List[str]] = None,
                  model: Union[None, tf.keras.Model, torch.nn.Module] = None,
-                 mode: Union[None, str, Iterable[str]] = None):
+                 mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None):
         inputs = to_list(inputs)
         finals = to_list(finals)
         outputs = to_list(outputs)
@@ -55,7 +58,7 @@ class GradientOp(TensorOp):
             assert isinstance(model, (tf.keras.Model, torch.nn.Module)), "Unrecognized model format"
             assert len(finals) == len(outputs), "GradientOp requires the same number of finals, and outputs"
         inputs.extend(finals)
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.model = model
         self.retain_graph = True
 

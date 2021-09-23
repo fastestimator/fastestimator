@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, TypeVar, Union
+from typing import Any, Dict, List, Optional, Sequence, Iterable, Tuple, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
@@ -48,6 +48,8 @@ class Saliency(Trace):
         mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Trace in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         smoothing: How many rounds of smoothing should be applied to the saliency mask (0 to disable).
         integrating: How many rounds of integration should be applied to the saliency mask (0 to disable). A tuple may
             be used to indicate (# integration, # smoothing) if a different amount of smoothing is desired than was
@@ -65,13 +67,15 @@ class Saliency(Trace):
                  label_mapping: Optional[Dict[str, Any]] = None,
                  outputs: Union[str, List[str]] = "saliency",
                  samples: Union[None, int, Dict[str, Any]] = None,
-                 mode: Union[str, Set[str]] = ("eval", "test"),
+                 mode: Union[None, str, Iterable[str]] = ("eval", "test"),
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  smoothing: int = 25,
                  integrating: Union[int, Tuple[int, int]] = (100, 6)) -> None:
         # Model outputs are required due to inability to statically determine the number of outputs from a pytorch model
         self.class_key = class_key
         self.model_outputs = to_list(model_outputs)
-        super().__init__(inputs=to_list(self.class_key) + to_list(model_inputs), outputs=outputs, mode=mode)
+        super().__init__(inputs=to_list(self.class_key) + to_list(model_inputs), outputs=outputs, mode=mode,
+                         ds_id=ds_id)
         self.smoothing = smoothing
         self.integrating = integrating
         self.samples = {}

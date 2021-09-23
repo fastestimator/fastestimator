@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Sequence, Set, Union
+from typing import Sequence, Union, Iterable
 
 import matplotlib.pyplot as plt
 
@@ -39,11 +39,12 @@ class ImageViewer(Trace):
         width: The width in inches of the figure.
         height: The height in inches of the figure.
     """
-    def __init__(self,
-                 inputs: Union[str, Sequence[str]],
-                 mode: Union[str, Set[str]] = ("eval", "test"),
-                 width: int = 12,
-                 height: int = 6) -> None:
+    def __init__(
+        self,
+        inputs: Union[str, Sequence[str]],
+        mode: Union[None, str, Iterable[str]] = ("eval", "test"),
+        width: int = 12,
+        height: int = 6) -> None:
         super().__init__(inputs=inputs, mode=mode)
         plt.rcParams['figure.figsize'] = [width, height]
 

@@ -64,7 +64,9 @@ class ModelSaver(Trace):
         # No model will be saved when save_dir is None, which makes smoke test easier.
         if self.save_dir and self.system.epoch_idx % self.frequency == 0:
             model_name = "{}_epoch_{}".format(self.model.model_name, self.system.epoch_idx)
-            model_path = save_model(model=self.model, save_dir=self.save_dir, model_name=model_name,
+            model_path = save_model(model=self.model,
+                                    save_dir=self.save_dir,
+                                    model_name=model_name,
                                     save_architecture=self.save_architecture)
             print("FastEstimator-ModelSaver: Saved model to {}".format(model_path))
             rm_path = self.file_queue[self.file_queue.maxlen - 1] if self.file_queue.maxlen else None

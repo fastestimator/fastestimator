@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import List, Optional, Tuple, TypeVar, Union
+from typing import Iterable, List, Optional, Tuple, TypeVar, Union
 
 from albumentations import BboxParams, KeypointParams
 from albumentations.imgaug.transforms import IAAAffine
@@ -50,6 +50,8 @@ class Affine(MultiVariateAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         image_in: The key of an image to be modified.
         mask_in: The key of a mask to be modified (with the same random factors as the image).
         masks_in: The key of masks to be modified (with the same random factors as the image).
@@ -74,7 +76,8 @@ class Affine(MultiVariateAlbumentation):
                  border_handling: Union[str, List[str]] = "reflect",
                  fill_value: Number = 0,
                  interpolation: str = "bilinear",
-                 mode: Optional[str] = None,
+                 mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  image_in: Optional[str] = None,
                  mask_in: Optional[str] = None,
                  masks_in: Optional[str] = None,
@@ -119,4 +122,5 @@ class Affine(MultiVariateAlbumentation):
                          keypoints_out=keypoints_out,
                          bbox_params=bbox_params,
                          keypoint_params=keypoint_params,
-                         mode=mode)
+                         mode=mode,
+                         ds_id=ds_id)

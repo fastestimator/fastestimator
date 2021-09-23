@@ -44,6 +44,8 @@ class CutMixBatch(TensorOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         alpha: The alpha value defining the beta distribution to be drawn from during training which controls the
             combination ratio between image pairs.
 
@@ -54,9 +56,10 @@ class CutMixBatch(TensorOp):
                  inputs: str,
                  outputs: Iterable[str],
                  mode: Union[None, str, Iterable[str]] = 'train',
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  alpha: Union[float, Tensor] = 1.0) -> None:
         assert alpha > 0, "Alpha value must be greater than zero"
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         assert len(self.outputs) == len(self.inputs) + 1, "CutMixBatch should generate 1 more output than it has inputs"
         self.alpha = alpha
         self.beta = None

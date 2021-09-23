@@ -32,6 +32,8 @@ class ReadImage(NumpyOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         parent_path: Parent path that will be prepended to a given path.
         color_flag: Whether to read the image as 'color', 'grey', or one of the cv2.IMREAD flags.
 
@@ -42,9 +44,10 @@ class ReadImage(NumpyOp):
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  parent_path: str = "",
                  color_flag: Union[str, int] = cv2.IMREAD_COLOR):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         if isinstance(self.inputs, List) and isinstance(self.outputs, List):
             assert len(self.inputs) == len(self.outputs), "Input and Output lengths must match"
         self.parent_path = parent_path

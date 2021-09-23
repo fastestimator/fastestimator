@@ -36,6 +36,8 @@ class MixUpBatch(TensorOp):
         inputs: Key of the input to be mixed up.
         outputs: Key to store the mixed-up outputs.
         mode: What mode to execute in. Probably 'train'.
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         alpha: The alpha value defining the beta distribution to be drawn from during training.
         shared_beta: Sample a single beta for a batch or element wise beta for each image.
 
@@ -46,10 +48,11 @@ class MixUpBatch(TensorOp):
                  inputs: Union[str, Iterable[str]],
                  outputs: Iterable[str],
                  mode: Union[None, str, Iterable[str]] = 'train',
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  alpha: float = 1.0,
                  shared_beta: bool = True):
         assert alpha > 0, "MixUp alpha value must be greater than zero"
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         assert len(self.outputs) == len(self.inputs) + 1, "MixUpBatch requires 1 more output than inputs"
         self.alpha = alpha
         self.beta = None

@@ -33,14 +33,17 @@ class ReadMat(NumpyOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         parent_path: Parent path that will be prepended to a given filepath.
     """
     def __init__(self,
                  file: str,
                  keys: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  parent_path: str = ""):
-        super().__init__(inputs=file, outputs=keys, mode=mode)
+        super().__init__(inputs=file, outputs=keys, mode=mode, ds_id=ds_id)
         self.parent_path = parent_path
         self.out_list = True
 

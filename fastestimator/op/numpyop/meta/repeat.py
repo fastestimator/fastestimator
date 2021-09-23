@@ -55,7 +55,7 @@ class Repeat(NumpyOp):
             self.repeat_inputs.extend(inspect.signature(repeat).parameters.keys())
             extra_reqs = list(set(self.repeat_inputs) - set(op.outputs))
         self.repeat = repeat
-        super().__init__(inputs=op.inputs + extra_reqs, outputs=op.outputs, mode=op.mode)
+        super().__init__(inputs=op.inputs + extra_reqs, outputs=op.outputs, mode=op.mode, ds_id=op.ds_id)
         self.ops = [op]
 
     @property

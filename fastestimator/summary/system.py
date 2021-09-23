@@ -15,7 +15,7 @@
 import datetime
 import json
 import os
-from typing import Any, Dict, List, Optional, TYPE_CHECKING, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypeVar, Union
 
 import dill as pickle  # Need to use dill since tf.Variable is a weakref object on multi-gpu machines
 import tensorflow as tf
@@ -54,6 +54,7 @@ class System:
 
     Attributes:
         mode: What is the current execution mode of the estimator ('train', 'eval', 'test'), None if warmup.
+        ds_id: The current dataset id, None if there is only one dataset in each mode.
         global_step: How many training steps have elapsed.
         num_devices: How many GPUs are available for training.
         log_steps: Log every n steps (0 to disable train logging, None to disable all logging).
@@ -72,6 +73,7 @@ class System:
     """
 
     mode: Optional[str]
+    ds_id: Optional[str]
     global_step: Optional[int]
     num_devices: int
     log_steps: Optional[int]
@@ -93,6 +95,7 @@ class System:
                  pipeline: Pipeline,
                  traces: List[Union['Trace', Scheduler['Trace']]],
                  mode: Optional[str] = None,
+                 ds_id: Optional[str] = None,
                  num_devices: int = torch.cuda.device_count(),
                  log_steps: Optional[int] = None,
                  total_epochs: int = 0,
@@ -104,6 +107,7 @@ class System:
         self.pipeline = pipeline
         self.traces = traces
         self.mode = mode
+        self.ds_id = ds_id
         self.num_devices = num_devices
         self.log_steps = log_steps
         self.total_epochs = total_epochs
@@ -147,6 +151,7 @@ class System:
         """
         self.experiment_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         self.mode = "train"
+        self.ds_id = None
         self._initialize_state()
         self.batch_idx = None
         self.stop_training = False
@@ -161,6 +166,7 @@ class System:
         """
         self.experiment_time = self.experiment_time or datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         self.mode = "test"
+        self.ds_id = None
         if not self.stop_training:
             self.epoch_idx = self.total_epochs
         self.stop_training = False
@@ -216,9 +222,12 @@ class System:
             'tops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.network.ops],
             'pops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.network.postprocessing],
             'nops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.pipeline.ops],
-            'ds':
-            {key: value.__getstate__()
-             for key, value in self.pipeline.data.items() if hasattr(value, '__getstate__')}
+            'ds': {
+                mode: {key: value.__getstate__()
+                       for key, value in ds.items() if hasattr(value, '__getstate__')}
+                for mode,
+                ds in self.pipeline.data.items()
+            }
         }
         with open(os.path.join(save_dir, 'objects.pkl'), 'wb') as file:
             pickle.dump(objects, file)
@@ -335,6 +344,8 @@ class System:
                 obj.__setstate__(state)
             elif hasattr(obj, '__dict__'):
                 obj.__dict__.update(state)
+            elif isinstance(obj, dict):
+                [System._load_dict(states, k, obj) for k in states]
             else:
                 # Might be a None or something else that can't be updated
                 pass

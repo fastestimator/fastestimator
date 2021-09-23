@@ -62,7 +62,7 @@ class Repeat(TensorOp):
             self.repeat_inputs.extend(inspect.signature(repeat).parameters.keys())
             extra_reqs = list(set(self.repeat_inputs) - set(op.outputs))
         self.repeat = repeat
-        super().__init__(inputs=op.inputs + extra_reqs, outputs=op.outputs, mode=op.mode)
+        super().__init__(inputs=op.inputs + extra_reqs, outputs=op.outputs, mode=op.mode, ds_id=op.ds_id)
         self.ops = [op]
         self.retain_graph = None
         self.while_fn = None
@@ -142,7 +142,9 @@ class Repeat(TensorOp):
         """
         args = ([data[var_name] for var_name in self.repeat_inputs], data)
         # Use functools.partial since state may contain objects which cannot be cast to tensors (ex. gradient tape)
-        args = tf.while_loop(self._tf_cond, functools.partial(self._tf_body, state=state), args,
+        args = tf.while_loop(self._tf_cond,
+                             functools.partial(self._tf_body, state=state),
+                             args,
                              maximum_iterations=self.max_iter)
         return args[1]
 

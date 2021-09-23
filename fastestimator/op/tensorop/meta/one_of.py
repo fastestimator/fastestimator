@@ -37,7 +37,8 @@ class OneOf(TensorOp):
         inputs = tensor_ops[0].inputs
         outputs = tensor_ops[0].outputs
         mode = tensor_ops[0].mode
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        ds_id = tensor_ops[0].ds_id
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.in_list = tensor_ops[0].in_list
         self.out_list = tensor_ops[0].out_list
         for op in tensor_ops[1:]:
@@ -46,6 +47,7 @@ class OneOf(TensorOp):
             assert outputs == op.outputs, "All ops within a OneOf must share the same outputs"
             assert self.out_list == op.out_list, "All ops within OneOf must share the same output configuration"
             assert mode == op.mode, "All ops within a OneOf must share the same mode"
+            assert ds_id == op.ds_id, "All ops within a OneOf must share the same ds_id"
         self.ops = tensor_ops
         self.prob_fn = None
         self.invoke_fn = None

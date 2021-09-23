@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import os
-from typing import Sequence, Set, Union
+from typing import Sequence, Union, Iterable
 
 import matplotlib.pyplot as plt
 
@@ -42,7 +42,7 @@ class ImageSaver(Trace):
                  inputs: Union[str, Sequence[str]],
                  save_dir: str = os.getcwd(),
                  dpi: int = 300,
-                 mode: Union[str, Set[str]] = ("eval", "test")) -> None:
+                 mode: Union[None, str, Iterable[str]] = ("eval", "test")) -> None:
         super().__init__(inputs=inputs, mode=mode)
         self.save_dir = save_dir
         self.dpi = dpi

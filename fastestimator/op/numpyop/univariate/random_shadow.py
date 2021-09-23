@@ -30,6 +30,8 @@ class RandomShadow(ImageOnlyAlbumentation):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
         shadow_roi: Region of the image where shadows will appear (x_min, y_min, x_max, y_max).
             All values should be in range [0, 1].
         num_shadows_lower: Lower limit for the possible number of shadows. Should be in range [0, `num_shadows_upper`].
@@ -44,6 +46,7 @@ class RandomShadow(ImageOnlyAlbumentation):
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None,
                  shadow_roi: Tuple[float, float, float, float] = (0.0, 0.5, 1.0, 1.0),
                  num_shadows_lower: int = 1,
                  num_shadows_upper: int = 2,
@@ -60,4 +63,5 @@ class RandomShadow(ImageOnlyAlbumentation):
                             always_apply=True),
             inputs=inputs,
             outputs=outputs,
-            mode=mode)
+            mode=mode,
+            ds_id=ds_id)

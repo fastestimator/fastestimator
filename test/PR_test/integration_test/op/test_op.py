@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2021 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.trace import adapt, io, metric, xai
-from fastestimator.trace.trace import EvalEssential, Logger, TestEssential, Trace, TrainEssential, PerDSTrace, \
-    sort_traces
+import unittest
+
+import fastestimator as fe
+
+
+class TestOpNames(unittest.TestCase):
+    def test_forbidden_names_semi(self):
+        with self.assertRaises(AssertionError):
+            fe.op.Op(inputs="x:")
+        with self.assertRaises(AssertionError):
+            fe.op.Op(outputs="x:")
+
+    def test_forbidden_names_colon(self):
+        with self.assertRaises(AssertionError):
+            fe.op.Op(inputs="x;")
+        with self.assertRaises(AssertionError):
+            fe.op.Op(outputs="x;")
