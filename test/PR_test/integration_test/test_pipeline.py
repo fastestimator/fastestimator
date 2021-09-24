@@ -21,7 +21,6 @@ from torch.utils.data import DataLoader, Dataset
 
 import fastestimator as fe
 from fastestimator.dataset.batch_dataset import BatchDataset
-from fastestimator.dataset.data import mnist
 from fastestimator.dataset.numpy_dataset import NumpyDataset
 from fastestimator.op.numpyop import NumpyOp
 from fastestimator.op.numpyop.univariate import Minmax
@@ -355,16 +354,9 @@ class TestPipelineTransform(unittest.TestCase):
         self.assertTrue(is_equal(data, ans))
 
     def test_multi_train(self):
-        train_data, eval_data = mnist.load_data()
-        test_data = eval_data.split(0.5)
-        train_ds = {"ds_1": train_data, "ds_2": train_data, "ds_3": train_data}
-        pipeline = fe.Pipeline(train_data=train_ds,
-                               eval_data=eval_data,
-                               test_data=test_data,
-                               batch_size=1,
+        pipeline = fe.Pipeline(train_data=self.sample_dataset,
                                ops=Minmax(inputs="x", outputs="x", ds_id=("ds_1", "ds_2")))
-        sample_data = train_data[0]
-
+        sample_data = {"x": np.array([0, 255], dtype=np.float32)}
         data1 = pipeline.transform(data=sample_data, mode="train", ds_id="ds_1")
         assert data1["x"].max() == 1.0
         data2 = pipeline.transform(data=sample_data, mode="train", ds_id="ds_2")
@@ -373,15 +365,9 @@ class TestPipelineTransform(unittest.TestCase):
         assert data3["x"].max() == 255
 
     def test_multi_eval(self):
-        train_data, eval_data = mnist.load_data()
-        test_data = eval_data.split(0.5)
-        eval_ds = {"ds_1": eval_data, "ds_2": eval_data, "ds_3": eval_data}
-        pipeline = fe.Pipeline(train_data=train_data,
-                               eval_data=eval_ds,
-                               test_data=test_data,
-                               batch_size=1,
+        pipeline = fe.Pipeline(train_data=self.sample_dataset,
                                ops=Minmax(inputs="x", outputs="x", ds_id=("!ds_1", "!ds_2")))
-        sample_data = eval_data[0]
+        sample_data = {"x": np.array([0, 255], dtype=np.float32)}
         data1 = pipeline.transform(data=sample_data, mode="eval", ds_id="ds_1")
         assert data1["x"].max() == 255
         data2 = pipeline.transform(data=sample_data, mode="eval", ds_id="ds_2")
@@ -390,15 +376,8 @@ class TestPipelineTransform(unittest.TestCase):
         assert data3["x"].max() == 1.0
 
     def test_multi_test(self):
-        train_data, eval_data = mnist.load_data()
-        test_data = eval_data.split(0.5)
-        test_ds = {"ds_1": test_data, "ds_2": test_data, "ds_3": test_data}
-        pipeline = fe.Pipeline(train_data=train_data,
-                               eval_data=eval_data,
-                               test_data=test_ds,
-                               batch_size=1,
-                               ops=Minmax(inputs="x", outputs="x", ds_id="!ds_1"))
-        sample_data = test_data[0]
+        pipeline = fe.Pipeline(train_data=self.sample_dataset, ops=Minmax(inputs="x", outputs="x", ds_id="!ds_1"))
+        sample_data = {"x": np.array([0, 255], dtype=np.float32)}
         data1 = pipeline.transform(data=sample_data, mode="test", ds_id="ds_1")
         assert data1["x"].max() == 255
         data2 = pipeline.transform(data=sample_data, mode="test", ds_id="ds_2")
@@ -407,15 +386,8 @@ class TestPipelineTransform(unittest.TestCase):
         assert data3["x"].max() == 1.0
 
     def test_multi_infer(self):
-        train_data, eval_data = mnist.load_data()
-        test_data = eval_data.split(0.5)
-        test_ds = {"ds_1": test_data, "ds_2": test_data, "ds_3": test_data}
-        pipeline = fe.Pipeline(train_data=train_data,
-                               eval_data=eval_data,
-                               test_data=test_ds,
-                               batch_size=1,
-                               ops=[Minmax(inputs="x", outputs="x", ds_id="!ds_1")])
-        sample_data = test_data[0]
+        pipeline = fe.Pipeline(train_data=self.sample_dataset, ops=[Minmax(inputs="x", outputs="x", ds_id="!ds_1")])
+        sample_data = {"x": np.array([0, 255], dtype=np.float32)}
         data1 = pipeline.transform(data=sample_data, mode="infer", ds_id="ds_1")
         assert data1["x"].max() == 255
         data2 = pipeline.transform(data=sample_data, mode="infer", ds_id="ds_2")
