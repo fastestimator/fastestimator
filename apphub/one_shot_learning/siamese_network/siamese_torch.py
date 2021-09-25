@@ -94,8 +94,8 @@ class OneShotAccuracy(Trace):
                                   dtype=np.float32))
 
             input_img = (to_tensor(input_img[0], "torch").to(device), to_tensor(input_img[1], "torch").to(device))
-
-            prediction_score = feed_forward(self.model, input_img, training=False).cpu().detach().numpy()
+            model = self.model.module if torch.cuda.device_count() > 1 else self.model
+            prediction_score = feed_forward(model, input_img, training=False).cpu().detach().numpy()
 
             if np.argmax(prediction_score) == 0 and prediction_score.std() > 0.01:
                 self.correct += 1
