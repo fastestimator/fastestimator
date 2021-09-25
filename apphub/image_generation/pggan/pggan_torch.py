@@ -384,11 +384,9 @@ class ImageSaving(Trace):
         if self.system.epoch_idx in self.epoch_model_map:
             model = self.epoch_model_map[self.system.epoch_idx]
             for i in range(self.num_sample):
-                random_vectors = torch.normal(
-                    mean=0.0, std=1.0, size=(1, self.latent_dim)).to("cuda:0" if torch.cuda.is_available() else "cpu")
-                pred = feed_forward(model, random_vectors, training=False)
-                if torch.cuda.is_available():
-                    pred = pred.to("cpu")
+                random_vectors = torch.normal(mean=0.0, std=1.0,
+                                              size=(1, self.latent_dim)).to(next(model.parameters()).device)
+                pred = feed_forward(model, random_vectors, training=False).to("cpu")
                 disp_img = np.transpose(pred.data.numpy(), (0, 2, 3, 1))  # BCHW -> BHWC
                 disp_img = np.squeeze(disp_img)
                 disp_img -= disp_img.min()
