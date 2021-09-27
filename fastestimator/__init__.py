@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator import architecture, backend, dataset, layers, op, schedule, summary, trace, util, xai, search
+# Fix known bugs with libraries which use multi-processing in a way which conflicts with pytorch data loader
+import cv2
+
+from fastestimator import architecture, backend, dataset, layers, op, schedule, search, summary, trace, util, xai
 from fastestimator.estimator import Estimator, enable_deterministic
 from fastestimator.network import Network, build
 from fastestimator.pipeline import Pipeline
 
-# Fix known bugs with libraries which use multi-processing in a way which conflicts with pytorch data loader
-import cv2
 cv2.setNumThreads(0)
 try:
     import SimpleITK as sitk
@@ -26,5 +27,5 @@ try:
 except ModuleNotFoundError:
     pass
 
-__version__ = '1.2.0'
+__version__ = '1.3.0'
 fe_deterministic_seed = None
