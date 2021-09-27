@@ -160,6 +160,7 @@ class Search(ABC):
             self._initialize_state()
         else:
             self.save_dir = save_dir
+            os.makedirs(save_dir, exist_ok=True)
             self.load(save_dir, not_exist_ok=True)
         self._fit()
 
