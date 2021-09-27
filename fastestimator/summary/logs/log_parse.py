@@ -15,12 +15,67 @@
 import os
 import re
 from collections import defaultdict
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Iterable
 
 from fastestimator.dataset.dir_dataset import DirDataset
 from fastestimator.summary.logs.log_plot import visualize_logs
 from fastestimator.summary.summary import Summary, ValWithError, average_summaries
 from fastestimator.util.util import strip_suffix
+
+
+def parse_log_iter(source: Iterable[str], sync: Summary) -> Summary:
+    """A function which will parse lines into a dictionary of metrics.
+
+    Args:
+        source: A collection of lines to parse.
+        sync: The summary to append into.
+
+    Returns:
+        The updated summary object.
+    """
+    last_step = 0
+    last_epoch = 0
+    for line in source:
+        mode = None
+        if line.startswith("FastEstimator-Train") or line.startswith("FastEstimator-Finish"):
+            mode = "train"
+        elif line.startswith("FastEstimator-Eval"):
+            mode = "eval"
+        elif line.startswith("FastEstimator-Test"):
+            mode = "test"
+        if mode is None:
+            continue
+        num = r"([-]?[0-9]+[.]?[0-9]*(e[-]?[0-9]+[.]?[0-9]*)?)"
+        parsed_line = re.findall(r"([^:;]+):[\s]*(" + num + r"|None|\(" + num + ", " + num + ", " + num + r"\));", line)
+        step = parsed_line[0]
+        assert step[0].strip() == "step", \
+            "Log file (%s) seems to be missing step information, or step is not listed first" % sync.name
+        step = step[1]
+        adjust_epoch = False
+        if step == 'None':
+            # This might happen if someone runs the test mode from the cli
+            step = last_step
+            # If the test mode was just guessing its epoch, use the prior epoch instead
+            adjust_epoch = mode == 'test'
+        else:
+            step = int(step)
+            last_step = step
+        for metric in parsed_line[1:]:
+            if metric[4]:
+                val = ValWithError(float(metric[4]), float(metric[6]), float(metric[8]))
+            else:
+                val = metric[1]
+                if val == 'None':
+                    continue
+                val = float(val)
+            key = metric[0].strip()
+            if key == 'epoch':
+                if adjust_epoch:
+                    val = last_epoch
+                else:
+                    last_epoch = val
+            sync.history[mode][key].update({step: val})
+    return sync
 
 
 def parse_log_file(file_path: str, file_extension: str) -> Summary:
@@ -34,49 +89,8 @@ def parse_log_file(file_path: str, file_extension: str) -> Summary:
     """
     # TODO: need to handle multi-line output like confusion matrix
     experiment = Summary(strip_suffix(os.path.split(file_path)[1].strip(), file_extension))
-    last_step = 0
-    last_epoch = 0
     with open(file_path) as file:
-        for line in file:
-            mode = None
-            if line.startswith("FastEstimator-Train") or line.startswith("FastEstimator-Finish"):
-                mode = "train"
-            elif line.startswith("FastEstimator-Eval"):
-                mode = "eval"
-            elif line.startswith("FastEstimator-Test"):
-                mode = "test"
-            if mode is None:
-                continue
-            num = r"([-]?[0-9]+[.]?[0-9]*(e[-]?[0-9]+[.]?[0-9]*)?)"
-            parsed_line = re.findall(r"([^:;]+):[\s]*(" + num + r"|None|\(" + num + ", " + num + ", " + num + r"\));", line)
-            step = parsed_line[0]
-            assert step[0].strip() == "step", \
-                "Log file (%s) seems to be missing step information, or step is not listed first" % file
-            step = step[1]
-            adjust_epoch = False
-            if step == 'None':
-                # This might happen if someone runs the test mode from the cli
-                step = last_step
-                # If the test mode was just guessing its epoch, use the prior epoch instead
-                adjust_epoch = mode == 'test'
-            else:
-                step = int(step)
-                last_step = step
-            for metric in parsed_line[1:]:
-                if metric[4]:
-                    val = ValWithError(float(metric[4]), float(metric[6]), float(metric[8]))
-                else:
-                    val = metric[1]
-                    if val == 'None':
-                        continue
-                    val = float(val)
-                key = metric[0].strip()
-                if key == 'epoch':
-                    if adjust_epoch:
-                        val = last_epoch
-                    else:
-                        last_epoch = val
-                experiment.history[mode][key].update({step: val})
+        parse_log_iter(source=file, sync=experiment)
     return experiment
 
 

@@ -20,7 +20,7 @@ from ast import literal_eval
 from typing import Any, Dict, List, Optional
 
 from fastestimator import Estimator
-from fastestimator.cli.cli_util import parse_cli_to_dictionary
+from fastestimator.util.cli_util import parse_cli_to_dictionary
 
 
 def _get_estimator(args: Dict[str, Any], unknown: Optional[List[str]]) -> Estimator:
