@@ -822,6 +822,12 @@ def build(model_fn: Callable[[], Union[Model, List[Model]]],
 
     if not hasattr(build, "count"):
         build.count = 0
+    # Tensorflow models require setting global policies prior to model creation. Since there is no way to know the
+    # framework of the model ahead of time, set the policy for both tf and pytorch here.
+    if mixed_precision:
+        mixed_precision_tf.set_global_policy(mixed_precision_tf.Policy('mixed_float16'))
+    else:
+        mixed_precision_tf.set_global_policy(mixed_precision_tf.Policy('float32'))
     models, optimizer_fn = to_list(model_fn()), to_list(optimizer_fn)
     # fill optimizer
     if not optimizer_fn:
@@ -829,11 +835,6 @@ def build(model_fn: Callable[[], Union[Model, List[Model]]],
     # check framework
     if isinstance(models[0], tf.keras.Model):
         framework = "tf"
-        # tensorflow mix-precision instantiation
-        if mixed_precision:
-            mixed_precision_tf.set_global_policy(mixed_precision_tf.Policy('mixed_float16'))
-        else:
-            mixed_precision_tf.set_global_policy(mixed_precision_tf.Policy('float32'))
     elif isinstance(models[0], torch.nn.Module):
         framework = "torch"
     else:

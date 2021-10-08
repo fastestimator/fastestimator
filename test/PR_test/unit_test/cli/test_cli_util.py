@@ -14,7 +14,7 @@
 # ==============================================================================
 import unittest
 
-from fastestimator.cli.cli_util import parse_cli_to_dictionary
+from fastestimator.util.cli_util import parse_cli_to_dictionary
 
 
 class TestCliUtil(unittest.TestCase):

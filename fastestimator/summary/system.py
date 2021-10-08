@@ -15,9 +15,10 @@
 import datetime
 import json
 import os
-import dill as pickle  # Need to use dill since tf.Variable is a weakref object on multi-gpu machines
-from typing import Any, Dict, List, Optional, TYPE_CHECKING, TypeVar, Union
+import uuid
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypeVar, Union
 
+import dill as pickle  # Need to use dill since tf.Variable is a weakref object on multi-gpu machines
 import tensorflow as tf
 import torch
 
@@ -54,6 +55,7 @@ class System:
 
     Attributes:
         mode: What is the current execution mode of the estimator ('train', 'eval', 'test'), None if warmup.
+        exp_id: A unique identifier for current training experiment.
         global_step: How many training steps have elapsed.
         num_devices: How many GPUs are available for training.
         log_steps: Log every n steps (0 to disable train logging, None to disable all logging).
@@ -72,6 +74,7 @@ class System:
     """
 
     mode: Optional[str]
+    exp_id: int
     global_step: Optional[int]
     num_devices: int
     log_steps: Optional[int]
@@ -121,6 +124,8 @@ class System:
         """
         self.global_step = None
         self.epoch_idx = 0
+        # Get a 64 bit random id related to current time
+        self.exp_id = int.from_bytes(uuid.uuid1().bytes, byteorder='big', signed=True) >> 64
 
     def update_global_step(self) -> None:
         """Increment the current `global_step`.
