@@ -18,7 +18,7 @@ import os
 import sys
 from typing import Any, Dict, List, Optional
 
-from fastestimator.cli.cli_util import parse_cli_to_dictionary
+from fastestimator.util.cli_util import parse_cli_to_dictionary
 
 
 def run(args: Dict[str, Any], unknown: Optional[List[str]]) -> None:
