@@ -13,5 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.summary import logs
+from fastestimator.summary.history import connect, delete, HistoryRecorder, HistoryReader, update_settings
 from fastestimator.summary.summary import Summary
 from fastestimator.summary.system import System

@@ -59,7 +59,8 @@ def get_dependency():
         'pydot==1.4.1',
         'dot2tex==2.11.3',
         'gdown==3.12.0',
-        'PySocks==1.7.1'
+        'PySocks==1.7.1',
+        'prettytable==2.2.1'
     ]
     if os.name == "nt":
         dependencies.append(
