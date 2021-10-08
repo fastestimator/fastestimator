@@ -14,10 +14,11 @@
 # limitations under the License.
 # ==============================================================================
 import argparse
+import sys
 
+from fastestimator.cli.history import configure_history_parser
 from fastestimator.cli.logs import configure_log_parser
 from fastestimator.cli.train import configure_test_parser, configure_train_parser
-import sys
 
 
 def run(argv) -> None:
@@ -31,6 +32,7 @@ def run(argv) -> None:
     configure_train_parser(subparsers)
     configure_test_parser(subparsers)
     configure_log_parser(subparsers)
+    configure_history_parser(subparsers)
     args, unknown = parser.parse_known_args(argv)
     args.func(vars(args), unknown)
 
