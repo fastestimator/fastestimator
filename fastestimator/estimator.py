@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import inspect
 import os
 import random
 from collections import ChainMap
@@ -31,6 +32,7 @@ from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
 from fastestimator.pipeline import Pipeline
 from fastestimator.schedule.schedule import Scheduler, get_current_items, get_signature_epochs
+from fastestimator.summary.history import HistoryRecorder
 from fastestimator.summary.system import Summary, System
 from fastestimator.trace.io.best_model_saver import BestModelSaver
 from fastestimator.trace.io.model_saver import ModelSaver
@@ -39,7 +41,7 @@ from fastestimator.trace.io.traceability import Traceability
 from fastestimator.trace.trace import EvalEssential, Logger, TestEssential, Trace, TrainEssential, sort_traces
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import Suppressor, draw, to_list, to_set
+from fastestimator.util.util import NonContext, Suppressor, draw, to_list, to_set
 
 
 @traceable()
@@ -66,6 +68,7 @@ class Estimator:
     monitor_names: Set[str]
     traces_in_use: List[Union[Trace, Scheduler[Trace]]]
     system: System
+    filepath: str
 
     def __init__(self,
                  pipeline: Pipeline,
@@ -77,6 +80,7 @@ class Estimator:
                  log_steps: Optional[int] = 100,
                  monitor_names: Union[None, str, Iterable[str]] = None):
         self.traces_in_use = []
+        self.filepath = os.path.realpath(inspect.stack()[2].filename)  # Record this for history tracking
         assert log_steps is None or log_steps >= 0, \
             "log_steps must be None or positive (or 0 to disable only train logging)"
         self.monitor_names = to_set(monitor_names) | network.get_loss_keys()
@@ -253,25 +257,27 @@ class Estimator:
             run_modes: The current execution modes.
         """
         all_traces = sort_traces(get_current_items(self.traces_in_use, run_modes=run_modes))
-        try:
-            self._run_traces_on_begin(traces=all_traces)
-            if "train" in run_modes or "eval" in run_modes:
-                # If the training is re-starting from a restore wizard, it should re-run the last eval epoch
-                if self.system.epoch_idx > 0 and "eval" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
-                    self.system.mode = "eval"
-                    self._run_epoch()
-                for self.system.epoch_idx in range(self.system.epoch_idx + 1, self.system.total_epochs + 1):
-                    if "train" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
-                        self.system.mode = "train"
-                        self._run_epoch()
-                    if "eval" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
+        with NonContext() if fe.fe_history_path is False else HistoryRecorder(
+                self.system, self.filepath, db_path=fe.fe_history_path):
+            try:
+                self._run_traces_on_begin(traces=all_traces)
+                if "train" in run_modes or "eval" in run_modes:
+                    # If the training is re-starting from a restore wizard, it should re-run the last eval epoch
+                    if self.system.epoch_idx > 0 and "eval" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
                         self.system.mode = "eval"
                         self._run_epoch()
-            else:
-                self._run_epoch()
-        except EarlyStop:
-            pass  # On early stopping we still want to run the final traces and return results
-        self._run_traces_on_end(traces=all_traces)
+                    for self.system.epoch_idx in range(self.system.epoch_idx + 1, self.system.total_epochs + 1):
+                        if "train" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
+                            self.system.mode = "train"
+                            self._run_epoch()
+                        if "eval" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
+                            self.system.mode = "eval"
+                            self._run_epoch()
+                else:
+                    self._run_epoch()
+            except EarlyStop:
+                pass  # On early stopping we still want to run the final traces and return results
+            self._run_traces_on_end(traces=all_traces)
 
     def _run_epoch(self) -> None:
         """A method to perform an epoch of activity.
@@ -466,13 +472,16 @@ class EarlyStop(Exception):
     """
 
 
-def enable_deterministic(seed):
-    """Invoke to set random seed for deterministic training. The determinism only works for tensorflow >= 2.1 and
-    pytorch >= 1.14, and some model layers don't support.
+def enable_deterministic(seed: int) -> None:
+    """Invoke to set random seed for deterministic training.
+
+    The determinism only works for tensorflow >= 2.1 and pytorch >= 1.14, and some model layers don't support.
 
     Known failing layers:
     * tf.keras.layers.UpSampling2D
 
+    Args:
+        seed: The random seed to use for training.
     """
     fe.fe_deterministic_seed = seed
     os.environ['PYTHONHASHSEED'] = str(seed)
@@ -481,3 +490,16 @@ def enable_deterministic(seed):
     np.random.seed(seed)
     tf.random.set_seed(seed)
     torch.manual_seed(seed)
+
+
+def record_history(path: Union[bool, str]) -> None:
+    """Change the default location for history tracking.
+
+    Args:
+        path: The path to save experiment histories. Pass True to use the default location of
+            ~/fastestimator_data/history.db. Pass False to disable history tracking.
+    """
+    if path in (None, True):
+        fe.fe_history_path = None
+    else:
+        fe.fe_history_path = path
