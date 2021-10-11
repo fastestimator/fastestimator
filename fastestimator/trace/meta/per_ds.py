@@ -103,6 +103,6 @@ def per_ds(clz: type(Trace)):
 
     PerDS.__name__ = clz.__name__
     PerDS.__qualname__ = clz.__qualname__
-    PerDS.__module__ = clz.__module__  
-    PerDS.__doc__ = clz.__doc__ # We want to preserve the docstring of the original class
+    PerDS.__module__ = clz.__module__
+    PerDS.__doc__ = clz.__doc__  # We want to preserve the docstring of the original class
     return PerDS
