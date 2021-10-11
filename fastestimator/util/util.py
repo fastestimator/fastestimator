@@ -236,6 +236,11 @@ class Suppressor(object):
         """
         pass
 
+    def flush(self) -> None:
+        """A function to empty the current print buffer. No-op in this case.
+        """
+        pass
+
 
 class LogSplicer:
     """A class to send stdout information into a file before passing it along to the normal stdout.
