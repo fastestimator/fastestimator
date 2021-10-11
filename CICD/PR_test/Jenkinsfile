@@ -22,6 +22,7 @@ pipeline {
                             sh 'coverage run --source fastestimator -m unittest test.run_pr_test'
                             sh 'coverage html'
                             sh 'coverage xml'
+                            sh 'chmod -R a+rwX .'
                         }
                     }
                     finally {
