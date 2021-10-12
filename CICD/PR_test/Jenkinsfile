@@ -17,6 +17,7 @@ pipeline {
                         customImage.inside('-u root') {
                             sh 'pip install --no-cache-dir .'
                             sh 'python test/run_pr_test.py'
+                            sh 'chmod -R a+rwX .'
                         }
                     }
                     finally {
