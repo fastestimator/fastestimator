@@ -18,6 +18,7 @@ import os
 import shutil
 import tempfile
 import unittest
+from contextlib import closing
 
 from fastestimator.summary.history import HistoryReader, HistoryRecorder, connect, update_settings
 from fastestimator.test.unittest_util import sample_system_object
@@ -38,9 +39,9 @@ class TestHistoryRecorder(unittest.TestCase):
             print("Test Log Capture")
             print("Line 2")
         db = connect(self.db_path)
-        cursor = db.cursor()
-        cursor.execute("SELECT * FROM history WHERE pk = (?)", [system.exp_id])
-        results = cursor.fetchall()
+        with closing(db.cursor()) as cursor:
+            cursor.execute("SELECT * FROM history WHERE pk = (?)", [system.exp_id])
+            results = cursor.fetchall()
         with self.subTest("History Captured"):
             self.assertEqual(len(results), 1)
         results = results[0]
@@ -49,8 +50,9 @@ class TestHistoryRecorder(unittest.TestCase):
         with self.subTest("Status updated"):
             self.assertEqual(results['status'], 'Completed')
         # Logs
-        cursor.execute("SELECT * FROM logs WHERE fk = (?)", [system.exp_id])
-        results = cursor.fetchall()
+        with closing(db.cursor()) as cursor:
+            cursor.execute("SELECT * FROM logs WHERE fk = (?)", [system.exp_id])
+            results = cursor.fetchall()
         with self.subTest("Log Captured"):
             self.assertEqual(len(results), 1)
         results = results[0]
@@ -69,9 +71,9 @@ class TestHistoryRecorder(unittest.TestCase):
         except RuntimeError:
             pass
         db = connect(self.db_path)
-        cursor = db.cursor()
-        cursor.execute("SELECT * FROM history WHERE pk = (?)", [system.exp_id])
-        results = cursor.fetchall()
+        with closing(db.cursor()) as cursor:
+            cursor.execute("SELECT * FROM history WHERE pk = (?)", [system.exp_id])
+            results = cursor.fetchall()
         with self.subTest("History Captured"):
             self.assertEqual(len(results), 1)
         results = results[0]
@@ -80,16 +82,18 @@ class TestHistoryRecorder(unittest.TestCase):
         with self.subTest("Status updated"):
             self.assertEqual(results['status'], 'Failed')
         # Logs
-        cursor.execute("SELECT * FROM logs WHERE fk = (?)", [system.exp_id])
-        results = cursor.fetchall()
+        with closing(db.cursor()) as cursor:
+            cursor.execute("SELECT * FROM logs WHERE fk = (?)", [system.exp_id])
+            results = cursor.fetchall()
         with self.subTest("Log Captured"):
             self.assertEqual(len(results), 1)
         results = results[0]
         with self.subTest("Complete log captured"):
             self.assertEqual(results['log'], "Test Log Capture\nLine 2\n")
         # Error
-        cursor.execute("SELECT * FROM errors WHERE fk = (?)", [system.exp_id])
-        results = cursor.fetchall()
+        with closing(db.cursor()) as cursor:
+            cursor.execute("SELECT * FROM errors WHERE fk = (?)", [system.exp_id])
+            results = cursor.fetchall()
         with self.subTest("Error Captured"):
             self.assertEqual(len(results), 1)
         results = results[0]
@@ -115,9 +119,9 @@ class TestHistoryRecorder(unittest.TestCase):
             print("Line 3")
             print("Line 4")
         db = connect(self.db_path)
-        cursor = db.cursor()
-        cursor.execute("SELECT * FROM history")
-        results = cursor.fetchall()
+        with closing(db.cursor()) as cursor:
+            cursor.execute("SELECT * FROM history")
+            results = cursor.fetchall()
         with self.subTest("History Captured and Consolidated"):
             self.assertEqual(len(results), 1)
         results = results[0]
@@ -130,8 +134,9 @@ class TestHistoryRecorder(unittest.TestCase):
         with self.subTest("Restarts Incremented"):
             self.assertEqual(results['n_restarts'], 1)
         # Logs
-        cursor.execute("SELECT * FROM logs WHERE fk = (?)", [system1.exp_id])
-        results = cursor.fetchall()
+        with closing(db.cursor()) as cursor:
+            cursor.execute("SELECT * FROM logs WHERE fk = (?)", [system1.exp_id])
+            results = cursor.fetchall()
         with self.subTest("Log Captured"):
             self.assertEqual(len(results), 1)
         results = results[0]
@@ -159,9 +164,9 @@ class TestHistoryRecorder(unittest.TestCase):
             system2.__dict__.update(system1.__dict__)
             print("Line 3")
             print("Line 4")
-        cursor = db.cursor()
-        cursor.execute("SELECT * FROM history")
-        results = cursor.fetchall()
+        with closing(db.cursor()) as cursor:
+            cursor.execute("SELECT * FROM history")
+            results = cursor.fetchall()
         with self.subTest("History Captured and Consolidated"):
             self.assertEqual(len(results), 1)
         results = results[0]
@@ -174,8 +179,9 @@ class TestHistoryRecorder(unittest.TestCase):
         with self.subTest("Restarts Incremented"):
             self.assertEqual(results['n_restarts'], 1)
         # Logs
-        cursor.execute("SELECT * FROM logs WHERE fk = (?)", [system1.exp_id])
-        results = cursor.fetchall()
+        with closing(db.cursor()) as cursor:
+            cursor.execute("SELECT * FROM logs WHERE fk = (?)", [system1.exp_id])
+            results = cursor.fetchall()
         with self.subTest("Log Captured"):
             self.assertEqual(len(results), 1)
         results = results[0]
@@ -193,9 +199,9 @@ class TestHistoryRecorder(unittest.TestCase):
                 print(f"Run {i}")
 
         db = connect(self.db_path)
-        cursor = db.cursor()
-        cursor.execute("SELECT * FROM history")
-        results = cursor.fetchall()
+        with closing(db.cursor()) as cursor:
+            cursor.execute("SELECT * FROM history")
+            results = cursor.fetchall()
 
         with self.subTest("Ensure correct number retained"):
             self.assertEqual(len(results), 5)
