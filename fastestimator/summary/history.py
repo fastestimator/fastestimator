@@ -106,7 +106,7 @@ _MAKE_ERR_ENTRY_P1 = "UPDATE errors SET exc_type = :type, exc_tb = :tb WHERE fk 
 _MAKE_ERR_ENTRY_P2 = "INSERT OR IGNORE INTO errors (exc_type, exc_tb, fk) VALUES (:type, :tb, :fk)"
 _MAKE_LOG_ENTRY = "INSERT INTO logs (log, fk) VALUES (:log, :fk)"
 _MAKE_SETTINGS_ENTRY = "INSERT OR IGNORE INTO settings (pk, schema_version, n_keep, n_keep_logs) " \
-                       "VALUES (0, 1, 1000, 1000)"
+                       "VALUES (0, 1, 500, 500)"
 
 
 def connect(db_path: Optional[str] = None) -> sql.Connection:
@@ -222,7 +222,6 @@ class HistoryRecorder:
         self.system = system
         self.db = None
         self.pk = None
-        self.buf = ''
         self.stdout = None
 
     def __enter__(self) -> None:
@@ -256,7 +255,6 @@ class HistoryRecorder:
             self.db.execute(_MAKE_LOG_ENTRY, {'log': '', 'fk': self.pk})
             self.db.commit()
         # Take over the output logging
-        self.buf = ''
         self.stdout = sys.stdout
         sys.stdout = self
 
@@ -364,24 +362,29 @@ class HistoryRecorder:
                         "SELECT pk FROM history ORDER BY train_start DESC LIMIT 1 OFFSET ("
                         "SELECT n_keep_logs FROM settings WHERE pk = 0))")
         self.db.commit()  # Have to commit before vacuuming
-        self.db.execute("VACUUM")
-        self.db.commit()
+        if sum(int(digit) for digit in str(abs(self.pk))) % 10 == 0:
+            # 10% of time do a vacuum (expensive). We don't use random.randint here due to deterministic training. Also,
+            # don't use pk directly because last digit is not uniformly distributed.
+            self.db.execute("PRAGMA VACUUM;")
+            self.db.commit()
+        else:
+            # Otherwise do a less costly optimize
+            self.db.execute("PRAGMA optimize;")
+            self.db.commit()
         self.db.close()
 
     def write(self, output: str) -> None:
         self._check_for_restart()  # Check here instead of just waiting for __exit__ in case system powers off later
         self.stdout.write(output)
-        self.buf += output  # Even forked multi-processing doesn't seem to capture child strings into main buffer
-
-    def flush(self) -> None:
-        self.stdout.flush()
         if multiprocessing.current_process().name == 'MainProcess':
             # Flush can also get invoked by pipeline multi-processing, but db should only be accessed by main thread.
             # This can happen, for example, when pipeline prints a warning that a certain key is unused and will be
             # dropped.
-            self.db.execute('UPDATE logs SET log = log || (?) WHERE fk = (?)', [self.buf, self.pk])
+            self.db.execute('UPDATE logs SET log = log || (?) WHERE fk = (?)', [output, self.pk])
             self.db.commit()
-        self.buf = ''
+
+    def flush(self) -> None:
+        self.stdout.flush()
 
 
 class HistoryReader:
