@@ -1,4 +1,5 @@
 def IMAGE_TAG="$BUILD_TAG".toLowerCase()
+def customImage
 
 pipeline {
     agent {label 'master'}
@@ -12,17 +13,26 @@ pipeline {
         stage('PR-test') {
             steps {
                 script {
-                    def customImage = docker.build("$IMAGE_TAG", "--no-cache --build-arg InstallFE=False - < docker/nightly/Dockerfile.cpu")
-                    try {
-                        customImage.inside('-u root') {
-                            sh 'pip install --no-cache-dir .'
-                            sh 'python test/run_pr_test.py'
-                            sh 'chmod -R a+rwX .'
+                    customImage = docker.build("$IMAGE_TAG", "--no-cache --build-arg InstallFE=False - < docker/nightly/Dockerfile.cpu")
+                    customImage.inside('-u root') {
+                        sh 'pip install --no-cache-dir .'
+                        sh 'python test/run_pr_test.py'
+                        sh 'chmod -R 777 .'
+                    }
+                }
+            }
+        }
+        stage('Cleanup'){
+            steps {
+                script {
+                        try {
+                            customImage.inside('-u root') {
+                                sh 'rm -rf *'
+                            }
                         }
-                    }
-                    finally {
-                        sh 'docker rmi "$IMAGE_TAG"'
-                    }
+                        finally {
+                            sh 'docker rmi "$IMAGE_TAG"'
+                        }
                 }
             }
         }
