@@ -1,5 +1,7 @@
 def IMAGE_TAG = "$BUILD_TAG".toLowerCase()
 
+def customImage
+
 pipeline {
     agent {label 'master'}
     options {
@@ -13,19 +15,13 @@ pipeline {
         stage('PR-test') {
             steps {
                 script {
-                    def customImage = docker.build("$IMAGE_TAG", "--no-cache --build-arg InstallFE=False - < docker/nightly/Dockerfile.cpu")
-                    try {
+                        customImage = docker.build("$IMAGE_TAG", "--no-cache --build-arg InstallFE=False - < docker/nightly/Dockerfile.cpu")
                         customImage.inside('-u root') {
                             sh 'pip install --no-cache-dir .'
                             sh 'pip install coverage'
                             sh 'coverage run --source fastestimator -m unittest test.run_pr_test'
                             sh 'coverage html'
                             sh 'coverage xml'
-                            sh 'chmod -R a+rwX .'
-                        }
-                    }
-                    finally {
-                        sh 'docker rmi "$IMAGE_TAG"'
                     }
                 }
             }
@@ -53,8 +49,23 @@ pipeline {
                 }
             }
         }
+        stage('Cleanup') {
+                steps {
+                    script {
+                        try {
+                            customImage.inside('-u root') {
+                                sh 'chmod -R 777 .'
+                                sh 'rm -rf *'
+                            }
+                        }
+                        finally {
+                            sh 'docker rmi "$IMAGE_TAG"'
+                        }
+                    }
+                }
+            }
     }
-    post {
+	post {
         failure {
             script{
                 if (!IMAGE_TAG.contains("-pr-")){
