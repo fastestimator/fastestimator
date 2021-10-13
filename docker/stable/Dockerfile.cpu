@@ -40,4 +40,4 @@ RUN pip install torch==1.6.0+cpu torchvision==0.7.0+cpu -f https://download.pyto
 
 # install FastEstimator
 ARG InstallFE=True
-RUN if [ $InstallFE = "True" ]; then pip install fastestimator==1.1.2; fi
+RUN if [ $InstallFE = "True" ]; then pip install fastestimator==1.1.3; fi
