@@ -13,11 +13,13 @@
 # limitations under the License.
 # ==============================================================================
 import argparse
+import multiprocessing
 import os
 import sqlite3 as sql
 import sys
 import traceback
 from collections import defaultdict
+from contextlib import closing
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Type
@@ -104,7 +106,7 @@ _MAKE_ERR_ENTRY_P1 = "UPDATE errors SET exc_type = :type, exc_tb = :tb WHERE fk 
 _MAKE_ERR_ENTRY_P2 = "INSERT OR IGNORE INTO errors (exc_type, exc_tb, fk) VALUES (:type, :tb, :fk)"
 _MAKE_LOG_ENTRY = "INSERT INTO logs (log, fk) VALUES (:log, :fk)"
 _MAKE_SETTINGS_ENTRY = "INSERT OR IGNORE INTO settings (pk, schema_version, n_keep, n_keep_logs) " \
-                       "VALUES (0, 1, 1000, 1000)"
+                       "VALUES (0, 1, 500, 500)"
 
 
 def connect(db_path: Optional[str] = None) -> sql.Connection:
@@ -184,9 +186,9 @@ def update_settings(n_keep: Optional[int] = None, n_keep_logs: Optional[int] = N
     elif n_keep_logs is not None:
         db.execute("UPDATE settings SET n_keep_logs = MIN(n_keep, (?)) WHERE pk = 0", [n_keep_logs])
     db.commit()
-    cursor = db.cursor()
-    cursor.execute("SELECT * FROM settings")
-    response = from_db_cursor(cursor)
+    with closing(db.cursor()) as cursor:
+        cursor.execute("SELECT * FROM settings")
+        response = from_db_cursor(cursor)
     # Hide implementation details from end user
     response.del_column('pk')
     response.del_column('schema_version')
@@ -224,11 +226,11 @@ class HistoryRecorder:
 
     def __enter__(self) -> None:
         self.db = connect(self.db_path)
-        cursor = self.db.cursor()
         self.pk = self.system.exp_id  # This might be changed later by RestoreWizard. See the _check_for_restart method
         # Check whether an entry for this pk already exists, for example if a user ran .fit() and is now running .test()
-        exists = cursor.execute("SELECT pk FROM history WHERE pk = (?)", [self.pk])
-        exists = exists.fetchall()
+        with closing(self.db.cursor()) as cursor:
+            exists = cursor.execute("SELECT pk FROM history WHERE pk = (?)", [self.pk])
+            exists = exists.fetchall()
         if not exists:
             self.db.execute(
                 _MAKE_HIST_ENTRY,
@@ -292,9 +294,9 @@ class HistoryRecorder:
             return
         # RestoreWizard reset the system, we are continuing an old training rather than starting a new one
         # First make sure the old entry is still available to edit
-        cursor = self.db.cursor()
-        exists = cursor.execute("SELECT pk FROM history WHERE pk = (?)", [self.system.exp_id])
-        exists = exists.fetchall()
+        with closing(self.db.cursor()) as cursor:
+            exists = cursor.execute("SELECT pk FROM history WHERE pk = (?)", [self.system.exp_id])
+            exists = exists.fetchall()
         if exists:
             # If we still have the original entry, we will delete our new one and update the old instead
             self.db.execute("DELETE FROM history WHERE pk = (?)", [self.pk])
@@ -360,18 +362,29 @@ class HistoryRecorder:
                         "SELECT pk FROM history ORDER BY train_start DESC LIMIT 1 OFFSET ("
                         "SELECT n_keep_logs FROM settings WHERE pk = 0))")
         self.db.commit()  # Have to commit before vacuuming
-        self.db.execute("VACUUM")
-        self.db.commit()
+        if sum(int(digit) for digit in str(abs(self.pk))) % 10 == 0:
+            # 10% of time do a vacuum (expensive). We don't use random.randint here due to deterministic training. Also,
+            # don't use pk directly because last digit is not uniformly distributed.
+            self.db.execute("PRAGMA VACUUM;")
+            self.db.commit()
+        else:
+            # Otherwise do a less costly optimize
+            self.db.execute("PRAGMA optimize;")
+            self.db.commit()
         self.db.close()
 
     def write(self, output: str) -> None:
         self._check_for_restart()  # Check here instead of just waiting for __exit__ in case system powers off later
         self.stdout.write(output)
-        self.db.execute('UPDATE logs SET log = log || (?) WHERE fk = (?)', [output, self.pk])
+        if multiprocessing.current_process().name == 'MainProcess':
+            # Flush can also get invoked by pipeline multi-processing, but db should only be accessed by main thread.
+            # This can happen, for example, when pipeline prints a warning that a certain key is unused and will be
+            # dropped.
+            self.db.execute('UPDATE logs SET log = log || (?) WHERE fk = (?)', [output, self.pk])
+            self.db.commit()
 
     def flush(self) -> None:
         self.stdout.flush()
-        self.db.commit()
 
 
 class HistoryReader:
@@ -392,17 +405,14 @@ class HistoryReader:
     def __init__(self, db_path: Optional[str] = None):
         self.db_path = db_path
         self.db = None  # sql.Connection
-        self.cursor = None  # sql.Cursor
         self.response = None  # List[sql.Row]
 
     def __enter__(self) -> 'HistoryReader':
         self.db = connect(self.db_path)
         self.db.set_trace_callback(print)  # Show the query in case user wants to adapt it later
-        self.cursor = self.db.cursor()
         return self
 
     def __exit__(self, exc_type: Optional[Type], exc_val: Optional[Exception], exc_tb: Optional[Any]) -> None:
-        self.cursor = None
         self.db.close()
 
     def read_basic(self,
@@ -491,11 +501,13 @@ class HistoryReader:
             interactive: Whether to run this function interactively, prompting the user for additional input along the
                 way. This enables things like error and log retrieval for individual experiments.
         """
-        self.cursor.execute(query, args)
-        self.response = self.cursor.fetchall()
+        with closing(self.db.cursor()) as cursor:
+            cursor.execute(query, args)
+            self.response = cursor.fetchall()
+            names = [col[0] for col in cursor.description]
         # Build nice output table
         table = PrettyTable()
-        table.field_names = [col[0] for col in self.cursor.description]
+        table.field_names = names
         for row in self.response:
             table.add_row(row)
         for col in hide_cols:
@@ -663,8 +675,7 @@ class HistoryReader:
             action=SaveAction,
             default=False,
             help="Save the output image. May be accompanied by a directory into \
-                                                              which the file is saved. If no output directory is specified, the history \
-                                                              directory will be used")
+                  which the file is saved. If no output directory is specified, the history directory will be used")
         save_x_group.add_argument('--display',
                                   dest='save',
                                   action='store_false',
@@ -714,8 +725,9 @@ class HistoryReader:
         for idx in args['indices']:
             selection = self.response[idx - 1]  # Auto index starts at 1
             pk = selection['pk']
-            self.cursor.execute("SELECT log FROM logs WHERE logs.fk = (?)", [pk])
-            logs[idx] = self.cursor.fetchall()
+            with closing(self.db.cursor()) as cursor:
+                cursor.execute("SELECT log FROM logs WHERE logs.fk = (?)", [pk])
+                logs[idx] = cursor.fetchall()
         with open(save_path, 'w') if save == 'file' else NonContext() as f:
             f = sys.stdout if f is None else f
             for idx, log in logs.items():
@@ -741,8 +753,9 @@ class HistoryReader:
         for idx in args['indices']:
             selection = self.response[idx - 1]  # Auto index starts at 1
             pk = selection['pk']
-            self.cursor.execute("SELECT exc_tb FROM errors WHERE errors.fk = (?)", [pk])
-            err = self.cursor.fetchall()
+            with closing(self.db.cursor()) as cursor:
+                cursor.execute("SELECT exc_tb FROM errors WHERE errors.fk = (?)", [pk])
+                err = cursor.fetchall()
             if err:
                 print(f'@@@@@@@@@@@ Traceback for Index {idx} @@@@@@@@@@@')
                 print(err[0]['exc_tb'])
@@ -766,12 +779,13 @@ class HistoryReader:
         pks = {idx: self.response[idx - 1]['pk'] for idx in set(args['indices'] + group_indices)}
         if len(pks) == 0:
             return
-        self.cursor.execute(
-            "SELECT H.pk, H.experiment, L.log "
-            "FROM logs L LEFT JOIN history H ON L.fk = H.pk "
-            "WHERE L.fk IN ({seq})".format(seq=','.join(['?'] * len(pks))),
-            list(pks.values()))
-        logs = self.cursor.fetchall()
+        with closing(self.db.cursor()) as cursor:
+            cursor.execute(
+                "SELECT H.pk, H.experiment, L.log "
+                "FROM logs L LEFT JOIN history H ON L.fk = H.pk "
+                "WHERE L.fk IN ({seq})".format(seq=','.join(['?'] * len(pks))),
+                list(pks.values()))
+            logs = cursor.fetchall()
         logs = {elem['pk']: elem for elem in logs}
         failures = 0
         for idx, pk in pks.items():
