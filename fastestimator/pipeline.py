@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import multiprocessing as mp
 import os
 import random
 import time
@@ -31,7 +32,7 @@ from fastestimator.op.numpyop.meta.sometimes import Sometimes
 from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
 from fastestimator.schedule.schedule import Scheduler, get_current_items
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import pad_batch, to_list, to_set
+from fastestimator.util.util import get_num_devices, pad_batch, to_list, to_set
 
 DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
 
@@ -49,8 +50,8 @@ class Pipeline:
         ops: NumpyOps to be used for pre-processing. NOTE: This argument is only applicable when using a FastEstimator
             Dataset.
         num_process: Number of CPU threads to use for data pre-processing. NOTE: This argument is only applicable when
-            using a FastEstimator Dataset. None will default to the system CPU count. Multiprocessing can be disabled by
-            passing 0 here, which can be useful for debugging.
+            using a FastEstimator Dataset. None will default to min(n_cpus, max(32, 32*n_gpus)). Multiprocessing can be
+            disabled by passing 0 here, which can be useful for debugging.
         drop_last: Whether to drop the last batch if the last batch is incomplete.
         pad_value: The padding value if batch padding is needed. None indicates that no padding is needed. NOTE: This
             argument is only applicable when using a FastEstimator Dataset.
@@ -71,7 +72,12 @@ class Pipeline:
         self.data = {x: y for (x, y) in zip(["train", "eval", "test"], [train_data, eval_data, test_data]) if y}
         self.batch_size = batch_size
         self.ops = to_list(ops)
-        self.num_process = num_process if num_process is not None else os.cpu_count() if os.name != 'nt' else 0
+        if mp.get_start_method(allow_none=True) is None and os.name != 'nt':
+            mp.set_start_method('fork')
+        if mp.get_start_method(allow_none=True) != 'fork':
+            print("FastEstimator-Warn: Pipeline multiprocessing is disabled. OS must support the 'fork' start method.")
+            num_process = 0
+        self.num_process = num_process if num_process is not None else min(os.cpu_count(), 32 * get_num_devices())
         self.drop_last = drop_last
         self.pad_value = pad_value
         self.collate_fn = collate_fn
