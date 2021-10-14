@@ -115,6 +115,7 @@ def connect(db_path: Optional[str] = None) -> sql.Connection:
     """
     if db_path is None:
         db_path = os.path.join(str(Path.home()), 'fastestimator_data', 'history.db')
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
     connection = sql.connect(db_path, detect_types=sql.PARSE_DECLTYPES | sql.PARSE_COLNAMES)
     connection.execute("PRAGMA foreign_keys = 1")  # Enable FK constraints
     connection.row_factory = sql.Row  # Get nice query return objects
