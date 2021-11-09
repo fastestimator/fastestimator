@@ -22,6 +22,7 @@ from collections import ChainMap, deque, namedtuple
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 import torch
 from pylatex import Document, Label, Marker, MultiColumn, NoEscape, Package, Table, Tabularx, TextColor
@@ -78,7 +79,8 @@ _RestorableClasses = (int,
                       np.ndarray,
                       np.number,
                       np.bool_,
-                      np.flexible)
+                      np.flexible,
+                      pd.DataFrame)
 
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
