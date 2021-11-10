@@ -14,9 +14,13 @@
 # ==============================================================================
 import csv
 import os
+import sys
 import tempfile
 import unittest
 from collections import defaultdict
+
+import pandas as pd
+from pandas.testing import assert_frame_equal
 
 from fastestimator.test.unittest_util import is_equal, sample_system_object
 from fastestimator.trace.io import CSVLogger
@@ -27,25 +31,26 @@ class TestCSVLogger(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.data = Data({'mode': 'train', 'epoch': 1})
-        cls.dict = defaultdict(list, {'mode': ['train'], 'epoch': [0]})
+        cls.df = pd.DataFrame([['train', None, 0]], columns=["mode", "step", "epoch"])
         cls.csv_path = os.path.join(tempfile.mkdtemp(), 'test_csv_logger.csv')
 
     def test_on_begin(self):
         csvlogger = CSVLogger(filename=self.csv_path)
         csvlogger.on_begin(data=self.data)
-        self.assertTrue(is_equal(csvlogger.data, defaultdict(list)))
+        assert_frame_equal(csvlogger.df, pd.DataFrame(columns=["mode", "step", "epoch"]))
 
     def test_on_epoch_end(self):
         csvlogger = CSVLogger(filename=self.csv_path)
         csvlogger.system = sample_system_object()
-        csvlogger.data = defaultdict(list)
+        csvlogger.df = pd.DataFrame(columns=["mode", "step", "epoch"])
+        temp_df = pd.DataFrame([['train', None, 0]], columns=["mode", "step", "epoch"])
         csvlogger.on_epoch_end(data=self.data)
-        self.assertDictEqual(csvlogger.data, self.dict)
+        assert_frame_equal(csvlogger.df, self.df, check_dtype=False)
 
     def test_on_end(self):
         csvlogger = CSVLogger(filename=self.csv_path)
         csvlogger.system = sample_system_object()
-        csvlogger.data = defaultdict(list, {'mode': ['train'], 'epoch': [0]})
+        csvlogger.df = pd.DataFrame([['train', None, 0]], columns=["mode", "step", "epoch"])
         # remove csv file previously created if it exists
         if os.path.exists(self.csv_path):
             os.remove(self.csv_path)
@@ -59,6 +64,6 @@ class TestCSVLogger(unittest.TestCase):
         with self.subTest('Check if path exists'):
             self.assertTrue(os.path.exists(self.csv_path))
         with self.subTest('Check mode value stored in csv file'):
-            self.assertEqual(csv_data[0]['mode'], csvlogger.data['mode'][0])
+            self.assertEqual(csv_data[0]['mode'], csvlogger.df['mode'].iloc[0])
         with self.subTest('Check epoch value stored in csv file'):
-            self.assertEqual(int(csv_data[0]['epoch']), csvlogger.data['epoch'][0])
+            self.assertEqual(int(csv_data[0]['epoch']), csvlogger.df['epoch'].iloc[0])
