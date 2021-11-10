@@ -14,7 +14,6 @@
 # ==============================================================================
 import csv
 import os
-import sys
 import tempfile
 import unittest
 from collections import defaultdict
@@ -22,7 +21,7 @@ from collections import defaultdict
 import pandas as pd
 from pandas.testing import assert_frame_equal
 
-from fastestimator.test.unittest_util import is_equal, sample_system_object
+from fastestimator.test.unittest_util import sample_system_object
 from fastestimator.trace.io import CSVLogger
 from fastestimator.util.data import Data
 
@@ -43,7 +42,6 @@ class TestCSVLogger(unittest.TestCase):
         csvlogger = CSVLogger(filename=self.csv_path)
         csvlogger.system = sample_system_object()
         csvlogger.df = pd.DataFrame(columns=["mode", "step", "epoch"])
-        temp_df = pd.DataFrame([['train', None, 0]], columns=["mode", "step", "epoch"])
         csvlogger.on_epoch_end(data=self.data)
         assert_frame_equal(csvlogger.df, self.df, check_dtype=False)
 
