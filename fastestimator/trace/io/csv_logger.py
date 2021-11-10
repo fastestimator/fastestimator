@@ -38,7 +38,7 @@ class CSVLogger(Trace):
         self,
         filename: str,
         monitor_names: Optional[Union[List[str], str]] = None,
-        mode: Union[None, str, Iterable[str]] = ("eval", "test")
+        mode: Union[None, str, Iterable[str]] = None
     ) -> None:
         super().__init__(inputs="*" if monitor_names is None else monitor_names, mode=mode)
         self.filename = filename
