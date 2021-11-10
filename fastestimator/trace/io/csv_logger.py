@@ -23,7 +23,7 @@ from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
 
 
-@traceable
+@traceable()
 class CSVLogger(Trace):
     """Log monitored quantities in a CSV file.
 
