@@ -22,6 +22,7 @@ from collections import ChainMap, deque, namedtuple
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 import torch
 from pylatex import Document, Label, Marker, MultiColumn, NoEscape, Package, Table, Tabularx, TextColor
@@ -78,7 +79,8 @@ _RestorableClasses = (int,
                       np.ndarray,
                       np.number,
                       np.bool_,
-                      np.flexible)
+                      np.flexible,
+                      pd.DataFrame)
 
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
@@ -1005,13 +1007,15 @@ def fe_summary(self) -> List[FeSummaryTable]:
         A summary of the instance.
     """
     # Delayed imports to avoid circular dependency
+    from torch.utils.data import Dataset
+
     from fastestimator.estimator import Estimator
     from fastestimator.network import TFNetwork, TorchNetwork
-    from fastestimator.pipeline import Pipeline
     from fastestimator.op.op import Op
-    from fastestimator.trace.trace import Trace
+    from fastestimator.pipeline import Pipeline
     from fastestimator.schedule.schedule import Scheduler
-    from torch.utils.data import Dataset
+    from fastestimator.trace.trace import Trace
+
     # re-number the references for nicer viewing
     ordered_items = sorted(
         self._fe_traceability_summary.items(),

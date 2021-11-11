@@ -14,7 +14,7 @@
 # ==============================================================================
 import os
 from collections import defaultdict
-from typing import List, Optional, Union, Iterable
+from typing import Iterable, List, Optional, Union
 
 import pandas as pd
 
@@ -37,27 +37,65 @@ class CSVLogger(Trace):
     def __init__(self,
                  filename: str,
                  monitor_names: Optional[Union[List[str], str]] = None,
-                 mode: Union[None, str, Iterable[str]] = ("eval", "test")) -> None:
+                 mode: Union[None, str, Iterable[str]] = None) -> None:
         super().__init__(inputs="*" if monitor_names is None else monitor_names, mode=mode)
         self.filename = filename
-        self.data = None
+        self.df = None
 
     def on_begin(self, data: Data) -> None:
-        self.data = defaultdict(list)
+        self.df = pd.DataFrame(columns=["mode", "step", "epoch"])
 
     def on_epoch_end(self, data: Data) -> None:
-        self.data["mode"].append(self.system.mode)
-        self.data["epoch"].append(self.system.epoch_idx)
+        tmpdic = defaultdict()
+        tmpdic["mode"] = self.system.mode
+        tmpdic["step"] = self.system.global_step
+        tmpdic["epoch"] = self.system.epoch_idx
+
         if "*" in self.inputs:
             for key, value in data.read_logs().items():
-                self.data[key].append(value)
+                tmpdic[key] = value
+                if key not in self.df.columns:
+                    self.df[key] = ''
         else:
             for key in self.inputs:
-                self.data[key].append(data[key])
+                tmpdic[key].append(data[key])
+                if key not in self.df.columns:
+                    self.df[key] = ''
+        for col in self.df.columns:
+            if col not in tmpdic.keys():
+                tmpdic[col] = ''
+
+        self.df = self.df.append(tmpdic, ignore_index=True)
+
+    def on_batch_end(self, data: Data) -> None:
+        if self.system.mode == "train" and self.system.log_steps and (self.system.global_step % self.system.log_steps
+                                                                      == 0 or self.system.global_step == 1):
+            tmpdic = defaultdict()
+            tmpdic["mode"] = self.system.mode
+            tmpdic["step"] = self.system.global_step
+            tmpdic["epoch"] = self.system.epoch_idx
+
+            if "*" in self.inputs:
+                for key, value in data.read_logs().items():
+                    tmpdic[key] = value
+                    if key not in self.df.columns:
+                        self.df[key] = ''
+            else:
+                for key in self.inputs:
+                    tmpdic[key].append(data[key])
+                    if key not in self.df.columns:
+                        self.df[key] = ''
+            for col in self.df.columns:
+                if col not in tmpdic.keys():
+                    tmpdic[col] = ''
+
+            self.df = self.df.append(tmpdic, ignore_index=True)
 
     def on_end(self, data: Data) -> None:
-        df = pd.DataFrame(data=self.data)
-        if os.path.exists(self.filename):
-            df.to_csv(self.filename, mode='a', index=False)
-        else:
-            df.to_csv(self.filename, index=False)
+
+        if self.system.mode == "test":
+            if os.path.exists(self.filename):
+                df1 = pd.read_csv(self.filename)
+                self.df = pd.concat([df1, self.df], axis=0, ignore_index=True)
+
+        self.df.to_csv(self.filename, index=False)
