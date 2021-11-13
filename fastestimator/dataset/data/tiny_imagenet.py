@@ -19,7 +19,6 @@ from typing import Optional, Tuple
 
 import wget
 
-from fastestimator.dataset.dir_dataset import DirDataset
 from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset
 from fastestimator.util.wget_util import bar_custom, callback_progress
 
@@ -63,7 +62,7 @@ def load_data(root_dir: Optional[str] = None) -> Tuple[LabeledDirDataset, Labele
         current_dir = os.path.join(root_dir, 'tiny-imagenet-200')
 
         # Update Train Directory
-        for root, dirs, files in os.walk(os.path.join(current_dir, 'train')):
+        for root, _, files in os.walk(os.path.join(current_dir, 'train')):
             for filename in files:
                 #print(os.path.join(root, filename))
                 if filename.endswith('.txt'):
