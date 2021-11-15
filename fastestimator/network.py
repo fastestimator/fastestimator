@@ -603,6 +603,7 @@ class TFNetwork(BaseNetwork):
     def unload_epoch(self) -> None:
         # This prevents a tf graph memory leak that would slow down long trainings. Since we
         # re-build graphs every epoch there is no reason to keep old ones around.
+        # tf.keras.backend.clear_session()  # This causes problems with multi-gpu
         if self._forward_step_static._stateful_fn is None:
             return
         # TODO - stateful_fn doesn't seem to get populated in multi-gpu

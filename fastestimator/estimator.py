@@ -283,11 +283,6 @@ class Estimator:
                         if "eval" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
                             self.system.mode = "eval"
                             self._run_epoch(eager=eager)
-                        if isinstance(self.network, TFNetwork):
-                            # This prevents a tf graph memory leak that would slow down long trainings. Since we
-                            # re-build graphs every epoch there is no reason to keep old ones around.
-                            # tf.keras.backend.clear_session()
-                            pass
                 else:
                     self._run_epoch(eager=eager)
             except EarlyStop:
