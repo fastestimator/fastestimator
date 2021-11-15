@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import json
 import os
-import pickle
 import unittest
 import urllib.request
 
@@ -32,9 +32,9 @@ def ping(host):
 class TestData(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        urls_dict_path = os.path.abspath(os.path.join(__file__, "..", "resources", "dataset_urls.pickle"))
+        urls_dict_path = os.path.abspath(os.path.join(__file__, "..", "resources", "dataset_urls.json"))
         with open(urls_dict_path, 'rb') as dataset_url_dict:
-            cls.data_urls = pickle.load(dataset_url_dict)
+            cls.data_urls = json.load(dataset_url_dict)
 
     def test_dataset_urls(self):
         failed_urls = set()
