@@ -17,6 +17,7 @@ import multiprocessing
 import os
 import sqlite3 as sql
 import sys
+import threading
 import traceback
 from collections import defaultdict
 from contextlib import closing
@@ -223,11 +224,13 @@ class HistoryRecorder:
         self.db_path = db_path if db_path else os.path.join(str(Path.home()), 'fastestimator_data', 'history.db')
         self.system = system
         self.db = None
+        self.ident = (multiprocessing.current_process().pid, threading.get_ident())
         self.pk = None
         self.stdout = None
 
     def __enter__(self) -> None:
         self.db = connect(self.db_path)
+        self.ident = (multiprocessing.current_process().pid, threading.get_ident())
         self.pk = self.system.exp_id  # This might be changed later by RestoreWizard. See the _check_for_restart method
         # Check whether an entry for this pk already exists, for example if a user ran .fit() and is now running .test()
         with closing(self.db.cursor()) as cursor:
@@ -376,12 +379,12 @@ class HistoryRecorder:
         self.db.close()
 
     def write(self, output: str) -> None:
-        self._check_for_restart()  # Check here instead of just waiting for __exit__ in case system powers off later
         self.stdout.write(output)
-        if multiprocessing.current_process().name == 'MainProcess':
+        if multiprocessing.current_process().pid == self.ident[0] and threading.get_ident() == self.ident[1]:
             # Flush can also get invoked by pipeline multi-processing, but db should only be accessed by main thread.
             # This can happen, for example, when pipeline prints a warning that a certain key is unused and will be
             # dropped.
+            self._check_for_restart()  # Check here instead of just waiting for __exit__ in case system powers off later
             self.db.execute('UPDATE logs SET log = log || (?) WHERE fk = (?)', [output, self.pk])
             self.db.commit()
 
