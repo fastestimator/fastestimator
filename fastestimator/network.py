@@ -600,6 +600,15 @@ class TFNetwork(BaseNetwork):
             [str(id(model.current_optimizer)) for model in self.epoch_models if hasattr(model, 'current_optimizer')])
         self.epoch_state["_force_tf_retrace"] = hash(opt_str)  # Hash to keep at fixed memory overhead
 
+    def unload_epoch(self) -> None:
+        # This prevents a tf graph memory leak that would slow down long trainings. Since we
+        # re-build graphs every epoch there is no reason to keep old ones around.
+        strategy = tf.distribute.get_strategy()
+        if isinstance(strategy, tf.distribute.MirroredStrategy):
+            return  # TODO - Find a way to clear graph for multi-gpu
+        else:
+            tf.keras.backend.clear_session()
+
     def _run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """Run a forward step through the Network on a batch of data.
 
