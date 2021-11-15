@@ -603,18 +603,11 @@ class TFNetwork(BaseNetwork):
     def unload_epoch(self) -> None:
         # This prevents a tf graph memory leak that would slow down long trainings. Since we
         # re-build graphs every epoch there is no reason to keep old ones around.
-        # tf.keras.backend.clear_session()  # This causes problems with multi-gpu
-        if self._forward_step_static._stateful_fn is None:
-            return
-        # TODO - stateful_fn doesn't seem to get populated in multi-gpu
-        if hasattr(self._forward_step_static._stateful_fn._function_cache, 'clear'):
-            # Newer versions of tf (master)
-            self._forward_step_static._stateful_fn._function_cache.clear()
+        strategy = tf.distribute.get_strategy()
+        if isinstance(strategy, tf.distribute.MirroredStrategy):
+            return  # TODO - Find a way to clear graph for multi-gpu
         else:
-            # Older versions of tf (2.4, 2.5, 2.6, 2.7)
-            self._forward_step_static._stateful_fn._function_cache.primary.clear()
-            self._forward_step_static._stateful_fn._function_cache.arg_relaxed_specs.clear()
-            self._forward_step_static._stateful_fn._function_cache.arg_relaxed.clear()
+            tf.keras.backend.clear_session()
 
     def _run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """Run a forward step through the Network on a batch of data.
