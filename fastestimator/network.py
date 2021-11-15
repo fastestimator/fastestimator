@@ -600,6 +600,21 @@ class TFNetwork(BaseNetwork):
             [str(id(model.current_optimizer)) for model in self.epoch_models if hasattr(model, 'current_optimizer')])
         self.epoch_state["_force_tf_retrace"] = hash(opt_str)  # Hash to keep at fixed memory overhead
 
+    def unload_epoch(self) -> None:
+        # This prevents a tf graph memory leak that would slow down long trainings. Since we
+        # re-build graphs every epoch there is no reason to keep old ones around.
+        if self._forward_step_static._stateful_fn is None:
+            return
+        # TODO - stateful_fn doesn't seem to get populated in multi-gpu
+        if hasattr(self._forward_step_static._stateful_fn._function_cache, 'clear'):
+            # Newer versions of tf (master)
+            self._forward_step_static._stateful_fn._function_cache.clear()
+        else:
+            # Older versions of tf (2.4, 2.5, 2.6, 2.7)
+            self._forward_step_static._stateful_fn._function_cache.primary.clear()
+            self._forward_step_static._stateful_fn._function_cache.arg_relaxed_specs.clear()
+            self._forward_step_static._stateful_fn._function_cache.arg_relaxed.clear()
+
     def _run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """Run a forward step through the Network on a batch of data.
 
