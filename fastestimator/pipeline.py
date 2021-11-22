@@ -492,21 +492,19 @@ class Pipeline:
             if self.ctx_train_steps_per_epoch is not None and self.ctx_mode == "train":
 
                 if self.ctx_shuffle == True:
-                    expand_dataset_sampler = ExtendDatasetSampler(ds_len=len(data),
-                                                                  ds_expand_len=self.ctx_train_steps_per_epoch)
+                    expand_dataset_sampler = ExtendDatasetSampler(
+                        ds_len=len(data), ds_expand_len=int(self.ctx_train_steps_per_epoch * batch_size))
                 else:
-                    expand_dataset_sampler = ExtendDatasetSampler(ds_len=len(data),
-                                                                  ds_expand_len=self.ctx_train_steps_per_epoch,
-                                                                  shuffle=False)
+                    expand_dataset_sampler = ExtendDatasetSampler(
+                        ds_len=len(data), ds_expand_len=int(self.ctx_train_steps_per_epoch * batch_size), shuffle=False)
             elif self.ctx_eval_steps_per_epoch is not None and self.ctx_mode == "eval":
 
                 if self.ctx_shuffle == True:
-                    expand_dataset_sampler = ExtendDatasetSampler(ds_len=len(data),
-                                                                  ds_expand_len=self.ctx_eval_steps_per_epoch)
+                    expand_dataset_sampler = ExtendDatasetSampler(
+                        ds_len=len(data), ds_expand_len=int(self.ctx_eval_steps_per_epoch * batch_size))
                 else:
-                    expand_dataset_sampler = ExtendDatasetSampler(ds_len=len(data),
-                                                                  ds_expand_len=self.ctx_eval_steps_per_epoch,
-                                                                  shuffle=False)
+                    expand_dataset_sampler = ExtendDatasetSampler(
+                        ds_len=len(data), ds_expand_len=int(self.ctx_eval_steps_per_epoch * batch_size), shuffle=False)
             else:
                 if self.ctx_shuffle == True:
                     expand_dataset_sampler = ExtendDatasetSampler(ds_len=len(data), ds_expand_len=len(data))
