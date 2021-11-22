@@ -219,7 +219,7 @@ class Estimator:
                     with self.pipeline(mode=mode,
                                        epoch=epoch,
                                        ds_id=ds_id,
-                                       train_steps_per_epoch=self.train_steps_per_epoch,
+                                       train_steps_per_epoch=self.system.train_steps_per_epoch,
                                        eval_steps_per_epoch=self.system.eval_steps_per_epoch,
                                        output_keys=trace_input_keys - network_output_keys
                                        | network_input_keys) as loader:
