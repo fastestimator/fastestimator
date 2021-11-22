@@ -54,7 +54,7 @@ def search_max_lr(pipeline, model, network, epochs):
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             max_train_steps_per_epoch=10,
+                             train_steps_per_epoch=10,
                              log_steps=10)
     print("Running LR range test for super convergence. It will take a while...")
     with Suppressor():
@@ -115,7 +115,7 @@ def get_estimator(epochs=24, batch_size=128, lr_epochs=100, max_train_steps_per_
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             max_train_steps_per_epoch=max_train_steps_per_epoch)
+                             train_steps_per_epoch=max_train_steps_per_epoch)
     return estimator
 
 

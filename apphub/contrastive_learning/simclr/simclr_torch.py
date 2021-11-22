@@ -196,7 +196,7 @@ def pretrain_model(epochs, batch_size, max_train_steps_per_epoch, save_dir):
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             max_train_steps_per_epoch=max_train_steps_per_epoch)
+                             train_steps_per_epoch=max_train_steps_per_epoch)
     estimator.fit()
 
     return model_con
@@ -226,7 +226,7 @@ def finetune_model(model, epochs, batch_size, max_train_steps_per_epoch, save_di
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             max_train_steps_per_epoch=max_train_steps_per_epoch)
+                             train_steps_per_epoch=max_train_steps_per_epoch)
     estimator.fit()
 
 

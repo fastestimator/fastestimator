@@ -200,8 +200,8 @@ def pretrain(batch_size,
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             max_train_steps_per_epoch=max_train_steps_per_epoch,
-                             max_eval_steps_per_epoch=max_eval_steps_per_epoch)
+                             train_steps_per_epoch=max_train_steps_per_epoch,
+                             eval_steps_per_epoch=max_eval_steps_per_epoch)
     estimator.fit(warmup=False)
     return traces[1].model_path  # return the weights path
 
@@ -247,8 +247,8 @@ def finetune(weights_path,
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             max_train_steps_per_epoch=max_train_steps_per_epoch,
-                             max_eval_steps_per_epoch=max_eval_steps_per_epoch)
+                             train_steps_per_epoch=max_train_steps_per_epoch,
+                             eval_steps_per_epoch=max_eval_steps_per_epoch)
     estimator.fit(warmup=False)
 
 

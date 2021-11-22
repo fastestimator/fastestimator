@@ -269,7 +269,7 @@ def get_estimator(batch_size=4,
                              pipeline=pipeline,
                              traces=ModelSaver(model=model, save_dir=save_dir, frequency=1),
                              epochs=epochs,
-                             max_train_steps_per_epoch=max_train_steps_per_epoch,
+                             train_steps_per_epoch=max_train_steps_per_epoch,
                              log_steps=log_steps)
 
     return estimator

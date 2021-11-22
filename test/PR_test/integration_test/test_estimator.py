@@ -173,7 +173,7 @@ class TestEstimatorConfigureLoader(unittest.TestCase):
             UpdateOp(model=model, loss_name="ce")
         ])
 
-        est = fe.Estimator(pipeline=pipeline, network=network, max_train_steps_per_epoch=3, epochs=1)
+        est = fe.Estimator(pipeline=pipeline, network=network, train_steps_per_epoch=3, epochs=1)
 
         est.system.mode = "train"
         new_loader = est._configure_loader(loader)
@@ -204,7 +204,7 @@ class TestEstimatorConfigureLoader(unittest.TestCase):
             UpdateOp(model=model, loss_name="ce")
         ])
 
-        est = fe.Estimator(pipeline=pipeline, network=network, max_train_steps_per_epoch=3, epochs=1)
+        est = fe.Estimator(pipeline=pipeline, network=network, train_steps_per_epoch=3, epochs=1)
 
         est.system.mode = "train"
         new_loader = est._configure_loader(loader)
@@ -240,7 +240,7 @@ class TestEstimatorConfigureTensor(unittest.TestCase):
             UpdateOp(model=model, loss_name="ce")
         ])
 
-        est = fe.Estimator(pipeline=pipeline, network=network, max_train_steps_per_epoch=3, epochs=1)
+        est = fe.Estimator(pipeline=pipeline, network=network, train_steps_per_epoch=3, epochs=1)
 
         iterator = iter(loader)
         batch = next(iterator)
@@ -258,7 +258,7 @@ class TestEstimatorConfigureTensor(unittest.TestCase):
             UpdateOp(model=model, loss_name="ce")
         ])
 
-        est = fe.Estimator(pipeline=pipeline, network=network, max_train_steps_per_epoch=3, epochs=1)
+        est = fe.Estimator(pipeline=pipeline, network=network, train_steps_per_epoch=3, epochs=1)
 
         iterator = iter(loader)
         batch = next(iterator)

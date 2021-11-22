@@ -138,8 +138,8 @@ def pretrain(batch_size,
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             max_train_steps_per_epoch=max_train_steps_per_epoch,
-                             max_eval_steps_per_epoch=max_eval_steps_per_epoch)
+                             train_steps_per_epoch=max_train_steps_per_epoch,
+                             eval_steps_per_epoch=max_eval_steps_per_epoch)
     estimator.fit(warmup=False)
     return model
 
@@ -191,8 +191,8 @@ def finetune(pretrained_model,
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             max_train_steps_per_epoch=max_train_steps_per_epoch,
-                             max_eval_steps_per_epoch=max_eval_steps_per_epoch)
+                             train_steps_per_epoch=max_train_steps_per_epoch,
+                             eval_steps_per_epoch=max_eval_steps_per_epoch)
     estimator.fit(warmup=False)
 
 

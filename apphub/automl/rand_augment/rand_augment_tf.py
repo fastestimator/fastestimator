@@ -249,8 +249,8 @@ def get_estimator(level,
                              network=network,
                              epochs=epochs,
                              traces=Accuracy(true_key="y", pred_key="y_pred"),
-                             max_train_steps_per_epoch=max_train_steps_per_epoch,
-                             max_eval_steps_per_epoch=max_eval_steps_per_epoch)
+                             train_steps_per_epoch=max_train_steps_per_epoch,
+                             eval_steps_per_epoch=max_eval_steps_per_epoch)
     return estimator
 
 

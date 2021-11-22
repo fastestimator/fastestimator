@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import gc
+import math
 import multiprocessing as mp
 import os
 import random
@@ -25,6 +26,7 @@ import numpy as np
 import tensorflow as tf
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.dataloader import default_collate
+from torch.utils.data.sampler import Sampler
 
 from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.dataloader import FEDataLoader
@@ -401,6 +403,8 @@ class Pipeline:
                  epoch: int = 1,
                  ds_id: Optional[str] = None,
                  shuffle: Optional[bool] = None,
+                 train_steps_per_epoch: Optional[int] = None,
+                 eval_steps_per_epoch: Optional[int] = None,
                  output_keys: Optional[Set[str]] = None) -> 'Pipeline':
         """Prepare this Pipeline for a given `mode` and `epoch`.
 
@@ -435,6 +439,8 @@ class Pipeline:
         self.ctx_epoch = epoch
         self.ctx_ds_id = ds_id
         self.ctx_shuffle = mode == 'train' if shuffle is None else shuffle
+        self.ctx_train_steps_per_epoch = train_steps_per_epoch
+        self.ctx_eval_steps_per_epoch = eval_steps_per_epoch
         self.ctx_output_keys = output_keys
         self.ctx_lock.release()
         return self
@@ -482,6 +488,33 @@ class Pipeline:
             collate_fn = self.collate_fn
             if collate_fn is None and self.pad_value is not None:
                 collate_fn = self._pad_batch_collate
+            # Default ExapandDataset Sampler
+            if self.ctx_train_steps_per_epoch is not None and self.ctx_mode == "train":
+
+                if self.ctx_shuffle == True:
+                    expand_dataset_sampler = ExtendDatasetSampler(ds_len=len(data),
+                                                                  ds_expand_len=self.ctx_train_steps_per_epoch)
+                else:
+                    expand_dataset_sampler = ExtendDatasetSampler(ds_len=len(data),
+                                                                  ds_expand_len=self.ctx_train_steps_per_epoch,
+                                                                  shuffle=False)
+            elif self.ctx_eval_steps_per_epoch is not None and self.ctx_mode == "eval":
+
+                if self.ctx_shuffle == True:
+                    expand_dataset_sampler = ExtendDatasetSampler(ds_len=len(data),
+                                                                  ds_expand_len=self.ctx_eval_steps_per_epoch)
+                else:
+                    expand_dataset_sampler = ExtendDatasetSampler(ds_len=len(data),
+                                                                  ds_expand_len=self.ctx_eval_steps_per_epoch,
+                                                                  shuffle=False)
+            else:
+                if self.ctx_shuffle == True:
+                    expand_dataset_sampler = ExtendDatasetSampler(ds_len=len(data), ds_expand_len=len(data))
+                else:
+                    expand_dataset_sampler = ExtendDatasetSampler(ds_len=len(data),
+                                                                  ds_expand_len=len(data),
+                                                                  shuffle=False)
+
             op_dataset = OpDataset(data,
                                    get_current_items(self.ops, self.ctx_mode, self.ctx_epoch, self.ctx_ds_id),
                                    self.ctx_mode,
@@ -491,7 +524,8 @@ class Pipeline:
             # Results will be immediately converted to tensors, so don't need deep_remainder
             data = FEDataLoader(op_dataset,
                                 batch_size=batch_size,
-                                shuffle=self.ctx_shuffle,
+                                shuffle=False,
+                                sampler=expand_dataset_sampler,
                                 num_workers=self.num_process,
                                 drop_last=False if batch_size is None else self.drop_last,
                                 worker_init_fn=lambda _: np.random.seed(random.randint(0, 2**32 - 1)),
@@ -519,3 +553,57 @@ class Pipeline:
         """
         pad_batch(batch, self.pad_value)
         return default_collate(batch)
+
+
+class ExtendDatasetSampler(Sampler):
+    """Samples elements randomly, while ensuring change in size of dataset.
+    Arguments:
+        ds_len : Length of original dataset.
+        ds_expand_len : Length to which original dataset must be expanded to.
+        shuffle : Whether to use shuffling.
+    """
+    def __init__(self, ds_len, ds_expand_len, shuffle=True):
+
+        self.ds_len = ds_len
+        self.ds_expand_len = ds_expand_len
+        self.shuffle = shuffle
+
+        self._check_input()
+
+        self.indices = []
+        self.base = [[i for i in range(self.ds_len)] for _ in range(math.ceil(self.ds_expand_len / self.ds_len))]
+
+    def __len__(self):
+        return self.ds_expand_len
+
+    def _check_input(self) -> None:
+        """Verify that the given input values are valid.
+        Raises:
+            AssertionError: If any of the parameters are found to by unacceptable for a variety of reasons.
+        """
+        assert isinstance(self.ds_expand_len, int), "Only accept positive integer type as ds_expand_len"
+        assert self.ds_expand_len > 0, "Invalid ds_expand_len. Expand Length cannot be less than or equal to 0"
+        assert isinstance(self.ds_len, int), "Only accept positive integer type as ds_len"
+        assert self.ds_len > 0, "Invalid ds_len. Dataset Length cannot be less than or equal to 0"
+
+    def __iter__(self):
+
+        self.indices = []
+        base = self.base
+
+        if self.ds_expand_len == self.ds_len:
+            if self.shuffle == True:
+                random.shuffle(base[0])
+            self.indices = base[0]
+        else:
+            if self.shuffle == True:
+                random.shuffle(base[-1])
+            base[-1] = base[-1][:self.ds_expand_len % self.ds_len]
+
+            for ls in base:
+                if self.shuffle == True:
+                    random.shuffle(ls)
+                for ele in ls:
+                    self.indices.append(ele)
+
+        return iter(self.indices)

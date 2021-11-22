@@ -75,8 +75,8 @@ class Estimator:
                  pipeline: Pipeline,
                  network: BaseNetwork,
                  epochs: int,
-                 max_train_steps_per_epoch: Optional[int] = None,
-                 max_eval_steps_per_epoch: Optional[int] = None,
+                 train_steps_per_epoch: Optional[int] = None,
+                 eval_steps_per_epoch: Optional[int] = None,
                  traces: Union[None, Trace, Scheduler[Trace], Iterable[Union[Trace, Scheduler[Trace]]]] = None,
                  log_steps: Optional[int] = 100,
                  monitor_names: Union[None, str, Iterable[str]] = None):
@@ -90,8 +90,8 @@ class Estimator:
                              traces=to_list(traces),
                              log_steps=log_steps,
                              total_epochs=epochs,
-                             max_train_steps_per_epoch=max_train_steps_per_epoch,
-                             max_eval_steps_per_epoch=max_eval_steps_per_epoch,
+                             train_steps_per_epoch=train_steps_per_epoch,
+                             eval_steps_per_epoch=eval_steps_per_epoch,
                              system_config=self.fe_summary())
 
     @property
@@ -219,6 +219,8 @@ class Estimator:
                     with self.pipeline(mode=mode,
                                        epoch=epoch,
                                        ds_id=ds_id,
+                                       train_steps_per_epoch=self.train_steps_per_epoch,
+                                       eval_steps_per_epoch=self.system.eval_steps_per_epoch,
                                        output_keys=trace_input_keys - network_output_keys
                                        | network_input_keys) as loader:
                         loader = self._configure_loader(loader)
@@ -328,6 +330,8 @@ class Estimator:
             with self.pipeline(mode=self.system.mode,
                                epoch=self.system.epoch_idx,
                                ds_id=self.system.ds_id,
+                               train_steps_per_epoch=self.system.train_steps_per_epoch,
+                               eval_steps_per_epoch=self.system.eval_steps_per_epoch,
                                output_keys=trace_input_keys - network_output_keys | network_input_keys) as loader:
                 loader = self._configure_loader(loader)
                 iterator = iter(loader)
@@ -347,11 +351,10 @@ class Estimator:
                         self._run_traces_on_batch_begin(batch, traces=ds_traces)
                         batch, prediction = self.network.run_step(batch)
                         self._run_traces_on_batch_end(batch, prediction, traces=ds_traces)
-                        if isinstance(loader,
-                                      DataLoader) and ((self.system.batch_idx == self.system.max_train_steps_per_epoch
-                                                        and self.system.mode == "train") or
-                                                       (self.system.batch_idx == self.system.max_eval_steps_per_epoch
-                                                        and self.system.mode == "eval")):
+                        if isinstance(loader, DataLoader) and (
+                            (self.system.batch_idx == self.system.train_steps_per_epoch and self.system.mode == "train")
+                                or
+                            (self.system.batch_idx == self.system.eval_steps_per_epoch and self.system.mode == "eval")):
                             raise StopIteration
                         with Suppressor():
                             batch = next(iterator)
@@ -384,10 +387,10 @@ class Estimator:
             new_loader = tf.data.Dataset.from_generator(lambda: loader, data_type, output_shapes=data_shape)
             new_loader = new_loader.prefetch(1)
         if isinstance(new_loader, tf.data.Dataset):
-            if self.system.max_train_steps_per_epoch and self.system.mode == "train":
-                new_loader = new_loader.take(self.system.max_train_steps_per_epoch)
-            if self.system.max_eval_steps_per_epoch and self.system.mode == "eval":
-                new_loader = new_loader.take(self.system.max_eval_steps_per_epoch)
+            if self.system.train_steps_per_epoch and self.system.mode == "train":
+                new_loader = new_loader.take(self.system.train_steps_per_epoch)
+            if self.system.eval_steps_per_epoch and self.system.mode == "eval":
+                new_loader = new_loader.take(self.system.eval_steps_per_epoch)
             if isinstance(tf.distribute.get_strategy(), tf.distribute.MirroredStrategy) and isinstance(
                     self.network, TFNetwork) and not isinstance(new_loader, DistributedDataset):
                 # The default autoshard policy is file, changing it to data to avoid warning

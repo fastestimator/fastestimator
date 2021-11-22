@@ -87,8 +87,8 @@ class System:
     network: BaseNetwork
     pipeline: Pipeline
     traces: List[Union['Trace', Scheduler['Trace']]]
-    max_train_steps_per_epoch: Optional[int]
-    max_eval_steps_per_epoch: Optional[int]
+    train_steps_per_epoch: Optional[int]
+    eval_steps_per_epoch: Optional[int]
     summary: Summary
     experiment_time: str
     custom_graphs: Dict[str, List[Summary]]
@@ -102,8 +102,8 @@ class System:
                  num_devices: int = torch.cuda.device_count(),
                  log_steps: Optional[int] = None,
                  total_epochs: int = 0,
-                 max_train_steps_per_epoch: Optional[int] = None,
-                 max_eval_steps_per_epoch: Optional[int] = None,
+                 train_steps_per_epoch: Optional[int] = None,
+                 eval_steps_per_epoch: Optional[int] = None,
                  system_config: Optional[List[FeSummaryTable]] = None) -> None:
 
         self.network = network
@@ -115,8 +115,8 @@ class System:
         self.log_steps = log_steps
         self.total_epochs = total_epochs
         self.batch_idx = None
-        self.max_train_steps_per_epoch = max_train_steps_per_epoch
-        self.max_eval_steps_per_epoch = max_eval_steps_per_epoch
+        self.train_steps_per_epoch = train_steps_per_epoch
+        self.eval_steps_per_epoch = eval_steps_per_epoch
         self.stop_training = False
         self.summary = Summary(None, system_config)
         self.experiment_time = ""

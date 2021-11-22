@@ -68,8 +68,8 @@ def _build_estimator(model: Union[tf.keras.Model, torch.nn.Module], trace: Trace
                              network=network,
                              epochs=1,
                              traces=traces,
-                             max_train_steps_per_epoch=1,
-                             max_eval_steps_per_epoch=None)
+                             train_steps_per_epoch=1,
+                             eval_steps_per_epoch=None)
     fake_data = tf.ones(shape=(batch_size, 28, 28, 1)) if axis == -1 else torch.ones(size=(batch_size, 1, 28, 28))
     model.fe_input_spec = FeInputSpec(fake_data, model)
     return estimator

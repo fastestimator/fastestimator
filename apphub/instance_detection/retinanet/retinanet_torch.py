@@ -445,8 +445,8 @@ def get_estimator(data_dir=None,
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             max_train_steps_per_epoch=max_train_steps_per_epoch,
-                             max_eval_steps_per_epoch=max_eval_steps_per_epoch,
+                             train_steps_per_epoch=max_train_steps_per_epoch,
+                             eval_steps_per_epoch=max_eval_steps_per_epoch,
                              monitor_names=["l1_loss", "focal_loss"])
     return estimator
 

@@ -33,7 +33,7 @@ class TestLRScheduler(unittest.TestCase):
                                  network=network,
                                  epochs=2,
                                  traces=LRScheduler(model=model, lr_fn=ARC(1)),
-                                 max_train_steps_per_epoch=10)
+                                 train_steps_per_epoch=10)
         return estimator
 
     def test_tf_model_arc_train_eval(self):

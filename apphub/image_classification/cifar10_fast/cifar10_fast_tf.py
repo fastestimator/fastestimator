@@ -74,7 +74,7 @@ def get_estimator(epochs=24, batch_size=512, max_train_steps_per_epoch=None, sav
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             max_train_steps_per_epoch=max_train_steps_per_epoch)
+                             train_steps_per_epoch=max_train_steps_per_epoch)
     return estimator
 
 

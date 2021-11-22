@@ -178,8 +178,8 @@ def get_estimator(batch_size=8,
                              pipeline=pipeline,
                              traces=traces,
                              epochs=epochs,
-                             max_train_steps_per_epoch=max_train_steps_per_epoch,
-                             max_eval_steps_per_epoch=max_eval_steps_per_epoch,
+                             train_steps_per_epoch=max_train_steps_per_epoch,
+                             eval_steps_per_epoch=max_eval_steps_per_epoch,
                              log_steps=500)
 
     return estimator

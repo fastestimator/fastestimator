@@ -209,8 +209,8 @@ def get_estimator(data_dir=None,
                              network=network,
                              traces=traces,
                              epochs=epochs,
-                             max_train_steps_per_epoch=max_train_steps_per_epoch,
-                             max_eval_steps_per_epoch=max_eval_steps_per_epoch)
+                             train_steps_per_epoch=max_train_steps_per_epoch,
+                             eval_steps_per_epoch=max_eval_steps_per_epoch)
     return estimator
 
 
