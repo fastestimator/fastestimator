@@ -106,6 +106,16 @@ class Estimator:
     def traces(self) -> List[Union[Trace, Scheduler[Trace]]]:
         return self.system.traces
 
+    @ property
+    def steps_per_epoch(self,mode):
+        if mode == 'train':
+            return self.system.train_steps_per_epoch
+        elif mode == 'eval':
+            return self.system.eval_steps_per_epoch
+        else:
+            return None
+
+
     def fit(self, summary: Optional[str] = None, warmup: bool = True, eager: bool = False) -> Optional[Summary]:
         """Train the network for the number of epochs specified by the estimator's constructor.
 
@@ -216,12 +226,7 @@ class Estimator:
                             trace_input_keys.update(trace.inputs)
                         trace_output_keys.update(trace.get_outputs(ds_ids=ds_ids))
                     # Mode checking
-                    if mode == "train":
-                        steps = self.system.train_steps_per_epoch
-                    elif mode == "eval":
-                        steps = self.system.eval_steps_per_epoch
-                    else:
-                        steps = None
+                    steps = self.steps_per_epoch(mode=mode)
                     # key checking
                     with self.pipeline(mode=mode,
                                        epoch=epoch,
@@ -334,12 +339,7 @@ class Estimator:
                                     output_keys=trace_input_keys,
                                     eager=eager)
             # Mode checking
-            if self.system.mode == "train":
-                steps = self.system.train_steps_per_epoch
-            elif self.system.mode == "eval":
-                steps = self.system.eval_steps_per_epoch
-            else:
-                steps = None
+            steps = self.steps_per_epoch(mode=self.system.mode)
 
             with self.pipeline(mode=self.system.mode,
                                epoch=self.system.epoch_idx,
