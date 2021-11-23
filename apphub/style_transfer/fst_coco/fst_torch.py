@@ -221,7 +221,7 @@ class LossNet(nn.Module):
 
 def get_estimator(batch_size=4,
                   epochs=2,
-                  max_train_steps_per_epoch=None,
+                  train_steps_per_epoch=None,
                   log_steps=100,
                   style_weight=5.0,
                   content_weight=1.0,
@@ -269,7 +269,7 @@ def get_estimator(batch_size=4,
                              pipeline=pipeline,
                              traces=ModelSaver(model=model, save_dir=save_dir, frequency=1),
                              epochs=epochs,
-                             train_steps_per_epoch=max_train_steps_per_epoch,
+                             train_steps_per_epoch=train_steps_per_epoch,
                              log_steps=log_steps)
 
     return estimator

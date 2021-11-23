@@ -70,8 +70,8 @@ def corrupt_dataset(dataset, n_classes=100, corruption_fraction=0.4):
 
 def get_estimator(epochs=50,
                   batch_size=128,
-                  max_train_steps_per_epoch=None,
-                  max_eval_steps_per_epoch=None,
+                  train_steps_per_epoch=None,
+                  eval_steps_per_epoch=None,
                   save_dir=tempfile.mkdtemp()):
     # step 1
     train_data, eval_data = cifair100.load_data()
@@ -118,8 +118,8 @@ def get_estimator(epochs=50,
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             train_steps_per_epoch=max_train_steps_per_epoch,
-                             eval_steps_per_epoch=max_eval_steps_per_epoch)
+                             train_steps_per_epoch=train_steps_per_epoch,
+                             eval_steps_per_epoch=eval_steps_per_epoch)
     return estimator
 
 

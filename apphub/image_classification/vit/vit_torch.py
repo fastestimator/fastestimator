@@ -100,8 +100,8 @@ class ViTModel(nn.Module):
 def pretrain(batch_size,
              epochs,
              model_dir=tempfile.mkdtemp(),
-             max_train_steps_per_epoch=None,
-             max_eval_steps_per_epoch=None):
+             train_steps_per_epoch=None,
+             eval_steps_per_epoch=None):
     train_data, eval_data = cifair100.load_data()
     pipeline = fe.Pipeline(
         train_data=train_data,
@@ -138,8 +138,8 @@ def pretrain(batch_size,
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             train_steps_per_epoch=max_train_steps_per_epoch,
-                             eval_steps_per_epoch=max_eval_steps_per_epoch)
+                             train_steps_per_epoch=train_steps_per_epoch,
+                             eval_steps_per_epoch=eval_steps_per_epoch)
     estimator.fit(warmup=False)
     return model
 
@@ -148,8 +148,8 @@ def finetune(pretrained_model,
              batch_size,
              epochs,
              model_dir=tempfile.mkdtemp(),
-             max_train_steps_per_epoch=None,
-             max_eval_steps_per_epoch=None):
+             train_steps_per_epoch=None,
+             eval_steps_per_epoch=None):
     train_data, eval_data = cifair10.load_data()
     pipeline = fe.Pipeline(
         train_data=train_data,
@@ -191,25 +191,25 @@ def finetune(pretrained_model,
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             train_steps_per_epoch=max_train_steps_per_epoch,
-                             eval_steps_per_epoch=max_eval_steps_per_epoch)
+                             train_steps_per_epoch=train_steps_per_epoch,
+                             eval_steps_per_epoch=eval_steps_per_epoch)
     estimator.fit(warmup=False)
 
 
 def fastestimator_run(batch_size=128,
                       pretrain_epochs=100,
                       finetune_epochs=1,
-                      max_train_steps_per_epoch=None,
-                      max_eval_steps_per_epoch=None):
+                      train_steps_per_epoch=None,
+                      eval_steps_per_epoch=None):
     pretrained_model = pretrain(batch_size=batch_size,
                                 epochs=pretrain_epochs,
-                                max_train_steps_per_epoch=max_train_steps_per_epoch,
-                                max_eval_steps_per_epoch=max_eval_steps_per_epoch)
+                                train_steps_per_epoch=train_steps_per_epoch,
+                                eval_steps_per_epoch=eval_steps_per_epoch)
     finetune(pretrained_model,
              batch_size=batch_size,
              epochs=finetune_epochs,
-             max_train_steps_per_epoch=max_train_steps_per_epoch,
-             max_eval_steps_per_epoch=max_eval_steps_per_epoch)
+             train_steps_per_epoch=train_steps_per_epoch,
+             eval_steps_per_epoch=eval_steps_per_epoch)
 
 
 if __name__ == "__main__":

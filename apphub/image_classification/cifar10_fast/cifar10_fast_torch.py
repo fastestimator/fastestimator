@@ -40,7 +40,7 @@ def lr_schedule(step):
     return lr * 0.1
 
 
-def get_estimator(epochs=24, batch_size=512, max_train_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
+def get_estimator(epochs=24, batch_size=512, train_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
     # step 1: prepare dataset
     train_data, test_data = load_data()
     pipeline = fe.Pipeline(
@@ -75,7 +75,7 @@ def get_estimator(epochs=24, batch_size=512, max_train_steps_per_epoch=None, sav
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             train_steps_per_epoch=max_train_steps_per_epoch)
+                             train_steps_per_epoch=train_steps_per_epoch)
     return estimator
 
 

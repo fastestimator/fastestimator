@@ -29,8 +29,8 @@ from fastestimator.trace.metric import Accuracy
 def get_estimator(epsilon=0.04,
                   epochs=10,
                   batch_size=32,
-                  max_train_steps_per_epoch=None,
-                  max_eval_steps_per_epoch=None,
+                  train_steps_per_epoch=None,
+                  eval_steps_per_epoch=None,
                   save_dir=tempfile.mkdtemp()):
     # step 1
     train_data, eval_data = cifair10.load_data()
@@ -67,8 +67,8 @@ def get_estimator(epsilon=0.04,
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             train_steps_per_epoch=max_train_steps_per_epoch,
-                             eval_steps_per_epoch=max_eval_steps_per_epoch,
+                             train_steps_per_epoch=train_steps_per_epoch,
+                             eval_steps_per_epoch=eval_steps_per_epoch,
                              monitor_names=["base_ce", "adv_ce"])
     return estimator
 

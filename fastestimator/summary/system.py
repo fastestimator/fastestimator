@@ -49,7 +49,9 @@ class System:
         num_devices: How many GPUs are available for training.
         log_steps: Log every n steps (0 to disable train logging, None to disable all logging).
         total_epochs: How many epochs training is expected to run for.
-        max_train_steps_per_epoch: Whether training epochs will be cut short after N steps (or use None if they will run
+        train_steps_per_epoch: Whether training iterations will be cut short or extended to complete N steps (or use None if they will run
+            to completion)
+        eval_steps_per_epoch: Whether evaluation iterations will be cut short or extended to complete N steps (or use None if they will run
             to completion)
         system_config: A description of the initialization parameters defining the associated estimator.
 
@@ -67,8 +69,10 @@ class System:
         network: A reference to the network being used.
         pipeline: A reference to the pipeline being used.
         traces: The traces being used.
-        max_train_steps_per_epoch: Training will complete after n steps even if loader is not yet exhausted.
-        max_eval_steps_per_epoch: Evaluation will complete after n steps even if loader is not yet exhausted.
+        train_steps_per_epoch: Training will be cut short or extended to complete N steps even if loader is not yet
+            exhausted. If None, all data will be used.
+        eval_steps_per_epoch: Evaluation will be cut short or extended to complete N steps even if loader is not yet
+            exhausted. If None, all data will be used.
         summary: An object to write experiment results to.
         experiment_time: A timestamp indicating when this model was trained.
         custom_graphs: A place to store extra graphs which are too complicated for the primary history.

@@ -43,8 +43,8 @@ class CombineLeftRightMask(NumpyOp):
 
 def get_estimator(epochs=20,
                   batch_size=4,
-                  max_train_steps_per_epoch=None,
-                  max_eval_steps_per_epoch=None,
+                  train_steps_per_epoch=None,
+                  eval_steps_per_epoch=None,
                   save_dir=tempfile.mkdtemp(),
                   log_steps=20,
                   data_dir=None):
@@ -96,8 +96,8 @@ def get_estimator(epochs=20,
                              epochs=epochs,
                              log_steps=log_steps,
                              traces=traces,
-                             train_steps_per_epoch=max_train_steps_per_epoch,
-                             eval_steps_per_epoch=max_eval_steps_per_epoch)
+                             train_steps_per_epoch=train_steps_per_epoch,
+                             eval_steps_per_epoch=eval_steps_per_epoch)
 
     return estimator
 

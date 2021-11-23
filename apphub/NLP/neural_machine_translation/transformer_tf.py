@@ -273,8 +273,8 @@ def get_estimator(data_dir=None,
                   epochs=20,
                   em_dim=128,
                   batch_size=64,
-                  max_train_steps_per_epoch=None,
-                  max_eval_steps_per_epoch=None):
+                  train_steps_per_epoch=None,
+                  eval_steps_per_epoch=None):
     train_ds, eval_ds, test_ds = tednmt.load_data(data_dir, translate_option="pt_to_en")
     pt_tokenizer = BertTokenizer.from_pretrained("neuralmind/bert-base-portuguese-cased")
     en_tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
@@ -314,8 +314,8 @@ def get_estimator(data_dir=None,
                              network=network,
                              traces=traces,
                              epochs=epochs,
-                             train_steps_per_epoch=max_train_steps_per_epoch,
-                             eval_steps_per_epoch=max_eval_steps_per_epoch)
+                             train_steps_per_epoch=train_steps_per_epoch,
+                             eval_steps_per_epoch=eval_steps_per_epoch)
     return estimator
 
 

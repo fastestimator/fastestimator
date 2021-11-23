@@ -403,8 +403,7 @@ class Pipeline:
                  epoch: int = 1,
                  ds_id: Optional[str] = None,
                  shuffle: Optional[bool] = None,
-                 train_steps_per_epoch: Optional[int] = None,
-                 eval_steps_per_epoch: Optional[int] = None,
+                 steps_per_epoch: Optional[int] = None,
                  output_keys: Optional[Set[str]] = None) -> 'Pipeline':
         """Prepare this Pipeline for a given `mode` and `epoch`.
 
@@ -423,6 +422,8 @@ class Pipeline:
             ds_id: The dataset id to consider for the loader.
             shuffle: Whether to shuffle the data. If None, the value for shuffle is based on mode. NOTE: This argument
                 is only used with FastEstimator Datasets.
+            steps_per_epoch: Training or Evaluation will be cut short or extended to complete N steps even if loader is not yet
+                exhausted. If None, all data will be used.
             output_keys: What keys can be produced from pipeline. If None, all keys will be considered.
 
         Returns:
@@ -439,8 +440,7 @@ class Pipeline:
         self.ctx_epoch = epoch
         self.ctx_ds_id = ds_id
         self.ctx_shuffle = mode == 'train' if shuffle is None else shuffle
-        self.ctx_train_steps_per_epoch = train_steps_per_epoch
-        self.ctx_eval_steps_per_epoch = eval_steps_per_epoch
+        self.ctx_steps_per_epoch = steps_per_epoch
         self.ctx_output_keys = output_keys
         self.ctx_lock.release()
         return self
@@ -489,29 +489,15 @@ class Pipeline:
             if collate_fn is None and self.pad_value is not None:
                 collate_fn = self._pad_batch_collate
             # Default ExapandDataset Sampler
-            if self.ctx_train_steps_per_epoch is not None and self.ctx_mode == "train":
+            if self.ctx_steps_per_epoch is not None and self.ctx_mode in ["train", "eval"]:
 
-                if self.ctx_shuffle == True:
-                    expand_dataset_sampler = ExtendDatasetSampler(
-                        ds_len=len(data), ds_expand_len=int(self.ctx_train_steps_per_epoch * batch_size))
-                else:
-                    expand_dataset_sampler = ExtendDatasetSampler(
-                        ds_len=len(data), ds_expand_len=int(self.ctx_train_steps_per_epoch * batch_size), shuffle=False)
-            elif self.ctx_eval_steps_per_epoch is not None and self.ctx_mode == "eval":
-
-                if self.ctx_shuffle == True:
-                    expand_dataset_sampler = ExtendDatasetSampler(
-                        ds_len=len(data), ds_expand_len=int(self.ctx_eval_steps_per_epoch * batch_size))
-                else:
-                    expand_dataset_sampler = ExtendDatasetSampler(
-                        ds_len=len(data), ds_expand_len=int(self.ctx_eval_steps_per_epoch * batch_size), shuffle=False)
+                expand_dataset_sampler = ExtendDatasetSampler(ds_len=len(data),
+                                                              ds_expand_len=int(self.ctx_steps_per_epoch * batch_size),
+                                                              shuffle=self.ctx_shuffle)
             else:
-                if self.ctx_shuffle == True:
-                    expand_dataset_sampler = ExtendDatasetSampler(ds_len=len(data), ds_expand_len=len(data))
-                else:
-                    expand_dataset_sampler = ExtendDatasetSampler(ds_len=len(data),
-                                                                  ds_expand_len=len(data),
-                                                                  shuffle=False)
+                expand_dataset_sampler = ExtendDatasetSampler(ds_len=len(data),
+                                                              ds_expand_len=len(data),
+                                                              shuffle=self.ctx_shuffle)
 
             op_dataset = OpDataset(data,
                                    get_current_items(self.ops, self.ctx_mode, self.ctx_epoch, self.ctx_ds_id),
@@ -554,13 +540,15 @@ class Pipeline:
 
 
 class ExtendDatasetSampler(Sampler):
-    """Samples elements randomly, while ensuring change in size of dataset.
+    """Sampler to take care of expansion and contraction of Dataset. If the original length of dataset and new desired
+    length of are same, sampled in sequential fashion from original dataset. If shuffle is True, then sampled from shuffled Dataset.
+
     Arguments:
         ds_len : Length of original dataset.
-        ds_expand_len : Length to which original dataset must be expanded to.
+        ds_expand_len : Length to which original dataset must be expanded or contracted to. (New desired length)
         shuffle : Whether to use shuffling.
     """
-    def __init__(self, ds_len, ds_expand_len, shuffle=True):
+    def __init__(self, ds_len: int, ds_expand_len: int, shuffle: Optional[bool] = True):
 
         self.ds_len = ds_len
         self.ds_expand_len = ds_expand_len
@@ -589,19 +577,14 @@ class ExtendDatasetSampler(Sampler):
         self.indices = []
         base = self.base
 
-        if self.ds_expand_len == self.ds_len:
-            if self.shuffle == True:
-                random.shuffle(base[0])
-            self.indices = base[0]
-        else:
+        if self.ds_expand_len % self.ds_len != 0:
             if self.shuffle == True:
                 random.shuffle(base[-1])
             base[-1] = base[-1][:self.ds_expand_len % self.ds_len]
 
-            for ls in base:
-                if self.shuffle == True:
-                    random.shuffle(ls)
-                for ele in ls:
-                    self.indices.append(ele)
+        for ls in base:
+            if self.shuffle == True:
+                random.shuffle(ls)
+            self.indices.extend(ls)
 
         return iter(self.indices)

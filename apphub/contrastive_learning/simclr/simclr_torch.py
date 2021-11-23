@@ -146,7 +146,7 @@ def NTXent(A, B, temperature):
     return loss, ab, labels
 
 
-def pretrain_model(epochs, batch_size, max_train_steps_per_epoch, save_dir):
+def pretrain_model(epochs, batch_size, train_steps_per_epoch, save_dir):
     train_data, test_data = load_data()
     pipeline = fe.Pipeline(
         train_data=train_data,
@@ -196,13 +196,13 @@ def pretrain_model(epochs, batch_size, max_train_steps_per_epoch, save_dir):
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             train_steps_per_epoch=max_train_steps_per_epoch)
+                             train_steps_per_epoch=train_steps_per_epoch)
     estimator.fit()
 
     return model_con
 
 
-def finetune_model(model, epochs, batch_size, max_train_steps_per_epoch, save_dir):
+def finetune_model(model, epochs, batch_size, train_steps_per_epoch, save_dir):
     train_data, test_data = load_data()
     train_data = train_data.split(0.1)
     pipeline = fe.Pipeline(train_data=train_data,
@@ -226,7 +226,7 @@ def finetune_model(model, epochs, batch_size, max_train_steps_per_epoch, save_di
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             train_steps_per_epoch=max_train_steps_per_epoch)
+                             train_steps_per_epoch=train_steps_per_epoch)
     estimator.fit()
 
 

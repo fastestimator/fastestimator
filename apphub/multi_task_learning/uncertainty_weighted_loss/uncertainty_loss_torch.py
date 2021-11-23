@@ -141,8 +141,8 @@ class ResUnet50(nn.Module):
 
 def get_estimator(batch_size=8,
                   epochs=25,
-                  max_train_steps_per_epoch=None,
-                  max_eval_steps_per_epoch=None,
+                  train_steps_per_epoch=None,
+                  eval_steps_per_epoch=None,
                   save_dir=tempfile.mkdtemp(),
                   data_dir=None):
     # load CUB200 dataset.
@@ -215,8 +215,8 @@ def get_estimator(batch_size=8,
                              pipeline=pipeline,
                              traces=traces,
                              epochs=epochs,
-                             train_steps_per_epoch=max_train_steps_per_epoch,
-                             eval_steps_per_epoch=max_eval_steps_per_epoch,
+                             train_steps_per_epoch=train_steps_per_epoch,
+                             eval_steps_per_epoch=eval_steps_per_epoch,
                              log_steps=500)
 
     return estimator

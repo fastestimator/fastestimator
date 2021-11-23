@@ -401,7 +401,7 @@ class ImageSaving(Trace):
 def get_estimator(target_size=128,
                   epochs=55,
                   save_dir=tempfile.mkdtemp(),
-                  max_train_steps_per_epoch=None,
+                  train_steps_per_epoch=None,
                   data_dir=None):
     # assert growth parameters
     num_grow = np.log2(target_size) - 2
@@ -503,7 +503,7 @@ def get_estimator(target_size=128,
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             train_steps_per_epoch=max_train_steps_per_epoch)
+                             train_steps_per_epoch=train_steps_per_epoch)
     return estimator
 
 

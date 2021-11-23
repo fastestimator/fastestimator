@@ -210,8 +210,8 @@ def get_estimator(level,
                   num_augment,
                   epochs=24,
                   batch_size=512,
-                  max_train_steps_per_epoch=None,
-                  max_eval_steps_per_epoch=None):
+                  train_steps_per_epoch=None,
+                  eval_steps_per_epoch=None):
     assert 0 <= level <= 10, "the level should be between 0 and 10"
     train_data, test_data = load_data()
     aug_ops = [
@@ -250,8 +250,8 @@ def get_estimator(level,
                              network=network,
                              epochs=epochs,
                              traces=Accuracy(true_key="y", pred_key="y_pred"),
-                             train_steps_per_epoch=max_train_steps_per_epoch,
-                             eval_steps_per_epoch=max_eval_steps_per_epoch)
+                             train_steps_per_epoch=train_steps_per_epoch,
+                             eval_steps_per_epoch=eval_steps_per_epoch)
     return estimator
 
 

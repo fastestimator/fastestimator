@@ -383,8 +383,8 @@ def get_estimator(data_dir=None,
                   model_dir=tempfile.mkdtemp(),
                   batch_size=16,
                   epochs=13,
-                  max_train_steps_per_epoch=None,
-                  max_eval_steps_per_epoch=None,
+                  train_steps_per_epoch=None,
+                  eval_steps_per_epoch=None,
                   image_size=512,
                   num_classes=90):
     # pipeline
@@ -445,8 +445,8 @@ def get_estimator(data_dir=None,
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             train_steps_per_epoch=max_train_steps_per_epoch,
-                             eval_steps_per_epoch=max_eval_steps_per_epoch,
+                             train_steps_per_epoch=train_steps_per_epoch,
+                             eval_steps_per_epoch=eval_steps_per_epoch,
                              monitor_names=["l1_loss", "focal_loss"])
     return estimator
 
