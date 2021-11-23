@@ -225,11 +225,11 @@ def finetune_model(model, epochs, batch_size, train_steps_per_epoch, save_dir):
 def fastestimator_run(epochs_pretrain=50,
                       epochs_finetune=10,
                       batch_size=512,
-                      max_train_steps_per_epoch=None,
+                      train_steps_per_epoch=None,
                       save_dir=tempfile.mkdtemp()):
 
-    model_con, model_finetune = pretrain_model(epochs_pretrain, batch_size, max_train_steps_per_epoch, save_dir)
-    finetune_model(model_finetune, epochs_finetune, batch_size, max_train_steps_per_epoch, save_dir)
+    model_con, model_finetune = pretrain_model(epochs_pretrain, batch_size, train_steps_per_epoch, save_dir)
+    finetune_model(model_finetune, epochs_finetune, batch_size, train_steps_per_epoch, save_dir)
 
 
 if __name__ == "__main__":

@@ -185,7 +185,7 @@ class TestEstimatorConfigureLoader(unittest.TestCase):
             else:
                 self.assertIsInstance(new_loader, tf.data.Dataset)
 
-        with self.subTest("max_train_steps_per_epoch=3"):
+        with self.subTest("train_steps_per_epoch=3"):
             iterator = iter(new_loader)
             for i in range(3):
                 batch = next(iterator)
@@ -216,7 +216,7 @@ class TestEstimatorConfigureLoader(unittest.TestCase):
             else:
                 self.assertIsInstance(new_loader, tf.data.Dataset)
 
-        with self.subTest("max_train_steps_per_epoch=3"):
+        with self.subTest("train_steps_per_epoch=3"):
             iterator = iter(new_loader)
             for i in range(3):
                 batch = next(iterator)

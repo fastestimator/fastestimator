@@ -157,7 +157,7 @@ class SiameseNetwork(nn.Module):
 def get_estimator(epochs=200,
                   batch_size=128,
                   train_steps_per_epoch=None,
-                  max_eval_steps_per_epoch=None,
+                  eval_steps_per_epoch=None,
                   save_dir=tempfile.mkdtemp(),
                   data_dir=None):
     # step 1. prepare pipeline
@@ -218,7 +218,7 @@ def get_estimator(epochs=200,
                              epochs=epochs,
                              traces=traces,
                              train_steps_per_epoch=train_steps_per_epoch,
-                             eval_steps_per_epoch=max_eval_steps_per_epoch)
+                             eval_steps_per_epoch=eval_steps_per_epoch)
 
     return estimator
 
