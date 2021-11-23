@@ -220,6 +220,8 @@ class Estimator:
                         steps = self.system.train_steps_per_epoch
                     elif mode == "eval":
                         steps = self.system.eval_steps_per_epoch
+                    else:
+                        steps = None
                     # key checking
                     with self.pipeline(mode=mode,
                                        epoch=epoch,
@@ -336,6 +338,8 @@ class Estimator:
                 steps = self.system.train_steps_per_epoch
             elif self.system.mode == "eval":
                 steps = self.system.eval_steps_per_epoch
+            else:
+                steps = None
 
             with self.pipeline(mode=self.system.mode,
                                epoch=self.system.epoch_idx,
