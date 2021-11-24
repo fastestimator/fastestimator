@@ -106,16 +106,6 @@ class Estimator:
     def traces(self) -> List[Union[Trace, Scheduler[Trace]]]:
         return self.system.traces
 
-    @ property
-    def steps_per_epoch(self,mode):
-        if mode == 'train':
-            return self.system.train_steps_per_epoch
-        elif mode == 'eval':
-            return self.system.eval_steps_per_epoch
-        else:
-            return None
-
-
     def fit(self, summary: Optional[str] = None, warmup: bool = True, eager: bool = False) -> Optional[Summary]:
         """Train the network for the number of epochs specified by the estimator's constructor.
 
@@ -225,13 +215,11 @@ class Estimator:
                         if idx > 0:  # ignore TrainEssential and EvalEssential's inputs for unmet requirement checking
                             trace_input_keys.update(trace.inputs)
                         trace_output_keys.update(trace.get_outputs(ds_ids=ds_ids))
-                    # Mode checking
-                    steps = self.steps_per_epoch(mode=mode)
                     # key checking
                     with self.pipeline(mode=mode,
                                        epoch=epoch,
                                        ds_id=ds_id,
-                                       steps_per_epoch=steps,
+                                       steps_per_epoch=None,
                                        output_keys=trace_input_keys - network_output_keys
                                        | network_input_keys) as loader:
                         loader = self._configure_loader(loader)
@@ -338,13 +326,11 @@ class Estimator:
                                     ds_id=self.system.ds_id,
                                     output_keys=trace_input_keys,
                                     eager=eager)
-            # Mode checking
-            steps = self.steps_per_epoch(mode=self.system.mode)
 
             with self.pipeline(mode=self.system.mode,
                                epoch=self.system.epoch_idx,
                                ds_id=self.system.ds_id,
-                               steps_per_epoch=steps,
+                               steps_per_epoch=self.system.steps_per_epoch,
                                output_keys=trace_input_keys - network_output_keys | network_input_keys) as loader:
                 loader = self._configure_loader(loader)
                 iterator = iter(loader)

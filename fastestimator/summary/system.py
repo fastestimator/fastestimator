@@ -127,6 +127,15 @@ class System:
         self.custom_graphs = {}
         self._initialize_state()
 
+    @property
+    def steps_per_epoch(self):
+        if self.mode == 'train':
+            return self.train_steps_per_epoch
+        elif self.mode == 'eval':
+            return self.eval_steps_per_epoch
+        else:
+            return None
+
     def _initialize_state(self) -> None:
         """Initialize the training state.
         """
