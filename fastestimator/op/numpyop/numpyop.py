@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Callable, Dict, Iterable, List, MutableMapping, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
 import torch
 
 from fastestimator.op.op import Op, get_inputs_by_op, write_outputs_by_op
+from fastestimator.util.data import FilteredData
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
 
@@ -156,8 +157,45 @@ class LambdaOp(NumpyOp):
         return self.fn(*data)
 
 
+@traceable()
+class RemoveIf(NumpyOp):
+    """An Operator which will remove a datapoint from the pipeline if the given criterion is satisfied.
+
+    Args:
+        fn: A function taking any desired `inputs` and returning a boolean. If the return value is true, the current
+            datapoint (or batch if using a batch dataset) will be removed and another will take its place.
+        replacement: Whether to replace the filtered element with another (thus maintaining the number of steps in an
+            epoch but potentially increasing data repetition) or else shortening the epoch by the number of filtered
+            data points (fewer steps per epoch than expected, but no extra data repetition). Either way, the number of
+            data points within an individual batch will remain the same. Even if `replacement` is true, data will not be
+            repeated until all of the given epoch's data has been traversed.
+        inputs: Key(s) from which to retrieve data from the data dictionary.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
+
+    """
+    def __init__(self,
+                 fn: Callable[..., bool],
+                 replacement: bool = True,
+                 inputs: Union[None, str, Iterable[str]] = None,
+                 mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None) -> None:
+        super().__init__(inputs=inputs, mode=mode, ds_id=ds_id)
+        self.filter_fn = fn
+        self.in_list = True
+        self.replacement = replacement
+
+    def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> Optional[FilteredData]:
+        if self.filter_fn(*data):
+            return FilteredData(replacement=self.replacement)
+        return None
+
+
 def forward_numpyop(ops: List[NumpyOp], data: MutableMapping[str, Any], state: Dict[str, Any],
-                    batched: bool = False) -> None:
+                    batched: bool = False) -> Optional[FilteredData]:
     """Call the forward function for list of NumpyOps, and modify the data dictionary in place.
 
     Args:
@@ -178,8 +216,11 @@ def forward_numpyop(ops: List[NumpyOp], data: MutableMapping[str, Any], state: D
                 op_data = op.forward_batch(op_data, state) if batched else op.forward(op_data, state)
             else:
                 raise err
+        if isinstance(op_data, FilteredData):
+            return op_data
         if isinstance(op, Delete):
             for key in op.inputs:
                 del data[key]
         if op.outputs:
             write_outputs_by_op(op, data, op_data)
+    return None

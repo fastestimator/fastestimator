@@ -587,7 +587,7 @@ def pad_batch(batch: List[MutableMapping[str, np.ndarray]], pad_value: Union[flo
 
 
 def pad_data(data: np.ndarray, target_shape: Tuple[int, ...], pad_value: Union[float, int]) -> np.ndarray:
-    """Pad `data` by appending `pad_value`s along it's dimensions until the `target_shape` is reached. All entris of
+    """Pad `data` by appending `pad_value`s along it's dimensions until the `target_shape` is reached. All entries of
     target_shape should be larger than the data.shape, and have the same rank.
 
     ```python

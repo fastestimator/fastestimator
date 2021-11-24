@@ -27,7 +27,7 @@ from tensorflow.python.distribute.values import DistributedValues
 
 from fastestimator.backend.load_model import load_model
 from fastestimator.backend.to_tensor import to_tensor
-from fastestimator.op.numpyop import NumpyOp, forward_numpyop
+from fastestimator.op.numpyop import NumpyOp, forward_numpyop, RemoveIf
 from fastestimator.op.op import get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.tensorop.model.update import UpdateOp
 from fastestimator.op.tensorop.tensorop import TensorOp
@@ -71,6 +71,9 @@ class BaseNetwork:
             op.build(framework=self.target_type, device=self.device)
         self.models = to_list(_collect_models(ops))
         self.postprocessing = to_list(postprocessing)
+        for pop in self.postprocessing:
+            if isinstance(pop, RemoveIf):
+                raise ValueError("Filtering is currently not supported in network post-processing")
         self._verify_inputs()
         self.effective_inputs = dict()
         self.effective_outputs = dict()

@@ -13,10 +13,8 @@
 # limitations under the License.
 # ==============================================================================
 import gc
-import math
 import multiprocessing as mp
 import os
-import random
 import time
 from copy import deepcopy
 from threading import Lock
@@ -26,11 +24,9 @@ import numpy as np
 import tensorflow as tf
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.dataloader import default_collate
-from torch.utils.data.sampler import Sampler
 
 from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.dataloader import FEDataLoader
-from fastestimator.dataset.extend_dataset import ExtendDataset
 from fastestimator.dataset.op_dataset import OpDataset
 from fastestimator.op.numpyop.meta.one_of import OneOf
 from fastestimator.op.numpyop.meta.sometimes import Sometimes
@@ -103,7 +99,8 @@ class Pipeline:
 
     @staticmethod
     def _register_ds_ids(
-        data: Dict[str, Union[DataSource, Scheduler[DataSource], Dict[str, Union[DataSource, Scheduler[DataSource]]]]]
+            data: Dict[
+                str, Union[DataSource, Scheduler[DataSource], Dict[str, Union[DataSource, Scheduler[DataSource]]]]]
     ) -> Dict[str, Dict[Optional[str], Union[DataSource, Scheduler[DataSource]]]]:
         """Associate dataset of each mode with a `ds_id`.
 
@@ -477,42 +474,24 @@ class Pipeline:
                 batch_size = batch_size.get_current_value(self.ctx_epoch)
             if isinstance(batch_size, dict):
                 batch_size = batch_size[self.ctx_mode]
-            # check whether to batch the data
-            if not hasattr(data, "fe_batch"):
-                sample_item = data[0]
-                data.fe_batch = len(sample_item) if isinstance(sample_item, list) else 0
-            # batch dataset
-            if data.fe_batch:
-                data.pad_value = self.pad_value
-            batch_size = None if data.fe_batch else batch_size
-            # collate_fn
-            collate_fn = self.collate_fn
-            if collate_fn is None and self.pad_value is not None:
-                collate_fn = self._pad_batch_collate
-            # Default ExapandDataset Sampler
-            if (self.ctx_steps_per_epoch != None) and (batch_size != None):
-                extend_dataset_sampler = ExtendDatasetSampler(ds=data,
-                                                              ds_extend_len=int(self.ctx_steps_per_epoch * batch_size),
-                                                              shuffle=self.ctx_shuffle)
-            else:
-                extend_dataset_sampler = ExtendDatasetSampler(ds=data,
-                                                              ds_extend_len=self.ctx_steps_per_epoch,
-                                                              shuffle=self.ctx_shuffle)
-
             op_dataset = OpDataset(data,
                                    get_current_items(self.ops, self.ctx_mode, self.ctx_epoch, self.ctx_ds_id),
                                    self.ctx_mode,
                                    self.ctx_output_keys,
-                                   deep_remainder=False,
-                                   shuffle=self.ctx_shuffle)
+                                   deep_remainder=False)
+            # check whether to batch the data
+            batch_size = None if op_dataset.fe_batch else batch_size
+            # collate_fn
+            collate_fn = self.collate_fn
+            if collate_fn is None and self.pad_value is not None:
+                collate_fn = self._pad_batch_collate
             # Results will be immediately converted to tensors, so don't need deep_remainder
             data = FEDataLoader(op_dataset,
                                 batch_size=batch_size,
-                                shuffle=False,
-                                sampler=extend_dataset_sampler,
+                                shuffle=self.ctx_shuffle,
+                                steps_per_epoch=self.ctx_steps_per_epoch,
                                 num_workers=self.num_process,
                                 drop_last=False if batch_size is None else self.drop_last,
-                                worker_init_fn=lambda _: np.random.seed(random.randint(0, 2**32 - 1)),
                                 collate_fn=collate_fn)
             self.ctx_loader = data
         return data
@@ -537,66 +516,3 @@ class Pipeline:
         """
         pad_batch(batch, self.pad_value)
         return default_collate(batch)
-
-
-@traceable()
-class ExtendDatasetSampler(Sampler):
-    """Sampler to take care of expansion and contraction of Dataset.
-
-    If the original length of dataset and new desired length of are same, sampled in sequential fashion from original
-    dataset. If shuffle is True, then sampled from shuffled Dataset.
-
-    Note: In the case where ds_extend_len is NOT None and also the dataset ds is an ExtendDataset object, priority will
-    be given to ds_extend_len.
-
-    Arguments:
-        ds: Original dataset.
-        ds_extend_len: Length to which original dataset must be expanded or contracted to. (New desired length)
-        shuffle: Whether to use shuffling.
-    """
-    def __init__(self, ds: Dataset, ds_extend_len: Union[int, None] = None, shuffle: Optional[bool] = True):
-
-        self.ds = ds
-        self.ds_extend_len = ds_extend_len
-        self.shuffle = shuffle
-
-        if self.ds_extend_len == None:
-            # Check if ds is ExtendDataset object
-            if isinstance(self.ds, ExtendDataset):
-                self.ds_extend_len = self.ds.spoof_length
-            else:
-                self.ds_extend_len = len(self.ds)
-
-        self._check_input()
-
-        self.indices = []
-        self.base = [[i for i in range(len(self.ds))] for _ in range(math.ceil(self.ds_extend_len / len(self.ds)))]
-
-    def __len__(self):
-        return self.ds_extend_len
-
-    def _check_input(self) -> None:
-        """Verify that the given input values are valid.
-        Raises:
-            AssertionError: If any of the parameters are found to by unacceptable for a variety of reasons.
-        """
-        assert isinstance(self.ds_extend_len, int), "Only accept positive integer type as ds_expand_len"
-        assert self.ds_extend_len > 0, "Invalid ds_expand_len. Expand Length cannot be less than or equal to 0"
-        assert len(self.ds) > 0, "Invalid ds. Dataset Length cannot be less than or equal to 0"
-
-    def __iter__(self):
-
-        self.indices = []
-        base = self.base
-
-        if self.ds_extend_len % len(self.ds) != 0:
-            if self.shuffle == True:
-                random.shuffle(base[-1])
-            base[-1] = base[-1][:self.ds_extend_len % len(self.ds)]
-
-        for ls in base:
-            if self.shuffle == True:
-                random.shuffle(ls)
-            self.indices.extend(ls)
-
-        return iter(self.indices)

@@ -69,3 +69,22 @@ class Data(ChainMap[str, Any]):
             A dictionary of all of the keys and values to be logged.
         """
         return self.maps[0]
+
+
+class FilteredData:
+    """A placeholder to indicate that this data instance should not be used.
+
+    This class is intentionally not @traceable.
+
+    Args:
+        replacement: Whether to replace the filtered element with another (thus maintaining the number of steps in an
+            epoch but potentially increasing data repetition) or else shortening the epoch by the number of filtered
+            data points (fewer steps per epoch than expected, but no extra data repetition). Either way, the number of
+            data points within an individual batch will remain the same. Even if `replacement` is true, data will not be
+            repeated until all of the given epoch's data has been traversed.
+    """
+    def __init__(self, replacement: bool = True):
+        self.replacement = replacement
+
+    def __repr__(self):
+        return "FilteredData"

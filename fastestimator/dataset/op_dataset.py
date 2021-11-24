@@ -13,14 +13,14 @@
 # limitations under the License.
 # ==============================================================================
 from copy import deepcopy
-from typing import Any, Dict, List, Mapping, Optional, Set
+from typing import Any, Dict, List, Mapping, Optional, Set, Union
 
 import numpy as np
 from torch.utils.data import Dataset
 
 from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
+from fastestimator.util.data import FilteredData
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import pad_batch
 
 
 class _DelayedDeepDict(dict):
@@ -111,31 +111,37 @@ class OpDataset(Dataset):
         output_keys: What keys can be produced from pipeline. If None, all keys will be considered.
         deep_remainder: Whether data which is not modified by Ops should be deep copied or not. This argument is used to
             help with RAM management, but end users can almost certainly ignore it.
-        shuffle: Whether to shuffle batched datasets every epoch.
     """
     def __init__(self,
                  dataset: Dataset,
                  ops: List[NumpyOp],
                  mode: str,
                  output_keys: Optional[Set[str]] = None,
-                 deep_remainder: bool = True,
-                 shuffle: bool = True) -> None:
+                 deep_remainder: bool = True) -> None:
+        # Track whether this dataset returns batches or not (useful for pipeline and traceability)
+        if not hasattr(dataset, "fe_batch"):
+            sample_item = dataset[0]
+            dataset.fe_batch = len(sample_item) if isinstance(sample_item, list) else 0
         self.dataset = dataset
-        if hasattr(self.dataset, "reset_index_maps") and shuffle:
-            self.dataset.reset_index_maps()
+        self.fe_batch = dataset.fe_batch
+        if hasattr(dataset, "fe_reset_ds"):
+            self.fe_reset_ds = dataset.fe_reset_ds
+        if hasattr(dataset, "fe_batch_indices"):
+            self.fe_batch_indices = dataset.fe_batch_indices
         self.ops = ops
         self.mode = mode
         self.output_keys = output_keys
         self.deep_remainder = deep_remainder
 
-    def __getitem__(self, index: int) -> Mapping[str, Any]:
+    def __getitem__(self, index: int) -> Union[Mapping[str, Any], FilteredData]:
         """Fetch a data instance at a specified index, and apply transformations to it.
 
         Args:
             index: Which datapoint to retrieve.
 
         Returns:
-            The data dictionary from the specified index, with transformations applied.
+            The data dictionary from the specified index, with transformations applied OR an indication that this index
+            should be thrown out.
         """
         item = self.dataset[index]
         if isinstance(item, list):
@@ -146,18 +152,20 @@ class OpDataset(Dataset):
                 data_id = id(data)
                 if data_id not in unique_samples:
                     data = _DelayedDeepDict(data)
-                    forward_numpyop(self.ops, data, {'mode': self.mode})
-                    data.finalize(retain=self.output_keys, deep_remainder=self.deep_remainder)
-                    results.append(data)
+                    filter_data = forward_numpyop(self.ops, data, {'mode': self.mode})
+                    if filter_data:
+                        results.append(filter_data)
+                    else:
+                        data.finalize(retain=self.output_keys, deep_remainder=self.deep_remainder)
+                        results.append(data)
                     unique_samples[data_id] = idx
                 else:
                     results.append(results[unique_samples[data_id]])
-            if hasattr(self.dataset, "pad_value") and self.dataset.pad_value is not None:
-                pad_batch(results, self.dataset.pad_value)
-            results = {key: np.array([result[key] for result in results]) for key in results[0]}
         else:
             results = _DelayedDeepDict(item)
-            forward_numpyop(self.ops, results, {'mode': self.mode})
+            filter_data = forward_numpyop(self.ops, results, {'mode': self.mode})
+            if filter_data:
+                return filter_data
             results.finalize(retain=self.output_keys, deep_remainder=self.deep_remainder)
         return results
 
