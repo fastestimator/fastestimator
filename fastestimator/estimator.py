@@ -53,8 +53,8 @@ class Estimator:
     (estimator.fit) or test (estimator.test) models. It wraps `Pipeline`, `Network`, `Trace` objects together and
     defines the whole optimization process.
 
-    If the data fed into pipeline is a TensorFlow Dataset, then the parameters "train_steps_per_epoch" and
-    "eval_steps_per_epoch" can only reduce the number of steps per epoch. If these parameters are higher than the
+    If the data fed into pipeline is a TensorFlow Dataset, then the parameters `train_steps_per_epoch` and
+    `eval_steps_per_epoch` can only reduce the number of steps per epoch. If these parameters are higher than the
     dimension of the stated Dataset then the whole Dataset will be used.
 
 

@@ -128,7 +128,7 @@ class System:
         self._initialize_state()
 
     @property
-    def steps_per_epoch(self):
+    def steps_per_epoch(self) -> Optional[int]:
         if self.mode == 'train':
             return self.train_steps_per_epoch
         elif self.mode == 'eval':
