@@ -489,8 +489,7 @@ class Pipeline:
             if collate_fn is None and self.pad_value is not None:
                 collate_fn = self._pad_batch_collate
             # Default ExapandDataset Sampler
-            if self.ctx_steps_per_epoch is not None and self.ctx_mode in ["train", "eval"]:
-
+            if self.ctx_steps_per_epoch is not None:
                 expand_dataset_sampler = ExtendDatasetSampler(ds_len=len(data),
                                                               ds_expand_len=int(self.ctx_steps_per_epoch * batch_size),
                                                               shuffle=self.ctx_shuffle)

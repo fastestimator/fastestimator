@@ -369,6 +369,10 @@ class Estimator:
         This method will ensure that the `loader` returns the correct data type (tf.Tensor or torch.Tensor) depending on
          the requirements of the Network. It also handles issues with multi-gpu data sharding.
 
+        If the loader is a TensorFlow Dataset object, then we use .take() method to extract the required samples and
+         return a new Datset. If the input to this method is not defined or else negative or is higher than the dimension of the stated
+         dataset then the newly created dataset will hold each item of the given dataset.
+
         Args:
             loader: A data loader to be modified.
 
