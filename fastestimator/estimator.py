@@ -53,6 +53,11 @@ class Estimator:
     (estimator.fit) or test (estimator.test) models. It wraps `Pipeline`, `Network`, `Trace` objects together and
     defines the whole optimization process.
 
+    If the data fed into pipeline is a TensorFlow Dataset, then the parameters "train_steps_per_epoch" and
+    "eval_steps_per_epoch" can only reduce the number of steps per epoch. If these parameters are higher than the
+    dimension of the stated Dataset then the whole Dataset will be used.
+
+
     Args:
         pipeline: An fe.Pipeline object that defines the data processing workflow.
         network: An fe.Network object that contains models and other training graph definitions.
@@ -368,10 +373,6 @@ class Estimator:
 
         This method will ensure that the `loader` returns the correct data type (tf.Tensor or torch.Tensor) depending on
          the requirements of the Network. It also handles issues with multi-gpu data sharding.
-
-        If the loader is a TensorFlow Dataset object, then we use .take() method to extract the required samples and
-         return a new Datset. If the input to this method is not defined or else negative or is higher than the dimension of the stated
-         dataset then the newly created dataset will hold each item of the given dataset.
 
         Args:
             loader: A data loader to be modified.
