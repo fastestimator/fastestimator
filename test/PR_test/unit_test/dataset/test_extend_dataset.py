@@ -33,7 +33,7 @@ class TestBatchDataset(unittest.TestCase):
 
         self.assertEqual(len(pipeline.get_results(num_steps=10)), 5)
 
-    def test_dataset_extention(self):
+    def test_dataset_extension(self):
         ds1 = GeneratorDataset(generator=inputs(), samples_per_epoch=10)
         unpaired_ds = fe.dataset.ExtendDataset(dataset=ds1, spoof_length=15)
         pipeline = fe.Pipeline(unpaired_ds)

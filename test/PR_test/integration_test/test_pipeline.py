@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import itertools
 import unittest
 
 import numpy as np
@@ -21,8 +22,9 @@ from torch.utils.data import DataLoader, Dataset
 
 import fastestimator as fe
 from fastestimator.dataset.batch_dataset import BatchDataset
+from fastestimator.dataset.extend_dataset import ExtendDataset
 from fastestimator.dataset.numpy_dataset import NumpyDataset
-from fastestimator.op.numpyop import NumpyOp
+from fastestimator.op.numpyop import NumpyOp, RemoveIf
 from fastestimator.op.numpyop.univariate import Minmax
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.schedule import EpochScheduler
@@ -733,3 +735,980 @@ class TestPipelineNames(unittest.TestCase):
         train_ds = {"ds|ds1": data}
         with self.assertRaises(AssertionError):
             fe.Pipeline(train_data=train_ds)
+
+
+class TestPipelineFilter(unittest.TestCase):
+
+    def test_unbatched_nodrop_nofilter(self):
+        data = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process)
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertListEqual([i for i in range(23)], composite_list)
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertSetEqual(set([i for i in range(23)]), set(composite_list))
+
+    def test_unbatched_nodrop_replacementfilter(self):
+        data = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process,
+                                       ops=RemoveIf(inputs="idx", fn=lambda x: x in [2, 6, 9, 10, 11]))
+                target = [0, 1, 3, 4, 5, 7, 8, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 0, 1, 3, 4, 5]
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertListEqual(target, composite_list)
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(23, len(composite_list))
+                    self.assertSetEqual(set(target), set(composite_list))  # Should visit all the data at least once
+
+    def test_unbatched_nodrop_cutfilter(self):
+        data = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process,
+                                       ops=RemoveIf(fn=lambda x: x in [2, 6, 9, 10, 11],
+                                                    inputs="idx",
+                                                    replacement=False))
+                target = [0, 1, 3, 4, 5, 7, 8, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertListEqual(target, composite_list)
+
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(18, len(composite_list))
+                    self.assertSetEqual(set(target), set(composite_list))  # Should visit all the data at least once
+
+    def test_unbatched_drop_nofilter(self):
+        data = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process,
+                                       drop_last=True)
+                with self.subTest("shuffle false"):
+                    with pipeline(mode="train", shuffle=False) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertListEqual([i for i in range(20)], composite_list)
+                with self.subTest("shuffle true"):
+                    with pipeline(mode="train", shuffle=True) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(20, len(composite_list))  # Since shuffling don't know which will be kept
+
+    def test_unbatched_drop_replacementfilter(self):
+        data = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process,
+                                       drop_last=True,
+                                       ops=RemoveIf(inputs="idx", fn=lambda x: x in [2, 6, 9, 10, 11]))
+                target = [0, 1, 3, 4, 5, 7, 8, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 0, 1]
+                with self.subTest("shuffle false"):
+                    with pipeline(mode="train", shuffle=False) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertListEqual(target, composite_list)
+                with self.subTest("shuffle true"):
+                    with pipeline(mode="train", shuffle=True) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(20, len(composite_list))  # Since shuffling don't know which will be kept
+                    self.assertSetEqual(set(target), set(composite_list))  # Everything should be visited at least once
+
+    def test_unbatched_drop_cutfilter(self):
+        data = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process,
+                                       drop_last=True,
+                                       ops=RemoveIf(fn=lambda x: x in [2, 6, 9, 10, 11],
+                                                    inputs="idx",
+                                                    replacement=False))
+                target = [0, 1, 3, 4, 5, 7, 8, 12, 13, 14, 15, 16, 17, 18, 19]
+                with self.subTest("shuffle false"):
+                    with pipeline(mode="train", shuffle=False) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertListEqual(target, composite_list)
+                with self.subTest("shuffle true"):
+                    with pipeline(mode="train", shuffle=True) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(15, len(composite_list))
+                    # Don't know which ones, but should be no repeats at least
+                    self.assertEqual(15, len(set(composite_list)))
+
+    def test_unbatched_nofilter_expand(self):
+        data = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process)
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False, steps_per_epoch=11) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertListEqual([i for i in range(23)]*2+[i for i in range(9)], composite_list)
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True, steps_per_epoch=11) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(55, len(composite_list))
+                    for i in range(23):
+                        self.assertGreaterEqual(composite_list.count(i), 2)
+
+    def test_unbatched_nofilter_contract(self):
+        data = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process)
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False, steps_per_epoch=2) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertListEqual([i for i in range(10)], composite_list)
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True, steps_per_epoch=2) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(10, len(set(composite_list)))  # All the elements should be unique
+
+    def test_unbatched_replacementfilter_expand(self):
+        data = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process,
+                                       ops=RemoveIf(inputs="idx", fn=lambda x: x in [2, 6, 9, 10, 11]))
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False, steps_per_epoch=11) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertListEqual(([0, 1, 3, 4, 5, 7, 8]+list(range(12, 23)))*3+[0], composite_list)
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True, steps_per_epoch=11) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(55, len(composite_list))
+                    for i in [0, 1, 3, 4, 5, 7, 8]+list(range(12, 23)):
+                        self.assertGreaterEqual(composite_list.count(i), 3)
+
+    def test_unbatched_replacementfilter_contract(self):
+        data = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process,
+                                       ops=RemoveIf(fn=lambda x: x in [1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13],
+                                                    inputs="idx"))
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False, steps_per_epoch=2) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    # The initial data will be deferred until later since it only formed a partial batch
+                    self.assertListEqual([15, 16, 17, 18, 19, 0, 8, 9, 14, 20], composite_list)
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True, steps_per_epoch=2) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(10, len(set(composite_list)))  # All the elements should be unique
+
+    def test_unbatched_cutfilter_expand(self):
+        data = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process,
+                                       ops=RemoveIf(inputs="idx",
+                                                    replacement=False,
+                                                    fn=lambda x: x in [2, 6, 9, 10, 11]))
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False, steps_per_epoch=11) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertListEqual((([0, 1, 3, 4, 5, 7, 8]+list(range(12, 23)))*3)[:43], composite_list)
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True, steps_per_epoch=11) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertGreaterEqual(len(composite_list), 40)
+                    self.assertLessEqual(len(composite_list), 45)
+                    for i in [0, 1, 3, 4, 5, 7, 8]+list(range(12, 23)):
+                        self.assertGreaterEqual(composite_list.count(i), 2)
+
+    def test_unbatched_cutfilter_contract(self):
+        data = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process,
+                                       ops=RemoveIf(fn=lambda x: x in [1, 2, 3, 4, 5, 6, 7, 10],
+                                                    replacement=False,
+                                                    inputs="idx"))
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False, steps_per_epoch=2) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertListEqual([0, 8, 9], composite_list)
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True, steps_per_epoch=2) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertGreaterEqual(len(set(composite_list)), 2)
+
+    def test_unbatched_nofilter_expandds(self):
+        data = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        data = ExtendDataset(data, spoof_length=55)
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process)
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertListEqual([i for i in range(23)] * 2 + [i for i in range(9)], composite_list)
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(55, len(composite_list))
+                    for i in range(23):
+                        self.assertGreaterEqual(composite_list.count(i), 2)
+
+    def test_unbatched_nofilter_contractds(self):
+        data = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        data = ExtendDataset(data, spoof_length=10)
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process)
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertListEqual([i for i in range(10)], composite_list)
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(10, len(set(composite_list)))  # All the elements should be unique
+
+    def test_unbatched_replacementfilter_expandds(self):
+        data = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        data = ExtendDataset(data, spoof_length=55)
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process,
+                                       ops=RemoveIf(inputs="idx", fn=lambda x: x in [2, 6, 9, 10, 11]))
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertListEqual(([0, 1, 3, 4, 5, 7, 8] + list(range(12, 23))) * 3 + [0], composite_list)
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(55, len(composite_list))
+                    for i in [0, 1, 3, 4, 5, 7, 8] + list(range(12, 23)):
+                        self.assertGreaterEqual(composite_list.count(i), 3)
+
+    def test_unbatched_replacementfilter_contractds(self):
+        data = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        data = ExtendDataset(data, spoof_length=10)
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process,
+                                       ops=RemoveIf(fn=lambda x: x in [1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13],
+                                                    inputs="idx"))
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    # Batch order will be modified since initial data is deferred due to filter
+                    self.assertListEqual([15, 16, 17, 18, 19, 0, 8, 9, 14, 20], composite_list)
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(10, len(set(composite_list)))  # All the elements should be unique
+
+    def test_unbatched_cutfilter_expandds(self):
+        data = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        data = ExtendDataset(data, spoof_length=55)
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process,
+                                       ops=RemoveIf(inputs="idx",
+                                                    replacement=False,
+                                                    fn=lambda x: x in [2, 6, 9, 10, 11]))
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertListEqual((([0, 1, 3, 4, 5, 7, 8] + list(range(12, 23))) * 3)[:43], composite_list)
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertGreaterEqual(len(composite_list), 40)
+                    self.assertLessEqual(len(composite_list), 45)
+                    for i in [0, 1, 3, 4, 5, 7, 8] + list(range(12, 23)):
+                        self.assertGreaterEqual(composite_list.count(i), 2)
+
+    def test_unbatched_cutfilter_contractds(self):
+        data = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        data = ExtendDataset(data, spoof_length=10)
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process,
+                                       ops=RemoveIf(fn=lambda x: x in [1, 2, 3, 4, 5, 6, 7, 10],
+                                                    replacement=False,
+                                                    inputs="idx"))
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertListEqual([0, 8, 9], composite_list)
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertGreaterEqual(len(set(composite_list)), 2)
+
+    # ### Batched Tests ### #
+    # Note that pipeline ignores drop_last for batched datasets
+    # ###               ### #
+
+    def test_batched_nofilter(self):
+        data_a = NumpyDataset({"a": np.array([i for i in range(23)])})
+        data_b = NumpyDataset({"b": np.array([i for i in range(23)])})
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                with self.subTest("shuffle False"):
+                    data = BatchDataset(datasets=[data_a, data_b], num_samples=[3, 3])
+                    pipeline = fe.Pipeline(train_data=data,
+                                           batch_size=5,
+                                           num_process=n_process)
+                    with pipeline(mode="train", shuffle=False) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_a = list(np.concatenate([batch['a'] for batch in batches]))
+                    composite_b = list(np.concatenate([batch['b'] for batch in batches]))
+                    self.assertEqual(24, len(composite_a))  # batch dataset will fill up the final batch
+                    self.assertListEqual(composite_a, composite_b)  # make sure that the index orders are consistent
+                    self.assertEqual(23, len(set(composite_a)))  # make sure all the elements got visited
+                with self.subTest("shuffle True"):
+                    # have to re-create the dataset since shuffle pollutes the state of the index maps
+                    data = BatchDataset(datasets=[data_a, data_b], num_samples=[3, 3])
+                    pipeline = fe.Pipeline(train_data=data,
+                                           batch_size=5,
+                                           num_process=n_process)
+                    with pipeline(mode="train", shuffle=True) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_a = list(np.concatenate([batch['a'] for batch in batches]))
+                    composite_b = list(np.concatenate([batch['b'] for batch in batches]))
+                    self.assertEqual(24, len(composite_a))  # batch dataset will fill up the final batch
+                    self.assertEqual(24, len(composite_b))  # batch dataset will fill up the final batch
+                    self.assertNotEqual(composite_a, composite_b)  # make sure that the index orders are mixed
+                    self.assertEqual(23, len(set(composite_a)))  # make sure all the elements got visited
+                    self.assertEqual(23, len(set(composite_b)))  # make sure all the elements got visited
+
+    def test_batched_replacementfilter(self):
+        data_a = NumpyDataset({"a": np.array([i for i in range(29)])})
+        data_b = NumpyDataset({"b": np.array([i for i in range(29)])})
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                data = BatchDataset(datasets=[data_a, data_b], num_samples=[3, 3])
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process,
+                                       ops=RemoveIf(inputs="a", fn=lambda x: x in [2, 6, 9, 10, 11]))
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_a = list(np.concatenate([batch['a'] for batch in batches]))
+                    composite_b = list(np.concatenate([batch['b'] for batch in batches]))
+                    self.assertEqual(30, len(composite_a))  # batch dataset will fill up the final batch
+                    self.assertListEqual(composite_a, composite_b)  # make sure that the index orders are consistent
+                    self.assertGreaterEqual(len(set(composite_a)), 12)  # There should be at least 4 unique batches
+                with self.subTest("shuffle True"):
+                    # have to re-create the dataset since shuffle pollutes the state of the index maps
+                    data = BatchDataset(datasets=[data_a, data_b], num_samples=[5, 5])
+                    pipeline = fe.Pipeline(train_data=data,
+                                           batch_size=5,
+                                           num_process=n_process,
+                                           ops=RemoveIf(inputs="a", fn=lambda x: x in [2, 6, 9, 10]))
+                    with pipeline(mode="train", shuffle=True) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_a = list(np.concatenate([batch['a'] for batch in batches]))
+                    composite_b = list(np.concatenate([batch['b'] for batch in batches]))
+                    self.assertEqual(30, len(composite_a))  # batch dataset will fill up the final batch
+                    self.assertEqual(30, len(composite_b))  # batch dataset will fill up the final batch
+                    self.assertNotEqual(composite_a, composite_b)  # make sure that the index orders are mixed
+                    batch_pairs = []
+                    for batch in batches:
+                        batch_a = list(batch['a'].numpy())
+                        batch_b = list(batch['b'].numpy())
+                        batch_pairs.append(sorted([(a, b) for a, b in zip(batch_a, batch_b)], key=lambda t: t[0]))
+                    for pair1, pair2 in itertools.combinations(batch_pairs, 2):
+                        # Make sure none of the batch sequences are ever repeated
+                        self.assertNotEqual(pair1, pair2)
+
+    def test_batched_cutfilter(self):
+        data_a = NumpyDataset({"a": np.array([i for i in range(29)])})
+        data_b = NumpyDataset({"b": np.array([i for i in range(29)])})
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                data = BatchDataset(datasets=[data_a, data_b], num_samples=[3, 3])
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process,
+                                       ops=RemoveIf(inputs="a",
+                                                    replacement=False,
+                                                    fn=lambda x: x in [2, 6, 9, 10, 11]))
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_a = list(np.concatenate([batch['a'] for batch in batches]))
+                    composite_b = list(np.concatenate([batch['b'] for batch in batches]))
+                    self.assertListEqual(composite_a, composite_b)  # make sure that the index orders are consistent
+                    self.assertGreaterEqual(len(set(composite_a)), 12)  # There should be at least 4 unique batches
+                    self.assertGreaterEqual(len(composite_a), 15)  # There should be at least 5 batches
+                with self.subTest("shuffle True"):
+                    # have to re-create the dataset since shuffle pollutes the state of the index maps
+                    data = BatchDataset(datasets=[data_a, data_b], num_samples=[5, 5])
+                    pipeline = fe.Pipeline(train_data=data,
+                                           batch_size=5,
+                                           num_process=n_process,
+                                           ops=RemoveIf(inputs="a",
+                                                        replacement=False,
+                                                        fn=lambda x: x in [2, 6, 9]))
+                    with pipeline(mode="train", shuffle=True) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_a = list(np.concatenate([batch['a'] for batch in batches]))
+                    composite_b = list(np.concatenate([batch['b'] for batch in batches]))
+                    self.assertGreaterEqual(len(composite_a), 10)  # There should be at least 2 batches
+                    self.assertNotEqual(composite_a, composite_b)  # make sure that the index orders are mixed
+                    batch_pairs = []
+                    for batch in batches:
+                        batch_a = list(batch['a'].numpy())
+                        batch_b = list(batch['b'].numpy())
+                        batch_pairs.append(sorted([(a, b) for a, b in zip(batch_a, batch_b)], key=lambda t: t[0]))
+                    for pair1, pair2 in itertools.combinations(batch_pairs, 2):
+                        # Make sure none of the batch sequences are ever repeated
+                        self.assertNotEqual(pair1, pair2)
+
+    def test_batched_nofilter_expand(self):
+        data_x = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        data_y = NumpyDataset({"y": np.array([i for i in range(23)])})
+        data = BatchDataset(datasets=[data_x, data_y], num_samples=[5, 5])
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       num_process=n_process)
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False, steps_per_epoch=11) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(55, len(composite_list))
+                    for i in range(23):
+                        self.assertGreaterEqual(composite_list.count(i), 2)
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True, steps_per_epoch=11) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(55, len(composite_list))
+                    for i in range(23):
+                        self.assertGreaterEqual(composite_list.count(i), 2)
+
+    def test_batched_nofilter_contract(self):
+        data_x = NumpyDataset({"idx": np.array([i for i in range(25)])})
+        data_y = NumpyDataset({"y": np.array([i for i in range(25)])})
+        data = BatchDataset(datasets=[data_x, data_y], num_samples=[5, 5])
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process)
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False, steps_per_epoch=2) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(10, len(set(composite_list)))  # All the elements should be unique
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True, steps_per_epoch=2) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(10, len(set(composite_list)))  # All the elements should be unique
+
+    def test_batched_replacementfilter_expand(self):
+        data_x = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        data_y = NumpyDataset({"y": np.array([i for i in range(23)])})
+        data = BatchDataset(datasets=[data_x, data_y], num_samples=[5, 5])
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process,
+                                       ops=RemoveIf(inputs="idx", fn=lambda x: x in [2, 6, 9, 10, 11]))
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False, steps_per_epoch=11) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(55, len(composite_list))
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True, steps_per_epoch=11) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(55, len(composite_list))
+
+    def test_batched_replacementfilter_contract(self):
+        data_x = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        data_y = NumpyDataset({"y": np.array([i for i in range(23)])})
+        data = BatchDataset(datasets=[data_x, data_y], num_samples=[5, 5])
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       num_process=n_process,
+                                       ops=RemoveIf(fn=lambda x: x in [1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13],
+                                                    inputs="idx"))
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False, steps_per_epoch=2) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(10, len(composite_list))
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True, steps_per_epoch=2) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(10, len(composite_list))
+
+    def test_batched_cutfilter_expand(self):
+        data_x = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        data_y = NumpyDataset({"y": np.array([i for i in range(23)])})
+        data = BatchDataset(datasets=[data_x, data_y], num_samples=[5, 5])
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process,
+                                       ops=RemoveIf(inputs="idx",
+                                                    replacement=False,
+                                                    fn=lambda x: x in [2, 6, 9]))
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False, steps_per_epoch=11) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertGreaterEqual(len(composite_list), 10)
+                    self.assertLessEqual(len(composite_list), 45)
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True, steps_per_epoch=11) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertGreaterEqual(len(composite_list), 10)
+                    self.assertLessEqual(len(composite_list), 45)
+
+    def test_batched_cutfilter_contract(self):
+        data_x = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        data_y = NumpyDataset({"y": np.array([i for i in range(23)])})
+        data = BatchDataset(datasets=[data_x, data_y], num_samples=[5, 5])
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       num_process=n_process,
+                                       ops=RemoveIf(fn=lambda x: x in list(range(18)),
+                                                    replacement=False,
+                                                    inputs="idx"))
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False, steps_per_epoch=2) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    self.assertEqual(0, len(batches))
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True, steps_per_epoch=2) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    self.assertEqual(0, len(batches))
+
+    def test_batched_nofilter_expandds(self):
+        data_x = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        data_y = NumpyDataset({"y": np.array([i for i in range(23)])})
+        data = BatchDataset(datasets=[data_x, data_y], num_samples=[5, 5])
+        data = ExtendDataset(data, spoof_length=11)
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process)
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(55, len(composite_list))
+                    for i in range(23):
+                        self.assertGreaterEqual(composite_list.count(i), 2)
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(55, len(composite_list))
+                    for i in range(23):
+                        self.assertGreaterEqual(composite_list.count(i), 2)
+
+    def test_batched_nofilter_contractds(self):
+        data_x = NumpyDataset({"idx": np.array([i for i in range(25)])})
+        data_y = NumpyDataset({"y": np.array([i for i in range(25)])})
+        data = BatchDataset(datasets=[data_x, data_y], num_samples=[5, 5])
+        data = ExtendDataset(data, spoof_length=2)
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process)
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(10, len(set(composite_list)))  # All the elements should be unique
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(10, len(set(composite_list)))  # All the elements should be unique
+
+    def test_batched_replacementfilter_expandds(self):
+        data_x = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        data_y = NumpyDataset({"y": np.array([i for i in range(23)])})
+        data = BatchDataset(datasets=[data_x, data_y], num_samples=[5, 5])
+        data = ExtendDataset(data, spoof_length=11)
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process,
+                                       ops=RemoveIf(inputs="idx", fn=lambda x: x in [2, 6, 9, 10, 11]))
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(55, len(composite_list))
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(55, len(composite_list))
+
+    def test_batched_replacementfilter_contractds(self):
+        data_x = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        data_y = NumpyDataset({"y": np.array([i for i in range(23)])})
+        data = BatchDataset(datasets=[data_x, data_y], num_samples=[5, 5])
+        data = ExtendDataset(data, spoof_length=2)
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process,
+                                       ops=RemoveIf(fn=lambda x: x in [1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13],
+                                                    inputs="idx"))
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(10, len(composite_list))
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertEqual(10, len(composite_list))
+
+    def test_batched_cutfilter_expandds(self):
+        data_x = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        data_y = NumpyDataset({"y": np.array([i for i in range(23)])})
+        data = BatchDataset(datasets=[data_x, data_y], num_samples=[5, 5])
+        data = ExtendDataset(data, spoof_length=11)
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process,
+                                       ops=RemoveIf(inputs="idx",
+                                                    replacement=False,
+                                                    fn=lambda x: x in [2, 6, 9]))
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertGreaterEqual(len(composite_list), 10)
+                    self.assertLessEqual(len(composite_list), 45)
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertGreaterEqual(len(composite_list), 10)
+                    self.assertLessEqual(len(composite_list), 45)
+
+    def test_batched_cutfilter_contractds(self):
+        data_x = NumpyDataset({"idx": np.array([i for i in range(23)])})
+        data_y = NumpyDataset({"y": np.array([i for i in range(23)])})
+        data = BatchDataset(datasets=[data_x, data_y], num_samples=[5, 5])
+        data = ExtendDataset(data, spoof_length=2)
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       batch_size=5,
+                                       num_process=n_process,
+                                       ops=RemoveIf(fn=lambda x: x in list(range(18)),
+                                                    replacement=False,
+                                                    inputs="idx"))
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    self.assertEqual(0, len(batches))
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    self.assertEqual(0, len(batches))

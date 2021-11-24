@@ -18,8 +18,8 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
 
 import numpy as np
 
-import fastestimator as fe
 from fastestimator.dataset.dataset import DatasetSummary, FEDataset
+from fastestimator.dataset.extend_dataset import ExtendDataset
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_list
 
@@ -69,8 +69,8 @@ class BatchDataset(FEDataset):
         self.all_fe_datasets = False
         self._check_input()
         self.index_maps = []
-        self.reset_index_maps(0)
-        self.pad_value = None
+        self.child_reset_fns = [dataset.fe_reset_ds for dataset in self.datasets if hasattr(dataset, 'fe_reset_ds')]
+        self.fe_reset_ds(seed=0)
 
     def _check_input(self) -> None:
         """Verify that the given input values are valid.
@@ -123,7 +123,7 @@ class BatchDataset(FEDataset):
         self.all_fe_datasets = all([isinstance(dataset, FEDataset) for dataset in self.datasets])
         # Check ExtendDataset
         for idx, dataset in enumerate(self.datasets):
-            assert not isinstance(dataset, fe.dataset.ExtendDataset), "Input Dataset cannot be an ExtendDataset object"
+            assert not isinstance(dataset, ExtendDataset), "Input Dataset cannot be an ExtendDataset object"
 
     def _do_split(self, splits: Sequence[Iterable[int]]) -> List['BatchDataset']:
         """This class overwrites the .split() method instead of _do_split().
@@ -192,9 +192,9 @@ class BatchDataset(FEDataset):
         new_datasets = [[ds[i] for ds in new_datasets] for i in range(num_splits)]
         results = [BatchDataset(ds, self.num_samples, self.probability) for ds in new_datasets]
         if seed is not None:
-            [ds.reset_index_maps(seed=seed) for ds in results]
+            [ds.fe_reset_ds(seed=seed) for ds in results]
         # Re-compute personal variables
-        self.reset_index_maps(seed=seed)
+        self.fe_reset_ds(seed=seed)
         FEDataset.fix_split_traceabilty(self, results, fractions, seed, stratify)
         # Unpack response if only a single split
         if len(results) == 1:
@@ -228,8 +228,46 @@ class BatchDataset(FEDataset):
             length = max([math.ceil(len(ds) / num_sample / p) for ds, p in zip(self.datasets, self.probability)])
         return length
 
-    def __getitem__(self, batch_idx: int) -> List[Dict[str, Any]]:
+    def __getitem__(self, indices: Union[int, List[List[int]]]) -> List[Dict[str, Any]]:
         """Extract items from the underlying datasets based on the given `batch_idx`.
+
+        Args:
+            indices: Which indices to pull data from (or which batch_idx to query).
+
+        Returns:
+            A list of data instance dictionaries corresponding to the current `batch_idx`.
+        """
+        if isinstance(indices, int):
+            indices = self.fe_batch_indices(indices)
+        if self.same_feature:
+            batch = []
+            for dataset, idx_list in zip(self.datasets, indices):
+                for idx in idx_list:
+                    item = dataset[idx]
+                    if isinstance(item, list):
+                        batch.extend(item)
+                    else:
+                        batch.append(item)
+        else:
+            unpaired_items = []
+            for dataset, idx_list in zip(self.datasets, indices):
+                single_ds_items = []
+                for idx in idx_list:
+                    item = dataset[idx]
+                    if isinstance(item, list):
+                        single_ds_items.extend(item)
+                    else:
+                        single_ds_items.append(item)
+                unpaired_items.append(single_ds_items)
+            batch = [{k: v for d in d_pair for k, v in d.items()} for d_pair in zip(*unpaired_items)]
+        random.shuffle(batch)
+        return batch
+
+    def fe_batch_indices(self, batch_idx: int) -> List[List[int]]:
+        """Compute which internal dataset indices to use for a given batch.
+
+        This method is separate from the __getitem__ call so that multi-processing can work correctly when data is
+        filtered or extended.
 
         Args:
             batch_idx: Which batch is it.
@@ -237,57 +275,46 @@ class BatchDataset(FEDataset):
         Returns:
             A list of data instance dictionaries corresponding to the current `batch_idx`.
         """
-        if self.same_feature:
-            if self.probability:
-                index = list(np.random.choice(range(len(self.datasets)), size=self.num_samples, p=self.probability))
-                num_samples = [index.count(i) for i in range(len(self.datasets))]
-            else:
-                num_samples = self.num_samples
-            items = []
-            for dataset, num_sample, index_map in zip(self.datasets, num_samples, self.index_maps):
-                for idx in range(num_sample):
-                    item = dataset[index_map[batch_idx * num_sample + idx]]
-                    if isinstance(item, list):
-                        items.extend(item)
-                    else:
-                        items.append(item)
+        if self.probability:
+            index = list(np.random.choice(range(self.n_datasets), size=self.num_samples, p=self.probability))
+            num_samples = [index.count(i) for i in range(self.n_datasets)]
         else:
-            unpaired_items = []
-            for dataset, num_sample, index_map in zip(self.datasets, self.num_samples, self.index_maps):
-                single_ds_items = []
-                for idx in range(num_sample):
-                    item = dataset[index_map[batch_idx * num_sample + idx]]
-                    if isinstance(item, list):
-                        single_ds_items.extend(item)
-                    else:
-                        single_ds_items.append(item)
-                unpaired_items.append(single_ds_items)
-            items = [{k: v for d in d_pair for k, v in d.items()} for d_pair in zip(*unpaired_items)]
-        random.shuffle(items)
-        return items
+            num_samples = self.num_samples
+        indices = [[index_map[batch_idx * num_sample + idx] for idx in range(num_sample)] for num_sample, index_map
+                   in zip(num_samples, self.index_maps)]
+        return indices
 
-    def reset_index_maps(self, seed: Optional[int] = None) -> None:
+    def fe_reset_ds(self, shuffle: bool = True, *, seed: Optional[int] = None) -> None:
         """Rearrange the index maps of this BatchDataset.
 
         Args:
+            shuffle: Whether to shuffle the dataset. If False the method will do nothing so long as index maps already
+                exist.
             seed: A random seed to control the shuffling. This is provided for compatibility with the dataset.split
                 method random seed. It's not necessary from a training functionality perspective since shuffling is
                 performed every epoch, but if user wants to visualize a dataset element after the split this will help.
 
-        This method is invoked every epoch by OpDataset which allows each epoch to have different random pairings of the
+        This method is invoked by the FEDataLoader which allows each epoch to have different random pairings of the
         basis datasets.
         """
+        # Reset any children who need resetting
+        for fn in self.child_reset_fns:
+            fn(shuffle=shuffle, seed=seed)
+        # Don't bother re-initializing if shuffle is False
+        if shuffle is False and self.index_maps:
+            return
         num_samples = self.num_samples
         if self.probability:
             num_samples = num_samples * len(self.datasets)
         self.index_maps = []
         for dataset, num_sample in zip(self.datasets, num_samples):
-            if hasattr(dataset, "reset_index_maps"):
-                dataset.reset_index_maps(seed)
             index_map = [list(range(len(dataset))) for _ in range(math.ceil(len(self) * num_sample / len(dataset)))]
             for mapping in index_map:
                 if seed is not None:
                     random.Random(seed).shuffle(mapping)
                 else:
                     random.shuffle(mapping)
-            self.index_maps.append([item for sublist in index_map for item in sublist])
+            if hasattr(dataset, "fe_batch_indices"):
+                self.index_maps.append([dataset.fe_batch_indices(item) for sublist in index_map for item in sublist])
+            else:
+                self.index_maps.append([item for sublist in index_map for item in sublist])
