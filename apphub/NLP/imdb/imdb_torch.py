@@ -56,8 +56,8 @@ def get_estimator(max_words=10000,
                   max_len=500,
                   epochs=10,
                   batch_size=64,
-                  max_train_steps_per_epoch=None,
-                  max_eval_steps_per_epoch=None,
+                  train_steps_per_epoch=None,
+                  eval_steps_per_epoch=None,
                   save_dir=tempfile.mkdtemp()):
     # step 1. prepare data
     train_data, eval_data = imdb_review.load_data(max_len, max_words)
@@ -78,8 +78,8 @@ def get_estimator(max_words=10000,
                              pipeline=pipeline,
                              epochs=epochs,
                              traces=traces,
-                             max_train_steps_per_epoch=max_train_steps_per_epoch,
-                             max_eval_steps_per_epoch=max_eval_steps_per_epoch)
+                             train_steps_per_epoch=train_steps_per_epoch,
+                             eval_steps_per_epoch=eval_steps_per_epoch)
 
     return estimator
 

@@ -173,7 +173,7 @@ class TestEstimatorConfigureLoader(unittest.TestCase):
             UpdateOp(model=model, loss_name="ce")
         ])
 
-        est = fe.Estimator(pipeline=pipeline, network=network, max_train_steps_per_epoch=3, epochs=1)
+        est = fe.Estimator(pipeline=pipeline, network=network, train_steps_per_epoch=3, epochs=1)
 
         est.system.mode = "train"
         new_loader = est._configure_loader(loader)
@@ -185,7 +185,7 @@ class TestEstimatorConfigureLoader(unittest.TestCase):
             else:
                 self.assertIsInstance(new_loader, tf.data.Dataset)
 
-        with self.subTest("max_train_steps_per_epoch=3"):
+        with self.subTest("train_steps_per_epoch=3"):
             iterator = iter(new_loader)
             for i in range(3):
                 batch = next(iterator)
@@ -204,7 +204,7 @@ class TestEstimatorConfigureLoader(unittest.TestCase):
             UpdateOp(model=model, loss_name="ce")
         ])
 
-        est = fe.Estimator(pipeline=pipeline, network=network, max_train_steps_per_epoch=3, epochs=1)
+        est = fe.Estimator(pipeline=pipeline, network=network, train_steps_per_epoch=3, epochs=1)
 
         est.system.mode = "train"
         new_loader = est._configure_loader(loader)
@@ -216,7 +216,7 @@ class TestEstimatorConfigureLoader(unittest.TestCase):
             else:
                 self.assertIsInstance(new_loader, tf.data.Dataset)
 
-        with self.subTest("max_train_steps_per_epoch=3"):
+        with self.subTest("train_steps_per_epoch=3"):
             iterator = iter(new_loader)
             for i in range(3):
                 batch = next(iterator)
@@ -240,7 +240,7 @@ class TestEstimatorConfigureTensor(unittest.TestCase):
             UpdateOp(model=model, loss_name="ce")
         ])
 
-        est = fe.Estimator(pipeline=pipeline, network=network, max_train_steps_per_epoch=3, epochs=1)
+        est = fe.Estimator(pipeline=pipeline, network=network, train_steps_per_epoch=3, epochs=1)
 
         iterator = iter(loader)
         batch = next(iterator)
@@ -258,7 +258,7 @@ class TestEstimatorConfigureTensor(unittest.TestCase):
             UpdateOp(model=model, loss_name="ce")
         ])
 
-        est = fe.Estimator(pipeline=pipeline, network=network, max_train_steps_per_epoch=3, epochs=1)
+        est = fe.Estimator(pipeline=pipeline, network=network, train_steps_per_epoch=3, epochs=1)
 
         iterator = iter(loader)
         batch = next(iterator)

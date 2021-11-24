@@ -175,7 +175,7 @@ class TestUpdateOp(unittest.TestCase):
                                      network=network,
                                      epochs=2,
                                      traces=traces,
-                                     max_train_steps_per_epoch=2)
+                                     train_steps_per_epoch=2)
             estimator.fit(warmup=False)
 
         for mixed_precision in [True, False]:
@@ -225,7 +225,7 @@ class TestUpdateOp(unittest.TestCase):
                                      network=network,
                                      epochs=2,
                                      traces=traces,
-                                     max_train_steps_per_epoch=2)
+                                     train_steps_per_epoch=2)
             estimator.fit(warmup=False)
 
         for mixed_precision in [True, False]:
@@ -279,7 +279,7 @@ class TestUpdateOp(unittest.TestCase):
                                      network=network,
                                      epochs=3,
                                      traces=traces,
-                                     max_train_steps_per_epoch=2)
+                                     train_steps_per_epoch=2)
             estimator.fit(warmup=False)
 
         for mixed_precision in [True, False]:
@@ -336,7 +336,7 @@ class TestUpdateOp(unittest.TestCase):
                                      network=network,
                                      epochs=3,
                                      traces=traces,
-                                     max_train_steps_per_epoch=2)
+                                     train_steps_per_epoch=2)
             estimator.fit(warmup=False)
 
         for mixed_precision in [True, False]:
@@ -388,7 +388,7 @@ class TestUpdateOp(unittest.TestCase):
                                      network=network,
                                      epochs=4,
                                      traces=traces,
-                                     max_train_steps_per_epoch=2)
+                                     train_steps_per_epoch=2)
             estimator.fit(warmup=False)
 
         for mixed_precision in [True, False]:
@@ -441,7 +441,7 @@ class TestUpdateOp(unittest.TestCase):
                                      network=network,
                                      epochs=4,
                                      traces=traces,
-                                     max_train_steps_per_epoch=2)
+                                     train_steps_per_epoch=2)
             estimator.fit(warmup=False)
 
         for mixed_precision in [True, False]:

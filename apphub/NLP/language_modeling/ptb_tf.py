@@ -61,7 +61,7 @@ def get_estimator(epochs=30,
                   seq_length=20,
                   vocab_size=10000,
                   data_dir=None,
-                  max_train_steps_per_epoch=None,
+                  train_steps_per_epoch=None,
                   save_dir=tempfile.mkdtemp()):
     train_data, eval_data, _, _ = load_data(root_dir=data_dir, seq_length=seq_length + 1)
     pipeline = fe.Pipeline(train_data=train_data,
@@ -89,7 +89,7 @@ def get_estimator(epochs=30,
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             max_train_steps_per_epoch=max_train_steps_per_epoch)
+                             train_steps_per_epoch=train_steps_per_epoch)
     return estimator
 
 

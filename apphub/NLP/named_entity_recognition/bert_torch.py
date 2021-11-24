@@ -67,8 +67,8 @@ class NERModel(nn.Module):
 def get_estimator(max_len=20,
                   epochs=20,
                   batch_size=64,
-                  max_train_steps_per_epoch=None,
-                  max_eval_steps_per_epoch=None,
+                  train_steps_per_epoch=None,
+                  eval_steps_per_epoch=None,
                   pretrained_model='bert-base-uncased',
                   save_dir=tempfile.mkdtemp(),
                   data_dir=None):
@@ -111,8 +111,8 @@ def get_estimator(max_len=20,
                              pipeline=pipeline,
                              epochs=epochs,
                              traces=traces,
-                             max_train_steps_per_epoch=max_train_steps_per_epoch,
-                             max_eval_steps_per_epoch=max_eval_steps_per_epoch)
+                             train_steps_per_epoch=train_steps_per_epoch,
+                             eval_steps_per_epoch=eval_steps_per_epoch)
 
     return estimator
 

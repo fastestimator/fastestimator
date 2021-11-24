@@ -138,7 +138,7 @@ def NTXent(A, B, temperature):
     return loss, ab, labels
 
 
-def pretrain_model(epochs, batch_size, max_train_steps_per_epoch, save_dir):
+def pretrain_model(epochs, batch_size, train_steps_per_epoch, save_dir):
     # step 1: prepare dataset
     train_data, test_data = load_data()
     pipeline = fe.Pipeline(
@@ -189,13 +189,13 @@ def pretrain_model(epochs, batch_size, max_train_steps_per_epoch, save_dir):
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             max_train_steps_per_epoch=max_train_steps_per_epoch)
+                             train_steps_per_epoch=train_steps_per_epoch)
     estimator.fit()
 
     return model_con, model_finetune
 
 
-def finetune_model(model, epochs, batch_size, max_train_steps_per_epoch, save_dir):
+def finetune_model(model, epochs, batch_size, train_steps_per_epoch, save_dir):
     train_data, test_data = load_data()
     train_data = train_data.split(0.1)
     pipeline = fe.Pipeline(train_data=train_data,
@@ -218,18 +218,18 @@ def finetune_model(model, epochs, batch_size, max_train_steps_per_epoch, save_di
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             max_train_steps_per_epoch=max_train_steps_per_epoch)
+                             train_steps_per_epoch=train_steps_per_epoch)
     estimator.fit()
 
 
 def fastestimator_run(epochs_pretrain=50,
                       epochs_finetune=10,
                       batch_size=512,
-                      max_train_steps_per_epoch=None,
+                      train_steps_per_epoch=None,
                       save_dir=tempfile.mkdtemp()):
 
-    model_con, model_finetune = pretrain_model(epochs_pretrain, batch_size, max_train_steps_per_epoch, save_dir)
-    finetune_model(model_finetune, epochs_finetune, batch_size, max_train_steps_per_epoch, save_dir)
+    model_con, model_finetune = pretrain_model(epochs_pretrain, batch_size, train_steps_per_epoch, save_dir)
+    finetune_model(model_finetune, epochs_finetune, batch_size, train_steps_per_epoch, save_dir)
 
 
 if __name__ == "__main__":

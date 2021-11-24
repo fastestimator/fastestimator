@@ -161,7 +161,7 @@ class F1AUCScores(Trace):
         data.write_with_log(self.outputs[1], f_score)
 
 
-def get_estimator(epochs=20, batch_size=128, max_train_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
+def get_estimator(epochs=20, batch_size=128, train_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
     # Dataset Creation
     (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.mnist.load_data()
     x_eval0, y_eval0 = x_eval[np.where((y_eval == 1))], np.ones(y_eval[np.where((y_eval == 1))].shape)
@@ -220,7 +220,7 @@ def get_estimator(epochs=20, batch_size=128, max_train_steps_per_epoch=None, sav
                              network=network,
                              epochs=epochs,
                              traces=traces,
-                             max_train_steps_per_epoch=max_train_steps_per_epoch,
+                             train_steps_per_epoch=train_steps_per_epoch,
                              log_steps=50)
 
     return estimator

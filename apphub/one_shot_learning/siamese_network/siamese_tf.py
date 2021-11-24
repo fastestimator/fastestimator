@@ -152,8 +152,8 @@ def siamese_network(input_shape=(105, 105, 1), classes=1):
 
 def get_estimator(epochs=200,
                   batch_size=128,
-                  max_train_steps_per_epoch=None,
-                  max_eval_steps_per_epoch=None,
+                  train_steps_per_epoch=None,
+                  eval_steps_per_epoch=None,
                   save_dir=tempfile.mkdtemp(),
                   data_dir=None):
     # step 1. prepare pipeline
@@ -210,8 +210,8 @@ def get_estimator(epochs=200,
                              pipeline=pipeline,
                              epochs=epochs,
                              traces=traces,
-                             max_train_steps_per_epoch=max_train_steps_per_epoch,
-                             max_eval_steps_per_epoch=max_eval_steps_per_epoch)
+                             train_steps_per_epoch=train_steps_per_epoch,
+                             eval_steps_per_epoch=eval_steps_per_epoch)
     return estimator
 
 

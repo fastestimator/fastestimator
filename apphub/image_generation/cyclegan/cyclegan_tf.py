@@ -276,7 +276,7 @@ def build_generator(input_shape=(256, 256, 3), num_blocks=9):
 def get_estimator(weight=10.0,
                   epochs=200,
                   batch_size=1,
-                  max_train_steps_per_epoch=None,
+                  train_steps_per_epoch=None,
                   save_dir=tempfile.mkdtemp(),
                   data_dir=None):
     train_data, _ = load_data(batch_size=batch_size, root_dir=data_dir)
@@ -349,7 +349,7 @@ def get_estimator(weight=10.0,
                              pipeline=pipeline,
                              epochs=epochs,
                              traces=traces,
-                             max_train_steps_per_epoch=max_train_steps_per_epoch)
+                             train_steps_per_epoch=train_steps_per_epoch)
 
     return estimator
 

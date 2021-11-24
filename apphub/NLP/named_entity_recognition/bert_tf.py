@@ -55,8 +55,8 @@ def ner_model(max_len, pretrained_model, label_vocab):
 def get_estimator(max_len=20,
                   epochs=10,
                   batch_size=64,
-                  max_train_steps_per_epoch=None,
-                  max_eval_steps_per_epoch=None,
+                  train_steps_per_epoch=None,
+                  eval_steps_per_epoch=None,
                   save_dir=tempfile.mkdtemp(),
                   pretrained_model='bert-base-uncased',
                   data_dir=None):
@@ -95,8 +95,8 @@ def get_estimator(max_len=20,
                              pipeline=pipeline,
                              epochs=epochs,
                              traces=traces,
-                             max_train_steps_per_epoch=max_train_steps_per_epoch,
-                             max_eval_steps_per_epoch=max_eval_steps_per_epoch)
+                             train_steps_per_epoch=train_steps_per_epoch,
+                             eval_steps_per_epoch=eval_steps_per_epoch)
 
     return estimator
 

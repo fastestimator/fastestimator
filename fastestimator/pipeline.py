@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import gc
+import math
 import multiprocessing as mp
 import os
 import random
@@ -25,6 +26,7 @@ import numpy as np
 import tensorflow as tf
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.dataloader import default_collate
+from torch.utils.data.sampler import Sampler
 
 from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.dataloader import FEDataLoader
@@ -401,6 +403,7 @@ class Pipeline:
                  epoch: int = 1,
                  ds_id: Optional[str] = None,
                  shuffle: Optional[bool] = None,
+                 steps_per_epoch: Optional[int] = None,
                  output_keys: Optional[Set[str]] = None) -> 'Pipeline':
         """Prepare this Pipeline for a given `mode` and `epoch`.
 
@@ -419,6 +422,8 @@ class Pipeline:
             ds_id: The dataset id to consider for the loader.
             shuffle: Whether to shuffle the data. If None, the value for shuffle is based on mode. NOTE: This argument
                 is only used with FastEstimator Datasets.
+            steps_per_epoch: Training or Evaluation will be cut short or extended to complete N steps even if loader is not yet
+                exhausted. If None, all data will be used.
             output_keys: What keys can be produced from pipeline. If None, all keys will be considered.
 
         Returns:
@@ -435,6 +440,7 @@ class Pipeline:
         self.ctx_epoch = epoch
         self.ctx_ds_id = ds_id
         self.ctx_shuffle = mode == 'train' if shuffle is None else shuffle
+        self.ctx_steps_per_epoch = steps_per_epoch
         self.ctx_output_keys = output_keys
         self.ctx_lock.release()
         return self
@@ -482,6 +488,16 @@ class Pipeline:
             collate_fn = self.collate_fn
             if collate_fn is None and self.pad_value is not None:
                 collate_fn = self._pad_batch_collate
+            # Default ExapandDataset Sampler
+            if self.ctx_steps_per_epoch is not None:
+                expand_dataset_sampler = ExtendDatasetSampler(ds_len=len(data),
+                                                              ds_expand_len=int(self.ctx_steps_per_epoch * batch_size),
+                                                              shuffle=self.ctx_shuffle)
+            else:
+                expand_dataset_sampler = ExtendDatasetSampler(ds_len=len(data),
+                                                              ds_expand_len=len(data),
+                                                              shuffle=self.ctx_shuffle)
+
             op_dataset = OpDataset(data,
                                    get_current_items(self.ops, self.ctx_mode, self.ctx_epoch, self.ctx_ds_id),
                                    self.ctx_mode,
@@ -491,7 +507,8 @@ class Pipeline:
             # Results will be immediately converted to tensors, so don't need deep_remainder
             data = FEDataLoader(op_dataset,
                                 batch_size=batch_size,
-                                shuffle=self.ctx_shuffle,
+                                shuffle=False,
+                                sampler=expand_dataset_sampler,
                                 num_workers=self.num_process,
                                 drop_last=False if batch_size is None else self.drop_last,
                                 worker_init_fn=lambda _: np.random.seed(random.randint(0, 2**32 - 1)),
@@ -519,3 +536,56 @@ class Pipeline:
         """
         pad_batch(batch, self.pad_value)
         return default_collate(batch)
+
+
+class ExtendDatasetSampler(Sampler):
+    """Sampler to take care of expansion and contraction of Dataset.
+
+    If the original length of dataset and new desired length of are same, sampled in sequential fashion from original
+    dataset. If shuffle is True, then sampled from shuffled Dataset.
+
+    Arguments:
+        ds_len: Length of original dataset.
+        ds_expand_len: Length to which original dataset must be expanded or contracted to. (New desired length)
+        shuffle: Whether to use shuffling.
+    """
+    def __init__(self, ds_len: int, ds_expand_len: int, shuffle: Optional[bool] = True):
+
+        self.ds_len = ds_len
+        self.ds_expand_len = ds_expand_len
+        self.shuffle = shuffle
+
+        self._check_input()
+
+        self.indices = []
+        self.base = [[i for i in range(self.ds_len)] for _ in range(math.ceil(self.ds_expand_len / self.ds_len))]
+
+    def __len__(self):
+        return self.ds_expand_len
+
+    def _check_input(self) -> None:
+        """Verify that the given input values are valid.
+        Raises:
+            AssertionError: If any of the parameters are found to by unacceptable for a variety of reasons.
+        """
+        assert isinstance(self.ds_expand_len, int), "Only accept positive integer type as ds_expand_len"
+        assert self.ds_expand_len > 0, "Invalid ds_expand_len. Expand Length cannot be less than or equal to 0"
+        assert isinstance(self.ds_len, int), "Only accept positive integer type as ds_len"
+        assert self.ds_len > 0, "Invalid ds_len. Dataset Length cannot be less than or equal to 0"
+
+    def __iter__(self):
+
+        self.indices = []
+        base = self.base
+
+        if self.ds_expand_len % self.ds_len != 0:
+            if self.shuffle == True:
+                random.shuffle(base[-1])
+            base[-1] = base[-1][:self.ds_expand_len % self.ds_len]
+
+        for ls in base:
+            if self.shuffle == True:
+                random.shuffle(ls)
+            self.indices.extend(ls)
+
+        return iter(self.indices)

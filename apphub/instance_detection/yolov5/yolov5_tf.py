@@ -465,8 +465,8 @@ def get_estimator(data_dir=None,
                   model_dir=tempfile.mkdtemp(),
                   epochs=200,
                   batch_size_per_gpu=16,
-                  max_train_steps_per_epoch=None,
-                  max_eval_steps_per_epoch=None):
+                  train_steps_per_epoch=None,
+                  eval_steps_per_epoch=None):
     num_device = get_num_devices()
     train_ds, val_ds = mscoco.load_data(root_dir=data_dir)
     train_ds = PreMosaicDataset(mscoco_ds=train_ds)
@@ -575,6 +575,6 @@ def get_estimator(data_dir=None,
                              epochs=epochs,
                              traces=traces,
                              monitor_names=["bbox_loss", "conf_loss", "cls_loss"],
-                             max_train_steps_per_epoch=max_train_steps_per_epoch,
-                             max_eval_steps_per_epoch=max_eval_steps_per_epoch)
+                             train_steps_per_epoch=train_steps_per_epoch,
+                             eval_steps_per_epoch=eval_steps_per_epoch)
     return estimator
