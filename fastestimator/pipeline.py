@@ -539,13 +539,15 @@ class Pipeline:
 
 
 class ExtendDatasetSampler(Sampler):
-    """Sampler to take care of expansion and contraction of Dataset. If the original length of dataset and new desired
-    length of are same, sampled in sequential fashion from original dataset. If shuffle is True, then sampled from shuffled Dataset.
+    """Sampler to take care of expansion and contraction of Dataset.
+
+    If the original length of dataset and new desired length of are same, sampled in sequential fashion from original
+    dataset. If shuffle is True, then sampled from shuffled Dataset.
 
     Arguments:
-        ds_len : Length of original dataset.
-        ds_expand_len : Length to which original dataset must be expanded or contracted to. (New desired length)
-        shuffle : Whether to use shuffling.
+        ds_len: Length of original dataset.
+        ds_expand_len: Length to which original dataset must be expanded or contracted to. (New desired length)
+        shuffle: Whether to use shuffling.
     """
     def __init__(self, ds_len: int, ds_expand_len: int, shuffle: Optional[bool] = True):
 
