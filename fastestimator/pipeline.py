@@ -492,7 +492,8 @@ class Pipeline:
             if self.ctx_steps_per_epoch is not None:
                 extend_dataset_sampler = ExtendDatasetSampler(
                     ds_len=len(data),
-                    ds_expand_len=int(self.ctx_steps_per_epoch * batch_size) if self.ctx_steps_per_epoch != None else None,
+                    ds_expand_len=int(self.ctx_steps_per_epoch *
+                                      batch_size) if batch_size != None else self.ctx_steps_per_epoch,
                     shuffle=self.ctx_shuffle)
             else:
                 extend_dataset_sampler = ExtendDatasetSampler(ds_len=len(data),
@@ -537,6 +538,7 @@ class Pipeline:
         """
         pad_batch(batch, self.pad_value)
         return default_collate(batch)
+
 
 @traceable()
 class ExtendDatasetSampler(Sampler):
