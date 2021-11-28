@@ -490,11 +490,12 @@ class Pipeline:
                 collate_fn = self._pad_batch_collate
             # Default ExapandDataset Sampler
             if self.ctx_steps_per_epoch is not None:
-                expand_dataset_sampler = ExtendDatasetSampler(ds_len=len(data),
-                                                              ds_expand_len=int(self.ctx_steps_per_epoch * batch_size),
-                                                              shuffle=self.ctx_shuffle)
+                extend_dataset_sampler = ExtendDatasetSampler(
+                    ds_len=len(data),
+                    ds_expand_len=int(self.ctx_steps_per_epoch * batch_size) if self.ctx_steps_per_epoch != None else None,
+                    shuffle=self.ctx_shuffle)
             else:
-                expand_dataset_sampler = ExtendDatasetSampler(ds_len=len(data),
+                extend_dataset_sampler = ExtendDatasetSampler(ds_len=len(data),
                                                               ds_expand_len=len(data),
                                                               shuffle=self.ctx_shuffle)
 
@@ -508,7 +509,7 @@ class Pipeline:
             data = FEDataLoader(op_dataset,
                                 batch_size=batch_size,
                                 shuffle=False,
-                                sampler=expand_dataset_sampler,
+                                sampler=extend_dataset_sampler,
                                 num_workers=self.num_process,
                                 drop_last=False if batch_size is None else self.drop_last,
                                 worker_init_fn=lambda _: np.random.seed(random.randint(0, 2**32 - 1)),
@@ -537,7 +538,7 @@ class Pipeline:
         pad_batch(batch, self.pad_value)
         return default_collate(batch)
 
-
+@traceable()
 class ExtendDatasetSampler(Sampler):
     """Sampler to take care of expansion and contraction of Dataset.
 
