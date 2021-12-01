@@ -120,6 +120,9 @@ class BatchDataset(FEDataset):
             assert len(set(num_examples)) == 1, "the number of output samples must be the same for disjoint features"
             self.fe_batch = num_examples[0]
         self.all_fe_datasets = all([isinstance(dataset, FEDataset) for dataset in self.datasets])
+        # Check ExtendDataset
+        for idx, dataset in enumerate(self.datasets):
+            assert not isinstance(dataset, ExtendDataset), "Input Dataset cannot be an ExtendDataset object"
 
     def _do_split(self, splits: Sequence[Iterable[int]]) -> List['BatchDataset']:
         """This class overwrites the .split() method instead of _do_split().
@@ -287,3 +290,6 @@ class BatchDataset(FEDataset):
                 else:
                     random.shuffle(mapping)
             self.index_maps.append([item for sublist in index_map for item in sublist])
+
+
+from fastestimator.dataset.extend_dataset import ExtendDataset
