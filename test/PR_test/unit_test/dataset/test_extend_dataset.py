@@ -15,7 +15,6 @@
 import unittest
 
 import numpy as np
-import tensorflow as tf
 
 import fastestimator as fe
 from fastestimator.dataset import GeneratorDataset
