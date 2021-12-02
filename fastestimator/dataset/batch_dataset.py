@@ -18,6 +18,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
 
 import numpy as np
 
+import fastestimator as fe
 from fastestimator.dataset.dataset import DatasetSummary, FEDataset
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_list
@@ -122,7 +123,7 @@ class BatchDataset(FEDataset):
         self.all_fe_datasets = all([isinstance(dataset, FEDataset) for dataset in self.datasets])
         # Check ExtendDataset
         for idx, dataset in enumerate(self.datasets):
-            assert not isinstance(dataset, ExtendDataset), "Input Dataset cannot be an ExtendDataset object"
+            assert not isinstance(dataset, fe.dataset.ExtendDataset), "Input Dataset cannot be an ExtendDataset object"
 
     def _do_split(self, splits: Sequence[Iterable[int]]) -> List['BatchDataset']:
         """This class overwrites the .split() method instead of _do_split().
@@ -290,6 +291,3 @@ class BatchDataset(FEDataset):
                 else:
                     random.shuffle(mapping)
             self.index_maps.append([item for sublist in index_map for item in sublist])
-
-
-from fastestimator.dataset.extend_dataset import ExtendDataset

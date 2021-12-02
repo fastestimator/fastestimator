@@ -22,3 +22,4 @@ from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset
 from fastestimator.dataset.numpy_dataset import NumpyDataset
 from fastestimator.dataset.pickle_dataset import PickleDataset
 from fastestimator.dataset.siamese_dir_dataset import SiameseDirDataset
+from fastestimator.dataset.extend_dataset import ExtendDataset
