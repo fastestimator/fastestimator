@@ -18,6 +18,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
 
 import numpy as np
 
+import fastestimator as fe
 from fastestimator.dataset.dataset import DatasetSummary, FEDataset
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_list
@@ -120,6 +121,9 @@ class BatchDataset(FEDataset):
             assert len(set(num_examples)) == 1, "the number of output samples must be the same for disjoint features"
             self.fe_batch = num_examples[0]
         self.all_fe_datasets = all([isinstance(dataset, FEDataset) for dataset in self.datasets])
+        # Check ExtendDataset
+        for idx, dataset in enumerate(self.datasets):
+            assert not isinstance(dataset, fe.dataset.ExtendDataset), "Input Dataset cannot be an ExtendDataset object"
 
     def _do_split(self, splits: Sequence[Iterable[int]]) -> List['BatchDataset']:
         """This class overwrites the .split() method instead of _do_split().

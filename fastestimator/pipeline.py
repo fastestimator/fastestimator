@@ -30,6 +30,7 @@ from torch.utils.data.sampler import Sampler
 
 from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.dataloader import FEDataLoader
+from fastestimator.dataset.extend_dataset import ExtendDataset
 from fastestimator.dataset.op_dataset import OpDataset
 from fastestimator.op.numpyop.meta.one_of import OneOf
 from fastestimator.op.numpyop.meta.sometimes import Sometimes
@@ -489,15 +490,13 @@ class Pipeline:
             if collate_fn is None and self.pad_value is not None:
                 collate_fn = self._pad_batch_collate
             # Default ExapandDataset Sampler
-            if self.ctx_steps_per_epoch is not None:
-                extend_dataset_sampler = ExtendDatasetSampler(
-                    ds_len=len(data),
-                    ds_expand_len=int(self.ctx_steps_per_epoch *
-                                      batch_size) if batch_size != None else self.ctx_steps_per_epoch,
-                    shuffle=self.ctx_shuffle)
+            if (self.ctx_steps_per_epoch != None) and (batch_size != None):
+                extend_dataset_sampler = ExtendDatasetSampler(ds=data,
+                                                              ds_extend_len=int(self.ctx_steps_per_epoch * batch_size),
+                                                              shuffle=self.ctx_shuffle)
             else:
-                extend_dataset_sampler = ExtendDatasetSampler(ds_len=len(data),
-                                                              ds_expand_len=len(data),
+                extend_dataset_sampler = ExtendDatasetSampler(ds=data,
+                                                              ds_extend_len=self.ctx_steps_per_epoch,
                                                               shuffle=self.ctx_shuffle)
 
             op_dataset = OpDataset(data,
@@ -547,44 +546,53 @@ class ExtendDatasetSampler(Sampler):
     If the original length of dataset and new desired length of are same, sampled in sequential fashion from original
     dataset. If shuffle is True, then sampled from shuffled Dataset.
 
+    Note: In the case where ds_extend_len is NOT None and also the dataset ds is an ExtendDataset object, priority will
+    be given to ds_extend_len.
+
     Arguments:
-        ds_len: Length of original dataset.
-        ds_expand_len: Length to which original dataset must be expanded or contracted to. (New desired length)
+        ds: Original dataset.
+        ds_extend_len: Length to which original dataset must be expanded or contracted to. (New desired length)
         shuffle: Whether to use shuffling.
     """
-    def __init__(self, ds_len: int, ds_expand_len: int, shuffle: Optional[bool] = True):
+    def __init__(self, ds: Dataset, ds_extend_len: Union[int, None] = None, shuffle: Optional[bool] = True):
 
-        self.ds_len = ds_len
-        self.ds_expand_len = ds_expand_len
+        self.ds = ds
+        self.ds_extend_len = ds_extend_len
         self.shuffle = shuffle
+
+        if self.ds_extend_len == None:
+            # Check if ds is ExtendDataset object
+            if isinstance(self.ds, ExtendDataset):
+                self.ds_extend_len = self.ds.spoof_length
+            else:
+                self.ds_extend_len = len(self.ds)
 
         self._check_input()
 
         self.indices = []
-        self.base = [[i for i in range(self.ds_len)] for _ in range(math.ceil(self.ds_expand_len / self.ds_len))]
+        self.base = [[i for i in range(len(self.ds))] for _ in range(math.ceil(self.ds_extend_len / len(self.ds)))]
 
     def __len__(self):
-        return self.ds_expand_len
+        return self.ds_extend_len
 
     def _check_input(self) -> None:
         """Verify that the given input values are valid.
         Raises:
             AssertionError: If any of the parameters are found to by unacceptable for a variety of reasons.
         """
-        assert isinstance(self.ds_expand_len, int), "Only accept positive integer type as ds_expand_len"
-        assert self.ds_expand_len > 0, "Invalid ds_expand_len. Expand Length cannot be less than or equal to 0"
-        assert isinstance(self.ds_len, int), "Only accept positive integer type as ds_len"
-        assert self.ds_len > 0, "Invalid ds_len. Dataset Length cannot be less than or equal to 0"
+        assert isinstance(self.ds_extend_len, int), "Only accept positive integer type as ds_expand_len"
+        assert self.ds_extend_len > 0, "Invalid ds_expand_len. Expand Length cannot be less than or equal to 0"
+        assert len(self.ds) > 0, "Invalid ds. Dataset Length cannot be less than or equal to 0"
 
     def __iter__(self):
 
         self.indices = []
         base = self.base
 
-        if self.ds_expand_len % self.ds_len != 0:
+        if self.ds_extend_len % len(self.ds) != 0:
             if self.shuffle == True:
                 random.shuffle(base[-1])
-            base[-1] = base[-1][:self.ds_expand_len % self.ds_len]
+            base[-1] = base[-1][:self.ds_extend_len % len(self.ds)]
 
         for ls in base:
             if self.shuffle == True:
