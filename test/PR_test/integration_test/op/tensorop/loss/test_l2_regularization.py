@@ -41,7 +41,6 @@ class TestL2Regularization(unittest.TestCase):
         cls.pytorch_l2 = fe.build(model_fn=LeNet, optimizer_fn=lambda x: torch.optim.SGD(params=x, lr=0.01))
 
     def test_l2_regularization_pytorch(self):
-        from fastestimator.architecture.pytorch import LeNet
         fe.enable_deterministic(42)
         pytorch_l2 = fe.build(model_fn=LeNet, optimizer_fn="adam")
         l2 = L2Regularizaton(inputs='x', outputs='x',model=pytorch_l2)
