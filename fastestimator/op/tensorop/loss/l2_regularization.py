@@ -1,18 +1,36 @@
 import torch
 import tensorflow as tf
 
-from fastestimator.op.tensorop import TensorOp
-from typing import Any, Dict, List, Tuple, TypeVar, Union
+from fastestimator.op.tensorop.loss.loss import LossOp
+from fastestimator.util.traceability_util import traceable
+from typing import Any, Dict, List, Tuple, TypeVar, Union, Iterable
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
-class L2Regularizaton(TensorOp):
+
+@traceable()
+class L2Regularizaton(LossOp):
+    """Calculate L2 Regularization Loss.
+
+    Args:
+        inputs: String key representing input loss.
+        outputs: String key under which to store the computed loss value.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
+
+    Raises:
+        AssertionError: If `class_weights` or it's keys and values are of unacceptable data types.
+    """
     def __init__(self,
                  inputs: Union[Tuple[str, str], List[str]],
                  outputs: str,
                  model: Union[tf.keras.Model, torch.nn.Module],
+                 mode: Union[None, str, Iterable[str]] = None,
                  beta: float = 0.01):
-        super().__init__(inputs=inputs, outputs=outputs)
+        super().__init__(inputs=inputs, outputs=outputs, mode = mode)
 
         self.model = model
         self.beta = beta
@@ -34,9 +52,11 @@ class L2Regularizaton(TensorOp):
             l2_loss = tf.zeros(1)
             for layer in self.model.layers:
                 for w in layer.trainable_variables:
-                    if tf.reduce_sum(tf.pow(w, 2)) != 0.0:
-                        l2_loss += tf.reduce_sum(tf.pow(w, 2)) / 2
+                    if tf.nn.l2_loss(w) != 0.0:
+                        l2_loss += tf.nn.l2_loss(w)
 
             total_loss = tf.add((self.beta * l2_loss)[0], loss)
+        else:
+            raise ValueError("Unrecognized model framework: Please make sure to pass either torch or tensorflow models")
 
         return total_loss
