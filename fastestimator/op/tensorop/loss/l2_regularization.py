@@ -1,7 +1,22 @@
+# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
 import torch
 import tensorflow as tf
 
 from fastestimator.op.tensorop.loss.loss import LossOp
+from fastestimator.backend.l2_regularization import l2_regularization
 from fastestimator.util.traceability_util import traceable
 from typing import Any, Dict, List, Tuple, TypeVar, Union, Iterable
 
@@ -41,22 +56,6 @@ class L2Regularizaton(LossOp):
         For tensorflow: tf.nn.l2_loss(w) is similar to `tf.reduce_sum(tf.pow(w,2)) / 2`
         '''
         loss = data
-        if isinstance(self.model, torch.nn.Module):
-            l2_loss = torch.tensor(0.)
-            for param in self.model.parameters():
-                if param.requires_grad:
-                    l2_loss += (torch.sum(param.pow(2))) / 2
-            total_loss = torch.add((self.beta * l2_loss), loss)
-
-        elif isinstance(self.model, tf.keras.Model):
-            l2_loss = tf.zeros(1)
-            for layer in self.model.layers:
-                for w in layer.trainable_variables:
-                    if tf.nn.l2_loss(w) != 0.0:
-                        l2_loss += tf.nn.l2_loss(w)
-
-            total_loss = tf.add((self.beta * l2_loss)[0], loss)
-        else:
-            raise ValueError("Unrecognized model framework: Please make sure to pass either torch or tensorflow models")
-
+        total_loss = l2_regularization(loss, self.model, self.beta) + loss
+        
         return total_loss
