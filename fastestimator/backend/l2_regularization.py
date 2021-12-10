@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2021 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ def l2_regularization(model: Union[tf.keras.Model, torch.nn.Module], beta: float
     This method can be used with TensorFlow and Pytorch tensors
 
     Args:
-        model: A tensorflow or pytorc model
+        model: A tensorflow or pytorch model
         beta : The multiplicative factor, to weight the l2 regularization loss with the input loss
 
     Returns:

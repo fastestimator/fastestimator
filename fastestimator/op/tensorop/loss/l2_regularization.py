@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2021 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import torch
-import tensorflow as tf
+from typing import Any, Dict, Iterable, List, Tuple, TypeVar, Union
 
-from fastestimator.op.tensorop.loss.loss import LossOp
+import tensorflow as tf
+import torch
+
 from fastestimator.backend.l2_regularization import l2_regularization
+from fastestimator.op.tensorop.loss.loss import LossOp
 from fastestimator.util.traceability_util import traceable
-from typing import Any, Dict, List, Tuple, TypeVar, Union, Iterable
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
@@ -33,26 +34,21 @@ class L2Regularizaton(LossOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        model: A tensorflow or pytorc model
+        model: A tensorflow or pytorch model
         beta : The multiplicative factor, to weight the l2 regularization loss with the input loss
-
     """
     def __init__(self,
-                 inputs: Union[Tuple[str, str], List[str]],
+                 inputs: str,
                  outputs: str,
                  model: Union[tf.keras.Model, torch.nn.Module],
                  mode: Union[None, str, Iterable[str]] = None,
                  beta: float = 0.01):
-        super().__init__(inputs=inputs, outputs=outputs, mode = mode)
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
 
         self.model = model
         self.beta = beta
 
     def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> Tensor:
-        '''
-        
-        '''
         loss = data
         total_loss = l2_regularization(self.model, self.beta) + loss
-
         return total_loss
