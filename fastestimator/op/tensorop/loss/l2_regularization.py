@@ -33,11 +33,9 @@ class L2Regularizaton(LossOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
-            ds_ids except for a particular one, you can pass an argument like "!ds1".
+        model: A tensorflow or pytorc model
+        beta : The multiplicative factor, to weight the l2 regularization loss with the input loss
 
-    Raises:
-        AssertionError: If `class_weights` or it's keys and values are of unacceptable data types.
     """
     def __init__(self,
                  inputs: Union[Tuple[str, str], List[str]],
@@ -52,10 +50,9 @@ class L2Regularizaton(LossOp):
 
     def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> Tensor:
         '''
-        For pytorch: param.norm(2) is similar to `param.pow(2).sum().sqrt()`
-        For tensorflow: tf.nn.l2_loss(w) is similar to `tf.reduce_sum(tf.pow(w,2)) / 2`
+        
         '''
         loss = data
-        total_loss = l2_regularization(loss, self.model, self.beta) + loss
-        
+        total_loss = l2_regularization(self.model, self.beta) + loss
+
         return total_loss
