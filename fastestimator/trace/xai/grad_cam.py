@@ -137,7 +137,7 @@ class GradCAM(Trace):
         for component_batch in components:
             img_batch = []
             for img in component_batch:
-                img = cv2.resize(img, (height, width))
+                img = cv2.resize(img, (width, height))
                 img = img - np.min(img)
                 img = img / np.max(img)
                 img = cv2.cvtColor(cv2.applyColorMap(np.uint8(255 * img), cv2.COLORMAP_JET), cv2.COLOR_BGR2RGB)

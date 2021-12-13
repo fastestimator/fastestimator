@@ -383,7 +383,7 @@ class Estimator:
         new_loader = loader
         if isinstance(new_loader, DataLoader) and isinstance(self.network, TFNetwork):
             add_batch = True
-            if isinstance(loader.dataset, OpDataset) and loader.dataset.dataset.fe_batch:
+            if hasattr(loader.dataset, 'fe_batch') and loader.dataset.fe_batch:
                 add_batch = False
             batch = to_tensor(loader.dataset[0], target_type="tf")
             data_type = to_type(batch)

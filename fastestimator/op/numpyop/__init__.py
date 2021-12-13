@@ -13,4 +13,4 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.op.numpyop import meta, multivariate, univariate
-from fastestimator.op.numpyop.numpyop import Delete, LambdaOp, NumpyOp, forward_numpyop
+from fastestimator.op.numpyop.numpyop import Delete, LambdaOp, NumpyOp, RemoveIf, forward_numpyop
