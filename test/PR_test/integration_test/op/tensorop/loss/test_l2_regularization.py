@@ -20,9 +20,12 @@ import tensorflow as tf
 import torch
 import torch.nn as nn
 import torch.nn.functional as fn
-from tensorflow.python.keras import Sequential, initializers, layers
+from tensorflow.keras import Sequential, initializers, layers
 
 import fastestimator as fe
+from fastestimator.pipeline import Pipeline
+from fastestimator.estimator import Estimator
+from fastestimator.network import Network, build
 from fastestimator.dataset.data import mnist
 from fastestimator.op.numpyop.univariate import ExpandDims, Minmax
 from fastestimator.op.tensorop.loss import CrossEntropy, L2Regularizaton
@@ -173,12 +176,13 @@ class TestL2Regularization(unittest.TestCase):
 
     def test_pytorch_l2_vs_tensorflow_l2(self):
         # Get Data
-        train_data, _ = mnist.load_data()
+        train_data, eval_data = mnist.load_data()
         t_d = train_data.split(128)
         # Initializing Pytorch model
         pytorch_l2 = fe.build(model_fn=MyNet_torch, optimizer_fn=lambda x: torch.optim.SGD(params=x, lr=0.01))
         # Initialize Pytorch pipeline
         pipeline = fe.Pipeline(train_data=t_d,
+                        eval_data=eval_data,
                         batch_size=128,
                         ops=[ExpandDims(inputs="x", outputs="x", axis=0),
                                 Minmax(inputs="x", outputs="x")])
@@ -198,8 +202,9 @@ class TestL2Regularization(unittest.TestCase):
                             network=network_l2,
                             epochs=1,
                             traces=traces,
-                            train_steps_per_epoch=2,
+                            train_steps_per_epoch=1,
                             monitor_names=["ce","l2"])
+        print('********************************Pytorch L2 Regularization training************************************')
         estimator_l2.fit()
 
         # Converting Pytorch weights to numpy
@@ -210,9 +215,9 @@ class TestL2Regularization(unittest.TestCase):
 
         # step 1
         pipeline = fe.Pipeline(train_data=t_d,
-                            ops=[ExpandDims(inputs="x", outputs="x"),
-                                    Minmax(inputs="x", outputs="x")
-                                    ])
+                               eval_data=eval_data,
+                               batch_size=128,
+                               ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")])
         # step 2
         model_tf = fe.build(model_fn=MyNet_tf, optimizer_fn=lambda: tf.optimizers.SGD(learning_rate=0.01))
         network = fe.Network(ops=[
@@ -231,7 +236,7 @@ class TestL2Regularization(unittest.TestCase):
                                 traces=traces,
                                 train_steps_per_epoch=1,
                                 monitor_names=["ce","l2"])
-
+        print('*******************************Tensorflow L2 Regularization training***********************************')
         estimator.fit()
 
 
@@ -241,14 +246,9 @@ class TestL2Regularization(unittest.TestCase):
             for w in layer.trainable_variables:
                 tf_wt.append(w.numpy())
 
-
-        #torch_wt, tf_wt = train_pt(t_d)
-        # = train_tf(t_d)
-
         # testing weights
         count = 0
         for tf_t,tr in zip(tf_wt,torch_wt):
             if np.sum(np.abs(tf_t-np.transpose(tr))) < (10**-6):
                 count += 1
-            print(np.sum(np.abs(tf_t-np.transpose(tr))))
         self.assertTrue(count == 6)
