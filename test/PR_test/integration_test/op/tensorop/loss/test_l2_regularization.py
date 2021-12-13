@@ -241,7 +241,7 @@ class TestL2Regularization(unittest.TestCase):
         # Get Data
         train_data, _ = mnist.load_data()
         t_d = train_data.split(128)
-        torch_wt, tf_wt = train_pt_tf(t_d)
+        torch_wt, tf_wt = train_pt_tf(t_d,self.beta)
         # testing weights
         count = 0
         for tf,tr in zip(tf_wt,torch_wt):
