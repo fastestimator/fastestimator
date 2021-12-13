@@ -23,9 +23,6 @@ import torch.nn.functional as fn
 from tensorflow.keras import Sequential, initializers, layers
 
 import fastestimator as fe
-from fastestimator.pipeline import Pipeline
-from fastestimator.estimator import Estimator
-from fastestimator.network import Network, build
 from fastestimator.dataset.data import mnist
 from fastestimator.op.numpyop.univariate import ExpandDims, Minmax
 from fastestimator.op.tensorop.loss import CrossEntropy, L2Regularizaton
