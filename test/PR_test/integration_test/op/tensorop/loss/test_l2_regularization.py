@@ -198,7 +198,7 @@ class TestL2Regularization(unittest.TestCase):
                             network=network_l2,
                             epochs=1,
                             traces=traces,
-                            max_train_steps_per_epoch=2,
+                            train_steps_per_epoch=2,
                             monitor_names=["ce","l2"])
         estimator_l2.fit()
 
@@ -229,7 +229,7 @@ class TestL2Regularization(unittest.TestCase):
                                 network=network,
                                 epochs=1,
                                 traces=traces,
-                                max_train_steps_per_epoch=1,
+                                train_steps_per_epoch=1,
                                 monitor_names=["ce","l2"])
 
         estimator.fit()
