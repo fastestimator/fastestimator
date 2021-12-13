@@ -97,6 +97,72 @@ def MyNet_tf(input_shape: Tuple[int, int, int] = (28, 28, 1), classes: int = 10)
     return model
 
 
+def train_pt_tf(t_d,beta):
+    '''
+    Helper Function to train Pytorch and tensorflow models
+    '''
+    # Initializing Pytorch model
+    pytorch_l2 = fe.build(model_fn=MyNet_torch, optimizer_fn=lambda x: torch.optim.SGD(params=x, lr=0.01))
+    # Initialize Pytorch pipeline
+    pipeline = fe.Pipeline(train_data=t_d,
+                           batch_size=128,
+                           ops=[ExpandDims(inputs="x", outputs="x", axis=0), Minmax(inputs="x", outputs="x")])
+    # Initialize Pytorch Network
+    network_l2 = fe.Network(ops=[
+        ModelOp(model=pytorch_l2, inputs="x", outputs="y_pred"),
+        CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),
+        L2Regularizaton(inputs="ce", outputs="l2", model=pytorch_l2, beta=beta),
+        UpdateOp(model=pytorch_l2, loss_name="l2")
+    ])
+    # step 3
+    traces = [Accuracy(true_key="y", pred_key="y_pred")]
+    # Initialize Pytorch estimator
+    estimator_l2 = fe.Estimator(pipeline=pipeline,
+                                network=network_l2,
+                                epochs=1,
+                                traces=traces,
+                                train_steps_per_epoch=2,
+                                monitor_names=["ce", "l2"])
+    estimator_l2.fit()
+
+    # Converting Pytorch weights to numpy
+    torch_wt = []
+    for name, param in pytorch_l2.named_parameters():
+        if param.requires_grad:
+            torch_wt.append(param.detach().numpy())
+
+    # step 1
+    pipeline = fe.Pipeline(train_data=t_d,
+                           batch_size=128,
+                           ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")])
+    # step 2
+    model_tf = fe.build(model_fn=MyNet_tf, optimizer_fn=lambda: tf.optimizers.SGD(learning_rate=0.01))
+    network = fe.Network(ops=[
+        ModelOp(model=model_tf, inputs="x", outputs="y_pred"),
+        CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),
+        L2Regularizaton(inputs="ce", outputs="l2", model=model_tf, beta=beta),
+        UpdateOp(model=model_tf, loss_name="l2")
+    ])
+    # step 3
+    traces = [Accuracy(true_key="y", pred_key="y_pred")]
+    estimator = fe.Estimator(pipeline=pipeline,
+                             network=network,
+                             epochs=1,
+                             traces=traces,
+                             train_steps_per_epoch=1,
+                             monitor_names=["ce", "l2"])
+
+    estimator.fit()
+
+    # Converting TF weights to numpy
+    tf_wt = []
+    for layer in model_tf.layers:
+        for w in layer.trainable_variables:
+            tf_wt.append(w.numpy())
+
+    return torch_wt, tf_wt
+
+
 class TestL2Regularization(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -122,7 +188,7 @@ class TestL2Regularization(unittest.TestCase):
         t_d = train_data.split(128)
         # Initializing models
         pytorch_wd = fe.build(model_fn=MyNet_torch,
-                                        optimizer_fn=lambda x: torch.optim.SGD(params=x, lr=0.01, weight_decay=self.beta))
+                              optimizer_fn=lambda x: torch.optim.SGD(params=x, lr=0.01, weight_decay=self.beta))
 
         pytorch_l2 = fe.build(model_fn=MyNet_torch, optimizer_fn=lambda x: torch.optim.SGD(params=x, lr=0.01))
         # Initialize pipeline
@@ -168,5 +234,17 @@ class TestL2Regularization(unittest.TestCase):
         count = 0
         for wt, l2 in zip(pytorch_wd.parameters(), pytorch_l2.parameters()):
             if ((wt - l2).abs()).sum() < torch.tensor(10**-6):
+                count += 1
+        self.assertTrue(count == 6)
+
+    def test_pytorch_l2_vs_tensorflow_l2(self):
+        # Get Data
+        train_data, _ = mnist.load_data()
+        t_d = train_data.split(128)
+        torch_wt, tf_wt = train_pt_tf(t_d)
+        # testing weights
+        count = 0
+        for tf,tr in zip(tf_wt,torch_wt):
+            if np.sum(np.abs(tf-np.transpose(tr))) < (10**-5):
                 count += 1
         self.assertTrue(count == 6)
