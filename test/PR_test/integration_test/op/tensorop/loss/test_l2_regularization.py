@@ -246,6 +246,6 @@ class TestL2Regularization(unittest.TestCase):
         # testing weights
         count = 0
         for tf_t,tr in zip(tf_wt,torch_wt):
-            if np.sum(np.abs(tf_t-np.transpose(tr))) < (10**-6):
+            if np.sum(np.abs(tf_t-np.transpose(tr))) < (10**-5):
                 count += 1
         self.assertTrue(count == 6)

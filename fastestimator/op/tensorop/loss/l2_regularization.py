@@ -19,13 +19,15 @@ import torch
 
 from fastestimator.backend.l2_regularization import l2_regularization
 from fastestimator.op.tensorop.loss.loss import LossOp
+from fastestimator.op.tensorop.tensorop import TensorOp
+
 from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 @traceable()
-class L2Regularizaton(LossOp):
+class L2Regularizaton(TensorOp):
     """Calculate L2 Regularization Loss.
 
     Args:
