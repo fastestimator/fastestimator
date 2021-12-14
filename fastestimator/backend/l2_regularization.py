@@ -29,7 +29,7 @@ def l2_regularization(model: Union[tf.keras.Model, torch.nn.Module], beta: float
 
     Args:
         model: A tensorflow or pytorch model
-        beta : The multiplicative factor, to weight the l2 regularization loss with the input loss
+        beta: The multiplicative factor, to weight the l2 regularization loss with the input loss
 
     Returns:
         The L2 norm of model parameters
@@ -47,8 +47,7 @@ def l2_regularization(model: Union[tf.keras.Model, torch.nn.Module], beta: float
         l2_loss = tf.zeros(1)[0]
         for layer in model.layers:
             for w in layer.trainable_variables:
-                if tf.nn.l2_loss(w) != 0.0:
-                    l2_loss += tf.nn.l2_loss(w)
+                l2_loss += tf.nn.l2_loss(w)
 
     else:
         raise ValueError("Unrecognized model framework: Please make sure to pass either torch or tensorflow models")

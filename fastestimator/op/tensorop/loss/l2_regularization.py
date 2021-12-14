@@ -36,7 +36,7 @@ class L2Regularizaton(TensorOp):
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
         model: A tensorflow or pytorch model
-        beta : The multiplicative factor, to weight the l2 regularization loss with the input loss
+        beta: The multiplicative factor, to weight the l2 regularization loss with the input loss
     """
     def __init__(self,
                  inputs: str,
