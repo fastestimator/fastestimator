@@ -382,12 +382,13 @@ class Estimator:
         """
         new_loader = loader
         if isinstance(new_loader, DataLoader) and isinstance(self.network, TFNetwork):
-            add_batch = True
-            if hasattr(loader.dataset, 'fe_batch') and loader.dataset.fe_batch:
-                add_batch = False
-            batch = to_tensor(loader.dataset[0], target_type="tf")
-            data_type = to_type(batch)
-            data_shape = to_shape(batch, add_batch=add_batch, exact_shape=False)
+            data_instance = loader.dataset[0]
+            if isinstance(data_instance, list):
+                # This is a batched dataset
+                data_instance = data_instance[0]
+            data_instance = to_tensor(data_instance, target_type="tf")
+            data_type = to_type(data_instance)
+            data_shape = to_shape(data_instance, add_batch=True, exact_shape=False)
             new_loader = tf.data.Dataset.from_generator(lambda: loader, data_type, output_shapes=data_shape)
             new_loader = new_loader.prefetch(1)
         if isinstance(new_loader, tf.data.Dataset):

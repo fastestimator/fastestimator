@@ -472,6 +472,13 @@ class Pipeline:
         acquired = self.ctx_lock.acquire(blocking=False)
         if not acquired:
             raise ValueError("You cannot generate a new loader from this Pipeline before closing its other loader.")
+        # Release the lock if arguments are invalid so that people in Jupyter / debug consoles don't get stuck
+        if self.ctx_mode not in self.data:
+            self.ctx_lock.release()
+            raise KeyError(f"Pipeline has no data for mode '{self.ctx_mode}'")
+        if self.ctx_ds_id not in self.data[self.ctx_mode]:
+            self.ctx_lock.release()
+            raise KeyError(f"The dataset id '{self.ctx_ds_id}' is not present in {self.ctx_mode} mode")
         data = self.data[self.ctx_mode][self.ctx_ds_id]
         if isinstance(data, Scheduler):
             data = data.get_current_value(self.ctx_epoch)
