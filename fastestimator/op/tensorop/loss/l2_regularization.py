@@ -18,7 +18,6 @@ import tensorflow as tf
 import torch
 
 from fastestimator.backend.l2_regularization import l2_regularization
-from fastestimator.op.tensorop.loss.loss import LossOp
 from fastestimator.op.tensorop.tensorop import TensorOp
 
 from fastestimator.util.traceability_util import traceable
