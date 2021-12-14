@@ -18,3 +18,4 @@ from fastestimator.op.tensorop.loss.loss import LossOp
 from fastestimator.op.tensorop.loss.mean_squared_error import MeanSquaredError
 from fastestimator.op.tensorop.loss.mix_loss import MixLoss
 from fastestimator.op.tensorop.loss.super_loss import SuperLoss
+from fastestimator.op.tensorop.loss.l2_regularization import L2Regularizaton
