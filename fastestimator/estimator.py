@@ -28,7 +28,6 @@ import fastestimator as fe
 from fastestimator.backend.to_shape import to_shape
 from fastestimator.backend.to_tensor import to_tensor
 from fastestimator.backend.to_type import to_type
-from fastestimator.dataset.op_dataset import OpDataset
 from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
 from fastestimator.pipeline import Pipeline
 from fastestimator.schedule.schedule import Scheduler, get_current_items, get_signature_epochs
@@ -40,7 +39,7 @@ from fastestimator.trace.io.restore_wizard import RestoreWizard
 from fastestimator.trace.io.traceability import Traceability
 from fastestimator.trace.trace import EvalEssential, Logger, PerDSTrace, TestEssential, Trace, TrainEssential, \
     sort_traces
-from fastestimator.util.data import Data
+from fastestimator.util.data import Data, FilteredData
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import NonContext, Suppressor, draw, to_list, to_set
 
@@ -383,11 +382,18 @@ class Estimator:
         new_loader = loader
         if isinstance(new_loader, DataLoader) and isinstance(self.network, TFNetwork):
             add_batch = True
-            if hasattr(loader.dataset, 'fe_batch') and loader.dataset.fe_batch:
+            data_instance = loader.dataset[0]
+            if isinstance(data_instance, list):
+                # This is a batched dataset
+                data_instance = data_instance[0]
+            if isinstance(data_instance, FilteredData):
+                # We got unlucky and drew filtered data as the zeroth element. Fall back to a slower but more robust
+                # analysis of the batch
+                data_instance = next(iter(loader))
                 add_batch = False
-            batch = to_tensor(loader.dataset[0], target_type="tf")
-            data_type = to_type(batch)
-            data_shape = to_shape(batch, add_batch=add_batch, exact_shape=False)
+            data_instance = to_tensor(data_instance, target_type="tf")
+            data_type = to_type(data_instance)
+            data_shape = to_shape(data_instance, add_batch=add_batch, exact_shape=False)
             new_loader = tf.data.Dataset.from_generator(lambda: loader, data_type, output_shapes=data_shape)
             new_loader = new_loader.prefetch(1)
         if isinstance(new_loader, tf.data.Dataset):
