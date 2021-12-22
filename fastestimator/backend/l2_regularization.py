@@ -38,18 +38,9 @@ def l2_regularization(model: Union[tf.keras.Model, torch.nn.Module], beta: float
         ValueError: If `model` belongs to an unacceptable framework.
     """
     if isinstance(model, torch.nn.Module):
-        l2_loss = torch.tensor(0.).to(next(model.parameters()).device)
-        for param in model.parameters():
-            if param.requires_grad:
-                l2_loss += (torch.sum(param.pow(2))) / 2
-
+        l2_loss = torch.sum(torch.stack([torch.sum(p**2) / 2 for p in model.parameters() if p.requires_grad]))
     elif isinstance(model, tf.keras.Model):
-        l2_loss = tf.zeros(1)[0]
-        for layer in model.layers:
-            for w in layer.trainable_variables:
-                l2_loss += tf.nn.l2_loss(w)
-
+        l2_loss = tf.reduce_sum([tf.nn.l2_loss(p) for p in model.trainable_variables])
     else:
         raise ValueError("Unrecognized model framework: Please make sure to pass either torch or tensorflow models")
-
     return beta * l2_loss
