@@ -71,6 +71,19 @@ class Data(ChainMap[str, Any]):
         return self.maps[0]
 
 
+class DSData(Data):
+    # noinspection PyMissingConstructor
+    def __init__(self, ds_id: str, data: Data):
+        self.maps = data.maps
+        self.ds_id = ds_id
+
+    def write_with_log(self, key: str, value: Any) -> None:
+        super().write_with_log(key=f'{key}|{self.ds_id}', value=value)
+
+    def write_without_log(self, key: str, value: Any) -> None:
+        super().write_without_log(key=f'{key}|{self.ds_id}', value=value)
+
+
 class FilteredData:
     """A placeholder to indicate that this data instance should not be used.
 

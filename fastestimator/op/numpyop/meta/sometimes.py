@@ -17,7 +17,7 @@ from typing import Any, Dict, List
 
 import numpy as np
 
-from fastestimator.op.numpyop.numpyop import NumpyOp
+from fastestimator.op.numpyop.numpyop import Batch, NumpyOp
 from fastestimator.util.traceability_util import traceable
 
 
@@ -47,6 +47,8 @@ class Sometimes(NumpyOp):
                          ds_id=numpy_op.ds_id)
         # Note that in_list and out_list will always be true
         self.op = numpy_op
+        if isinstance(numpy_op, Batch):
+            raise ValueError("Cannot nest a Batch op inside of Sometimes")
         self.prob = prob
 
     def __getstate__(self) -> Dict[str, Dict[Any, Any]]:

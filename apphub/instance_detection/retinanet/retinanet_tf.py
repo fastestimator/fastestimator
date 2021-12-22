@@ -23,7 +23,7 @@ from tensorflow.python.keras import layers, models, regularizers
 
 import fastestimator as fe
 from fastestimator.dataset.data import mscoco
-from fastestimator.op.numpyop import NumpyOp
+from fastestimator.op.numpyop import Batch, NumpyOp
 from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import HorizontalFlip, LongestMaxSize, PadIfNeeded
 from fastestimator.op.numpyop.univariate import Normalize, ReadImage
@@ -454,7 +454,6 @@ def get_estimator(data_dir=None,
     pipeline = fe.Pipeline(
         train_data=train_ds,
         eval_data=eval_ds,
-        batch_size=batch_size,
         ops=[
             ReadImage(inputs="image", outputs="image"),
             LongestMaxSize(image_size,
@@ -482,9 +481,9 @@ def get_estimator(data_dir=None,
                                bbox_params='coco')),
             Normalize(inputs="image", outputs="image", mean=1.0, std=1.0, max_pixel_value=127.5),
             ShiftLabel(inputs="bbox", outputs="bbox"),
-            AnchorBox(inputs="bbox", outputs="anchorbox", width=image_size, height=image_size)
-        ],
-        pad_value=0)
+            AnchorBox(inputs="bbox", outputs="anchorbox", width=image_size, height=image_size),
+            Batch(batch_size=batch_size, pad_value=0)
+        ])
     # network
     model = fe.build(model_fn=lambda: RetinaNet(input_shape=(image_size, image_size, 3), num_classes=num_classes),
                      optimizer_fn=lambda: tf.optimizers.SGD(momentum=0.9))

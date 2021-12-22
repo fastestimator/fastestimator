@@ -20,7 +20,7 @@ import torch.nn as nn
 
 import fastestimator as fe
 from fastestimator.dataset.data.penn_treebank import load_data
-from fastestimator.op.numpyop import NumpyOp
+from fastestimator.op.numpyop import Batch, NumpyOp
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
@@ -83,9 +83,8 @@ def get_estimator(epochs=30,
     train_data, eval_data, _, _ = load_data(root_dir=data_dir, seq_length=seq_length + 1)
     pipeline = fe.Pipeline(train_data=train_data,
                            eval_data=eval_data,
-                           batch_size=batch_size,
-                           ops=CreateInputAndTarget(inputs="x", outputs=("x", "y")),
-                           drop_last=True)
+                           ops=[CreateInputAndTarget(inputs="x", outputs=("x", "y")),
+                                Batch(batch_size=batch_size, drop_last=True)])
     # step 2
     model = fe.build(model_fn=lambda: BuildModel(vocab_size, embedding_dim=300, rnn_units=600),
                      optimizer_fn=lambda x: torch.optim.SGD(x, lr=1.0, momentum=0.9))

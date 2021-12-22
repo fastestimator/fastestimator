@@ -26,7 +26,7 @@ from torch.utils.data import Dataset
 
 import fastestimator as fe
 from fastestimator.dataset.data import mscoco
-from fastestimator.op.numpyop import Delete, NumpyOp
+from fastestimator.op.numpyop import Batch, Delete, NumpyOp
 from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import CenterCrop, HorizontalFlip, LongestMaxSize, PadIfNeeded
 from fastestimator.op.numpyop.univariate import ReadImage, ToArray
@@ -529,7 +529,6 @@ def get_estimator(data_dir=None,
     pipeline = fe.Pipeline(
         train_data=train_ds,
         eval_data=val_ds,
-        batch_size=batch_size,
         ops=[
             ReadImage(inputs=("image1", "image2", "image3", "image4"),
                       outputs=("image1", "image2", "image3", "image4"),
@@ -588,9 +587,9 @@ def get_estimator(data_dir=None,
             GTBox(inputs="bbox", outputs=("gt_sbbox", "gt_mbbox", "gt_lbbox"), image_size=640),
             Delete(keys=("image1", "image2", "image3", "image4", "bbox1", "bbox2", "bbox3", "bbox4", "bbox"),
                    mode="train"),
-            Delete(keys="image_id", mode="eval")
-        ],
-        pad_value=0)
+            Delete(keys="image_id", mode="eval"),
+            Batch(batch_size=batch_size, pad_value=0)
+        ])
     init_lr = 1e-2 / 64 * batch_size
     model = fe.build(
         lambda: YoloV5(w=640, h=640, c=3),

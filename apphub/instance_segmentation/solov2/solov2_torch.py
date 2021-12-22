@@ -28,7 +28,7 @@ from scipy.ndimage.measurements import center_of_mass
 import fastestimator as fe
 from fastestimator.backend import to_tensor
 from fastestimator.dataset.data import mscoco
-from fastestimator.op.numpyop import Delete, NumpyOp
+from fastestimator.op.numpyop import Batch, Delete, NumpyOp
 from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import HorizontalFlip, LongestMaxSize, PadIfNeeded, Resize
 from fastestimator.op.numpyop.univariate import ReadImage
@@ -573,7 +573,6 @@ def get_estimator(data_dir=None,
         train_data=train_ds,
         eval_data=val_ds,
         test_data=val_ds,
-        batch_size=batch_size,
         ops=[
             ReadImage(inputs="image", outputs="image"),
             MergeMask(inputs="mask", outputs="mask"),
@@ -592,9 +591,9 @@ def get_estimator(data_dir=None,
             Resize(height=im_size // 4, width=im_size // 4, image_in='mask'),  # downscale mask for memory efficiency
             Gt2Target(inputs=("mask", "bbox"), outputs=("gt_match", "mask", "classes")),
             Delete(keys="bbox"),
-            Delete(keys="image_id", mode="!test")
+            Delete(keys="image_id", mode="!test"),
+            Batch(batch_size=batch_size, pad_value=0)
         ],
-        pad_value=0,
         num_process=8 * num_device)
     init_lr = 1e-2 / 16 * batch_size
     model = fe.build(model_fn=SoloV2, optimizer_fn=lambda x: torch.optim.SGD(x, lr=init_lr, momentum=0.9))

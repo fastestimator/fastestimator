@@ -25,29 +25,29 @@ class TestTestEssential(unittest.TestCase):
         cls.data = Data({'loss': 10})
 
     def test_on_epoch_begin(self):
-        test_essential = TestEssential(monitor_names='loss')
+        test_essential = TestEssential(monitor_names={'loss'})
         test_essential.system = sample_system_object()
         test_essential.on_epoch_begin(data=self.data)
-        self.assertIsNone(test_essential.test_results)
+        self.assertEqual(len(test_essential.test_results), 0)
 
     def test_on_batch_end_test_results_not_none(self):
-        test_essential = TestEssential(monitor_names='loss')
+        test_essential = TestEssential(monitor_names={'loss'})
         test_essential.system = sample_system_object()
-        test_essential.test_results = {'loss': [95]}
+        test_essential.test_results['loss'][''].append(95)
         test_essential.on_batch_end(data=self.data)
-        self.assertEqual(test_essential.test_results['loss'], [95, 10])
+        self.assertEqual(test_essential.test_results['loss'][''], [95, 10])
 
     def test_on_batch_end_test_results_none(self):
         data = Data({'loss': 5})
-        test_essential = TestEssential(monitor_names='loss')
+        test_essential = TestEssential(monitor_names={'loss'})
         test_essential.system = sample_system_object()
         test_essential.on_batch_end(data=data)
-        self.assertEqual(test_essential.test_results['loss'], [5])
+        self.assertEqual(test_essential.test_results['loss'][''], [5])
 
     def test_on_epoch_end(self):
         data = Data({})
-        test_essential = TestEssential(monitor_names='loss')
+        test_essential = TestEssential(monitor_names={'loss'})
         test_essential.system = sample_system_object()
-        test_essential.test_results = {'loss': [10, 20]}
+        test_essential.test_results['loss'][''].extend([10, 20])
         test_essential.on_epoch_end(data=data)
         self.assertEqual(data['loss'], 15.0)

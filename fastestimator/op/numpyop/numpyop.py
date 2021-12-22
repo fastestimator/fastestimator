@@ -17,11 +17,12 @@ from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional
 import numpy as np
 import tensorflow as tf
 import torch
+from torch.utils.data.dataloader import default_collate
 
 from fastestimator.op.op import Op, get_inputs_by_op, write_outputs_by_op
 from fastestimator.util.data import FilteredData
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import to_number
+from fastestimator.util.util import to_number, pad_batch
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
@@ -70,13 +71,11 @@ class NumpyOp(Op):
         return data
 
     def forward_batch(self, data: Union[Tensor, List[Tensor]], state: Dict[str,
-                                                                           Any]) -> Union[np.ndarray, List[np.ndarray]]:
+                                                                           Any]) -> Union[Tensor, List[Tensor]]:
         """A method which will be invoked in order to transform a batch of data.
 
         This method will be invoked on batches of data during network postprocessing. Note that the inputs may be numpy
-        arrays or TF/Torch tensors. Outputs are expected to be Numpy arrays, though this is not enforced. Developers
-        should probably not need to override this implementation unless they are building an op specifically intended
-        for postprocessing.
+        arrays or TF/Torch tensors. Outputs should be of the same tensor type as the inputs (tf -> tf, torch -> torch).
 
         Args:
             data: The arrays from the data dictionary corresponding to whatever keys this Op declares as its `inputs`.
@@ -87,18 +86,86 @@ class NumpyOp(Op):
             dictionary based on whatever keys this Op declares as its `outputs`.
         """
         if isinstance(data, List):
+            stack_fn = default_collate if isinstance(data[0], torch.Tensor) else \
+                tf.convert_to_tensor if tf.is_tensor(data[0]) else np.array
             data = [to_number(elem) for elem in data]
             batch_size = data[0].shape[0]
             data = [[elem[i] for elem in data] for i in range(batch_size)]
         else:
+            stack_fn = default_collate if isinstance(data, torch.Tensor) else \
+                tf.convert_to_tensor if tf.is_tensor(data) else np.array
             data = to_number(data)
             data = [data[i] for i in range(data.shape[0])]
         results = [self.forward(elem, state) for elem in data]
+        # The pytorch default collate function is used to perform shared-memory stacking to speed multi-processing when
+        # the output target is a pytorch Tensor
         if self.out_list:
-            results = [np.array(col) for col in [[row[i] for row in results] for i in range(len(results[0]))]]
+            results = [stack_fn(col) for col in [[row[i] for row in results] for i in range(len(results[0]))]]
         else:
-            results = np.array(results)
+            results = stack_fn(results)
         return results
+
+
+@traceable()
+class Batch(NumpyOp):
+    """Convert data instances into a batch of data.
+
+    Only one instance of a Batch Op can be present for a given epoch/mode/ds_id combination. Any Ops after this one will
+    operate on batches of data rather than individual instances (using their batch_forward methods).
+
+    Args:
+        batch_size: The batch size to use. If set, this will override any value specified by the Pipeline, allowing
+            control of the batch size on a per-mode and per-ds_id level. Note that this value will be ignored when using
+            a BatchDataset (or any dataset which decides on its own batch configuration).
+        drop_last: Whether to drop the last batch if the last batch is incomplete. Note that setting this to True when
+            using a BatchDataset (or any dataset which decides on its own batch configuration) won't do anything.
+        pad_value: The padding value if batch padding is needed. None indicates that no padding is needed. Mutually
+            exclusive with `collate_fn`.
+        collate_fn: A function to merge a list of data elements into a batch of data. Mutually exclusive with
+            `pad_value`.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
+    """
+    def __init__(self,
+                 batch_size: Optional[int] = None,
+                 drop_last: bool = False,
+                 pad_value: Optional[Union[int, float]] = None,
+                 collate_fn: Optional[Callable[[List[Dict[str, Any]]], Dict[str, Any]]] = None,
+                 mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None) -> None:
+        super().__init__(mode=mode, ds_id=ds_id)
+        if batch_size is not None:
+            if not isinstance(batch_size, int):
+                raise ValueError(f"batch_size must be an integer, but got {type(batch_size)}")
+            if batch_size < 0:
+                raise ValueError("batch_size must be non-negative")
+        self.batch_size = batch_size
+        self.drop_last = drop_last
+        if pad_value is not None and collate_fn is not None:
+            raise ValueError("Provide either a pad_value or collate_fn, but not both")
+        self._pad_value = pad_value
+        self.collate_fn = collate_fn
+        if pad_value is not None:
+            self.collate_fn = self._pad_batch_collate
+        if self.collate_fn is None:
+            # Note that this might get ignored in favor of default_convert inside the FEDataLoader if it looks like the
+            # user really doesn't want stuff to be batched.
+            self.collate_fn = default_collate
+
+    def _pad_batch_collate(self, batch: List[MutableMapping[str, Any]]) -> Dict[str, Any]:
+        """A collate function which pads a batch of data.
+
+        Args:
+            batch: The data to be batched and collated.
+
+        Returns:
+            A padded and collated batch of data.
+        """
+        pad_batch(batch, self._pad_value)
+        return default_collate(batch)
 
 
 @traceable()
@@ -109,6 +176,9 @@ class Delete(NumpyOp):
 
     Args:
         keys: Existing key(s) to be deleted from the data dictionary.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
@@ -119,6 +189,9 @@ class Delete(NumpyOp):
         super().__init__(inputs=keys, mode=mode, ds_id=ds_id)
 
     def forward(self, data: Union[np.ndarray, List[np.ndarray]], state: Dict[str, Any]) -> None:
+        pass
+
+    def forward_batch(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> None:
         pass
 
 
@@ -156,6 +229,10 @@ class LambdaOp(NumpyOp):
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
         return self.fn(*data)
 
+    def forward_batch(self, data: Union[Tensor, List[Tensor]], state: Dict[str,
+                                                                           Any]) -> Union[np.ndarray, List[np.ndarray]]:
+        return self.forward(data, state)
+
 
 @traceable()
 class RemoveIf(NumpyOp):
@@ -192,6 +269,10 @@ class RemoveIf(NumpyOp):
         if self.filter_fn(*data):
             return FilteredData(replacement=self.replacement)
         return None
+
+    def forward_batch(self, data: Union[Tensor, List[Tensor]], state: Dict[str,
+                                                                           Any]) -> Optional[FilteredData]:
+        return self.forward(data, state)
 
 
 def forward_numpyop(ops: List[NumpyOp], data: MutableMapping[str, Any], state: Dict[str, Any],

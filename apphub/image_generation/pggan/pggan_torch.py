@@ -22,7 +22,7 @@ from torch.optim import Adam
 import fastestimator as fe
 from fastestimator.backend import feed_forward, get_gradient
 from fastestimator.dataset.data import nih_chestxray
-from fastestimator.op.numpyop import LambdaOp
+from fastestimator.op.numpyop import Batch, LambdaOp
 from fastestimator.op.numpyop.multivariate import Resize
 from fastestimator.op.numpyop.univariate import ChannelTranspose, Normalize, ReadImage
 from fastestimator.op.tensorop import TensorOp
@@ -433,7 +433,6 @@ def get_estimator(target_size=128,
     pipeline = fe.Pipeline(
         batch_size=batch_scheduler,
         train_data=dataset,
-        drop_last=True,
         ops=[
             ReadImage(inputs="x", outputs="x", color_flag='gray'),
             EpochScheduler(epoch_dict=resize_map),
@@ -441,7 +440,8 @@ def get_estimator(target_size=128,
             EpochScheduler(epoch_dict=resize_low_res_map2),
             Normalize(inputs=["x", "x_low_res"], outputs=["x", "x_low_res"], mean=1.0, std=1.0, max_pixel_value=127.5),
             ChannelTranspose(inputs=["x", "x_low_res"], outputs=["x", "x_low_res"]),
-            LambdaOp(fn=lambda: np.random.normal(size=[512]).astype('float32'), outputs="z")
+            LambdaOp(fn=lambda: np.random.normal(size=[512]).astype('float32'), outputs="z"),
+            Batch(drop_last=True)
         ])
     fade_in_alpha = torch.tensor(1.0)
     d_models = fe.build(

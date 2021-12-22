@@ -15,7 +15,7 @@
 import functools
 import random
 from abc import ABC
-from typing import Any, Optional, Callable, Sized, Dict, List, Union, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sized, Tuple, Union
 
 import numpy as np
 import torch
@@ -39,6 +39,8 @@ class FEDataLoader(DataLoader):
         dataset: The dataset to be drawn from. The dataset may optionally implement .fe_reset_ds(bool) and/or
             .fe_batch_indices(int) methods to modify the system's sampling behavior. See fe.dataset.BatchDataset for an
             example which uses both of these methods.
+        postprocess_fn: A function to run on a collated batch of data before returning it. This function can return a
+            FilteredData object in order to drop the given batch.
         batch_size: The batch size to use (or None if the dataset is already providing a batch).
         steps_per_epoch: How many steps to have per epoch. If None the loader will perform a single pass through the
             dataset (unless samples are filtered with replacement, in which case the dataset may be passed over multiple
@@ -55,11 +57,13 @@ class FEDataLoader(DataLoader):
             necessary until the specified number of steps has been completed in full.
     """
     _current_threads = []
+
     # The typing for 'dataset' should be an 'and' rather than 'or' but that feature is still under development:
     # https://github.com/python/typing/issues/213
 
     def __init__(self,
                  dataset: Union[Dataset, Sized],
+                 postprocess_fn: Optional[Callable[[Dict[str, Any]], Union[Dict[str, Any], FilteredData]]] = None,
                  batch_size: Optional[int] = 1,
                  steps_per_epoch: Optional[int] = None,
                  shuffle: bool = False,
@@ -96,13 +100,12 @@ class FEDataLoader(DataLoader):
                 to_yield -= to_yield % (batch_size or 1)
         self.fe_samples_to_yield = to_yield
         self.fe_drop_last = drop_last
-        if collate_fn is None:
-            if self.fe_batch_size is not None:
-                # We use the 'real' batch size here to ensure that batch datasets get collated as expected
-                collate_fn = default_collate
-            else:
-                collate_fn = default_convert
-        self.fe_collate_fn = collate_fn
+        self.fe_collate_fn = collate_fn or default_collate
+        if self.fe_batch_size in (0, None) and batch_size is None and self.fe_collate_fn == default_collate:
+            # The user did not provide a batch dataset nor a batch size, so default collate won't work. Have to try
+            # convert instead.
+            self.fe_collate_fn = default_convert
+        self.fe_postprocess_fn = postprocess_fn
 
         # We could disable pre-collating when num_workers=0, but this would lead to inconsistent batch ordering between
         # single- and multi-processing.
@@ -112,7 +115,7 @@ class FEDataLoader(DataLoader):
                          sampler=sampler,
                          num_workers=num_workers,
                          persistent_workers=False,
-                         collate_fn=functools.partial(_pre_collate, try_fn=collate_fn),
+                         collate_fn=functools.partial(_pre_collate, try_fn=collate_fn, postprocess_fn=postprocess_fn),
                          worker_init_fn=lambda _: np.random.seed(random.randint(0, 2 ** 32 - 1)))
 
     def shutdown(self) -> None:
@@ -148,19 +151,26 @@ class FEDataLoader(DataLoader):
             return _MPPreBatchIter(self)
 
 
-def _pre_collate(data: List[Union[FilteredData, Dict[str, Any]]], try_fn: Callable) -> \
+def _pre_collate(data: List[Union[FilteredData, Dict[str, Any]]],
+                 try_fn: Callable[[List[Union[FilteredData, Dict[str, Any]]]], Dict[str, Any]],
+                 postprocess_fn: Optional[Callable[[Dict[str, Any]], Union[Dict[str, Any], FilteredData]]]) -> \
         Tuple[bool, Union[Dict[str, Any], List[Union[FilteredData, Dict[str, Any]]]]]:
     """A function which will try to pre-collate the data ahead of time in order to accelerate 'happy path'
 
     Args:
-        data: An un-batched batch of data
-        try_fn: A collate function to attempt to use on the data
+        data: An un-batched batch of data.
+        try_fn: A collate function to attempt to use on the data.
+        postprocess_fn: A function to run on batches of data after collation.
 
     Returns:
         The collated data (if the `try_fn` succeeded), along with the original uncollated data.
     """
     try:
         collated = try_fn(data)
+        if postprocess_fn is not None:
+            collated = postprocess_fn(collated)
+            if isinstance(collated, FilteredData):
+                return False, [collated] * len(data)
         return True, collated
     except:
         # The presence of filtered data instances could break the possibly-user-specified collate function for any
@@ -179,6 +189,7 @@ class _BaseFELoaderIter(_BaseDataLoaderIter, ABC):
         self.fe_batch_size = loader.fe_batch_size
         self.fe_drop_last = loader.fe_drop_last
         self.fe_collate_fn = loader.fe_collate_fn
+        self.fe_postprocess_fn = loader.fe_postprocess_fn
         self.fe_samples_to_yield = loader.fe_samples_to_yield
         self.fe_samples_yielded = 0
         self.fe_extra_data = []
@@ -242,7 +253,16 @@ def _next_pre_batch(self: _BaseFELoaderIter) -> Dict[str, Tensor]:
     if not real_batch or (self.fe_drop_last and len(real_batch) < self.fe_batch_size):
         self.fe_extra_data.clear()  # Throw out any extra data
         raise StopIteration
-    return self.fe_collate_fn(real_batch)
+    # Collate the batch
+    collated = self.fe_collate_fn(real_batch)
+    # Apply any batch-level operations
+    if self.fe_postprocess_fn is not None:
+        collated = self.fe_postprocess_fn(collated)
+        if isinstance(collated, FilteredData):
+            if collated.replacement:
+                self.fe_samples_yielded -= len(real_batch)
+            return _next_pre_batch(self)
+    return collated
 
 
 def _next_post_batch(self: _BaseFELoaderIter) -> Dict[str, Tensor]:
@@ -267,9 +287,16 @@ def _next_post_batch(self: _BaseFELoaderIter) -> Dict[str, Tensor]:
                     self.fe_samples_yielded += 1
                 break
         else:
-            # The else block is reached iff the for loop never breaks
+            # The else block is reached iff the for loop never breaks (probably should never get here)
+            collated = self.fe_collate_fn(candidate_batch)
+            if self.fe_postprocess_fn is not None:
+                collated = self.fe_postprocess_fn(collated)
+                if isinstance(collated, FilteredData):
+                    if not collated.replacement:
+                        self.fe_samples_yielded += 1
+                    return _next_post_batch(self)
             self.fe_samples_yielded += 1
-            return self.fe_collate_fn(candidate_batch)
+            return collated
     raise StopIteration
 
 
