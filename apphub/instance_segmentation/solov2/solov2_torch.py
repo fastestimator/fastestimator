@@ -227,8 +227,8 @@ class Gt2Target(NumpyOp):
                  outputs,
                  mode=None,
                  im_size=1024,
-                 num_grids=[40, 36, 24, 16, 12],
-                 scale_ranges=[[1, 96], [48, 192], [96, 384], [192, 768], [384, 2048]],
+                 num_grids=(40, 36, 24, 16, 12),
+                 scale_ranges=((1, 96), (48, 192), (96, 384), (192, 768), (384, 2048)),
                  coord_sigma=0.05,
                  sampling_ratio=4.0):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
@@ -276,13 +276,15 @@ class Gt2Target(NumpyOp):
         gt_match = self.pad_match(gt_match)  #num_object x num_matches x [grid_idx, heihght_idx, width_idx, exist]
         return gt_match, masks, classes
 
-    def pad_match(self, gt_match):
+    @staticmethod
+    def pad_match(gt_match):
         max_num_matches = max([len(match) for match in gt_match])
         for match in gt_match:
             match.extend([(0, 0, 0, 0) for _ in range(max_num_matches - len(match))])
         return np.array(gt_match, dtype="int32")
 
-    def remove_empty_gt(self, masks, bboxes):
+    @staticmethod
+    def remove_empty_gt(masks, bboxes):
         num_objects = masks.shape[0]
         non_empty_mask = np.sum(masks.reshape(num_objects, -1), axis=1) > 0
         return masks[non_empty_mask], bboxes[non_empty_mask]
@@ -308,7 +310,8 @@ class PointsNMS(TensorOp):
         feat_cls_list = [self.points_nms(x) for x in data]
         return feat_cls_list
 
-    def points_nms(self, x):
+    @staticmethod
+    def points_nms(x):
         x_max_pool = nn.functional.max_pool2d(x, kernel_size=2, stride=1, padding=1)[..., :-1, :-1]
         x = torch.where(x == x_max_pool, x, torch.zeros_like(x))
         return x
@@ -339,7 +342,8 @@ class Solov2Loss(TensorOp):
         loss = self.dice_loss(seg_preds, mask_gt)
         return loss
 
-    def dice_loss(self, pred, gt):
+    @staticmethod
+    def dice_loss(pred, gt):
         pred = torch.sigmoid(pred)
         a = torch.sum(pred * gt)
         b = torch.sum(pred * pred) + 0.001
@@ -361,7 +365,8 @@ class Solov2Loss(TensorOp):
         cls_loss = self.focal_loss(feat_cls.permute(1, 2, 0).reshape(-1), feat_cls_gts.type(feat_cls.dtype).view(-1))
         return cls_loss, grid_object_map
 
-    def focal_loss(self, pred, gt, alpha=0.25, gamma=2.0):
+    @staticmethod
+    def focal_loss(pred, gt, alpha=0.25, gamma=2.0):
         anchor_obj_count = torch.count_nonzero(gt).type(pred.dtype)
         alpha_factor = torch.ones_like(gt) * alpha
         alpha_factor = torch.where(gt == 1, alpha_factor, 1 - alpha_factor)
@@ -393,7 +398,7 @@ class CombineLoss(TensorOp):
 
 
 class Predict(TensorOp):
-    def __init__(self, inputs, outputs, mode=None, score_threshold=0.1, strides=[8.0, 8.0, 16.0, 32.0, 32.0]):
+    def __init__(self, inputs, outputs, mode=None, score_threshold=0.1, strides=(8.0, 8.0, 16.0, 32.0, 32.0)):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.score_threshold = score_threshold
         self.strides = strides

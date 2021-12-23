@@ -170,8 +170,8 @@ class Gt2Target(NumpyOp):
                  inputs,
                  outputs,
                  mode=None,
-                 num_grids=[40, 36, 24, 16, 12],
-                 scale_ranges=[[1, 96], [48, 192], [96, 384], [192, 768], [384, 2048]],
+                 num_grids=(40, 36, 24, 16, 12),
+                 scale_ranges=((1, 96), (48, 192), (96, 384), (192, 768), (384, 2048)),
                  coord_sigma=0.05):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.num_grids = num_grids
@@ -215,13 +215,15 @@ class Gt2Target(NumpyOp):
         gt_match = self.pad_match(gt_match)  #num_object x num_matches x [grid_idx, heihght_idx, width_idx, exist]
         return gt_match, masks, classes
 
-    def pad_match(self, gt_match):
+    @staticmethod
+    def pad_match(gt_match):
         max_num_matches = max([len(match) for match in gt_match])
         for match in gt_match:
             match.extend([(0, 0, 0, 0) for _ in range(max_num_matches - len(match))])
         return np.array(gt_match, dtype="int32")
 
-    def remove_empty_gt(self, masks, bboxes):
+    @staticmethod
+    def remove_empty_gt(masks, bboxes):
         num_objects = masks.shape[0]
         non_empty_mask = np.sum(masks.reshape(num_objects, -1), axis=1) > 0
         return masks[non_empty_mask], bboxes[non_empty_mask]
@@ -266,7 +268,8 @@ class Solov2Loss(TensorOp):
         loss = self.dice_loss(seg_preds, mask_gt)
         return loss
 
-    def dice_loss(self, pred, gt):
+    @staticmethod
+    def dice_loss(pred, gt):
         pred = tf.sigmoid(pred)
         a = tf.reduce_sum(pred * gt)
         b = tf.reduce_sum(pred * pred) + 0.001
@@ -290,7 +293,8 @@ class Solov2Loss(TensorOp):
         cls_loss = self.focal_loss(feat_cls, feat_cls_gts)
         return cls_loss, grid_object_map
 
-    def focal_loss(self, pred, gt, alpha=0.25, gamma=2.0):
+    @staticmethod
+    def focal_loss(pred, gt, alpha=0.25, gamma=2.0):
         pred, gt = tf.reshape(pred, (-1, 1)), tf.reshape(gt, (-1, 1))
         anchor_obj_count = tf.cast(tf.math.count_nonzero(gt), pred.dtype)
         alpha_factor = tf.ones_like(gt) * alpha
@@ -323,14 +327,15 @@ class PointsNMS(TensorOp):
         feat_cls_list = [self.points_nms(x) for x in data]
         return feat_cls_list
 
-    def points_nms(self, x):
+    @staticmethod
+    def points_nms(x):
         x_max_pool = tf.nn.max_pool2d(x, ksize=2, strides=1, padding=[[0, 0], [1, 1], [1, 1], [0, 0]])[:, :-1, :-1, :]
         x = tf.where(tf.equal(x, x_max_pool), x, 0)
         return x
 
 
 class Predict(TensorOp):
-    def __init__(self, inputs, outputs, mode=None, score_threshold=0.1, segm_strides=[8.0, 8.0, 16.0, 32.0, 32.0]):
+    def __init__(self, inputs, outputs, mode=None, score_threshold=0.1, segm_strides=(8.0, 8.0, 16.0, 32.0, 32.0)):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.score_threshold = score_threshold
         self.segm_strides = segm_strides
@@ -372,7 +377,8 @@ class Predict(TensorOp):
         seg_preds, cate_scores, cate_labels = self.matrix_nms(seg_preds, seg_masks, cate_labels, cate_scores, mask_sum)
         return seg_preds, cate_scores, cate_labels
 
-    def matrix_nms(self, seg_preds, seg_masks, cate_labels, cate_scores, mask_sum, pre_nms_k=500, post_nms_k=100):
+    @staticmethod
+    def matrix_nms(seg_preds, seg_masks, cate_labels, cate_scores, mask_sum, pre_nms_k=500, post_nms_k=100):
         # first select top k category scores
         num_selected = tf.minimum(pre_nms_k, tf.shape(cate_scores)[0])
         indices = tf.argsort(cate_scores, direction='DESCENDING')[:num_selected]
