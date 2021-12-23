@@ -226,21 +226,16 @@ class Gt2Target(NumpyOp):
                  inputs,
                  outputs,
                  mode=None,
-                 im_size=1024,
                  num_grids=(40, 36, 24, 16, 12),
                  scale_ranges=((1, 96), (48, 192), (96, 384), (192, 768), (384, 2048)),
-                 coord_sigma=0.05,
-                 sampling_ratio=4.0):
+                 coord_sigma=0.05):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        self.im_size = im_size
         self.num_grids = num_grids
         self.scale_ranges = scale_ranges
         self.coord_sigma = coord_sigma
-        self.sampling_ratio = sampling_ratio
         missing_category = [66, 68, 69, 71, 12, 45, 83, 26, 29, 30]
         category = [x for x in range(1, 91) if not x in missing_category]
         self.mapping = {k: v for k, v in zip(category, list(range(80)))}
-        self.mask_size = int(im_size / sampling_ratio)
 
     def forward(self, data, state):
         masks, bboxes = data
@@ -572,7 +567,7 @@ def get_estimator(data_dir=None,
         train_data=train_ds,
         eval_data=val_ds,
         test_data=val_ds,
-        batch_size=num_device * batch_size_per_gpu,
+        batch_size=batch_size,
         ops=[
             ReadImage(inputs="image", outputs="image"),
             MergeMask(inputs="mask", outputs="mask"),

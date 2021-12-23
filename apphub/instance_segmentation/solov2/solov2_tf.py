@@ -499,7 +499,7 @@ def get_estimator(data_dir=None,
         train_data=train_ds,
         eval_data=val_ds,
         test_data=val_ds,
-        batch_size=num_device * batch_size_per_gpu,
+        batch_size=batch_size,
         ops=[
             ReadImage(inputs="image", outputs="image"),
             MergeMask(inputs="mask", outputs="mask"),
