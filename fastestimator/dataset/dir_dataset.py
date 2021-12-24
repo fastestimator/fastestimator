@@ -38,6 +38,7 @@ class DirDataset(InMemoryDataset):
                  recursive_search: bool = True) -> None:
         data = []
         root_dir = os.path.normpath(root_dir)
+        self.root_dir = root_dir
         if not os.path.isdir(root_dir):
             raise AssertionError("Provided path is not a directory")
         try:
