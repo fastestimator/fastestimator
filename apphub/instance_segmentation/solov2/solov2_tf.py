@@ -424,7 +424,7 @@ class COCOMaskmAP(Trace):
     def __init__(self, data_dir, inputs=None, outputs="mAP", mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         with Suppressor():
-            self.coco_gt = COCO(os.path.join(data_dir, "MSCOCO2017", "annotations", "instances_val2017.json"))
+            self.coco_gt = COCO(os.path.join(data_dir.replace('val2017', 'annotations'), "instances_val2017.json"))
         missing_category = [66, 68, 69, 71, 12, 45, 83, 26, 29, 30]
         category = [x for x in range(1, 91) if not x in missing_category]
         self.mapping = {k: v for k, v in zip(list(range(80)), category)}
@@ -559,7 +559,7 @@ def get_estimator(data_dir=None,
     }
     traces = [
         EpochScheduler(lr_schedule),
-        COCOMaskmAP(data_dir=data_dir,
+        COCOMaskmAP(data_dir=val_ds.root_dir,
                     inputs=("seg_preds", "cate_scores", "cate_labels", "image_id", "imsize"),
                     mode="test"),
         BestModelSaver(model=model, save_dir=model_dir, metric="total_loss")
