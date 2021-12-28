@@ -351,14 +351,20 @@ class Solov2Loss(TensorOp):
         match, cls_gt = match[cls_gt > 0], cls_gt[cls_gt > 0]  # remove the padded object
         feat_cls_gts_raw = torch.stack(
             [self.assign_cls_feat(match_single, cls_gt_single) for match_single, cls_gt_single in zip(match, cls_gt)])
-        # reduce the gt for all objects into single grid
-        # TODO: if there are multiple objects overlapping on same grid point, randomly choose one
-        feat_cls_gts, object_idx = torch.max(feat_cls_gts_raw, dim=0)
-        grid_object_map = torch.stack([feat_cls_gts, object_idx.type(feat_cls_gts.dtype)], dim=-1)
-        # classification loss
-        feat_cls_gts = nn.functional.one_hot(feat_cls_gts.long(), num_classes=self.num_class + 1)[..., 1:]
+        grid_object_map = self.reduce_to_single_grid(feat_cls_gts_raw)
+        feat_cls_gts = nn.functional.one_hot(grid_object_map[..., 0].long(), num_classes=self.num_class + 1)[..., 1:]
         cls_loss = self.focal_loss(feat_cls.permute(1, 2, 0).reshape(-1), feat_cls_gts.type(feat_cls.dtype).view(-1))
         return cls_loss, grid_object_map
+
+    def reduce_to_single_grid(self, feat_cls_gts_raw):
+        feat_cls_gts = torch.zeros(self.grid_dim, self.grid_dim, device=feat_cls_gts_raw.device)
+        object_idx = torch.zeros_like(feat_cls_gts)
+        for idx, classes in enumerate(feat_cls_gts_raw):
+            indexes = torch.where(classes > 0, float(idx), 0.0)
+            object_idx = object_idx + torch.where(feat_cls_gts == 0, indexes, torch.zeros_like(indexes))
+            feat_cls_gts = feat_cls_gts + torch.where(feat_cls_gts == 0, classes, torch.zeros_like(classes))
+        grid_object_map = torch.stack([feat_cls_gts, object_idx], dim=-1)
+        return grid_object_map
 
     @staticmethod
     def focal_loss(pred, gt, alpha=0.25, gamma=2.0):
@@ -554,8 +560,8 @@ class COCOMaskmAP(Trace):
 
 def get_estimator(data_dir=None,
                   epochs=12,
-                  batch_size_per_gpu=8,
-                  im_size=1024,
+                  batch_size_per_gpu=4,
+                  im_size=1344,
                   model_dir=tempfile.mkdtemp(),
                   train_steps_per_epoch=None,
                   eval_steps_per_epoch=None):
@@ -591,8 +597,7 @@ def get_estimator(data_dir=None,
         pad_value=0,
         num_process=8 * num_device)
     init_lr = 1e-2 / 16 * batch_size
-    model = fe.build(model_fn=SoloV2,
-                     optimizer_fn=lambda x: torch.optim.SGD(x, lr=init_lr, momentum=0.9, weight_decay=1e-4))
+    model = fe.build(model_fn=SoloV2, optimizer_fn=lambda x: torch.optim.SGD(x, lr=init_lr, momentum=0.9))
     network = fe.Network(ops=[
         NormalizePermute(inputs="image", outputs="image", mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         ModelOp(model=model, inputs="image", outputs=("feat_seg", "feat_cls_list", "feat_kernel_list")),
@@ -605,7 +610,7 @@ def get_estimator(data_dir=None,
         Solov2Loss(4, 12, inputs=("mask", "classes", "gt_match", "feat_seg", "cls5", "k5"), outputs=("l_c5", "l_s5")),
         CombineLoss(inputs=("l_c1", "l_s1", "l_c2", "l_s2", "l_c3", "l_s3", "l_c4", "l_s4", "l_c5", "l_s5"),
                     outputs=("total_loss", "cls_loss", "seg_loss")),
-        L2Regularizaton(inputs="total_loss", outputs="total_loss_l2", model=model, beta=1e-4, mode="train"),
+        L2Regularizaton(inputs="total_loss", outputs="total_loss_l2", model=model, beta=1e-5, mode="train"),
         UpdateOp(model=model, loss_name="total_loss_l2"),
         PointsNMS(inputs="feat_cls_list", outputs="feat_cls_list", mode="test"),
         Predict(inputs=("feat_seg", "feat_cls_list", "feat_kernel_list"),

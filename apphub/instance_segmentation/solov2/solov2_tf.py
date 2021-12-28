@@ -283,15 +283,22 @@ class Solov2Loss(TensorOp):
         feat_cls_gts_raw = tf.map_fn(fn=lambda x: self.assign_cls_feat(x[0], x[1]),
                                      elems=(match, cls_gt),
                                      fn_output_signature=tf.float32)
-        # reduce the gt for all objects into single grid
-        # TODO: if there are multiple objects overlapping on same grid point, randomly choose one
-        feat_cls_gts = tf.reduce_max(feat_cls_gts_raw, axis=0)
-        object_idx = tf.cast(tf.math.argmax(feat_cls_gts_raw, axis=0), feat_cls_gts.dtype)
-        grid_object_map = tf.stack([feat_cls_gts, object_idx], axis=-1)
-        # classification loss
-        feat_cls_gts = tf.one_hot(tf.cast(feat_cls_gts, tf.int32), depth=self.num_class + 1)[..., 1:]
+        grid_object_map = self.reduce_to_single_grid(feat_cls_gts_raw)
+        feat_cls_gts = tf.one_hot(tf.cast(grid_object_map[..., 0], tf.int32), depth=self.num_class + 1)[..., 1:]
         cls_loss = self.focal_loss(feat_cls, feat_cls_gts)
         return cls_loss, grid_object_map
+
+    def reduce_to_single_grid(self, feat_cls_gts_raw):
+        feat_cls_gts = tf.zeros((self.grid_dim, self.grid_dim), dtype=feat_cls_gts_raw.dtype)
+        object_idx = tf.zeros((self.grid_dim, self.grid_dim), dtype=feat_cls_gts_raw.dtype)
+        num_obj = tf.shape(feat_cls_gts_raw)[0]
+        for idx in range(num_obj):
+            classes = feat_cls_gts_raw[idx]
+            indexes = tf.cast(tf.where(classes > 0, idx, 0), classes.dtype)
+            object_idx = object_idx + tf.where(feat_cls_gts == 0, indexes, tf.zeros_like(indexes))
+            feat_cls_gts = feat_cls_gts + tf.where(feat_cls_gts == 0, classes, tf.zeros_like(classes))
+        grid_object_map = tf.stack([feat_cls_gts, object_idx], axis=-1)
+        return grid_object_map
 
     @staticmethod
     def focal_loss(pred, gt, alpha=0.25, gamma=2.0):
@@ -486,8 +493,8 @@ class COCOMaskmAP(Trace):
 
 def get_estimator(data_dir=None,
                   epochs=12,
-                  batch_size_per_gpu=8,
-                  im_size=1024,
+                  batch_size_per_gpu=4,
+                  im_size=1344,
                   model_dir=tempfile.mkdtemp(),
                   train_steps_per_epoch=None,
                   eval_steps_per_epoch=None):
@@ -537,7 +544,7 @@ def get_estimator(data_dir=None,
         Solov2Loss(4, 12, inputs=("mask", "classes", "gt_match", "feat_seg", "cls5", "k5"), outputs=("l_c5", "l_s5")),
         CombineLoss(inputs=("l_c1", "l_s1", "l_c2", "l_s2", "l_c3", "l_s3", "l_c4", "l_s4", "l_c5", "l_s5"),
                     outputs=("total_loss", "cls_loss", "seg_loss")),
-        L2Regularizaton(inputs="total_loss", outputs="total_loss_l2", model=model, beta=1e-4, mode="train"),
+        L2Regularizaton(inputs="total_loss", outputs="total_loss_l2", model=model, beta=1e-5, mode="train"),
         UpdateOp(model=model, loss_name="total_loss_l2"),
         PointsNMS(inputs="feat_cls_list", outputs="feat_cls_list", mode="test"),
         Predict(inputs=("feat_seg", "feat_cls_list", "feat_kernel_list"),
