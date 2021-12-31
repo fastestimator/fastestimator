@@ -100,6 +100,8 @@ TENSOR_TO_NP_DTYPE = {
 }
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+KT = TypeVar('KT')  # Key type.
+VT = TypeVar('VT')  # Value type.
 
 
 def parse_string_to_python(val: str) -> Any:
@@ -632,7 +634,7 @@ def is_number(arg: str) -> bool:
         return False
 
 
-class DefaultKeyDict(dict):
+class DefaultKeyDict(Dict[KT, VT]):
     """Like collections.defaultdict but it passes the key argument to the default function.
 
     This class is intentionally not @traceable.

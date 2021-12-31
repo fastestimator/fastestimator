@@ -162,13 +162,15 @@ class EpochScheduler(Scheduler[T]):
         }
 
 
-def get_signature_epochs(items: List[Any], total_epochs: int, mode: Optional[str] = None) -> List[int]:
+def get_signature_epochs(items: List[Any], total_epochs: int, mode: Optional[str] = None, ds_id: Optional[str] = None) \
+        -> List[int]:
     """Find all epochs of changes due to schedulers.
 
     Args:
         items: List of items to scan from.
         total_epochs: The maximum epoch number to consider when searching for signature epochs.
         mode: Current execution mode. If None, all execution modes will be considered.
+        ds_id: Current ds_id. If None, all ds_ids will be considered.
 
     Returns:
         The epoch numbers of changes.
@@ -176,7 +178,7 @@ def get_signature_epochs(items: List[Any], total_epochs: int, mode: Optional[str
     unique_configs = []
     signature_epochs = []
     for epoch in range(1, total_epochs + 1):
-        epoch_config = get_current_items(items, run_modes=mode, epoch=epoch)
+        epoch_config = get_current_items(items, run_modes=mode, epoch=epoch, ds_id=ds_id)
         if epoch_config not in unique_configs:
             unique_configs.append(epoch_config)
             signature_epochs.append(epoch)
@@ -194,7 +196,9 @@ def get_current_items(items: Iterable[Union[T, Scheduler[T]]],
         run_modes: The desired execution mode. One or more of "train", "eval", "test", or "infer". If None, items of
             all modes will be returned.
         epoch: The desired execution epoch. If None, items across all epochs will be returned.
-        ds_id: The desired execution dataset id. If None, items across all ds_ids will be returned.
+        ds_id: The desired execution dataset id. If None, items across all ds_ids will be returned. An empty string
+            indicates that positive matches should be excluded ('' != 'ds1'), but that negative matches are satisfied
+            ('' == '!ds1').
 
     Returns:
         The items which should be executed.
@@ -224,18 +228,21 @@ def get_current_items(items: Iterable[Union[T, Scheduler[T]]],
 
             # ds_id matching
             ds_id_match = False
-            if not ds_id:
+            if ds_id is None:
                 ds_id_match = True
             if not hasattr(item_, "ds_id"):
                 ds_id_match = True
             else:
+                # If the object has no requirements, then allow it
                 if not item_.ds_id:
                     ds_id_match = True
-                elif ds_id in item_.ds_id:
-                    ds_id_match = True  # whitelist check
+                # blacklist check (before whitelist due to desired empty string behavior)
                 # if any of ds_id starts with "!", then they will all start with "!"
                 elif any([x.startswith("!") for x in item_.ds_id]) and all([ds_id != x[1:] for x in item_.ds_id]):
-                    ds_id_match = True  # blacklist check
+                    ds_id_match = True  # Note that empty string will pass this check (unless target is literally "!")
+                # whitelist check
+                elif ds_id in item_.ds_id:
+                    ds_id_match = True  # Note that empty string will fail this check
             if item_ and mode_match and ds_id_match:
                 selected_items.append(item_)
     return selected_items

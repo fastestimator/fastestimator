@@ -96,7 +96,7 @@ class Pipeline:
         self.ctx_shuffle = True
         self.ctx_output_keys = None
         self.ctx_loader = None
-        self.ctx_ds_id = None
+        self.ctx_ds_id = ''
 
     @staticmethod
     def _register_ds_ids(
@@ -117,7 +117,8 @@ class Pipeline:
                         "dataset id should not contain forbidden characters like ':', ';', '!', '|', " + \
                         "found {} in pipeline".format(ds_name)
             else:
-                data[mode] = {None: dataset}
+                # Empty string is special, matches against ops which require '!ds1' but not 'ds1'
+                data[mode] = {"": dataset}
         return data
 
     def _verify_inputs(self, **kwargs) -> None:
@@ -345,15 +346,18 @@ class Pipeline:
                 break
         return epochs_with_data
 
-    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 1, ds_id: Union[None,
-                                                                                      str] = None) -> Dict[str, Any]:
+    def transform(self,
+                  data: Dict[str, Any],
+                  mode: str,
+                  epoch: int = 1,
+                  ds_id: str = '') -> Dict[str, Any]:
         """Apply all pipeline operations on a given data instance for the specified `mode` and `epoch`.
 
         Args:
             data: Input data in dictionary format.
             mode: The execution mode in which to run. This can be "train", "eval", "test" or "infer".
             epoch: The epoch index to run. Note that epoch indices are 1-indexed.
-            ds_id: The current dataset id. If None, ops with all ds_id will be considered.
+            ds_id: The current dataset id.
 
         Returns:
             The transformed data.
@@ -368,7 +372,7 @@ class Pipeline:
     def get_results(self,
                     mode: str = "train",
                     epoch: int = 1,
-                    ds_id: Optional[str] = None,
+                    ds_id: str = '',
                     num_steps: int = 1,
                     shuffle: bool = False) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
         """Get sample Pipeline outputs.
@@ -378,7 +382,7 @@ class Pipeline:
             epoch: The epoch index to run. Note that epoch indices are 1-indexed.
             num_steps: Number of steps (batches) to get.
             shuffle: Whether to use shuffling.
-            ds_id: The current dataset id. If None, ops with all ds_id will be considered.
+            ds_id: The current dataset id.
 
         Returns:
             A list of batches of Pipeline outputs.
@@ -399,7 +403,7 @@ class Pipeline:
     def __call__(self,
                  mode: str,
                  epoch: int = 1,
-                 ds_id: Optional[str] = None,
+                 ds_id: str = '',
                  shuffle: Optional[bool] = None,
                  output_keys: Optional[Set[str]] = None) -> 'Pipeline':
         """Prepare this Pipeline for a given `mode` and `epoch`.
@@ -460,6 +464,13 @@ class Pipeline:
         acquired = self.ctx_lock.acquire(blocking=False)
         if not acquired:
             raise ValueError("You cannot generate a new loader from this Pipeline before closing its other loader.")
+        # Release the lock if arguments are invalid so that people in Jupyter / debug consoles don't get stuck
+        if self.ctx_mode not in self.data:
+            self.ctx_lock.release()
+            raise KeyError(f"Pipeline has no data for mode '{self.ctx_mode}'")
+        if self.ctx_ds_id not in self.data[self.ctx_mode]:
+            self.ctx_lock.release()
+            raise KeyError(f"The dataset id '{self.ctx_ds_id}' is not present in {self.ctx_mode} mode")
         data = self.data[self.ctx_mode][self.ctx_ds_id]
         if isinstance(data, Scheduler):
             data = data.get_current_value(self.ctx_epoch)

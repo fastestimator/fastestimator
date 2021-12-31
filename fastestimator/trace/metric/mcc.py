@@ -82,7 +82,7 @@ class MCC(Trace):
         y_true, y_pred = to_number(data[self.true_key]), to_number(data[self.pred_key])
         if y_true.shape[-1] > 1 and y_true.ndim > 1:
             y_true = np.argmax(y_true, axis=-1)
-        if y_pred.shape[-1] > 1:
+        if y_pred.shape[-1] > 1 and y_pred.ndim > 1:
             y_pred = np.argmax(y_pred, axis=-1)
         else:
             y_pred = np.round(y_pred)

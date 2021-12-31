@@ -69,3 +69,16 @@ class Data(ChainMap[str, Any]):
             A dictionary of all of the keys and values to be logged.
         """
         return self.maps[0]
+
+
+class DSData(Data):
+    # noinspection PyMissingConstructor
+    def __init__(self, ds_id: str, data: Data):
+        self.maps = data.maps
+        self.ds_id = ds_id
+
+    def write_with_log(self, key: str, value: Any) -> None:
+        super().write_with_log(key=f'{key}|{self.ds_id}', value=value)
+
+    def write_without_log(self, key: str, value: Any) -> None:
+        super().write_without_log(key=f'{key}|{self.ds_id}', value=value)
