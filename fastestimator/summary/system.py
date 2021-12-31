@@ -57,7 +57,7 @@ class System:
 
     Attributes:
         mode: What is the current execution mode of the estimator ('train', 'eval', 'test'), None if warmup.
-        ds_id: The current dataset id, None if there is only one dataset in each mode.
+        ds_id: The current dataset id, Empty string if there is only one dataset in each mode.
         exp_id: A unique identifier for current training experiment.
         global_step: How many training steps have elapsed.
         num_devices: How many GPUs are available for training.
@@ -79,7 +79,7 @@ class System:
     """
 
     mode: Optional[str]
-    ds_id: Optional[str]
+    ds_id: str
     exp_id: int
     global_step: Optional[int]
     num_devices: int
@@ -102,7 +102,7 @@ class System:
                  pipeline: Pipeline,
                  traces: List[Union['Trace', Scheduler['Trace']]],
                  mode: Optional[str] = None,
-                 ds_id: Optional[str] = None,
+                 ds_id: str = '',
                  num_devices: int = torch.cuda.device_count(),
                  log_steps: Optional[int] = None,
                  total_epochs: int = 0,
@@ -169,7 +169,7 @@ class System:
         """
         self.experiment_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         self.mode = "train"
-        self.ds_id = None
+        self.ds_id = ''
         self._initialize_state()
         self.batch_idx = None
         self.stop_training = False
@@ -184,7 +184,7 @@ class System:
         """
         self.experiment_time = self.experiment_time or datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         self.mode = "test"
-        self.ds_id = None
+        self.ds_id = ''
         if not self.stop_training:
             self.epoch_idx = self.total_epochs
         self.stop_training = False
@@ -363,7 +363,7 @@ class System:
             elif hasattr(obj, '__dict__'):
                 obj.__dict__.update(state)
             elif isinstance(obj, dict):
-                [System._load_dict(states, k, obj) for k in states]
+                System._load_dict(states, key, obj)
             else:
                 # Might be a None or something else that can't be updated
                 pass

@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Union
 
 import numpy as np
 
-from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
+from fastestimator.op.numpyop.numpyop import Batch, NumpyOp, forward_numpyop
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_list
 
@@ -42,6 +42,8 @@ class Fuse(NumpyOp):
         mode = ops[0].mode
         ds_id = ops[0].ds_id
         for op in ops:
+            if isinstance(op, Batch):
+                raise ValueError("Cannot nest the Batch op inside of Fuse")
             if op.mode != mode:
                 raise ValueError(f"All Fuse ops must share the same mode, but got {mode} and {op.mode}")
             if op.ds_id != ds_id:

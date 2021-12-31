@@ -156,7 +156,8 @@ class HrefFEID(ContainerList):
                  name: str,
                  link_prefix: str = 'tbl',
                  id_in_name: bool = True,
-                 bold_name: bool = False):
+                 bold_name: bool = False,
+                 color: str = 'blue'):
         self.content_separator = ''
         self.packages.add(Package('hyperref', options='hidelinks'))
         self.packages.add(Package('ulem'))
@@ -164,7 +165,9 @@ class HrefFEID(ContainerList):
         self.fe_id = fe_id
         self.name = name
         data = [
-            NoEscape(r'\hyperref['), escape_latex(f"{link_prefix}:"), fe_id, NoEscape(r']{\textcolor{blue}{\uline{')
+            NoEscape(r'\hyperref['),
+            escape_latex(f"{link_prefix}:"), fe_id,
+            NoEscape(r']{\textcolor{' + color + r'}{\uline{')
         ]
         if id_in_name:
             data.append(fe_id)

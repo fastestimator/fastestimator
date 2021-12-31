@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import contextlib
+import functools
 import locale
 import os
 import platform
@@ -21,7 +22,7 @@ import shutil
 import sys
 import types
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, List, Set, Tuple, Union, Optional
+from typing import Any, Dict, List, Set, Tuple, Union, Optional
 from unittest.mock import Base, MagicMock
 
 import dot2tex as d2t
@@ -43,6 +44,7 @@ from torch.utils.data import Dataset
 import fastestimator as fe
 from fastestimator.dataset.dataset import FEDataset
 from fastestimator.network import BaseNetwork
+from fastestimator.op.numpyop.numpyop import Batch
 from fastestimator.op.numpyop.meta.fuse import Fuse
 from fastestimator.op.numpyop.meta.one_of import OneOf
 from fastestimator.op.numpyop.meta.repeat import Repeat
@@ -61,7 +63,8 @@ from fastestimator.trace.trace import Trace, sort_traces
 from fastestimator.util.data import Data
 from fastestimator.util.latex_util import AdjustBox, Center, ContainerList, HrefFEID, Verbatim
 from fastestimator.util.traceability_util import FeSummaryTable, traceable
-from fastestimator.util.util import FEID, LogSplicer, Suppressor, prettify_metric_name, to_list, NonContext
+from fastestimator.util.util import FEID, LogSplicer, Suppressor, prettify_metric_name, to_list, NonContext, \
+    DefaultKeyDict
 
 
 @traceable()
@@ -245,7 +248,7 @@ class Traceability(Trace):
                                                   label=Label(Marker(name=f"{mode}{epoch}", prefix="ssubsec")))):
                                 ds_ids = self.system.pipeline.get_ds_ids(epoch=epoch, mode=mode)
                                 for ds_id in ds_ids:
-                                    with NonContext() if ds_id is None else self.doc.create(
+                                    with NonContext() if ds_id == '' else self.doc.create(
                                             Paragraph(f"Dataset {ds_id}",
                                                       label=Label(Marker(name=f"{mode}{epoch}{ds_id}",
                                                                          prefix="para")))):
@@ -513,7 +516,7 @@ class Traceability(Trace):
                                         color='black!5' if color else 'white')
                         color = not color
 
-    def _draw_diagram(self, mode: str, epoch: int, ds_id: Optional[str]) -> pydot.Dot:
+    def _draw_diagram(self, mode: str, epoch: int, ds_id: str) -> pydot.Dot:
         """Draw a summary diagram of the FastEstimator Ops / Traces.
 
         Args:
@@ -540,7 +543,7 @@ class Traceability(Trace):
 
         # Make the dataset the first of the pipeline ops
         pipe_ops.insert(0, ds)
-        label_last_seen = defaultdict(lambda: str(id(ds)))  # Where was this key last generated
+        label_last_seen = DefaultKeyDict(lambda k: str(id(ds)))  # Where was this key last generated
 
         batch_size = ""
         if isinstance(ds, Dataset):
@@ -562,7 +565,7 @@ class Traceability(Trace):
     def _draw_subgraph(self,
                        progenitor: pydot.Dot,
                        diagram: Union[pydot.Dot, pydot.Cluster],
-                       label_last_seen: DefaultDict[str, str],
+                       label_last_seen: DefaultKeyDict[str, str],
                        subgraph_name: str,
                        subgraph_ops: List[Union[Op, Trace, Any]],
                        ds_id: Optional[str]) -> None:
@@ -591,7 +594,7 @@ class Traceability(Trace):
                   progenitor: pydot.Dot,
                   diagram: Union[pydot.Dot, pydot.Cluster],
                   op: Union[Op, Trace, Any],
-                  label_last_seen: DefaultDict[str, str],
+                  label_last_seen: DefaultKeyDict[str, str],
                   ds_id: Optional[str],
                   edges: bool = True) -> None:
         """Draw a node onto a diagram based on a given op.
@@ -660,13 +663,44 @@ class Traceability(Trace):
                                      text=NoEscape(r'\textcolor{blue}{') + bold(op.model.model_name) +
                                      NoEscape('}')).dumps()
                 texlbl = f"{HrefFEID(FEID(id(op)), name=op.__class__.__name__).dumps()}: {model_ref}"
+            elif isinstance(op, Batch):
+                label = f"{op.__class__.__name__} ({FEID(id(op))})"
+                texlbl = HrefFEID(FEID(id(op)), name=op.__class__.__name__, color='purple').dumps()
+                if op.batch_size is not None:
+                    diagram.set_label(f"Pipeline (Batch Size: {op.batch_size})")
+                label_last_seen.factory = functools.partial(self._delayed_edge,
+                                                            progenitor=progenitor,
+                                                            old_source=label_last_seen.factory(''),
+                                                            new_source=str(id(op)))
             else:
                 label = f"{op.__class__.__name__} ({FEID(id(op))})"
                 texlbl = HrefFEID(FEID(id(op)), name=op.__class__.__name__).dumps()
             diagram.add_node(pydot.Node(node_id, label=label, texlbl=texlbl))
             if isinstance(op, (Op, Trace)) and edges:
-                # Need the instance check since subgraph_ops might contain a tf dataset or torch dataloader
+                # Need the instance check since subgraph_ops might contain a tf dataset or torch data loader
                 self._add_edge(progenitor, op, label_last_seen, ds_id)
+
+    @staticmethod
+    def _delayed_edge(key: str, progenitor: pydot.Dot, old_source: str, new_source: str) -> str:
+        """Draw a specific edge between two nodes, modifying the old label if applicable.
+
+        Args:
+            key: The key associated with the edge.
+            progenitor: The parent cluster.
+            old_source: The edge source.
+            new_source: The edge sync.
+
+        Returns:
+            The `new_source`.
+        """
+        edge = progenitor.get_edge(old_source, new_source)
+        if edge:
+            edge = edge[0]
+            label = f"{edge.get_label()}, {key}"
+            edge.set_label(label)
+        else:
+            progenitor.add_edge(pydot.Edge(src=old_source, dst=new_source, label=f" {key}"))
+        return new_source
 
     def _add_edge(self,
                   progenitor: pydot.Dot,
@@ -684,7 +718,7 @@ class Traceability(Trace):
         node_id = str(id(op))
         edge_srcs = defaultdict(lambda: [])
         global_ds_ids = {key for vals in self.system.pipeline.data.values() for key in vals.keys() if key is not None}
-        for inp in op.inputs:
+        for inp in label_last_seen.keys() if isinstance(op, Batch) else op.inputs:
             if inp == '*':
                 continue
             _, candidate_id, *_ = f"{inp}|".split('|')
@@ -694,7 +728,7 @@ class Traceability(Trace):
         for src, labels in edge_srcs.items():
             progenitor.add_edge(pydot.Edge(src=src, dst=node_id, label=f" {', '.join(labels)} "))
         outputs = op.get_outputs(ds_ids=ds_id) if isinstance(op, Trace) else op.outputs
-        for out in outputs:
+        for out in label_last_seen.keys() if isinstance(op, Batch) else outputs:
             label_last_seen[out] = node_id
 
     @staticmethod

@@ -12,29 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import functools
 import gc
 import multiprocessing as mp
 import os
 import time
 from copy import deepcopy
+from operator import mul
 from threading import Lock
-from typing import Any, Callable, Dict, List, MutableMapping, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
 from torch.utils.data import DataLoader, Dataset
-from torch.utils.data.dataloader import default_collate
 
+from fastestimator.backend.to_tensor import to_tensor
 from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.dataloader import FEDataLoader
-from fastestimator.dataset.op_dataset import OpDataset
+from fastestimator.dataset.op_dataset import OpDataset, _DelayedDeepDict
 from fastestimator.op.numpyop.meta.one_of import OneOf
 from fastestimator.op.numpyop.meta.sometimes import Sometimes
-from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
-from fastestimator.schedule.schedule import Scheduler, get_current_items
+from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop, Batch
+from fastestimator.schedule.schedule import Scheduler, get_current_items, EpochScheduler, \
+    RepeatScheduler
 from fastestimator.util.data import FilteredData
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import get_num_devices, pad_batch, to_list, to_set
+from fastestimator.util.util import get_num_devices, to_list, to_set
 
 DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
 
@@ -47,17 +50,14 @@ class Pipeline:
         train_data: The training data, or None if no training data is available.
         eval_data: The evaluation data, or None if no evaluation data is available.
         test_data: The testing data, or None if no evaluation data is available.
-        batch_size: The batch size to be used by the pipeline. NOTE: This argument is only applicable when using a
-            FastEstimator Dataset.
+        batch_size: The batch size to be used by the pipeline. If the batch_size is also set by a Batch Op, that value
+            will take precedence over this one (for example, if you want to set the batch_size based on mode or ds_is).
+            NOTE: This argument is only applicable when using a FastEstimator Dataset.
         ops: NumpyOps to be used for pre-processing. NOTE: This argument is only applicable when using a FastEstimator
             Dataset.
         num_process: Number of CPU threads to use for data pre-processing. NOTE: This argument is only applicable when
             using a FastEstimator Dataset. None will default to min(n_cpus, max(32, 32*n_gpus)). Multiprocessing can be
             disabled by passing 0 here, which can be useful for debugging.
-        drop_last: Whether to drop the last batch if the last batch is incomplete.
-        pad_value: The padding value if batch padding is needed. None indicates that no padding is needed. NOTE: This
-            argument is only applicable when using a FastEstimator Dataset.
-        collate_fn: Function to merge data into one batch with input being list of elements.
     """
     ops: List[Union[NumpyOp, Scheduler[NumpyOp]]]
     data: Dict[str, Dict[Optional[str], Union[DataSource, Scheduler[DataSource]]]]  # {"mode": {"ds_id": ds}}
@@ -69,12 +69,9 @@ class Pipeline:
                                    Dict[str, Union[DataSource, Scheduler[DataSource]]]] = None,
                  eval_data: Union[None, DataSource, Scheduler[DataSource], Dict[str, DataSource]] = None,
                  test_data: Union[None, DataSource, Scheduler[DataSource], Dict[str, DataSource]] = None,
-                 batch_size: Union[None, int, Scheduler[Union[int, Dict[str, int]]], Dict[str, int]] = None,
+                 batch_size: Union[None, int, Scheduler[int]] = None,
                  ops: Union[None, NumpyOp, Scheduler[NumpyOp], List[Union[NumpyOp, Scheduler[NumpyOp]]]] = None,
-                 num_process: Optional[int] = None,
-                 drop_last: bool = False,
-                 pad_value: Optional[Union[int, float]] = None,
-                 collate_fn: Optional[Callable] = None):
+                 num_process: Optional[int] = None):
         data = {x: y for (x, y) in zip(["train", "eval", "test"], [train_data, eval_data, test_data]) if y}
         self.data = self._register_ds_ids(data)
         self.batch_size = batch_size
@@ -85,9 +82,6 @@ class Pipeline:
             print("FastEstimator-Warn: Pipeline multiprocessing is disabled. OS must support the 'fork' start method.")
             num_process = 0
         self.num_process = num_process if num_process is not None else min(os.cpu_count(), 32 * get_num_devices())
-        self.drop_last = drop_last
-        self.pad_value = pad_value
-        self.collate_fn = collate_fn
         self._verify_inputs(**{k: v for k, v in locals().items() if k != 'self'})
         # Loader Variables
         self.ctx_lock = Lock()
@@ -97,6 +91,11 @@ class Pipeline:
         self.ctx_output_keys = None
         self.ctx_loader = None
         self.ctx_ds_id = None
+        self.ctx_batch_size = None
+        self.ctx_ops = []
+        self.ctx_batch_info = Batch()
+        self.ctx_batch_ops = []
+        self.ctx_batch_input_keys = set()
 
     @staticmethod
     def _register_ds_ids(
@@ -118,7 +117,8 @@ class Pipeline:
                         "dataset id should not contain forbidden characters like ':', ';', '!', '|', " + \
                         "found {} in pipeline".format(ds_name)
             else:
-                data[mode] = {None: dataset}
+                # Empty string is special, matches against ops which require '!ds1' but not 'ds1'
+                data[mode] = {"": dataset}
         return data
 
     def _verify_inputs(self, **kwargs) -> None:
@@ -138,6 +138,40 @@ class Pipeline:
             assert kwargs['batch_size'] is None, "Pipeline only supports batch_size with built-in (FE) datasets"
             assert kwargs['ops'] is None, "Pipeline only supports ops with built-in (FE) datasets"
             assert kwargs['num_process'] is None, "Pipeline only support num_process with built-in (FE) datasets"
+        # Make sure that the user provides at most 1 Batch Op for a given epoch/mode/ds_id
+        batch_ops = []
+        schedule_epochs = {1}
+        schedule_cycles = set()
+        for op in self.ops:
+            if isinstance(op, Batch):
+                batch_ops.append(op)
+            if isinstance(op, Scheduler):
+                # Only keep the scheduler if it contains at least one Batch op
+                vals = op.get_all_values()
+                for val in vals:
+                    if isinstance(val, Batch):
+                        batch_ops.append(op)
+                        if isinstance(op, EpochScheduler):
+                            schedule_epochs |= op.epoch_dict.keys()
+                        elif isinstance(op, RepeatScheduler):
+                            schedule_cycles.add(op.cycle_length)
+                        else:
+                            # Some unknown scheduler, no known shortcuts so just try first 100 epochs to be safe
+                            schedule_epochs |= {*range(1, 100)}
+                        break
+        # After m*n steps all possible m and n combinations will be visited
+        schedule_cycles = functools.reduce(mul, schedule_cycles, 1)
+        # Consider x + m*n epochs for each epoch scheduler x value
+        schedule_epochs = sorted({epoch for base_epoch in schedule_epochs for epoch in
+                                  list(range(base_epoch, base_epoch + schedule_cycles))})
+        for mode, id_ds in self.data.items():
+            for ds_id in id_ds.keys():
+                for epoch in schedule_epochs:
+                    ops = get_current_items(batch_ops, run_modes=mode, epoch=epoch, ds_id=ds_id)
+                    # We have to do an instance check again since the user could technically use a scheduler that has a
+                    # Batch Op at one point, but some other Op (or None) at a different point
+                    ops = [op for op in ops if isinstance(op, Batch)]
+                    assert len(ops) < 2, "You may provide at most 1 batch op for a given epoch/mode/ds_id combination"
 
     def _verify_dataset(self, dataset: DataSource, **kwargs) -> bool:
         """A helper function to ensure that all of a dataset's arguments are correct.
@@ -156,12 +190,7 @@ class Pipeline:
         if isinstance(dataset, Dataset):
             # batch_size check
             for batch_size in get_current_items(to_list(self.batch_size)):
-                assert isinstance(batch_size, (int, dict)), "unsupported batch_size format: {}".format(type(batch_size))
-                if isinstance(batch_size, dict):
-                    assert all([key in {"train", "eval", "test", "infer"} for key in batch_size.keys()]), \
-                        "batch size dictionaries must be keyed on mode"
-                    assert all([isinstance(val, int) for val in batch_size.values()]), \
-                        "batch size dictionary values must be integers"
+                assert isinstance(batch_size, int), "unsupported batch_size format: {}".format(type(batch_size))
             # ops check
             for op in get_current_items(self.ops):
                 assert isinstance(op, NumpyOp), "unsupported op format, must provide NumpyOp in Pipeline"
@@ -178,6 +207,30 @@ class Pipeline:
             return False
         else:
             raise ValueError("Unsupported dataset type: {}".format(type(dataset)))
+
+    def _get_op_split(self, mode: str, epoch: int, ds_id: str) -> Tuple[List[NumpyOp], Batch, List[NumpyOp]]:
+        """Figure out which ops are pre-batch vs post-batch.
+
+        Args:
+            mode: The current mode.
+            epoch: The current epoch.
+            ds_id: The current dataset.
+
+        Returns:
+            (instance ops, batch info, batch ops).
+        """
+        batch_info = Batch()
+        instance_ops = []
+        batch_ops = []
+        ops = get_current_items(self.ops, run_modes=mode, epoch=epoch, ds_id=ds_id)
+        target = instance_ops
+        for op in ops:
+            if isinstance(op, Batch):
+                batch_info = op
+                target = batch_ops
+                continue
+            target.append(op)
+        return instance_ops, batch_info, batch_ops
 
     def get_modes(self, epoch: Optional[int] = None) -> Set[str]:
         """Get the modes for which the Pipeline has data.
@@ -351,32 +404,40 @@ class Pipeline:
                 break
         return epochs_with_data
 
-    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 1, ds_id: Union[None, str] = None) -> \
-            Union[Dict[str, Any], FilteredData]:
+    def transform(self,
+                  data: Dict[str, Any],
+                  mode: str,
+                  epoch: int = 1,
+                  ds_id: str = '',
+                  target_type: str = 'np') -> Union[Dict[str, Any], FilteredData]:
         """Apply all pipeline operations on a given data instance for the specified `mode` and `epoch`.
 
         Args:
             data: Input data in dictionary format.
             mode: The execution mode in which to run. This can be "train", "eval", "test" or "infer".
             epoch: The epoch index to run. Note that epoch indices are 1-indexed.
-            ds_id: The current dataset id. If None, ops with all ds_id will be considered.
+            ds_id: The current dataset id.
+            target_type: What kind of tensor(s) to create. One of "tf", "torch", or "np".
 
         Returns:
             The transformed data.
         """
         data = deepcopy(data)
-        ops = get_current_items(self.ops, mode, epoch, ds_id=ds_id)
-        op_data = forward_numpyop(ops, data, {'mode': mode})
+        instance_ops, batch_spec, batch_ops = self._get_op_split(mode=mode, epoch=epoch, ds_id=ds_id)
+        state = {'mode': mode}
+        op_data = forward_numpyop(instance_ops, data, state)
         if isinstance(op_data, FilteredData):
             return op_data
-        for key, value in data.items():
-            data[key] = np.expand_dims(value, 0)
-        return data
+        data = batch_spec.collate_fn([data])
+        op_data = forward_numpyop(batch_ops, data, state, batched=True)
+        if isinstance(op_data, FilteredData):
+            return op_data
+        return to_tensor(data, target_type=target_type)
 
     def get_results(self,
                     mode: str = "train",
                     epoch: int = 1,
-                    ds_id: Optional[str] = None,
+                    ds_id: str = '',
                     num_steps: int = 1,
                     shuffle: bool = False) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
         """Get sample Pipeline outputs.
@@ -386,7 +447,7 @@ class Pipeline:
             epoch: The epoch index to run. Note that epoch indices are 1-indexed.
             num_steps: Number of steps (batches) to get.
             shuffle: Whether to use shuffling.
-            ds_id: The current dataset id. If None, ops with all ds_id will be considered.
+            ds_id: The current dataset id.
 
         Returns:
             A list of batches of Pipeline outputs.
@@ -407,7 +468,7 @@ class Pipeline:
     def __call__(self,
                  mode: str,
                  epoch: int = 1,
-                 ds_id: Optional[str] = None,
+                 ds_id: str = '',
                  shuffle: Optional[bool] = None,
                  steps_per_epoch: Optional[int] = None,
                  output_keys: Optional[Set[str]] = None) -> 'Pipeline':
@@ -428,9 +489,9 @@ class Pipeline:
             ds_id: The dataset id to consider for the loader.
             shuffle: Whether to shuffle the data. If None, the value for shuffle is based on mode. NOTE: This argument
                 is only used with FastEstimator Datasets.
-            steps_per_epoch: Training or Evaluation will be cut short or extended to complete N steps even if loader is not yet
-                exhausted. If None, all data will be used.
-            output_keys: What keys can be produced from pipeline. If None, all keys will be considered.
+            steps_per_epoch: Training or Evaluation will be cut short or extended to complete N steps even if loader is
+                not yet exhausted. If None, all data will be used.
+            output_keys: What keys can be produced from pipeline. If None or empty, all keys will be considered.
 
         Returns:
             The pipeline, but with `mode` and `epoch` set for use in a loader.
@@ -447,7 +508,22 @@ class Pipeline:
         self.ctx_ds_id = ds_id
         self.ctx_shuffle = mode == 'train' if shuffle is None else shuffle
         self.ctx_steps_per_epoch = steps_per_epoch
-        self.ctx_output_keys = output_keys
+        self.ctx_output_keys = output_keys or set()
+        self.ctx_ops, self.ctx_batch_info, self.ctx_batch_ops = self._get_op_split(mode=mode, epoch=epoch, ds_id=ds_id)
+        # Figure out which input keys are required by the batch ops (so they don't get pruned too early)
+        self.ctx_batch_input_keys = set()
+        batch_produced_keys = set()
+        for op in get_current_items(self.ctx_batch_ops, mode, epoch, ds_id=ds_id):
+            self.ctx_batch_input_keys.update(set(key for key in op.inputs if key not in batch_produced_keys))
+            batch_produced_keys.update(op.outputs)
+        # Decide on the batch size (this might still be ignored later if the user is using a BatchDataset)
+        self.ctx_batch_size = self.ctx_batch_info.batch_size
+        if self.ctx_batch_size is None:
+            # batch size
+            batch_size = self.batch_size
+            if isinstance(batch_size, Scheduler):
+                batch_size = batch_size.get_current_value(self.ctx_epoch)
+            self.ctx_batch_size = batch_size
         self.ctx_lock.release()
         return self
 
@@ -483,31 +559,33 @@ class Pipeline:
         if isinstance(data, Scheduler):
             data = data.get_current_value(self.ctx_epoch)
         if isinstance(data, Dataset):
-            # batch size
-            batch_size = self.batch_size
-            if isinstance(batch_size, Scheduler):
-                batch_size = batch_size.get_current_value(self.ctx_epoch)
-            if isinstance(batch_size, dict):
-                batch_size = batch_size[self.ctx_mode]
+            # Results will be immediately converted to tensors, so don't need deep_remainder
             op_dataset = OpDataset(data,
-                                   get_current_items(self.ops, self.ctx_mode, self.ctx_epoch, self.ctx_ds_id),
+                                   self.ctx_ops,
                                    self.ctx_mode,
-                                   self.ctx_output_keys,
+                                   self.ctx_output_keys | self.ctx_batch_input_keys,
                                    deep_remainder=False)
             # check whether to batch the data
-            batch_size = None if op_dataset.fe_batch else batch_size
-            # collate_fn
-            collate_fn = self.collate_fn
-            if collate_fn is None and self.pad_value is not None:
-                collate_fn = self._pad_batch_collate
-            # Results will be immediately converted to tensors, so don't need deep_remainder
-            data = FEDataLoader(op_dataset,
-                                batch_size=batch_size,
-                                shuffle=self.ctx_shuffle,
-                                steps_per_epoch=self.ctx_steps_per_epoch,
-                                num_workers=self.num_process,
-                                drop_last=False if batch_size is None else self.drop_last,
-                                collate_fn=collate_fn)
+            batch_size = None if op_dataset.fe_batch else self.ctx_batch_size
+            # Figure out whether a postprocessing function is needed (for batched ops)
+            postprocess_fn = None
+            if self.ctx_batch_ops:
+                postprocess_fn = functools.partial(_batch_postprocess,
+                                                   ops=self.ctx_batch_ops,
+                                                   output_keys=self.ctx_output_keys,
+                                                   mode=self.ctx_mode)
+            try:
+                data = FEDataLoader(op_dataset,
+                                    postprocess_fn=postprocess_fn,
+                                    batch_size=batch_size,
+                                    shuffle=self.ctx_shuffle,
+                                    steps_per_epoch=self.ctx_steps_per_epoch,
+                                    num_workers=self.num_process,
+                                    drop_last=self.ctx_batch_info.drop_last,
+                                    collate_fn=self.ctx_batch_info.collate_fn)
+            except ValueError as err:
+                self.ctx_lock.release()
+                raise err
             self.ctx_loader = data
         return data
 
@@ -520,14 +598,17 @@ class Pipeline:
         gc.collect()
         self.ctx_lock.release()
 
-    def _pad_batch_collate(self, batch: List[MutableMapping[str, Any]]) -> Dict[str, Any]:
-        """A collate function which pads a batch of data.
 
-        Args:
-            batch: The data to be batched and collated.
-
-        Returns:
-            A padded and collated batch of data.
-        """
-        pad_batch(batch, self.pad_value)
-        return default_collate(batch)
+def _batch_postprocess(data: Dict[str, Any], ops: List[NumpyOp], output_keys: Set[str], mode: str) -> \
+        Union[Dict[str, Any], FilteredData]:
+    op_data = forward_numpyop(ops=ops, data=data, state={'mode': mode}, batched=True)
+    if isinstance(op_data, FilteredData):
+        return op_data
+    if output_keys:
+        for key in data.keys() - output_keys:
+            if key not in _DelayedDeepDict.warned:
+                _DelayedDeepDict.warned.add(key)
+                print("FastEstimator-Warn: the key '{}' is being pruned since it is unused outside of the Pipeline."
+                      " To prevent this, you can declare the key as an input of a Trace or TensorOp.".format(key))
+            data.pop(key)
+    return data

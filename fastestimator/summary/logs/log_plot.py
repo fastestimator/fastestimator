@@ -212,7 +212,7 @@ def plot_logs(experiments: List[Summary],
     include_keys = to_set(include_metrics)
     # TODO: epoch should be indicated on the axis (top x axis?). Problem - different epochs per experiment.
     # TODO: figure out how ignore_metrics should interact with mode
-
+    # TODO: when ds_id switches during training, prevent old id from connecting with new one (break every epoch?)
     ds_ids = set()
     metric_histories = defaultdict(_MetricGroup)  # metric: MetricGroup
     for idx, experiment in enumerate(experiments):

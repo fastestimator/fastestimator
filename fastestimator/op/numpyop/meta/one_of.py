@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Union
 
 import numpy as np
 
-from fastestimator.op.numpyop.numpyop import NumpyOp
+from fastestimator.op.numpyop.numpyop import Batch, NumpyOp
 from fastestimator.util.traceability_util import traceable
 
 
@@ -38,6 +38,7 @@ class OneOf(NumpyOp):
         self.in_list = numpy_ops[0].in_list
         self.out_list = numpy_ops[0].out_list
         for op in numpy_ops[1:]:
+            assert not isinstance(op, Batch), "Cannot nest the Batch op inside OneOf"
             assert inputs == op.inputs, "All ops within a OneOf must share the same inputs"
             assert self.in_list == op.in_list, "All ops within OneOf must share the same input configuration"
             assert outputs == op.outputs, "All ops within a OneOf must share the same outputs"

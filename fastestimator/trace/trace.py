@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import time
-from collections import deque
+from collections import deque, defaultdict
 from typing import Iterable, List, Set, Union
 
 import numpy as np
@@ -22,7 +22,7 @@ from natsort import humansorted
 from fastestimator.backend.get_lr import get_lr
 from fastestimator.summary.summary import ValWithError
 from fastestimator.summary.system import System
-from fastestimator.util.data import Data
+from fastestimator.util.data import Data, DSData
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import check_ds_id, check_io_names, parse_modes, to_list, to_number, to_set
 
@@ -180,6 +180,8 @@ class TrainEssential(Trace):
     def on_batch_end(self, data: Data) -> None:
         if self.system.log_steps and (self.system.global_step % self.system.log_steps == 0
                                       or self.system.global_step == 1):
+            if self.system.ds_id != '':
+                data = DSData(self.system.ds_id, data)
             for key in self.inputs:
                 if key in data:
                     data.write_with_log(key, data[key])
@@ -213,22 +215,23 @@ class EvalEssential(Trace):
     """
     def __init__(self, monitor_names: Set[str]) -> None:
         super().__init__(mode="eval", inputs=monitor_names)
-        self.eval_results = None
+        self.eval_results = defaultdict(lambda: defaultdict(list))
 
     def on_epoch_begin(self, data: Data) -> None:
-        self.eval_results = None
+        self.eval_results = defaultdict(lambda: defaultdict(list))
 
     def on_batch_end(self, data: Data) -> None:
-        if self.eval_results is None:
-            self.eval_results = {key: [data[key]] for key in self.inputs if key in data}
-        else:
-            for key in self.inputs:
-                if key in data:
-                    self.eval_results[key].append(data[key])
+        for key in self.inputs:
+            if key in data:
+                self.eval_results[key][self.system.ds_id].append(data[key])
 
     def on_epoch_end(self, data: Data) -> None:
-        for key, value_list in self.eval_results.items():
-            data.write_with_log(key, np.mean(np.array(value_list), axis=0))
+        for key, ds_vals in self.eval_results.items():
+            for ds_id, vals in ds_vals.items():
+                if ds_id != '':
+                    d = DSData(ds_id, data)
+                    d.write_with_log(key, np.mean(np.array(vals), axis=0))
+            data.write_with_log(key, np.mean(np.array([e for x in ds_vals.values() for e in x]), axis=0))
 
 
 @traceable()
@@ -242,22 +245,23 @@ class TestEssential(Trace):
     """
     def __init__(self, monitor_names: Set[str]) -> None:
         super().__init__(mode="test", inputs=monitor_names)
-        self.test_results = None
+        self.test_results = defaultdict(lambda: defaultdict(list))
 
     def on_epoch_begin(self, data: Data) -> None:
-        self.test_results = None
+        self.test_results = defaultdict(lambda: defaultdict(list))
 
     def on_batch_end(self, data: Data) -> None:
-        if self.test_results is None:
-            self.test_results = {key: [data[key]] for key in self.inputs if key in data}
-        else:
-            for key in self.inputs:
-                if key in data:
-                    self.test_results[key].append(data[key])
+        for key in self.inputs:
+            if key in data:
+                self.test_results[key][self.system.ds_id].append(data[key])
 
     def on_epoch_end(self, data: Data) -> None:
-        for key, value_list in self.test_results.items():
-            data.write_with_log(key, np.mean(np.array(value_list), axis=0))
+        for key, ds_vals in self.test_results.items():
+            for ds_id, vals in ds_vals.items():
+                if ds_id != '':
+                    d = DSData(ds_id, data)
+                    d.write_with_log(key, np.mean(np.array(vals), axis=0))
+            data.write_with_log(key, np.mean(np.array([e for x in ds_vals.values() for e in x]), axis=0))
 
 
 @traceable()

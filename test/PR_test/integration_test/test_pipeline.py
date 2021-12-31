@@ -25,9 +25,10 @@ from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.extend_dataset import ExtendDataset
 from fastestimator.dataset.numpy_dataset import NumpyDataset
 from fastestimator.op.numpyop import NumpyOp, RemoveIf
+from fastestimator.op.numpyop.numpyop import Batch
 from fastestimator.op.numpyop.univariate import Minmax
 from fastestimator.op.tensorop import TensorOp
-from fastestimator.schedule import EpochScheduler
+from fastestimator.schedule import EpochScheduler, RepeatScheduler
 from fastestimator.test.unittest_util import is_equal
 
 
@@ -118,15 +119,15 @@ class TestPipelineInit(unittest.TestCase):
         for data_type, data in dataset.items():
             with self.subTest("{} with numpyop".format(data_type)):
                 with self.assertRaises(AssertionError):
-                    pipeline = fe.Pipeline(train_data=data, eval_data=data, test_data=data, ops=[self.sample_numpy_op])
+                    fe.Pipeline(train_data=data, eval_data=data, test_data=data, ops=[self.sample_numpy_op])
 
             with self.subTest("{} with batch_size not None".format(data_type)):
                 with self.assertRaises(AssertionError):
-                    pipeline = fe.Pipeline(train_data=data, eval_data=data, test_data=data, batch_size=10)
+                    fe.Pipeline(train_data=data, eval_data=data, test_data=data, batch_size=10)
 
             with self.subTest("{} with num_process not None".format(data_type)):
                 with self.assertRaises(AssertionError):
-                    pipeline = fe.Pipeline(train_data=data, eval_data=data, test_data=data, num_process=1)
+                    fe.Pipeline(train_data=data, eval_data=data, test_data=data, num_process=1)
 
     def test_pipeline_init_tf_dataset_torch_dataloader_scheduler_have_op_batch_size_num_process(self):
         dataset = {"tf_dataset": self.sample_tf_dataset, "dataloader": self.sample_torch_dataloader}
@@ -135,44 +136,44 @@ class TestPipelineInit(unittest.TestCase):
             scheduler_dataset = EpochScheduler(epoch_dict={1: data, 2: None})
             with self.subTest("{} with numpyop".format(data_type)):
                 with self.assertRaises(AssertionError):
-                    pipeline = fe.Pipeline(train_data=scheduler_dataset,
-                                           eval_data=scheduler_dataset,
-                                           test_data=scheduler_dataset,
-                                           ops=[self.sample_numpy_op])
+                    fe.Pipeline(train_data=scheduler_dataset,
+                                eval_data=scheduler_dataset,
+                                test_data=scheduler_dataset,
+                                ops=[self.sample_numpy_op])
 
             with self.subTest("{} with batch_size not None".format(data_type)):
                 with self.assertRaises(AssertionError):
-                    pipeline = fe.Pipeline(train_data=scheduler_dataset,
-                                           eval_data=scheduler_dataset,
-                                           test_data=scheduler_dataset,
-                                           batch_size=10)
+                    fe.Pipeline(train_data=scheduler_dataset,
+                                eval_data=scheduler_dataset,
+                                test_data=scheduler_dataset,
+                                batch_size=10)
 
             with self.subTest("{} with num_process not None".format(data_type)):
                 with self.assertRaises(AssertionError):
-                    pipeline = fe.Pipeline(train_data=scheduler_dataset,
-                                           eval_data=scheduler_dataset,
-                                           test_data=scheduler_dataset,
-                                           num_process=1)
+                    fe.Pipeline(train_data=scheduler_dataset,
+                                eval_data=scheduler_dataset,
+                                test_data=scheduler_dataset,
+                                num_process=1)
 
     def test_pipeline_init_torch_dataset_have_op_batch_size_num_process(self):
         data = self.sample_torch_dataset
 
         with self.subTest("with numpyop"):
             try:
-                pipeline = fe.Pipeline(train_data=data, eval_data=data, test_data=data, ops=[self.sample_numpy_op])
-            except:
+                fe.Pipeline(train_data=data, eval_data=data, test_data=data, ops=[self.sample_numpy_op])
+            except (AssertionError, ValueError):
                 self.fail("exception occurred")
 
         with self.subTest("with batch_size not None"):
             try:
-                pipeline = fe.Pipeline(train_data=data, eval_data=data, test_data=data, batch_size=10)
-            except:
+                fe.Pipeline(train_data=data, eval_data=data, test_data=data, batch_size=10)
+            except (AssertionError, ValueError):
                 self.fail("exception occurred")
 
         with self.subTest("with num_process not None"):
             try:
-                pipeline = fe.Pipeline(train_data=data, eval_data=data, test_data=data, num_process=1)
-            except:
+                fe.Pipeline(train_data=data, eval_data=data, test_data=data, num_process=1)
+            except (AssertionError, ValueError):
                 self.fail("exception occurred")
 
     def test_pipeline_init_torch_dataset_scheduler_have_op_batch_size_num_process(self):
@@ -180,20 +181,20 @@ class TestPipelineInit(unittest.TestCase):
 
         with self.subTest("with numpyop"):
             try:
-                pipeline = fe.Pipeline(train_data=data, eval_data=data, test_data=data, ops=[self.sample_numpy_op])
-            except:
+                fe.Pipeline(train_data=data, eval_data=data, test_data=data, ops=[self.sample_numpy_op])
+            except (AssertionError, ValueError):
                 self.fail("exception occurred")
 
         with self.subTest("with batch_size not None"):
             try:
-                pipeline = fe.Pipeline(train_data=data, eval_data=data, test_data=data, batch_size=10)
-            except:
+                fe.Pipeline(train_data=data, eval_data=data, test_data=data, batch_size=10)
+            except (AssertionError, ValueError):
                 self.fail("exception occurred")
 
         with self.subTest("with num_process not None"):
             try:
-                pipeline = fe.Pipeline(train_data=data, eval_data=data, test_data=data, num_process=1)
-            except:
+                fe.Pipeline(train_data=data, eval_data=data, test_data=data, num_process=1)
+            except (AssertionError, ValueError):
                 self.fail("exception occurred")
 
     def test_pipeline_init_all_dataset_no_op_batch_size_num_process(self):
@@ -206,25 +207,103 @@ class TestPipelineInit(unittest.TestCase):
         for data_type, data in dataset.items():
             with self.subTest("{}".format(data_type)):
                 try:
-                    pipeline = fe.Pipeline(train_data=data, eval_data=data, test_data=data)
-                except:
+                    fe.Pipeline(train_data=data, eval_data=data, test_data=data)
+                except (AssertionError, ValueError):
                     self.fail("exception occurred")
 
     def test_pipeline_init_torch_dataset_with_tensorop(self):
         data = self.sample_torch_dataset
         with self.subTest("all tensorop"):
             with self.assertRaises(AssertionError):
-                pipeline = fe.Pipeline(train_data=data,
-                                       eval_data=data,
-                                       test_data=data,
-                                       ops=[self.sample_tensor_op, self.sample_tensor_op])
+                fe.Pipeline(train_data=data,
+                            eval_data=data,
+                            test_data=data,
+                            ops=[self.sample_tensor_op, self.sample_tensor_op])
         with self.subTest("mixed tensorop numpyop"):
             with self.assertRaises(AssertionError):
-                pipeline = fe.Pipeline(train_data=data,
-                                       eval_data=data,
-                                       test_data=data,
-                                       ops=[self.sample_tensor_op, self.sample_numpy_op])
+                fe.Pipeline(train_data=data,
+                            eval_data=data,
+                            test_data=data,
+                            ops=[self.sample_tensor_op, self.sample_numpy_op])
 
+    def test_init_with_impermissible_batch_ops(self):
+        data = self.sample_torch_dataset
+        with self.subTest("Simple Mode Conflict"):
+            with self.assertRaises(AssertionError):
+                fe.Pipeline(train_data=data, ops=[Batch(mode='train'), Batch(mode='train')])
+        with self.subTest("Simple DS Conflict"):
+            with self.assertRaises(AssertionError):
+                fe.Pipeline(train_data={'ds1': data}, ops=[Batch(ds_id='ds1'), Batch(ds_id='ds1')])
+        with self.subTest("Scheduler Conflict"):
+            with self.assertRaises(AssertionError):
+                fe.Pipeline(train_data=data,
+                            eval_data={'ds1': data, 'ds2': data, 'ds3': data, 'ds4': data},
+                            test_data=data,
+                            ops=[EpochScheduler({1: Batch(mode='train'),
+                                                 50: Batch(mode='eval', ds_id='ds4'),
+                                                 10000: Batch(mode='test')}),
+                                 RepeatScheduler([Batch(ds_id='ds1'),
+                                                  Batch(ds_id='ds2'),
+                                                  Batch(ds_id='ds3'),
+                                                  Batch(ds_id='ds4')])])
+
+    def test_init_with_permissible_batch_ops(self):
+        data = self.sample_torch_dataset
+        with self.subTest("Simple Mode Non-Conflict"):
+            try:
+                fe.Pipeline(train_data=data, ops=[Batch(mode='train'), Batch(mode='eval')])
+            except (AssertionError, ValueError):
+                self.fail("Exception Occurred")
+        with self.subTest("Simple DS Non-Conflict (1)"):
+            try:
+                fe.Pipeline(train_data=data, ops=[Batch(ds_id="ds1"), Batch(ds_id="ds2")])
+            except (AssertionError, ValueError):
+                self.fail("Exception Occurred")
+        with self.subTest("Simple DS Non-Conflict (2)"):
+            try:
+                fe.Pipeline(train_data={'ds1': data, 'ds2': data}, ops=[Batch(ds_id="ds1"), Batch(ds_id="ds2")])
+            except (AssertionError, ValueError):
+                self.fail("Exception Occurred")
+        with self.subTest("Mode/DS Non Conflict (1)"):
+            try:
+                fe.Pipeline(train_data={'ds1': data, 'ds2': data},
+                            eval_data={'ds1': data, 'ds2': data},
+                            ops=[Batch(mode="train", ds_id="ds1"),
+                                 Batch(mode="eval", ds_id="ds1")])
+            except (AssertionError, ValueError):
+                self.fail("Exception Occurred")
+        with self.subTest("Mode/DS Non Conflict (2)"):
+            try:
+                fe.Pipeline(train_data={'ds1': data, 'ds2': data},
+                            eval_data={'ds1': data, 'ds2': data},
+                            ops=[Batch(mode="train", ds_id="ds1"),
+                                 Batch(mode="train", ds_id="ds2")])
+            except (AssertionError, ValueError):
+                self.fail("Exception Occurred")
+        with self.subTest("Scheduler Non Conflict"):
+            try:
+                fe.Pipeline(train_data={'ds1': data, 'ds2': data},
+                            eval_data={'ds1': data, 'ds2': data},
+                            ops=[EpochScheduler({1: Batch(mode="train", ds_id="ds1"),
+                                                 5: Batch(mode="eval")}),
+                                 EpochScheduler({1: Batch(mode="eval"),
+                                                 5: Batch(mode="train", ds_id="ds1")})])
+            except (AssertionError, ValueError):
+                self.fail("Exception Occurred")
+        with self.subTest("Scheduler Non Conflict (2)"):
+            try:
+                fe.Pipeline(train_data=data,
+                            eval_data={'ds1': data, 'ds2': data, 'ds3': data, 'ds4': data},
+                            test_data=data,
+                            ops=[EpochScheduler({1: Batch(mode='train'),
+                                                 50: Batch(mode='eval', ds_id='ds4'),
+                                                 100: Batch(mode='test')}),
+                                 RepeatScheduler([Batch(ds_id='ds1'),
+                                                  Batch(ds_id='ds2'),
+                                                  Batch(ds_id='ds3')])
+                                 ])
+            except (AssertionError, ValueError):
+                self.fail("Exception Occurred")
 
 class TestPipelineGetModes(unittest.TestCase):
     """This test include:
@@ -285,7 +364,7 @@ class TestPipelineGetEpochsWithData(unittest.TestCase):
 
         with self.subTest("mode has no dataset"):
             with self.assertRaises(KeyError):
-                epochs = pipeline.get_epochs_with_data(total_epochs=5, mode="eval")
+                pipeline.get_epochs_with_data(total_epochs=5, mode="eval")
 
     def test_pipeline_get_epochs_with_data_with_scheduler(self):
         dataset = EpochScheduler(epoch_dict={1: self.sample_torch_dataset, 3: None})
@@ -352,7 +431,8 @@ class TestPipelineTransform(unittest.TestCase):
     def test_pipeline_transform_with_ops(self):
         pipeline = fe.Pipeline(train_data=self.sample_dataset, ops=[NumpyOpAdd1(inputs="x", outputs="y")])
         data = pipeline.transform(data=self.sample_data, mode="train")
-        ans = {"x": np.array([[1, 2, 3]], dtype=np.float32), "y": np.array([[2, 3, 4]], dtype=np.float32)}
+        ans = {"x": np.array([[1, 2, 3]], dtype=np.float32),
+               "y": np.array([[2, 3, 4]], dtype=np.float32)}
         self.assertTrue(is_equal(data, ans))
 
     def test_multi_train(self):
@@ -438,8 +518,7 @@ class TestPipelineGetResults(unittest.TestCase):
 
     def test_pipeline_get_result_dict_batch_size(self):
         pipeline = fe.Pipeline(train_data=self.sample_torch_dataset,
-                               ops=NumpyOpAdd1(inputs="x", outputs="y"),
-                               batch_size={"train": 1})
+                               ops=[NumpyOpAdd1(inputs="x", outputs="y"), Batch(batch_size=1, mode='train')])
         data = pipeline.get_results(mode="train", epoch=1)
         data["x"] = data["x"].numpy()
         data["y"] = data["y"].numpy()
@@ -448,10 +527,8 @@ class TestPipelineGetResults(unittest.TestCase):
 
     def test_pipeline_get_result_dict_batch_size_scheduler(self):
         pipeline = fe.Pipeline(train_data=self.sample_torch_dataset,
-                               ops=NumpyOpAdd1(inputs="x", outputs="y"),
-                               batch_size=EpochScheduler({1: {
-                                   "train": 1
-                               }}))
+                               ops=[NumpyOpAdd1(inputs="x", outputs="y"),
+                                    EpochScheduler({1: Batch(batch_size=1, mode='train')})])
         data = pipeline.get_results(mode="train", epoch=1)
         data["x"] = data["x"].numpy()
         data["y"] = data["y"].numpy()
@@ -461,10 +538,9 @@ class TestPipelineGetResults(unittest.TestCase):
     def test_pipeline_get_result_dict_batch_size_train_eval(self):
         pipeline = fe.Pipeline(train_data=self.sample_torch_dataset,
                                eval_data=self.sample_torch_dataset,
-                               ops=NumpyOpAdd1(inputs="x", outputs="y"),
-                               batch_size={
-                                   "train": 2, "eval": 1
-                               })
+                               ops=[NumpyOpAdd1(inputs="x", outputs="y"),
+                                    Batch(batch_size=2, mode='train'),
+                                    Batch(batch_size=1, mode='eval')])
         data_train = pipeline.get_results(mode="train", epoch=1)
         data_eval = pipeline.get_results(mode="eval", epoch=1)
         data_train["x"] = data_train["x"].numpy()
@@ -665,7 +741,7 @@ class TestPipelineGetLoader(unittest.TestCase):
                       [-1, -1]]
         """
         dataset = fe.dataset.NumpyDataset({"x": [np.ones((2, 1), dtype=np.float32), np.ones((1, 2), dtype=np.float32)]})
-        pipeline = fe.Pipeline(train_data=dataset, pad_value=-1, batch_size=2)
+        pipeline = fe.Pipeline(train_data=dataset, batch_size=2, ops=Batch(pad_value=-1))
         with pipeline(mode="train", shuffle=False) as loader:
             for idx, batch in enumerate(loader, start=1):
                 result = batch
@@ -676,7 +752,7 @@ class TestPipelineGetLoader(unittest.TestCase):
 
     def test_pipeline_nested_loaders(self):
         dataset = fe.dataset.NumpyDataset({"x": [np.ones((2, 1), dtype=np.float32), np.ones((1, 2), dtype=np.float32)]})
-        pipeline = fe.Pipeline(train_data=dataset, pad_value=-1, batch_size=2)
+        pipeline = fe.Pipeline(train_data=dataset, ops=Batch(pad_value=-1), batch_size=2)
         with self.subTest("With Call"):
             with self.assertRaises(ValueError):
                 with pipeline(mode='train') as loader1:
@@ -692,7 +768,7 @@ class TestPipelineGetLoader(unittest.TestCase):
 
     def test_pipeline_nested_call(self):
         dataset = fe.dataset.NumpyDataset({"x": [np.ones((2, 1), dtype=np.float32), np.ones((1, 2), dtype=np.float32)]})
-        pipeline = fe.Pipeline(train_data=dataset, pad_value=-1, batch_size=2)
+        pipeline = fe.Pipeline(train_data=dataset, ops=Batch(pad_value=-1), batch_size=2)
         with self.assertRaises(ValueError):
             with pipeline(mode='train') as loader1:
                 pipeline(mode='train')
@@ -827,7 +903,7 @@ class TestPipelineFilter(unittest.TestCase):
                 pipeline = fe.Pipeline(train_data=data,
                                        batch_size=5,
                                        num_process=n_process,
-                                       drop_last=True)
+                                       ops=Batch(drop_last=True))
                 with self.subTest("shuffle false"):
                     with pipeline(mode="train", shuffle=False) as loader:
                         itr = iter(loader)
@@ -852,8 +928,8 @@ class TestPipelineFilter(unittest.TestCase):
                 pipeline = fe.Pipeline(train_data=data,
                                        batch_size=5,
                                        num_process=n_process,
-                                       drop_last=True,
-                                       ops=RemoveIf(inputs="idx", fn=lambda x: x in [2, 6, 9, 10, 11]))
+                                       ops=[RemoveIf(inputs="idx", fn=lambda x: x in [2, 6, 9, 10, 11]),
+                                            Batch(drop_last=True)])
                 target = [0, 1, 3, 4, 5, 7, 8, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 0, 1]
                 with self.subTest("shuffle false"):
                     with pipeline(mode="train", shuffle=False) as loader:
@@ -880,10 +956,10 @@ class TestPipelineFilter(unittest.TestCase):
                 pipeline = fe.Pipeline(train_data=data,
                                        batch_size=5,
                                        num_process=n_process,
-                                       drop_last=True,
-                                       ops=RemoveIf(fn=lambda x: x in [2, 6, 9, 10, 11],
+                                       ops=[RemoveIf(fn=lambda x: x in [2, 6, 9, 10, 11],
                                                     inputs="idx",
-                                                    replacement=False))
+                                                    replacement=False),
+                                            Batch(drop_last=True)])
                 target = [0, 1, 3, 4, 5, 7, 8, 12, 13, 14, 15, 16, 17, 18, 19]
                 with self.subTest("shuffle false"):
                     with pipeline(mode="train", shuffle=False) as loader:

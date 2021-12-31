@@ -17,7 +17,7 @@ from typing import Any, Callable, Dict, List, Optional, Union
 
 import numpy as np
 
-from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
+from fastestimator.op.numpyop.numpyop import Batch, NumpyOp, forward_numpyop
 from fastestimator.util.traceability_util import traceable
 
 
@@ -38,6 +38,8 @@ class Repeat(NumpyOp):
     """
     def __init__(self, op: NumpyOp, repeat: Union[int, Callable[..., bool]] = 1,
                  max_iter: Optional[int] = None) -> None:
+        if isinstance(op, Batch):
+            raise ValueError("Cannot nest the Batch op inside Repeat")
         self.repeat_inputs = []
         extra_reqs = []
         if max_iter is None:

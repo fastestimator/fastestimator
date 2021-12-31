@@ -466,8 +466,8 @@ class TestNetworkTransform(unittest.TestCase):
             self.assertTrue(np.array_equal(batch["y_pred"].numpy(), ans))
 
         with self.subTest("postprocessing y_pred check"):
-            ans = np.array([[7]], dtype=np.float32)  # 1*1 + 1*2 + 1*3 + 1
-            self.assertTrue(np.array_equal(batch["y_pred_processed"], ans))
+            ans = torch.Tensor([[7.0]])  # 1*1 + 1*2 + 1*3 + 1
+            self.assertTrue(torch.equal(batch["y_pred_processed"], ans))
 
         with self.subTest("output ce check"):
             self.assertEqual(batch["ce"].numpy(), 25)  # (6-1)^2

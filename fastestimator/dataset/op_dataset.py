@@ -108,7 +108,7 @@ class OpDataset(Dataset):
         dataset: The base dataset to wrap.
         ops: A list of ops to be applied after the base `dataset` `__getitem__` is invoked.
         mode: What mode the system is currently running in ('train', 'eval', 'test', or 'infer').
-        output_keys: What keys can be produced from pipeline. If None, all keys will be considered.
+        output_keys: What keys can be produced from pipeline. If None or empty, all keys will be considered.
         deep_remainder: Whether data which is not modified by Ops should be deep copied or not. This argument is used to
             help with RAM management, but end users can almost certainly ignore it.
     """
@@ -133,7 +133,7 @@ class OpDataset(Dataset):
         self.output_keys = output_keys
         self.deep_remainder = deep_remainder
 
-    def __getitem__(self, index: int) -> Union[Mapping[str, Any], FilteredData]:
+    def __getitem__(self, index: int) -> Union[Mapping[str, Any], List[Mapping[str, Any]], FilteredData]:
         """Fetch a data instance at a specified index, and apply transformations to it.
 
         Args:

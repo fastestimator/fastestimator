@@ -9,7 +9,7 @@ from albumentations import BboxParams
 
 import fastestimator as fe
 from fastestimator.dataset.data import mscoco
-from fastestimator.op.numpyop import NumpyOp
+from fastestimator.op.numpyop import Batch, NumpyOp
 from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import HorizontalFlip, LongestMaxSize, PadIfNeeded
 from fastestimator.op.numpyop.univariate import ChannelTranspose, Normalize, ReadImage
@@ -392,7 +392,6 @@ def get_estimator(data_dir=None,
     pipeline = fe.Pipeline(
         train_data=train_ds,
         eval_data=eval_ds,
-        batch_size=batch_size,
         ops=[
             ReadImage(inputs="image", outputs="image"),
             LongestMaxSize(image_size,
@@ -422,9 +421,9 @@ def get_estimator(data_dir=None,
             Normalize(inputs="image", outputs="image", mean=1.0, std=1.0, max_pixel_value=127.5),
             ShiftLabel(inputs="bbox", outputs="bbox"),
             AnchorBox(inputs="bbox", outputs="anchorbox", width=image_size, height=image_size),
-            ChannelTranspose(inputs="image", outputs="image")
-        ],
-        pad_value=0)
+            ChannelTranspose(inputs="image", outputs="image"),
+            Batch(batch_size=batch_size, pad_value=0)
+        ])
     # network
     model = fe.build(model_fn=lambda: RetinaNet(num_classes=num_classes),
                      optimizer_fn=lambda x: torch.optim.SGD(x, lr=2e-4, momentum=0.9, weight_decay=0.0001))

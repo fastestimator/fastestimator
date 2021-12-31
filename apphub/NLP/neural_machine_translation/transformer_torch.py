@@ -23,7 +23,7 @@ from transformers import BertTokenizer
 
 import fastestimator as fe
 from fastestimator.dataset.data import tednmt
-from fastestimator.op.numpyop import NumpyOp
+from fastestimator.op.numpyop import Batch, NumpyOp
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.loss import LossOp
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
@@ -174,12 +174,11 @@ def get_estimator(data_dir=None,
         train_data=train_ds,
         eval_data=eval_ds,
         test_data=test_ds,
-        batch_size=batch_size,
         ops=[
             Encode(inputs="source", outputs="source", tokenizer=pt_tokenizer),
-            Encode(inputs="target", outputs="target", tokenizer=en_tokenizer)
-        ],
-        pad_value=0)
+            Encode(inputs="target", outputs="target", tokenizer=en_tokenizer),
+            Batch(batch_size=batch_size, pad_value=0)
+        ])
     model = fe.build(
         model_fn=lambda: Transformer(num_layers=4,
                                      em_dim=em_dim,

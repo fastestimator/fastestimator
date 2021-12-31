@@ -416,6 +416,7 @@ class Estimator:
         Returns:
             Either the original `batch`, or the `batch` converted to torch.Tensors if required.
         """
+        # TODO - if user has torch loader but custom collate that doesn't return torch tensor, need to cast here
         if isinstance(loader, tf.data.Dataset) and isinstance(self.network, TorchNetwork):
             batch = to_tensor(batch, target_type="torch")
         return batch
