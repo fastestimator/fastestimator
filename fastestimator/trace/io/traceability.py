@@ -245,7 +245,7 @@ class Traceability(Trace):
                                                   label=Label(Marker(name=f"{mode}{epoch}", prefix="ssubsec")))):
                                 ds_ids = self.system.pipeline.get_ds_ids(epoch=epoch, mode=mode)
                                 for ds_id in ds_ids:
-                                    with NonContext() if ds_id is None else self.doc.create(
+                                    with NonContext() if ds_id == '' else self.doc.create(
                                             Paragraph(f"Dataset {ds_id}",
                                                       label=Label(Marker(name=f"{mode}{epoch}{ds_id}",
                                                                          prefix="para")))):
@@ -513,7 +513,7 @@ class Traceability(Trace):
                                         color='black!5' if color else 'white')
                         color = not color
 
-    def _draw_diagram(self, mode: str, epoch: int, ds_id: Optional[str]) -> pydot.Dot:
+    def _draw_diagram(self, mode: str, epoch: int, ds_id: str) -> pydot.Dot:
         """Draw a summary diagram of the FastEstimator Ops / Traces.
 
         Args:

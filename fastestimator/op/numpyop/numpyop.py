@@ -108,6 +108,9 @@ class Delete(NumpyOp):
 
     Args:
         keys: Existing key(s) to be deleted from the data dictionary.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
@@ -118,6 +121,9 @@ class Delete(NumpyOp):
         super().__init__(inputs=keys, mode=mode, ds_id=ds_id)
 
     def forward(self, data: Union[np.ndarray, List[np.ndarray]], state: Dict[str, Any]) -> None:
+        pass
+
+    def forward_batch(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> None:
         pass
 
 
@@ -154,6 +160,10 @@ class LambdaOp(NumpyOp):
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
         return self.fn(*data)
+
+    def forward_batch(self, data: Union[Tensor, List[Tensor]], state: Dict[str,
+                                                                           Any]) -> Union[np.ndarray, List[np.ndarray]]:
+        return self.forward(data, state)
 
 
 def forward_numpyop(ops: List[NumpyOp], data: MutableMapping[str, Any], state: Dict[str, Any],

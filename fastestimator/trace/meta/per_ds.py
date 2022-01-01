@@ -12,26 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Union, List
+from typing import Union, List
 
 import functools
 
 from fastestimator.trace.trace import Trace, PerDSTrace
-from fastestimator.util.data import Data
+from fastestimator.util.data import Data, DSData
 from fastestimator.util.util import to_list
-
-
-class DSData(Data):
-    # noinspection PyMissingConstructor
-    def __init__(self, ds_id: str, data: Data):
-        self.maps = data.maps
-        self.ds_id = ds_id
-
-    def write_with_log(self, key: str, value: Any) -> None:
-        super().write_with_log(key=f'{key}|{self.ds_id}', value=value)
-
-    def write_without_log(self, key: str, value: Any) -> None:
-        super().write_without_log(key=f'{key}|{self.ds_id}', value=value)
 
 
 def per_ds(clz: type(Trace)):
@@ -80,21 +67,21 @@ def per_ds(clz: type(Trace)):
             self.fe_per_ds_trace.on_begin(data)
 
         def on_ds_begin(self, data: Data) -> None:
-            if self.system.ds_id is not None:
+            if self.system.ds_id != '':
                 self.fe_per_ds_trace.on_epoch_begin(DSData(self.system.ds_id, data))
 
         def on_batch_begin(self, data: Data) -> None:
             super().on_batch_begin(data)
-            if self.system.ds_id is not None:
+            if self.system.ds_id != '':
                 self.fe_per_ds_trace.on_batch_begin(DSData(self.system.ds_id, data))
 
         def on_batch_end(self, data: Data) -> None:
             super().on_batch_end(data)
-            if self.system.ds_id is not None:
+            if self.system.ds_id != '':
                 self.fe_per_ds_trace.on_batch_end(DSData(self.system.ds_id, data))
 
         def on_ds_end(self, data: Data) -> None:
-            if self.system.ds_id is not None:
+            if self.system.ds_id != '':
                 self.fe_per_ds_trace.on_epoch_end(DSData(self.system.ds_id, data))
 
         def on_end(self, data: Data) -> None:
