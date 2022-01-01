@@ -27,7 +27,7 @@ from tensorflow.keras import layers
 
 import fastestimator as fe
 from fastestimator.dataset.data import mscoco
-from fastestimator.op.numpyop import Batch, Delete, NumpyOp
+from fastestimator.op.numpyop import Batch, Delete, NumpyOp, RemoveIf
 from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import HorizontalFlip, LongestMaxSize, PadIfNeeded, Resize
 from fastestimator.op.numpyop.univariate import ReadImage
@@ -511,6 +511,7 @@ def get_estimator(data_dir=None,
             MergeMask(inputs="mask", outputs="mask"),
             GetImageSize(inputs="image", outputs="imsize", mode="test"),
             LongestMaxSize(max_size=im_size, image_in="image", mask_in="mask", bbox_in="bbox", bbox_params="coco"),
+            RemoveIf(fn=lambda x: len(x) == 0, inputs="bbox"),
             PadIfNeeded(min_height=im_size,
                         min_width=im_size,
                         image_in="image",
