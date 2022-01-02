@@ -24,7 +24,7 @@ dir_path="$(dirname "$full_path")"
 # 2. The expression for the above setup is "-p epochs 2 -p batch_size 8 -p train_steps_per_epoch 2"
 # 3. The arguement will re-declare the variable right after the jupyter notebook cell with "parameters" tag (there \
 # must be one and only cell with "parameters" tag)
-train_info=(-p epochs 2 -p batch_size_per_gpu 8 -p train_steps_per_epoch 2 -p eval_steps_per_epoch 2 -p im_size 128)
+train_info=(-p epochs 2 -p batch_size_per_gpu 8 -p train_steps_per_epoch 2 -p eval_steps_per_epoch 2 -p im_size 256)
 
 # ==============================================================================================
 
