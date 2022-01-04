@@ -563,7 +563,7 @@ class Pipeline:
             op_dataset = OpDataset(data,
                                    self.ctx_ops,
                                    self.ctx_mode,
-                                   self.ctx_output_keys | self.ctx_batch_input_keys,
+                                   self.ctx_output_keys | self.ctx_batch_input_keys if self.ctx_output_keys else None,
                                    deep_remainder=False)
             # check whether to batch the data
             batch_size = None if op_dataset.fe_batch else self.ctx_batch_size
