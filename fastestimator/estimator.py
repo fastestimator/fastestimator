@@ -382,15 +382,22 @@ class Estimator:
         new_loader = loader
         if isinstance(new_loader, DataLoader) and isinstance(self.network, TFNetwork):
             add_batch = True
-            data_instance = loader.dataset[0]
-            if isinstance(data_instance, list):
-                # This is a batched dataset
-                data_instance = data_instance[0]
-            if isinstance(data_instance, FilteredData):
-                # We got unlucky and drew filtered data as the zeroth element. Fall back to a slower but more robust
-                # analysis of the batch
+            if hasattr(loader, 'fe_postprocess_fn') and loader.fe_postprocess_fn is not None:
+                # The user is manually batching data and running ops on data batches. No reliable way to shortcut this
+                # since ops might require specific batch composition.
                 data_instance = next(iter(loader))
                 add_batch = False
+            else:
+                # No batch-based ops so we can try and just use the OpDataset to more quickly get our data summary
+                data_instance = loader.dataset[0]
+                if isinstance(data_instance, list):
+                    # This is a batched dataset
+                    data_instance = data_instance[0]
+                if isinstance(data_instance, FilteredData):
+                    # We got unlucky and drew filtered data as the zeroth element. Fall back to a slower but more robust
+                    # analysis of the batch
+                    data_instance = next(iter(loader))
+                    add_batch = False
             data_instance = to_tensor(data_instance, target_type="tf")
             data_type = to_type(data_instance)
             data_shape = to_shape(data_instance, add_batch=add_batch, exact_shape=False)
