@@ -27,10 +27,11 @@ import tensorflow as tf
 from torch.utils.data import DataLoader, Dataset
 
 from fastestimator.backend.to_tensor import to_tensor
-from fastestimator.dataset.batch_dataset import BatchDataset
 from fastestimator.dataset.dataloader import FEDataLoader
 from fastestimator.dataset.op_dataset import OpDataset, _DelayedDeepDict
+from fastestimator.op.numpyop.meta.fuse import Fuse
 from fastestimator.op.numpyop.meta.one_of import OneOf
+from fastestimator.op.numpyop.meta.repeat import Repeat
 from fastestimator.op.numpyop.meta.sometimes import Sometimes
 from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop, Batch
 from fastestimator.schedule.schedule import Scheduler, get_current_items, EpochScheduler, \
@@ -304,71 +305,118 @@ class Pipeline:
                     if idx % log_interval == 0:
                         duration = time.perf_counter() - start
                         iters_per_sec = log_interval / duration
-                        print("FastEstimator-Benchmark: Dataset: {}, Step: {}, Epoch: {}, Steps/sec: {}".format(
-                            ds_id, idx, epoch, iters_per_sec))
+                        ds_str = f"Dataset: {ds_id}, " if ds_id else ""
+                        print("FastEstimator-Benchmark ({}): {}Step: {}, Epoch: {}, Steps/sec: {}".format(
+                            mode.capitalize(), ds_str, idx, epoch, iters_per_sec))
                         start = time.perf_counter()
                 # Pipeline Operations Benchmarking when using FEDataset
-                if isinstance(loader, DataLoader) and isinstance(loader.dataset, OpDataset) and detailed:
-                    op_list = loader.dataset.ops
-                    duration_list = np.zeros(shape=(len(op_list), 2))  # (n_visited, duration)
-                    data_len = len(loader.dataset.dataset)
-                    print("Breakdown of time taken by Pipeline Operations (mode:{} epoch:{}, ds_id:{})".format(
-                        mode, epoch, ds_id))
+                if isinstance(loader, FEDataLoader) and isinstance(loader.dataset, OpDataset) and detailed:
+                    # (n_visited, duration)
+                    duration_list = np.zeros(shape=(len(self.ctx_ops) + 1 + len(self.ctx_batch_ops), 2))
+                    data_len = len(loader.dataset)
+                    print("")
+                    ds_str = f", Dataset: {ds_id}" if ds_id else ""
+                    print("Breakdown of time taken by Pipeline Operations (Mode: {}, Epoch: {}{})".format(
+                        mode.capitalize(), epoch, ds_str))
+                    print("")
                     for _ in range(log_interval):
+                        filtered = False
+                        batch = []
                         index = np.random.randint(data_len)
                         items = deepcopy(loader.dataset.dataset[index])
-                        if isinstance(loader.dataset.dataset, BatchDataset):
-                            # BatchDataset may randomly sample the same elements multiple times, lets avoid reprocessing
-                            unique_samples = set()
-                            for item in items:
-                                if id(item) not in unique_samples:
-                                    for i, op in enumerate(op_list):
-                                        start = time.perf_counter()
-                                        op_data = forward_numpyop([op], item, {'mode': loader.dataset.mode})
-                                        duration = time.perf_counter() - start
-                                        duration_list[i][0] += 1
-                                        duration_list[i][1] += duration
-                                        if isinstance(op_data, FilteredData):
-                                            break
-                                    unique_samples.add(id(item))
+                        if isinstance(items, list):
+                            while not batch:
+                                # BatchDataset may randomly sample the same elements multiple times, avoid reprocessing
+                                unique_samples = set()
+                                for item in items:
+                                    if id(item) not in unique_samples:
+                                        for i, op in enumerate(self.ctx_ops):
+                                            start = time.perf_counter()
+                                            op_data = forward_numpyop([op], item, {'mode': loader.dataset.mode})
+                                            duration = time.perf_counter() - start
+                                            duration_list[i][0] += 1
+                                            duration_list[i][1] += duration
+                                            if isinstance(op_data, FilteredData):
+                                                filtered = True
+                                                break
+                                        unique_samples.add(id(item))
+                                if not filtered:
+                                    batch = items
                         else:
-                            for i, op in enumerate(op_list):
+                            while len(batch) < (self.ctx_batch_size or 1):
+                                for i, op in enumerate(self.ctx_ops):
+                                    start = time.perf_counter()
+                                    op_data = forward_numpyop([op], items, {'mode': mode})
+                                    duration = time.perf_counter() - start
+                                    duration_list[i][0] += 1
+                                    duration_list[i][1] += duration
+                                    if isinstance(op_data, FilteredData):
+                                        filtered = True
+                                        break
+                                if not filtered:
+                                    batch.append(items)
+                                index = np.random.randint(data_len)
+                                items = deepcopy(loader.dataset.dataset[index])
+                        if not filtered:
+                            # Perform the batching
+                            start = time.perf_counter()
+                            batch = self.ctx_batch_info.collate_fn(batch)
+                            duration = time.perf_counter() - start
+                            duration_list[len(self.ctx_ops)][0] += 1
+                            duration_list[len(self.ctx_ops)][1] += duration
+                            # Perform batch ops
+                            batch = to_tensor(batch, target_type='np')  # Transform to numpy to not bias against the
+                            # first op in the batch_op chain vs the subsequent ones
+                            for i, op in enumerate(self.ctx_batch_ops, start=len(self.ctx_ops) + 1):
                                 start = time.perf_counter()
-                                op_data = forward_numpyop([op], items, {'mode': loader.dataset.mode})
+                                op_data = forward_numpyop([op], data=batch, state={'mode': mode}, batched='np')
                                 duration = time.perf_counter() - start
                                 duration_list[i][0] += 1
                                 duration_list[i][1] += duration
                                 if isinstance(op_data, FilteredData):
                                     break
 
-                    duration_list = duration_list[:, 1] / np.maximum(duration_list[:, 0], 1)
-                    total_time = np.sum(duration_list)
+                    total_time = np.sum(duration_list[:, 1])
+                    total_normalized_time = np.sum(duration_list[:, 1] / np.maximum(duration_list[:, 0], 1))
                     op_names = ["Op"]
 
-                    # TODO - also benchmark ops which appear after the Batch Op
-
-                    for op in op_list:
+                    for op in self.ctx_ops + [self.ctx_batch_info] + self.ctx_batch_ops:
                         if isinstance(op, Sometimes) and op.op:
+                            op_names.append(op.__class__.__name__ + " (" + op.op.__class__.__name__ + ")")
+                        elif isinstance(op, Repeat) and op.op:
                             op_names.append(op.__class__.__name__ + " (" + op.op.__class__.__name__ + ")")
                         elif isinstance(op, OneOf) and op.ops:
                             op_names.append(op.__class__.__name__ + " (" +
                                             ", ".join([sub_op.__class__.__name__ for sub_op in op.ops]) + ")")
+                        elif isinstance(op, Fuse) and op.ops:
+                            op_names.append(op.__class__.__name__ + " (" +
+                                            ", ".join([sub_op.__class__.__name__ for sub_op in op.ops]) + ")")
+                        elif isinstance(op, Batch):
+                            op_names.append("<Collating Batch>")
                         else:
                             op_names.append(op.__class__.__name__)
 
                     max_op_len = max(len(op_name) for op_name in op_names)
-                    max_in_len = max([len(", ".join(op.inputs)) for op in op_list] + [len("Inputs")])
-                    max_out_len = max([len(", ".join(op.outputs)) for op in op_list] + [len("Outputs")])
-                    print("{}: {}: {}: {}".format("Op".ljust(max_op_len + 1),
-                                                  "Inputs".ljust(max_in_len + 1),
-                                                  "Outputs".ljust(max_out_len + 1),
-                                                  "Time".rjust(5)))
-                    print("-" * (max_op_len + max_in_len + max_out_len + 15))
-                    for i, op in enumerate(op_list):
-                        print("{}: {}: {}: {:5.2f}%".format(op_names[i + 1].ljust(max_op_len + 1),
-                                                            ", ".join(op.inputs).ljust(max_in_len + 1),
-                                                            ", ".join(op.outputs).ljust(max_out_len + 1),
-                                                            100 * duration_list[i] / total_time))
+                    max_in_len = max([len(", ".join(op.inputs)) for op in
+                                      self.ctx_ops + [self.ctx_batch_info] + self.ctx_batch_ops] + [len("Inputs")])
+                    max_out_len = max([len(", ".join(op.outputs)) for op in
+                                       self.ctx_ops + [self.ctx_batch_info] + self.ctx_batch_ops] + [len("Outputs")])
+                    visit_len = max(len(f"{int(np.max(duration_list[:, 0]))}"), len("Visits"))
+                    print("{}: {}: {}: {}: {}: {}".format("Op".ljust(max_op_len + 1),
+                                                          "Inputs".ljust(max_in_len + 1),
+                                                          "Outputs".ljust(max_out_len + 1),
+                                                          "Visits".ljust(visit_len + 1),
+                                                          "Time (Normalized)".rjust(17),
+                                                          "Time (Total)".rjust(13)))
+                    print("-" * (max_op_len + max_in_len + max_out_len + visit_len + 44))
+                    for i, op in enumerate(self.ctx_ops + [self.ctx_batch_info] + self.ctx_batch_ops):
+                        print("{}: {}: {}: {}: {:15.2f}% : {:12.2f}%".format(
+                            op_names[i + 1].ljust(max_op_len + 1),
+                            ", ".join(op.inputs).ljust(max_in_len + 1),
+                            ", ".join(op.outputs).ljust(max_out_len + 1),
+                            str(int(duration_list[i][0])).ljust(visit_len + 1),
+                            100 * duration_list[i][1] / max(duration_list[i][0], 1) / total_normalized_time,
+                            100 * duration_list[i][1] / total_time))
                 print("\n")  # to make printing more obvious
 
     def get_scheduled_items(self, mode: str) -> List[Any]:
