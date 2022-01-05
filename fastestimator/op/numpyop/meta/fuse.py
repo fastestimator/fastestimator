@@ -81,5 +81,12 @@ class Fuse(NumpyOp):
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
         data = {key: elem for key, elem in zip(self.inputs, data)}
-        forward_numpyop(self.ops, data, state)
-        return [data[key] for key in self.outputs]
+        filtered = forward_numpyop(self.ops, data, state)
+        return filtered if filtered else [data[key] for key in self.outputs]
+
+    def forward_batch(self,
+                      data: Union[np.ndarray, List[np.ndarray]],
+                      state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
+        data = {key: elem for key, elem in zip(self.inputs, data)}
+        filtered = forward_numpyop(self.ops, data, state, batched="np")
+        return filtered if filtered else [data[key] for key in self.outputs]

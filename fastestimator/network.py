@@ -265,7 +265,7 @@ class BaseNetwork:
         forward_numpyop(ops=self.epoch_postprocessing,
                         data=ChainMap(prediction, batch),
                         state=self.epoch_state,
-                        batched=True)
+                        batched=self.target_type)
         return batch, prediction
 
     def _run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:  # Batch, Prediction

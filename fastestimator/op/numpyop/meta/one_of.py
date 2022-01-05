@@ -81,3 +81,8 @@ class OneOf(NumpyOp):
             The `data` after application of one of the available numpyOps.
         """
         return random.choice(self.ops).forward(data, state)
+
+    def forward_batch(self,
+                      data: Union[np.ndarray, List[np.ndarray]],
+                      state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
+        return random.choice(self.ops).forward_batch(data, state)

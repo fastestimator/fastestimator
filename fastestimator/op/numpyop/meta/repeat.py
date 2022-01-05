@@ -18,6 +18,7 @@ from typing import Any, Callable, Dict, List, Optional, Union
 import numpy as np
 
 from fastestimator.op.numpyop.numpyop import Batch, NumpyOp, forward_numpyop
+from fastestimator.util.data import FilteredData
 from fastestimator.util.traceability_util import traceable
 
 
@@ -85,17 +86,46 @@ class Repeat(NumpyOp):
                 "RUA Augmentations should have a 'set_rua_level' method but it's not present in Op: {}".format(
                     self.op.__class__.__name__))
 
-    def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
+    def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> Union[FilteredData, List[np.ndarray]]:
         data = {key: elem for key, elem in zip(self.inputs, data)}
         if isinstance(self.repeat, int):
             for i in range(self.repeat):
-                forward_numpyop(self.ops, data, state)
+                filtered = forward_numpyop(self.ops, data, state)
+                if filtered:
+                    return filtered
         else:
-            forward_numpyop(self.ops, data, state)
+            filtered = forward_numpyop(self.ops, data, state)
+            if filtered:
+                return filtered
             i = 0
             while self.repeat(*[data[var_name] for var_name in self.repeat_inputs]):
                 if self.max_iter and i >= self.max_iter:
                     break
-                forward_numpyop(self.ops, data, state)
+                filtered = forward_numpyop(self.ops, data, state)
+                if filtered:
+                    return filtered
+                i += 1
+        return [data[key] for key in self.outputs]
+
+    def forward_batch(self,
+                      data: Union[np.ndarray, List[np.ndarray]],
+                      state: Dict[str, Any]) -> Union[FilteredData, np.ndarray, List[np.ndarray]]:
+        data = {key: elem for key, elem in zip(self.inputs, data)}
+        if isinstance(self.repeat, int):
+            for i in range(self.repeat):
+                filtered = forward_numpyop(self.ops, data, state, batched='np')
+                if filtered:
+                    return filtered
+        else:
+            filtered = forward_numpyop(self.ops, data, state, batched='np')
+            if filtered:
+                return filtered
+            i = 0
+            while self.repeat(*[data[var_name] for var_name in self.repeat_inputs]):
+                if self.max_iter and i >= self.max_iter:
+                    break
+                filtered = forward_numpyop(self.ops, data, state, batched='np')
+                if filtered:
+                    return filtered
                 i += 1
         return [data[key] for key in self.outputs]

@@ -21,7 +21,9 @@ import torch
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
 
-def to_tensor(data: Union[Collection, Tensor, float, int, None], target_type: str) -> Union[Collection, Tensor, None]:
+def to_tensor(data: Union[Collection, Tensor, float, int, None],
+              target_type: str,
+              shared_memory: bool = False) -> Union[Collection, Tensor, None]:
     """Convert tensors within a collection of `data` to a given `target_type` recursively.
 
     This method can be used with Numpy data:
@@ -49,7 +51,8 @@ def to_tensor(data: Union[Collection, Tensor, float, int, None], target_type: st
 
     Args:
         data: A tensor or possibly nested collection of tensors.
-        target_type: What kind of tensor(s) to create, either "tf" or "torch".
+        target_type: What kind of tensor(s) to create, one of "tf", "torch", or "np".
+        shared_memory: Whether to put the tensor(s) in shared memory (only applicable when `target_type` is 'torch').
 
     Returns:
         A collection with the same structure as `data`, but with any tensors converted to the `target_type`.
@@ -59,6 +62,8 @@ def to_tensor(data: Union[Collection, Tensor, float, int, None], target_type: st
     }
     conversion_function = {"tf": tf.convert_to_tensor, "torch": torch.from_numpy, "np": np.array}
     if isinstance(data, target_instance[target_type]):
+        if shared_memory and target_type == "torch":
+            data.share_memory_()
         return data
     elif data is None:
         return None
@@ -66,9 +71,14 @@ def to_tensor(data: Union[Collection, Tensor, float, int, None], target_type: st
         return {key: to_tensor(value, target_type) for (key, value) in data.items()}
     elif isinstance(data, list):
         return [to_tensor(val, target_type) for val in data]
+    elif isinstance(data, tuple) and hasattr(data, '_fields'):  # Named tuple
+        return type(data)([to_tensor(val, target_type) for val in data])
     elif isinstance(data, tuple):
         return tuple([to_tensor(val, target_type) for val in data])
     elif isinstance(data, set):
         return set([to_tensor(val, target_type) for val in data])
     else:
-        return conversion_function[target_type](np.array(data))
+        data = conversion_function[target_type](np.array(data))
+        if shared_memory and target_type == "torch":
+            data.share_memory_()
+        return data
