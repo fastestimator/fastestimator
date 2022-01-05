@@ -326,6 +326,7 @@ class Pipeline:
                         items = deepcopy(loader.dataset.dataset[index])
                         if isinstance(items, list):
                             while not batch:
+                                filtered = False
                                 # BatchDataset may randomly sample the same elements multiple times, avoid reprocessing
                                 unique_samples = set()
                                 for item in items:
@@ -344,6 +345,7 @@ class Pipeline:
                                     batch = items
                         else:
                             while len(batch) < (self.ctx_batch_size or 1):
+                                filtered = False
                                 for i, op in enumerate(self.ctx_ops):
                                     start = time.perf_counter()
                                     op_data = forward_numpyop([op], items, {'mode': mode})
