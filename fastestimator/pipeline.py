@@ -345,6 +345,8 @@ class Pipeline:
                     total_time = np.sum(duration_list)
                     op_names = ["Op"]
 
+                    # TODO - also benchmark ops which appear after the Batch Op
+
                     for op in op_list:
                         if isinstance(op, Sometimes) and op.op:
                             op_names.append(op.__class__.__name__ + " (" + op.op.__class__.__name__ + ")")
@@ -429,7 +431,7 @@ class Pipeline:
         if isinstance(op_data, FilteredData):
             return op_data
         data = batch_spec.collate_fn([data])
-        op_data = forward_numpyop(batch_ops, data, state, batched=True)
+        op_data = forward_numpyop(batch_ops, data, state, batched='torch')
         if isinstance(op_data, FilteredData):
             return op_data
         return to_tensor(data, target_type=target_type)
@@ -601,7 +603,7 @@ class Pipeline:
 
 def _batch_postprocess(data: Dict[str, Any], ops: List[NumpyOp], output_keys: Set[str], mode: str) -> \
         Union[Dict[str, Any], FilteredData]:
-    op_data = forward_numpyop(ops=ops, data=data, state={'mode': mode}, batched=True)
+    op_data = forward_numpyop(ops=ops, data=data, state={'mode': mode}, batched='torch')
     if isinstance(op_data, FilteredData):
         return op_data
     if output_keys:

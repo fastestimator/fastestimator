@@ -19,10 +19,11 @@ import tensorflow as tf
 import torch
 from torch.utils.data.dataloader import default_collate
 
+from fastestimator.backend.to_tensor import to_tensor
 from fastestimator.op.op import Op, get_inputs_by_op, write_outputs_by_op
 from fastestimator.util.data import FilteredData
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import to_number, pad_batch
+from fastestimator.util.util import pad_batch
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
@@ -55,7 +56,7 @@ class NumpyOp(Op):
         self.in_place_edits = False
 
     def forward(self, data: Union[np.ndarray, List[np.ndarray]],
-                state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
+                state: Dict[str, Any]) -> Union[None, FilteredData, np.ndarray, List[np.ndarray]]:
         """A method which will be invoked in order to transform data.
 
         This method will be invoked on individual elements of data before any batching / axis expansion is performed.
@@ -70,12 +71,13 @@ class NumpyOp(Op):
         """
         return data
 
-    def forward_batch(self, data: Union[Tensor, List[Tensor]], state: Dict[str,
-                                                                           Any]) -> Union[Tensor, List[Tensor]]:
+    def forward_batch(self,
+                      data: Union[np.ndarray, List[np.ndarray]],
+                      state: Dict[str, Any]) -> Union[None, FilteredData, np.ndarray, List[np.ndarray]]:
         """A method which will be invoked in order to transform a batch of data.
 
-        This method will be invoked on batches of data during network postprocessing. Note that the inputs may be numpy
-        arrays or TF/Torch tensors. Outputs should be of the same tensor type as the inputs (tf -> tf, torch -> torch).
+        This method will be invoked on batches of data during network postprocessing. It should expect to receive
+        batched data and should itself return batched data.
 
         Args:
             data: The arrays from the data dictionary corresponding to whatever keys this Op declares as its `inputs`.
@@ -85,24 +87,15 @@ class NumpyOp(Op):
             The `data` after applying whatever transform this Op is responsible for. It will be written into the data
             dictionary based on whatever keys this Op declares as its `outputs`.
         """
-        if isinstance(data, List):
-            stack_fn = default_collate if isinstance(data[0], torch.Tensor) else \
-                tf.convert_to_tensor if tf.is_tensor(data[0]) else np.array
-            data = [to_number(elem) for elem in data]
-            batch_size = data[0].shape[0]
-            data = [[elem[i] for elem in data] for i in range(batch_size)]
+        if isinstance(data, list):
+            data = [elem for elem in map(list, zip(*data))]
         else:
-            stack_fn = default_collate if isinstance(data, torch.Tensor) else \
-                tf.convert_to_tensor if tf.is_tensor(data) else np.array
-            data = to_number(data)
-            data = [data[i] for i in range(data.shape[0])]
+            data = [elem for elem in data]
         results = [self.forward(elem, state) for elem in data]
-        # The pytorch default collate function is used to perform shared-memory stacking to speed multi-processing when
-        # the output target is a pytorch Tensor
         if self.out_list:
-            results = [stack_fn(col) for col in [[row[i] for row in results] for i in range(len(results[0]))]]
+            results = [np.array(col) for col in [[row[i] for row in results] for i in range(len(results[0]))]]
         else:
-            results = stack_fn(results)
+            results = np.array(results)
         return results
 
 
@@ -275,16 +268,23 @@ class RemoveIf(NumpyOp):
         return self.forward(data, state)
 
 
-def forward_numpyop(ops: List[NumpyOp], data: MutableMapping[str, Any], state: Dict[str, Any],
-                    batched: bool = False) -> Optional[FilteredData]:
+def forward_numpyop(ops: List[NumpyOp],
+                    data: MutableMapping[str, Any],
+                    state: Dict[str, Any],
+                    batched: Optional[str] = None) -> Optional[FilteredData]:
     """Call the forward function for list of NumpyOps, and modify the data dictionary in place.
 
     Args:
         ops: A list of NumpyOps to execute.
         data: The data dictionary.
         state: Information about the current execution context, ex. {"mode": "train"}. Must contain at least the mode.
-        batched: Whether the `data` is batched or not.
+        batched: Whether the `data` is batched or not. If it is batched, provide the string ('tf', 'torch', or 'np')
+            indicating which type of tensors the batch contains.
     """
+    if batched:
+        # Cast data to Numpy before performing batch forward
+        for key, val in data.items():
+            data[key] = to_tensor(val, target_type='np')
     for op in ops:
         op_data = get_inputs_by_op(op, data, copy_on_write=op.in_place_edits)
         try:
@@ -304,4 +304,8 @@ def forward_numpyop(ops: List[NumpyOp], data: MutableMapping[str, Any], state: D
                 del data[key]
         if op.outputs:
             write_outputs_by_op(op, data, op_data)
+    if batched:
+        # Cast data back to original tensor type after performing batch forward
+        for key, val in data.items():
+            data[key] = to_tensor(val, target_type=batched, shared_memory=True)
     return None

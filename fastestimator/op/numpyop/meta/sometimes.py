@@ -13,11 +13,12 @@
 # limitations under the License.
 # ==============================================================================
 import inspect
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 import numpy as np
 
 from fastestimator.op.numpyop.numpyop import Batch, NumpyOp
+from fastestimator.util.data import FilteredData
 from fastestimator.util.traceability_util import traceable
 
 
@@ -72,7 +73,7 @@ class Sometimes(NumpyOp):
                 "RUA Augmentations should have a 'set_rua_level' method but it's not present in Op: {}".format(
                     self.op.__class__.__name__))
 
-    def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
+    def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> Union[FilteredData, List[np.ndarray]]:
         """Execute the wrapped operator a certain fraction of the time.
 
         Args:
@@ -87,6 +88,24 @@ class Sometimes(NumpyOp):
             if not self.op.in_list:
                 data = data[0]
             data = self.op.forward(data, state)
+            if isinstance(data, FilteredData):
+                return data
+            if not self.op.out_list:
+                data = [data]
+        else:
+            data = [data[self.inputs.index(out)] for out in self.outputs]
+        return data
+
+    def forward_batch(self,
+                      data: Union[np.ndarray, List[np.ndarray]],
+                      state: Dict[str, Any]) -> Union[FilteredData, List[np.ndarray]]:
+        if self.prob > np.random.uniform():
+            data = data[:self.inp_idx]  # Cut off the unnecessary inputs
+            if not self.op.in_list:
+                data = data[0]
+            data = self.op.forward_batch(data, state)
+            if isinstance(data, FilteredData):
+                return data
             if not self.op.out_list:
                 data = [data]
         else:
