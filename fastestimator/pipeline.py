@@ -314,11 +314,10 @@ class Pipeline:
                     # (n_visited, duration)
                     duration_list = np.zeros(shape=(len(self.ctx_ops) + 1 + len(self.ctx_batch_ops), 2))
                     data_len = len(loader.dataset)
-                    print("")
                     ds_str = f", Dataset: {ds_id}" if ds_id else ""
-                    print("Breakdown of time taken by Pipeline Operations (Mode: {}, Epoch: {}{})".format(
+                    print("\nBreakdown of time taken by Pipeline Operations (Mode: {}, Epoch: {}{})\n".format(
                         mode.capitalize(), epoch, ds_str))
-                    print("")
+                    extra_memory_management_time = 0
                     for _ in range(log_interval):
                         filtered = False
                         batch = []
@@ -367,8 +366,11 @@ class Pipeline:
                             duration_list[len(self.ctx_ops)][0] += 1
                             duration_list[len(self.ctx_ops)][1] += duration
                             # Perform batch ops
-                            batch = to_tensor(batch, target_type='np')  # Transform to numpy to not bias against the
-                            # first op in the batch_op chain vs the subsequent ones
+                            start = time.perf_counter()
+                            # Transform to numpy to not bias against the first op in the batch_op chain
+                            batch = to_tensor(batch, target_type='np')
+                            extra_memory_management_time += time.perf_counter() - start
+
                             for i, op in enumerate(self.ctx_batch_ops, start=len(self.ctx_ops) + 1):
                                 start = time.perf_counter()
                                 op_data = forward_numpyop([op], data=batch, state={'mode': mode}, batched='np')
@@ -377,6 +379,14 @@ class Pipeline:
                                 duration_list[i][1] += duration
                                 if isinstance(op_data, FilteredData):
                                     break
+                            # Count extra time needed to cast data back to torch
+                            start = time.perf_counter()
+                            to_tensor(batch, target_type='torch', shared_memory=True)
+                            extra_memory_management_time += time.perf_counter() - start
+
+                    if self.ctx_batch_ops:
+                        # Extra memory management penalty is only incurred when using batch ops
+                        duration_list[len(self.ctx_ops)][1] += extra_memory_management_time
 
                     total_time = np.sum(duration_list[:, 1])
                     normalized_times_ms = 1000 * duration_list[:, 1] / np.maximum(duration_list[:, 0], 1)
@@ -420,6 +430,10 @@ class Pipeline:
                             "{:.3f}".format(normalized_times_ms[i]).ljust(ms_visit_len + 1),
                             str(int(duration_list[i][0])).ljust(visit_len + 1),
                             100 * duration_list[i][1] / total_time))
+                    if self.ctx_batch_ops:
+                        penalty = round(100*(duration_list[len(self.ctx_ops)][1] - extra_memory_management_time) /
+                                        duration_list[len(self.ctx_ops)][1], 1)
+                        print(f"\nNote that collation time would be cut by ~{penalty}% if there were no batched ops.")
                 print("\n")  # to make printing more obvious
 
     def get_scheduled_items(self, mode: str) -> List[Any]:
