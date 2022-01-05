@@ -379,7 +379,7 @@ class Pipeline:
                                     break
 
                     total_time = np.sum(duration_list[:, 1])
-                    total_normalized_time = np.sum(duration_list[:, 1] / np.maximum(duration_list[:, 0], 1))
+                    normalized_times_ms = 1000 * duration_list[:, 1] / np.maximum(duration_list[:, 0], 1)
                     op_names = ["Op"]
 
                     for op in self.ctx_ops + [self.ctx_batch_info] + self.ctx_batch_ops:
@@ -403,21 +403,22 @@ class Pipeline:
                                       self.ctx_ops + [self.ctx_batch_info] + self.ctx_batch_ops] + [len("Inputs")])
                     max_out_len = max([len(", ".join(op.outputs)) for op in
                                        self.ctx_ops + [self.ctx_batch_info] + self.ctx_batch_ops] + [len("Outputs")])
+                    ms_visit_len = max(len("{:.3f}".format(max(normalized_times_ms))), len("ms / Visit"))
                     visit_len = max(len(f"{int(np.max(duration_list[:, 0]))}"), len("Visits"))
                     print("{}: {}: {}: {}: {}: {}".format("Op".ljust(max_op_len + 1),
                                                           "Inputs".ljust(max_in_len + 1),
                                                           "Outputs".ljust(max_out_len + 1),
+                                                          "ms / Visit".ljust(ms_visit_len + 1),
                                                           "Visits".ljust(visit_len + 1),
-                                                          "Time (Normalized)".rjust(17),
-                                                          "Time (Total)".rjust(13)))
-                    print("-" * (max_op_len + max_in_len + max_out_len + visit_len + 44))
+                                                          "Time (Total)".rjust(12)))
+                    print("-" * (max_op_len + max_in_len + max_out_len + visit_len + 37))
                     for i, op in enumerate(self.ctx_ops + [self.ctx_batch_info] + self.ctx_batch_ops):
-                        print("{}: {}: {}: {}: {:15.2f}% : {:12.2f}%".format(
+                        print("{}: {}: {}: {}: {}: {:11.2f}%".format(
                             op_names[i + 1].ljust(max_op_len + 1),
                             ", ".join(op.inputs).ljust(max_in_len + 1),
                             ", ".join(op.outputs).ljust(max_out_len + 1),
+                            "{:.3f}".format(normalized_times_ms[i]).ljust(ms_visit_len + 1),
                             str(int(duration_list[i][0])).ljust(visit_len + 1),
-                            100 * duration_list[i][1] / max(duration_list[i][0], 1) / total_normalized_time,
                             100 * duration_list[i][1] / total_time))
                 print("\n")  # to make printing more obvious
 
