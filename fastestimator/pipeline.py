@@ -415,6 +415,7 @@ class Pipeline:
                                        self.ctx_ops + [self.ctx_batch_info] + self.ctx_batch_ops] + [len("Outputs")])
                     ms_visit_len = max(len("{:.3f}".format(max(normalized_times_ms))), len("ms / Visit"))
                     visit_len = max(len(f"{int(np.max(duration_list[:, 0]))}"), len("Visits"))
+
                     print("{}: {}: {}: {}: {}: {}".format("Op".ljust(max_op_len + 1),
                                                           "Inputs".ljust(max_in_len + 1),
                                                           "Outputs".ljust(max_out_len + 1),
