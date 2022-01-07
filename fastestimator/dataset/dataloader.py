@@ -18,10 +18,10 @@ from abc import ABC
 from typing import Any, Callable, Dict, List, Optional, Sized, Tuple, Union
 
 import numpy as np
-import torch
 from torch import Tensor
-from torch.utils.data import DataLoader, Dataset, Sampler
+from torch.utils.data import DataLoader, Dataset, Sampler, _DatasetKind
 from torch.utils.data._utils.collate import default_collate, default_convert
+from torch.utils.data._utils.fetch import _MapDatasetFetcher
 from torch.utils.data.dataloader import _BaseDataLoaderIter, _MultiProcessingDataLoaderIter
 from torch.utils.data.dataloader import _SingleProcessDataLoaderIter
 
@@ -57,6 +57,7 @@ class FEDataLoader(DataLoader):
             necessary until the specified number of steps has been completed in full.
     """
     _current_threads = []
+    FE_LOADER_KIND = 7
 
     # The typing for 'dataset' should be an 'and' rather than 'or' but that feature is still under development:
     # https://github.com/python/typing/issues/213
@@ -117,6 +118,9 @@ class FEDataLoader(DataLoader):
                          persistent_workers=False,
                          collate_fn=functools.partial(_pre_collate, try_fn=collate_fn, postprocess_fn=postprocess_fn),
                          worker_init_fn=lambda _: np.random.seed(random.randint(0, 2 ** 32 - 1)))
+        if self.batch_size is not None:
+            # We need a special fetcher type later in order to build batches correctly
+            self._dataset_kind = self.FE_LOADER_KIND
 
     def shutdown(self) -> None:
         """Close the worker threads used by this iterator.
@@ -154,7 +158,7 @@ class FEDataLoader(DataLoader):
 def _pre_collate(data: List[Union[FilteredData, Dict[str, Any]]],
                  try_fn: Callable[[List[Union[FilteredData, Dict[str, Any]]]], Dict[str, Any]],
                  postprocess_fn: Optional[Callable[[Dict[str, Any]], Union[Dict[str, Any], FilteredData]]]) -> \
-        Tuple[bool, Union[Dict[str, Any], List[Union[FilteredData, Dict[str, Any]]]]]:
+        Tuple[Union[bool, FilteredData], Union[Dict[str, Any], List[Union[FilteredData, Dict[str, Any]]]]]:
     """A function which will try to pre-collate the data ahead of time in order to accelerate 'happy path'
 
     Args:
@@ -163,19 +167,22 @@ def _pre_collate(data: List[Union[FilteredData, Dict[str, Any]]],
         postprocess_fn: A function to run on batches of data after collation.
 
     Returns:
-        The collated data (if the `try_fn` succeeded), along with the original uncollated data.
+        Whether the data is batched, along with the data. If collate succeeded but the data was subsequently filtered,
+        the first return value will be None.
     """
     try:
         collated = try_fn(data)
-        if postprocess_fn is not None:
-            collated = postprocess_fn(collated)
-            if isinstance(collated, FilteredData):
-                return False, [collated] * len(data)
-        return True, collated
     except:
         # The presence of filtered data instances could break the possibly-user-specified collate function for any
         # reason, so cast a broad net on this except clause.
         return False, data
+    if postprocess_fn is not None:
+        collated = postprocess_fn(collated)
+        if isinstance(collated, FilteredData):
+            # There might be extra data sitting around that was supposed to be combined with this data, so return the
+            # raw data and let the main thread try again.
+            return collated, data
+    return True, collated
 
 
 class _BaseFELoaderIter(_BaseDataLoaderIter, ABC):
@@ -216,8 +223,8 @@ def _next_pre_batch(self: _BaseFELoaderIter) -> Dict[str, Tensor]:
     # Look for new data until you have enough to complete a batch
     while len(self.fe_extra_data) < self.fe_batch_size and self.fe_samples_yielded + len(
             self.fe_extra_data) < self.fe_samples_to_yield:
-        collated, candidate_batch = self._next_data()
-        if collated:
+        sample_indices, (collated, candidate_batch) = self._next_data()
+        if collated is True:  # not regular if check since collated might be FilteredData
             if self.fe_samples_yielded + self.fe_batch_size + len(self.fe_extra_data) < self.fe_samples_to_yield:
                 # This batch can be used as-is
                 self.fe_samples_yielded += self.fe_batch_size
@@ -228,23 +235,24 @@ def _next_pre_batch(self: _BaseFELoaderIter) -> Dict[str, Tensor]:
                 self.fe_samples_yielded += self.fe_batch_size
                 return candidate_batch
             # Otherwise we need to unpack this batch, combine it with any older data, and shrink it to the desired size
-            try:
-                candidate_batch = decollate_batch(batch=candidate_batch)
-            except TypeError:
-                print("\033[93m {}\033[00m".format("FastEstimator-Warn: One or more data points may be missing from "
-                                                   "the final batch in your epoch. Please override the FE "
-                                                   "decollate_batch method or share your collate_fn with the FE "
-                                                   "developers for assistance."))
-                break
-        for instance in candidate_batch:
-            if self.fe_samples_yielded + len(self.fe_extra_data) == self.fe_samples_to_yield:
-                # Avoid processing extra data (needed for edge cases involving lots of filtered data near end of epoch)
-                break
-            if isinstance(instance, FilteredData):
-                if not instance.replacement:
-                    self.fe_samples_yielded += 1
-                continue
-            self.fe_extra_data.append(instance)
+            # The easiest way to do this is to re-draw the batch from scratch since user might have run batched ops
+            # which will have had invalid effects.
+            candidate_batch = [self._dataset[idx] for idx in sample_indices]
+        if isinstance(collated, FilteredData) and not self.fe_extra_data:
+            # This batch was collated but filtered during a batch filter. It was returned here just in case there was
+            # extra data lying around, but there isn't any. We can safely avoid processing it a second time.
+            if not collated.replacement:
+                self.fe_samples_yielded += min(len(candidate_batch), self.fe_samples_to_yield - self.fe_samples_yielded)
+        else:
+            for instance in candidate_batch:
+                if self.fe_samples_yielded + len(self.fe_extra_data) == self.fe_samples_to_yield:
+                    # Avoid processing extra data (for edge cases involving lots of filtered data near end of epoch)
+                    break
+                if isinstance(instance, FilteredData):
+                    if not instance.replacement:
+                        self.fe_samples_yielded += 1
+                    continue
+                self.fe_extra_data.append(instance)
     n_keep = min(self.fe_batch_size, self.fe_samples_to_yield - self.fe_samples_yielded)
     real_batch = self.fe_extra_data[:n_keep]
     self.fe_extra_data = self.fe_extra_data[n_keep:]
@@ -278,25 +286,31 @@ def _next_post_batch(self: _BaseFELoaderIter) -> Dict[str, Tensor]:
         self._reset()  # This copies the pytorch implementation, and seems to work, but is clearly missing an argument
     while self.fe_samples_yielded < self.fe_samples_to_yield:
         collated, candidate_batch = self._next_data()
-        if collated:
+        if collated is True:  # Not regular if check since collated might be FilteredData
             self.fe_samples_yielded += 1
             return candidate_batch
-        for instance in candidate_batch:
-            if isinstance(instance, FilteredData):
-                if not instance.replacement:
-                    self.fe_samples_yielded += 1
-                break
+        if isinstance(collated, FilteredData):
+            # The batch was filtered during the forward_batch pass
+            if not collated.replacement:
+                self.fe_samples_yielded += 1
         else:
-            # The else block is reached iff the for loop never breaks (probably should never get here)
-            collated = self.fe_collate_fn(candidate_batch)
-            if self.fe_postprocess_fn is not None:
-                collated = self.fe_postprocess_fn(collated)
-                if isinstance(collated, FilteredData):
-                    if not collated.replacement:
+            # The filtered data appeared before batching, need to find it
+            for instance in candidate_batch:
+                if isinstance(instance, FilteredData):
+                    if not instance.replacement:
                         self.fe_samples_yielded += 1
-                    return _next_post_batch(self)
-            self.fe_samples_yielded += 1
-            return collated
+                    break
+            else:
+                # The else block is reached iff the for loop never breaks (probably should never get here)
+                collated = self.fe_collate_fn(candidate_batch)
+                if self.fe_postprocess_fn is not None:
+                    collated = self.fe_postprocess_fn(collated)
+                    if isinstance(collated, FilteredData):
+                        if not collated.replacement:
+                            self.fe_samples_yielded += 1
+                        return _next_post_batch(self)
+                self.fe_samples_yielded += 1
+                return collated
     raise StopIteration
 
 
@@ -367,32 +381,28 @@ class InfiniteSampler(Sampler):
         return elem
 
 
-def decollate_batch(batch: Any) -> Any:
-    """A function which takes a collated batch of data and turns it back into a list of instances.
+###
+# Here we use a hack to patch a special fetcher into the pytorch ecosystem. This allows us to return the dataset indices
+# alongside the collated data points in case the batch needs to be re-constructed later. It won't interfere with regular
+# pytorch usage since our reserved 'kind' value is 7 whereas pytorch only uses 0 and 1.
+###
 
-    This method makes a number of implicit assumptions about the input data based on the fact that such data was
-    previously run through the pytorch default_collate function.
-
-    Args:
-        batch: The collated batch of data.
-
-    Returns:
-        A list of data instances.
-    """
-    if isinstance(batch, str):
-        return batch
-    elif isinstance(batch, torch.Tensor):
-        return [t.item() if t.ndim == 0 else t.numpy() for t in torch.unbind(batch)]
-    elif isinstance(batch, dict):
-        return [{k: v[idx] for idx, k in enumerate(batch.keys())} for v in
-                zip(*[decollate_batch(b) for b in batch.values()])]
-    elif isinstance(batch, (list, tuple)):
-        transposed = [decollate_batch(elem) for elem in batch]
-        if transposed and isinstance(transposed[0], str):
-            pass  # Strings don't get extra batch dimension, so don't need special treatment
+class _IdxMapDatasetFetcher(_MapDatasetFetcher):
+    def fetch(self, possibly_batched_index):
+        if self.auto_collation:
+            data = [self.dataset[idx] for idx in possibly_batched_index]
         else:
-            transposed = [list(e) for e in zip(*transposed)]
-        if hasattr(batch, '_fields'):  # Named tuple
-            transposed = [type(batch)(*e) for e in transposed]
-        return transposed
-    raise TypeError("Didn't implement this yet")
+            data = self.dataset[possibly_batched_index]
+        return possibly_batched_index, self.collate_fn(data)
+
+
+if not hasattr(_DatasetKind, '_original_create_fetcher'):
+    _DatasetKind._original_create_fetcher = _DatasetKind.create_fetcher
+
+    def _create_fetcher(kind, dataset, auto_collation, collate_fn, drop_last):
+        if kind == FEDataLoader.FE_LOADER_KIND:
+            return _IdxMapDatasetFetcher(dataset, auto_collation, collate_fn, drop_last)
+        else:
+            return _DatasetKind._original_create_fetcher(kind, dataset, auto_collation, collate_fn, drop_last)
+
+    _DatasetKind.create_fetcher = _create_fetcher

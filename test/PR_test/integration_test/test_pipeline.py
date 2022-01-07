@@ -815,6 +815,48 @@ class TestPipelineNames(unittest.TestCase):
 
 class TestPipelineFilter(unittest.TestCase):
 
+    def test_unbatched_no_drop_multi_filter(self):
+        data = NumpyDataset({"idx": np.array([i for i in range(10)])})
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       num_process=n_process,
+                                       ops=[RemoveIf(inputs="idx", replacement=False, fn=lambda x: x in [6, 7]),
+                                            Batch(batch_size=4),
+                                            RemoveIf(inputs="idx", replacement=False, fn=lambda x: 0 in x)])
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertListEqual([4, 5, 8, 9], composite_list)
+
+    def test_unbatched_nodrop_nofilter_batchop(self):
+        data = NumpyDataset({"idx": np.array([i for i in range(39)])})
+        for n_process in [0, 7]:
+            with self.subTest("proc status", workers=n_process):
+                pipeline = fe.Pipeline(train_data=data,
+                                       num_process=n_process,
+                                       ops=[Batch(batch_size=4), NumpyOpAdd1(inputs="idx", outputs="idx")])
+                with self.subTest("shuffle False"):
+                    with pipeline(mode="train", shuffle=False) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertListEqual([i+1 for i in range(39)], composite_list)
+                with self.subTest("shuffle True"):
+                    with pipeline(mode="train", shuffle=True) as loader:
+                        itr = iter(loader)
+                        batches = []
+                        for elem in itr:
+                            batches.append(elem)
+                    composite_list = list(np.concatenate([batch['idx'] for batch in batches]))
+                    self.assertSetEqual(set([i+1 for i in range(39)]), set(composite_list))
+
     def test_unbatched_nodrop_nofilter(self):
         data = NumpyDataset({"idx": np.array([i for i in range(23)])})
         for n_process in [0, 7]:
