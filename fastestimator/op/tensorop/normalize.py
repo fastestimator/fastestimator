@@ -19,6 +19,7 @@ import torch
 
 from fastestimator.backend.reduce_mean import reduce_mean
 from fastestimator.backend.reduce_std import reduce_std
+from fastestimator.backend.tensor_normalize import tensor_normalize
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 
@@ -48,16 +49,9 @@ class Normalize(TensorOp):
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None) -> None:
         super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
-        if mean is None:
-            self.mean = reduce_mean(inputs, axis=[0, 1, 2])
-        else:
-            self.mean = mean
-        
-        if std is None:
-            self.std = reduce_std(inputs, axis=[0, 1, 2])
-        else:
-            self.std = std
+        self.mean = mean
+        self.std = std 
         self.eps = eps 
 
     def forward(self, data: List[Tensor]) -> List[Tensor]:
-        return [reshape(item, self.eps, self.mean, self.std) for item in data]
+        return [tensor_normalize(item, self.eps, self.mean, self.std) for item in data]
