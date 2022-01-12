@@ -12,18 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Iterable, List, Tuple, TypeVar, Union
 
+import numpy as np
 import tensorflow as tf
+from tensorflow.python.keras.backend_config import epsilon
 import torch
+from typing import List, Tuple, TypeVar, Union
 
-from fastestimator.backend.reduce_mean import reduce_mean
-from fastestimator.backend.reduce_std import reduce_std
-from fastestimator.backend.tensor_normalize import tensor_normalize
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
+from fastestimator.backend.tensor_normalize import normalize
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
 
 @traceable()
@@ -43,15 +43,19 @@ class Normalize(TensorOp):
     def __init__(self,
                  inputs: Union[str, List[str]],
                  outputs: Union[str, List[str]],
-                 eps: float = 1e-6,
+                 epsilon: float = 1e-7,
                  mean: Union[None, float, Tuple[float, ...]] = None, 
                  std: Union[None, float, Tuple[float, ...]] = None,
-                 mode: Union[None, str, Iterable[str]] = None,
-                 ds_id: Union[None, str, Iterable[str]] = None) -> None:
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
+                 mode = None) -> None:
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        self.epsilon = epsilon
         self.mean = mean
-        self.std = std 
-        self.eps = eps 
+        self.std = std
+         
+    def build(self, framework, device):
+        self.mean = self.mean.to(device)
+        self.std = self.std.to(device)
+        self.epsilon = self.epsilon.to(device)
 
     def forward(self, data: List[Tensor]) -> List[Tensor]:
-        return [tensor_normalize(item, self.eps, self.mean, self.std) for item in data]
+        return [normalize(item, self.epsilon, self.mean, self.std) for item in data]
