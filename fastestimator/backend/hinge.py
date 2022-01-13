@@ -49,9 +49,7 @@ def hinge(y_true: Tensor, y_pred: Tensor) -> Tensor:
         The hinge loss between `y_true` and `y_pred`
 
     Raises:
-        AssertionError: If `y_true` and `y_pred` have disparate types.
         ValueError: If `y_pred` is an unacceptable data type.
     """
-    assert type(y_pred) == type(y_true), "y_pred and y_true must be same tensor type"
     y_true = cast(y_true, 'float32')
     return reduce_mean(clip_by_value(1.0 - y_true * y_pred, min_value=0), axis=-1)
