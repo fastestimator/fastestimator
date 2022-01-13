@@ -53,10 +53,8 @@ def mean_squared_error(y_true: Tensor, y_pred: Tensor) -> Tensor:
         The MSE between `y_true` and `y_pred`
 
     Raises:
-        AssertionError: If `y_true` and `y_pred` have disparate types.
         ValueError: If `y_pred` is an unacceptable data type.
     """
-    assert type(y_pred) == type(y_true), "y_pred and y_true must be of the same tensor type"
     if tf.is_tensor(y_pred):
         mse = tf.losses.MSE(y_true, y_pred)
     elif isinstance(y_pred, torch.Tensor):
