@@ -17,7 +17,7 @@ def reduce_std(tensor: Tensor, axis: Union[None, int, Sequence[int]] = None, kee
     b = fe.backend.reduce_std(n)  # 2.2913
     b = fe.backend.reduce_std(n, axis=0)  # [[2., 2.], [2., 2.]]
     b = fe.backend.reduce_std(n, axis=1)  # [[1., 1.], [1., 1.]]
-    b = fe.backend.reduce_std(n, axis=[0,2])  # [2.06155281, 2.06155281]
+    b = fe.backend.reduce_std(n, axis=[0,2])  # [2.23606798 2.23606798]
     ```
 
     This method can be used with TensorFlow tensors:
@@ -26,7 +26,7 @@ def reduce_std(tensor: Tensor, axis: Union[None, int, Sequence[int]] = None, kee
     b = fe.backend.reduce_std(t)  # 2.2913
     b = fe.backend.reduce_std(t, axis=0)  # [[2., 2.], [2., 2.]]
     b = fe.backend.reduce_std(t, axis=1)  # [[2, 3], [3, 7]]
-    b = fe.backend.reduce_std(t, axis=[0,2])  # [2.06155281, 2.06155281]
+    b = fe.backend.reduce_std(t, axis=[0,2])  # [2.23606798 2.23606798]
     ```
 
     This method can be used with PyTorch tensors:
@@ -35,7 +35,7 @@ def reduce_std(tensor: Tensor, axis: Union[None, int, Sequence[int]] = None, kee
     b = fe.backend.reduce_std(p)  # 2.2913
     b = fe.backend.reduce_std(p, axis=0)  # [[2., 2.], [2., 2.]]
     b = fe.backend.reduce_std(p, axis=1)  # [[1., 1.], [1., 1.]]
-    b = fe.backend.reduce_std(p, axis=[0,2])  # [2.06155281, 2.06155281]
+    b = fe.backend.reduce_std(p, axis=[0,2])  # [2.23606798 2.23606798]
     ```
 
     Args:
