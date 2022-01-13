@@ -18,7 +18,6 @@ import tensorflow as tf
 from numpy import arange, float32, array, testing
 
 from fastestimator.op.tensorop.normalize import Normalize
-from fastestimator.test.unittest_util import is_equal
 from fastestimator.backend import to_tensor
 import torch
 
@@ -54,17 +53,17 @@ class TestNormalize(unittest.TestCase):
         op = Normalize(mean=13.0, std=7.79)
         data = op.forward(data=tf.convert_to_tensor(self.numpy_array), state={})
         testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
-    
+
     def test_std_tf(self):
         op = Normalize(mean=13.0, std=None)
         data = op.forward(data=tf.convert_to_tensor(self.numpy_array), state={})
         testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
-    
+
     def test_mean_tf(self):
         op = Normalize(mean=None, std=7.78)
         data = op.forward(data=tf.convert_to_tensor(self.numpy_array), state={})
         testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
-    
+
     def test_tf(self):
         op = Normalize(mean=None, std=None)
         data = op.forward(data=tf.convert_to_tensor(self.numpy_array), state={})
@@ -74,32 +73,32 @@ class TestNormalize(unittest.TestCase):
         op = Normalize(mean=(12., 13., 14.), std=(7.745967, 7.745967, 7.745967))
         data = op.forward(data=tf.convert_to_tensor(self.numpy_array), state={})
         testing.assert_array_almost_equal(data.numpy(), self.expected_result_multi, 2)
-    
+
     def test_std_tf_multi(self):
         op = Normalize(mean=(12., 13., 14.), std=None)
         data = op.forward(data=tf.convert_to_tensor(self.numpy_array), state={})
         testing.assert_array_almost_equal(data.numpy(), self.expected_result_multi, 2)
-    
+
     def test_mean_tf_multi(self):
         op = Normalize(mean=None, std=(7.745967, 7.745967, 7.745967))
         data = op.forward(data=tf.convert_to_tensor(self.numpy_array), state={})
         testing.assert_array_almost_equal(data.numpy(), self.expected_result_multi, 2)
-    
+
     def test_normalize_torch(self):
         op = Normalize(mean=13.0, std=7.79)
         data = op.forward(data=to_tensor(self.numpy_array, "torch").type(torch.float32), state={})
         testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
-    
+
     def test_std_torch(self):
         op = Normalize(mean=13.0, std=None)
         data = op.forward(data=to_tensor(self.numpy_array, "torch").type(torch.float32), state={})
         testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
-    
+
     def test_mean_torch(self):
         op = Normalize(mean=None, std=7.78)
         data = op.forward(data=to_tensor(self.numpy_array, "torch").type(torch.float32), state={})
         testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
-    
+
     def test_torch(self):
         op = Normalize(mean=None, std=None)
         data = op.forward(data=to_tensor(self.numpy_array, "torch").type(torch.float32), state={})
