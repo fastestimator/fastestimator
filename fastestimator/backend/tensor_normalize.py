@@ -61,7 +61,7 @@ def normalize(tensor: Tensor, mean, std, epsilon: float = 1e-7) -> Tensor:
     if tf.is_tensor(tensor) or isinstance(tensor, torch.Tensor) or isinstance(tensor, np.ndarray):
         tensor = (tensor - mean) / (std + epsilon)
 
-        # for testing purpose we are not changing the channels 
+        # for testing purpose we are not changing the channels
         #if isinstance(tensor, torch.Tensor):
         #    tensor = tensor.permute((0, 1, 2, 3))  # channel first
     else:
@@ -85,7 +85,7 @@ def get_mean(tensor: Tensor, mean, channel_level):
         pass
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(tensor)))
-    
+
     return mean
 
 

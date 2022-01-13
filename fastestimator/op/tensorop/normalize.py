@@ -16,7 +16,7 @@ import torch
 import numpy as np
 import tensorflow as tf
 
-from typing import List, Tuple, TypeVar, Union
+from typing import Any, List, Dict, Tuple, TypeVar, Union, Optional
 
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
@@ -56,10 +56,10 @@ class Normalize(TensorOp):
         if (isinstance(self.mean, Tuple) and  isinstance(self.std, float)) or (isinstance(self.std, Tuple) and  isinstance(self.mean, float)) or (isinstance(self.mean, Tuple) and isinstance(self.std, Tuple) and len(self.mean)!=len(self.std)):
             raise ValueError("Both mean and std should have same dimensions.")
          
-    def build(self, framework, device):
+    def build(self, framework: str, device: Optional[torch.device] = None) -> None:
         self.mean = self.mean.to(device)
         self.std = self.std.to(device)
         self.epsilon = self.epsilon.to(device)
 
-    def forward(self, data: List[Tensor], state={}) -> List[Tensor]:
+    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
         return normalize(data, self.mean, self.std, self.epsilon)

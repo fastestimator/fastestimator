@@ -35,6 +35,5 @@ class TestNormalize(unittest.TestCase):
         np.testing.assert_array_almost_equal(normalize(self.test_tf, None, None).numpy(), np.array([[ 0. ,  0.], [ 0.48038446, -1.92153785], [ 1.44115338,  0.]]))
 
     def test_normalize_torch_value(self):
-        print(normalize(self.test_torch, None, None))
-        #np.testing.assert_array_almost_equal(normalize(self.test_torch, None, None).numpy(), np.array([[ 0. ,  0.], [ 0.48038446, -1.92153785], [ 1.44115338,  0.]]))
+        np.testing.assert_array_almost_equal(normalize(self.test_torch, None, None).numpy(), np.array([[ 0. ,  0.], [ 0.48038446, -1.92153785], [ 1.44115338,  0.]]))
 
