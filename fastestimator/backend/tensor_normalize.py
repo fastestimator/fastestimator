@@ -117,7 +117,7 @@ def get_std(tensor: Tensor, std, channel_level):
         pass
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(tensor)))
-    
+
     return std
 
 

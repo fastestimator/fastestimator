@@ -25,8 +25,8 @@ class TestReduceStd(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         self.test_np = np.array([[1, 2], [3, 3]])
-        self.test_tf = tf.cast(tf.constant([[1, 1], [2, -3], [4, 1]]), tf.float32)
-        self.test_torch = torch.Tensor([[1, 1], [2, -3], [4, 1]])
+        self.test_tf = tf.cast(tf.constant([[1, 1], [2, -3], [4, 2]]), tf.float32)
+        self.test_torch = torch.Tensor([[1, 1], [2, -3], [4, 2]])
 
     def test_reduce_mean_np_type(self):
         self.assertIsInstance(reduce_std(self.test_np), np.ScalarType, 'Output type must be NumPy')
@@ -38,11 +38,11 @@ class TestReduceStd(unittest.TestCase):
         self.assertIsInstance(reduce_std(self.test_tf), tf.Tensor, 'Output type must be tf.Tensor')
 
     def test_reduce_mean_tf_value(self):
-        self.assertAlmostEqual(reduce_std(self.test_tf).numpy(), 2.0816, 3)
+        self.assertAlmostEqual(reduce_std(self.test_tf).numpy(), 2.114, 3)
 
     def test_reduce_mean_torch_type(self):
         self.assertIsInstance(reduce_std(self.test_torch), torch.Tensor, 'Output type must be torch.Tensor')
 
     def test_reduce_mean_torch_value(self):
-        self.assertAlmostEqual(reduce_std(self.test_torch).numpy(), 2.0816, 3)
+        self.assertAlmostEqual(reduce_std(self.test_torch).numpy(), 2.114, 3)
 

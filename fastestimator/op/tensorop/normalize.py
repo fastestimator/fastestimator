@@ -44,7 +44,7 @@ class Normalize(TensorOp):
     def __init__(self,
                  inputs: Union[str, List[str]]=None,
                  outputs: Union[str, List[str]]=None,
-                 mean: Union[None, float, Tuple[float, ...]] = None, 
+                 mean: Union[None, float, Tuple[float, ...]] = None,
                  std: Union[None, float, Tuple[float, ...]] = None,
                  epsilon: float = 1e-7,
                  mode = None) -> None:
@@ -55,7 +55,7 @@ class Normalize(TensorOp):
 
         if (isinstance(self.mean, Tuple) and  isinstance(self.std, float)) or (isinstance(self.std, Tuple) and  isinstance(self.mean, float)) or (isinstance(self.mean, Tuple) and isinstance(self.std, Tuple) and len(self.mean)!=len(self.std)):
             raise ValueError("Both mean and std should have same dimensions.")
-         
+
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
         self.mean = self.mean.to(device)
         self.std = self.std.to(device)
