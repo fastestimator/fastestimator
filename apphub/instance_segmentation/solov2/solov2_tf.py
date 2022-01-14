@@ -34,6 +34,7 @@ from fastestimator.op.numpyop.univariate import ReadImage
 from fastestimator.op.tensorop.loss import L2Regularizaton
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.op.tensorop.tensorop import LambdaOp, TensorOp
+from fastestimator.op.tensorop.normalize import Normalize
 from fastestimator.schedule import EpochScheduler, cosine_decay
 from fastestimator.trace.adapt import LRScheduler
 from fastestimator.trace.io import BestModelSaver
@@ -227,17 +228,6 @@ class Gt2Target(NumpyOp):
         num_objects = masks.shape[0]
         non_empty_mask = np.sum(masks.reshape(num_objects, -1), axis=1) > 0
         return masks[non_empty_mask], bboxes[non_empty_mask]
-
-
-class Normalize(TensorOp):
-    def __init__(self, inputs, outputs, mean, std, mode=None):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        self.mean = tf.convert_to_tensor(mean)
-        self.std = tf.convert_to_tensor(std)
-
-    def forward(self, data, state):
-        data = (data / 255 - self.mean) / self.std
-        return data
 
 
 class Solov2Loss(TensorOp):
@@ -533,7 +523,7 @@ def get_estimator(data_dir=None,
     model = fe.build(model_fn=lambda: solov2(input_shape=(im_size, im_size, 3)),
                      optimizer_fn=lambda: tf.optimizers.SGD(learning_rate=init_lr, momentum=0.9))
     network = fe.Network(ops=[
-        Normalize(inputs="image", outputs="image", mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+        Normalize(inputs="image", outputs="image", mean=(123.675, 116.28, 103.53), std=(58.395, 57.12, 57.375)),
         ModelOp(model=model, inputs="image", outputs=("feat_seg", "feat_cls_list", "feat_kernel_list")),
         LambdaOp(fn=lambda x: x, inputs="feat_cls_list", outputs=("cls1", "cls2", "cls3", "cls4", "cls5")),
         LambdaOp(fn=lambda x: x, inputs="feat_kernel_list", outputs=("k1", "k2", "k3", "k4", "k5")),
