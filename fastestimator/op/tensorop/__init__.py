@@ -19,3 +19,4 @@ from fastestimator.op.tensorop.gather import Gather
 from fastestimator.op.tensorop.reshape import Reshape
 from fastestimator.op.tensorop.tensorop import LambdaOp, TensorOp
 from fastestimator.op.tensorop.un_hadamard import UnHadamard
+from fastestimator.op.tensorop.normalize import Normalize

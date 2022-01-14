@@ -32,17 +32,17 @@ class TestReduceStd(unittest.TestCase):
         self.assertIsInstance(reduce_std(self.test_np), np.ScalarType, 'Output type must be NumPy')
 
     def test_reduce_mean_np_value(self):
-        self.assertAlmostEqual(reduce_std(self.test_np), 0.829, 3)
+        self.assertAlmostEqual(reduce_std(self.test_np), 0.829, delta=0.001)
 
     def test_reduce_mean_tf_type(self):
         self.assertIsInstance(reduce_std(self.test_tf), tf.Tensor, 'Output type must be tf.Tensor')
 
     def test_reduce_mean_tf_value(self):
-        self.assertAlmostEqual(reduce_std(self.test_tf).numpy(), 2.114, 3)
+        self.assertAlmostEqual(reduce_std(self.test_tf).numpy(), 2.114, delta=0.001)
 
     def test_reduce_mean_torch_type(self):
         self.assertIsInstance(reduce_std(self.test_torch), torch.Tensor, 'Output type must be torch.Tensor')
 
     def test_reduce_mean_torch_value(self):
-        self.assertAlmostEqual(reduce_std(self.test_torch).numpy(), 2.114, 3)
+        self.assertAlmostEqual(reduce_std(self.test_torch).numpy(), 2.114, delta=0.001)
 

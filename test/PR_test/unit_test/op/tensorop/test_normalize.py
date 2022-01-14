@@ -29,77 +29,98 @@ class TestNormalize(unittest.TestCase):
         self.expected_result = array([[[[-1.6688062 , -1.5404365 , -1.4120668 ],
                                         [-1.283697  , -1.1553273 , -1.0269576 ],
                                         [-0.89858794, -0.77021825, -0.6418485 ]],
-
                                        [[-0.5134788 , -0.38510913, -0.2567394 ],
                                         [-0.1283697 ,  0.        ,  0.1283697 ],
                                         [ 0.2567394 ,  0.38510913,  0.5134788 ]],
-
                                        [[ 0.6418485 ,  0.77021825,  0.89858794],
                                         [ 1.0269576 ,  1.1553273 ,  1.283697  ],
                                         [ 1.4120668 ,  1.5404365 ,  1.6688062 ]]]], dtype=float32)
+        self.expected_result_torch = array([[[[-1.6688062 , -1.283697  , -0.89858794],
+                                            [-0.5134788 , -0.1283697 ,  0.2567394 ],
+                                            [ 0.6418485 ,  1.0269576 ,  1.4120668 ]],
+                                            [[-1.5404365 , -1.1553273 , -0.77021825],
+                                            [-0.38510913,  0.        ,  0.38510913],
+                                            [ 0.77021825,  1.1553273 ,  1.5404365 ]],
+                                            [[-1.4120668 , -1.0269576 , -0.6418485 ],
+                                            [-0.2567394 ,  0.1283697 ,  0.5134788 ],
+                                            [ 0.89858794,  1.283697  ,  1.6688062 ]]]], dtype=float32)
         self.expected_result_multi = array([[[[-1.5491933 , -1.5491933 , -1.5491933 ],
                                             [-1.1618949 , -1.1618949 , -1.1618949 ],
                                             [-0.77459663, -0.77459663, -0.77459663]],
-
                                             [[-0.38729832, -0.38729832, -0.38729832],
                                             [ 0.        ,  0.        ,  0.        ],
                                             [ 0.38729832,  0.38729832,  0.38729832]],
-
                                             [[ 0.77459663,  0.77459663,  0.77459663],
                                             [ 1.1618949 ,  1.1618949 ,  1.1618949 ],
                                             [ 1.5491933 ,  1.5491933 ,  1.5491933 ]]]], dtype=float32)
 
     def test_normalize_tf(self):
         op = Normalize(mean=13.0, std=7.79)
+        op.build("tf")
         data = op.forward(data=tf.convert_to_tensor(self.numpy_array), state={})
         testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
 
+    def test_normalize_tf_int(self):
+        op = Normalize(mean=13, std=7)
+        op.build("tf")
+        data = op.forward(data=tf.convert_to_tensor(self.numpy_array), state={})
+
     def test_std_tf(self):
         op = Normalize(mean=13.0, std=None)
+        op.build("tf")
         data = op.forward(data=tf.convert_to_tensor(self.numpy_array), state={})
         testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
 
     def test_mean_tf(self):
         op = Normalize(mean=None, std=7.78)
+        op.build("tf")
         data = op.forward(data=tf.convert_to_tensor(self.numpy_array), state={})
         testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
 
     def test_tf(self):
         op = Normalize(mean=None, std=None)
+        op.build("tf")
         data = op.forward(data=tf.convert_to_tensor(self.numpy_array), state={})
         testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
 
     def test_normalize_tf_multi(self):
         op = Normalize(mean=(12., 13., 14.), std=(7.745967, 7.745967, 7.745967))
+        op.build("tf")
         data = op.forward(data=tf.convert_to_tensor(self.numpy_array), state={})
         testing.assert_array_almost_equal(data.numpy(), self.expected_result_multi, 2)
 
     def test_std_tf_multi(self):
         op = Normalize(mean=(12., 13., 14.), std=None)
+        op.build("tf")
         data = op.forward(data=tf.convert_to_tensor(self.numpy_array), state={})
         testing.assert_array_almost_equal(data.numpy(), self.expected_result_multi, 2)
 
     def test_mean_tf_multi(self):
         op = Normalize(mean=None, std=(7.745967, 7.745967, 7.745967))
+        op.build("tf")
         data = op.forward(data=tf.convert_to_tensor(self.numpy_array), state={})
         testing.assert_array_almost_equal(data.numpy(), self.expected_result_multi, 2)
 
     def test_normalize_torch(self):
         op = Normalize(mean=13.0, std=7.79)
+        op.build("torch", "cuda:0" if torch.cuda.is_available() else "cpu")
         data = op.forward(data=to_tensor(self.numpy_array, "torch").type(torch.float32), state={})
-        testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
+        testing.assert_array_almost_equal(data.numpy(), self.expected_result_torch, 2)
 
     def test_std_torch(self):
         op = Normalize(mean=13.0, std=None)
+        op.build("torch", "cuda:0" if torch.cuda.is_available() else "cpu")
         data = op.forward(data=to_tensor(self.numpy_array, "torch").type(torch.float32), state={})
-        testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
+        testing.assert_array_almost_equal(data.numpy(), self.expected_result_torch, 2)
 
     def test_mean_torch(self):
         op = Normalize(mean=None, std=7.78)
+        op.build("torch", "cuda:0" if torch.cuda.is_available() else "cpu")
         data = op.forward(data=to_tensor(self.numpy_array, "torch").type(torch.float32), state={})
-        testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
+        testing.assert_array_almost_equal(data.numpy(), self.expected_result_torch, 2)
 
     def test_torch(self):
         op = Normalize(mean=None, std=None)
+        op.build("torch", "cuda:0" if torch.cuda.is_available() else "cpu")
         data = op.forward(data=to_tensor(self.numpy_array, "torch").type(torch.float32), state={})
-        testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
+        testing.assert_array_almost_equal(data.numpy(), self.expected_result_torch, 2)

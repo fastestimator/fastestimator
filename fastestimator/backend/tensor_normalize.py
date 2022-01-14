@@ -1,4 +1,18 @@
-from typing import Tuple, TypeVar
+# Copyright 2022 The FastEstimator Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+from typing import Tuple, TypeVar, Union, List
 
 import torch
 import numpy as np
@@ -10,9 +24,10 @@ from fastestimator.backend.reduce_std import reduce_std
 from fastestimator.backend.to_tensor import to_tensor
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+allowed_data_types = Union[None, float, Tuple[float, ...], List[float]]
 
 
-def normalize(tensor: Tensor, mean, std, epsilon: float = 1e-7) -> Tensor:
+def normalize(tensor: Tensor, mean: allowed_data_types, std: allowed_data_types, epsilon: float = 1e-7) -> Tensor:
     """Compute the normalized value of a `tensor`.
 
     This method can be used with Numpy data:
@@ -51,26 +66,35 @@ def normalize(tensor: Tensor, mean, std, epsilon: float = 1e-7) -> Tensor:
         ValueError: If `tensor` is an unacceptable data type.
     """
     channel_level = False
-    if isinstance(mean, Tuple) or isinstance(std, Tuple):
+    if isinstance(mean, (Tuple, List)) or isinstance(std, (Tuple, List)):
         channel_level = True
 
     mean = get_mean(tensor, mean, channel_level)
     std = get_std(tensor, std, channel_level)
     epsilon = get_epsilon(tensor, epsilon)
 
-    if tf.is_tensor(tensor) or isinstance(tensor, torch.Tensor) or isinstance(tensor, np.ndarray):
-        tensor = (tensor - mean) / (std + epsilon)
+    tensor = (tensor - mean) / (std + epsilon)
 
-        # for testing purpose we are not changing the channels
-        #if isinstance(tensor, torch.Tensor):
-        #    tensor = tensor.permute((0, 1, 2, 3))  # channel first
+    if isinstance(tensor, torch.Tensor):
+        return tensor.permute((0, 3, 1, 2))
     else:
-        raise ValueError("Unrecognized tensor type {}".format(type(tensor)))
-
-    return tensor
+        return tensor
 
 
-def get_mean(tensor: Tensor, mean, channel_level):
+def get_mean(tensor: Tensor, mean: allowed_data_types, channel_level: bool):
+    """Get the mean value of a `tensor`.
+
+    Args:
+        tensor: The input value.
+        mean: The mean which needs to applied(eg: None, 3.8, (1.9, 2.0, 2.9), [1.9, 2.0, 2.9])
+        channel_level: Whether to apply mean across channel or overall.
+
+    Returns:
+        The mean value of `tensor`.
+
+    Raises:
+        ValueError: If `tensor` is an unacceptable data type.
+    """
     if mean == None:
         if channel_level:
             return reduce_mean(tensor, axis=list(range(0, len(tensor.shape)-1)))
@@ -80,7 +104,7 @@ def get_mean(tensor: Tensor, mean, channel_level):
     if tf.is_tensor(tensor):
         mean = tf.cast(tf.convert_to_tensor(mean), tf.float32)
     elif isinstance(tensor, torch.Tensor):
-        mean = to_tensor(mean, "torch").type(torch.float32)
+        mean = to_tensor(np.array(mean, dtype="float32"), "torch")
     elif isinstance(tensor, np.ndarray):
         pass
     else:
@@ -89,20 +113,43 @@ def get_mean(tensor: Tensor, mean, channel_level):
     return mean
 
 
-def get_epsilon(tensor: Tensor, epsilon):
+def get_epsilon(tensor: Tensor, epsilon: float):
+    """Convert the epsilon value to right format.
 
+    Args:
+        tensor: The input tensor.
+        epsilon: The epsilon which needs to added to std(eg: 1e-7)
+
+    Returns:
+        The epsilon in right data format with respect to input tensor.
+
+    Raises:
+        ValueError: If `tensor` is an unacceptable data type.
+    """
     if tf.is_tensor(tensor):
         return tf.cast(tf.convert_to_tensor(epsilon), tf.float32)
     elif isinstance(tensor, torch.Tensor):
-        return to_tensor(epsilon, "torch").type(torch.float32)
+        return to_tensor(np.array(epsilon, dtype="float32"), "torch")
     elif isinstance(tensor, np.ndarray):
         return epsilon
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(tensor)))
 
 
-def get_std(tensor: Tensor, std, channel_level):
+def get_std(tensor: Tensor, std: allowed_data_types, channel_level: bool):
+    """Get the std value of a `tensor`.
 
+    Args:
+        tensor: The input value.
+        std: The mean which needs to applied(eg: None, 3.8, (1.9, 2.0, 2.9), [1.9, 2.0, 2.9])
+        channel_level: Whether to apply mean across channel or overall.
+
+    Returns:
+        The std value of `tensor`.
+
+    Raises:
+        ValueError: If `tensor` is an unacceptable data type.
+    """
     if std == None:
         if channel_level:
             return reduce_std(tensor, axis=list(range(0, len(tensor.shape)-1)))
@@ -112,12 +159,10 @@ def get_std(tensor: Tensor, std, channel_level):
     if tf.is_tensor(tensor):
         std = tf.cast(tf.convert_to_tensor(std), tf.float32)
     elif isinstance(tensor, torch.Tensor):
-        std = to_tensor(std, "torch").type(torch.float32)
+        std = to_tensor(np.array(std, dtype="float32"), "torch")
     elif isinstance(tensor, np.ndarray):
         pass
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(tensor)))
 
     return std
-
-

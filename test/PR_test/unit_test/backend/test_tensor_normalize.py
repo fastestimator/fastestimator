@@ -16,24 +16,33 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import torch
 
+from fastestimator.backend import to_tensor
 from fastestimator.backend.tensor_normalize import normalize
 
 
 class TestNormalize(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        self.test_np = np.array([[1, 2], [3, 3]])
-        self.test_tf = tf.cast(tf.constant([[1, 1], [2, -3], [4, 1]]), tf.float32)
-        self.test_torch = torch.Tensor([[1, 1], [2, -3], [4, 1]])
+        self.numpy_array = np.arange(0.0, 12.0, 1.0, dtype=np.float32).reshape((1, 2, 2, 3))
+        self.expected_result = np.array([[[[-1.593255  , -1.3035723 , -1.0138896 ],
+                                        [-0.7242068 , -0.4345241 , -0.14484136]],
+                                        [[ 0.14484136,  0.4345241 ,  0.7242068 ],
+                                        [ 1.0138896 ,  1.3035723 ,  1.593255  ]]]], dtype=np.float32)
+
+        self.expected_result_torch = np.array([[[[-1.593255  , -0.7242068 ],
+                                                [ 0.14484136,  1.0138896 ]],
+                                                [[-1.3035723 , -0.4345241 ],
+                                                [ 0.4345241 ,  1.3035723 ]],
+                                                [[-1.0138896 , -0.14484136],
+                                                [ 0.7242068 ,  1.593255  ]]]], dtype=np.float32)
 
     def test_normalize_np_value(self):
-        np.testing.assert_array_almost_equal(normalize(self.test_np, None, None), np.array([[-1.50755654, -0.30151131], [ 0.90453392,  0.90453392]]))
+        np.testing.assert_array_almost_equal(normalize(self.numpy_array, None, None), self.expected_result)
 
     def test_normalize_tf_value(self):
-        np.testing.assert_array_almost_equal(normalize(self.test_tf, None, None).numpy(), np.array([[ 0. ,  0.], [ 0.48038446, -1.92153785], [ 1.44115338,  0.]]))
+        np.testing.assert_array_almost_equal(normalize(tf.convert_to_tensor(self.numpy_array), None, None).numpy(), self.expected_result)
 
     def test_normalize_torch_value(self):
-        np.testing.assert_array_almost_equal(normalize(self.test_torch, None, None).numpy(), np.array([[ 0. ,  0.], [ 0.48038446, -1.92153785], [ 1.44115338,  0.]]))
+        np.testing.assert_array_almost_equal(normalize(to_tensor(self.numpy_array, 'torch'), None, None).numpy(), self.expected_result_torch)
 
