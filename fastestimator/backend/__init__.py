@@ -43,8 +43,8 @@ from fastestimator.backend.random_normal_like import random_normal_like
 from fastestimator.backend.random_uniform_like import random_uniform_like
 from fastestimator.backend.reduce_max import reduce_max
 from fastestimator.backend.reduce_mean import reduce_mean
-from fastestimator.backend.reduce_std import reduce_std
 from fastestimator.backend.reduce_min import reduce_min
+from fastestimator.backend.reduce_std import reduce_std
 from fastestimator.backend.reduce_sum import reduce_sum
 from fastestimator.backend.reshape import reshape
 from fastestimator.backend.roll import roll

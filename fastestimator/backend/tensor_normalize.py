@@ -24,10 +24,9 @@ from fastestimator.backend.reduce_std import reduce_std
 from fastestimator.backend.to_tensor import to_tensor
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
-allowed_data_types = Union[None, float, Tuple[float, ...], List[float]]
 
 
-def normalize(tensor: Tensor, mean: allowed_data_types, std: allowed_data_types, epsilon: float = 1e-7) -> Tensor:
+def normalize(tensor: Tensor, mean: Union[None, float, Tuple[float, ...], List[float]], std: Union[None, float, Tuple[float, ...], List[float]], epsilon: float = 1e-7) -> Tensor:
     """Compute the normalized value of a `tensor`.
 
     This method can be used with Numpy data:
@@ -78,7 +77,7 @@ def normalize(tensor: Tensor, mean: allowed_data_types, std: allowed_data_types,
     return tensor
 
 
-def get_mean(tensor: Tensor, mean: allowed_data_types, channel_level: bool) -> Tensor:
+def get_mean(tensor: Tensor, mean: Union[None, float, Tuple[float, ...], List[float]], channel_level: bool) -> Tensor:
     """Get the mean value of a `tensor`.
 
     Args:
@@ -133,7 +132,7 @@ def get_epsilon(tensor: Tensor, epsilon: float) -> Tensor:
         raise ValueError("Unrecognized tensor type {}".format(type(tensor)))
 
 
-def get_std(tensor: Tensor, std: allowed_data_types, channel_level: bool) -> Tensor:
+def get_std(tensor: Tensor, std: Union[None, float, Tuple[float, ...], List[float]], channel_level: bool) -> Tensor:
     """Get the std value of a `tensor`.
 
     Args:

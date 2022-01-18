@@ -35,7 +35,6 @@ class Normalize(TensorOp):
         outputs: Key of the output tensor that has been normalized.
         mean: The mean which needs to applied(eg: None, 3.8, (1.9, 2.0, 2.9))
         std: The standard deviation which needs to applied(eg: None, 3.8, (1.9, 2.0, 2.9))
-        epsilon: Epsilon value which needs to be added to standard deviation to avoid divide zero.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
@@ -45,13 +44,11 @@ class Normalize(TensorOp):
     def __init__(self,
                  inputs: Union[str, List[str]]=None,
                  outputs: Union[str, List[str]]=None,
-                 mean: Union[None, float, Tuple[float, ...], List[float]] = None,
-                 std: Union[None, float, Tuple[float, ...], List[float]] = None,
-                 epsilon: float = 1e-7,
                  mode: Union[None, str, Iterable[str]] = None,
-                 ds_id: Union[None, str, Iterable[str]] = None) -> None:
+                 ds_id: Union[None, str, Iterable[str]] = None,
+                 mean: Union[None, float, Tuple[float, ...], List[float]] = None,
+                 std: Union[None, float, Tuple[float, ...], List[float]] = None) -> None:
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        self.epsilon = epsilon
         self.mean = mean
         self.std = std
 
@@ -60,8 +57,6 @@ class Normalize(TensorOp):
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
         if framework == 'torch':
-            self.epsilon = to_tensor(self.epsilon, "torch").type(torch.float32)
-            self.epsilon = self.epsilon.to(device)
 
             if self.mean is not None:
                 self.mean = to_tensor(np.array(self.mean, dtype="float32"), "torch")
@@ -72,4 +67,4 @@ class Normalize(TensorOp):
                 self.std = self.std.to(device)
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
-        return normalize(data, self.mean, self.std, self.epsilon)
+        return normalize(data, self.mean, self.std)
