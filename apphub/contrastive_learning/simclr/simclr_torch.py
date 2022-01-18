@@ -51,15 +51,15 @@ class ResNet9Encoder(nn.Module):
     def __init__(self, input_size=(3, 32, 32)):
         super().__init__()
         self.conv0 = nn.Conv2d(input_size[0], 64, 3, padding=(1, 1))
-        self.conv0_bn = nn.BatchNorm2d(64, momentum=0.8)
+        self.conv0_bn = nn.BatchNorm2d(64, momentum=0.2)
         self.conv1 = nn.Conv2d(64, 128, 3, padding=(1, 1))
-        self.conv1_bn = nn.BatchNorm2d(128, momentum=0.8)
+        self.conv1_bn = nn.BatchNorm2d(128, momentum=0.2)
         self.residual1 = Residual(128)
         self.conv2 = nn.Conv2d(128, 256, 3, padding=(1, 1))
-        self.conv2_bn = nn.BatchNorm2d(256, momentum=0.8)
+        self.conv2_bn = nn.BatchNorm2d(256, momentum=0.2)
         self.residual2 = Residual(256)
         self.conv3 = nn.Conv2d(256, 512, 3, padding=(1, 1))
-        self.conv3_bn = nn.BatchNorm2d(512, momentum=0.8)
+        self.conv3_bn = nn.BatchNorm2d(512, momentum=0.2)
         self.residual3 = Residual(512)
 
     def forward(self, x):
