@@ -62,7 +62,7 @@ class Normalize(TensorOp):
         if framework == 'torch':
             self.epsilon = to_tensor(self.epsilon, "torch").type(torch.float32)
             self.epsilon = self.epsilon.to(device)
-            
+
             if self.mean is not None:
                 self.mean = to_tensor(np.array(self.mean, dtype="float32"), "torch")
                 self.mean = self.mean.to(device)
