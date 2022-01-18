@@ -63,7 +63,7 @@ class TestNormalize(unittest.TestCase):
     def test_normalize_tf_int(self):
         op = Normalize(mean=13, std=7)
         op.build("tf")
-        data = op.forward(data=tf.convert_to_tensor(self.numpy_array), state={})
+        _ = op.forward(data=tf.convert_to_tensor(self.numpy_array), state={})
 
     def test_std_tf(self):
         op = Normalize(mean=13.0, std=None)
