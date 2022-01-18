@@ -30,13 +30,6 @@ class TestNormalize(unittest.TestCase):
                                         [[ 0.14484136,  0.4345241 ,  0.7242068 ],
                                         [ 1.0138896 ,  1.3035723 ,  1.593255  ]]]], dtype=np.float32)
 
-        self.expected_result_torch = np.array([[[[-1.593255  , -0.7242068 ],
-                                                [ 0.14484136,  1.0138896 ]],
-                                                [[-1.3035723 , -0.4345241 ],
-                                                [ 0.4345241 ,  1.3035723 ]],
-                                                [[-1.0138896 , -0.14484136],
-                                                [ 0.7242068 ,  1.593255  ]]]], dtype=np.float32)
-
     def test_normalize_np_value(self):
         np.testing.assert_array_almost_equal(normalize(self.numpy_array, None, None), self.expected_result)
 
@@ -44,5 +37,5 @@ class TestNormalize(unittest.TestCase):
         np.testing.assert_array_almost_equal(normalize(tf.convert_to_tensor(self.numpy_array), None, None).numpy(), self.expected_result)
 
     def test_normalize_torch_value(self):
-        np.testing.assert_array_almost_equal(normalize(to_tensor(self.numpy_array, 'torch'), None, None).numpy(), self.expected_result_torch)
+        np.testing.assert_array_almost_equal(normalize(to_tensor(self.numpy_array, 'torch'), None, None).numpy(), self.expected_result)
 

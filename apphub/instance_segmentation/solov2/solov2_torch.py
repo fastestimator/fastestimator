@@ -36,6 +36,7 @@ from fastestimator.op.tensorop.loss import L2Regularizaton
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.op.tensorop.tensorop import LambdaOp, TensorOp
 from fastestimator.op.tensorop.normalize import Normalize
+from fastestimator.op.tensorop.permute import Permute
 from fastestimator.schedule import EpochScheduler, cosine_decay
 from fastestimator.trace.adapt import LRScheduler
 from fastestimator.trace.io import BestModelSaver
@@ -585,6 +586,7 @@ def get_estimator(data_dir=None,
     model = fe.build(model_fn=SoloV2, optimizer_fn=lambda x: torch.optim.SGD(x, lr=init_lr, momentum=0.9))
     network = fe.Network(ops=[
         Normalize(inputs="image", outputs="image", mean=(123.675, 116.28, 103.53), std=(58.395, 57.12, 57.375)),
+        Permute(inputs="image", outputs='image'),
         ModelOp(model=model, inputs="image", outputs=("feat_seg", "feat_cls_list", "feat_kernel_list")),
         LambdaOp(fn=lambda x: x, inputs="feat_cls_list", outputs=("cls1", "cls2", "cls3", "cls4", "cls5")),
         LambdaOp(fn=lambda x: x, inputs="feat_kernel_list", outputs=("k1", "k2", "k3", "k4", "k5")),

@@ -35,15 +35,6 @@ class TestNormalize(unittest.TestCase):
                                        [[ 0.6418485 ,  0.77021825,  0.89858794],
                                         [ 1.0269576 ,  1.1553273 ,  1.283697  ],
                                         [ 1.4120668 ,  1.5404365 ,  1.6688062 ]]]], dtype=float32)
-        self.expected_result_torch = array([[[[-1.6688062 , -1.283697  , -0.89858794],
-                                            [-0.5134788 , -0.1283697 ,  0.2567394 ],
-                                            [ 0.6418485 ,  1.0269576 ,  1.4120668 ]],
-                                            [[-1.5404365 , -1.1553273 , -0.77021825],
-                                            [-0.38510913,  0.        ,  0.38510913],
-                                            [ 0.77021825,  1.1553273 ,  1.5404365 ]],
-                                            [[-1.4120668 , -1.0269576 , -0.6418485 ],
-                                            [-0.2567394 ,  0.1283697 ,  0.5134788 ],
-                                            [ 0.89858794,  1.283697  ,  1.6688062 ]]]], dtype=float32)
         self.expected_result_multi = array([[[[-1.5491933 , -1.5491933 , -1.5491933 ],
                                             [-1.1618949 , -1.1618949 , -1.1618949 ],
                                             [-0.77459663, -0.77459663, -0.77459663]],
@@ -105,22 +96,22 @@ class TestNormalize(unittest.TestCase):
         op = Normalize(mean=13.0, std=7.79)
         op.build("torch", "cuda:0" if torch.cuda.is_available() else "cpu")
         data = op.forward(data=to_tensor(self.numpy_array, "torch").type(torch.float32), state={})
-        testing.assert_array_almost_equal(data.numpy(), self.expected_result_torch, 2)
+        testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
 
     def test_std_torch(self):
         op = Normalize(mean=13.0, std=None)
         op.build("torch", "cuda:0" if torch.cuda.is_available() else "cpu")
         data = op.forward(data=to_tensor(self.numpy_array, "torch").type(torch.float32), state={})
-        testing.assert_array_almost_equal(data.numpy(), self.expected_result_torch, 2)
+        testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
 
     def test_mean_torch(self):
         op = Normalize(mean=None, std=7.78)
         op.build("torch", "cuda:0" if torch.cuda.is_available() else "cpu")
         data = op.forward(data=to_tensor(self.numpy_array, "torch").type(torch.float32), state={})
-        testing.assert_array_almost_equal(data.numpy(), self.expected_result_torch, 2)
+        testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
 
     def test_torch(self):
         op = Normalize(mean=None, std=None)
         op.build("torch", "cuda:0" if torch.cuda.is_available() else "cpu")
         data = op.forward(data=to_tensor(self.numpy_array, "torch").type(torch.float32), state={})
-        testing.assert_array_almost_equal(data.numpy(), self.expected_result_torch, 2)
+        testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
