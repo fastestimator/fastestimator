@@ -75,13 +75,10 @@ def normalize(tensor: Tensor, mean: allowed_data_types, std: allowed_data_types,
 
     tensor = (tensor - mean) / (std + epsilon)
 
-    if isinstance(tensor, torch.Tensor):
-        return tensor.permute((0, 3, 1, 2))
-    else:
-        return tensor
+    return tensor
 
 
-def get_mean(tensor: Tensor, mean: allowed_data_types, channel_level: bool):
+def get_mean(tensor: Tensor, mean: allowed_data_types, channel_level: bool) -> Tensor:
     """Get the mean value of a `tensor`.
 
     Args:
@@ -113,7 +110,7 @@ def get_mean(tensor: Tensor, mean: allowed_data_types, channel_level: bool):
     return mean
 
 
-def get_epsilon(tensor: Tensor, epsilon: float):
+def get_epsilon(tensor: Tensor, epsilon: float) -> Tensor:
     """Convert the epsilon value to right format.
 
     Args:
@@ -136,7 +133,7 @@ def get_epsilon(tensor: Tensor, epsilon: float):
         raise ValueError("Unrecognized tensor type {}".format(type(tensor)))
 
 
-def get_std(tensor: Tensor, std: allowed_data_types, channel_level: bool):
+def get_std(tensor: Tensor, std: allowed_data_types, channel_level: bool) -> Tensor:
     """Get the std value of a `tensor`.
 
     Args:
