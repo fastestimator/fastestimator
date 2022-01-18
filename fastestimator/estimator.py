@@ -381,7 +381,7 @@ class Estimator:
         """
         new_loader = loader
         if isinstance(new_loader, DataLoader) and isinstance(self.network, TFNetwork):
-            add_batch = True
+            add_batch = bool(new_loader.batch_size)
             if hasattr(loader, 'fe_postprocess_fn') and loader.fe_postprocess_fn is not None:
                 # The user is manually batching data and running ops on data batches. No reliable way to shortcut this
                 # since ops might require specific batch composition.
@@ -393,6 +393,7 @@ class Estimator:
                 if isinstance(data_instance, list):
                     # This is a batched dataset
                     data_instance = data_instance[0]
+                    add_batch = True
                 if isinstance(data_instance, FilteredData):
                     # We got unlucky and drew filtered data as the zeroth element. Fall back to a slower but more robust
                     # analysis of the batch
