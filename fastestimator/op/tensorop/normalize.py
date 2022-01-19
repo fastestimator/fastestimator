@@ -46,25 +46,25 @@ class Normalize(TensorOp):
                  outputs: Union[str, List[str]]=None,
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
-                 mean: Union[None, float, Tuple[float, ...], List[float]] = None,
-                 std: Union[None, float, Tuple[float, ...], List[float]] = None) -> None:
+                 mean: Union[float, Tuple[float, ...]] = (0.485, 0.456, 0.406),
+                 std: Union[float, Tuple[float, ...]] = (0.229, 0.224, 0.225),
+                 max_pixel_value: float = 255.0):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.mean = mean
         self.std = std
-
-        if not ((self.mean is None) or (self.std is None) or (isinstance(self.mean, (Tuple, List)) and isinstance(self.std, (Tuple, List))) or (isinstance(self.mean, (float, int)) and isinstance(self.std, (float, int)))):
-            raise ValueError("Both mean and std should be of same data type or one of them should is None.")
+        self.max_pixel_value = max_pixel_value
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
         if framework == 'torch':
 
-            if self.mean is not None:
-                self.mean = to_tensor(np.array(self.mean, dtype="float32"), "torch")
-                self.mean = self.mean.to(device)
+            self.mean = to_tensor(np.array(self.mean, dtype="float32"), "torch")
+            self.mean = self.mean.to(device)
 
-            if self.std is not None:
-                self.std = to_tensor(np.array(self.std, dtype="float32"), "torch")
-                self.std = self.std.to(device)
+            self.std = to_tensor(np.array(self.std, dtype="float32"), "torch")
+            self.std = self.std.to(device)
+        
+            self.max_pixel_value = to_tensor(np.array(self.max_pixel_value, dtype="float32"), "torch")
+            self.max_pixel_value = self.max_pixel_value.to(device)
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
-        return normalize(data, self.mean, self.std)
+        return normalize(data, self.mean, self.std, self.max_pixel_value)
