@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Tuple, TypeVar, Union
+from typing import Sequence, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
@@ -24,8 +24,8 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
 
 def normalize(tensor: Tensor,
-              mean: Union[float, Tuple[float, ...]] = (0.485, 0.456, 0.406),
-              std: Union[float, Tuple[float, ...]] = (0.229, 0.224, 0.225),
+              mean: Union[float, Sequence[float]] = (0.485, 0.456, 0.406),
+              std: Union[float, Sequence[float]] = (0.229, 0.224, 0.225),
               max_pixel_value: float = 255.0,
               epsilon: float = 1e-7) -> Tensor:
     """Compute the normalized value of a `tensor`.
@@ -72,7 +72,7 @@ def normalize(tensor: Tensor,
 
 
 def get_mean(tensor: Tensor,
-             mean: Union[float, Tuple[float, ...]] = (0.485, 0.456, 0.406),
+             mean: Union[float, Sequence[float]] = (0.485, 0.456, 0.406),
              max_pixel_value: float = 255.0) -> Tensor:
     """Get the mean value of a `tensor`.
 
@@ -127,8 +127,7 @@ def get_epsilon(tensor: Tensor, epsilon: float) -> Tensor:
         raise ValueError("Unrecognized tensor type {}".format(type(tensor)))
 
 
-def get_std(tensor: Tensor,
-            std: Union[float, Tuple[float, ...]] = (0.229, 0.224, 0.225),
+def get_std(tensor: Tensor, std: Union[float, Sequence[float]] = (0.229, 0.224, 0.225),
             max_pixel_value: float = 255.0) -> Tensor:
     """Get the std value of a `tensor`.
 
