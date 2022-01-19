@@ -14,8 +14,8 @@
 # ==============================================================================
 import os
 import pickle
-from typing import Union
 from collections import OrderedDict
+from typing import Union
 
 import tensorflow as tf
 import tensorflow_addons as tfa
@@ -86,10 +86,10 @@ def load_model(model: Union[tf.keras.Model, torch.nn.Module], weights_path: str,
 def preprocess_torch_weights(weights_path: str) -> OrderedDict:
     """Preprocess the torch weights dictionary.
 
-    This method is used to remove the any DataParallel artifacts in torch weigths :
+    This method is used to remove the any DataParallel artifacts in torch weigths.
 
     Args:
-        weights_path: Path to the `model` weights.
+        weights_path: Path to the model weights.
     """
     new_state_dict = OrderedDict()
     for key, value in torch.load(weights_path, map_location='cpu' if torch.cuda.device_count() == 0 else None).items():
