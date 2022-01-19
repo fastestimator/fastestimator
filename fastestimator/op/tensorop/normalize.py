@@ -62,7 +62,7 @@ class Normalize(TensorOp):
 
             self.std = to_tensor(np.array(self.std, dtype="float32"), "torch")
             self.std = self.std.to(device)
-        
+
             self.max_pixel_value = to_tensor(np.array(self.max_pixel_value, dtype="float32"), "torch")
             self.max_pixel_value = self.max_pixel_value.to(device)
 

@@ -69,7 +69,7 @@ class TestNormalize(unittest.TestCase):
         op.build("torch", "cuda:0" if torch.cuda.is_available() else "cpu")
         data = op.forward(data=to_tensor(self.numpy_array, "torch"), state={})
         testing.assert_array_almost_equal(data.numpy(), self.expected_result_multi, 2)
-    
+
     def test_normalize_numpy(self):
         op = Normalize(mean=0.482, std=0.289, max_pixel_value=27.0)
         data = op.forward(data=self.numpy_array, state={})

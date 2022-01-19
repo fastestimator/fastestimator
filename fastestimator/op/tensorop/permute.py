@@ -42,9 +42,9 @@ class Permute(TensorOp):
     def __init__(self,
                  inputs: Union[str, List[str]]=None,
                  outputs: Union[str, List[str]]=None,
-                 permutation: List[int] = [0, 3, 1, 2],
                  mode: Union[None, str, Iterable[str]] = None,
-                 ds_id: Union[None, str, Iterable[str]] = None) -> None:
+                 ds_id: Union[None, str, Iterable[str]] = None,
+                 permutation: List[int] = [0, 3, 1, 2]) -> None:
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.permutation = permutation
 
