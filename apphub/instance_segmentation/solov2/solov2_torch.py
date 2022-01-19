@@ -26,7 +26,6 @@ from pycocotools.cocoeval import COCOeval
 from scipy.ndimage.measurements import center_of_mass
 
 import fastestimator as fe
-from fastestimator.backend import to_tensor
 from fastestimator.dataset.data import mscoco
 from fastestimator.op.numpyop import Batch, Delete, NumpyOp, RemoveIf
 from fastestimator.op.numpyop.meta import Sometimes

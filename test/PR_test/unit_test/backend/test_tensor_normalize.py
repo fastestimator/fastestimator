@@ -41,4 +41,3 @@ class TestNormalize(unittest.TestCase):
 
     def test_normalize_torch_value(self):
         np.testing.assert_array_almost_equal(normalize(to_tensor(self.numpy_array, 'torch'), 0.5, 0.31382295, 11.0).numpy(), self.expected_result)
-
