@@ -32,7 +32,7 @@ class TestNormalize(unittest.TestCase):
 
     def test_normalize_np_value(self):
         np.testing.assert_array_almost_equal(normalize(self.numpy_array, 0.5, 0.31382295, 11.0), self.expected_result)
-    
+
     def test_normalize_np_value_int(self):
         np.testing.assert_array_almost_equal(normalize(self.numpy_array, 0.5, 0.31382295, 11), self.expected_result)
 

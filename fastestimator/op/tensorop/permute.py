@@ -40,8 +40,8 @@ class Permute(TensorOp):
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
     def __init__(self,
-                 inputs: Union[str, List[str]]=None,
-                 outputs: Union[str, List[str]]=None,
+                 inputs: Union[str, List[str]],
+                 outputs: Union[str, List[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
                  permutation: List[int] = [0, 3, 1, 2]) -> None:

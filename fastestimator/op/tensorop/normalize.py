@@ -42,8 +42,8 @@ class Normalize(TensorOp):
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
     def __init__(self,
-                 inputs: Union[str, List[str]]=None,
-                 outputs: Union[str, List[str]]=None,
+                 inputs: Union[str, List[str]],
+                 outputs: Union[str, List[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
                  mean: Union[float, Tuple[float, ...]] = (0.485, 0.456, 0.406),
