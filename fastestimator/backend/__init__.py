@@ -44,6 +44,7 @@ from fastestimator.backend.random_uniform_like import random_uniform_like
 from fastestimator.backend.reduce_max import reduce_max
 from fastestimator.backend.reduce_mean import reduce_mean
 from fastestimator.backend.reduce_min import reduce_min
+from fastestimator.backend.reduce_std import reduce_std
 from fastestimator.backend.reduce_sum import reduce_sum
 from fastestimator.backend.reshape import reshape
 from fastestimator.backend.roll import roll
@@ -52,6 +53,7 @@ from fastestimator.backend.set_lr import set_lr
 from fastestimator.backend.sign import sign
 from fastestimator.backend.sparse_categorical_crossentropy import sparse_categorical_crossentropy
 from fastestimator.backend.squeeze import squeeze
+from fastestimator.backend.tensor_normalize import normalize
 from fastestimator.backend.tensor_pow import tensor_pow
 from fastestimator.backend.tensor_round import tensor_round
 from fastestimator.backend.tensor_sqrt import tensor_sqrt

@@ -34,6 +34,7 @@ from fastestimator.op.numpyop.univariate import ReadImage
 from fastestimator.op.tensorop.loss import L2Regularizaton
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.op.tensorop.tensorop import LambdaOp, TensorOp
+from fastestimator.op.tensorop.normalize import Normalize
 from fastestimator.schedule import EpochScheduler, cosine_decay
 from fastestimator.trace.adapt import LRScheduler
 from fastestimator.trace.io import BestModelSaver
@@ -227,17 +228,6 @@ class Gt2Target(NumpyOp):
         num_objects = masks.shape[0]
         non_empty_mask = np.sum(masks.reshape(num_objects, -1), axis=1) > 0
         return masks[non_empty_mask], bboxes[non_empty_mask]
-
-
-class Normalize(TensorOp):
-    def __init__(self, inputs, outputs, mean, std, mode=None):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        self.mean = tf.convert_to_tensor(mean)
-        self.std = tf.convert_to_tensor(std)
-
-    def forward(self, data, state):
-        data = (data / 255 - self.mean) / self.std
-        return data
 
 
 class Solov2Loss(TensorOp):
