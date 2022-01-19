@@ -12,16 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import torch
+from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
+
 import numpy as np
 import tensorflow as tf
+import torch
 
-from typing import Any, List, Dict, Tuple, TypeVar, Union, Optional, Iterable
-
-from fastestimator.op.tensorop.tensorop import TensorOp
-from fastestimator.util.traceability_util import traceable
 from fastestimator.backend.tensor_normalize import normalize
 from fastestimator.backend.to_tensor import to_tensor
+from fastestimator.op.tensorop.tensorop import TensorOp
+from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 

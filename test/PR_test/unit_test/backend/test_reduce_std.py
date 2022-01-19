@@ -45,4 +45,3 @@ class TestReduceStd(unittest.TestCase):
 
     def test_reduce_mean_torch_value(self):
         self.assertAlmostEqual(reduce_std(self.test_torch).numpy(), 2.114, delta=0.001)
-

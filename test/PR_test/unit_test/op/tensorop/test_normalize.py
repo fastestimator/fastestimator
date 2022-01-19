@@ -15,11 +15,11 @@
 import unittest
 
 import tensorflow as tf
-from numpy import arange, float32, array, testing
-
-from fastestimator.op.tensorop.normalize import Normalize
-from fastestimator.backend import to_tensor
 import torch
+from numpy import arange, array, float32, testing
+
+from fastestimator.backend import to_tensor
+from fastestimator.op.tensorop.normalize import Normalize
 
 
 class TestNormalize(unittest.TestCase):
