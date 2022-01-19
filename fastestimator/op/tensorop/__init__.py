@@ -21,4 +21,3 @@ from fastestimator.op.tensorop.permute import Permute
 from fastestimator.op.tensorop.reshape import Reshape
 from fastestimator.op.tensorop.tensorop import LambdaOp, TensorOp
 from fastestimator.op.tensorop.un_hadamard import UnHadamard
-
