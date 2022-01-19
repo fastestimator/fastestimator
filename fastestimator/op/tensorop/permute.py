@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Iterable, List, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Sequence, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
@@ -32,7 +32,7 @@ class Permute(TensorOp):
     Args:
         inputs: Key of the input tensor that is to be normalized.
         outputs: Key of the output tensor that has been normalized.
-        permutation: List[int]
+        permutation: Sequence[int]
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
@@ -40,9 +40,9 @@ class Permute(TensorOp):
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
     def __init__(self,
-                 inputs: Union[str, List[str]],
-                 outputs: Union[str, List[str]],
-                 permutation: List[int] = [0, 3, 1, 2],
+                 inputs: Union[str, Iterable[str]],
+                 outputs: Union[str, Iterable[str]],
+                 permutation: Sequence[int] = (0, 3, 1, 2),
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None) -> None:
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)

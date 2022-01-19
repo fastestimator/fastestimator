@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Optional, Sequence, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
@@ -33,8 +33,8 @@ class Normalize(TensorOp):
     Args:
         inputs: Key of the input tensor that is to be normalized.
         outputs: Key of the output tensor that has been normalized.
-        mean: The mean which needs to applied(eg: None, 3.8, (1.9, 2.0, 2.9))
-        std: The standard deviation which needs to applied(eg: None, 3.8, (1.9, 2.0, 2.9))
+        mean: The mean which needs to applied (eg: None, 3.8, (1.9, 2.0, 2.9))
+        std: The standard deviation which needs to applied (eg: None, 3.8, (1.9, 2.0, 2.9))
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
@@ -42,10 +42,10 @@ class Normalize(TensorOp):
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
     def __init__(self,
-                 inputs: Union[str, List[str]],
-                 outputs: Union[str, List[str]],
-                 mean: Union[float, Tuple[float, ...]] = (0.485, 0.456, 0.406),
-                 std: Union[float, Tuple[float, ...]] = (0.229, 0.224, 0.225),
+                 inputs: Union[str, Iterable[str]],
+                 outputs: Union[str, Iterable[str]],
+                 mean: Union[float, Sequence[float]] = (0.485, 0.456, 0.406),
+                 std: Union[float, Sequence[float]] = (0.229, 0.224, 0.225),
                  max_pixel_value: float = 255.0,
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None):
