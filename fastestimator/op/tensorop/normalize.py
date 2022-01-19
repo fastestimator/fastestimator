@@ -44,11 +44,11 @@ class Normalize(TensorOp):
     def __init__(self,
                  inputs: Union[str, List[str]],
                  outputs: Union[str, List[str]],
-                 mode: Union[None, str, Iterable[str]] = None,
-                 ds_id: Union[None, str, Iterable[str]] = None,
                  mean: Union[float, Tuple[float, ...]] = (0.485, 0.456, 0.406),
                  std: Union[float, Tuple[float, ...]] = (0.229, 0.224, 0.225),
-                 max_pixel_value: float = 255.0):
+                 max_pixel_value: float = 255.0,
+                 mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.mean = mean
         self.std = std
