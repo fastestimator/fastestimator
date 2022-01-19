@@ -31,11 +31,14 @@ class TestNormalize(unittest.TestCase):
                                         [ 1.0138896 ,  1.3035723 ,  1.593255  ]]]], dtype=np.float32)
 
     def test_normalize_np_value(self):
-        np.testing.assert_array_almost_equal(normalize(self.numpy_array, None, None), self.expected_result)
+        np.testing.assert_array_almost_equal(normalize(self.numpy_array, 0.5, 0.31382295, 11.0), self.expected_result)
+    
+    def test_normalize_np_value_int(self):
+        np.testing.assert_array_almost_equal(normalize(self.numpy_array, 0.5, 0.31382295, 11), self.expected_result)
 
     def test_normalize_tf_value(self):
-        np.testing.assert_array_almost_equal(normalize(tf.convert_to_tensor(self.numpy_array), None, None).numpy(), self.expected_result)
+        np.testing.assert_array_almost_equal(normalize(tf.convert_to_tensor(self.numpy_array), 0.5, 0.31382295, 11.0).numpy(), self.expected_result)
 
     def test_normalize_torch_value(self):
-        np.testing.assert_array_almost_equal(normalize(to_tensor(self.numpy_array, 'torch'), None, None).numpy(), self.expected_result)
+        np.testing.assert_array_almost_equal(normalize(to_tensor(self.numpy_array, 'torch'), 0.5, 0.31382295, 11.0).numpy(), self.expected_result)
 
