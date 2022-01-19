@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2022 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -79,7 +79,10 @@ def save_model(model: Union[tf.keras.Model, torch.nn.Module],
         return model_path
     elif isinstance(model, torch.nn.Module):
         model_path = os.path.join(save_dir, "{}.pt".format(model_name))
-        torch.save(model.state_dict(), model_path)
+        if isinstance(model, torch.nn.DataParallel):
+            torch.save(model.module.state_dict(), model_path)
+        else:
+            torch.save(model.state_dict(), model_path)
         if save_architecture:
             raise ValueError("Sorry, architecture saving is not currently enabled for PyTorch")
         if save_optimizer:
