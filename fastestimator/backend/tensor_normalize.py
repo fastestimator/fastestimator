@@ -14,16 +14,20 @@
 # ==============================================================================
 from typing import Tuple, TypeVar, Union
 
-import torch
 import numpy as np
 import tensorflow as tf
+import torch
 
 from fastestimator.backend.to_tensor import to_tensor
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
 
-def normalize(tensor: Tensor, mean: Union[float, Tuple[float, ...]]=(0.485, 0.456, 0.406), std: Union[float, Tuple[float, ...]]=(0.229, 0.224, 0.225), max_pixel_value: float = 255.0, epsilon: float = 1e-7) -> Tensor:
+def normalize(tensor: Tensor,
+              mean: Union[float, Tuple[float, ...]] = (0.485, 0.456, 0.406),
+              std: Union[float, Tuple[float, ...]] = (0.229, 0.224, 0.225),
+              max_pixel_value: float = 255.0,
+              epsilon: float = 1e-7) -> Tensor:
     """Compute the normalized value of a `tensor`.
 
     This method can be used with Numpy data:
@@ -67,7 +71,9 @@ def normalize(tensor: Tensor, mean: Union[float, Tuple[float, ...]]=(0.485, 0.45
     return tensor
 
 
-def get_mean(tensor: Tensor, mean: Union[float, Tuple[float, ...]]=(0.485, 0.456, 0.406), max_pixel_value: float=255.0) -> Tensor:
+def get_mean(tensor: Tensor,
+             mean: Union[float, Tuple[float, ...]] = (0.485, 0.456, 0.406),
+             max_pixel_value: float = 255.0) -> Tensor:
     """Get the mean value of a `tensor`.
 
     Args:
@@ -121,7 +127,9 @@ def get_epsilon(tensor: Tensor, epsilon: float) -> Tensor:
         raise ValueError("Unrecognized tensor type {}".format(type(tensor)))
 
 
-def get_std(tensor: Tensor, std: Union[float, Tuple[float, ...]]=(0.229, 0.224, 0.225), max_pixel_value: float=255.0) -> Tensor:
+def get_std(tensor: Tensor,
+            std: Union[float, Tuple[float, ...]] = (0.229, 0.224, 0.225),
+            max_pixel_value: float = 255.0) -> Tensor:
     """Get the std value of a `tensor`.
 
     Args:
