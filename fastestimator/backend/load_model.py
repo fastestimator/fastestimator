@@ -96,7 +96,7 @@ def preprocess_torch_weights(weights_path: str) -> OrderedDict:
         # remove `module.`
         new_key = key
         if key.startswith('module.'):
-            new_key = key[7:] 
+            new_key = key[7:]
         new_state_dict[new_key] = value
-    
+
     return new_state_dict
