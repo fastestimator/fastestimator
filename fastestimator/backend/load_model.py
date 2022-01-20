@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2022 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 # ==============================================================================
 import os
 import pickle
+from collections import OrderedDict
 from typing import Union
 
 import tensorflow as tf
@@ -49,6 +50,10 @@ def load_model(model: Union[tf.keras.Model, torch.nn.Module], weights_path: str,
         ValueError: If `model` is an unacceptable data type.
     """
     assert hasattr(model, "fe_compiled") and model.fe_compiled, "model must be built by fe.build"
+
+    if os.path.exists(weights_path):
+        ValueError("Weights path doesn't exist: ", weights_path)
+
     if isinstance(model, tf.keras.Model):
         model.load_weights(weights_path)
         if load_optimizer:
@@ -65,7 +70,10 @@ def load_model(model: Union[tf.keras.Model, torch.nn.Module], weights_path: str,
                 weight_decay = state_dict['weight_decay']
             set_lr(model, state_dict['lr'], weight_decay=weight_decay)
     elif isinstance(model, torch.nn.Module):
-        model.load_state_dict(torch.load(weights_path, map_location='cpu' if torch.cuda.device_count() == 0 else None))
+        if isinstance(model, torch.nn.DataParallel):
+            model.module.load_state_dict(preprocess_torch_weights(weights_path))
+        else:
+            model.load_state_dict(preprocess_torch_weights(weights_path))
         if load_optimizer:
             assert model.current_optimizer, "optimizer does not exist"
             optimizer_path = "{}_opt.pt".format(os.path.splitext(weights_path)[0])
@@ -73,3 +81,22 @@ def load_model(model: Union[tf.keras.Model, torch.nn.Module], weights_path: str,
             model.current_optimizer.load_state_dict(torch.load(optimizer_path))
     else:
         raise ValueError("Unrecognized model instance {}".format(type(model)))
+
+
+def preprocess_torch_weights(weights_path: str) -> OrderedDict:
+    """Preprocess the torch weights dictionary.
+
+    This method is used to remove the any DataParallel artifacts in torch weigths.
+
+    Args:
+        weights_path: Path to the model weights.
+    """
+    new_state_dict = OrderedDict()
+    for key, value in torch.load(weights_path, map_location='cpu' if torch.cuda.device_count() == 0 else None).items():
+        # remove `module.`
+        new_key = key
+        if key.startswith('module.'):
+            new_key = key[7:]
+        new_state_dict[new_key] = value
+
+    return new_state_dict
