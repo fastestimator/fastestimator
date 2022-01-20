@@ -18,6 +18,7 @@ import numpy as np
 import tensorflow as tf
 import torch
 
+from fastestimator.backend.cast import cast
 from fastestimator.backend.to_tensor import to_tensor
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
@@ -66,7 +67,7 @@ def normalize(tensor: Tensor,
     std = get_std(tensor, std, max_pixel_value)
     epsilon = get_epsilon(tensor, epsilon)
 
-    tensor = (tensor - mean) / (std + epsilon)
+    tensor = (cast(tensor, "float32") - mean) / (std + epsilon)
 
     return tensor
 
@@ -88,7 +89,7 @@ def get_mean(tensor: Tensor,
         ValueError: If `tensor` is an unacceptable data type.
     """
     mean = np.array(mean, dtype=np.float32)
-    mean *= np.array(max_pixel_value)
+    mean *= np.array(max_pixel_value, dtype=np.float32)
 
     if tf.is_tensor(tensor):
         mean = tf.convert_to_tensor(mean)
@@ -143,7 +144,7 @@ def get_std(tensor: Tensor, std: Union[float, Sequence[float]] = (0.229, 0.224, 
         ValueError: If `tensor` is an unacceptable data type.
     """
     std = np.array(std, dtype=np.float32)
-    std *= np.array(max_pixel_value)
+    std *= np.array(max_pixel_value, dtype=np.float32)
 
     if tf.is_tensor(tensor):
         std = tf.convert_to_tensor(std)
