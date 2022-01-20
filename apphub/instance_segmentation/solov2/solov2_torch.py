@@ -33,9 +33,9 @@ from fastestimator.op.numpyop.multivariate import HorizontalFlip, LongestMaxSize
 from fastestimator.op.numpyop.univariate import ReadImage
 from fastestimator.op.tensorop.loss import L2Regularizaton
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
-from fastestimator.op.tensorop.tensorop import LambdaOp, TensorOp
 from fastestimator.op.tensorop.normalize import Normalize
 from fastestimator.op.tensorop.permute import Permute
+from fastestimator.op.tensorop.tensorop import LambdaOp, TensorOp
 from fastestimator.schedule import EpochScheduler, cosine_decay
 from fastestimator.trace.adapt import LRScheduler
 from fastestimator.trace.io import BestModelSaver
@@ -284,6 +284,7 @@ class Gt2Target(NumpyOp):
         num_objects = masks.shape[0]
         non_empty_mask = np.sum(masks.reshape(num_objects, -1), axis=1) > 0
         return masks[non_empty_mask], bboxes[non_empty_mask]
+
 
 class PointsNMS(TensorOp):
     def forward(self, data, state):
