@@ -227,6 +227,8 @@ def plot_logs(experiments: List[Summary],
                     continue  # Ignore empty metrics
                 if metric in ignore_keys or base_metric in ignore_keys:
                     continue
+                # Here we intentionally check against metric and not base_metric. If user wants to display per-ds they
+                #  can specify that in their include list: --include mcc 'mcc|usps'
                 if include_keys and metric not in include_keys:
                     continue
                 metric_histories[base_metric].add(idx, mode, ds_id, step_val)
@@ -266,8 +268,8 @@ def plot_logs(experiments: List[Summary],
     # If only one row, need to re-format the axs object for consistency. Likewise for columns
     if n_rows == 1:
         axs = [axs]
-        if n_cols == 1:
-            axs = [axs]
+    if n_cols == 1:
+        axs = [[ax] for ax in axs]
 
     for metric in metric_grid_location.keys():
         axis = axs[metric_grid_location[metric][0]][metric_grid_location[metric][1]]
@@ -383,7 +385,7 @@ def plot_logs(experiments: List[Summary],
                                              linewidth=1.0,
                                              edgecolors='black',
                                              zorder=4)  # zorder to put markers on top of line segments
-                            if ds_id:
+                            if ds_id and ds_id_markers[ds_id]:
                                 # Overlay the dataset id marker on top of the normal scatter plot marker
                                 s2 = axis.scatter(xy[0],
                                                   xy[1],
@@ -467,7 +469,25 @@ def plot_logs(experiments: List[Summary],
                 for j in range(n_cols):
                     if i == last_row_idx and j > last_column_idx:
                         break
-                    axs[i][j].legend(loc='best', fontsize='small')
+                    # We need to do some processing here to make per-dataset entries appear correctly
+                    handles, labels = axs[i][j].get_legend_handles_labels()
+                    labels.append('_')  # labels that start with _ wouldn't be collected, so we can use this to pad
+                    merged_h, merged_l = [], []
+                    idx = 0
+                    while idx < len(handles):
+                        # duplicates should always be next to one another since they appear as a result of ds_id patches
+                        if labels[idx] == labels[idx+1]:
+                            merged_l.append(labels[idx])
+                            merged_h.append((handles[idx], handles[idx+1]))
+                            idx += 1
+                        else:
+                            merged_l.append(labels[idx])
+                            merged_h.append(handles[idx])
+                        idx += 1
+                    # Apply the same sort order that we'd have if the legend were separate
+                    handles = [h for _, h in sorted(zip(merged_l, merged_h), key=lambda pair: pair[0])]
+                    labels = sorted(merged_l)
+                    axs[i][j].legend(handles, labels, loc='best', fontsize='small')
     return fig
 
 
