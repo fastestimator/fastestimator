@@ -129,7 +129,7 @@ def parse_log_files(file_paths: List[str],
     if file_paths is None or len(file_paths) < 1:
         raise AssertionError("must provide at least one log file")
     if save and save_path is None:
-        save_path = file_paths[0]
+        save_path = os.path.join(os.path.dirname(file_paths[0]), 'parse_logs.png')
 
     groups = defaultdict(list)  # {group_name: [experiment(s)]}
     for path in file_paths:
