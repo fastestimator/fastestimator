@@ -12,14 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Iterable, List, Optional, Sequence, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Sequence, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
 import torch
 
 from fastestimator.backend.tensor_normalize import normalize
-from fastestimator.backend.to_tensor import to_tensor
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 
@@ -33,8 +32,10 @@ class Normalize(TensorOp):
     Args:
         inputs: Key of the input tensor that is to be normalized.
         outputs: Key of the output tensor that has been normalized.
-        mean: The mean which needs to applied (eg: None, 3.8, (1.9, 2.0, 2.9))
-        std: The standard deviation which needs to applied (eg: None, 3.8, (1.9, 2.0, 2.9))
+        mean: The mean which needs to applied (eg: None, 0.54, (0.24, 0.34, 0.35))
+        std: The standard deviation which needs to applied (eg: None, 0.4, (0.1, 0.25, 0.45))
+        max_pixel_value: The max value of the input data(eg: 255, 65025) to be multipled with mean and std to get actual mean and std.
+                            To directly use the mean and std provide set max_pixel_value as 1.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
@@ -53,18 +54,6 @@ class Normalize(TensorOp):
         self.mean = mean
         self.std = std
         self.max_pixel_value = max_pixel_value
-
-    def build(self, framework: str, device: Optional[torch.device] = None) -> None:
-        if framework == 'torch':
-
-            self.mean = to_tensor(np.array(self.mean, dtype="float32"), "torch")
-            self.mean = self.mean.to(device)
-
-            self.std = to_tensor(np.array(self.std, dtype="float32"), "torch")
-            self.std = self.std.to(device)
-
-            self.max_pixel_value = to_tensor(np.array(self.max_pixel_value, dtype="float32"), "torch")
-            self.max_pixel_value = self.max_pixel_value.to(device)
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
         return normalize(data, self.mean, self.std, self.max_pixel_value)
