@@ -58,6 +58,7 @@ def normalize(tensor: Tensor,
             std: The standard deviation which needs to applied(eg: 3.8, (0.229, 0.224, 0.225))
             max_pixel_value: The max value of the input data(eg: 255, 65025) to be multipled with mean and std to get actual mean and std.
                             To directly use the mean and std provide set max_pixel_value as 1.
+            epsilon: Default value to be added to std to avoid divide by zero error.
 
         Returns:
             The normalized values of `tensor`.
