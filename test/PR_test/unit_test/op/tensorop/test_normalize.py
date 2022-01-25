@@ -55,7 +55,7 @@ class TestNormalize(unittest.TestCase):
                        std=(0.287, 0.287, 0.287),
                        max_pixel_value=27)
         data = op.forward(data=tf.convert_to_tensor(self.numpy_array), state={})
-        np.testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
+        np.testing.assert_array_almost_equal(data.numpy(), self.expected_result_multi, 2)
 
     def test_normalize_torch(self):
         op = Normalize(inputs="image", outputs="image", mean=0.482, std=0.289, max_pixel_value=27.0)

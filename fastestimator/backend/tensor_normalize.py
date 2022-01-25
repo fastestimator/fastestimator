@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Optional, Sequence, TypeVar, Union
+from typing import Optional, Sequence, Tuple, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
@@ -36,21 +36,21 @@ def normalize(tensor: Tensor,
         python
         n = np.array([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
         b = fe.backend.tensor_normalize(n, 0.5625, 0.2864, 8.0)  # ([[[-1.52752516, -1.0910894 ], [-0.65465364, -0.21821788]], [[ 0.21821788,  0.65465364], [ 1.0910894 ,  1.52752516]]])
-        b = fe.backend.tensor_normalize(n, (0.5, 0.625), (0.2795, 0.2795), 8.0)  # [[[-1.34164073, -1.34164073], [-0.44721358, -0.44721358]], [[ 0.44721358,  0.44721358], [ 1.34164073,  1.34164073]]]
+        b = fe.backend.tensor_normalize(n, (0.5, 0.625), (0.2795, 0.2795), 8.0) # [[[-1.34164073, -1.34164073], [-0.44721358, -0.44721358]], [[ 0.44721358,  0.44721358], [ 1.34164073,  1.34164073]]]
 
 
         This method can be used with TensorFlow tensors:
         python
         t = tf.constant([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
         b = fe.backend.tensor_normalize(n, 0.5625, 0.2864, 8.0)  # ([[[-1.52752516, -1.0910894 ], [-0.65465364, -0.21821788]], [[ 0.21821788,  0.65465364], [ 1.0910894 ,  1.52752516]]])
-        b = fe.backend.tensor_normalize(n, (0.5, 0.625), (0.2795, 0.2795), 8.0)  # [[[-1.34164073, -1.34164073], [-0.44721358, -0.44721358]], [[ 0.44721358,  0.44721358], [ 1.34164073,  1.34164073]]]
+        b = fe.backend.tensor_normalize(n, (0.5, 0.625), (0.2795, 0.2795), 8.0) # [[[-1.34164073, -1.34164073], [-0.44721358, -0.44721358]], [[ 0.44721358,  0.44721358], [ 1.34164073,  1.34164073]]]
 
 
         This method can be used with PyTorch tensors:
         python
         p = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
         b = fe.backend.tensor_normalize(n, 0.5625, 0.2864, 8.0)  # ([[[-1.52752516, -1.0910894 ], [-0.65465364, -0.21821788]], [[ 0.21821788,  0.65465364], [ 1.0910894 ,  1.52752516]]])
-        b = fe.backend.tensor_normalize(n, (0.5, 0.625), (0.2795, 0.2795), 8.0)  # [[[-1.34164073, -1.34164073], [-0.44721358, -0.44721358]], [[ 0.44721358,  0.44721358], [ 1.34164073,  1.34164073]]]
+        b = fe.backend.tensor_normalize(n, (0.5, 0.625), (0.2795, 0.2795), 8.0) # [[[-1.34164073, -1.34164073], [-0.44721358, -0.44721358]], [[ 0.44721358,  0.44721358], [ 1.34164073,  1.34164073]]]
 
         Args:
             tensor: The input value.
@@ -77,7 +77,7 @@ def normalize(tensor: Tensor,
     return tensor
 
 
-def convert_input_precision(tensor: Tensor):
+def convert_input_precision(tensor: Tensor) -> Tensor:
     """
         Adjust the input data precision based of environment precision.
 
@@ -96,15 +96,15 @@ def convert_input_precision(tensor: Tensor):
     return cast(tensor, precision)
 
 
-def get_framework(tensor: Tensor):
+def get_framework(tensor: Tensor) -> Tuple[str, Optional[str]]:
     """
         Get the framework of the input data.
 
         Args:
             tensor: The input tensor.
         Returns:
-            framework(str): Framework which is used to load input data.
-            device(str): The device on which the method is executed.(Eg. cuda, cpu)
+            framework: Framework which is used to load input data.
+            device: The device on which the method is executed (Eg. cuda, cpu). Only applicable to torch.
     """
     device = None
     if tf.is_tensor(tensor):
@@ -117,7 +117,7 @@ def get_framework(tensor: Tensor):
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(tensor)))
 
-    return framework, device
+    return (framework, device)
 
 
 def get_scaled_data(data: Union[float, Sequence[float]] = (0.485, 0.456, 0.406),
