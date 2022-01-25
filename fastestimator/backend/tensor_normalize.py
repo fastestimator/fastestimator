@@ -53,9 +53,9 @@ def normalize(tensor: Tensor,
         b = fe.backend.tensor_normalize(n, (0.5, 0.625), (0.2795, 0.2795), 8.0) # [[[-1.34164073, -1.34164073], [-0.44721358, -0.44721358]], [[ 0.44721358,  0.44721358], [ 1.34164073,  1.34164073]]]
 
         Args:
-            tensor: The input value.
-            mean: The mean which needs to applied(eg: 3.8, (0.485, 0.456, 0.406))
-            std: The standard deviation which needs to applied(eg: 3.8, (0.229, 0.224, 0.225))
+            tensor: The input 'tensor' value.
+            mean: The mean which needs to applied(eg: 3.8, (0.485, 0.456, 0.406)).
+            std: The standard deviation which needs to applied(eg: 3.8, (0.229, 0.224, 0.225)).
             max_pixel_value: The max value of the input data(eg: 255, 65025) to be multipled with mean and std to get actual mean and std.
                             To directly use the mean and std provide set max_pixel_value as 1.
             epsilon: Default value to be added to std to avoid divide by zero error.
@@ -128,10 +128,10 @@ def get_scaled_data(data: Union[float, Sequence[float]] = (0.485, 0.456, 0.406),
         Get the scaled value of a input data.
 
         Args:
-            data: The data which needs to be scaled. (eg: 0.4, (0.485, 0.456, 0.406))
+            data: The data which needs to be scaled. (eg: 0.4, (0.485, 0.456, 0.406)).
             scale_factor: Scale factor which needs to be multipled with input data.
-            framework: Framework currently method is running in.(Eg: 'np','tf', 'torch')
-            device: Current device. (eg: 'cpu','cuda')
+            framework: Framework currently method is running in.(Eg: 'np','tf', 'torch').
+            device: Current device. (eg: 'cpu','cuda').
 
         Returns:
             The scaled value of input data.
