@@ -85,7 +85,7 @@ def convert_input_precision(tensor: Tensor) -> Tensor:
             tensor: The input value.
 
         Returns:
-            The precision adjusted data(16 bit for mixed precision, 32 bit otherwise)
+            The precision adjusted data(16 bit for mixed precision, 32 bit otherwise).
 
     """
     precision = 'float32'
