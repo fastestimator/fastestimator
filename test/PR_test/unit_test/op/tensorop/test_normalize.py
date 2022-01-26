@@ -45,8 +45,7 @@ class TestNormalize(unittest.TestCase):
 
     def test_normalize_tf_int(self):
         op = Normalize(inputs="image", outputs="image", mean=0.482, std=0.289, max_pixel_value=27)
-        op.build("tf")
-        data = op.forward(data=tf.convert_to_tensor(self.numpy_array_int), state={})
+        data = op.forward(data=tf.convert_to_tensor(self.numpy_array), state={})
         np.testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
 
     def test_normalize_tf_multi_int(self):
@@ -55,59 +54,25 @@ class TestNormalize(unittest.TestCase):
                        mean=(0.44, 0.48, 0.52),
                        std=(0.287, 0.287, 0.287),
                        max_pixel_value=27)
-        op.build("tf")
-        data = op.forward(data=tf.convert_to_tensor(self.numpy_array_int), state={})
+        data = op.forward(data=tf.convert_to_tensor(self.numpy_array), state={})
         np.testing.assert_array_almost_equal(data.numpy(), self.expected_result_multi, 2)
 
-    def test_normalize_torch_int(self):
+    def test_normalize_torch(self):
         op = Normalize(inputs="image", outputs="image", mean=0.482, std=0.289, max_pixel_value=27.0)
-        op.build("torch", "cuda:0" if torch.cuda.is_available() else "cpu")
-        data = op.forward(data=to_tensor(self.numpy_array_int, "torch"), state={})
+        data = op.forward(data=to_tensor(self.numpy_array, "torch"), state={})
         np.testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
 
-    def test_normalize_torch_multi_int(self):
+    def test_normalize_torch_multi(self):
         op = Normalize(inputs="image",
                        outputs="image",
                        mean=(0.44, 0.48, 0.52),
                        std=(0.287, 0.287, 0.287),
                        max_pixel_value=27)
-        op.build("torch", "cuda:0" if torch.cuda.is_available() else "cpu")
-        data = op.forward(data=to_tensor(self.numpy_array_int, "torch"), state={})
-        np.testing.assert_array_almost_equal(data.numpy(), self.expected_result_multi, 2)
-
-    def test_normalize_numpy_int(self):
-        op = Normalize(inputs="image", outputs="image", mean=0.482, std=0.289, max_pixel_value=27.0)
-        data = op.forward(data=self.numpy_array_int, state={})
-        np.testing.assert_array_almost_equal(data, self.expected_result, 2)
-
-    def test_normalize_numpy_multi_int(self):
-        op = Normalize(inputs="image",
-                       outputs="image",
-                       mean=(0.44, 0.48, 0.52),
-                       std=(0.287, 0.287, 0.287),
-                       max_pixel_value=27)
-        data = op.forward(data=self.numpy_array_int, state={})
-        np.testing.assert_array_almost_equal(data, self.expected_result_multi, 2)
-
-    def test_normalize_tf_float(self):
-        op = Normalize(inputs="image", outputs="image", mean=0.482, std=0.289, max_pixel_value=27)
-        op.build("tf")
-        data = op.forward(data=tf.convert_to_tensor(self.numpy_array), state={})
-        np.testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
-
-    def test_normalize_tf_multi_float(self):
-        op = Normalize(inputs="image",
-                       outputs="image",
-                       mean=(0.44, 0.48, 0.52),
-                       std=(0.287, 0.287, 0.287),
-                       max_pixel_value=27)
-        op.build("tf")
-        data = op.forward(data=tf.convert_to_tensor(self.numpy_array), state={})
+        data = op.forward(data=to_tensor(self.numpy_array, "torch"), state={})
         np.testing.assert_array_almost_equal(data.numpy(), self.expected_result_multi, 2)
 
     def test_normalize_torch_float(self):
         op = Normalize(inputs="image", outputs="image", mean=0.482, std=0.289, max_pixel_value=27.0)
-        op.build("torch", "cuda:0" if torch.cuda.is_available() else "cpu")
         data = op.forward(data=to_tensor(self.numpy_array, "torch"), state={})
         np.testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
 
@@ -117,7 +82,6 @@ class TestNormalize(unittest.TestCase):
                        mean=(0.44, 0.48, 0.52),
                        std=(0.287, 0.287, 0.287),
                        max_pixel_value=27)
-        op.build("torch", "cuda:0" if torch.cuda.is_available() else "cpu")
         data = op.forward(data=to_tensor(self.numpy_array, "torch"), state={})
         np.testing.assert_array_almost_equal(data.numpy(), self.expected_result_multi, 2)
 
