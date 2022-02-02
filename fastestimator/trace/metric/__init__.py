@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.trace.metric.accuracy import Accuracy
+from fastestimator.trace.metric.bleu_score import BleuScore
 from fastestimator.trace.metric.calibration_error import CalibrationError
 from fastestimator.trace.metric.confusion_matrix import ConfusionMatrix
 from fastestimator.trace.metric.dice import Dice
