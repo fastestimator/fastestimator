@@ -64,7 +64,8 @@ def get_dependency():
         'uncertainty-calibration==0.0.8',
         'dill==0.3.3',
         'scikit-image==0.17.2',
-        'prettytable==2.2.1'
+        'prettytable==2.2.1',
+        'nltk==3.6.7'
     ]
     if os.name == "nt":
         dependencies.append(

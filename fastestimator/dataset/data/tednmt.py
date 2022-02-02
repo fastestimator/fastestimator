@@ -26,7 +26,7 @@ wget.callback_progress = callback_progress
 
 
 def _read_data(file_path: str) -> List[str]:
-    with open(file_path) as f:
+    with open(file_path, encoding='utf-8') as f:
         data = [x.strip() for x in f if x.strip()]
     return data
 
