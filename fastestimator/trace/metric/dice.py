@@ -77,6 +77,7 @@ class Dice(Trace):
         intersection = np.sum(y_true * prediction_label, axis=-1)
         area_sum = np.sum(y_true, axis=-1) + np.sum(prediction_label, axis=-1)
         dice = (2. * intersection + self.smooth) / (area_sum + self.smooth)
+        data.write_per_instance_log(self.outputs[0], dice)
         self.dice.extend(list(dice))
 
     def on_epoch_end(self, data: Data) -> None:

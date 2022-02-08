@@ -83,6 +83,7 @@ class Accuracy(Trace):
         assert y_pred.size == y_true.size
         self.correct += np.sum(y_pred.ravel() == y_true.ravel())
         self.total += len(y_pred.ravel())
+        data.write_per_instance_log(self.outputs[0], np.array(y_pred.ravel() == y_true.ravel(), dtype=np.int8))
 
     def on_epoch_end(self, data: Data) -> None:
         data.write_with_log(self.outputs[0], self.correct / self.total)
