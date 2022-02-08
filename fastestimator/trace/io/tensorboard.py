@@ -296,6 +296,7 @@ class TensorBoard(Trace):
     """
     Freq = namedtuple('Freq', ['is_step', 'freq'])
     writer: _BaseWriter
+    # TODO - support for per-instance tracking
 
     def __init__(self,
                  log_dir: str = 'logs',
