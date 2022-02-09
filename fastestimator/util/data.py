@@ -43,6 +43,7 @@ class Data(ChainMap[str, Any]):
 
     def __init__(self, batch_data: Optional[MutableMapping[str, Any]] = None) -> None:
         super().__init__({}, batch_data or {}, {})
+        self.per_instance_enabled = True  # Can be toggled if you need to block traces from recording detailed info
 
     def write_with_log(self, key: str, value: Any) -> None:
         """Write a given `value` into the `Data` dictionary with the intent that it be logged.
@@ -69,7 +70,8 @@ class Data(ChainMap[str, Any]):
             key: The key to associate with the new entry.
             value: The new per-instance entry to be written.
         """
-        self.maps[2][key] = value
+        if self.per_instance_enabled:
+            self.maps[2][key] = value
 
     def read_logs(self) -> MutableMapping[str, Any]:
         """Read all values from the `Data` dictionary which were intended to be logged.
@@ -93,12 +95,16 @@ class DSData(Data):
     def __init__(self, ds_id: str, data: Data):
         self.maps = data.maps
         self.ds_id = ds_id
+        self.per_instance_enabled = True
 
     def write_with_log(self, key: str, value: Any) -> None:
         super().write_with_log(key=f'{key}|{self.ds_id}', value=value)
 
     def write_without_log(self, key: str, value: Any) -> None:
         super().write_without_log(key=f'{key}|{self.ds_id}', value=value)
+
+    def write_per_instance_log(self, key: str, value: Any) -> None:
+        super().write_per_instance_log(key=f'{key}|{self.ds_id}', value=value)
 
 
 class FilteredData:
