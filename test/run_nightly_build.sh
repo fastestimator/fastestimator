@@ -29,7 +29,7 @@ for file in $(find "$dir_path"/apphub_scripts -type f); do
         echo "$file"
 
         # sleep (fix 'Kernel died' issue: https://github.com/nteract/papermill/issues/511)
-        sleep 5s
+        sleep 10s
 
         start=$(date +%s)
         bash "$file"
@@ -37,7 +37,7 @@ for file in $(find "$dir_path"/apphub_scripts -type f); do
         end=$(date +%s)
 
         # sleep (fix 'Kernel died' issue: https://github.com/nteract/papermill/issues/511)
-        sleep 5s
+        sleep 10s
 
         # clean GPU memory
         if ls /dev/nvidia* 1> /dev/null 2>&1; then
@@ -50,7 +50,7 @@ for file in $(find "$dir_path"/apphub_scripts -type f); do
         rm -r /root/.cache
 
         # sleep (fix issue of kernel die)
-        sleep 5s
+        sleep 10s
 
         exectime[$file]=$((end-start))
         if [ ! ${result[$file]} -eq 0 ]; then
@@ -70,7 +70,7 @@ for nb_in in $(find "$dir_path"/tutorial -type f); do
         echo "$nb_in"
 
         # sleep (fix 'Kernel died' issue: https://github.com/nteract/papermill/issues/511)
-        sleep 5s
+        sleep 10s
 
         nb_out="${nb_in/'.ipynb'/'_out.ipynb'}"
         current_dir="$(dirname "$nb_in")"
@@ -81,7 +81,7 @@ for nb_in in $(find "$dir_path"/tutorial -type f); do
         end=$(date +%s)
 
         # sleep (fix 'Kernel died' issue: https://github.com/nteract/papermill/issues/511)
-        sleep 5s
+        sleep 10s
 
         # clean GPU memory
         if ls /dev/nvidia* 1> /dev/null 2>&1; then
@@ -94,7 +94,7 @@ for nb_in in $(find "$dir_path"/tutorial -type f); do
         rm -r /root/.cache
 
         # sleep (fix 'Kernel died' issue: https://github.com/nteract/papermill/issues/511)
-        sleep 5s
+        sleep 10s
 
         exectime[$nb_in]=$((end-start))
         if [ ! ${result[$nb_in]} -eq 0 ]; then
