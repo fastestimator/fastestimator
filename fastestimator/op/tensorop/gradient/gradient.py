@@ -88,7 +88,7 @@ class GradientOp(TensorOp):
             elif self.framework == "torch":
                 trainable_params = [p for p in self.model.parameters() if p.requires_grad]
                 for idx, final in enumerate(finals):
-                    # get_gradinet
+                    # get_gradient
                     retain_graph = self.retain_graph or not idx == len(finals) - 1
                     gradient = get_gradient(final, trainable_params, retain_graph=retain_graph)
                     results.append(gradient)
