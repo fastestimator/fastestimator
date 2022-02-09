@@ -3,5 +3,6 @@ engines:
   duplication:
     exclude_paths:
       - "apphub/**"
+      - "**/test/**"
 exclude_paths:
   - "**__init__.py"
