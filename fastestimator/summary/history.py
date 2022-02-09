@@ -283,8 +283,9 @@ class HistoryRecorder:
             sys.stdout = self.stdout
             self._check_for_restart()
             # In test mode only overwrite the train_end time if it hasn't already been set
-            train_end_query = "(?)" if self.system.mode in ('train', 'eval') else "IFNULL(train_end, (?))"
-            query = f"UPDATE history set train_end = {train_end_query}, status = (?) WHERE pk = (?)"
+            query = "UPDATE history set train_end = (?), status = (?) WHERE pk = (?)" \
+                if self.system.mode in ('train', 'eval') else \
+                "UPDATE history set train_end = IFNULL(train_end, (?)), status = (?) WHERE pk = (?)"
             self.db.execute(
                 query,
                 [

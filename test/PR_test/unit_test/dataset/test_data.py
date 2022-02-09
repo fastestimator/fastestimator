@@ -16,16 +16,18 @@ import json
 import os
 import unittest
 import urllib.request
+from urllib.error import URLError, HTTPError, ContentTooShortError
 
 
-def ping(host):
+def ping(host: str):
     try:
+        assert host.startswith('http')
         agent = 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.76 Safari/537.36'
         req = urllib.request.Request(host)
         req.add_header('User-Agent', agent)
         code = urllib.request.urlopen(req).getcode()
         return code == 200
-    except:
+    except (ValueError, URLError, HTTPError, ContentTooShortError):
         return False
 
 
