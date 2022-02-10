@@ -375,7 +375,7 @@ class MeanAveragePrecision(Trace):
                     for recall_index, precision_index in enumerate(inds):
                         precision_at_recall[recall_index] = precision[precision_index]
                         score[recall_index] = det_scores_sorted[precision_index]
-                except:
+                except IndexError:
                     pass
 
                 precision_matrix[index, :, cat_index] = np.array(precision_at_recall)
