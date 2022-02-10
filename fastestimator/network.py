@@ -437,7 +437,7 @@ class TorchNetwork(BaseNetwork):
             else:
                 try:
                     data[key] = data[key].to(device)
-                except:
+                except (RuntimeError, AssertionError, AttributeError):
                     pass
 
     def unload_epoch(self) -> None:
