@@ -30,6 +30,9 @@ from fastestimator.util.util import to_number
 def get_formated_list(input_data: np.array) -> List:
     """
         Filter the padding(elements with 0 value) and typecast the elements of list to str.
+
+        Returns:
+            Formated list.
     """
     return [str(i) for i in input_data if i != 0]
 
@@ -37,6 +40,9 @@ def get_formated_list(input_data: np.array) -> List:
 def get_formated_reference(input_data: np.array) -> List:
     """
         Encapsulate formated list in another list.
+
+        Returns:
+            List encapsulated formated list.
     """
     return [get_formated_list(input_data)]
 
@@ -117,11 +123,12 @@ class BleuScore(Trace):
                 Tuple of n_gram weights
 
             Raises:
+                ValueError: When n_gram provided is less than or equal to 0..
         """
         if self.n_gram > 0:
             return (1 / self.n_gram, ) * self.n_gram
         else:
-            ValueError("N Gram should be a positive integer.")
+            raise ValueError("N Gram should be a positive integer.")
 
     def on_epoch_begin(self, data: Data) -> None:
         self.no_of_correct_predicted = Counter()

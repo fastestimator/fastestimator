@@ -12,13 +12,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.trace.metric.accuracy import Accuracy
-from fastestimator.trace.metric.bleu_score import BleuScore
-from fastestimator.trace.metric.calibration_error import CalibrationError
-from fastestimator.trace.metric.confusion_matrix import ConfusionMatrix
-from fastestimator.trace.metric.dice import Dice
-from fastestimator.trace.metric.f1_score import F1Score
-from fastestimator.trace.metric.mcc import MCC
-from fastestimator.trace.metric.mean_average_precision import MeanAveragePrecision
-from fastestimator.trace.metric.precision import Precision
-from fastestimator.trace.metric.recall import Recall
