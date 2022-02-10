@@ -6,9 +6,9 @@ FastEstimator comes with a set of CLI commands that can help users train and tes
 * [How Does the CLI Work](#t10intro)
 * [CLI Usage](#t10usage)
 * [Sending Input Args to `get_estimator`](#t10args)
-    * [Using --arg](#t10arg)
-    * [Using a JSON file](#t10json)
-    * [System argument](#t10system)
+  * [Using --arg](#t10arg)
+  * [Using a JSON file](#t10json)
+  * [System argument](#t10system)
 
 <a id='t10intro'></a>
 ## How Does the CLI Work
@@ -22,7 +22,7 @@ FastEstimator comes with a set of CLI commands that can help users train and tes
 ## CLI Usage
 In this section we will show the actual commands that we can use to train and test our models. We will use [mnist_tf.py](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/mnist/mnist_tf.py) for illustration.
 
-  To call `estimator.fit()` and start the training on terminal:
+To call `estimator.fit()` and start the training on terminal:
 
 ``` bash
 $ fastestimator train mnist_tf.py
@@ -38,7 +38,6 @@ To first call `estimator.fit()` then `estimator.test()`, you can use:
 ``` bash
 $ fastestimator run mnist_tf.py
 ```
-
 
 <a id='t10args'></a>
 ## Sending Input Args to `get_estimator` or `fastestimator_run`
@@ -61,8 +60,7 @@ $ fastestimator train mnist_tf.py --epochs 3 --batch_size 64
 <a id='t10json'></a>
 ### Using a JSON file
 The other way we can send arguments is by using the `--hyperparameters` argument and passing it a json file containing all the training hyperparameters like epochs, batch_size, optimizer, etc. This option is really useful when you want to repeat the training job more than once and/or the list of the hyperparameter is getting really long. The following shows an example JSON file and how it could be used for our MNIST example:
-```
-JSON:
+``` json
 {
     "epochs": 1,
     "batch_size": 64
