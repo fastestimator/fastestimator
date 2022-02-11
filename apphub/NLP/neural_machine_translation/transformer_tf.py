@@ -27,6 +27,7 @@ from fastestimator.op.tensorop.loss import LossOp
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.adapt import LRScheduler
 from fastestimator.trace.io import BestModelSaver
+from fastestimator.trace.metric.bleu_score import BleuScore
 from fastestimator.trace.trace import Trace
 
 
@@ -306,6 +307,7 @@ def get_estimator(data_dir=None,
     ])
     traces = [
         MaskedAccuracy(inputs=("pred", "target_real"), outputs="masked_acc", mode="!train"),
+        BleuScore(true_key="target_real", pred_key="pred", output_name="bleu_score", n_gram=4, mode="!train"),
         BestModelSaver(model=model, save_dir=model_dir, metric="masked_acc", save_best_mode="max"),
         LRScheduler(model=model, lr_fn=lambda step: lr_fn(step, em_dim))
     ]
