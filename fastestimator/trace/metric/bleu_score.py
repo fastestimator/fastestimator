@@ -27,7 +27,7 @@ from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
 
 
-def get_formated_list(input_data: np.array) -> List:
+def get_formated_list(input_data: np.array) -> List[str]:
     """
         Filter the padding(elements with 0 value) and typecast the elements of list to str.
 
@@ -37,7 +37,7 @@ def get_formated_list(input_data: np.array) -> List:
     return [str(i) for i in input_data if i != 0]
 
 
-def get_formated_reference(input_data: np.array) -> List:
+def get_formated_reference(input_data: np.array) -> List[List[str]]:
     """
         Encapsulate formated list in another list.
 
@@ -115,7 +115,7 @@ class BleuScore(Trace):
     def pred_key(self) -> str:
         return self.inputs[1]
 
-    def get_output_weights(self) -> Tuple:
+    def get_output_weights(self) -> Tuple[float, ...]:
         """
             Generate weights tuple based on n_gram.
 
@@ -145,7 +145,7 @@ class BleuScore(Trace):
         """
         return brevity_penalty(self.total_references_length, self.total_hypotheses_length)
 
-    def get_smoothened_modified_precision(self) -> List:
+    def get_smoothened_modified_precision(self) -> List[float]:
         """
             Calculate the smoothened modified precision.
 
@@ -231,5 +231,4 @@ class BleuScore(Trace):
         data.write_per_instance_log(self.outputs[0], sentence_level_scores)
 
     def on_epoch_end(self, data: Data) -> None:
-        data[self.outputs[0]] = round(self.get_corpus_bleu_score(), 5)
-        data.write_with_log(self.outputs[0], data[self.outputs[0]])
+        data.write_with_log(self.outputs[0], round(self.get_corpus_bleu_score(), 5))
