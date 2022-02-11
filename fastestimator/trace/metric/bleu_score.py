@@ -27,7 +27,7 @@ from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
 
 
-def get_formated_list(input_data: np.array) -> List[str]:
+def get_formated_list(input_data: np.ndarray) -> List[str]:
     """
         Filter the padding(elements with 0 value) and typecast the elements of list to str.
 
@@ -37,7 +37,7 @@ def get_formated_list(input_data: np.array) -> List[str]:
     return [str(i) for i in input_data if i != 0]
 
 
-def get_formated_reference(input_data: np.array) -> List[List[str]]:
+def get_formated_reference(input_data: np.ndarray) -> List[List[str]]:
     """
         Encapsulate formated list in another list.
 
