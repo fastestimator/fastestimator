@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2022 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.dataset.data import breast_cancer, cifair10, cifair100, cifar10, cifar100, cub200, food101, \
-    horse2zebra, imdb_review, mendeley, mitmovie_ner, mnist, montgomery, mscoco, nih_chestxray, omniglot, \
-    penn_treebank, shakespeare, skl_digits, svhn, svhn_cropped, tednmt, usps
+from fastestimator.dataset.numpy_dataset import NumpyDataset
+from sklearn import datasets
+
+
+def load_data(image_key: str = "x", label_key: str = "y") -> NumpyDataset:
+    """Load and return the Sklearn digits dataset.
+
+    Args:
+        image_key: The key for image.
+        label_key: The key for label.
+
+    Returns:
+        (train_data, eval_data)
+    """
+    ds = datasets.load_digits()
+    images = ds.images
+    targets = ds.target
+    return NumpyDataset({image_key: images, label_key: targets})
