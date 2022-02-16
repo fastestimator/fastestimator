@@ -17,7 +17,7 @@ import tempfile
 import numpy as np
 import tensorflow as tf
 from sklearn.metrics import auc, f1_score, roc_curve
-from tensorflow.python.keras import layers
+from tensorflow.keras import layers
 
 import fastestimator as fe
 from fastestimator.backend import binary_crossentropy

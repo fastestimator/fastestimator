@@ -15,7 +15,7 @@
 from typing import Tuple
 
 import tensorflow as tf
-from tensorflow.python.keras import Sequential, layers
+from tensorflow.keras import Sequential, layers
 
 
 # noinspection PyPep8Naming

@@ -16,7 +16,7 @@ import os
 from typing import Tuple
 
 import numpy as np
-from tensorflow.python.keras.utils.data_utils import get_file
+from tensorflow.keras.utils import get_file
 
 from fastestimator.dataset.data.cifair10 import _load_batch
 from fastestimator.dataset.numpy_dataset import NumpyDataset

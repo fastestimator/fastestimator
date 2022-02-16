@@ -15,7 +15,7 @@
 import tempfile
 
 import tensorflow as tf
-from tensorflow.python.keras import layers
+from tensorflow.keras import layers
 
 import fastestimator as fe
 from fastestimator.dataset.data import imdb_review

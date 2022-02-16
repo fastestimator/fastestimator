@@ -16,7 +16,7 @@ from typing import Iterable, Optional, Tuple, Union
 
 import cv2
 from albumentations import BboxParams, KeypointParams
-from albumentations.augmentations.transforms import RandomResizedCrop as RandomResizedCropAlb
+from albumentations.augmentations import RandomResizedCrop as RandomResizedCropAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 from fastestimator.util.traceability_util import traceable

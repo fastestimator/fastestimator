@@ -17,7 +17,7 @@ import tempfile
 import cv2
 import tensorflow as tf
 from tensorflow.keras import layers
-from tensorflow.python.keras.models import Model
+from tensorflow.keras.models import Model
 
 import fastestimator as fe
 from fastestimator.backend import reduce_mean

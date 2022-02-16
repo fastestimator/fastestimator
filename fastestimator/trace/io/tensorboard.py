@@ -22,7 +22,7 @@ import tensorboard as tb
 import tensorflow as tf
 import torch
 from tensorflow.python.framework import ops as tfops
-from tensorflow.python.keras import backend
+from tensorflow.keras import backend
 from tensorflow.python.ops import summary_ops_v2
 from torch.utils.tensorboard import SummaryWriter
 

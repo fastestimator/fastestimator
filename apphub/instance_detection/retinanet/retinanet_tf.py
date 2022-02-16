@@ -19,7 +19,7 @@ import cv2
 import numpy as np
 import tensorflow as tf
 from albumentations import BboxParams
-from tensorflow.python.keras import layers, models, regularizers
+from tensorflow.keras import layers, models, regularizers
 
 import fastestimator as fe
 from fastestimator.dataset.data import mscoco

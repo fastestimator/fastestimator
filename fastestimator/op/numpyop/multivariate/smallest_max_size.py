@@ -16,7 +16,7 @@ from typing import Iterable, Optional, Union
 
 import cv2
 from albumentations import BboxParams, KeypointParams
-from albumentations.augmentations.transforms import SmallestMaxSize as SmallestMaxSizeAlb
+from albumentations.augmentations import SmallestMaxSize as SmallestMaxSizeAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 from fastestimator.util.traceability_util import traceable

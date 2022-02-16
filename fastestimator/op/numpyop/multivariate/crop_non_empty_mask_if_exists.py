@@ -15,7 +15,7 @@
 from typing import Iterable, List, Optional, Union
 
 from albumentations import BboxParams, KeypointParams
-from albumentations.augmentations.transforms import CropNonEmptyMaskIfExists as CropNonEmptyMaskIfExistsAlb
+from albumentations.augmentations import CropNonEmptyMaskIfExists as CropNonEmptyMaskIfExistsAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 from fastestimator.util.traceability_util import traceable

@@ -14,8 +14,8 @@
 # ==============================================================================
 import tempfile
 
-from tensorflow.python.keras.layers import Concatenate, Conv2D, Dense, Flatten, Input, MaxPooling2D
-from tensorflow.python.keras.models import Model
+from tensorflow.keras.layers import Concatenate, Conv2D, Dense, Flatten, Input, MaxPooling2D
+from tensorflow.keras.models import Model
 
 import fastestimator as fe
 from fastestimator.dataset.data import cifair10

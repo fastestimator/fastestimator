@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import tensorflow as tf
 from scipy.linalg import hadamard
-from tensorflow.python.keras import layers
+from tensorflow.keras import layers
 
 from fastestimator.util.util import to_list
 
