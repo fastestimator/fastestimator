@@ -124,6 +124,20 @@ def connect(db_path: Optional[str] = None) -> sql.Connection:
     if db_path != ':memory:':  # This is a reserved keyword to create an in-memory database
         os.makedirs(os.path.dirname(db_path), exist_ok=True)  # Make sure folders exist before creating disk file
     connection = sql.connect(db_path, detect_types=sql.PARSE_DECLTYPES | sql.PARSE_COLNAMES)
+    if db_path != ":memory:":
+        # Check to ensure the database isn't corrupted
+        cur = connection.execute("PRAGMA integrity_check")
+        response = cur.fetchall()[0]
+        if response != ('ok',):
+            connection.close()
+            corrupt_path = os.path.join(os.path.dirname(db_path),
+                                        f"corrupt_{datetime.now().strftime('%Y_%m_%d_%H_%M_%S')}_"
+                                        f"{os.path.basename(db_path)}")
+            os.renames(db_path, corrupt_path)
+            print(f"FastEstimator-Warn: The FastEstimator history database has been corrupted. It has been moved to "
+                  f"{corrupt_path} and a new one has been automatically created. The integrity check output is: "
+                  f"{response}")
+            connection = sql.connect(db_path, detect_types=sql.PARSE_DECLTYPES | sql.PARSE_COLNAMES)
     connection.execute("PRAGMA foreign_keys = 1")  # Enable FK constraints
     connection.row_factory = sql.Row  # Get nice query return objects
     # Build the schema if it doesn't exist
@@ -264,29 +278,37 @@ class HistoryRecorder:
         sys.stdout = self
 
     def __exit__(self, exc_type: Optional[Type], exc_val: Optional[Exception], exc_tb: Optional[Any]) -> None:
-        self._check_for_restart()
-        self.flush()
-        sys.stdout = self.stdout
-        # In test mode only overwrite the train_end time if it hasn't already been set
-        train_end_query = "(?)" if self.system.mode in ('train', 'eval') else "IFNULL(train_end, (?))"
-        query = f"UPDATE history set train_end = {train_end_query}, status = (?) WHERE pk = (?)"
-        self.db.execute(
-            query,
-            [
-                datetime.now(),
-                "Completed" if exc_type is None else "Aborted" if exc_type == KeyboardInterrupt else "Failed",
-                self.pk
-            ])
-        if exc_type is not None:
-            args = {
-                'type': exc_type.__name__,
-                'tb': "\n".join(traceback.format_exception(exc_type, exc_val, exc_tb)),
-                'fk': self.pk
-            }
-            self.db.execute(_MAKE_ERR_ENTRY_P1, args)
-            self.db.execute(_MAKE_ERR_ENTRY_P2, args)
-        self.db.commit()
-        self._apply_limits()
+        try:
+            self.flush()
+            sys.stdout = self.stdout
+            self._check_for_restart()
+            # In test mode only overwrite the train_end time if it hasn't already been set
+            query = "UPDATE history set train_end = (?), status = (?) WHERE pk = (?)" \
+                if self.system.mode in ('train', 'eval') else \
+                "UPDATE history set train_end = IFNULL(train_end, (?)), status = (?) WHERE pk = (?)"
+            self.db.execute(
+                query,
+                [
+                    datetime.now(),
+                    "Completed" if exc_type is None else "Aborted" if exc_type == KeyboardInterrupt else "Failed",
+                    self.pk
+                ])
+            if exc_type is not None:
+                args = {
+                    'type': exc_type.__name__,
+                    'tb': "\n".join(traceback.format_exception(exc_type, exc_val, exc_tb)),
+                    'fk': self.pk
+                }
+                self.db.execute(_MAKE_ERR_ENTRY_P1, args)
+                self.db.execute(_MAKE_ERR_ENTRY_P2, args)
+            self.db.commit()
+            self._apply_limits()
+        except (sql.OperationalError, sql.DatabaseError) as err:
+            # This could happen if user has multiple trainings running simultaneously, the database becomes corrupted,
+            # and then a new training is launched which detects the corrupted database of the old training and re-names
+            # the old database before the old job completes.
+            print(f"FastEstimator-Warn: FastEstimator history tracking failed to capture the final status of the "
+                  f"experiment: {err}")
         self.db.close()
 
     def _check_for_restart(self) -> None:
@@ -384,9 +406,14 @@ class HistoryRecorder:
             # Flush can also get invoked by pipeline multi-processing, but db should only be accessed by main thread.
             # This can happen, for example, when pipeline prints a warning that a certain key is unused and will be
             # dropped.
-            self._check_for_restart()  # Check here instead of just waiting for __exit__ in case system powers off later
-            self.db.execute('UPDATE logs SET log = log || (?) WHERE fk = (?)', [output, self.pk])
-            self.db.commit()
+            try:
+                self._check_for_restart()  # Check here instead of waiting for __exit__ in case system powers off later
+                self.db.execute('UPDATE logs SET log = log || (?) WHERE fk = (?)', [output, self.pk])
+                self.db.commit()
+            except (sql.OperationalError, sql.DatabaseError) as err:
+                self.ident = (-2, -2)  # No threads should match this identity in the future
+                print(f"\nFastEstimator-Warn: There was a problem writing to the FastEstimator history database. Log "
+                      f"capture will be disabled for the rest of this experiment. Error: {err}")
 
     def flush(self) -> None:
         self.stdout.flush()
@@ -583,7 +610,7 @@ class HistoryReader:
         p_log = subparsers.add_parser(
             'log',
             description='Retrieve one or more output logs. This command requires '
-            'that you currently have experiments selected.',
+                        'that you currently have experiments selected.',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
             allow_abbrev=False)
         p_log.add_argument('indices',
@@ -611,7 +638,7 @@ class HistoryReader:
         p_err = subparsers.add_parser(
             'err',
             description='Retrieve one or more error tracebacks. This command requires '
-            'that you currently have experiments selected.',
+                        'that you currently have experiments selected.',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
             allow_abbrev=False)
         p_err.add_argument('indices',
@@ -630,7 +657,7 @@ class HistoryReader:
         p_vis = subparsers.add_parser(
             'vis',
             description='Visualize logs for one or more experiments. This command requires '
-            'that you currently have experiments selected.',
+                        'that you currently have experiments selected.',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
             allow_abbrev=False)
         p_vis.add_argument('indices',
