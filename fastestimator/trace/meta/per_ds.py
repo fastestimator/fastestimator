@@ -76,9 +76,12 @@ def per_ds(clz: type(Trace)):
                 self.fe_per_ds_trace.on_batch_begin(DSData(self.system.ds_id, data))
 
         def on_batch_end(self, data: Data) -> None:
-            super().on_batch_end(data)
             if self.system.ds_id != '':
                 self.fe_per_ds_trace.on_batch_end(DSData(self.system.ds_id, data))
+                # Block the main process from writing per-instance info since we already have the more detailed key
+                data.per_instance_enabled = False
+            super().on_batch_end(data)
+            data.per_instance_enabled = True
 
         def on_ds_end(self, data: Data) -> None:
             if self.system.ds_id != '':

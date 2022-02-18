@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2022 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.trace.metric.accuracy import Accuracy
+from fastestimator.trace.metric.bleu_score import BleuScore
 from fastestimator.trace.metric.calibration_error import CalibrationError
 from fastestimator.trace.metric.confusion_matrix import ConfusionMatrix
 from fastestimator.trace.metric.dice import Dice

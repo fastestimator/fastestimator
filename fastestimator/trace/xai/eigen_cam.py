@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, List, Optional, TypeVar, Iterable, Union
+from typing import Any, Dict, List, Optional, Tuple, TypeVar, Iterable, Union
 
 import cv2
 import numpy as np
@@ -45,8 +45,13 @@ class EigenCAM(Trace):
         images: The key corresponding to images onto which to draw the CAM outputs.
         activations: The key corresponding to outputs from a convolution layer from which to draw the CAM outputs. You
             can easily extract these from any model by using the 'intermediate_layers' variable in a ModelOp.
-        n_components: How many principal components to visualize.
+        n_components: How many principal components to visualize. If you pass a float between 0 and 1 it will instead
+            visualize however many components are required in order to capture the corresponding percentage of the
+            variance in the image.
         n_samples: How many images in total to display every epoch (or None to display all available images).
+        downsize: Whether to downsize the inputs before svd decomposition in order to speed up processing. If provided,
+            the inputs will be proportionally downscaled such that their longest axis length is equal to the `downsize`
+            parameter. 64 seems like a good value to try if you are having performance problems.
         labels: The key corresponding to the true labels of the images to be visualized.
         preds: The key corresponding to the model prediction for each image.
         label_mapping: {class_string: model_output_value}.
@@ -60,8 +65,9 @@ class EigenCAM(Trace):
     def __init__(self,
                  images: str,
                  activations: str,
-                 n_components: int = 3,
+                 n_components: Union[int, float] = 3,
                  n_samples: Optional[int] = 5,
+                 downsize: Optional[int] = None,
                  labels: Optional[str] = None,
                  preds: Optional[str] = None,
                  label_mapping: Optional[Dict[str, Any]] = None,
@@ -77,6 +83,7 @@ class EigenCAM(Trace):
         self.n_samples = n_samples
         # TODO - handle non-hashable labels
         self.label_mapping = {val: key for key, val in label_mapping.items()} if label_mapping else None
+        self.downsize = downsize
         super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.images = []
         self.activations = []
@@ -93,25 +100,44 @@ class EigenCAM(Trace):
         self.preds = []
         self.n_found = 0
 
-    def _project_2d(self, activations: np.ndarray) -> List[np.ndarray]:
+    def _project_2d(self, activations: np.ndarray) -> Tuple[int, List[List[np.ndarray]]]:
         """Project 2D convolution activations maps into 2D principal component maps.
 
         Args:
             activations: A tensor of shape (batch, channels, height, width) to be transformed.
 
         Returns:
-            Principal component projections of the `activations`.
+            (max N_components, Principal component projections of the `activations` (batch x components x image)).
         """
-        projections = [[] for _ in range(self.n_components)]
+        projections = []
         for activation in activations:
+            if self.downsize:
+                long_axis = 1 if activation.shape[1] > activation.shape[2] else 2
+                long_len = activation.shape[long_axis]
+                if long_len > self.downsize:
+                    scale = self.downsize / long_len
+                    small_activations = []
+                    for i in range(activation.shape[0]):
+                        small_activations.append(
+                            cv2.resize(src=activation[i, ...],
+                                       dsize=(int(activation.shape[1]*scale), int(activation.shape[2]*scale)),
+                                       interpolation=cv2.INTER_AREA))
+                    activation = np.array(small_activations)
             flat = activation.reshape(activation.shape[0], -1).transpose()
             flat = flat - flat.mean(axis=0)
             U, S, VT = np.linalg.svd(flat, full_matrices=True)
-            for i in range(self.n_components):
+            components = []
+            n_components = self.n_components
+            if isinstance(n_components, float):
+                eig_vals = np.square(S)
+                pct_explained = np.cumsum(eig_vals) / np.cumsum(eig_vals)[-1]
+                n_components = 1 + np.searchsorted(pct_explained, self.n_components)
+            for i in range(n_components):
                 component_i = flat @ VT[i, :]
                 component_i = component_i.reshape(activation.shape[1:])
-                projections[i].append(component_i)
-        return [np.array(elem, dtype=np.float32) for elem in projections]
+                components.append(np.maximum(component_i, 0))
+            projections.append(components)
+        return max([len(x) for x in projections]), projections
 
     def on_batch_end(self, data: Data) -> None:
         if self.n_samples is None or self.n_found < self.n_samples:
@@ -149,26 +175,28 @@ class EigenCAM(Trace):
         # Clear memory
         self._reset()
         # Make the image
-        components = self._project_2d(activations)
-        components = [np.maximum(component, 0) for component in components]
-        masks = []
-        for component_batch in components:
-            img_batch = []
-            for img in component_batch:
-                img = cv2.resize(img, (width, height))
-                img = img - np.min(img)
-                img = img / np.max(img)
-                img = cv2.cvtColor(cv2.applyColorMap(np.uint8(255 * img), cv2.COLORMAP_JET), cv2.COLOR_BGR2RGB)
-                img = np.float32(img) / 255
-                img_batch.append(img)
-            img_batch = np.array(img_batch, dtype=np.float32)
-            # Switch to channel first for pytorch
-            if isinstance(images, torch.Tensor):
-                img_batch = np.moveaxis(img_batch, source=-1, destination=1)
-            masks.append(img_batch)
-
-        components = [images + mask for mask in masks]  # This seems to work even if the image is 1 channel instead of 3
-        components = [image / reduce_max(image) for image in components]
+        n_components, batch_component_image = self._project_2d(activations)
+        components = []  # component x image (batch x image)
+        for component_idx in range(n_components):
+            batch = []
+            for base_image, component_image in zip(images, batch_component_image):
+                if len(component_image) > component_idx:
+                    mask = component_image[component_idx]
+                    mask = cv2.resize(mask, (width, height))
+                    mask = mask - np.min(mask)
+                    mask = mask / np.max(mask)
+                    mask = cv2.cvtColor(cv2.applyColorMap(np.uint8(255*mask), cv2.COLORMAP_JET), cv2.COLOR_BGR2RGB)
+                    mask = np.float32(mask) / 255
+                    # switch to channel first for pytorch
+                    if isinstance(base_image, torch.Tensor):
+                        mask = np.moveaxis(mask, source=-1, destination=1)
+                    new_image = base_image + mask
+                    new_image = new_image / reduce_max(new_image)
+                else:
+                    # There's no component for this image, so display an empty image here
+                    new_image = np.ones_like(base_image)
+                batch.append(new_image)
+            components.append(np.array(batch, dtype=np.float32))
 
         for idx, elem in enumerate(components):
             args[f"Component {idx}"] = elem

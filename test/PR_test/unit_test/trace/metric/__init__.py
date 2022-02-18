@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2022 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,12 +12,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.tensorop import augmentation, gradient, loss, meta, model
-from fastestimator.op.tensorop.argmax import Argmax
-from fastestimator.op.tensorop.average import Average
-from fastestimator.op.tensorop.gather import Gather
-from fastestimator.op.tensorop.normalize import Normalize
-from fastestimator.op.tensorop.permute import Permute
-from fastestimator.op.tensorop.reshape import Reshape
-from fastestimator.op.tensorop.tensorop import LambdaOp, TensorOp
-from fastestimator.op.tensorop.un_hadamard import UnHadamard
