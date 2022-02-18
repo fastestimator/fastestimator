@@ -538,8 +538,7 @@ class HistoryReader:
             self.response = cursor.fetchall()
             names = [col[0] for col in cursor.description]
         # Build nice output table
-        table = PrettyTable()
-        table.field_names = names
+        table = PrettyTable(field_names=names)
         for row in self.response:
             table.add_row(row)
         for col in hide_cols:
