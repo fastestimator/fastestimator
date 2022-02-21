@@ -26,7 +26,7 @@ from fastestimator.trace.io import ImageSaver
 from fastestimator.trace.xai import Saliency
 
 
-class TestSalinecy(unittest.TestCase):
+class TestSaliency(unittest.TestCase):
     """ This test has dependency on:
     * fe.trace.ImageSaver
     * fe.estimator.enable_deterministic

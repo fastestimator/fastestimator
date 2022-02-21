@@ -34,7 +34,7 @@ def get_name():
 def get_dependency():
     dependencies = [
         'albumentations[imgaug]==1.1.0',
-        'matplotlib==3.5.1',
+        'matplotlib==3.4.3',
         'h5py==3.6.0',
         'scipy==1.8.0',
         'PyLaTeX==1.4.1',
@@ -53,7 +53,7 @@ def get_dependency():
         'dill==0.3.4',
         'scikit-image==0.19.1',
         'prettytable==3.1.0',
-        'nltk==3.6.7',
+        'nltk==3.7',
         'requests>=2.22.0',
         'tqdm>=4.62.3',
         'numpy>=1.22.1',
