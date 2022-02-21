@@ -37,7 +37,7 @@ try:
 except ModuleNotFoundError:
     pass
 
-__version__ = '1.4.1'
+__version__ = '1.4.2'
 fe_deterministic_seed = None
 fe_history_path = None  # Where to save training histories. None for ~/fastestimator_data/history.db, False to disable
 
