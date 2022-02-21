@@ -36,7 +36,7 @@ def _download_file_from_google_drive(id: str, destination: str) -> None:
         id: File ID of Google drive URL.
         destination: Destination path where the data needs to be stored.
     """
-    URL = "https://drive.google.com/uc?export=download"
+    URL = "https://drive.google.com/uc?export=download&confirm=t"
     CHUNK_SIZE = 128
     session = requests.Session()
 
@@ -47,7 +47,7 @@ def _download_file_from_google_drive(id: str, destination: str) -> None:
         params = {'id': id, 'confirm': token}
         response = session.get(URL, params=params, stream=True)
 
-    total_size = int(response.headers.get('content-length', 0))
+    total_size = int(response.headers.get('Content-Length', 0))
     progress = tqdm(total=total_size, unit='B', unit_scale=True)
     with open(destination, "wb") as f:
         for chunk in response.iter_content(CHUNK_SIZE):
