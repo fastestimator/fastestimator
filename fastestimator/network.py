@@ -25,6 +25,7 @@ import tensorflow as tf
 import tensorflow.keras.mixed_precision as mixed_precision_tf
 import torch
 from tensorflow.python.distribute.values import DistributedValues
+from tensorflow.python.keras.engine.sequential import Sequential
 
 from fastestimator.backend.load_model import load_model
 from fastestimator.backend.to_tensor import to_tensor
@@ -946,6 +947,9 @@ def _fe_compile(model: Model,
         framework = "tf"
     elif isinstance(model, torch.nn.Module):
         framework = "torch"
+    elif isinstance(model, Sequential):
+        raise DeprecationWarning("Importing from tensorflow.python.keras.models/layers is deprecated. Import from "
+                                 "tensorflow.keras.models/layers instead")
     else:
         raise ValueError("unrecognized model format: {}".format(type(model)))
     # torch multi-gpu handling
