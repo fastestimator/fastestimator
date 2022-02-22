@@ -14,6 +14,7 @@
 # ==============================================================================
 import gc
 import os
+import sys
 import tempfile
 from collections import ChainMap
 from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, Set, Tuple, TypeVar, Union
@@ -885,7 +886,12 @@ def build(model_fn: Callable[[], Union[Model, List[Model]]],
     # tensorflow models requires setting global policies prior to model creation. Since there is no way to know the
     # framework of model, setting the policy for both tf and pytorch here.
     if mixed_precision:
-        mixed_precision_tf.set_global_policy(mixed_precision_tf.Policy('mixed_float16'))
+        if sys.platform == 'darwin':
+            print("\033[93m{}\033[00m".format("FastEstimator-Warn: Mixed Precision is not currently supported on Mac / "
+                                              "Metal. This flag will be ignored."))
+            mixed_precision = False
+        else:
+            mixed_precision_tf.set_global_policy(mixed_precision_tf.Policy('mixed_float16'))
     else:
         mixed_precision_tf.set_global_policy(mixed_precision_tf.Policy('float32'))
     if torch.cuda.device_count() > 1:
