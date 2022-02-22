@@ -71,7 +71,7 @@ class ModelOp(TensorOp):
         for intermediate_layer in intermediate_layers:
             storage = {}
             if isinstance(model, tf.keras.Model):
-                layers = model.layers
+                layers = list(model._flatten_layers(include_self=False, recursive=True))
                 if isinstance(intermediate_layer, int):
                     intermediate_layer = layers[intermediate_layer]
                 else:
