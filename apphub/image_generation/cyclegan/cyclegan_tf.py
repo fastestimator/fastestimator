@@ -16,8 +16,8 @@ import tempfile
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.keras import Model, layers
-from tensorflow.python.keras.initializers import RandomNormal
+from tensorflow.keras import Model, layers
+from tensorflow.keras.initializers import RandomNormal
 
 import fastestimator as fe
 from fastestimator.backend import reduce_mean

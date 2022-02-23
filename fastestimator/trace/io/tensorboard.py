@@ -21,8 +21,9 @@ import matplotlib.pyplot as plt
 import tensorboard as tb
 import tensorflow as tf
 import torch
+from tensorflow.keras import backend
 from tensorflow.python.framework import ops as tfops
-from tensorflow.python.keras import backend
+from tensorflow.python.keras.callbacks import keras_model_summary
 from tensorflow.python.ops import summary_ops_v2
 from torch.utils.tensorboard import SummaryWriter
 
@@ -213,7 +214,7 @@ class _TfWriter(_BaseWriter):
                 summary_writable = (model.__class__.__name__ == 'Sequential'
                                     or (hasattr(model, '_is_graph_network') and model._is_graph_network))
                 if summary_writable:
-                    summary_ops_v2.keras_model(model.model_name, model, step=epoch)
+                    keras_model_summary(model.model_name, model, step=epoch)
 
     def write_weights(self, mode: str, models: Iterable[Model], step: int, visualize: bool) -> None:
         # Similar to TF implementation, but multiple models

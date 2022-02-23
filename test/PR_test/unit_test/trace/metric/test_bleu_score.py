@@ -48,7 +48,7 @@ def get_formatted_list(data):
     filtered_data = []
     for i in data:
         filtered_data.append([j for j in i if j != 0])
-    return np.array(filtered_data)
+    return filtered_data
 
 
 class TestBleuScore(unittest.TestCase):

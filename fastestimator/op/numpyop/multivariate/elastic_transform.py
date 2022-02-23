@@ -15,7 +15,7 @@
 from typing import Iterable, List, Optional, Union
 
 import cv2
-from albumentations.augmentations.transforms import ElasticTransform as ElasticTransformAlb
+from albumentations.augmentations import ElasticTransform as ElasticTransformAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 from fastestimator.util.traceability_util import traceable

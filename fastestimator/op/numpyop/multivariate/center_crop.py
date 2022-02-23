@@ -15,7 +15,7 @@
 from typing import Iterable, Optional, Union
 
 from albumentations import BboxParams, KeypointParams
-from albumentations.augmentations.transforms import CenterCrop as CenterCropAlb
+from albumentations.augmentations import CenterCrop as CenterCropAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 from fastestimator.util.traceability_util import traceable

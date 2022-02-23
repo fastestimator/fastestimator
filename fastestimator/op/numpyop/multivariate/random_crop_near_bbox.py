@@ -15,7 +15,7 @@
 from typing import Iterable, Optional, Union
 
 from albumentations import BboxParams, KeypointParams
-from albumentations.augmentations.transforms import RandomCropNearBBox as RandomCropNearBBoxAlb
+from albumentations.augmentations import RandomCropNearBBox as RandomCropNearBBoxAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 from fastestimator.util.traceability_util import traceable

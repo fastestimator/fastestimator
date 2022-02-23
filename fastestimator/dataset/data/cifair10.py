@@ -17,7 +17,7 @@ import pickle
 from typing import Tuple, List
 
 import numpy as np
-from tensorflow.python.keras.utils.data_utils import get_file
+from tensorflow.keras.utils import get_file
 
 from fastestimator.dataset.numpy_dataset import NumpyDataset
 

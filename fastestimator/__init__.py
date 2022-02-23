@@ -15,7 +15,14 @@
 import inspect
 import re
 
-# Fix known bugs with libraries which use multi-processing in a way which conflicts with pytorch data loader
+import sys
+if sys.platform == 'darwin':
+    # Block the tkinter module from being imported on Mac. This is necessary in order for Mac multiprocessing to work,
+    # since other modules such as nltk import tkinter, and it seems more likely that AI developers will need
+    # multiprocessing than tkinter.
+    sys.modules['tkinter'] = None
+
+# Fix known bugs with libraries which use multiprocessing in a way which conflicts with pytorch data loader
 import cv2
 
 from fastestimator import architecture, backend, dataset, layers, op, schedule, search, summary, trace, util, xai
@@ -30,7 +37,7 @@ try:
 except ModuleNotFoundError:
     pass
 
-__version__ = '1.4.0'
+__version__ = '1.5.0'
 fe_deterministic_seed = None
 fe_history_path = None  # Where to save training histories. None for ~/fastestimator_data/history.db, False to disable
 

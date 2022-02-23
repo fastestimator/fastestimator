@@ -18,9 +18,9 @@ import tempfile
 import cv2
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.keras import Model, Sequential, layers
-from tensorflow.python.keras.initializers import RandomNormal
-from tensorflow.python.keras.regularizers import l2
+from tensorflow.keras import Model, Sequential, layers
+from tensorflow.keras.initializers import RandomNormal
+from tensorflow.keras.regularizers import l2
 
 import fastestimator as fe
 from fastestimator.backend import feed_forward

@@ -15,8 +15,7 @@
 from typing import Tuple
 
 import tensorflow as tf
-from tensorflow.python.keras import layers
-from tensorflow.python.keras.engine.keras_tensor import KerasTensor
+from tensorflow.keras import layers
 
 
 def ResNet9(input_size: Tuple[int, int, int] = (32, 32, 3), classes: int = 10) -> tf.keras.Model:
@@ -68,7 +67,7 @@ def ResNet9(input_size: Tuple[int, int, int] = (32, 32, 3), classes: int = 10) -
     return model
 
 
-def residual(x: KerasTensor, num_channel: int) -> KerasTensor:
+def residual(x: tf.Tensor, num_channel: int) -> tf.Tensor:
     """A ResNet unit for ResNet9.
 
     Args:

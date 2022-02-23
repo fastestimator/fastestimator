@@ -17,8 +17,8 @@ from typing import List, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_probability as tfp
 import torch
+from tensorflow_probability.python.stats import percentile as tf_percentile
 
 from fastestimator.util.util import to_list
 
@@ -73,7 +73,7 @@ def percentile(tensor: Tensor,
     if tf.is_tensor(tensor):
         if isinstance(percentiles, List):
             percentiles = tf.convert_to_tensor(percentiles)
-        return tfp.stats.percentile(tensor, percentiles, axis=axis, keep_dims=keepdims, interpolation='lower')
+        return tf_percentile(tensor, percentiles, axis=axis, keepdims=keepdims, interpolation='lower')
     elif isinstance(tensor, torch.Tensor):
         n_dims = len(tensor.shape)
         if axis is None:

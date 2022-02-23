@@ -14,6 +14,7 @@
 # ==============================================================================
 import gc
 import os
+import sys
 import tempfile
 from collections import ChainMap
 from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, Set, Tuple, TypeVar, Union
@@ -24,6 +25,7 @@ import tensorflow as tf
 import tensorflow.keras.mixed_precision as mixed_precision_tf
 import torch
 from tensorflow.python.distribute.values import DistributedValues
+from tensorflow.python.keras.engine.sequential import Sequential
 
 from fastestimator.backend.load_model import load_model
 from fastestimator.backend.to_tensor import to_tensor
@@ -885,7 +887,12 @@ def build(model_fn: Callable[[], Union[Model, List[Model]]],
     # tensorflow models requires setting global policies prior to model creation. Since there is no way to know the
     # framework of model, setting the policy for both tf and pytorch here.
     if mixed_precision:
-        mixed_precision_tf.set_global_policy(mixed_precision_tf.Policy('mixed_float16'))
+        if sys.platform == 'darwin':
+            print("\033[93m{}\033[00m".format("FastEstimator-Warn: Mixed Precision is not currently supported on Mac / "
+                                              "Metal. This flag will be ignored."))
+            mixed_precision = False
+        else:
+            mixed_precision_tf.set_global_policy(mixed_precision_tf.Policy('mixed_float16'))
     else:
         mixed_precision_tf.set_global_policy(mixed_precision_tf.Policy('float32'))
     if torch.cuda.device_count() > 1:
@@ -940,6 +947,9 @@ def _fe_compile(model: Model,
         framework = "tf"
     elif isinstance(model, torch.nn.Module):
         framework = "torch"
+    elif isinstance(model, Sequential):
+        raise DeprecationWarning("Importing from tensorflow.python.keras.models/layers is deprecated. Import from "
+                                 "tensorflow.keras.models/layers instead")
     else:
         raise ValueError("unrecognized model format: {}".format(type(model)))
     # torch multi-gpu handling

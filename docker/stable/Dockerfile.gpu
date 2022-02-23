@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:2.4.1-gpu
+FROM tensorflow/tensorflow:2.8.0-gpu
 
 # change python library to root owner
 # it fixes "container ID cannot be mapped to a host ID" issue that happens later while upgrading python packages
@@ -8,6 +8,7 @@ RUN apt-get update
 
 # OpenCV dependencies
 RUN apt-get install -y --no-install-recommends \
+    ffmpeg \
     libglib2.0-0 \
     libsm6 \
     libxrender1 \
@@ -42,7 +43,7 @@ RUN ipython kernel install --user --name nightly_build
 RUN apt-get install -y lsof
 
 # backend dependencies
-RUN pip install torch==1.7.1+cu110 torchvision==0.8.2+cu110 torchaudio===0.7.2 -f https://download.pytorch.org/whl/torch_stable.html
+RUN pip install torch==1.10.2+cu113 torchvision==0.11.3+cu113 torchaudio==0.10.2+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
 
 # install FastEstimator
 ARG InstallFE=True

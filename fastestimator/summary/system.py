@@ -12,15 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import copyreg
 import datetime
 import json
 import os
 import uuid
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING, Tuple, TypeVar, Union
 
 import dill as pickle  # Need to use dill since tf.Variable is a weakref object on multi-gpu machines
 import tensorflow as tf
 import torch
+from tensorflow.python.distribute.mirrored_strategy import MirroredStrategy
 
 from fastestimator.backend.load_model import load_model
 from fastestimator.backend.save_model import save_model
@@ -34,6 +36,20 @@ if TYPE_CHECKING:
     from fastestimator.trace.trace import Trace
 
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
+
+
+def pickle_mirroredstrategy(obj: MirroredStrategy) -> Tuple[Callable, Tuple]:
+    """A custom reduce function to use when Pickle encounters a tf MirroredStrategy.
+
+    This relies on the fact that the tf strategy will already be set before the System.load_state method gets called.
+
+    Args:
+        obj: The MirroredStrategy instance.
+
+    Returns:
+        The mechanism to construct a new instance of the MirroredStrategy. See Python docs on the __reduce__ method.
+    """
+    return tf.distribute.get_strategy, ()
 
 
 class System:
@@ -243,12 +259,16 @@ class System:
             'ds': {
                 mode: {key: value.__getstate__()
                        for key, value in ds.items() if hasattr(value, '__getstate__')}
-                for mode,
-                ds in self.pipeline.data.items()
+                for mode, ds in self.pipeline.data.items()
             }
         }
         with open(os.path.join(save_dir, 'objects.pkl'), 'wb') as file:
-            pickle.dump(objects, file)
+            # We need to use a custom pickler here to handle MirroredStrategy, which will show up inside of tf
+            # MirroredVariables in multi-gpu systems.
+            p = pickle.Pickler(file)
+            p.dispatch_table = copyreg.dispatch_table.copy()
+            p.dispatch_table[MirroredStrategy] = pickle_mirroredstrategy
+            p.dump(objects)
 
     def load_state(self, load_dir: str) -> None:
         """Load training state.

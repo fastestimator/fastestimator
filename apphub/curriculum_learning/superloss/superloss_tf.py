@@ -16,8 +16,8 @@ import math
 import tempfile
 
 import numpy as np
-from tensorflow.python.keras.layers import BatchNormalization, Conv2D, Dense, Flatten, MaxPooling2D
-from tensorflow.python.keras.models import Sequential
+from tensorflow.keras.layers import BatchNormalization, Conv2D, Dense, Flatten, MaxPooling2D
+from tensorflow.keras.models import Sequential
 
 import fastestimator as fe
 from fastestimator.dataset.data import cifair100

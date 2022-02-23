@@ -15,9 +15,9 @@
 from typing import Tuple
 
 import tensorflow as tf
-from tensorflow.python.keras.layers import BatchNormalization, Conv2D, Dropout, Input, MaxPooling2D, ReLU, \
+from tensorflow.keras.layers import BatchNormalization, Conv2D, Dropout, Input, MaxPooling2D, ReLU, \
     UpSampling2D, concatenate
-from tensorflow.python.keras.models import Model
+from tensorflow.keras.models import Model
 
 
 # noinspection PyPep8Naming

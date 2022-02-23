@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import sys
 import unittest
 from collections import deque
 from copy import deepcopy
@@ -183,7 +184,8 @@ class TestUpdateOp(unittest.TestCase):
                 for gradient in ["grad", None]:
                     with self.subTest("mixed_precision: {}, merge_grad: {}, take: {}".format(
                             mixed_precision, merge_grad, "gradient" if gradient else "loss")):
-
+                        if mixed_precision and sys.platform == 'darwin':
+                            self.skipTest("Mixed Precision is not yet supported on Mac")
                         if (mixed_precision and gradient) or (torch.cuda.device_count() > 1 and merge_grad > 1):
                             with self.assertRaises(ValueError):
                                 run_test(mixed_precision, merge_grad, gradient)
@@ -233,7 +235,8 @@ class TestUpdateOp(unittest.TestCase):
                 for gradient in ["grad", None]:
                     with self.subTest("mixed_precision: {}, merge_grad: {}, take: {}".format(
                             mixed_precision, merge_grad, "gradient" if gradient else "loss")):
-
+                        if mixed_precision and sys.platform == 'darwin':
+                            self.skipTest("Mixed Precision is not yet supported on Mac")
                         if (mixed_precision and gradient) or (torch.cuda.device_count() > 1 and merge_grad > 1):
                             with self.assertRaises(ValueError):
                                 run_test(mixed_precision, merge_grad, gradient)
@@ -287,11 +290,11 @@ class TestUpdateOp(unittest.TestCase):
                 for gradient in ["grad", None]:
                     with self.subTest("mixed_precision: {}, merge_grad: {}, take: {}".format(
                             mixed_precision, merge_grad, "gradient" if gradient else "loss")):
-
+                        if mixed_precision and sys.platform == 'darwin':
+                            self.skipTest("Mixed Precision is not yet supported on Mac")
                         if (mixed_precision and gradient) or (torch.cuda.device_count() > 1 and merge_grad > 1):
                             with self.assertRaises(ValueError):
                                 run_test(mixed_precision, merge_grad, gradient)
-
                         else:
                             run_test(mixed_precision, merge_grad, gradient)
 
@@ -344,11 +347,11 @@ class TestUpdateOp(unittest.TestCase):
                 for gradient in ["grad", None]:
                     with self.subTest("mixed_precision: {}, merge_grad: {}, take: {}".format(
                             mixed_precision, merge_grad, "gradient" if gradient else "loss")):
-
+                        if mixed_precision and sys.platform == 'darwin':
+                            self.skipTest("Mixed Precision is not yet supported on Mac")
                         if (mixed_precision and gradient) or (torch.cuda.device_count() > 1 and merge_grad > 1):
                             with self.assertRaises(ValueError):
                                 run_test(mixed_precision, merge_grad, gradient)
-
                         else:
                             run_test(mixed_precision, merge_grad, gradient)
 
@@ -396,11 +399,11 @@ class TestUpdateOp(unittest.TestCase):
                 for gradient in ["grad", None]:
                     with self.subTest("mixed_precision: {}, merge_grad: {}, take: {}".format(
                             mixed_precision, merge_grad, "gradient" if gradient else "loss")):
-
+                        if mixed_precision and sys.platform == 'darwin':
+                            self.skipTest("Mixed Precision is not yet supported on Mac")
                         if (mixed_precision and gradient) or (torch.cuda.device_count() > 1 and merge_grad > 1):
                             with self.assertRaises(ValueError):
                                 run_test(mixed_precision, merge_grad, gradient)
-
                         else:
                             run_test(mixed_precision, merge_grad, gradient)
 
@@ -449,10 +452,10 @@ class TestUpdateOp(unittest.TestCase):
                 for gradient in ["grad", None]:
                     with self.subTest("mixed_precision: {}, merge_grad: {}, take: {}".format(
                             mixed_precision, merge_grad, "gradient" if gradient else "loss")):
-
+                        if mixed_precision and sys.platform == 'darwin':
+                            self.skipTest("Mixed Precision is not yet supported on Mac")
                         if (mixed_precision and gradient) or (torch.cuda.device_count() > 1 and merge_grad > 1):
                             with self.assertRaises(ValueError):
                                 run_test(mixed_precision, merge_grad, gradient)
-
                         else:
                             run_test(mixed_precision, merge_grad, gradient)

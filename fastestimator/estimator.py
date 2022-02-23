@@ -126,6 +126,7 @@ class Estimator:
         Returns:
             A summary object containing the training history for this session iff a `summary` name was provided.
         """
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # Prevent tf from constantly printing useless information
         draw()
         self.system.reset(summary, self.fe_summary())
         self._prepare_traces(run_modes={"train", "eval"})
@@ -182,6 +183,7 @@ class Estimator:
             A summary object containing the training history for this session iff the `summary` name is not None (after
             considering the default behavior above).
         """
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # Prevent tf from constantly printing useless information
         self.system.reset_for_test(summary)
         self._prepare_traces(run_modes={"test"})
         self._start(run_modes={"test"}, eager=eager)
