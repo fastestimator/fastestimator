@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2022 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,8 +28,9 @@ class ReadMat(NumpyOp):
     This expects every sample to have a separate .mat file.
 
     Args:
-        file: Dictionary key that contains the .mat path.
-        keys: Key(s) to read from the .mat file.
+        inputs: location of the .mat path.
+        outputs: keys to map the read data to the output.
+        keys: Keys to read from the .mat file.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
@@ -38,16 +39,25 @@ class ReadMat(NumpyOp):
         parent_path: Parent path that will be prepended to a given filepath.
     """
     def __init__(self,
-                 file: str,
+                 inputs: str,
+                 outputs: Union[str, Iterable[str]],
                  keys: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
                  parent_path: str = ""):
-        super().__init__(inputs=file, outputs=keys, mode=mode, ds_id=ds_id)
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.parent_path = parent_path
+        self.keys = keys
         self.out_list = True
 
+        if isinstance(self.keys, List) and isinstance(self.outputs, List):
+            assert len(self.keys) == len(self.outputs), "keys and Output lengths must match"
+
+        if not isinstance(self.keys, List):
+            self.keys = [self.keys]
+
     def forward(self, data: str, state: Dict[str, Any]) -> List[Dict[str, Any]]:
-        data = loadmat(os.path.normpath(os.path.join(self.parent_path, data)))
-        results = [data[key] for key in self.outputs]
+        input_path = os.path.normpath(os.path.join(self.parent_path, data))
+        data = loadmat(input_path)
+        results = [data[key] for key in self.keys]
         return results

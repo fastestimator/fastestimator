@@ -125,7 +125,7 @@ def get_estimator(batch_size=8,
         ops=[
             ReadImage(inputs="image", outputs="image", parent_path=train_data.parent_path),
             Normalize(inputs="image", outputs="image", mean=1.0, std=1.0, max_pixel_value=127.5),
-            ReadMat(file='annotation', keys="seg", parent_path=train_data.parent_path),
+            ReadMat(inputs='annotation', outputs="seg", keys="seg", parent_path=train_data.parent_path),
             LongestMaxSize(max_size=512, image_in="image", image_out="image", mask_in="seg", mask_out="seg"),
             PadIfNeeded(min_height=512,
                         min_width=512,
