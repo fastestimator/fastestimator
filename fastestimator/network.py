@@ -25,6 +25,7 @@ import tensorflow as tf
 import tensorflow.keras.mixed_precision as mixed_precision_tf
 import torch
 from tensorflow.python.distribute.values import DistributedValues
+from tensorflow.python.eager import context
 from tensorflow.python.keras.engine.sequential import Sequential
 
 from fastestimator.backend.load_model import load_model
@@ -895,10 +896,22 @@ def build(model_fn: Callable[[], Union[Model, List[Model]]],
             mixed_precision_tf.set_global_policy(mixed_precision_tf.Policy('mixed_float16'))
     else:
         mixed_precision_tf.set_global_policy(mixed_precision_tf.Policy('float32'))
+    models = None
     if torch.cuda.device_count() > 1:
+        # We need to figure out whether model_fn returns tf models or torch models
         if not isinstance(tf.distribute.get_strategy(), tf.distribute.MirroredStrategy):
-            tf.distribute.experimental_set_strategy(tf.distribute.MirroredStrategy())
-    models, optimizer_fn = to_list(model_fn()), to_list(optimizer_fn)
+            # If we've already done this and gotten TF model, the above flag will be set and this will be skipped. If we
+            # are dealing with pytorch models, the model_fn() invocation will be kept so as to not waste clock cycles.
+            tf.config.set_visible_devices([], device_type='GPU')  # If it turns out to be a TF model, we want it on CPU
+            # to make it execute faster and also prevent gpu memory pollution
+            models = to_list(model_fn())
+            if isinstance(models[0], tf.keras.Model):
+                models = None  # We will re-instantiate the models again now that we know we need MirroredStrategy
+                tf.keras.backend.clear_session()  # This will reset the automatic layer naming in case user is
+                # extracting intermediate layer outputs by name
+                context._reset_context()  # This clears out the execution context which makes the gpus visible again
+                tf.distribute.experimental_set_strategy(tf.distribute.MirroredStrategy())
+    models, optimizer_fn = to_list(model_fn()) if models is None else models, to_list(optimizer_fn)
     # fill optimizers if optimizer_fn is None
     if not optimizer_fn:
         optimizer_fn = [None] * len(models)
