@@ -902,14 +902,11 @@ def build(model_fn: Callable[[], Union[Model, List[Model]]],
         if not isinstance(tf.distribute.get_strategy(), tf.distribute.MirroredStrategy):
             # If we've already done this and gotten TF model, the above flag will be set and this will be skipped. If we
             # are dealing with pytorch models, the model_fn() invocation will be kept so as to not waste clock cycles.
-            tf.config.set_visible_devices([], device_type='GPU')  # If it turns out to be a TF model, we want it on CPU
-            # to make it execute faster and also prevent gpu memory pollution
             models = to_list(model_fn())
             if isinstance(models[0], tf.keras.Model):
                 models = None  # We will re-instantiate the models again now that we know we need MirroredStrategy
                 tf.keras.backend.clear_session()  # This will reset the automatic layer naming in case user is
                 # extracting intermediate layer outputs by name
-                context._reset_context()  # This clears out the execution context which makes the gpus visible again
                 tf.distribute.experimental_set_strategy(tf.distribute.MirroredStrategy())
     models, optimizer_fn = to_list(model_fn()) if models is None else models, to_list(optimizer_fn)
     # fill optimizers if optimizer_fn is None
