@@ -30,7 +30,7 @@ class TestReadMat(unittest.TestCase):
         cls.expected_second_image_output = 255 * np.ones((28, 28, 3))
 
     def test_input_multiple_keys(self):
-        image = ReadMat(inputs='x', keys=['a', 'label'], outputs=['a', 'label'])
+        image = ReadMat(inputs='x', outputs=['a', 'label'])
         output = image.forward(data=self.mat_path, state={})
         with self.subTest('Check data in mat'):
             self.assertTrue(is_equal(output[0], self.expected_mat_output))

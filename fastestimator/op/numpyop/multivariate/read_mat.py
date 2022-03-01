@@ -28,9 +28,9 @@ class ReadMat(NumpyOp):
     This expects every sample to have a separate .mat file.
 
     Args:
-        inputs: location of the .mat path.
+        inputs: Dictionary key that contains the .mat path.
         outputs: keys to map the read data to the output.
-        keys: Keys to read from the .mat file.
+        mat_keys: Keys to read from the .mat file. (Optional: Provide mat_keys when they are different from outputs).
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
@@ -41,23 +41,28 @@ class ReadMat(NumpyOp):
     def __init__(self,
                  inputs: str,
                  outputs: Union[str, Iterable[str]],
-                 keys: Union[str, Iterable[str]],
+                 mat_keys: Union[None, str, Iterable[str]] = None,
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
                  parent_path: str = ""):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.parent_path = parent_path
-        self.keys = keys
+
+        if mat_keys is None:
+            self.mat_keys = self.outputs
+        else:
+            self.mat_keys = mat_keys
+
         self.out_list = True
 
-        if isinstance(self.keys, List) and isinstance(self.outputs, List):
-            assert len(self.keys) == len(self.outputs), "keys and Output lengths must match"
+        if isinstance(self.mat_keys, List) and isinstance(self.outputs, List):
+            assert len(self.mat_keys) == len(self.outputs), "keys and Output lengths must match"
 
-        if not isinstance(self.keys, List):
-            self.keys = [self.keys]
+        if not isinstance(self.mat_keys, List):
+            self.mat_keys = [self.mat_keys]
 
     def forward(self, data: str, state: Dict[str, Any]) -> List[Dict[str, Any]]:
         input_path = os.path.normpath(os.path.join(self.parent_path, data))
         data = loadmat(input_path)
-        results = [data[key] for key in self.keys]
+        results = [data[key] for key in self.mat_keys]
         return results
