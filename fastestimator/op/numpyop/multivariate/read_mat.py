@@ -19,6 +19,7 @@ from scipy.io import loadmat
 
 from fastestimator.op.numpyop.numpyop import NumpyOp
 from fastestimator.util.traceability_util import traceable
+from fastestimator.util.util import to_list
 
 
 @traceable()
@@ -29,8 +30,9 @@ class ReadMat(NumpyOp):
 
     Args:
         inputs: Dictionary key that contains the .mat path.
-        outputs: keys to map the read data to the output.
-        mat_keys: Keys to read from the .mat file. (Optional: Provide mat_keys when they are different from outputs).
+        outputs: Keys to output from the mat file.
+        mat_keys: (Optional) Keys to read from the .mat file. Defaults to `outputs`, but to re-name keys you can provide
+            the original name here and the new name in `outputs`.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
@@ -51,15 +53,12 @@ class ReadMat(NumpyOp):
         if mat_keys is None:
             self.mat_keys = self.outputs
         else:
-            self.mat_keys = mat_keys
+            self.mat_keys = to_list(mat_keys)
 
         self.out_list = True
 
         if isinstance(self.mat_keys, List) and isinstance(self.outputs, List):
             assert len(self.mat_keys) == len(self.outputs), "keys and Output lengths must match"
-
-        if not isinstance(self.mat_keys, List):
-            self.mat_keys = [self.mat_keys]
 
     def forward(self, data: str, state: Dict[str, Any]) -> List[Dict[str, Any]]:
         input_path = os.path.normpath(os.path.join(self.parent_path, data))
