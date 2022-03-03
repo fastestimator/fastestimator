@@ -47,6 +47,7 @@ from fastestimator.backend.reduce_min import reduce_min
 from fastestimator.backend.reduce_std import reduce_std
 from fastestimator.backend.reduce_sum import reduce_sum
 from fastestimator.backend.reshape import reshape
+from fastestimator.backend.resize3d import resize_3d
 from fastestimator.backend.roll import roll
 from fastestimator.backend.save_model import save_model
 from fastestimator.backend.set_lr import set_lr
