@@ -14,76 +14,86 @@
 # ==============================================================================
 from typing import List, TypeVar
 
-import numpy as np
 import tensorflow as tf
 import torch
+import torchvision
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
-def resize_3d(tensor: Tensor, shape: List[int]) -> Tensor:
+def resize_3d(tensor: Tensor, size: List[int]) -> Tensor:
     """Reshape a `tensor` to conform to a given shape.
-
-    This method can be used with Numpy data:
-    ```python
-    n = np.array([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
-    b = fe.backend.reshape(n, shape=[-1])  # [1, 2, 3, 4, 5, 6, 7, 8]
-    b = fe.backend.reshape(n, shape=[2, 4])  # [[1, 2, 3, 4], [5, 6, 7, 8]]
-    b = fe.backend.reshape(n, shape=[4, 2])  # [[1, 2], [3, 4], [5, 6], [7, 8]]
-    b = fe.backend.reshape(n, shape=[2, 2, 2, 1])  # [[[[1], [2]], [[3], [4]]], [[[5], [6]], [[7], [8]]]]
-    ```
 
     This method can be used with TensorFlow tensors:
     ```python
-    t = tf.constant([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
-    b = fe.backend.reshape(t, shape=[-1])  # [1, 2, 3, 4, 5, 6, 7, 8]
-    b = fe.backend.reshape(t, shape=[2, 4])  # [[1, 2, 3, 4], [5, 6, 7, 8]]
-    b = fe.backend.reshape(t, shape=[4, 2])  # [[1, 2], [3, 4], [5, 6], [7, 8]]
-    b = fe.backend.reshape(t, shape=[2, 2, 2, 1])  # [[[[1], [2]], [[3], [4]]], [[[5], [6]], [[7], [8]]]]
+    t = tf.constant([[[[[0.], [1.]], [[2.], [3.]]], [[[4.], [5.]], [[6.], [7.]]]]])
+    b = fe.backend.resize_3d(t, shape=[3, 3, 3])  # [[[[[0.], [0.5], [1.]], [[1.], [1.5], [2.]], [[2.], [2.5], [3.]]],
+                                                      [[[2.], [2.5], [3.]], [[3.], [3.5], [4.]], [[4.], [4.5], [5.]]], [6.]], [[6.], [6.5], [7.]]]
     ```
 
     This method can be used with PyTorch tensors:
     ```python
-    p = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
-    b = fe.backend.reshape(p, shape=[-1])  # [1, 2, 3, 4, 5, 6, 7, 8]
-    b = fe.backend.reshape(p, shape=[2, 4])  # [[1, 2, 3, 4], [5, 6, 7, 8]]
-    b = fe.backend.reshape(p, shape=[4, 2])  # [[1, 2], [3, 4], [5, 6], [7, 8]]
-    b = fe.backend.reshape(p, shape=[2, 2, 2, 1])  # [[[[1], [2]], [[3], [4]]], [[[5], [6]], [[7], [8]]]]
+    p = torch.tensor([[[[[0., 1.], [2., 3.]], [[4., 5.], [6., 7.]]]]])
+    b = fe.backend.resize_3d(p, shape=[3, 3, 3])  # [[[[[0., 0.5, 1.], [1., 1.5, 2.], [2., 2.5, 3.]],
+                                                       [[2., 2.5, 3.], [3., 3.5, 4.], [4., 4.5, 5.]],
+                                                       [[4., 4.5, 5.], [5., 5.5, 6.], [6., 6.499999, 7.]]]]]
     ```
 
     Args:
         tensor: The input value.
-        shape: The new shape of the tensor. At most one value may be -1 which indicates that whatever values are left
-            should be packed into that axis.
+        size: The new size of the tensor.
 
     Returns:
-        The reshaped `tensor`.
+        The resized `tensor`.
 
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
     if tf.is_tensor(tensor):
-        return resize_tensorflow_tensor(tensor, shape)
+        return resize_tensorflow_tensor(tensor, size)
     elif isinstance(tensor, torch.Tensor):
-        return torch.nn.functional.interpolate(tensor, shape)
-    elif isinstance(tensor, np.ndarray):
-        return np.reshape(tensor, shape)
+        return resize_pytorch_tensor(tensor, size)
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(tensor)))
 
 
-def resize_tensorflow_tensor(data, size):
+def resize_tensorflow_tensor(data: tf.Tensor, size: List[int]) -> tf.Tensor:
+
     d1_new, d2_new, d3_new = size
     data_shape = tf.shape(data)
     batch_size, d1, d2, d3, c = data_shape[0], data_shape[1], data_shape[2], data_shape[3], data_shape[4]
+
     # resize d2-d3
     squeeze_b_x = tf.reshape(data, [-1, d2, d3, c])
     resize_b_x = tf.image.resize(squeeze_b_x, [d2_new, d3_new])
     resume_b_x = tf.reshape(resize_b_x, [batch_size, d1, d2_new, d3_new, c])
+
     # resize d1
     reoriented = tf.transpose(resume_b_x, [0, 3, 2, 1, 4])
     squeeze_b_z = tf.reshape(reoriented, [-1, d2_new, d1, c])
     resize_b_z = tf.image.resize(squeeze_b_z, [d2_new, d1_new])
     resume_b_z = tf.reshape(resize_b_z, [batch_size, d3_new, d2_new, d1_new, c])
     output_tensor = tf.transpose(resume_b_z, [0, 3, 2, 1, 4])
+    return output_tensor
+
+
+def resize_pytorch_tensor(pytorch_array: torch.Tensor, size: List[int]) -> torch.Tensor:
+
+    d1_new, d2_new, d3_new = size
+
+    data_shape = pytorch_array.shape
+    batch_size, c, d1, d2, d3 = data_shape[0], data_shape[1], data_shape[2], data_shape[3], data_shape[4]
+
+    # resize d2-d3
+    permute_pytorch_array = pytorch_array.permute((0, 2, 1, 3, 4))
+    squeeze_b_x = torch.reshape(permute_pytorch_array, [-1, c, d2, d3])
+    resize_b_x = torchvision.transforms.functional.resize(squeeze_b_x, [d2_new, d3_new])
+    resume_b_x = torch.reshape(resize_b_x, [batch_size, d1, c, d2_new, d3_new])
+
+    # resize d1
+    reoriented = resume_b_x.permute((0, 4, 2, 3, 1))
+    squeeze_b_z = torch.reshape(reoriented, [-1, c, d2_new, d1])
+    resize_b_z = torchvision.transforms.functional.resize(squeeze_b_z, [d2_new, d1_new])
+    resume_b_z = torch.reshape(resize_b_z, [batch_size, d3_new, c, d2_new, d1_new])
+    output_tensor = resume_b_z.permute((0, 2, 4, 3, 1))
     return output_tensor

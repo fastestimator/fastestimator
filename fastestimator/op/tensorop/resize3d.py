@@ -22,7 +22,7 @@ from fastestimator.backend.resize3d import resize_3d
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 @traceable()
