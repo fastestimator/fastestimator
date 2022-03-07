@@ -14,7 +14,6 @@
 # ==============================================================================
 from typing import Any, Dict, Iterable, List, Sequence, TypeVar, Union
 
-import numpy as np
 import tensorflow as tf
 import torch
 
@@ -33,7 +32,7 @@ class Resize3D(TensorOp):
         Args:
             inputs: Key of the input tensor.
             outputs: Key of the output tensor.
-            size: output size of input tensor.
+            output_shape: output size of input tensor.
             mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
                 regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
                 like "!infer" or "!train".
@@ -43,11 +42,11 @@ class Resize3D(TensorOp):
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
-                 size: Sequence[float],
+                 output_shape: Sequence[float],
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        self.size = size
+        self.output_shape = output_shape
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
-        return [resize_3d(elem, self.size) for elem in data]
+        return [resize_3d(elem, self.output_shape) for elem in data]

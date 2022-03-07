@@ -21,27 +21,27 @@ import torchvision
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
-def resize_3d(tensor: Tensor, size: List[int]) -> Tensor:
+def resize_3d(tensor: Tensor, output_shape: List[int]) -> Tensor:
     """Reshape a `tensor` to conform to a given shape.
 
     This method can be used with TensorFlow tensors:
     ```python
     t = tf.constant([[[[[0.], [1.]], [[2.], [3.]]], [[[4.], [5.]], [[6.], [7.]]]]])
-    b = fe.backend.resize_3d(t, shape=[3, 3, 3])  # [[[[[0.], [0.5], [1.]], [[1.], [1.5], [2.]], [[2.], [2.5], [3.]]],
+    b = fe.backend.resize_3d(t, output_shape=[3, 3, 3])  # [[[[[0.], [0.5], [1.]], [[1.], [1.5], [2.]], [[2.], [2.5], [3.]]],
                                                       [[[2.], [2.5], [3.]], [[3.], [3.5], [4.]], [[4.], [4.5], [5.]]], [6.]], [[6.], [6.5], [7.]]]
     ```
 
     This method can be used with PyTorch tensors:
     ```python
     p = torch.tensor([[[[[0., 1.], [2., 3.]], [[4., 5.], [6., 7.]]]]])
-    b = fe.backend.resize_3d(p, shape=[3, 3, 3])  # [[[[[0., 0.5, 1.], [1., 1.5, 2.], [2., 2.5, 3.]],
+    b = fe.backend.resize_3d(p, output_shape=[3, 3, 3])  # [[[[[0., 0.5, 1.], [1., 1.5, 2.], [2., 2.5, 3.]],
                                                        [[2., 2.5, 3.], [3., 3.5, 4.], [4., 4.5, 5.]],
                                                        [[4., 4.5, 5.], [5., 5.5, 6.], [6., 6.499999, 7.]]]]]
     ```
 
     Args:
         tensor: The input value.
-        size: The new size of the tensor.
+        output_shape: The new size of the tensor.
 
     Returns:
         The resized `tensor`.
@@ -50,22 +50,22 @@ def resize_3d(tensor: Tensor, size: List[int]) -> Tensor:
         ValueError: If `tensor` is an unacceptable data type.
     """
     if tf.is_tensor(tensor):
-        return resize_tensorflow_tensor(tensor, size)
+        return resize_tensorflow_tensor(tensor, output_shape)
     elif isinstance(tensor, torch.Tensor):
-        return resize_pytorch_tensor(tensor, size)
+        return resize_pytorch_tensor(tensor, output_shape)
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(tensor)))
 
 
-def resize_tensorflow_tensor(data: tf.Tensor, size: List[int]) -> tf.Tensor:
+def resize_tensorflow_tensor(data: tf.Tensor, output_shape: List[int]) -> tf.Tensor:
     """
         Resize tensorflow tensor
 
         Input:
             data: Input tensorflow tensor
-            size: (X, Y, Z) Expected output shape of tensor
+            output_shape: (X, Y, Z) Expected output shape of tensor
     """
-    d1_new, d2_new, d3_new = size
+    d1_new, d2_new, d3_new = output_shape
     data_shape = tf.shape(data)
     batch_size, d1, d2, d3, c = data_shape[0], data_shape[1], data_shape[2], data_shape[3], data_shape[4]
 
@@ -83,15 +83,15 @@ def resize_tensorflow_tensor(data: tf.Tensor, size: List[int]) -> tf.Tensor:
     return output_tensor
 
 
-def resize_pytorch_tensor(pytorch_array: torch.Tensor, size: List[int]) -> torch.Tensor:
+def resize_pytorch_tensor(pytorch_array: torch.Tensor, output_shape: List[int]) -> torch.Tensor:
     """
         Resize pytorch tensor
 
         Input:
             data: Input pytorch tensor
-            size: (X, Y, Z) Expected output shape of tensor
+            output_shape: (X, Y, Z) Expected output shape of tensor
     """
-    d1_new, d2_new, d3_new = size
+    d1_new, d2_new, d3_new = output_shape
 
     data_shape = pytorch_array.shape
     batch_size, c, d1, d2, d3 = data_shape[0], data_shape[1], data_shape[2], data_shape[3], data_shape[4]
