@@ -58,7 +58,13 @@ def resize_3d(tensor: Tensor, size: List[int]) -> Tensor:
 
 
 def resize_tensorflow_tensor(data: tf.Tensor, size: List[int]) -> tf.Tensor:
+    """
+        Resize tensorflow tensor
 
+        Input:
+            data: Input tensorflow tensor
+            size: (X, Y, Z) Expected output shape of tensor
+    """
     d1_new, d2_new, d3_new = size
     data_shape = tf.shape(data)
     batch_size, d1, d2, d3, c = data_shape[0], data_shape[1], data_shape[2], data_shape[3], data_shape[4]
@@ -78,7 +84,13 @@ def resize_tensorflow_tensor(data: tf.Tensor, size: List[int]) -> tf.Tensor:
 
 
 def resize_pytorch_tensor(pytorch_array: torch.Tensor, size: List[int]) -> torch.Tensor:
+    """
+        Resize pytorch tensor
 
+        Input:
+            data: Input pytorch tensor
+            size: (X, Y, Z) Expected output shape of tensor
+    """
     d1_new, d2_new, d3_new = size
 
     data_shape = pytorch_array.shape
