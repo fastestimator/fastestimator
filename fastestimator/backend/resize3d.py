@@ -16,7 +16,6 @@ from typing import List, TypeVar
 
 import tensorflow as tf
 import torch
-import torchvision
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
