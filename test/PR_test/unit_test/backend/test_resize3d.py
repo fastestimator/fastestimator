@@ -23,14 +23,22 @@ from fastestimator.backend.resize3d import resize_3d
 class TestResize3D(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        self.numpy_array = np.arange(0.0, 27.0, 1.0, dtype=np.float32).reshape((1, 3, 3, 3, 1))
-        self.pytorch_array = to_tensor(np.arange(0.0, 27.0, 1.0, dtype=np.float32).reshape((1, 1, 3, 3, 3)), 'torch')
-        self.tensorflow_array = to_tensor(np.arange(0.0, 27.0, 1.0, dtype=np.float32).reshape((1, 3, 3, 3, 1)), 'tf')
+        self.pytorch_array = to_tensor(np.arange(0.0, 8.0, 1.0, dtype=np.float32).reshape((1, 1, 2, 2, 2)), 'torch')
+        self.tensorflow_array = to_tensor(np.arange(0.0, 8.0, 1.0, dtype=np.float32).reshape((1, 2, 2, 2, 1)), 'tf')
 
-    def test_resize3d_compare(self):
-        tensorflow_output = resize_3d(self.tensorflow_array, (4, 4, 4)).numpy()
-        torch_output = resize_3d(self.pytorch_array, (4, 4, 4)).numpy()
-        np.testing.assert_array_almost_equal(tensorflow_output[0, :, :, :, 0], torch_output[0, 0, :, :, :])
+    def test_resize3d_area(self):
+        tensorflow_output = np.squeeze(resize_3d(self.tensorflow_array, (4, 4, 4), 'area').numpy())
+        torch_output = np.squeeze(resize_3d(self.pytorch_array, (4, 4, 4), 'area').numpy())
+        np.testing.assert_array_almost_equal(tensorflow_output, torch_output)
+
+    def test_resize3d_nearest(self):
+        tensorflow_output = np.squeeze(resize_3d(self.tensorflow_array, (4, 4, 4), 'nearest').numpy())
+        torch_output = np.squeeze(resize_3d(self.pytorch_array, (4, 4, 4), 'nearest').numpy())
+        np.testing.assert_array_almost_equal(tensorflow_output, torch_output)
+
+    def test_resize3d_bicubic(self):
+        with self.assertRaises(AssertionError):
+            _ = np.squeeze(resize_3d(self.tensorflow_array, (4, 4, 4), 'bicubic').numpy())
 
     def test_resize3d_torch(self):
         image_shape = resize_3d(self.pytorch_array, (4, 4, 4)).numpy().shape

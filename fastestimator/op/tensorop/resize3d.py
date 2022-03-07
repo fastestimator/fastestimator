@@ -33,6 +33,7 @@ class Resize3D(TensorOp):
             inputs: Key of the input tensor.
             outputs: Key of the output tensor.
             output_shape: output size of input tensor.
+            resize_mode: the resize mode of aperation.
             mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
                 regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
                 like "!infer" or "!train".
@@ -43,10 +44,13 @@ class Resize3D(TensorOp):
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  output_shape: Sequence[float],
+                 resize_mode: str = 'nearest',
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        assert resize_mode in ['nearest', 'area'], "Only following resize modes are supported: 'nearest', 'area' "
         self.output_shape = output_shape
+        self.reize_mode = resize_mode
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
-        return [resize_3d(elem, self.output_shape) for elem in data]
+        return [resize_3d(elem, self.output_shape, self.resize_mode) for elem in data]
