@@ -36,6 +36,13 @@ class TestResize3D(unittest.TestCase):
         torch_output = np.squeeze(resize_3d(self.pytorch_array, (4, 4, 4), 'nearest').numpy())
         np.testing.assert_array_almost_equal(tensorflow_output, torch_output)
 
+    def test_resize3d_nearest_values(self):
+        tensorflow_output = np.squeeze(resize_3d(self.tensorflow_array, (4, 4, 4), 'nearest').numpy())
+        torch_output = np.squeeze(resize_3d(self.pytorch_array, (4, 4, 4), 'nearest').numpy())
+        print(tensorflow_output)
+        np.testing.assert_array_equal(tensorflow_output[0, 0, :], [0, 0, 1, 1])
+        np.testing.assert_array_equal(torch_output[0, 0, :], [0, 0, 1, 1])
+
     def test_resize3d_bicubic(self):
         with self.assertRaises(AssertionError):
             _ = np.squeeze(resize_3d(self.tensorflow_array, (4, 4, 4), 'bicubic').numpy())

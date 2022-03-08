@@ -20,20 +20,20 @@ import torch
 from fastestimator.backend.resize3d import resize_3d
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
+from fastestimator.util.util import to_list
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 @traceable()
 class Resize3D(TensorOp):
-    """
-        Normalize a input tensor.
+    """Resize a 3D tensor.
 
         Args:
             inputs: Key of the input tensor.
             outputs: Key of the output tensor.
-            output_shape: output size of input tensor.
-            resize_mode: the resize mode of aperation.
+            output_shape: The desired output shape for the input tensor.
+            resize_mode: The resize mode of the operation ('area' or 'nearest').
             mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
                 regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
                 like "!infer" or "!train".
@@ -43,11 +43,12 @@ class Resize3D(TensorOp):
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
-                 output_shape: Sequence[float],
+                 output_shape: Sequence[int],
                  resize_mode: str = 'nearest',
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+
+        super().__init__(inputs=to_list(inputs), outputs=to_list(outputs), mode=mode)
         assert resize_mode in ['nearest', 'area'], "Only following resize modes are supported: 'nearest', 'area' "
         self.output_shape = output_shape
         self.reize_mode = resize_mode
