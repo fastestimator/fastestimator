@@ -49,11 +49,19 @@ class TestFuse(unittest.TestCase):
 
     def test_delete_op(self):
         ops = fe.op.numpyop.meta.Fuse(
-            ops=[TestNumpyOp(inputs='x', outputs='x', mode="train", var=1), Delete(
-                keys='x',
-                mode="train",
-            )])
+            ops=[TestNumpyOp(inputs='x', outputs=['x'], mode="train", var=1),
+                Delete(keys='x', mode='train')])
         _ = ops.forward(data=[self.tf_data], state={})
+        self.assertEqual(ops.inputs, ['x'])
+        self.assertEqual(ops.outputs, [])
+
+    def test_delete_multi(self):
+        ops = fe.op.numpyop.meta.Fuse(
+            ops=[TestNumpyOp(inputs='x', outputs=['x', 'y'], mode="train", var=1),
+                Delete(keys='y', mode='train')])
+        _ = ops.forward(data=[self.tf_data], state={})
+        self.assertEqual(ops.inputs, ['x'])
+        self.assertEqual(ops.outputs, ['x'])
 
     def test_save_and_load_state_torch(self):
         def instantiate_system():
