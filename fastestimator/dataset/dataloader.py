@@ -116,7 +116,9 @@ class FEDataLoader(DataLoader):
                          sampler=sampler,
                          num_workers=num_workers,
                          persistent_workers=False,
-                         collate_fn=functools.partial(_pre_collate, try_fn=collate_fn, postprocess_fn=postprocess_fn),
+                         collate_fn=functools.partial(_pre_collate,
+                                                      try_fn=self.fe_collate_fn,
+                                                      postprocess_fn=postprocess_fn),
                          worker_init_fn=lambda _: np.random.seed(random.randint(0, 2 ** 32 - 1)))
         if self.batch_size is not None:
             # We need a special fetcher type later in order to build batches correctly
