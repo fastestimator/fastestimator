@@ -65,7 +65,7 @@ def save_model(model: Union[tf.keras.Model, torch.nn.Module],
         model_path = os.path.join(save_dir, "{}.h5".format(model_name))
         model.save_weights(model_path)
         if save_architecture:
-            model.save(filepath=os.path.join(save_dir, model_name), include_optimizer=save_optimizer)
+            model.save(filepath=os.path.join(save_dir, "{}.pb".format(model_name)), include_optimizer=save_optimizer)
         if save_optimizer:
             assert model.current_optimizer, "optimizer does not exist"
             optimizer_path = os.path.join(save_dir, "{}_opt.pkl".format(model_name))
