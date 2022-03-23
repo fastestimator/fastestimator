@@ -22,7 +22,7 @@ from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset
 from fastestimator.util.traceability_util import traceable
 
 
-@traceable()
+@traceable(blacklist=('data', 'class_data', '_summary'))
 class SiameseDirDataset(LabeledDirDataset):
     """A dataset which returns pairs of data.
 
@@ -112,8 +112,7 @@ class SiameseDirDataset(LabeledDirDataset):
         self.data = {new_idx: v for new_idx, (old_idx, v) in enumerate(self.data.items())}
         self.class_data = self._data_to_class(self.data, self.label_key)
         # The summary function is being cached by a base class, so reset our cache here
-        # noinspection PyUnresolvedReferences
-        self.summary.cache_clear()
+        self._summary = None
         return results
 
     def _get_stratified_splits(self, split_counts: List[int], seed: Optional[int],

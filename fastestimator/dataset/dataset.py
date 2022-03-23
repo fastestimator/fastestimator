@@ -16,7 +16,6 @@ import math
 import random
 from collections import defaultdict
 from copy import deepcopy
-from functools import lru_cache
 from typing import Any, Dict, Hashable, Iterable, List, Optional, Sequence, Tuple, Union
 
 import jsonpickle
@@ -403,7 +402,7 @@ class FEDataset(Dataset):
         return str(self.summary())
 
 
-@traceable(blacklist=('data', 'summary'))
+@traceable(blacklist=('data', '_summary'))
 class InMemoryDataset(FEDataset):
     """A dataset abstraction to simplify the implementation of datasets which hold their data in memory.
 
@@ -414,9 +413,7 @@ class InMemoryDataset(FEDataset):
 
     def __init__(self, data: Dict[int, Dict[str, Any]]) -> None:
         self.data = data
-        # Normally lru cache annotation is shared over all class instances, so calling cache_clear would reset all
-        # caches (for example when calling .split()). Instead we make the lru cache per-instance
-        self.summary = lru_cache(maxsize=1)(self.summary)
+        self._summary = None
 
     def __len__(self) -> int:
         return len(self.data)
@@ -472,7 +469,7 @@ class InMemoryDataset(FEDataset):
                 "input value must be of length {}, but had length {}".format(len(self.data), len(value))
             for i in range(len(self.data)):
                 self.data[i][key] = value[i]
-        self.summary.cache_clear()
+        self._summary = None
 
     def _skip_init(self, data: Dict[int, Dict[str, Any]], **kwargs) -> 'InMemoryDataset':
         """A helper method to create new dataset instances without invoking their __init__ methods.
@@ -487,11 +484,8 @@ class InMemoryDataset(FEDataset):
         obj = self.__class__.__new__(self.__class__)
         obj.data = data
         for k, v in kwargs.items():
-            if k == 'summary':
-                continue  # Ignore summary object since we're going to re-initialize it
-            else:
-                obj.__setattr__(k, v)
-        obj.summary = lru_cache(maxsize=1)(obj.summary)
+            obj.__setattr__(k, v)
+        obj._summary = None
         return obj
 
     def _do_split(self, splits: Sequence[Iterable[int]]) -> List['InMemoryDataset']:
@@ -510,7 +504,7 @@ class InMemoryDataset(FEDataset):
             results.append(self._skip_init(data, **{k: v for k, v in self.__dict__.items() if k not in {'data'}}))
         # Re-key the remaining data to be contiguous from 0 to new max index
         self.data = {new_idx: v for new_idx, (old_idx, v) in enumerate(self.data.items())}
-        self.summary.cache_clear()
+        self._summary = None
         return results
 
     def summary(self) -> DatasetSummary:
@@ -518,6 +512,8 @@ class InMemoryDataset(FEDataset):
         Returns:
             A summary representation of this dataset.
         """
+        if self._summary is not None:
+            return self._summary
         # We will check whether the dataset is doing additional pre-processing on top of the self.data keys. If not we
         # can extract extra information about the data without incurring a large computational time cost
         final_example = self[0]
@@ -547,4 +543,5 @@ class InMemoryDataset(FEDataset):
             key: KeySummary(dtype=dtypes[key], num_unique_values=n_unique_vals[key] or None, shape=shapes[key])
             for key in keys
         }
-        return DatasetSummary(num_instances=len(self), keys=key_summary)
+        self._summary = DatasetSummary(num_instances=len(self), keys=key_summary)
+        return self._summary
