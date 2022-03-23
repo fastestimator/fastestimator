@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Union
 
 import numpy as np
 
-from fastestimator.op.numpyop.numpyop import Batch, NumpyOp, forward_numpyop
+from fastestimator.op.numpyop.numpyop import Batch, Delete, NumpyOp, forward_numpyop
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_list
 
@@ -49,7 +49,9 @@ class Fuse(NumpyOp):
             if op.ds_id != ds_id:
                 raise ValueError(f"All Fuse ops must share the same ds_id, but got {ds_id} and {op.ds_id}")
             for inp in op.inputs:
-                if inp not in inputs and inp not in outputs:
+                if isinstance(op, Delete) and inp in outputs:
+                    outputs.remove(inp)
+                elif inp not in inputs and inp not in outputs:
                     inputs.append(inp)
             for out in op.outputs:
                 if out not in outputs:
@@ -84,8 +86,7 @@ class Fuse(NumpyOp):
         filtered = forward_numpyop(self.ops, data, state)
         return filtered if filtered else [data[key] for key in self.outputs]
 
-    def forward_batch(self,
-                      data: Union[np.ndarray, List[np.ndarray]],
+    def forward_batch(self, data: Union[np.ndarray, List[np.ndarray]],
                       state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
         data = {key: elem for key, elem in zip(self.inputs, data)}
         filtered = forward_numpyop(self.ops, data, state, batched="np")
