@@ -23,6 +23,7 @@ import wget
 from PIL import Image
 
 from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset
+from fastestimator.util.util import cpu_count
 from fastestimator.util.wget_util import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress
@@ -56,7 +57,7 @@ def _write_data(images: np.ndarray, labels: np.ndarray, base_path: str, mode: st
         os.makedirs(base_path)
         for i in range(min(labels), max(labels) + 1):
             os.makedirs(os.path.join(base_path, "{}".format(i)))
-        with Pool(os.cpu_count()) as p:
+        with Pool(cpu_count()) as p:
             p.starmap(
                 _write_image,
                 zip(images,
