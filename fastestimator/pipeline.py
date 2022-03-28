@@ -38,7 +38,7 @@ from fastestimator.schedule.schedule import Scheduler, get_current_items, EpochS
     RepeatScheduler
 from fastestimator.util.data import FilteredData
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import get_num_devices, to_list, to_set
+from fastestimator.util.util import cpu_count, get_num_devices, to_list, to_set
 
 DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
 
@@ -82,7 +82,7 @@ class Pipeline:
         if mp.get_start_method(allow_none=True) != 'fork':
             print("FastEstimator-Warn: Pipeline multiprocessing is disabled. OS must support the 'fork' start method.")
             num_process = 0
-        self.num_process = num_process if num_process is not None else min(os.cpu_count(), 32 * get_num_devices())
+        self.num_process = num_process if num_process is not None else min(cpu_count(), 32 * get_num_devices())
         self._verify_inputs(**{k: v for k, v in locals().items() if k != 'self'})
         # Loader Variables
         self.ctx_lock = Lock()
