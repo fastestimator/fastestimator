@@ -28,7 +28,7 @@ pipeline {
                             steps {
                                 script {
                                     def customImage = docker.build('$IMAGE_TAG', \
-                                                                   '--no-cache - < docker/nightly/Dockerfile.gpu')
+                                                                  '--no-cache - < docker/nightly/Dockerfile.gpu')
                                     try {
                                         customImage.inside('-u root -v $LOCAL_DATASET_PATH:$DOCKER_DATASET_PATH \
                                                         --gpus all --shm-size 50g') {
@@ -57,7 +57,7 @@ pipeline {
                             steps {
                                 script {
                                     def customImage = docker.build('$IMAGE_TAG', \
-                                                                   '--no-cache - < docker/nightly/Dockerfile.gpu')
+                                                                  '--no-cache - < docker/nightly/Dockerfile.gpu')
                                     try {
                                         customImage.inside('-u root -v $LOCAL_DATASET_PATH:$DOCKER_DATASET_PATH \
                                                         --gpus all --shm-size 50g') {
@@ -113,10 +113,13 @@ pipeline {
                     try {
                         customImage.inside("-u root") {
                             withCredentials([string(credentialsId: 'pypi_password', variable: 'PYPI_PWD')]) {
-                                sh 'pip install -U keyring keyrings.alt'
-                                sh 'pip install --no-cache-dir twine'
-                                sh 'FASTESTIMATOR_IS_NIGHTLY=1 python setup.py sdist bdist_wheel'
-                                sh 'twine upload dist/* -u fastestimatordev -p ${PYPI_PWD}'
+                                sh '''#!/bin/bash
+                                    pip install -U keyring keyrings.alt
+                                    pip install --no-cache-dir twine
+                                    FASTESTIMATOR_IS_NIGHTLY=1 python setup.py sdist bdist_wheel
+                                    twine upload dist/* -u fastestimatordev -p ${PYPI_PWD}
+                                    rm -rf *
+                                '''
                             }
                         }
                     }
@@ -130,18 +133,21 @@ pipeline {
             agent {label 'master'}
             steps {
                 withDockerRegistry(credentialsId: 'docker_hub_credentials', url:'') {
-                    sh 'docker build -t fastestimator/fastestimator:nightly-cpu --no-cache - < docker/nightly/Dockerfile.cpu'
-                    sh 'docker push fastestimator/fastestimator:nightly-cpu'
-                    sh 'docker build -t fastestimator/fastestimator:nightly-gpu --no-cache - < docker/nightly/Dockerfile.gpu'
-                    sh 'docker push fastestimator/fastestimator:nightly-gpu'
-                    sh 'docker image prune -f'
+                    sh '''#!/bin/bash
+                        docker build -t fastestimator/fastestimator:nightly-cpu --no-cache - < docker/nightly/Dockerfile.cpu
+                        docker push fastestimator/fastestimator:nightly-cpu
+                        docker build -t fastestimator/fastestimator:nightly-gpu --no-cache - < docker/nightly/Dockerfile.gpu
+                        docker push fastestimator/fastestimator:nightly-gpu
+                        docker image prune -f
+                        rm -rf *
+                    '''
                 }
             }
         }
     }
     post {
         success{
-           script{
+          script{
                 slackSend(channel: "fastestimator", message: "Congrats! FastEstimator <$BUILD_URL|nightly-test> of $BUILD_DATE passed :)")
             }
         }
