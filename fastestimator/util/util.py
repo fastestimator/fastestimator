@@ -687,8 +687,7 @@ def cpu_count(limit: Optional[int] = None) -> int:
         try:
             existing_limit = int(existing_limit)
         except ValueError as err:
-            print(f"FastEstimator-Error: FE_NUM_THREADS_ is an internal variable. Use FE_NUM_THREADS (no underscore) "
-                  f"instead")
+            print("FastEstimator-Error: FE_NUM_THREADS_ is an internal variable. Use FE_NUM_THREADS (no underscore)")
             raise err
         if limit and limit != existing_limit:
             raise ValueError(f"Tried to enforce a cpu limit of {limit}, but {existing_limit} was already set.")
