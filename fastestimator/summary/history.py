@@ -35,7 +35,7 @@ from fastestimator.summary.logs.log_plot import visualize_logs
 from fastestimator.summary.summary import Summary, average_summaries
 from fastestimator.summary.system import System
 from fastestimator.util.cli_util import SaveAction
-from fastestimator.util.util import NonContext, parse_string_to_python
+from fastestimator.util.util import NonContext, cpu_count, parse_string_to_python
 
 _MAKE_HIST_TABLE = 'CREATE TABLE IF NOT EXISTS history (' \
                    'file TEXT, ' \
@@ -262,7 +262,7 @@ class HistoryRecorder:
                     'version': sys.modules['fastestimator'].__version__,
                     'start': datetime.now(),
                     'gpus': torch.cuda.device_count(),
-                    'cpus': os.cpu_count(),
+                    'cpus': cpu_count(),
                     'workers': self.system.pipeline.num_process
                 })
             self.db.executemany(_MAKE_FEAT_ENTRY, self._get_features_in_use())

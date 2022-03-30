@@ -667,6 +667,58 @@ def get_num_devices():
     return max(torch.cuda.device_count(), 1)
 
 
+def cpu_count(limit: Optional[int] = None) -> int:
+    """Determine the nuber of available CPUs (correcting for docker container limits).
+
+    Args:
+        limit: If provided, the TF and Torch backends will be told to use `limit` number of threads, or the available
+            number of cpus if the latter is lower (`limit` cannot raise the number of threads). A limit can only be
+            enforced once per python session, before starting anything like pipeline which requires multiprocessing.
+
+    Returns:
+        The nuber of available CPUs (correcting for docker container limits), or the user provided `limit`.
+
+    Raises:
+        ValueError: If a `limit` is provided which doesn't match previously enforced limits.
+    """
+    existing_limit = os.environ.get('FE_NUM_THREADS_', None)  # This variable is used internally to indicate whether cpu
+    # limits have already been enforced in this python session
+    if existing_limit:
+        try:
+            existing_limit = int(existing_limit)
+        except ValueError as err:
+            print("FastEstimator-Error: FE_NUM_THREADS_ is an internal variable. Use FE_NUM_THREADS (no underscore)")
+            raise err
+        if limit and limit != existing_limit:
+            raise ValueError(f"Tried to enforce a cpu limit of {limit}, but {existing_limit} was already set.")
+        return existing_limit
+    # Check if user provided an environment variable limit on the number of threads
+    env_limit = os.environ.get('FE_NUM_THREADS', None)  # User might set this one in a bash script
+    if env_limit:
+        try:
+            env_limit = int(env_limit)
+        except ValueError as err:
+            print(f"FastEstimator-Warn: FE_NUM_THREADS variable must be an integer, but was set to: {env_limit}")
+            raise err
+    try:
+        # In docker containers which have --cpuset-cpus, the limit won't be reflected by normal os.cpu_count() call
+        cores = len(os.sched_getaffinity(0))
+    except AttributeError:
+        # Running on Mac or Windows where the above method isn't available, so use the regular way
+        cores = os.cpu_count()
+    cores = min(cores, limit or cores, env_limit or cores)
+    if cores < 1:
+        raise ValueError(f"At least 1 core is required for training, but found {cores}")
+    os.environ['FE_NUM_THREADS_'] = f"{cores}"  # Remember the value so we don't try to re-set the frameworks later
+    os.environ['OMP_NUM_THREADS'] = f"{cores}"
+    os.environ['MKL_NUM_THREADS'] = f"{cores}"
+    os.environ['TF_NUM_INTEROP_THREADS'] = f"{cores}"
+    os.environ['TF_NUM_INTRAOP_THREADS'] = f"{cores}"
+    torch.set_num_threads(cores)
+    torch.set_num_interop_threads(cores)
+    return cores
+
+
 def show_image(im: Union[np.ndarray, Tensor],
                axis: plt.Axes = None,
                fig: plt.Figure = None,
