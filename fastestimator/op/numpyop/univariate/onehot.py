@@ -60,6 +60,6 @@ class Onehot(NumpyOp):
         assert class_index.size == 1, "data must have only one item"
         class_index = class_index.item()
         assert class_index < self.num_classes, "label value should be smaller than num_classes"
-        output = np.full((self.num_classes), fill_value=self.label_smoothing / self.num_classes)
+        output = np.full((self.num_classes), fill_value=self.label_smoothing / self.num_classes, dtype="float32")
         output[class_index] = 1.0 - self.label_smoothing + self.label_smoothing / self.num_classes
         return output
