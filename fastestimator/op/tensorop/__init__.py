@@ -17,6 +17,7 @@ from fastestimator.op.tensorop.argmax import Argmax
 from fastestimator.op.tensorop.average import Average
 from fastestimator.op.tensorop.gather import Gather
 from fastestimator.op.tensorop.normalize import Normalize
+from fastestimator.op.tensorop.dice import DiceScore
 from fastestimator.op.tensorop.permute import Permute
 from fastestimator.op.tensorop.reshape import Reshape
 from fastestimator.op.tensorop.resize3d import Resize3D

@@ -16,7 +16,8 @@ from typing import Iterable, Union
 
 import numpy as np
 
-from fastestimator.backend.dice_loss import dice_loss
+from fastestimator.backend.convert_tensor_precision import convert_input_precision
+from fastestimator.backend.dice_score import dice_score
 from fastestimator.trace.meta.per_ds import per_ds
 from fastestimator.trace.trace import Trace
 from fastestimator.util import Data
@@ -75,12 +76,13 @@ class Dice(Trace):
     def on_batch_end(self, data: Data) -> None:
         y_true, y_pred = data[self.true_key], data[self.pred_key]
 
-        dice_score = 1 - \
-            dice_loss(y_pred=y_pred, y_true=y_true,
-                      channel_average=self.channel_average)
+        y_pred = convert_input_precision(y_pred > self.threshold)
 
-        data.write_per_instance_log(self.outputs[0], dice_score)
-        self.dice.extend(list(dice_score))
+        dice = dice_score(y_pred=y_pred, y_true=y_true,
+                          channel_average=self.channel_average, epsilon=self.smooth)
+
+        data.write_per_instance_log(self.outputs[0], dice)
+        self.dice.extend(list(dice))
 
     def on_epoch_end(self, data: Data) -> None:
         data.write_with_log(self.outputs[0], np.mean(self.dice))

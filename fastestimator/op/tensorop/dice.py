@@ -18,26 +18,25 @@ import numpy as np
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.dice_loss import dice_loss
-from fastestimator.op.tensorop.loss.loss import LossOp
+from fastestimator.backend.dice_score import dice_score
+from fastestimator.op.tensorop.tensorop import TensorOp
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.array)
 
 
-class DiceLoss(LossOp):
+class DiceScore(TensorOp):
     """
-    Calculate Element-Wise Dice loss.
+    Calculate Element-Wise Dice Score.
 
         Args:
             y_pred: Prediction with a shape like (Batch, C). dtype: float32 or float16.
             y_true: Ground truth class labels with a shape like `y_pred`. dtype: int or float32 or float16.
-            log_loss: Whether to commute log loss. If True, log loss will be applied instead of dice loss.
-            soft_dice_loss: Whether to square elements. If True, square of elements is added.
-            average_sample_loss: Whether to average the element-wise loss.
-            channel_average: Whether to average the channel wise loss.
+            soft_dice: Whether to square elements. If True, square of elements is added.
+            average_sample: Whether to average the element-wise dice score.
+            channel_average: Whether to average the channel wise dice score.
 
         Returns:
-            The dice loss between `y_pred` and `y_true`. A scalar if `average_sample_loss` is True, else a
+            The dice loss between `y_pred` and `y_true`. A scalar if `average_sample` is True, else a
             tensor with the shape (Batch).
 
         Raises:
@@ -49,16 +48,18 @@ class DiceLoss(LossOp):
                  outputs: str,
                  mode: Union[None, str, Iterable[str]] = "!infer",
                  ds_id: Union[None, str, Iterable[str]] = None,
-                 log_loss: bool = False,
-                 soft_dice_loss: bool = False,
-                 average_sample_loss: bool = False,
-                 channel_average: bool = False):
+                 soft_dice: bool = False,
+                 average_sample: bool = False,
+                 channel_average: bool = False,
+                 epsilon: float = 1e-6):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode,
-                         ds_id=ds_id, average_loss=average_sample_loss)
+                         ds_id=ds_id, average_loss=average_sample)
         self.channel_average = channel_average
-        self.log_loss = log_loss
-        self.soft_dice_loss = soft_dice_loss
+        self.soft_dice = soft_dice
+        self.epsilon = epsilon
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
         y_pred, y_true = data
-        return dice_loss(y_pred, y_true, self.log_loss, self.soft_dice_loss, self.average_loss, self.channel_average)
+        dice = dice_score(
+            y_pred, y_true, self.soft_dice, self.average_loss, self.channel_average, self.epsilon)
+        return -dice

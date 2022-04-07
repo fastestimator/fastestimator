@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 from fastestimator.op.tensorop.loss.cross_entropy import CrossEntropy
-from fastestimator.op.tensorop.loss.dice_loss import DiceLoss
 from fastestimator.op.tensorop.loss.hinge import Hinge
 from fastestimator.op.tensorop.loss.l2_regularization import L2Regularizaton
 from fastestimator.op.tensorop.loss.loss import LossOp

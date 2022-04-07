@@ -20,7 +20,8 @@ from fastestimator.backend.categorical_crossentropy import categorical_crossentr
 from fastestimator.backend.check_nan import check_nan
 from fastestimator.backend.clip_by_value import clip_by_value
 from fastestimator.backend.concat import concat
-from fastestimator.backend.dice_loss import dice_loss
+from fastestimator.backend.convert_tensor_precision import convert_input_precision
+from fastestimator.backend.dice_score import dice_score
 from fastestimator.backend.exp import exp
 from fastestimator.backend.expand_dims import expand_dims
 from fastestimator.backend.feed_forward import feed_forward
