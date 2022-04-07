@@ -32,6 +32,7 @@ class Dice(Trace):
         true_key: The key of the ground truth mask.
         pred_key: The key of the prediction values.
         threshold: The threshold for binarizing the prediction.
+        channel_average: Whether the average channel-wise dice loss.
         mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
