@@ -12,15 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, Iterable
+from typing import Iterable, Union
 
 import numpy as np
 
+from fastestimator.backend.dice_loss import dice_loss
 from fastestimator.trace.meta.per_ds import per_ds
 from fastestimator.trace.trace import Trace
 from fastestimator.util import Data
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import to_number
 
 
 @per_ds
@@ -42,17 +42,21 @@ class Dice(Trace):
             computing an aggregate across all ds_ids on which it runs. This is automatically False if `output_name`
             contains a "|" character.
     """
+
     def __init__(self,
                  true_key: str,
                  pred_key: str,
                  threshold: float = 0.5,
+                 channel_average: bool = False,
                  mode: Union[None, str, Iterable[str]] = ("eval", "test"),
                  ds_id: Union[None, str, Iterable[str]] = None,
                  output_name: str = "Dice",
                  per_ds: bool = True) -> None:
-        super().__init__(inputs=(true_key, pred_key), mode=mode, outputs=output_name, ds_id=ds_id)
+        super().__init__(inputs=(true_key, pred_key),
+                         mode=mode, outputs=output_name, ds_id=ds_id)
         self.threshold = threshold
         self.smooth = 1e-8
+        self.channel_average = channel_average
         self.dice = []
         self.per_ds = per_ds
 
@@ -68,17 +72,14 @@ class Dice(Trace):
         self.dice = []
 
     def on_batch_end(self, data: Data) -> None:
-        y_true, y_pred = to_number(data[self.true_key]), to_number(data[self.pred_key])
-        batch_size = y_true.shape[0]
-        y_true, y_pred = y_true.reshape((batch_size, -1)), y_pred.reshape((batch_size, -1))
+        y_true, y_pred = data[self.true_key], data[self.pred_key]
 
-        prediction_label = (y_pred >= self.threshold).astype(np.int32)
+        dice_score = 1 - \
+            dice_loss(y_pred=y_pred, y_true=y_true,
+                      channel_average=self.channel_average)
 
-        intersection = np.sum(y_true * prediction_label, axis=-1)
-        area_sum = np.sum(y_true, axis=-1) + np.sum(prediction_label, axis=-1)
-        dice = (2. * intersection + self.smooth) / (area_sum + self.smooth)
-        data.write_per_instance_log(self.outputs[0], dice)
-        self.dice.extend(list(dice))
+        data.write_per_instance_log(self.outputs[0], dice_score)
+        self.dice.extend(list(dice_score))
 
     def on_epoch_end(self, data: Data) -> None:
         data.write_with_log(self.outputs[0], np.mean(self.dice))
