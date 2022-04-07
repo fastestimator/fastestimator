@@ -15,7 +15,6 @@
 import inspect
 import json
 import os
-from pickletools import optimize
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from fastestimator.network import build
