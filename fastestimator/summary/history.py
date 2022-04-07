@@ -683,19 +683,6 @@ class HistoryReader:
         p_vis.add_argument('--pretty_names', help="Clean up the metric names for display", action='store_true')
         p_vis.add_argument('-g', '--group', dest='groups', default={}, action=_GroupAction, nargs="*")
 
-        legend_group = p_vis.add_argument_group('legend arguments')
-        legend_x_group = legend_group.add_mutually_exclusive_group(required=False)
-        legend_x_group.add_argument('--common_legend',
-                                    dest='share_legend',
-                                    help="Generate one legend total",
-                                    action='store_true',
-                                    default=True)
-        legend_x_group.add_argument('--split_legend',
-                                    dest='share_legend',
-                                    help="Generate one legend per graph",
-                                    action='store_false',
-                                    default=False)
-
         save_group = p_vis.add_argument_group('output arguments')
         save_x_group = save_group.add_mutually_exclusive_group(required=False)
         save_x_group.add_argument(

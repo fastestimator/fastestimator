@@ -89,9 +89,6 @@ class TestMain(unittest.TestCase):
             with self.subTest('args["smooth"]'):
                 self.assertEqual(args["smooth"], 1)
 
-            with self.subTest('args["share_legend"]'):
-                self.assertEqual(args["share_legend"], True)
-
             with self.subTest('args["save"]'):
                 self.assertEqual(args["save"], False)
 

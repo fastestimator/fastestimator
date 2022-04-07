@@ -65,6 +65,8 @@ def get_dependency():
         'seaborn>=0.11.2',
         'jsonpickle>=2.1.0',
         'python-docx>=0.8.11',
+        'plotly>=5.7.0',
+        'kaleido>=0.2.1',
         'sklearn',
     ]
     if os.name == "nt":
