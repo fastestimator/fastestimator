@@ -70,11 +70,11 @@ class TestDiceScore(unittest.TestCase):
 
     def test_average_sample_loss(cls):
         np_dice_score = dice_score(
-            cls.np_true, cls.np_pred, average_sample=True)
+            cls.np_true, cls.np_pred, sample_average=True)
         tf_dice_score = dice_score(
-            cls.tf_true, cls.tf_pred, average_sample=True)
+            cls.tf_true, cls.tf_pred, sample_average=True)
         torch_dice_score = dice_score(
-            cls.torch_true, cls.torch_pred, average_sample=True)
+            cls.torch_true, cls.torch_pred, sample_average=True)
         cls.assertAlmostEqual(np_dice_score, 0.839, delta=0.001)
         cls.assertAlmostEqual(tf_dice_score, 0.839, delta=0.001)
         cls.assertAlmostEqual(torch_dice_score, 0.839, delta=0.001)

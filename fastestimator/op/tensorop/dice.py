@@ -32,7 +32,7 @@ class DiceScore(TensorOp):
             y_pred: Prediction with a shape like (Batch, C). dtype: float32 or float16.
             y_true: Ground truth class labels with a shape like `y_pred`. dtype: int or float32 or float16.
             soft_dice: Whether to square elements. If True, square of elements is added.
-            average_sample: Whether to average the element-wise dice score.
+            sample_average: Whether to average the element-wise dice score.
             channel_average: Whether to average the channel wise dice score.
 
         Returns:
@@ -49,17 +49,17 @@ class DiceScore(TensorOp):
                  mode: Union[None, str, Iterable[str]] = "!infer",
                  ds_id: Union[None, str, Iterable[str]] = None,
                  soft_dice: bool = False,
-                 average_sample: bool = False,
+                 sample_average: bool = False,
                  channel_average: bool = False,
                  epsilon: float = 1e-6):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode,
-                         ds_id=ds_id, average_loss=average_sample)
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.channel_average = channel_average
         self.soft_dice = soft_dice
         self.epsilon = epsilon
+        self.sample_average = sample_average
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
         y_pred, y_true = data
         dice = dice_score(
-            y_pred, y_true, self.soft_dice, self.average_loss, self.channel_average, self.epsilon)
+            y_pred, y_true, self.soft_dice, self.sample_average, self.channel_average, self.epsilon)
         return -dice

@@ -75,7 +75,7 @@ def get_axis(y_true: Tensor, channel_average: bool) -> Tensor:
 def dice_score(y_pred: Tensor,
                y_true: Tensor,
                soft_dice: bool = False,
-               average_sample: bool = False,
+               sample_average: bool = False,
                channel_average: bool = False,
                epsilon: float = 1e-6) -> Tensor:
     """
@@ -88,7 +88,7 @@ def dice_score(y_pred: Tensor,
     b = fe.backend.dice_score(y_pred=pred, y_true=true)  # 0.161
     b = fe.backend.dice_score(y_pred=pred, y_true=true, soft_dice=True)  # 0.161
     b = fe.backend.dice_score(y_pred=pred, y_true=true, channel_average=True)  # 0.1636
-    b = fe.backend.dice_score(y_pred=pred, y_true=true, average_sample=True)  # 0.161
+    b = fe.backend.dice_score(y_pred=pred, y_true=true, sample_average=True)  # 0.161
 
     This method can be used with TensorFlow tensors:
     ```python
@@ -97,7 +97,7 @@ def dice_score(y_pred: Tensor,
     b = fe.backend.dice_score(y_pred=pred, y_true=true)  # 0.161
     b = fe.backend.dice_score(y_pred=pred, y_true=true, soft_dice=True)  # 0.161
     b = fe.backend.dice_score(y_pred=pred, y_true=true, channel_average=True)  # 0.1636
-    b = fe.backend.dice_score(y_pred=pred, y_true=true, average_sample=True)  # 0.161
+    b = fe.backend.dice_score(y_pred=pred, y_true=true, sample_average=True)  # 0.161
     ```
 
     This method can be used with PyTorch tensors:
@@ -107,7 +107,7 @@ def dice_score(y_pred: Tensor,
     b = fe.backend.dice_score(y_pred=pred, y_true=true)  # 0.161
     b = fe.backend.dice_score(y_pred=pred, y_true=true, soft_dice=True)  # 0.161
     b = fe.backend.dice_score(y_pred=pred, y_true=true, channel_average=True)  # 0.1636
-    b = fe.backend.dice_score(y_pred=pred, y_true=true, average_sample=True)  # 0.161
+    b = fe.backend.dice_score(y_pred=pred, y_true=true, sample_average=True)  # 0.161
     ```
 
     ```
@@ -115,7 +115,7 @@ def dice_score(y_pred: Tensor,
         y_pred: Prediction with a shape like (Batch, C, H, W) for torch and (Batch, H, W, C) for tensorflow or numpy. dtype: float32 or float16.
         y_true: Ground truth class labels with a shape like `y_pred`. dtype: int or float32 or float16.
         soft_dice: Whether to square elements. If True, square of elements is added.
-        average_sample: Whether to average the element-wise dice score.
+        sample_average: Whether to average the element-wise dice score.
         channel_average: Whether to average the channel wise dice score.
 
     Returns:
@@ -142,7 +142,7 @@ def dice_score(y_pred: Tensor,
     if channel_average:
         dice_score = reduce_mean(dice_score, axis=1)
 
-    if average_sample:
+    if sample_average:
         dice_score = reduce_mean(dice_score)
 
     return dice_score
