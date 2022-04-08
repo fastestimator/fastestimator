@@ -95,7 +95,7 @@ class Search:
             raise ValueError("Multiple keys exist in result dictionary and optimize_field is None.")
         return optimize_field
 
-    def get_best_results(self, best_mode: Optional[str] = None, optimize_field: Optional[str] = None):
+    def get_best_results(self, best_mode: Optional[str] = None, optimize_field: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
         """Get the best result from the current search summary.
 
         Args:
