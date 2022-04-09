@@ -14,7 +14,7 @@
 # ==============================================================================
 import inspect
 import math
-from typing import Callable, Union
+from typing import Any, Callable, Dict, Optional, Union
 
 from fastestimator.search.search import Search
 
@@ -23,49 +23,57 @@ class GoldenSection(Search):
     """A search class that performs the golden-section search on a single variable.
 
     Golden-section search is good at finding minimal or maximal values of a unimodal function. Each search step reduces
-    the search range by a constant factor: the golden ratio. More details are available at:
+    the search range by a constant factor: the inverse of golden ratio. More details are available at:
     https://en.wikipedia.org/wiki/Golden-section_search.
 
     ```python
-    search = GoldenSection(score_fn=lambda search_idx, n: (n - 3)**2, x_min=0, x_max=6, max_iter=10, best_mode="min")
+    search = GoldenSection(eval_fn=lambda search_idx, n: (n - 3)**2, x_min=0, x_max=6, max_iter=10, best_mode="min")
     search.fit()
-    print(search.get_best_parameters()) # {"n": 3, "search_idx": 2}
+    print(search.get_best_parameters()) # {'param': {'n': 3, 'search_idx': 2}, 'result': {'value': 0}}
     ```
 
     Args:
-        score_fn: Objective function that measures search fitness. One of its arguments must be 'search_idx' which will
+        eval_fn: Function that evaluates result given parameter. One of its arguments must be 'search_idx' which will
             be automatically provided by the search routine. This can help with file saving / logging during the search.
-            The other argument should be the variable to be searched over.
+            The eval_fn should return a dictionary, or else the return would be wrapped inside one. The other
+            argument should be the variable to be searched over.
         x_min: Lower limit (inclusive) of the search space.
         x_max: Upper limit (inclusive) of the search space.
         max_iter: Maximum number of iterations to run. The range at a given iteration i is 0.618**i * (x_max - x_min).
-            Note that the scoring function will always be evaluated twice before any iterations begin.
+            Note that the eval_fn will always be evaluated twice before any iterations begin.
+        best_mode: Whether maximal or minimal objective is desired. Must be either 'min' or 'max'.
+        optimize_field: the key corresponding to the target value when deciding the best. If None and multiple keys
+            exist in result dictionary, the optimization is ambiguous therefore an error will be raised.
         integer: Whether the optimized variable is a discrete integer.
         best_mode: Whether maximal or minimal fitness is desired. Must be either 'min' or 'max'.
         name: The name of the search instance. This is used for saving and loading purposes.
 
     Raises:
-        AssertionError: If `score_fn`, `x_min`, `x_max`, or `max_iter` are invalid.
+        AssertionError: If `eval_fn`, `x_min`, `x_max`, or `max_iter` are invalid.
     """
     def __init__(self,
-                 score_fn: Callable[[int, Union[int, float]], float],
+                 eval_fn: Callable[[int, Union[int, float]], float],
                  x_min: Union[int, float],
                  x_max: Union[int, float],
                  max_iter: int,
+                 best_mode: str,
+                 optimize_field: Optional[str] = None,
                  integer: bool = True,
-                 best_mode: str = "max",
                  name: str = "golden_section_search"):
-        super().__init__(score_fn=score_fn, best_mode=best_mode, name=name)
+        super().__init__(eval_fn=eval_fn, name=name)
+        assert best_mode in ["max", "min"], "best_mode must be either 'max' or 'min'"
         assert x_min < x_max, "x_min must be smaller than x_max"
         if integer:
             assert isinstance(x_min, int) and isinstance(x_max, int), \
                 "x_min and x_max must be integers when searching in integer mode"
-        args = set(inspect.signature(score_fn).parameters.keys()) - {'search_idx'}
+        args = set(inspect.signature(eval_fn).parameters.keys()) - {'search_idx'}
         assert len(args) == 1, "the score function should only contain one argument other than 'search_idx'"
         assert max_iter > 0, "max_iter should be greater than 0"
         self.x_min = x_min
         self.x_max = x_max
         self.max_iter = max_iter
+        self.best_mode = best_mode
+        self.optimize_field = optimize_field
         self.integer = integer
         self.arg_name = args.pop()
 
@@ -79,19 +87,25 @@ class GoldenSection(Search):
         a, b, h = self.x_min, self.x_max, self.x_max - self.x_min
         invphi, invphi2 = (math.sqrt(5) - 1) / 2, (3 - math.sqrt(5)) / 2
         c, d = self._convert(a + invphi2 * h), self._convert(a + invphi * h)
-        yc = self.evaluate(**{self.arg_name: c})
-        yd = self.evaluate(**{self.arg_name: d})
+        yc = self._get_value_from_result(self.evaluate(**{self.arg_name: c}))
+        yd = self._get_value_from_result(self.evaluate(**{self.arg_name: d}))
         for _ in range(self.max_iter):
             if self._is_better(yc, yd):
                 b, d, yd = d, c, yc
                 h = invphi * h
                 c = self._convert(a + invphi2 * h)
-                yc = self.evaluate(**{self.arg_name: c})
+                yc = self._get_value_from_result(self.evaluate(**{self.arg_name: c}))
             else:
                 a, c, yc = c, d, yd
                 h = invphi * h
                 d = self._convert(a + invphi * h)
-                yd = self.evaluate(**{self.arg_name: d})
+                yd = self._get_value_from_result(self.evaluate(**{self.arg_name: d}))
         best_results = self.get_best_results()
-        print("FastEstimator-Search: Golden Section Search Finished, best parameters: {}, best score: {}".format(
-            best_results[0], best_results[1]))
+        print("FastEstimator-Search: Golden Section Search Finished, best parameters: {}, best result: {}".format(
+            best_results['param'], best_results['result']))
+
+    def _get_value_from_result(self, result: Dict[str, Any]) -> Union[int, float]:
+        optimize_field = self.optimize_field
+        if optimize_field is None:
+            optimize_field = self._infer_optmize_field(result)
+        return result[optimize_field]
