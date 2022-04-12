@@ -281,6 +281,9 @@ def forward_numpyop(ops: List[NumpyOp],
         batched: Whether the `data` is batched or not. If it is batched, provide the string ('tf', 'torch', or 'np')
             indicating which type of tensors the batch contains.
     """
+    if not ops:
+        # Shortcut to prevent wasting time in to_tensor calls if there aren't any ops
+        return None
     if batched:
         # Cast data to Numpy before performing batch forward
         for key, val in data.items():
