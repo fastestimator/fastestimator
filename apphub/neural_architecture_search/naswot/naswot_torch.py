@@ -337,14 +337,14 @@ def fastestimator_run(batch_size=128, num_archs=1000, save_dir=tempfile.mkdtemp(
     batch_data = get_pipeline_data(batch_size)
 
     search = GridSearch(
-        score_fn=lambda search_idx,
+        eval_fn=lambda search_idx,
         uid: score_fn(search_idx, uid, batch_data=batch_data, config_info=config_info, batch_size=batch_size),
         params={"uid": uid_list},
         best_mode="max")
     search.fit()
 
     best_results = search.get_best_results()
-    score_list = [result[1] for result in search.get_search_results()]
+    score_list = [result['result']['value'] for result in search.get_search_summary()]
     acc_list = [config_info.loc[i, :]["accuracy"] for i in uid_list]
 
     tau, _ = stats.kendalltau(acc_list, score_list)
@@ -352,10 +352,14 @@ def fastestimator_run(batch_size=128, num_archs=1000, save_dir=tempfile.mkdtemp(
 
     print("Maximum accuracy among all the networks tested: ", np.max(acc_list))
     print("Params for best network: {}, best score: {} and corresponding accuracy: {}".format(
-        best_results[0], best_results[1], config_info.loc[best_results[0]["uid"], :]["accuracy"]))
+        best_results['param'],
+        best_results['result']['value'],
+        config_info.loc[best_results['param']["uid"], :]["accuracy"]))
     print(
         "The best network is the top - {} network among the selected networks, based on trained performance (accuracy)".
-        format(len(acc_list) - list(np.sort(acc_list)).index(config_info.loc[best_results[0]["uid"], :]["accuracy"])))
+        format(
+            len(acc_list) -
+            list(np.sort(acc_list)).index(config_info.loc[best_results['param']["uid"], :]["accuracy"])))
 
 
 if __name__ == "__main__":
