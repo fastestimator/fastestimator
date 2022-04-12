@@ -338,7 +338,7 @@ def fastestimator_run(batch_size=128, num_archs=1000, save_dir=tempfile.mkdtemp(
 
     search = GridSearch(
         eval_fn=lambda search_idx,
-        uid: score_fn(search_idx, uid, batch_data=batch_data, config_info=config_info),
+        uid: score_fn(search_idx, uid, batch_data=batch_data, config_info=config_info, batch_size=batch_size),
         params={"uid": uid_list},
         best_mode="max")
     search.fit()
