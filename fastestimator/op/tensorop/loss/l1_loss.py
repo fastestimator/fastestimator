@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from ctypes.wintypes import HACCEL
 from typing import Any, Dict, Iterable, List, Tuple, TypeVar, Union
 
 import tensorflow as tf

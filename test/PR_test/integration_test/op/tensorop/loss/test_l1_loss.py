@@ -37,7 +37,7 @@ class Test_L1_Loss(unittest.TestCase):
                                    [1.0, 0.0, 0.0, 0.0]])
         l1 = L1_Loss(inputs='x', outputs='x')
         output = l1.forward(data=[torch_pred, torch_true], state={})
-        self.assertTrue(np.allclose(output.detach().numpy(), 0.0813))
+        self.assertTrue(np.allclose(output.detach().numpy(), 0.081250004))
 
     def test_Smooth_L1_tf(self):
         tf_true = tf.constant([[0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0], [1, 0, 0, 0]])
@@ -54,7 +54,7 @@ class Test_L1_Loss(unittest.TestCase):
                                    [1.0, 0.0, 0.0, 0.0]])
         smooth_l1 = L1_Loss(inputs='x', outputs='x', loss_type='Smooth', beta=0.65)
         output = smooth_l1.forward(data=[torch_pred, torch_true], state={})
-        self.assertTrue(np.allclose(output.detach().numpy(), 0.0111))
+        self.assertTrue(np.allclose(output.detach().numpy(), 0.011057693))
 
     def test_Huber_tf(self):
         tf_true = tf.constant([[0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0], [1, 0, 0, 0]])
@@ -71,4 +71,4 @@ class Test_L1_Loss(unittest.TestCase):
                                    [1.0, 0.0, 0.0, 0.0]])
         Huber = L1_Loss(inputs='x', outputs='x', loss_type='Huber', beta=0.65)
         output = Huber.forward(data=[torch_pred, torch_true], state={})
-        self.assertTrue(np.allclose(output.detach().numpy(), 0.0072))
+        self.assertTrue(np.allclose(output.detach().numpy(), 0.0071875006))
