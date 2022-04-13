@@ -66,3 +66,6 @@ from fastestimator.backend.update_model import update_model
 from fastestimator.backend.watch import watch
 from fastestimator.backend.zeros_like import zeros_like
 from fastestimator.backend.zscore import zscore
+from fastestimator.backend.l1_loss import l1_loss
+from fastestimator.backend.smooth_l1_loss import Smooth_l1_loss
+from fastestimator.backend.huber import Huber
