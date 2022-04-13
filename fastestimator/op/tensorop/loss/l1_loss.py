@@ -13,11 +13,10 @@
 # limitations under the License.
 # ==============================================================================
 from ctypes.wintypes import HACCEL
-from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Tuple, TypeVar, Union
 
 import tensorflow as tf
 import torch
-from sklearn.linear_model import HuberRegressor
 
 from fastestimator.backend.huber import Huber
 from fastestimator.backend.l1_loss import l1_loss

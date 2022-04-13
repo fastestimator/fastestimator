@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 import tensorflow as tf
 import torch
@@ -74,24 +74,3 @@ def Huber(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(y_pred)))
     return huber_loss
-
-
-if __name__ == '__main__':
-
-    print('TF')
-    # true = tf.constant([[[0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0], [1, 0, 0, 0]], [[0, 1, 0, 0], [0, 0, 0, 1],
-    #                                                                                [0, 0, 1, 0], [1, 0, 0, 0]]])
-    # pred = tf.constant([[[0.1, 0.9, 0.05, 0.05], [0.1, 0.2, 0.0, 0.7], [0.0, 0.15, 0.8, 0.05], [1.0, 0.0, 0.0, 0.0]],
-    #                     [[0.1, 0.9, 0.05, 0.05], [0.1, 0.2, 0.0, 0.7], [0.0, 0.15, 0.8, 0.05], [1.0, 0.0, 0.0, 0.0]]])
-    true = tf.constant([[0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0], [1, 0, 0, 0]])
-    pred = tf.constant([[0.1, 0.9, 0.05, 0.05], [0.1, 0.2, 0.0, 0.7], [0.0, 0.15, 0.8, 0.05], [1.0, 0.0, 0.0, 0.0]])
-    print('L1 : ', reduce_mean(Huber(true, pred, beta=0.65)).numpy())
-
-    print('Torch')
-    # true = torch.tensor([[[0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0], [1, 0, 0, 0]], [[0, 1, 0, 0], [0, 0, 0, 1],
-    #                                                                                 [0, 0, 1, 0], [1, 0, 0, 0]]])
-    # pred = torch.tensor([[[0.1, 0.9, 0.05, 0.05], [0.1, 0.2, 0.0, 0.7], [0.0, 0.15, 0.8, 0.05], [1.0, 0.0, 0.0, 0.0]],
-    #                      [[0.1, 0.9, 0.05, 0.05], [0.1, 0.2, 0.0, 0.7], [0.0, 0.15, 0.8, 0.05], [1.0, 0.0, 0.0, 0.0]]])
-    true = torch.tensor([[0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0], [1, 0, 0, 0]])
-    pred = torch.tensor([[0.1, 0.9, 0.05, 0.05], [0.1, 0.2, 0.0, 0.7], [0.0, 0.15, 0.8, 0.05], [1.0, 0.0, 0.0, 0.0]])
-    print('L1 : ', reduce_mean(Huber(true, pred, beta=0.65)))
