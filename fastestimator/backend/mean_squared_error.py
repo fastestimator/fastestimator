@@ -40,8 +40,8 @@ def mean_squared_error(y_true: Tensor, y_pred: Tensor) -> Tensor:
     true = torch.tensor([[0,1,0,0], [0,0,0,1], [0,0,1,0], [1,0,0,0]])
     pred = torch.tensor([[0.1,0.9,0.05,0.05], [0.1,0.2,0.0,0.7], [0.0,0.15,0.8,0.05], [1.0,0.0,0.0,0.0]])
     b = fe.backend.mean_squared_error(y_pred=pred, y_true=true)  # [0.0063, 0.035, 0.016, 0.0]
-    true = tf.constant([[1], [3], [2], [0]])
-    pred = tf.constant([[2.0], [0.0], [2.0], [1.0]])
+    true = torch.tensor([[1], [3], [2], [0]])
+    pred = torch.tensor([[2.0], [0.0], [2.0], [1.0]])
     b = fe.backend.mean_squared_error(y_pred=pred, y_true=true)  # [1.0, 9.0, 0.0, 1.0]
     ```
 
