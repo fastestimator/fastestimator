@@ -18,7 +18,6 @@ import numpy as np
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.convert_tensor_precision import convert_input_precision
 from fastestimator.backend.reduce_mean import reduce_mean
 from fastestimator.backend.reduce_sum import reduce_sum
 
@@ -30,7 +29,7 @@ def get_denominator(y_true: Tensor, y_pred: Tensor, soft_dice: bool) -> Tensor:
         Calculate sum/squared sum of y_true and y_pred
 
         Args:
-            y_pred: Prediction with a shape like (Batch, C). dtype: float32 or float16.
+            y_pred: Prediction with a shape like (Batch, C, H, W) for torch and (Batch, H, W, C) for tensorflow or numpy. dtype: float32 or float16.
             y_true: Ground truth class labels with a shape like `y_pred`. dtype: int or float32 or float16.
             soft_dice: Whether to add direct sum or square sum of inputs
 
@@ -38,12 +37,7 @@ def get_denominator(y_true: Tensor, y_pred: Tensor, soft_dice: bool) -> Tensor:
             The sum or squared sum of y_pred and y_true
     """
     if soft_dice:
-        if tf.is_tensor(y_true):
-            return tf.square(y_true) + tf.square(y_pred)
-        elif isinstance(y_true, torch.Tensor):
-            return torch.square(y_true) + torch.square(y_pred)
-        elif isinstance(y_true, np.ndarray):
-            return np.square(y_true) + np.square(y_pred)
+        return y_true**2 + y_pred**2
     else:
         return y_true + y_pred
 
@@ -53,23 +47,52 @@ def get_axis(y_true: Tensor, channel_average: bool) -> Tensor:
         Get the axis to apply reduced_sum on.
 
         Args:
-            y_true: Prediction with a shape like (Batch, C). dtype: float32 or float16.
+            y_true: Ground truth class labels with a shape like (Batch, C, H, W) for torch and (Batch, H, W, C) for tensorflow or numpy. dtype: int or float32 or float16.
             channel_average: Whether to average the channel wise dice score.
 
         Returns:
             The axis on which reduce_sum needs to be applied.
     """
-    axis = (1, 2, 3)
-    if tf.is_tensor(y_true) or isinstance(y_true, np.ndarray):
+    dims = y_true.ndim
+    if dims <= 2:
+        return None
+    else:
+        input_axis = list(range(dims))
+        axis = input_axis[1:]
         if channel_average:
-            axis = (1, 2)
+            if tf.is_tensor(y_true) or isinstance(y_true, np.ndarray):
+                axis = input_axis[1:-1]
+            elif isinstance(y_true, torch.Tensor):
+                axis = input_axis[2:]
+            else:
+                raise ValueError("Unsupported tensor type.")
+
+        return axis
+
+
+def cast(y_true, epsilon, dtype):
+    """
+        Cast y_true, epsilon to desired data type.
+
+        Args:
+            y_true: Ground truth class labels with a shape like (Batch, C, H, W) for torch and (Batch, H, W, C) for tensorflow or numpy. dtype: int or float32 or float16.
+            epsilon: Floating point value to avoid divide by zero error.
+            dtype: Datatype to which the y_true and epsilon should be converted to.
+
+        Returns:
+            Converted y_true and epsilon values.
+
+        Raises:
+            AssertionError: If `y_true` are unacceptable data types. if data type is other than np.array, tensor.Tensor, tf.Tensor.
+    """
+    if tf.is_tensor(y_true):
+        return tf.cast(y_true, dtype), tf.cast(epsilon, dtype)
     elif isinstance(y_true, torch.Tensor):
-        if channel_average:
-            axis = (2, 3)
+        return y_true.type(dtype), torch.tensor(epsilon).type(dtype)
+    elif isinstance(y_true, np.ndarray):
+        return np.array(y_true, dtype=dtype), np.array(epsilon, dtype=dtype)
     else:
         raise ValueError("Unsupported tensor type.")
-
-    return axis
 
 
 def dice_score(y_pred: Tensor,
@@ -117,30 +140,32 @@ def dice_score(y_pred: Tensor,
         soft_dice: Whether to square elements. If True, square of elements is added.
         sample_average: Whether to average the element-wise dice score.
         channel_average: Whether to average the channel wise dice score.
+        epsilon: floating point value to avoid divide by zero error.
 
     Returns:
-        The dice score between `y_pred` and `y_true`. A scalar if `average_sample` is True, else a
-        tensor with the shape (Batch).
+        The dice score between `y_pred` and `y_true`. A scalar if `average_sample` is True, else a tensor with the shape (Batch).
 
     Raises:
         AssertionError: If `y_true` or `y_pred` are unacceptable data types. if data type is other than np.array, tensor.Tensor, tf.Tensor.
     """
-    y_true = convert_input_precision(y_true)
-    y_pred = convert_input_precision(y_pred)
-    epsilon = convert_input_precision(epsilon)
+    y_true, epsilon = cast(y_true, epsilon, y_pred.dtype)
 
     axis = get_axis(y_true, channel_average)
 
-    numerator = reduce_sum(y_true*y_pred, axis=axis)
+    keep_dims = False
+    if axis == None:
+        keep_dims = True
+
+    numerator = reduce_sum(y_true*y_pred, axis=axis, keepdims=keep_dims)
 
     denominator = get_denominator(y_true, y_pred, soft_dice)
 
-    denominator = reduce_sum(denominator, axis=axis)
+    denominator = reduce_sum(denominator, axis=axis, keepdims=keep_dims)
 
-    dice_score = (2 * (numerator + epsilon)) / (denominator + epsilon)
+    dice_score = ((2 * numerator) + epsilon) / (denominator + epsilon)
 
     if channel_average:
-        dice_score = reduce_mean(dice_score, axis=1)
+        dice_score = reduce_mean(dice_score, axis=-1)
 
     if sample_average:
         dice_score = reduce_mean(dice_score)

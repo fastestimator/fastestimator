@@ -24,7 +24,7 @@ from fastestimator.backend.cast import cast
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
 
-def convert_input_precision(tensor: Tensor) -> Tensor:
+def convert_tensor_precision(tensor: Tensor) -> Tensor:
     """
         Adjust the input data precision based of environment precision.
 

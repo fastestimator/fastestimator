@@ -78,3 +78,9 @@ class TestDiceScore(unittest.TestCase):
         cls.assertAlmostEqual(np_dice_score, 0.839, delta=0.001)
         cls.assertAlmostEqual(tf_dice_score, 0.839, delta=0.001)
         cls.assertAlmostEqual(torch_dice_score, 0.839, delta=0.001)
+
+    def test_dice_loss_2d(cls):
+        np_true = np.array([[0, 1, 1], [1, 0, 1], [0, 0, 1]])
+        np_pred = np.array([[1, 1, 1], [1, 1, 1], [1, 0, 1]])
+        np_dice_score = dice_score(np_true, np_pred)
+        cls.assertAlmostEqual(np_dice_score, 0.7692, delta=0.001)

@@ -16,12 +16,12 @@ from typing import Iterable, Union
 
 import numpy as np
 
-from fastestimator.backend.convert_tensor_precision import convert_input_precision
 from fastestimator.backend.dice_score import dice_score
 from fastestimator.trace.meta.per_ds import per_ds
 from fastestimator.trace.trace import Trace
 from fastestimator.util import Data
 from fastestimator.util.traceability_util import traceable
+from fastestimator.util.util import to_number
 
 
 @per_ds
@@ -74,9 +74,10 @@ class Dice(Trace):
         self.dice = []
 
     def on_batch_end(self, data: Data) -> None:
-        y_true, y_pred = data[self.true_key], data[self.pred_key]
+        y_true, y_pred = to_number(
+            data[self.true_key]), to_number(data[self.pred_key])
 
-        y_pred = convert_input_precision(y_pred > self.threshold)
+        y_pred = np.where(y_pred < 0.5, 1.0, 0.0).astype(y_pred.dtype)
 
         dice = dice_score(y_pred=y_pred, y_true=y_true,
                           channel_average=self.channel_average, epsilon=self.smooth)

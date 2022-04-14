@@ -29,7 +29,7 @@ class DiceScore(TensorOp):
     Calculate Element-Wise Dice Score.
 
         Args:
-            y_pred: Prediction with a shape like (Batch, C). dtype: float32 or float16.
+            y_pred: Prediction with a shape like (Batch, C, H, W) for torch and (Batch, H, W, C) for tensorflow or numpy. dtype: float32 or float16.
             y_true: Ground truth class labels with a shape like `y_pred`. dtype: int or float32 or float16.
             soft_dice: Whether to square elements. If True, square of elements is added.
             sample_average: Whether to average the element-wise dice score.
