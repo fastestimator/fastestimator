@@ -23,6 +23,10 @@ from fastestimator.backend.reduce_sum import reduce_sum
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
+allowed_data_types = [torch.float, torch.float16, torch.float32, torch.float64,
+                      np.float, np.float16, np.float32, np.float64,
+                      tf.float16, tf.float32, tf.float64]
+
 
 def get_denominator(y_true: Tensor, y_pred: Tensor, soft_dice: bool) -> Tensor:
     """
@@ -85,6 +89,10 @@ def cast(y_true, epsilon, dtype):
         Raises:
             AssertionError: If `y_true` are unacceptable data types. if data type is other than np.array, tensor.Tensor, tf.Tensor.
     """
+    if dtype not in allowed_data_types:
+        raise ValueError(
+            "Provided datatype {} is not supported, only {} data types are supported".format(dtype, allowed_data_types))
+
     if tf.is_tensor(y_true):
         return tf.cast(y_true, dtype), tf.cast(epsilon, dtype)
     elif isinstance(y_true, torch.Tensor):

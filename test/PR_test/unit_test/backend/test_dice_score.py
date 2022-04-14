@@ -31,12 +31,12 @@ class TestDiceScore(unittest.TestCase):
         cls.pred = [[[[0, 1, 0], [1, 0, 0], [1, 0, 1]],
                      [[0, 1, 1], [1, 0, 1], [0, 0, 0]],
                      [[0, 0, 1], [1, 0, 1], [1, 0, 1]]]]
-        cls.np_true = np.array(cls.true)
-        cls.np_pred = np.array(cls.pred)
-        cls.torch_true = torch.tensor(cls.true)
-        cls.torch_pred = torch.tensor(cls.pred)
-        cls.tf_true = tf.constant(cls.true)
-        cls.tf_pred = tf.constant(cls.pred)
+        cls.np_true = np.array(cls.true, dtype=np.float32)
+        cls.np_pred = np.array(cls.pred, dtype=np.float32)
+        cls.torch_true = torch.tensor(cls.true).type(torch.float32)
+        cls.torch_pred = torch.tensor(cls.pred).type(torch.float32)
+        cls.tf_true = tf.constant(cls.true, dtype=tf.float32)
+        cls.tf_pred = tf.constant(cls.pred, dtype=tf.float32)
 
     def test_dice_score(cls):
         np_dice_score = dice_score(cls.np_true, cls.np_pred)
@@ -80,7 +80,7 @@ class TestDiceScore(unittest.TestCase):
         cls.assertAlmostEqual(torch_dice_score, 0.839, delta=0.001)
 
     def test_dice_loss_2d(cls):
-        np_true = np.array([[0, 1, 1], [1, 0, 1], [0, 0, 1]])
-        np_pred = np.array([[1, 1, 1], [1, 1, 1], [1, 0, 1]])
+        np_true = np.array([[0, 1, 1], [1, 0, 1], [0, 0, 1]], dtype=np.float32)
+        np_pred = np.array([[1, 1, 1], [1, 1, 1], [1, 0, 1]], dtype=np.float32)
         np_dice_score = dice_score(np_true, np_pred)
         cls.assertAlmostEqual(np_dice_score, 0.7692, delta=0.001)
