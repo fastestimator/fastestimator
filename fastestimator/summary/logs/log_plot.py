@@ -16,18 +16,19 @@ import math
 import os
 import re
 from collections import defaultdict
+from itertools import cycle
 from typing import Any, Dict, List, Optional, Set, Union
 
-import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sns
-from matplotlib.markers import MarkerStyle
-from matplotlib.ticker import EngFormatter
 from natsort import humansorted
+from plotly.graph_objects import Figure
+import plotly.graph_objects as go
+import seaborn as sns
+from plotly.subplots import make_subplots
 from scipy.ndimage.filters import gaussian_filter1d
 
 from fastestimator.summary.summary import Summary, ValWithError
-from fastestimator.util.util import prettify_metric_name, to_list, to_set
+from fastestimator.util.util import in_notebook, prettify_metric_name, to_list, to_set
 
 
 class _MetricGroup:
@@ -183,16 +184,14 @@ class _MetricGroup:
 
 def plot_logs(experiments: List[Summary],
               smooth_factor: float = 0,
-              share_legend: bool = True,
               ignore_metrics: Optional[Set[str]] = None,
               pretty_names: bool = False,
-              include_metrics: Optional[Set[str]] = None) -> plt.Figure:
+              include_metrics: Optional[Set[str]] = None) -> Figure:
     """A function which will plot experiment histories for comparison viewing / analysis.
 
     Args:
         experiments: Experiment(s) to plot.
         smooth_factor: A non-negative float representing the magnitude of gaussian smoothing to apply (zero for none).
-        share_legend: Whether to have one legend across all graphs (True) or one legend per graph (False).
         pretty_names: Whether to modify the metric names in graph titles (True) or leave them alone (False).
         ignore_metrics: Any keys to ignore during plotting.
         include_metrics: A whitelist of keys to include during plotting. If None then all will be included.
@@ -204,7 +203,7 @@ def plot_logs(experiments: List[Summary],
     experiments = humansorted(to_list(experiments), lambda exp: exp.name)
     n_experiments = len(experiments)
     if n_experiments == 0:
-        return plt.subplots(111)[0]
+        return make_subplots()
 
     ignore_keys = ignore_metrics or set()
     ignore_keys = to_set(ignore_keys)
@@ -236,14 +235,13 @@ def plot_logs(experiments: List[Summary],
 
     metric_list = list(sorted(metric_histories.keys()))
     if len(metric_list) == 0:
-        return plt.subplots(111)[0]
+        return make_subplots()
     ds_ids = humansorted(ds_ids)  # Sort them to have consistent ordering (and thus symbols) between plot runs
-    n_ds_ids = len(ds_ids)  # Each ds_id will have its own set of legend entries, so need to count them
+    n_plots = len(metric_list)
 
-    # If sharing legend and there is more than 1 plot, then dedicate subplot(s) for the legend
-    share_legend = share_legend and (len(metric_list) > 1)
-    n_legends = math.ceil(n_experiments * n_ds_ids / 4)
-    n_plots = len(metric_list) + (share_legend * n_legends)
+    # Non-Shared legends aren't supported yet. If they get supported then maybe can have that feature here too.
+    #  https://github.com/plotly/plotly.js/issues/5099
+    #  https://github.com/plotly/plotly.js/issues/5098
 
     # map the metrics into an n x n grid, then remove any extra columns. Final grid will be n x m with m <= n
     n_rows = math.ceil(math.sqrt(n_plots))
@@ -261,55 +259,44 @@ def plot_logs(experiments: List[Summary],
     for metric in nd1_metrics:
         metric_grid_location[metric] = (idx // n_cols, idx % n_cols)
         idx += 1
+    titles = [k for k, v in sorted(list(metric_grid_location.items()), key=lambda e: e[1][0] * n_cols + e[1][1])]
+    if pretty_names:
+        titles = [prettify_metric_name(title) for title in titles]
 
-    sns.set_context('paper')
-    fig, axs = plt.subplots(n_rows, n_cols, sharex='all', figsize=(4 * n_cols, 2.8 * n_rows))
+    fig = make_subplots(rows=n_rows, cols=n_cols, subplot_titles=titles, shared_xaxes='all')
+    fig.update_layout({'plot_bgcolor': '#FFF',
+                       'hovermode': 'closest',
+                       'margin': {'t': 50},
+                       'modebar': {'add': ['hoverclosest', 'hovercompare'],
+                                   'remove': ['select2d', 'lasso2d']},
+                       'legend': {'tracegroupgap': 5,
+                                  'font': {'size': 11}}})
 
-    # If only one row, need to re-format the axs object for consistency. Likewise for columns
-    if n_rows == 1:
-        axs = [axs]
-    if n_cols == 1:
-        axs = [[ax] for ax in axs]
-
-    for metric in metric_grid_location.keys():
-        axis = axs[metric_grid_location[metric][0]][metric_grid_location[metric][1]]
-        if metric_histories[metric].ndim() == 1:
-            axis.grid(linestyle='')
+    # Set x-labels
+    for idx, metric in enumerate(titles, start=1):
+        plotly_idx = idx if idx > 1 else ""
+        x_axis_name = f'xaxis{plotly_idx}'
+        y_axis_name = f'yaxis{plotly_idx}'
+        if metric_histories[metric].ndim() > 1:
+            fig['layout'][x_axis_name]['title'] = 'Steps'
+            fig['layout'][x_axis_name]['showticklabels'] = True
+            fig['layout'][x_axis_name]['linecolor'] = "#BCCCDC"
+            fig['layout'][y_axis_name]['linecolor'] = "#BCCCDC"
         else:
-            axis.grid(linestyle='--')
-            axis.ticklabel_format(axis='y', style='sci', scilimits=(-2, 3))
-        axis.set_title(metric if not pretty_names else prettify_metric_name(metric), fontweight='bold')
-        axis.spines['top'].set_visible(False)
-        axis.spines['right'].set_visible(False)
-        axis.spines['bottom'].set_visible(False)
-        axis.spines['left'].set_visible(False)
-        axis.tick_params(bottom=False, left=False)
-        axis.xaxis.set_major_formatter(EngFormatter(sep=""))  # Convert 10000 steps to 10k steps
-
-    # some of the later rows/columns might be unused or reserved for legends, so disable them
-    last_row_idx = math.ceil(len(metric_list) / n_cols) - 1
-    last_column_idx = len(metric_list) - last_row_idx * n_cols - 1
-    for c in range(n_cols):
-        if c <= last_column_idx:
-            axs[last_row_idx][c].set_xlabel('Steps')
-            axs[last_row_idx][c].xaxis.set_tick_params(which='both', labelbottom=True)
-        else:
-            axs[last_row_idx][c].axis('off')
-            axs[last_row_idx - 1][c].set_xlabel('Steps')
-            axs[last_row_idx - 1][c].xaxis.set_tick_params(which='both', labelbottom=True)
-        for r in range(last_row_idx + 1, n_rows):
-            axs[r][c].axis('off')
-
-    # the 1D metrics don't need x axis, so move them up, starting with the last in case multiple rows of them
-    for metric in reversed(nd1_metrics):
-        row = metric_grid_location[metric][0]
-        col = metric_grid_location[metric][1]
-        axs[row][col].axis('off')
-        if row > 0:
-            axs[row - 1][col].set_xlabel('Steps')
-            axs[row - 1][col].xaxis.set_tick_params(which='both', labelbottom=True)
+            # Put blank data onto the axis to instantiate the domain
+            row, col = metric_grid_location[metric][0], metric_grid_location[metric][1]
+            fig.add_annotation(text='', showarrow=False, row=row + 1, col=col + 1)
+            # Hide the axis stuff
+            fig['layout'][x_axis_name]['showgrid'] = False
+            fig['layout'][x_axis_name]['zeroline'] = False
+            fig['layout'][x_axis_name]['visible'] = False
+            fig['layout'][y_axis_name]['showgrid'] = False
+            fig['layout'][y_axis_name]['zeroline'] = False
+            fig['layout'][y_axis_name]['visible'] = False
 
     colors = sns.hls_palette(n_colors=n_experiments, s=0.95) if n_experiments > 10 else sns.color_palette("colorblind")
+    alpha_colors = [f'rgba({int(rgb[0]*256)},{int(rgb[1]*256)},{int(rgb[2]*256)},0.3)' for rgb in colors]
+    colors = [f'rgb({int(rgb[0]*256)},{int(rgb[1]*256)},{int(rgb[2]*256)})' for rgb in colors]
     color_offset = defaultdict(lambda: 0)
     # If there is only 1 experiment, we will use alternate colors based on mode
     if n_experiments == 1:
@@ -317,89 +304,113 @@ def plot_logs(experiments: List[Summary],
         color_offset['test'] = 2
         color_offset['infer'] = 3
 
-    handles = []
-    labels = []
     # exp_id : {mode: {ds_id: {type: True}}}
-    has_label = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: False))))
-    ax_text = defaultdict(lambda: (0.0, 0.9))  # Where to put the text on a given axis
+    add_label = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: True))))
+    # {row: {col: (x, y)}}
+    ax_text = defaultdict(lambda: defaultdict(lambda: (0.0, 0.9)))  # Where to put the text on a given axis
     # Set up ds_id markers. The empty ds_id will have no extra marker. After that there are 4 configurations of 3-arm
-    # marker, followed by asterisks with growing numbers of arms (starting at 4).
-    ds_id_markers = ['', "1", "2", "3", "4"] + [(ticks, 2, 0) for ticks in range(4, n_ds_ids - 1)]
-    ds_id_markers = {k: v for k, v in zip(ds_ids, ds_id_markers)}
+    # marker, followed by 'x', '+', '*', and pound. After that it will just repeat the symbol set.
+    ds_id_markers = [None, 37, 38, 39, 40, 34, 33, 35, 36]  # https://plotly.com/python/marker-style/
+    ds_id_unicode = [None, "\U00002144", "\U0001d5b8", "\U00002919", "\U0000291a", "\U000000d7", "\U0000002b",
+                     "\U00002733", "\U00002317"]  # Symbols located using https://shapecatcher.com/index.html
+    ds_id_markers = {k: v for k, v in zip(ds_ids, cycle(ds_id_markers))}
+    ds_id_unicode = {k: '' if v is None else f'{v} ' for k, v in zip(ds_ids, cycle(ds_id_unicode))}
+    # Plotly doesn't support z-order, so delay insertion until all the plots are figured out:
+    # https://github.com/plotly/plotly.py/issues/2345
+    z_order = defaultdict(list)  # {order: [(plotly element, row, col), ...]}
+
+    # Figure out the legend ordering
+    legend_order = []
+    for exp_idx, experiment in enumerate(experiments):
+        for metric, group in metric_histories.items():
+            for mode in group.modes(exp_idx):
+                for ds_id in group.ds_ids(exp_idx, mode):
+                    ds_title = f"{ds_id} " if ds_id else ''
+                    title = f"{experiment.name} ({ds_title}{mode})" if n_experiments > 1 else f"{ds_title}{mode}"
+                    legend_order.append(title)
+    legend_order.sort()
+    legend_order = {legend: order for order, legend in enumerate(legend_order)}
+
     # Actually do the plotting
     for exp_idx, experiment in enumerate(experiments):
         for metric, group in metric_histories.items():
-            axis = axs[metric_grid_location[metric][0]][metric_grid_location[metric][1]]
+            row, col = metric_grid_location[metric][0], metric_grid_location[metric][1]
             if group.ndim() == 1:
                 # Single value
                 for mode in group.modes(exp_idx):
                     for ds_id in group.ds_ids(exp_idx, mode):
                         ds_title = f"{ds_id} " if ds_id else ''
-                        ax_id = id(axis)
                         prefix = f"{experiment.name} ({ds_title}{mode})" if n_experiments > 1 else f"{ds_title}{mode}"
-                        axis.text(ax_text[ax_id][0],
-                                  ax_text[ax_id][1],
-                                  f"{prefix}: {group.get_val(exp_idx, mode, ds_id)}",
-                                  color=colors[exp_idx + color_offset[mode]],
-                                  transform=axis.transAxes)
-                        ax_text[ax_id] = (ax_text[ax_id][0], ax_text[ax_id][1] - 0.1)
-                        if ax_text[ax_id][1] < 0:
-                            ax_text[ax_id] = (ax_text[ax_id][0] + 0.5, 0.9)
+                        plotly_idx = row*n_cols+col+1 if row*n_cols+col+1 > 1 else ''
+                        fig.add_annotation(text=f"{prefix}: {group.get_val(exp_idx, mode, ds_id)}",
+                                           font={'color': colors[exp_idx + color_offset[mode]]},
+                                           showarrow=False,
+                                           xref=f'x{plotly_idx} domain',
+                                           xanchor='left',
+                                           x=ax_text[row][col][0],
+                                           yref=f'y{plotly_idx} domain',
+                                           yanchor='top',
+                                           y=ax_text[row][col][1],
+                                           exclude_empty_subplots=False)
+                        ax_text[row][col] = (ax_text[row][col][0], ax_text[row][col][1] - 0.1)
+                        if ax_text[row][col][1] < 0:
+                            ax_text[row][col] = (ax_text[row][col][0] + 0.5, 0.9)
             elif group.ndim() == 2:
                 for mode, dsv in group[exp_idx].items():
+                    color = colors[exp_idx + color_offset[mode]]
                     for ds_id, data in dsv.items():
                         ds_title = f"{ds_id} " if ds_id else ''
                         title = f"{experiment.name} ({ds_title}{mode})" if n_experiments > 1 else f"{ds_title}{mode}"
                         if data.shape[0] < 2:
-                            # This particular mode only has a single data point, so draw a shape instead of a line
-                            xy = [data[0][0], data[0][1]]
-                            if mode == 'train':
-                                style = MarkerStyle(marker='o', fillstyle='full')
-                            elif mode == 'eval':
-                                style = MarkerStyle(marker='D', fillstyle='full')
-                            elif mode == 'test':
-                                style = MarkerStyle(marker='s', fillstyle='full')
-                            else:
-                                style = MarkerStyle(marker='d', fillstyle='full')
-                            if isinstance(xy[1], ValWithError):
-                                # We've got error bars
-                                x = xy[0]
-                                y = xy[1]
-                                # Plotting requires positive values for error
-                                y_err = [[max(1e-9, y.y - y.y_min)], [max(1e-9, y.y_max - y.y)]]
-                                axis.errorbar(x=x,
-                                              y=y.y,
-                                              yerr=y_err,
-                                              ecolor=colors[exp_idx + color_offset[mode]],
-                                              elinewidth=1.5,
-                                              capsize=4.0,
-                                              capthick=1.5,
-                                              zorder=3)  # zorder to put markers on top of line segments
-                                xy[1] = y.y
-                            s = axis.scatter(xy[0],
-                                             xy[1],
-                                             s=45,
-                                             c=[colors[exp_idx + color_offset[mode]]],
-                                             label=title,
-                                             marker=style,
-                                             linewidth=1.0,
-                                             edgecolors='black',
-                                             zorder=4)  # zorder to put markers on top of line segments
+                            x = data[0][0]
+                            y = data[0][1]
+                            y_min = None
+                            y_max = None
+                            if isinstance(y, ValWithError):
+                                y_min = y.y_min
+                                y_max = y.y_max
+                                y = y.y
+                            marker_style = 'circle' if mode == 'train' else 'diamond' if mode == 'eval' \
+                                else 'square' if mode == 'test' else 'hexagram'
+                            limit_data = [(y_max, y_min)] if y_max is not None and y_min is not None else None
+                            tip_text = "%{x}: (%{customdata[1]:.3f}, %{y:.3f}, %{customdata[0]:.3f})" if \
+                                limit_data is not None else "%{x}: %{y:.3f}"
+                            error_y = None if limit_data is None else {'type': 'data',
+                                                                       'symmetric': False,
+                                                                       'array': [y_max-y],
+                                                                       'arrayminus': [y-y_min]}
+                            z_order[2].append((go.Scatter(x=[x],
+                                                          y=[y],
+                                                          name=f"{ds_id_unicode[ds_id]}{title}",
+                                                          legendgroup=title,
+                                                          customdata=limit_data,
+                                                          hovertemplate=tip_text,
+                                                          mode='markers',
+                                                          marker={'color': color,
+                                                                  'size': 12,
+                                                                  'symbol': marker_style},
+                                                          error_y=error_y,
+                                                          showlegend=add_label[exp_idx][mode][ds_id]['patch'],
+                                                          legendrank=legend_order[title]),
+                                              row,
+                                              col))
+                            add_label[exp_idx][mode][ds_id]['patch'] = False
                             if ds_id and ds_id_markers[ds_id]:
-                                # Overlay the dataset id marker on top of the normal scatter plot marker
-                                s2 = axis.scatter(xy[0],
-                                                  xy[1],
-                                                  s=45,
-                                                  c='white',
-                                                  label=title,
-                                                  marker=ds_id_markers[ds_id],
-                                                  linewidth=1.1,
-                                                  zorder=5)  # zorder to put markers on top of line segments
-                                s = (s, s2)
-                            if not has_label[exp_idx][mode][ds_id]['patch']:
-                                labels.append(title)
-                                handles.append(s)
-                                has_label[exp_idx][mode][ds_id]['patch'] = True
+                                # TODO - get this overlayed in legend. maybe need to custom draw the shape?
+                                #  https://plotly.com/python/shapes/
+                                z_order[3].append((go.Scatter(x=[x],
+                                                              y=[y],
+                                                              name=title,
+                                                              legendgroup=title,
+                                                              hoverinfo='skip',
+                                                              mode='markers',
+                                                              marker={'color': color,
+                                                                      'size': 8,
+                                                                      'line': {'width': 1.5,
+                                                                               'color': 'White'},
+                                                                      'symbol': ds_id_markers[ds_id]},
+                                                              showlegend=False),
+                                                   row, col))
                         else:
                             # We can draw a line
                             y = data[:, 1]
@@ -413,121 +424,120 @@ def plot_logs(experiments: List[Summary],
                                 if smooth_factor != 0:
                                     y_min = gaussian_filter1d(y_min, sigma=smooth_factor)
                                     y_max = gaussian_filter1d(y_max, sigma=smooth_factor)
+                            # TODO - for smoothed lines, plot original data in background but greyed out
                             if smooth_factor != 0:
                                 y = gaussian_filter1d(y, sigma=smooth_factor)
                             x = data[:, 0]
-                            ln = axis.plot(
-                                x,
-                                y,
-                                color=colors[exp_idx + color_offset[mode]],
-                                label=title,
-                                linewidth=1.5,
-                                linestyle='solid' if mode == 'train' else
-                                'dashed' if mode == 'eval' else 'dotted' if mode == 'test' else 'dashdot',
-                                marker=ds_id_markers[ds_id],
-                                markersize=7,
-                                markeredgewidth=1.5,
-                                markeredgecolor='black',
-                                markevery=0.1)
-                            if not has_label[exp_idx][mode][ds_id]['line']:
-                                labels.append(title)
-                                handles.append(ln[0])
-                                has_label[exp_idx][mode][ds_id]['line'] = True
-                            if y_max is not None and y_min is not None:
-                                axis.fill_between(x.astype(np.float32),
-                                                  y_max,
-                                                  y_min,
-                                                  facecolor=colors[exp_idx + color_offset[mode]],
-                                                  alpha=0.3,
-                                                  zorder=-1)
+                            linestyle = 'solid' if mode == 'train' else 'dash' if mode == 'eval' else 'dot' if \
+                                mode == 'test' else 'dashdot'
+                            limit_data = [(mx, mn) for mx, mn in zip(y_max, y_min)] if y_max is not None and y_min is \
+                                not None else None
+                            tip_text = "%{x}: (%{customdata[1]:.3f}, %{y:.3f}, %{customdata[0]:.3f})" if \
+                                limit_data is not None else "%{x}: %{y:.3f}"
+                            z_order[1].append((go.Scatter(x=x,
+                                                          y=y,
+                                                          name=title,
+                                                          legendgroup=title,
+                                                          mode="lines+markers" if ds_id_markers[ds_id] else 'lines',
+                                                          marker={'color': color,
+                                                                  'size': 8,
+                                                                  'line': {'width': 2,
+                                                                           'color': 'DarkSlateGrey'},
+                                                                  'maxdisplayed': 10,
+                                                                  'symbol': ds_id_markers[ds_id]},
+                                                          line={'dash': linestyle,
+                                                                'color': color},
+                                                          customdata=limit_data,
+                                                          hovertemplate=tip_text,
+                                                          showlegend=add_label[exp_idx][mode][ds_id]['line'],
+                                                          legendrank=legend_order[title]),
+                                              row,
+                                              col))
+                            add_label[exp_idx][mode][ds_id]['line'] = False
+                            if limit_data is not None:
+                                z_order[0].append((go.Scatter(x=x,
+                                                              y=y_max,
+                                                              mode='lines',
+                                                              line={'width': 0},
+                                                              legendgroup=title,
+                                                              showlegend=False,
+                                                              hoverinfo='skip'),
+                                                   row,
+                                                   col))
+                                z_order[0].append((go.Scatter(x=x,
+                                                              y=y_min,
+                                                              mode='lines',
+                                                              line={'width': 0},
+                                                              fillcolor=alpha_colors[exp_idx+color_offset[mode]],
+                                                              fill='tonexty',
+                                                              legendgroup=title,
+                                                              showlegend=False,
+                                                              hoverinfo='skip'),
+                                                  row,
+                                                  col))
             else:
                 # Some kind of image or matrix. Not implemented yet.
                 pass
+    for z in sorted(list(z_order.keys())):
+        plts = z_order[z]
+        for plt, row, col in plts:
+            fig.add_trace(plt, row=row+1, col=col+1)
 
-    plt.tight_layout()
-
-    if labels:
-        if share_legend:
-            # Sort the labels
-            handles = [h for _, h in sorted(zip(labels, handles), key=lambda pair: pair[0])]
-            labels = sorted(labels)
-            # Split the labels over multiple legends if there are too many to fit in one axis
-            elems_per_legend = math.ceil(len(labels) / n_legends)
-            i = 0
-            for r in range(last_row_idx, n_rows):
-                for c in range(last_column_idx + 1 if r == last_row_idx else 0, n_cols):
-                    if len(handles) <= i:
-                        break
-                    axs[r][c].legend(
-                        handles[i:i + elems_per_legend],
-                        labels[i:i + elems_per_legend],
-                        loc='center',
-                        fontsize='large' if elems_per_legend <= 6 else 'medium' if elems_per_legend <= 8 else 'small')
-                    i += elems_per_legend
-        else:
-            for i in range(n_rows):
-                for j in range(n_cols):
-                    if i == last_row_idx and j > last_column_idx:
-                        break
-                    # We need to do some processing here to make per-dataset entries appear correctly
-                    handles, labels = axs[i][j].get_legend_handles_labels()
-                    labels.append('_')  # labels that start with _ wouldn't be collected, so we can use this to pad
-                    merged_h, merged_l = [], []
-                    idx = 0
-                    while idx < len(handles):
-                        # duplicates should always be next to one another since they appear as a result of ds_id patches
-                        if labels[idx] == labels[idx+1]:
-                            merged_l.append(labels[idx])
-                            merged_h.append((handles[idx], handles[idx+1]))
-                            idx += 1
-                        else:
-                            merged_l.append(labels[idx])
-                            merged_h.append(handles[idx])
-                        idx += 1
-                    # Apply the same sort order that we'd have if the legend were separate
-                    handles = [h for _, h in sorted(zip(merged_l, merged_h), key=lambda pair: pair[0])]
-                    labels = sorted(merged_l)
-                    axs[i][j].legend(handles, labels, loc='best', fontsize='small')
+    # If inside a jupyter notebook then force the height based on number of rows
+    if in_notebook():
+        fig.update_layout(height=280 * n_rows)
     return fig
 
 
 def visualize_logs(experiments: List[Summary],
                    save_path: str = None,
                    smooth_factor: float = 0,
-                   share_legend: bool = True,
                    pretty_names: bool = False,
                    ignore_metrics: Optional[Set[str]] = None,
                    include_metrics: Optional[Set[str]] = None,
-                   verbose: bool = True,
-                   dpi: int = 300):
+                   verbose: bool = True):
     """A function which will save or display experiment histories for comparison viewing / analysis.
 
     Args:
         experiments: Experiment(s) to plot.
         save_path: The path where the figure should be saved, or None to display the figure to the screen.
         smooth_factor: A non-negative float representing the magnitude of gaussian smoothing to apply (zero for none).
-        share_legend: Whether to have one legend across all graphs (True) or one legend per graph (False).
         pretty_names: Whether to modify the metric names in graph titles (True) or leave them alone (False).
         ignore_metrics: Any metrics to ignore during plotting.
         include_metrics: A whitelist of metric keys (None whitelists all keys).
         verbose: Whether to print out the save location.
-        dpi: The dpi at which to save the figure.
     """
-    plot_logs(experiments,
-              smooth_factor=smooth_factor,
-              share_legend=share_legend,
-              pretty_names=pretty_names,
-              ignore_metrics=ignore_metrics,
-              include_metrics=include_metrics)
+    fig = plot_logs(experiments,
+                    smooth_factor=smooth_factor,
+                    pretty_names=pretty_names,
+                    ignore_metrics=ignore_metrics,
+                    include_metrics=include_metrics)
+    config = {
+        'displaylogo': False,
+        'toImageButtonOptions': {
+            'format': 'png',  # one of png, svg, jpeg, webp
+            'height': None,
+            'width': None,
+            'filename': 'parse_logs',
+            'scale': 5  # Multiply title/legend/axis/canvas sizes by this factor (high resolution save)
+        }}
     if save_path is None:
-        plt.show()
+        fig.show(config=config)
     else:
         save_path = os.path.normpath(save_path)
         root_dir = os.path.dirname(save_path)
         if root_dir == "":
             root_dir = "."
         os.makedirs(root_dir, exist_ok=True)
-        save_file = os.path.join(root_dir, os.path.basename(save_path) or 'parse_logs.png')
+        save_file = os.path.join(root_dir, os.path.basename(save_path) or 'parse_logs.html')
+        config['toImageButtonOptions']['filename'] = os.path.splitext(os.path.basename(save_file))[0]
+        ext = os.path.splitext(save_file)[1]
+        if ext == '':
+            ext = '.html'
+            save_file = save_file + ext  # Use html by default
         if verbose:
             print("Saving to {}".format(save_file))
-        plt.savefig(save_file, dpi=dpi, bbox_inches="tight")
+        if ext == '.html':
+            fig.write_html(save_file, config=config)
+        else:
+            fig.write_image(save_file, width=1920, height=1080, scale=5)

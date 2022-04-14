@@ -81,16 +81,10 @@ class TestMain(unittest.TestCase):
                 self.assertEqual(args["ignore"], None)
 
             with self.subTest('args["smooth"]'):
-                self.assertEqual(args["smooth"], 1)
+                self.assertEqual(args["smooth"], 0)
 
             with self.subTest('args["pretty_names"]'):
                 self.assertEqual(args["pretty_names"], False)
-
-            with self.subTest('args["smooth"]'):
-                self.assertEqual(args["smooth"], 1)
-
-            with self.subTest('args["share_legend"]'):
-                self.assertEqual(args["share_legend"], True)
 
             with self.subTest('args["save"]'):
                 self.assertEqual(args["save"], False)
