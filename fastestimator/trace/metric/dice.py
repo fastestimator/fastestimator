@@ -77,7 +77,8 @@ class Dice(Trace):
         y_true, y_pred = to_number(
             data[self.true_key]), to_number(data[self.pred_key])
 
-        y_pred = np.where(y_pred < 0.5, 1.0, 0.0).astype(y_pred.dtype)
+        y_pred = np.where(y_pred > self.threshold, 1.0,
+                          0.0).astype(y_pred.dtype)
 
         dice = dice_score(y_pred=y_pred, y_true=y_true,
                           channel_average=self.channel_average, epsilon=self.smooth)
