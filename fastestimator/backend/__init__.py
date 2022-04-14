@@ -29,7 +29,9 @@ from fastestimator.backend.get_gradient import get_gradient
 from fastestimator.backend.get_image_dims import get_image_dims
 from fastestimator.backend.get_lr import get_lr
 from fastestimator.backend.hinge import hinge
+from fastestimator.backend.huber import huber
 from fastestimator.backend.iwd import iwd
+from fastestimator.backend.l1_loss import l1_loss
 from fastestimator.backend.lambertw import lambertw
 from fastestimator.backend.load_model import load_model
 from fastestimator.backend.matmul import matmul
@@ -52,6 +54,7 @@ from fastestimator.backend.roll import roll
 from fastestimator.backend.save_model import save_model
 from fastestimator.backend.set_lr import set_lr
 from fastestimator.backend.sign import sign
+from fastestimator.backend.smooth_l1_loss import smooth_l1_loss
 from fastestimator.backend.sparse_categorical_crossentropy import sparse_categorical_crossentropy
 from fastestimator.backend.squeeze import squeeze
 from fastestimator.backend.tensor_normalize import normalize
@@ -66,6 +69,3 @@ from fastestimator.backend.update_model import update_model
 from fastestimator.backend.watch import watch
 from fastestimator.backend.zeros_like import zeros_like
 from fastestimator.backend.zscore import zscore
-from fastestimator.backend.l1_loss import l1_loss
-from fastestimator.backend.smooth_l1_loss import Smooth_l1_loss
-from fastestimator.backend.huber import Huber

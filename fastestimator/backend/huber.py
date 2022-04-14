@@ -22,7 +22,7 @@ from fastestimator.backend.reduce_mean import reduce_mean
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
-def Huber(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
+def huber(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
     """Calculate Huber between two tensors.
 
     This method can be used with TensorFlow tensors:
@@ -61,6 +61,9 @@ def Huber(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
         ValueError: If `y_pred` is an unacceptable data type.
         ValueError: If beta is less than 1 for Smooth L1 loss and Huber Loss
     """
+    if beta <= 0:
+        raise ValueError("Beta cannot be less than or equal to 0")
+
     if tf.is_tensor(y_pred):
         if y_pred.ndim == 1:
             y_true = tf.expand_dims(y_true, axis=-1)

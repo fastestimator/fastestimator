@@ -22,7 +22,7 @@ from fastestimator.backend.reduce_mean import reduce_mean
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
-def Smooth_l1_loss(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
+def smooth_l1_loss(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
     """Calculate Smooth L1 Loss between two tensors.
 
     This method can be used with TensorFlow tensors:
@@ -61,6 +61,9 @@ def Smooth_l1_loss(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
         ValueError: If `y_pred` is an unacceptable data type.
         ValueError: If beta is less than 1 for Smooth L1 loss.
     """
+    if beta <= 0:
+        raise ValueError("Beta cannot be less than or equal to 0")
+
     if tf.is_tensor(y_pred):
         if beta <= 0:
             raise ValueError("Beta cannot be less than or equal to 0")

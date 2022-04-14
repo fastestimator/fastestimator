@@ -55,11 +55,10 @@ def l1_loss(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
         beta: Threshold factor. Needs to be a positive number. dtype: float16 or float32.
 
     Returns:
-        The L1 between `y_true` and `y_pred` wrt beta.
+        The L1 between `y_true` and `y_pred`.
 
     Raises:
         ValueError: If `y_pred` is an unacceptable data type.
-        ValueError: If beta is less than 1 for Smooth L1 loss and Huber Loss
     """
     if tf.is_tensor(y_pred):
         if y_pred.ndim == 1:
