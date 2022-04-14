@@ -67,6 +67,7 @@ def get_dependency():
         'python-docx>=0.8.11',
         'plotly>=5.7.0',
         'kaleido>=0.2.1',
+        'orjson>=3.6.7',
         'sklearn',
     ]
     if os.name == "nt":
