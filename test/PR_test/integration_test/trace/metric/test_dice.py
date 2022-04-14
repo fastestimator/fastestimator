@@ -26,11 +26,11 @@ class TestDice(unittest.TestCase):
     def setUpClass(cls):
         x = np.array([[[[0, 1, 1], [1, 0, 1], [1, 0, 1]],
                        [[0, 0, 1], [1, 1, 1], [1, 0, 1]],
-                       [[0, 1, 1], [1, 0, 1], [1, 0, 1]]]])
+                       [[0, 1, 1], [1, 0, 1], [1, 0, 1]]]], dtype=np.float32)
 
         x_pred = np.array([[[[0, 1, 0], [1, 0, 0], [1, 0, 1]],
                             [[1, 0, 1], [1, 0, 1], [0, 1, 0]],
-                            [[0, 0, 1], [1, 0, 1], [1, 0, 1]]]])
+                            [[0, 0, 1], [1, 0, 1], [1, 0, 1]]]], dtype=np.float32)
         cls.data = Data({'x': x, 'x_pred': x_pred})
         cls.dice_output = [0.750]
         cls.dice = Dice(true_key='x', pred_key='x_pred')
