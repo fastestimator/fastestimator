@@ -61,9 +61,9 @@ class L1_Loss(LossOp):
         if self.loss_type == None:
             loss = l1_loss(y_true=y_true, y_pred=y_pred)
         elif self.loss_type == 'Smooth':
-            loss = Smooth_l1_loss(y_true=y_true, y_pred=y_pred, beta=self.beta)
+            loss = smooth_l1_loss(y_true=y_true, y_pred=y_pred, beta=self.beta)
         elif self.loss_type == 'Huber':
-            loss = Huber(y_true=y_true, y_pred=y_pred, beta=self.beta)
+            loss = huber(y_true=y_true, y_pred=y_pred, beta=self.beta)
         else:
             raise ValueError(
                 "Unrecognized Loss type. Can either be None (L1 Loss), 'Smooth' (Smooth L1 Loss) or 'Huber' (Huber loss)"
