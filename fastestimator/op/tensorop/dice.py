@@ -24,16 +24,23 @@ from fastestimator.op.tensorop.tensorop import TensorOp
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.array)
 
 
-class DiceScore(TensorOp):
+class Dice(TensorOp):
     """
     Calculate Element-Wise Dice Score.
 
         Args:
-            y_pred: Prediction with a shape like (Batch, C, H, W) for torch and (Batch, H, W, C) for tensorflow or numpy. dtype: float32 or float16.
-            y_true: Ground truth class labels with a shape like `y_pred`. dtype: int or float32 or float16.
+            inputs: Keys of tensors to be averaged.
+            outputs: The key under which to save the output.
+            mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+                regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+                like "!infer" or "!train".
+            ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+                ds_ids except for a particular one, you can pass an argument like "!ds1".
             soft_dice: Whether to square elements. If True, square of elements is added.
             sample_average: Whether to average the element-wise dice score.
             channel_average: Whether to average the channel wise dice score.
+            negate: Whether to negate dice score.
+            epsilon: A small value to prevent numeric instability in the division.
 
         Returns:
             The dice loss between `y_pred` and `y_true`. A scalar if `average_sample` is True, else a
@@ -51,15 +58,17 @@ class DiceScore(TensorOp):
                  soft_dice: bool = False,
                  sample_average: bool = False,
                  channel_average: bool = False,
+                 negate: bool = False,
                  epsilon: float = 1e-6):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.channel_average = channel_average
         self.soft_dice = soft_dice
         self.epsilon = epsilon
         self.sample_average = sample_average
+        self.negate = negate
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
         y_pred, y_true = data
         dice = dice_score(
             y_pred, y_true, self.soft_dice, self.sample_average, self.channel_average, self.epsilon)
-        return -dice
+        return -dice if self.negate else dice
