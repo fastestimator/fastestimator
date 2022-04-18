@@ -23,7 +23,7 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 def huber(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
-    """Calculate Huber between two tensors.
+    """Calculate Huber Loss between two tensors.
 
     This method can be used with TensorFlow tensors:
     ```python

@@ -54,7 +54,7 @@ def l1_loss(y_true: Tensor, y_pred: Tensor) -> Tensor:
         y_pred: Prediction score for each class, with a shape like y_true. dtype: float32 or float16.
 
     Returns:
-        The L1 between `y_true` and `y_pred`.
+        The L1 loss between `y_true` and `y_pred`.
 
     Raises:
         ValueError: If `y_pred` is an unacceptable data type.

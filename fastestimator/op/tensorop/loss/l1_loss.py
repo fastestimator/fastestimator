@@ -29,7 +29,15 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 @traceable()
 class L1_Loss(LossOp):
-    """Calculate the mean squared error loss between two tensors.
+    """Calculate the L1 loss between two tensors.
+
+    This LossOp can be used to Implement:
+        L1 loss: Is a criterion that calculates Mean Absolute Error between the elements ([<y_pred>, <y_true>]).
+        Smooth_L1 loss: Is a criterion that uses squared loss if absolute element wise subtraction ('y_pred - y_true') is less than
+                        'beta' and vanilla L1 loss otherwise.
+        Huber loss: Is a criterion that uses squared loss if absolute element wise subtraction ('y_pred - y_true') is less than
+                    'beta' and a 'beta' scaled L1 loss otherwise.
+
 
     Args:
         inputs: A tuple or list like: [<y_pred>, <y_true>].
@@ -40,8 +48,8 @@ class L1_Loss(LossOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
         average_loss: Whether to average the element-wise loss after the Loss Op.
-        loss_type: What type of L1 loss. Can either be None (L1 Loss), 'Smooth' (Smooth L1 Loss) or 'Huber' (Huber loss)
-        beta: Threshold factor. Needs to be a positive number. dtype: float16 or float32.
+        loss_type: What type of L1 loss. Can either be 'L1' (L1 Loss), 'Smooth' (Smooth L1 Loss) or 'Huber' (Huber loss). Default:'L1'
+        beta: A threshold at which to change between L1 and L2 loss. Needs to be a positive number. Default:1.0 . dtype: float16 or float32.
     """
     def __init__(self,
                  inputs: Union[Tuple[str, str], List[str]],
@@ -49,7 +57,7 @@ class L1_Loss(LossOp):
                  mode: Union[None, str, Iterable[str]] = "!infer",
                  ds_id: Union[None, str, Iterable[str]] = None,
                  average_loss: bool = True,
-                 loss_type: Union[None, str] = None,
+                 loss_type: str = 'L1',
                  beta: Union[None, float] = 1.0):
         self.average_loss = average_loss
         self.loss_type = loss_type
@@ -58,7 +66,7 @@ class L1_Loss(LossOp):
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
         y_pred, y_true = data
-        if self.loss_type == None:
+        if self.loss_type == 'L1':
             loss = l1_loss(y_true=y_true, y_pred=y_pred)
         elif self.loss_type == 'Smooth':
             loss = smooth_l1_loss(y_true=y_true, y_pred=y_pred, beta=self.beta)
