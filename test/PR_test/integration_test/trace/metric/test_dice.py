@@ -24,10 +24,15 @@ from fastestimator.util import Data
 class TestDice(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        x = np.array([1, 2, 3])
-        x_pred = np.array([[1, 1, 3], [2, 3, 4], [1, 1, 0]])
+        x = np.array([[[[0, 1, 1], [1, 0, 1], [1, 0, 1]],
+                       [[0, 0, 1], [1, 1, 1], [1, 0, 1]],
+                       [[0, 1, 1], [1, 0, 1], [1, 0, 1]]]], dtype=np.float32)
+
+        x_pred = np.array([[[[0, 1, 0], [1, 0, 0], [1, 0, 1]],
+                            [[1, 0, 1], [1, 0, 1], [0, 1, 0]],
+                            [[0, 0, 1], [1, 0, 1], [1, 0, 1]]]], dtype=np.float32)
         cls.data = Data({'x': x, 'x_pred': x_pred})
-        cls.dice_output = [1.4999999987500001, 2.3999999972, 2.3999999972]
+        cls.dice_output = [0.750]
         cls.dice = Dice(true_key='x', pred_key='x_pred')
         cls.dice.system = sample_system_object()
 
@@ -41,9 +46,9 @@ class TestDice(unittest.TestCase):
         self.assertEqual(self.dice.dice, self.dice_output)
 
     def test_on_epoch_end(self):
-        self.dice.dice = [1.4999999987500001, 2.3999999972, 2.3999999972]
+        self.dice.dice = [0.750]
         self.dice.on_epoch_end(data=self.data)
         with self.subTest('Check if dice exists'):
             self.assertIn('Dice', self.data)
         with self.subTest('Check the value of dice'):
-            self.assertEqual(self.data['Dice'], 2.0999999977166666)
+            self.assertEqual(self.data['Dice'], 0.750)

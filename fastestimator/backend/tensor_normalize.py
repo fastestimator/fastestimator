@@ -16,10 +16,9 @@ from typing import Optional, Sequence, Tuple, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
-import tensorflow.keras.mixed_precision as mixed_precision
 import torch
 
-from fastestimator.backend.cast import cast
+from fastestimator.backend.convert_tensor_precision import convert_tensor_precision
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
@@ -71,29 +70,10 @@ def normalize(tensor: Tensor,
     mean = get_scaled_data(mean, max_pixel_value, framework, device)
     std = get_scaled_data(std, max_pixel_value, framework, device)
 
-    tensor = (convert_input_precision(tensor) - convert_input_precision(mean)) / (convert_input_precision(std) +
-                                                                                  epsilon)
+    tensor = (convert_tensor_precision(tensor) - convert_tensor_precision(mean)) / (convert_tensor_precision(std) +
+                                                                                    epsilon)
 
     return tensor
-
-
-def convert_input_precision(tensor: Tensor) -> Tensor:
-    """
-        Adjust the input data precision based of environment precision.
-
-        Args:
-            tensor: The input value.
-
-        Returns:
-            The precision adjusted data(16 bit for mixed precision, 32 bit otherwise).
-
-    """
-    precision = 'float32'
-
-    if mixed_precision.global_policy().compute_dtype == 'float16':
-        precision = 'float16'
-
-    return cast(tensor, precision)
 
 
 def get_framework(tensor: Tensor) -> Tuple[str, Optional[str]]:

@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2022 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
 # ==============================================================================
 from fastestimator.op.tensorop.loss.cross_entropy import CrossEntropy
 from fastestimator.op.tensorop.loss.hinge import Hinge
+from fastestimator.op.tensorop.loss.l2_regularization import L2Regularizaton
 from fastestimator.op.tensorop.loss.loss import LossOp
 from fastestimator.op.tensorop.loss.mean_squared_error import MeanSquaredError
 from fastestimator.op.tensorop.loss.mix_loss import MixLoss
 from fastestimator.op.tensorop.loss.super_loss import SuperLoss
-from fastestimator.op.tensorop.loss.l2_regularization import L2Regularizaton
