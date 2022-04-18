@@ -974,3 +974,19 @@ def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray, int, float]) -> n
         else:
             data = data.numpy()
     return np.array(data)
+
+
+def in_notebook() -> bool:
+    """Determine whether the code is running inside a jupyter notebook
+
+    Returns:
+        True iff the code is executing inside a Jupyter notebook
+    """
+    try:
+        from IPython import get_ipython
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True  # Jupyter notebook or qtconsole
+        return False
+    except (ImportError, NameError):
+        return False

@@ -101,7 +101,6 @@ def parse_log_files(file_paths: List[str],
                     save_path: Optional[str] = None,
                     ignore_metrics: Optional[Set[str]] = None,
                     include_metrics: Optional[Set[str]] = None,
-                    share_legend: bool = True,
                     pretty_names: bool = False,
                     group_by: Optional[str] = None) -> None:
     """Parse one or more log files for graphing.
@@ -117,7 +116,6 @@ def parse_log_files(file_paths: List[str],
         save_path: Where to save the image if save is true. Defaults to dir_path if not provided.
         ignore_metrics: Any metrics within the log files which will not be visualized.
         include_metrics: A whitelist of metric keys (None whitelists all keys).
-        share_legend: Whether to have one legend across all graphs (True) or one legend per graph (False).
         pretty_names: Whether to modify the metric names in graph titles (True) or leave them alone (False).
         group_by: Combine multiple log files by a regex to visualize their mean+-stddev. For example, to group together
             files like [a_1.txt, a_2.txt] vs [b_1.txt, b_2.txt] you can use: r'(.*)_[\d]+\.txt'.
@@ -129,7 +127,7 @@ def parse_log_files(file_paths: List[str],
     if file_paths is None or len(file_paths) < 1:
         raise AssertionError("must provide at least one log file")
     if save and save_path is None:
-        save_path = os.path.join(os.path.dirname(file_paths[0]), 'parse_logs.png')
+        save_path = os.path.join(os.path.dirname(file_paths[0]), 'parse_logs.html')
 
     groups = defaultdict(list)  # {group_name: [experiment(s)]}
     for path in file_paths:
@@ -144,7 +142,6 @@ def parse_log_files(file_paths: List[str],
     visualize_logs(experiments,
                    save_path=save_path,
                    smooth_factor=smooth_factor,
-                   share_legend=share_legend,
                    pretty_names=pretty_names,
                    ignore_metrics=ignore_metrics,
                    include_metrics=include_metrics)
@@ -153,12 +150,11 @@ def parse_log_files(file_paths: List[str],
 def parse_log_dir(dir_path: str,
                   log_extension: str = '.txt',
                   recursive_search: bool = False,
-                  smooth_factor: float = 1,
+                  smooth_factor: float = 0,
                   save: bool = False,
                   save_path: Optional[str] = None,
                   ignore_metrics: Optional[Set[str]] = None,
                   include_metrics: Optional[Set[str]] = None,
-                  share_legend: bool = True,
                   pretty_names: bool = False,
                   group_by: Optional[str] = None) -> None:
     """A function which will gather all log files within a given folder and pass them along for visualization.
@@ -172,7 +168,6 @@ def parse_log_dir(dir_path: str,
         save_path: Where to save the image if save is true. Defaults to dir_path if not provided.
         ignore_metrics: Any metrics within the log files which will not be visualized.
         include_metrics: A whitelist of metric keys (None whitelists all keys).
-        share_legend: Whether to have one legend across all graphs (True) or one legend per graph (False).
         pretty_names: Whether to modify the metric names in graph titles (True) or leave them alone (False).
         group_by: Combine multiple log files by a regex to visualize their mean+-stddev. For example, to group together
             files like [a_1.txt, a_2.txt] vs [b_1.txt, b_2.txt] you can use: r'(.*)_[\d]+\.txt'.
@@ -187,6 +182,5 @@ def parse_log_dir(dir_path: str,
                     save_path,
                     ignore_metrics,
                     include_metrics,
-                    share_legend,
                     pretty_names,
                     group_by)

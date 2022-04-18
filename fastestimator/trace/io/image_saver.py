@@ -65,10 +65,10 @@ class ImageSaver(Trace):
                     plt.close(f)
                     print("FastEstimator-ImageSaver: saved image to {}".format(im_path))
                 elif isinstance(imgs, Summary):
-                    visualize_logs([imgs], save_path=im_path, dpi=self.dpi, verbose=False)
+                    visualize_logs([imgs], save_path=im_path, verbose=False)
                     print("FastEstimator-ImageSaver: saved image to {}".format(im_path))
                 elif isinstance(imgs, (list, tuple)) and all([isinstance(img, Summary) for img in imgs]):
-                    visualize_logs(imgs, save_path=im_path, dpi=self.dpi, verbose=False)
+                    visualize_logs(imgs, save_path=im_path, verbose=False)
                     print("FastEstimator-ImageSaver: saved image to {}".format(im_path))
                 else:
                     for idx, img in enumerate(imgs):

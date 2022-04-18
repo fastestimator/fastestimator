@@ -46,7 +46,6 @@ def logs(args: Dict[str, Any], unknown: List[str]) -> None:
                   args['save_dir'],
                   args['ignore'],
                   args['include'],
-                  args['share_legend'],
                   args['pretty_names'],
                   group_by)
 
@@ -86,7 +85,7 @@ def configure_log_parser(subparsers: argparse._SubParsersAction) -> None:
                         metavar='<float>',
                         type=float,
                         help="The amount of gaussian smoothing to apply (zero for no smoothing)",
-                        default=1)
+                        default=0)
     parser.add_argument('--pretty_names', help="Clean up the metric names for display", action='store_true')
     parser.add_argument('--group_by',
                         metavar='G',
@@ -96,19 +95,6 @@ def configure_log_parser(subparsers: argparse._SubParsersAction) -> None:
                              r"example, you could use --G '(.*)_[\d]+\.txt' to group files of the form "
                              "<name>_<number>.txt by their <name>. We anticipate this being the common usecase, so you "
                              "can use --G _n as a shortcut for that functionality.")
-
-    legend_group = parser.add_argument_group('legend arguments')
-    legend_x_group = legend_group.add_mutually_exclusive_group(required=False)
-    legend_x_group.add_argument('--common_legend',
-                                dest='share_legend',
-                                help="Generate one legend total",
-                                action='store_true',
-                                default=True)
-    legend_x_group.add_argument('--split_legend',
-                                dest='share_legend',
-                                help="Generate one legend per graph",
-                                action='store_false',
-                                default=False)
 
     save_group = parser.add_argument_group('output arguments')
     save_x_group = save_group.add_mutually_exclusive_group(required=False)
