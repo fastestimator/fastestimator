@@ -65,8 +65,6 @@ def smooth_l1_loss(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
         raise ValueError("Beta cannot be less than or equal to 0")
 
     if tf.is_tensor(y_pred):
-        if beta <= 0:
-            raise ValueError("Beta cannot be less than or equal to 0")
         y_true = tf.cast(y_true, y_pred.dtype)
         regression_diff = tf.math.abs(y_true - y_pred)  # |y - f(x)|
         regression_loss = tf.where(tf.math.less(regression_diff, beta),

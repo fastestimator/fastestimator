@@ -22,7 +22,7 @@ from fastestimator.backend.reduce_mean import reduce_mean
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
-def l1_loss(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
+def l1_loss(y_true: Tensor, y_pred: Tensor) -> Tensor:
     """Calculate Mean Absolute Error between two tensors.
 
     This method can be used with TensorFlow tensors:
@@ -52,8 +52,7 @@ def l1_loss(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
     Args:
         y_true: Ground truth class labels with a shape like (batch) or (batch, n_classes). dtype: int, float16, float32.
         y_pred: Prediction score for each class, with a shape like y_true. dtype: float32 or float16.
-        beta: Threshold factor. Needs to be a positive number. dtype: float16 or float32.
-
+        
     Returns:
         The L1 between `y_true` and `y_pred`.
 
