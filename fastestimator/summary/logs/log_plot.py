@@ -17,13 +17,15 @@ import os
 import re
 from collections import defaultdict
 from itertools import cycle
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import Any, Dict, List, Optional, Set, Union, Tuple
 
 import numpy as np
-from natsort import humansorted
 from plotly.graph_objects import Figure
 import plotly.graph_objects as go
 import seaborn as sns
+from natsort import humansorted
+from plotly.offline.offline import get_plotlyjs
+from plotly.io import _html
 from plotly.subplots import make_subplots
 from scipy.ndimage.filters import gaussian_filter1d
 
@@ -295,8 +297,8 @@ def plot_logs(experiments: List[Summary],
             fig['layout'][y_axis_name]['visible'] = False
 
     colors = sns.hls_palette(n_colors=n_experiments, s=0.95) if n_experiments > 10 else sns.color_palette("colorblind")
-    alpha_colors = [f'rgba({int(rgb[0]*256)},{int(rgb[1]*256)},{int(rgb[2]*256)},0.3)' for rgb in colors]
-    colors = [f'rgb({int(rgb[0]*256)},{int(rgb[1]*256)},{int(rgb[2]*256)})' for rgb in colors]
+    alpha_colors = [f'rgba({int(rgb[0] * 256)},{int(rgb[1] * 256)},{int(rgb[2] * 256)},0.3)' for rgb in colors]
+    colors = [f'rgb({int(rgb[0] * 256)},{int(rgb[1] * 256)},{int(rgb[2] * 256)})' for rgb in colors]
     color_offset = defaultdict(lambda: 0)
     # If there is only 1 experiment, we will use alternate colors based on mode
     if n_experiments == 1:
@@ -311,10 +313,7 @@ def plot_logs(experiments: List[Summary],
     # Set up ds_id markers. The empty ds_id will have no extra marker. After that there are 4 configurations of 3-arm
     # marker, followed by 'x', '+', '*', and pound. After that it will just repeat the symbol set.
     ds_id_markers = [None, 37, 38, 39, 40, 34, 33, 35, 36]  # https://plotly.com/python/marker-style/
-    ds_id_unicode = [None, "\U00002144", "\U0001d5b8", "\U00002919", "\U0000291a", "\U000000d7", "\U0000002b",
-                     "\U00002733", "\U00002317"]  # Symbols located using https://shapecatcher.com/index.html
     ds_id_markers = {k: v for k, v in zip(ds_ids, cycle(ds_id_markers))}
-    ds_id_unicode = {k: '' if v is None else f'{v} ' for k, v in zip(ds_ids, cycle(ds_id_unicode))}
     # Plotly doesn't support z-order, so delay insertion until all the plots are figured out:
     # https://github.com/plotly/plotly.py/issues/2345
     z_order = defaultdict(list)  # {order: [(plotly element, row, col), ...]}
@@ -341,7 +340,7 @@ def plot_logs(experiments: List[Summary],
                     for ds_id in group.ds_ids(exp_idx, mode):
                         ds_title = f"{ds_id} " if ds_id else ''
                         prefix = f"{experiment.name} ({ds_title}{mode})" if n_experiments > 1 else f"{ds_title}{mode}"
-                        plotly_idx = row*n_cols+col+1 if row*n_cols+col+1 > 1 else ''
+                        plotly_idx = row * n_cols + col + 1 if row * n_cols + col + 1 > 1 else ''
                         fig.add_annotation(text=f"{prefix}: {group.get_val(exp_idx, mode, ds_id)}",
                                            font={'color': colors[exp_idx + color_offset[mode]]},
                                            showarrow=False,
@@ -377,40 +376,27 @@ def plot_logs(experiments: List[Summary],
                                 limit_data is not None else "%{x}: %{y:.3f}"
                             error_y = None if limit_data is None else {'type': 'data',
                                                                        'symmetric': False,
-                                                                       'array': [y_max-y],
-                                                                       'arrayminus': [y-y_min]}
+                                                                       'array': [y_max - y],
+                                                                       'arrayminus': [y - y_min]}
                             z_order[2].append((go.Scatter(x=[x],
                                                           y=[y],
-                                                          name=f"{ds_id_unicode[ds_id]}{title}",
+                                                          name=title,
                                                           legendgroup=title,
                                                           customdata=limit_data,
                                                           hovertemplate=tip_text,
                                                           mode='markers',
                                                           marker={'color': color,
                                                                   'size': 12,
-                                                                  'symbol': marker_style},
+                                                                  'symbol': _symbol_mash(marker_style,
+                                                                                         ds_id_markers[ds_id]),
+                                                                  'line': {'width': 1.5,
+                                                                           'color': 'White'}},
                                                           error_y=error_y,
                                                           showlegend=add_label[exp_idx][mode][ds_id]['patch'],
                                                           legendrank=legend_order[title]),
-                                              row,
-                                              col))
+                                               row,
+                                               col))
                             add_label[exp_idx][mode][ds_id]['patch'] = False
-                            if ds_id and ds_id_markers[ds_id]:
-                                # TODO - get this overlayed in legend. maybe need to custom draw the shape?
-                                #  https://plotly.com/python/shapes/
-                                z_order[3].append((go.Scatter(x=[x],
-                                                              y=[y],
-                                                              name=title,
-                                                              legendgroup=title,
-                                                              hoverinfo='skip',
-                                                              mode='markers',
-                                                              marker={'color': color,
-                                                                      'size': 8,
-                                                                      'line': {'width': 1.5,
-                                                                               'color': 'White'},
-                                                                      'symbol': ds_id_markers[ds_id]},
-                                                              showlegend=False),
-                                                   row, col))
                         else:
                             # We can draw a line
                             y = data[:, 1]
@@ -431,7 +417,7 @@ def plot_logs(experiments: List[Summary],
                             linestyle = 'solid' if mode == 'train' else 'dash' if mode == 'eval' else 'dot' if \
                                 mode == 'test' else 'dashdot'
                             limit_data = [(mx, mn) for mx, mn in zip(y_max, y_min)] if y_max is not None and y_min is \
-                                not None else None
+                                                                                       not None else None
                             tip_text = "%{x}: (%{customdata[1]:.3f}, %{y:.3f}, %{customdata[0]:.3f})" if \
                                 limit_data is not None else "%{x}: %{y:.3f}"
                             z_order[1].append((go.Scatter(x=x,
@@ -451,8 +437,8 @@ def plot_logs(experiments: List[Summary],
                                                           hovertemplate=tip_text,
                                                           showlegend=add_label[exp_idx][mode][ds_id]['line'],
                                                           legendrank=legend_order[title]),
-                                              row,
-                                              col))
+                                               row,
+                                               col))
                             add_label[exp_idx][mode][ds_id]['line'] = False
                             if limit_data is not None:
                                 z_order[0].append((go.Scatter(x=x,
@@ -468,24 +454,25 @@ def plot_logs(experiments: List[Summary],
                                                               y=y_min,
                                                               mode='lines',
                                                               line={'width': 0},
-                                                              fillcolor=alpha_colors[exp_idx+color_offset[mode]],
+                                                              fillcolor=alpha_colors[exp_idx + color_offset[mode]],
                                                               fill='tonexty',
                                                               legendgroup=title,
                                                               showlegend=False,
                                                               hoverinfo='skip'),
-                                                  row,
-                                                  col))
+                                                   row,
+                                                   col))
             else:
                 # Some kind of image or matrix. Not implemented yet.
                 pass
     for z in sorted(list(z_order.keys())):
         plts = z_order[z]
         for plt, row, col in plts:
-            fig.add_trace(plt, row=row+1, col=col+1)
+            fig.add_trace(plt, row=row + 1, col=col + 1)
 
     # If inside a jupyter notebook then force the height based on number of rows
     if in_notebook():
         fig.update_layout(height=280 * n_rows)
+
     return fig
 
 
@@ -541,3 +528,132 @@ def visualize_logs(experiments: List[Summary],
             fig.write_html(save_file, config=config)
         else:
             fig.write_image(save_file, width=1920, height=1080, scale=5)
+
+
+def _symbol_mash(base_symbol: str, ds_symbol: Optional[int]) -> int:
+    """Compute a composite symbol id given 2 symbol components.
+
+    A list of the normally possible symbols can be found here: https://plotly.com/python/marker-style/
+
+    Args:
+        base_symbol: The symbol to be put on the bottom.
+        ds_symbol: The symbol to be drawn over the base_symbol.
+
+    Returns:
+        An integer corresponding to the shape which we will override to be the overlaid shape.
+    """
+    base_table = {'circle': 0, 'diamond': 2, 'square': 1, 'hexagram': 18}
+    if ds_symbol is None:
+        return base_table[base_symbol]
+    ds_offsets = {37: 0, 38: 1, 39: 2, 40: 3, 34: 4, 33: 5, 35: 6, 36: 7}
+    slots = {i for i in range(53)} - set(base_table.values()) - set(ds_offsets.keys())
+    slots = sorted(list(slots))
+    base_offsets = {'circle': 0,
+                    'diamond': len(ds_offsets),
+                    'square': 2 * len(ds_offsets),
+                    'hexagram': 3 * len(ds_offsets)}
+    mashed_symbol = slots[base_offsets[base_symbol] + ds_offsets[ds_symbol]]
+    return mashed_symbol
+
+
+def _get_vars(symbol: Union[str, int]) -> str:
+    """Get the javascript variable declarations associated with a given symbol.
+
+    These are adapted from plotly.js -> src/components/drawing/symbol_defs.js
+
+    Args:
+        symbol: The symbol whose variables should be retrieved.
+
+    Returns:
+        A minified string representation of the variables to be declared in javascript.
+    """
+    if isinstance(symbol, str):
+        return {'circle': 'var b1=n.round(t,2);',
+                'square': 'var b1=n.round(t,2);',
+                'diamond': 'var b1=n.round(t*1.3,2);',
+                'hexagram': 'var b1=n.round(t,2);var b2=n.round(t/2,2);var b3=n.round(t*Math.sqrt(3)/2,2);'}[symbol]
+    return {37: 'var d1=n.round(t*1.2,2);var d2=n.round(t*1.6,2);var d3=n.round(t*0.8,2);',
+            38: 'var d1=n.round(t*1.2,2);var d2=n.round(t*1.6,2);var d3=n.round(t*0.8,2);',
+            39: 'var d1=n.round(t*1.2,2);var d2=n.round(t*1.6,2);var d3=n.round(t*0.8,2);',
+            40: 'var d1=n.round(t*1.2,2);var d2=n.round(t*1.6,2);var d3=n.round(t*0.8,2);',
+            34: 'var d1=n.round(t,2);',
+            33: 'var d1=n.round(t*1.4,2);',
+            35: 'var d1=n.round(t*1.2,2);var d2=n.round(t*0.85,2);',
+            36: 'var d1=n.round(t/2,2);var d2=n.round(t,2);'}[symbol]
+
+
+def _get_paths(symbol: Union[str, int]) -> str:
+    """Get the javascript pen paths associated with a given symbol.
+
+    These are adapted from plotly.js -> src/components/drawing/symbol_defs.js
+
+    Args:
+        symbol: The symbol whose pen paths should be retrieved.
+
+    Returns:
+        A minified string representation of the paths to be declared in javascript.
+    """
+    if isinstance(symbol, str):
+        return {'circle': '"M"+b1+",0A"+b1+","+b1+"0 1,1 0,-"+b1+"A"+b1+","+b1+" 0 0,1 "+b1+",0Z"',
+                'square': '"M"+b1+","+b1+"H-"+b1+"V-"+b1+"H"+b1+"Z"',
+                'diamond': '"M"+b1+",0L0,"+b1+"L-"+b1+",0L0,-"+b1+"Z"',
+                'hexagram': '"M-"+b3+",0l-"+b2+",-"+b1+"h"+b3+"l"+b2+",-"+b1+"l"+b2+","+b1+"h"+b3+"l-"+b2+","+b1+"l"+'
+                            'b2+","+b1+"h-"+b3+"l-"+b2+","+b1+"l-"+b2+",-"+b1+"h-"+b3+"Z"'}[symbol]
+    return {37: '"M-"+d1+","+d3+"L0,0M"+d1+","+d3+"L0,0M0,-"+d2+"L0,0"',
+            38: '"M-"+d1+",-"+d3+"L0,0M"+d1+",-"+d3+"L0,0M0,"+d2+"L0,0"',
+            39: '"M"+d3+","+d1+"L0,0M"+d3+",-"+d1+"L0,0M-"+d2+",0L0,0"',
+            40: '"M-"+d3+","+d1+"L0,0M-"+d3+",-"+d1+"L0,0M"+d2+",0L0,0"',
+            34: '"M"+d1+","+d1+"L-"+d1+",-"+d1+"M"+d1+",-"+d1+"L-"+d1+","+d1',
+            33: '"M0,"+d1+"V-"+d1+"M"+d1+",0H-"+d1',
+            35: '"M0,"+d1+"V-"+d1+"M"+d1+",0H-"+d1+"M"+d2+","+d2+"L-"+d2+",-"+d2+"M"+d2+",-"+d2+"L-"+d2+","+d2',
+            36: '"M"+d1+","+d2+"V-"+d2+"m-"+d2+",0V"+d2+"M"+d2+","+d1+"H-"+d2+"m0,-"+d2+"H"+d2'}[symbol]
+
+
+def _draw_mash(base_symbol: str, ds_symbol: int) -> Tuple[str, str]:
+    """Figure out how to draw one symbol on top of another, and propose an existing symbol to overwrite to make room.
+
+    The names in this function were extracted from plotly/validators/scatter/marker/_symbol.py
+
+    Args:
+        base_symbol: The symbol to go on the bottom.
+        ds_symbol: The symbol to go on the top.
+
+    Returns:
+        (A regex pattern corresponding to an existing symbol to be replaced, a new javascript string to replace the old
+         symbol)
+    """
+    id_to_name = {0: 'circle', 1: 'square', 2: 'diamond', 3: 'cross', 4: 'x', 5: '"triangle-up"', 6: '"triangle-down"',
+                  7: '"triangle-left"', 8: '"triangle-right"', 9: '"triangle-ne"', 10: '"triangle-se"',
+                  11: '"triangle-sw"', 12: '"triangle-nw"', 13: 'pentagon', 14: 'hexagon', 15: 'hexagon2',
+                  16: 'octagon', 17: 'star', 18: 'hexagram', 19: '"star-triangle-up"', 20: '"star-triangle-down"',
+                  21: '"star-square"', 22: '"star-diamond"', 23: '"diamond-tall"', 24: '"diamond-wide"',
+                  25: 'hourglass', 26: 'bowtie', 27: '"circle-cross"', 28: '"circle-x"', 29: '"square-cross"',
+                  30: '"square-x"', 31: '"diamond-cross"', 32: '"diamond-x"', 33: '"cross-thin"', 34: '"x-thin"',
+                  35: 'asterisk', 36: 'hash', 37: '"y-up"', 38: '"y-down"', 39: '"y-left"', 40: '"y-right"',
+                  41: '"line-ew"', 42: '"line-ns"', 43: '"line-ne"', 44: '"line-nw"', 45: '"arrow-up"',
+                  46: '"arrow-down"', 47: '"arrow-left"', 48: '"arrow-right"', 49: '"arrow-bar-up"',
+                  50: '"arrow-bar-down"', 51: '"arrow-bar-left"', 52: '"arrow-bar-right"'}
+    mash_id = _symbol_mash(base_symbol, ds_symbol)
+    mash_name = id_to_name[mash_id]
+    target_str = mash_name + r':{n.*?}(,needLine:!0)?(,noDot:!0)?(,noFill:!0)?}'
+    swap_str = mash_name + r':{n:' + str(mash_id) + ',f:function(t){' + _get_vars(base_symbol) + _get_vars(
+        ds_symbol) + f'return{_get_paths(ds_symbol)}+{_get_paths(base_symbol)};' + '}}'
+    return target_str, swap_str
+
+
+def _get_plotlyjs():
+    js = get_plotlyjs()
+    base_symbols = ['circle', 'diamond', 'square', 'hexagram']
+    ds_ids = [37, 38, 39, 40, 34, 33, 35, 36]
+    for base in base_symbols:
+        for ds in ds_ids:
+            old, new = _draw_mash(base_symbol=base, ds_symbol=ds)
+            if len(re.findall(old, js)) != 1:
+                raise ImportError("Warning: Incompatible version of Plotly Detected. Please use v5.7.0")
+            js = re.sub(old, new, js)
+    return js
+
+
+_html.get_plotlyjs = _get_plotlyjs
+# TODO - also hack plotly.io._kaleido.py scope object to point to modified code (maybe save hacked code to disk?)
+# TODO - double check all of the shape combos
