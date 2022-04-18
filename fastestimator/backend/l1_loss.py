@@ -52,7 +52,7 @@ def l1_loss(y_true: Tensor, y_pred: Tensor) -> Tensor:
     Args:
         y_true: Ground truth class labels with a shape like (batch) or (batch, n_classes). dtype: int, float16, float32.
         y_pred: Prediction score for each class, with a shape like y_true. dtype: float32 or float16.
-        
+
     Returns:
         The L1 between `y_true` and `y_pred`.
 
