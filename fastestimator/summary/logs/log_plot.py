@@ -15,6 +15,7 @@
 import math
 import os
 import re
+import tempfile
 from collections import defaultdict
 from itertools import cycle
 from typing import Any, Dict, List, Optional, Set, Union, Tuple
@@ -24,8 +25,8 @@ from plotly.graph_objects import Figure
 import plotly.graph_objects as go
 import seaborn as sns
 from natsort import humansorted
+from plotly.io import _html, _kaleido
 from plotly.offline.offline import get_plotlyjs
-from plotly.io import _html
 from plotly.subplots import make_subplots
 from scipy.ndimage.filters import gaussian_filter1d
 
@@ -240,6 +241,9 @@ def plot_logs(experiments: List[Summary],
         return make_subplots()
     ds_ids = humansorted(ds_ids)  # Sort them to have consistent ordering (and thus symbols) between plot runs
     n_plots = len(metric_list)
+    if len(ds_ids) > 9:  # 9 b/c None is included
+        print("FastEstimator-Warn: Plotting more than 8 different datasets isn't well supported. Symbols will be "
+              "reused.")
 
     # Non-Shared legends aren't supported yet. If they get supported then maybe can have that feature here too.
     #  https://github.com/plotly/plotly.js/issues/5099
@@ -594,7 +598,7 @@ def _get_paths(symbol: Union[str, int]) -> str:
         A minified string representation of the paths to be declared in javascript.
     """
     if isinstance(symbol, str):
-        return {'circle': '"M"+b1+",0A"+b1+","+b1+"0 1,1 0,-"+b1+"A"+b1+","+b1+" 0 0,1 "+b1+",0Z"',
+        return {'circle': '"M"+b1+",0A"+b1+","+b1+" 0 1,1 0,-"+b1+"A"+b1+","+b1+" 0 0,1 "+b1+",0Z"',
                 'square': '"M"+b1+","+b1+"H-"+b1+"V-"+b1+"H"+b1+"Z"',
                 'diamond': '"M"+b1+",0L0,"+b1+"L-"+b1+",0L0,-"+b1+"Z"',
                 'hexagram': '"M-"+b3+",0l-"+b2+",-"+b1+"h"+b3+"l"+b2+",-"+b1+"l"+b2+","+b1+"h"+b3+"l-"+b2+","+b1+"l"+'
@@ -641,7 +645,12 @@ def _draw_mash(base_symbol: str, ds_symbol: int) -> Tuple[str, str]:
     return target_str, swap_str
 
 
-def _get_plotlyjs():
+def _get_plotlyjs() -> str:
+    """A function to build a modified version of the plotly.js source code.
+
+    Returns:
+        The plotly.js source code, modified to handle overlaid shapes.
+    """
     js = get_plotlyjs()
     base_symbols = ['circle', 'diamond', 'square', 'hexagram']
     ds_ids = [37, 38, 39, 40, 34, 33, 35, 36]
@@ -654,6 +663,12 @@ def _get_plotlyjs():
     return js
 
 
+# Override the plotly python code to use the modified version of the javascript code
 _html.get_plotlyjs = _get_plotlyjs
-# TODO - also hack plotly.io._kaleido.py scope object to point to modified code (maybe save hacked code to disk?)
-# TODO - double check all of the shape combos
+if hasattr(_kaleido.scope, 'plotlyjs'):
+    new_code = tempfile.NamedTemporaryFile(suffix='.min.js', delete=False)
+    try:
+        new_code.write(_get_plotlyjs().encode('utf-8'))
+    finally:
+        new_code.close()
+    _kaleido.scope.plotlyjs = new_code.name

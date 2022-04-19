@@ -65,7 +65,7 @@ def get_dependency():
         'seaborn>=0.11.2',
         'jsonpickle>=2.1.0',
         'python-docx>=0.8.11',
-        'plotly>=5.7.0',
+        'plotly==5.7.0',
         'kaleido>=0.2.1',
         'orjson>=3.6.7',
         'sklearn',
