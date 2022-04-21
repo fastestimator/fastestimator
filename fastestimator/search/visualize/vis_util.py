@@ -69,14 +69,14 @@ class SearchData:
                 if k in ignore_keys:
                     continue
                 if k not in self.params:
-                    raise ValueError(f"Inconsistent parameter list detected")
+                    raise ValueError("Inconsistent parameter list detected")
                 self.data[k].append(self._parse_value(v))
             res = elem['result']
             for k, v in res.items():
                 if k in ignore_keys:
                     continue
                 if k not in self.results:
-                    raise ValueError(f"Inconsistent result list detected")
+                    raise ValueError("Inconsistent result list detected")
                 self.data[k].append(self._parse_value(v))
 
         # Handle categorical data

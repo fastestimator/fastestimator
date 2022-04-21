@@ -57,7 +57,7 @@ def _cartesian_supports_data(data: SearchData, throw_on_invalid: bool = True) ->
     if len(data.results) == 0:
         if not throw_on_invalid:
             return False
-        raise ValueError(f"Cartesian plots require at least 1 result, but none were found")
+        raise ValueError("Cartesian plots require at least 1 result, but none were found")
     if data.categorical_maps.keys():
         if not throw_on_invalid:
             return False
