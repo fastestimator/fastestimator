@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 import math
-import os
 import re
 import tempfile
 from collections import defaultdict
@@ -31,7 +30,7 @@ from plotly.subplots import make_subplots
 from scipy.ndimage.filters import gaussian_filter1d
 
 from fastestimator.summary.summary import Summary, ValWithError
-from fastestimator.util.util import in_notebook, prettify_metric_name, to_list, to_set
+from fastestimator.util.util import in_notebook, prettify_metric_name, to_list, to_set, visualize_figure
 
 
 class _MetricGroup:
@@ -503,35 +502,7 @@ def visualize_logs(experiments: List[Summary],
                     pretty_names=pretty_names,
                     ignore_metrics=ignore_metrics,
                     include_metrics=include_metrics)
-    config = {
-        'displaylogo': False,
-        'toImageButtonOptions': {
-            'format': 'png',  # one of png, svg, jpeg, webp
-            'height': None,
-            'width': None,
-            'filename': 'parse_logs',
-            'scale': 5  # Multiply title/legend/axis/canvas sizes by this factor (high resolution save)
-        }}
-    if save_path is None:
-        fig.show(config=config)
-    else:
-        save_path = os.path.normpath(save_path)
-        root_dir = os.path.dirname(save_path)
-        if root_dir == "":
-            root_dir = "."
-        os.makedirs(root_dir, exist_ok=True)
-        save_file = os.path.join(root_dir, os.path.basename(save_path) or 'parse_logs.html')
-        config['toImageButtonOptions']['filename'] = os.path.splitext(os.path.basename(save_file))[0]
-        ext = os.path.splitext(save_file)[1]
-        if ext == '':
-            ext = '.html'
-            save_file = save_file + ext  # Use html by default
-        if verbose:
-            print("Saving to {}".format(save_file))
-        if ext == '.html':
-            fig.write_html(save_file, config=config)
-        else:
-            fig.write_image(save_file, width=1920, height=1080, scale=5)
+    visualize_figure(fig=fig, save_path=save_path, verbose=verbose, scale=5)
 
 
 def _symbol_mash(base_symbol: str, ds_symbol: Optional[int]) -> int:

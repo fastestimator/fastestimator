@@ -107,5 +107,5 @@ class GoldenSection(Search):
     def _get_value_from_result(self, result: Dict[str, Any]) -> Union[int, float]:
         optimize_field = self.optimize_field
         if optimize_field is None:
-            optimize_field = self._infer_optmize_field(result)
+            optimize_field = self._infer_optimize_field(result)
         return result[optimize_field]

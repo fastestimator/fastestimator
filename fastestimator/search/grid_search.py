@@ -14,7 +14,7 @@
 # ==============================================================================
 import inspect
 import itertools
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Union, Optional
 
 from fastestimator.search.search import Search
 
@@ -48,7 +48,7 @@ class GridSearch(Search):
         AssertionError: If `params` is not dictionary, or contains key not used by `eval_fn`
     """
     def __init__(self,
-                 eval_fn: Callable[..., float],
+                 eval_fn: Callable[..., Union[Dict[str, Any], float]],
                  params: Dict[str, List],
                  best_mode: Optional[str] = None,
                  optimize_field: Optional[str] = None,
