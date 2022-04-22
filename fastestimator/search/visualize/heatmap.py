@@ -47,6 +47,10 @@ def _heatmap_supports_data(data: SearchData, throw_on_invalid: bool = True) -> b
             if not throw_on_invalid:
                 return False
             raise ValueError(f"Heatmap only supports numeric results, but found categorical results for key: {result}")
+    if data.ignored_params:
+        if not throw_on_invalid:
+            return False
+        raise ValueError("Heatmaps do not support ignoring parameters which have more than 1 value")
     return True
 
 

@@ -49,6 +49,7 @@ class SearchData:
         self.results = []
         self.data = defaultdict(list)
         self.categorical_maps = {}
+        self.ignored_params = False  # Did you ignore a param other than search_idx which had more than 1 value?
 
         search = search.get_search_summary()
         if not search:
@@ -63,14 +64,22 @@ class SearchData:
             self.params.discard(key)
             self.results.discard(key)
 
+        # Keep a sample parameter value to catch boring parameters
+        param_samples = {}
+
         for elem in search:
             pars = elem['param']
             for k, v in pars.items():
                 if k in ignore_keys:
+                    if k != 'search_idx' and v != param_samples.setdefault(k, v):
+                        # The ignored key had more than 1 value
+                        self.ignored_params = True
                     continue
                 if k not in self.params:
                     raise ValueError("Inconsistent parameter list detected")
-                self.data[k].append(self._parse_value(v))
+                v = self._parse_value(v)
+                param_samples.setdefault(k, v)
+                self.data[k].append(v)
             res = elem['result']
             for k, v in res.items():
                 if k in ignore_keys:
@@ -78,6 +87,15 @@ class SearchData:
                 if k not in self.results:
                     raise ValueError("Inconsistent result list detected")
                 self.data[k].append(self._parse_value(v))
+
+        # Remove any parameters which have only 1 value since they are boring to visualize
+        for param in list(self.params):  # Copy to a list since it may be modified during iteration
+            for val in self.data[param]:
+                if val != param_samples[param]:
+                    break
+            else:
+                self.params.discard(param)
+                self.data.pop(param)
 
         # Handle categorical data
         for key, values in self.data.items():
@@ -100,6 +118,8 @@ class SearchData:
 
     @staticmethod
     def _parse_value(value: Any) -> Union[int, float, str, None]:
+        if isinstance(value, (list, tuple)) and len(value) == 1:
+            value = value[0]
         if isinstance(value, (np.ndarray, tf.Tensor, torch.Tensor)):
             value = to_number(value)
             value = float(reduce_mean(value))
