@@ -29,6 +29,7 @@ import tensorflow as tf
 import torch
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
+from plotly.graph_objs import Figure
 from pyfiglet import Figlet
 
 STRING_TO_TORCH_DTYPE = {
@@ -851,6 +852,49 @@ def show_image(im: Union[np.ndarray, Tensor],
     if title is not None:
         axis.set_title(title, fontsize=min(20, 1 + width // len(title)), family='monospace')
     return fig
+
+
+def visualize_figure(fig: Figure,
+                     save_path: Optional[str] = None,
+                     verbose: bool = True,
+                     scale: int = 1) -> None:
+    """A function which will save or display plotly figures.
+
+    Args:
+        fig: The figure to display.
+        save_path: The path where the figure should be saved, or None to display the figure to the screen.
+        verbose: Whether to print out the save location.
+        scale: A scaling factor to apply when exporting to static images (to increase resolution).
+    """
+    config = {
+        'displaylogo': False,
+        'toImageButtonOptions': {
+            'format': 'png',  # one of png, svg, jpeg, webp
+            'height': None,
+            'width': None,
+            'filename': 'figure',
+            'scale': scale  # Multiply title/legend/axis/canvas sizes by this factor (high resolution save)
+        }}
+    if save_path is None:
+        fig.show(config=config)
+    else:
+        save_path = os.path.normpath(save_path)
+        root_dir = os.path.dirname(save_path)
+        if root_dir == "":
+            root_dir = "."
+        os.makedirs(root_dir, exist_ok=True)
+        save_file = os.path.join(root_dir, os.path.basename(save_path) or 'figure.html')
+        config['toImageButtonOptions']['filename'] = os.path.splitext(os.path.basename(save_file))[0]
+        ext = os.path.splitext(save_file)[1]
+        if ext == '':
+            ext = '.html'
+            save_file = save_file + ext  # Use html by default
+        if verbose:
+            print("Saving to {}".format(save_file))
+        if ext == '.html':
+            fig.write_html(save_file, config=config)
+        else:
+            fig.write_image(save_file, width=1920, height=1080, scale=scale)
 
 
 def get_batch_size(data: Dict[str, Any]) -> int:

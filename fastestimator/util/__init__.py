@@ -19,5 +19,5 @@ from fastestimator.util.traceability_util import FeSplitSummary, trace_model, tr
 from fastestimator.util.util import FEID, DefaultKeyDict, Flag, LogSplicer, NonContext, Suppressor, Timer, \
     check_ds_id, check_io_names, cpu_count, draw, get_batch_size, get_num_devices, get_shape, get_type, in_notebook, \
     is_number, pad_batch, pad_data, param_to_range, parse_modes, parse_string_to_python, prettify_metric_name, \
-    show_image, strip_prefix, strip_suffix, to_list, to_number, to_set
+    show_image, strip_prefix, strip_suffix, to_list, to_number, to_set, visualize_figure
 from fastestimator.util.wget_util import bar_custom, callback_progress

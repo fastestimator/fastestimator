@@ -79,7 +79,7 @@ class Search:
             print("FastEstimator-Search: Evaluated {}, result: {}".format(kwargs, result))
         return result
 
-    def _infer_optmize_field(self, result: Dict[str, Any]) -> str:
+    def _infer_optimize_field(self, result: Dict[str, Any]) -> str:
         """Infer optimize_field based on result, only needed when optimize_field is not provided.
 
         Returns:
@@ -88,14 +88,15 @@ class Search:
         Raises:
             Value error if multiple keys exist in the result.
         """
-        optimize_field = None
         if len(self.search_summary[0]['result']) == 1:
             optimize_field = list(result.keys())[0]
         else:
             raise ValueError("Multiple keys exist in result dictionary and optimize_field is None.")
         return optimize_field
 
-    def get_best_results(self, best_mode: Optional[str] = None, optimize_field: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
+    def get_best_results(self,
+                         best_mode: Optional[str] = None,
+                         optimize_field: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
         """Get the best result from the current search summary.
 
         Args:
@@ -112,7 +113,7 @@ class Search:
         if not self.search_summary:
             raise RuntimeError("No search summary yet, so best parameters are not available.")
         if optimize_field is None:
-            optimize_field = self._infer_optmize_field(self.search_summary[0]['result'])
+            optimize_field = self._infer_optimize_field(self.search_summary[0]['result'])
         if best_mode == "max":
             best_results = max(self.search_summary, key=lambda x: x['result'][optimize_field])
         else:  # min
@@ -125,13 +126,21 @@ class Search:
         Returns:
             The dictionary containing the state variable.
         """
-        return {"search_summary": self.search_summary}
+        state = {"search_summary": self.search_summary}
+        # Include extra info if it is available for better visualization options later
+        if self.name:
+            state["name"] = self.name
+        if self.best_mode:
+            state["best_mode"] = self.best_mode
+        if self.optimize_field:
+            state["optimize_field"] = self.optimize_field
+        return state
 
     def get_search_summary(self) -> List[Dict[str, Dict[str, Any]]]:
         """Get the current search history.
 
         Returns:
-            The evluation history list, with each element being a tuple of parameters and score.
+            The evaluation history list, with each element being a tuple of parameters and score.
         """
         return self.search_summary.copy()
 

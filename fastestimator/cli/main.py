@@ -18,6 +18,7 @@ import sys
 
 from fastestimator.cli.history import configure_history_parser
 from fastestimator.cli.logs import configure_log_parser
+from fastestimator.cli.plot import configure_plot_parser
 from fastestimator.cli.run import configure_run_parser
 from fastestimator.cli.train import configure_test_parser, configure_train_parser
 
@@ -34,6 +35,7 @@ def run_main(argv) -> None:
     configure_test_parser(subparsers)
     configure_run_parser(subparsers)
     configure_log_parser(subparsers)
+    configure_plot_parser(subparsers)
     configure_history_parser(subparsers)
     args, unknown = parser.parse_known_args(argv)
     args.func(vars(args), unknown)
