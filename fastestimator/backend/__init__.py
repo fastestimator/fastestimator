@@ -25,6 +25,7 @@ from fastestimator.backend.dice_score import dice_score
 from fastestimator.backend.exp import exp
 from fastestimator.backend.expand_dims import expand_dims
 from fastestimator.backend.feed_forward import feed_forward
+from fastestimator.backend.flip import flip
 from fastestimator.backend.gather import gather
 from fastestimator.backend.gather_from_batch import gather_from_batch
 from fastestimator.backend.get_gradient import get_gradient
