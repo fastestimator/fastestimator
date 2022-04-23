@@ -20,7 +20,7 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 import torch
 
-from fastestimator.backend.get_lr import get_lr
+from fastestimator.backend._get_lr import get_lr
 
 
 def save_model(model: Union[tf.keras.Model, torch.nn.Module],

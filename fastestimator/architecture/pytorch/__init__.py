@@ -12,8 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.architecture.pytorch.attention_unet import AttentionUNet
-from fastestimator.architecture.pytorch.lenet import LeNet
-from fastestimator.architecture.pytorch.resnet9 import ResNet9
-from fastestimator.architecture.pytorch.unet import UNet
-from fastestimator.architecture.pytorch.wideresnet import WideResidualNetwork
+from typing import TYPE_CHECKING
+
+import lazy_loader as lazy
+
+__getattr__, __dir__, __all__ = lazy.attach(__name__,
+                                            submod_attrs={'attention_unet': ['AttentionUNet'],
+                                                          'lenet': ['LeNet'],
+                                                          'resnet9': ['ResNet9'],
+                                                          'unet': ['UNet'],
+                                                          'wideresnet': ['WideResidualNetwork']})
+
+if TYPE_CHECKING:
+    from fastestimator.architecture.pytorch.attention_unet import AttentionUNet
+    from fastestimator.architecture.pytorch.lenet import LeNet
+    from fastestimator.architecture.pytorch.resnet9 import ResNet9
+    from fastestimator.architecture.pytorch.unet import UNet
+    from fastestimator.architecture.pytorch.wideresnet import WideResidualNetwork

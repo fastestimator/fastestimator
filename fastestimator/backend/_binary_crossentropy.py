@@ -17,7 +17,7 @@ from typing import Dict, Optional, TypeVar
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.reduce_mean import reduce_mean
+from fastestimator.backend._reduce_mean import reduce_mean
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 Weight_Dict = TypeVar('Weight_Dict', tf.lookup.StaticHashTable, Dict[int, float])

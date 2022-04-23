@@ -34,8 +34,9 @@ from fastestimator.summary.logs.log_parse import parse_log_iter
 from fastestimator.summary.logs.log_plot import visualize_logs
 from fastestimator.summary.summary import Summary, average_summaries
 from fastestimator.summary.system import System
-from fastestimator.util.cli_util import SaveAction
-from fastestimator.util.util import NonContext, cpu_count, parse_string_to_python
+from fastestimator.util.cli_util import SaveAction, parse_string_to_python
+from fastestimator.util.util import cpu_count
+from fastestimator.util.base_util import NonContext
 
 _MAKE_HIST_TABLE = 'CREATE TABLE IF NOT EXISTS history (' \
                    'file TEXT, ' \

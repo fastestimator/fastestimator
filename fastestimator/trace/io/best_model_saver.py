@@ -18,8 +18,8 @@ import numpy as np
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.load_model import load_model
-from fastestimator.backend.save_model import save_model
+from fastestimator.backend._load_model import load_model
+from fastestimator.backend._save_model import save_model
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable

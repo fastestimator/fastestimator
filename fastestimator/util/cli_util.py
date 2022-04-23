@@ -13,10 +13,10 @@
 #  limitations under the License.
 # ==============================================================================
 import argparse
+import json
 import os
+from ast import literal_eval
 from typing import Any, Dict, List, Optional, Sequence, Union
-
-from fastestimator.util.util import parse_string_to_python
 
 
 class SaveAction(argparse.Action):
@@ -33,6 +33,7 @@ class SaveAction(argparse.Action):
         nargs: The number of command line arguments to be consumed.
         **kwargs: Pass-through keyword arguments.
     """
+
     def __init__(self,
                  option_strings: Sequence[str],
                  dest: str,
@@ -91,3 +92,29 @@ def parse_cli_to_dictionary(input_list: List[str]) -> Dict[str, Any]:
     if len(key) > 0:
         result[key] = parse_string_to_python(val)
     return result
+
+
+def parse_string_to_python(val: str) -> Any:
+    """Convert a string into a python object.
+
+    ```python
+    x = fe.util.parse_string_to_python("5")  # 5
+    x = fe.util.parse_string_to_python("[5, 4, 0.3]")  # [5, 4, 0.3]
+    x = fe.util.parse_string_to_python("{'a':5, 'b':7}")  # {'a':5, 'b':7}
+    ```
+
+    Args:
+        val: An input string.
+
+    Returns:
+        A python object version of the input string.
+    """
+    if val is None or not val:
+        return ""
+    try:
+        return literal_eval(val)
+    except (ValueError, SyntaxError):
+        try:
+            return json.loads(val)
+        except json.JSONDecodeError:
+            return val

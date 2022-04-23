@@ -17,11 +17,11 @@ from typing import Any, Dict, Iterable, List, TypeVar, Union
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.gather_from_batch import gather_from_batch
-from fastestimator.backend.reduce_max import reduce_max
+from fastestimator.backend._gather_from_batch import gather_from_batch
+from fastestimator.backend._reduce_max import reduce_max
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import to_list
+from fastestimator.util.base_util import to_list
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 

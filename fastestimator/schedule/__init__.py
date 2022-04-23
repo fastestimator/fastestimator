@@ -12,6 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.schedule.lr_shedule import ARC, cosine_decay
-from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items, \
-    get_signature_epochs
+from typing import TYPE_CHECKING
+
+import lazy_loader as lazy
+
+__getattr__, __dir__, __all__ = lazy.attach(__name__,
+                                            submod_attrs={
+                                                'lr_shedule': ['ARC', 'cosine_decay'],
+                                                'schedule': ['EpochScheduler', 'RepeatScheduler', 'Scheduler',
+                                                             'get_current_items', 'get_signature_epochs'],
+                                            })
+
+if TYPE_CHECKING:
+    from fastestimator.schedule.lr_shedule import ARC, cosine_decay
+    from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items, \
+        get_signature_epochs

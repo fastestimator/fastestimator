@@ -12,8 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.trace.adapt.early_stopping import EarlyStopping
-from fastestimator.trace.adapt.lr_scheduler import LRScheduler
-from fastestimator.trace.adapt.pbm_calibrator import PBMCalibrator
-from fastestimator.trace.adapt.reduce_lr_on_plateau import ReduceLROnPlateau
-from fastestimator.trace.adapt.terminate_on_nan import TerminateOnNaN
+from typing import TYPE_CHECKING
+
+import lazy_loader as lazy
+
+__getattr__, __dir__, __all__ = lazy.attach(__name__,
+                                            submod_attrs={'early_stopping': ['EarlyStopping'],
+                                                          'lr_scheduler': ['LRScheduler'],
+                                                          'pbm_calibrator': ['PBMCalibrator'],
+                                                          'reduce_lr_on_plateau': ['ReduceLROnPlateau'],
+                                                          'terminate_on_nan': ['TerminateOnNaN'], })
+
+if TYPE_CHECKING:
+    from fastestimator.trace.adapt.early_stopping import EarlyStopping
+    from fastestimator.trace.adapt.lr_scheduler import LRScheduler
+    from fastestimator.trace.adapt.pbm_calibrator import PBMCalibrator
+    from fastestimator.trace.adapt.reduce_lr_on_plateau import ReduceLROnPlateau
+    from fastestimator.trace.adapt.terminate_on_nan import TerminateOnNaN

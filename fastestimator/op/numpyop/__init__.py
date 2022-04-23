@@ -12,5 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.numpyop import meta, multivariate, univariate
-from fastestimator.op.numpyop.numpyop import Batch, Delete, LambdaOp, NumpyOp, RemoveIf, forward_numpyop
+from typing import TYPE_CHECKING
+
+import lazy_loader as lazy
+
+__getattr__, __dir__, __all__ = lazy.attach(__name__,
+                                            submodules={'meta', 'multivariate', 'univariate'},
+                                            submod_attrs={'numpyop': ['Batch', 'Delete', 'LambdaOp', 'NumpyOp',
+                                                                      'RemoveIf', 'forward_numpyop']})
+
+if TYPE_CHECKING:
+    from fastestimator.op.numpyop import meta, multivariate, univariate
+    from fastestimator.op.numpyop.numpyop import Batch, Delete, LambdaOp, NumpyOp, RemoveIf, forward_numpyop

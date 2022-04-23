@@ -18,13 +18,13 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 import torch
 
-from fastestimator.backend.cast import cast
-from fastestimator.backend.clip_by_value import clip_by_value
-from fastestimator.backend.get_image_dims import get_image_dims
-from fastestimator.backend.maximum import maximum
-from fastestimator.backend.roll import roll
-from fastestimator.backend.tensor_round import tensor_round
-from fastestimator.backend.tensor_sqrt import tensor_sqrt
+from fastestimator.backend._cast import cast
+from fastestimator.backend._clip_by_value import clip_by_value
+from fastestimator.backend._get_image_dims import get_image_dims
+from fastestimator.backend._maximum import maximum
+from fastestimator.backend._roll import roll
+from fastestimator.backend._tensor_round import tensor_round
+from fastestimator.backend._tensor_sqrt import tensor_sqrt
 from fastestimator.op.tensorop.tensorop import TensorOp
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)

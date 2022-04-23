@@ -17,7 +17,7 @@ from typing import Any, Dict, Iterable, List, TypeVar, Union
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.zeros_like import zeros_like
+from fastestimator.backend._zeros_like import zeros_like
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 

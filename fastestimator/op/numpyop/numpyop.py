@@ -19,7 +19,7 @@ import tensorflow as tf
 import torch
 from torch.utils.data.dataloader import default_collate
 
-from fastestimator.backend.to_tensor import to_tensor
+from fastestimator.backend._to_tensor import to_tensor
 from fastestimator.op.op import Op, get_inputs_by_op, write_outputs_by_op
 from fastestimator.util.data import FilteredData
 from fastestimator.util.traceability_util import traceable

@@ -19,7 +19,7 @@ import tensorflow as tf
 import tensorflow.keras.mixed_precision as mixed_precision
 import torch
 
-from fastestimator.backend.cast import cast
+from fastestimator.backend._cast import cast
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 

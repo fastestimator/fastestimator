@@ -29,10 +29,10 @@ from pylatex import Document, Label, Marker, MultiColumn, NoEscape, Package, Tab
 from pylatex.base_classes import LatexObject
 from pylatex.utils import bold, escape_latex, italic
 
-from fastestimator.backend.to_shape import to_shape
-from fastestimator.backend.to_type import to_type
+from fastestimator.backend._to_shape import to_shape
+from fastestimator.backend._to_type import to_type
 from fastestimator.util.latex_util import ContainerList, HrefFEID, PyContainer
-from fastestimator.util.util import FEID, Flag, strip_prefix
+from fastestimator.util.base_util import strip_prefix, FEID, Flag
 
 _Function = namedtuple('_Function', ['func', 'name'])
 _BoundFn = namedtuple('_BoundFn', ['func', 'args'])

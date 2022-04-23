@@ -12,5 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.summary.logs.log_parse import parse_log_dir, parse_log_file, parse_log_files
-from fastestimator.summary.logs.log_plot import plot_logs, visualize_logs
+from typing import TYPE_CHECKING
+
+import lazy_loader as lazy
+
+__getattr__, __dir__, __all__ = lazy.attach(__name__,
+                                            submod_attrs={
+                                                'log_parse': ['parse_log_dir', 'parse_log_file', 'parse_log_files'],
+                                                'log_plot': ['plot_logs', 'visualize_logs'],
+                                            })
+
+if TYPE_CHECKING:
+    from fastestimator.summary.logs.log_parse import parse_log_dir, parse_log_file, parse_log_files
+    from fastestimator.summary.logs.log_plot import plot_logs, visualize_logs

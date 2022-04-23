@@ -17,7 +17,7 @@ from typing import Any, Dict, Union, Iterable
 import numpy as np
 from sklearn.metrics import recall_score
 
-from fastestimator.trace.meta.per_ds import per_ds
+from fastestimator.trace.meta._per_ds import per_ds
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable

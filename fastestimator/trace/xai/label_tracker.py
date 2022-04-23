@@ -20,7 +20,8 @@ from fastestimator.summary.summary import Summary, ValWithError
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import DefaultKeyDict, to_number, to_set
+from fastestimator.util.util import to_number
+from fastestimator.util.base_util import to_set, DefaultKeyDict
 
 
 @traceable()

@@ -26,7 +26,7 @@ import numpy as np
 import tensorflow as tf
 from torch.utils.data import DataLoader, Dataset
 
-from fastestimator.backend.to_tensor import to_tensor
+from fastestimator.backend._to_tensor import to_tensor
 from fastestimator.dataset.dataloader import FEDataLoader
 from fastestimator.dataset.op_dataset import OpDataset, _DelayedDeepDict
 from fastestimator.op.numpyop.meta.fuse import Fuse
@@ -38,7 +38,8 @@ from fastestimator.schedule.schedule import Scheduler, get_current_items, EpochS
     RepeatScheduler
 from fastestimator.util.data import FilteredData
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import cpu_count, get_num_devices, to_list, to_set
+from fastestimator.util.util import cpu_count, get_num_devices
+from fastestimator.util.base_util import to_set, to_list
 
 DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
 

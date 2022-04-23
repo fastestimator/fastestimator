@@ -22,7 +22,8 @@ import tensorflow as tf
 import torch
 from matplotlib.gridspec import GridSpec
 
-from fastestimator.util.util import show_image, to_list
+from fastestimator.util.util import show_image
+from fastestimator.util.base_util import to_list
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 

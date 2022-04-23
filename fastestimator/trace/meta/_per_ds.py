@@ -18,7 +18,7 @@ import functools
 
 from fastestimator.trace.trace import Trace, PerDSTrace
 from fastestimator.util.data import Data, DSData
-from fastestimator.util.util import to_list
+from fastestimator.util.base_util import to_list
 
 
 def per_ds(clz: type(Trace)):

@@ -19,10 +19,11 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, TypeVar, Uni
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.feed_forward import feed_forward
+from fastestimator.backend._feed_forward import feed_forward
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import FeInputSpec, traceable
-from fastestimator.util.util import get_num_devices, to_list
+from fastestimator.util.util import get_num_devices
+from fastestimator.util.base_util import to_list
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)

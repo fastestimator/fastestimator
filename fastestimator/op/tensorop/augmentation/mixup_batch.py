@@ -18,9 +18,9 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 import torch
 
-from fastestimator.backend.maximum import maximum
-from fastestimator.backend.reshape import reshape
-from fastestimator.backend.roll import roll
+from fastestimator.backend._maximum import maximum
+from fastestimator.backend._reshape import reshape
+from fastestimator.backend._roll import roll
 from fastestimator.op.tensorop.tensorop import TensorOp
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)

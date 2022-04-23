@@ -17,10 +17,10 @@ from typing import Any, Dict, Iterable, List, Tuple, TypeVar, Union
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.huber import huber
-from fastestimator.backend.l1_loss import l1_loss
-from fastestimator.backend.reduce_mean import reduce_mean
-from fastestimator.backend.smooth_l1_loss import smooth_l1_loss
+from fastestimator.backend._huber import huber
+from fastestimator.backend._l1_loss import l1_loss
+from fastestimator.backend._reduce_mean import reduce_mean
+from fastestimator.backend._smooth_l1_loss import smooth_l1_loss
 from fastestimator.op.tensorop.loss.loss import LossOp
 from fastestimator.util.traceability_util import traceable
 

@@ -17,13 +17,15 @@ import json
 import os
 import sys
 from ast import literal_eval
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
-from fastestimator import Estimator
 from fastestimator.util.cli_util import parse_cli_to_dictionary
 
+if TYPE_CHECKING:
+    from fastestimator import Estimator
 
-def _get_estimator(args: Dict[str, Any], unknown: Optional[List[str]]) -> Estimator:
+
+def _get_estimator(args: Dict[str, Any], unknown: Optional[List[str]]) -> 'Estimator':
     """A helper method to invoke the get_estimator method from a file using provided command line arguments as input.
 
     Args:

@@ -19,7 +19,7 @@ import torch
 import torch.nn as nn
 from scipy.linalg import hadamard
 
-from fastestimator.util.util import to_list
+from fastestimator.util.base_util import to_list
 
 
 class HadamardCode(nn.Module):

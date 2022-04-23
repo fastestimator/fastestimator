@@ -18,7 +18,7 @@ import tensorflow as tf
 import torch
 
 import fastestimator as fe
-from fastestimator.backend.roll import roll
+from fastestimator.backend._roll import roll
 from fastestimator.op.tensorop.loss.loss import LossOp
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)

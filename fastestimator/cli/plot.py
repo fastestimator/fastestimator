@@ -16,10 +16,6 @@ import argparse
 import sys
 from typing import Any, Dict, List
 
-from fastestimator.search.visualize.visualize import visualize_search
-from fastestimator.search.visualize.parallel_coordinate_plot import visualize_parallel_coordinates
-from fastestimator.search.visualize.cartesian import visualize_cartesian
-from fastestimator.search.visualize.heatmap import visualize_heatmap
 from fastestimator.util.cli_util import SaveAction
 
 
@@ -37,12 +33,16 @@ def search(args: Dict[str, Any], unknown: List[str]) -> None:
         print("error: unrecognized arguments: ", str.join(", ", unknown))
         sys.exit(-1)
     if args['draw'] == 'cartesian':
+        from fastestimator.search.visualize.cartesian import visualize_cartesian
         fn = visualize_cartesian
     elif args['draw'] == 'heatmap':
+        from fastestimator.search.visualize.heatmap import visualize_heatmap
         fn = visualize_heatmap
     elif args['draw'] == 'parallel':
+        from fastestimator.search.visualize.parallel_coordinate_plot import visualize_parallel_coordinates
         fn = visualize_parallel_coordinates
     else:
+        from fastestimator.search.visualize.visualize import visualize_search
         fn = visualize_search
     kwargs = {'search': args['search_path'],
               'title': args['title'],

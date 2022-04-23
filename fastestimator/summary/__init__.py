@@ -12,7 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.summary import logs
-from fastestimator.summary.history import connect, delete, HistoryRecorder, HistoryReader, update_settings
-from fastestimator.summary.summary import average_summaries, Summary, ValWithError
-from fastestimator.summary.system import System
+from typing import TYPE_CHECKING
+
+import lazy_loader as lazy
+
+__getattr__, __dir__, __all__ = lazy.attach(__name__,
+                                            submodules={'logs'},
+                                            submod_attrs={
+                                                'history': ['connect', 'delete', 'HistoryRecorder', 'HistoryReader',
+                                                            'update_settings'],
+                                                'summary': ['average_summaries', 'Summary', 'ValWithError'],
+                                                'system': ['System']})
+
+if TYPE_CHECKING:
+    from fastestimator.summary import logs
+    from fastestimator.summary.history import connect, delete, HistoryRecorder, HistoryReader, update_settings
+    from fastestimator.summary.summary import average_summaries, Summary, ValWithError
+    from fastestimator.summary.system import System

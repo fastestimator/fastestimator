@@ -19,7 +19,7 @@ import tensorflow as tf
 from scipy.linalg import hadamard
 from tensorflow.keras import layers
 
-from fastestimator.util.util import to_list
+from fastestimator.util.base_util import to_list
 
 
 class HadamardCode(layers.Layer):

@@ -15,7 +15,7 @@
 from typing import Any, Dict, Generic, Iterable, List, Optional, TypeVar, Union
 
 from fastestimator.util.traceability_util import is_restorable, traceable
-from fastestimator.util.util import to_set
+from fastestimator.util.base_util import to_set
 
 T = TypeVar('T')
 

@@ -18,7 +18,7 @@ import calibration as cal
 import numpy as np
 
 from fastestimator.summary.summary import ValWithError
-from fastestimator.trace.meta.per_ds import per_ds
+from fastestimator.trace.meta._per_ds import per_ds
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable

@@ -12,6 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.layers.tensorflow.hadamard import HadamardCode
-from fastestimator.layers.tensorflow.instance_norm import InstanceNormalization
-from fastestimator.layers.tensorflow.reflection_padding_2d import ReflectionPadding2D
+from typing import TYPE_CHECKING
+
+import lazy_loader as lazy
+
+__getattr__, __dir__, __all__ = lazy.attach(__name__,
+                                            submod_attrs={'hadamard': ['HadamardCode'],
+                                                          'instance_norm': ['InstanceNormalization'],
+                                                          'reflection_padding_2d': ['ReflectionPadding2D']})
+
+if TYPE_CHECKING:
+    from fastestimator.layers.tensorflow.hadamard import HadamardCode
+    from fastestimator.layers.tensorflow.instance_norm import InstanceNormalization
+    from fastestimator.layers.tensorflow.reflection_padding_2d import ReflectionPadding2D

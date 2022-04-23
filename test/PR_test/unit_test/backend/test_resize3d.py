@@ -16,8 +16,7 @@ import unittest
 
 import numpy as np
 
-from fastestimator.backend import to_tensor
-from fastestimator.backend.resize3d import resize_3d
+from fastestimator.backend import to_tensor, resize_3d
 
 
 class TestResize3D(unittest.TestCase):

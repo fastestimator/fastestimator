@@ -63,8 +63,8 @@ from fastestimator.trace.trace import Trace, sort_traces
 from fastestimator.util.data import Data
 from fastestimator.util.latex_util import AdjustBox, Center, ContainerList, HrefFEID, Verbatim
 from fastestimator.util.traceability_util import FeSummaryTable, traceable
-from fastestimator.util.util import FEID, LogSplicer, Suppressor, prettify_metric_name, to_list, NonContext, \
-    DefaultKeyDict
+from fastestimator.util.base_util import to_list, NonContext, Suppressor, LogSplicer, prettify_metric_name, \
+    DefaultKeyDict, FEID
 
 
 @traceable()

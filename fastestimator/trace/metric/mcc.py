@@ -17,7 +17,7 @@ from typing import Union, Iterable
 import numpy as np
 from sklearn.metrics import matthews_corrcoef
 
-from fastestimator.trace.meta.per_ds import per_ds
+from fastestimator.trace.meta._per_ds import per_ds
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Any, Data, Dict
 from fastestimator.util.traceability_util import traceable

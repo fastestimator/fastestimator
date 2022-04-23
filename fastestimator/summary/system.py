@@ -24,8 +24,8 @@ import tensorflow as tf
 import torch
 from tensorflow.python.distribute.mirrored_strategy import MirroredStrategy
 
-from fastestimator.backend.load_model import load_model
-from fastestimator.backend.save_model import save_model
+from fastestimator.backend._load_model import load_model
+from fastestimator.backend._save_model import save_model
 from fastestimator.network import BaseNetwork
 from fastestimator.pipeline import Pipeline
 from fastestimator.schedule.schedule import Scheduler

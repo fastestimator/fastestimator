@@ -17,9 +17,9 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.binary_crossentropy import binary_crossentropy
-from fastestimator.backend.categorical_crossentropy import categorical_crossentropy
-from fastestimator.backend.sparse_categorical_crossentropy import sparse_categorical_crossentropy
+from fastestimator.backend._binary_crossentropy import binary_crossentropy
+from fastestimator.backend._categorical_crossentropy import categorical_crossentropy
+from fastestimator.backend._sparse_categorical_crossentropy import sparse_categorical_crossentropy
 from fastestimator.op.tensorop.loss.loss import LossOp
 from fastestimator.util.traceability_util import traceable
 

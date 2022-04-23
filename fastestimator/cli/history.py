@@ -16,8 +16,6 @@ import argparse
 import sys
 from typing import Any, Dict, List
 
-from fastestimator.summary.history import HistoryReader, delete, update_settings
-
 
 def history_basic(args: Dict[str, Any], unknown: List[str]) -> None:
     """A method to query FE history using CLI-provided arguments.
@@ -32,6 +30,7 @@ def history_basic(args: Dict[str, Any], unknown: List[str]) -> None:
     if len(unknown) > 0:
         print("error: unrecognized arguments: ", str.join(", ", unknown))
         sys.exit(-1)
+    from fastestimator.summary.history import HistoryReader
     with HistoryReader() as reader:
         reader.read_basic(limit=args['limit'],
                           interactive=args['interactive'],
@@ -50,6 +49,7 @@ def history_sql(args: Dict[str, Any], unknown: List[str]) -> None:
     if len(unknown) > 0:
         print("error: unrecognized arguments: ", str.join(", ", unknown))
         sys.exit(-1)
+    from fastestimator.summary.history import HistoryReader
     with HistoryReader() as reader:
         reader.read_sql(query=args['query'], as_csv=args['csv'], interactive=args['interactive'])
 
@@ -58,6 +58,7 @@ def clear_history(args: Dict[str, Any], unknown: List[str]) -> None:
     if len(unknown) > 0:
         print("error: unrecognized arguments: ", str.join(", ", unknown))
         sys.exit(-1)
+    from fastestimator.summary.history import delete
     delete(n_keep=args['retain'])
 
 
@@ -65,6 +66,7 @@ def settings(args: Dict[str, Any], unknown: List[str]) -> None:
     if len(unknown) > 0:
         print("error: unrecognized arguments: ", str.join(", ", unknown))
         sys.exit(-1)
+    from fastestimator.summary.history import update_settings
     update_settings(n_keep=args['keep'], n_keep_logs=args['keep_logs'])
 
 

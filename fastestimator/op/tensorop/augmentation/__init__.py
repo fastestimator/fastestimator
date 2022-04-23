@@ -12,6 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.tensorop.augmentation.cutmix_batch import CutMixBatch
-from fastestimator.op.tensorop.augmentation.mixup_batch import MixUpBatch
+from typing import TYPE_CHECKING
 
+import lazy_loader as lazy
+
+__getattr__, __dir__, __all__ = lazy.attach(__name__,
+                                            submod_attrs={'cutmix_batch': ['CutMixBatch'],
+                                                          'mixup_batch': ['MixUpBatch'],
+                                                          })
+
+if TYPE_CHECKING:
+    from fastestimator.op.tensorop.augmentation.cutmix_batch import CutMixBatch
+    from fastestimator.op.tensorop.augmentation.mixup_batch import MixUpBatch

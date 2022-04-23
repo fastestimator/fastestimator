@@ -14,8 +14,9 @@
 # ==============================================================================
 import inspect
 import re
-
 import sys
+from typing import TYPE_CHECKING
+
 if sys.platform == 'darwin':
     # Block the tkinter module from being imported on Mac. This is necessary in order for Mac multiprocessing to work,
     # since other modules such as nltk import tkinter, and it seems more likely that AI developers will need
@@ -24,12 +25,6 @@ if sys.platform == 'darwin':
 
 # Fix known bugs with libraries which use multiprocessing in a way which conflicts with pytorch data loader
 import cv2
-
-from fastestimator import architecture, backend, dataset, layers, op, schedule, search, summary, trace, util, xai
-from fastestimator.estimator import Estimator, enable_deterministic, record_history
-from fastestimator.network import Network, build
-from fastestimator.pipeline import Pipeline
-
 cv2.setNumThreads(0)
 try:
     import SimpleITK as sitk
@@ -37,9 +32,27 @@ try:
 except ModuleNotFoundError:
     pass
 
+import lazy_loader as lazy
+
+__getattr__, __dir__, __all__ = lazy.attach(__name__,
+                                            submodules={'architecture', 'backend', 'dataset', 'layers', 'op',
+                                                        'schedule', 'search', 'summary', 'trace', 'util', 'xai'},
+                                            submod_attrs={'estimator': ['Estimator', 'enable_deterministic',
+                                                                        'record_history'],
+                                                          'network': ['Network', 'build'],
+                                                          'pipeline': ['Pipeline']})
+
+if TYPE_CHECKING:
+    # Allow IDEs to play nice with lazy loading
+    from fastestimator import architecture, backend, dataset, layers, op, schedule, search, summary, trace, util, xai
+    from fastestimator.estimator import Estimator, enable_deterministic, record_history
+    from fastestimator.network import Network, build
+    from fastestimator.pipeline import Pipeline
+
 __version__ = '1.5.0'
 fe_deterministic_seed = None
 fe_history_path = None  # Where to save training histories. None for ~/fastestimator_data/history.db, False to disable
+fe_build_count = 0
 
 # Disable history logging for tests by default (they can still turn it on/off manually in setUpClass/tearDownClass)
 if __name__ != '__main__':

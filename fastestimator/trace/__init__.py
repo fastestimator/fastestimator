@@ -12,6 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.trace import adapt, io, metric, xai
-from fastestimator.trace.trace import EvalEssential, Logger, TestEssential, Trace, TrainEssential, PerDSTrace, \
-    sort_traces
+from typing import TYPE_CHECKING
+
+import lazy_loader as lazy
+
+__getattr__, __dir__, __all__ = lazy.attach(__name__,
+                                            submodules={'adapt', 'io', 'metric', 'xai'},
+                                            submod_attrs={'trace': ['EvalEssential', 'Logger', 'TestEssential', 'Trace',
+                                                                    'TrainEssential', 'PerDSTrace', 'sort_traces'],
+                                                          })
+
+if TYPE_CHECKING:
+    from fastestimator.trace import adapt, io, metric, xai
+    from fastestimator.trace.trace import EvalEssential, Logger, TestEssential, Trace, TrainEssential, PerDSTrace, \
+        sort_traces

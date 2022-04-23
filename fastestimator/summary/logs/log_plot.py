@@ -22,7 +22,6 @@ from typing import Any, Dict, List, Optional, Set, Union, Tuple
 import numpy as np
 from plotly.graph_objects import Figure
 import plotly.graph_objects as go
-import seaborn as sns
 from natsort import humansorted
 from plotly.io import _html, _kaleido
 from plotly.offline.offline import get_plotlyjs
@@ -30,7 +29,8 @@ from plotly.subplots import make_subplots
 from scipy.ndimage.filters import gaussian_filter1d
 
 from fastestimator.summary.summary import Summary, ValWithError
-from fastestimator.util.util import in_notebook, prettify_metric_name, to_list, to_set, visualize_figure
+from fastestimator.util.base_util import get_colors, to_set, to_list, prettify_metric_name, in_notebook, \
+    visualize_figure
 
 
 class _MetricGroup:
@@ -299,15 +299,16 @@ def plot_logs(experiments: List[Summary],
             fig['layout'][y_axis_name]['zeroline'] = False
             fig['layout'][y_axis_name]['visible'] = False
 
-    colors = sns.hls_palette(n_colors=n_experiments, s=0.95) if n_experiments > 10 else sns.color_palette("colorblind")
-    alpha_colors = [f'rgba({int(rgb[0] * 256)},{int(rgb[1] * 256)},{int(rgb[2] * 256)},0.3)' for rgb in colors]
-    colors = [f'rgb({int(rgb[0] * 256)},{int(rgb[1] * 256)},{int(rgb[2] * 256)})' for rgb in colors]
-    color_offset = defaultdict(lambda: 0)
     # If there is only 1 experiment, we will use alternate colors based on mode
+    color_offset = defaultdict(lambda: 0)
+    n_colors = n_experiments
     if n_experiments == 1:
+        n_colors = 4
         color_offset['eval'] = 1
         color_offset['test'] = 2
         color_offset['infer'] = 3
+    colors = get_colors(n_colors=n_colors)
+    alpha_colors = get_colors(n_colors=n_colors, alpha=0.3)
 
     # exp_id : {mode: {ds_id: {type: True}}}
     add_label = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: True))))

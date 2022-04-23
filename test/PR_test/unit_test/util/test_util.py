@@ -23,32 +23,33 @@ import torch
 from tensorflow.python.client import device_lib
 
 import fastestimator as fe
+import fastestimator.util.cli_util
 from fastestimator.test.unittest_util import is_equal
 
 
 class TestParseStringToPython(unittest.TestCase):
     def test_parse_string_to_python_positive_int(self):
-        x = fe.util.parse_string_to_python("5")
+        x = fastestimator.util.cli_util.parse_string_to_python("5")
         self.assertEqual(x, 5)
 
     def test_parse_string_to_python_negative_float(self):
-        x = fe.util.parse_string_to_python("-1.5")
+        x = fastestimator.util.cli_util.parse_string_to_python("-1.5")
         self.assertEqual(x, -1.5)
 
     def test_parse_string_to_python_list(self):
-        x = fe.util.parse_string_to_python("[5, 4, 0.3]")
+        x = fastestimator.util.cli_util.parse_string_to_python("[5, 4, 0.3]")
         self.assertTrue(x, [5, 4, 0.3])
 
     def test_parse_string_to_python_list_over_mixed_entries(self):
-        x = fe.util.parse_string_to_python("[5, [1,2,3]]")
+        x = fastestimator.util.cli_util.parse_string_to_python("[5, [1,2,3]]")
         self.assertTrue(x, [5, [1, 2, 3]])
 
     def test_parse_string_to_python_dict(self):
-        x = fe.util.parse_string_to_python("{'a': 5, 'b': 7}")
+        x = fastestimator.util.cli_util.parse_string_to_python("{'a': 5, 'b': 7}")
         self.assertEqual(x, {'a': 5, 'b': 7})
 
     def test_parse_string_to_python_dict_over_mixed_entries(self):
-        x = fe.util.parse_string_to_python("{'a':5, 'b':[1,2,3]}")
+        x = fastestimator.util.cli_util.parse_string_to_python("{'a':5, 'b':[1,2,3]}")
         self.assertEqual(x, {'a': 5, 'b': [1, 2, 3]})
 
 

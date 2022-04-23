@@ -18,7 +18,7 @@ import numpy as np
 from skimage.draw import random_shapes
 import math
 
-from fastestimator.backend.get_image_dims import get_image_dims
+from fastestimator.backend._get_image_dims import get_image_dims
 from fastestimator.op.numpyop.numpyop import NumpyOp
 from fastestimator.util.traceability_util import traceable
 

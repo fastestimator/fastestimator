@@ -17,7 +17,7 @@ from typing import Any, Dict, Iterable, List, Optional, TypeVar, Union
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.watch import watch
+from fastestimator.backend._watch import watch
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 

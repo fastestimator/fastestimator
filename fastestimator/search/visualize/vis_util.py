@@ -17,15 +17,11 @@ import os
 from collections import defaultdict
 from typing import Any, Optional, Sequence, Union
 
-import numpy as np
-import tensorflow as tf
-import torch
 from natsort import humansorted
 
-from fastestimator.backend.reduce_mean import reduce_mean
 from fastestimator.search.search import Search
 from fastestimator.summary.summary import ValWithError
-from fastestimator.util.util import to_number, to_set
+from fastestimator.util.base_util import to_set
 
 
 def _load_search_file(path: str) -> Search:
@@ -120,10 +116,7 @@ class SearchData:
     def _parse_value(value: Any) -> Union[int, float, str, None]:
         if isinstance(value, (list, tuple)) and len(value) == 1:
             value = value[0]
-        if isinstance(value, (np.ndarray, tf.Tensor, torch.Tensor)):
-            value = to_number(value)
-            value = float(reduce_mean(value))
-        elif isinstance(value, ValWithError):
+        if isinstance(value, ValWithError):
             value = value.y
         if not isinstance(value, (int, float, str, type(None))):
             value = str(value)

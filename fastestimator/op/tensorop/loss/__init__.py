@@ -12,12 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.tensorop.loss.cross_entropy import CrossEntropy
-from fastestimator.op.tensorop.loss.hinge import Hinge
-from fastestimator.op.tensorop.loss.l2_regularization import L2Regularizaton
-from fastestimator.op.tensorop.loss.loss import LossOp
-from fastestimator.op.tensorop.loss.mean_squared_error import MeanSquaredError
-from fastestimator.op.tensorop.loss.mix_loss import MixLoss
-from fastestimator.op.tensorop.loss.super_loss import SuperLoss
-from fastestimator.op.tensorop.loss.l2_regularization import L2Regularizaton
-from fastestimator.op.tensorop.loss.l1_loss import L1_Loss
+from typing import TYPE_CHECKING
+
+import lazy_loader as lazy
+
+__getattr__, __dir__, __all__ = lazy.attach(__name__,
+                                            submod_attrs={'cross_entropy': ['CrossEntropy'],
+                                                          'hinge': ['Hinge'],
+                                                          'l2_regularization': ['L2Regularizaton'],
+                                                          'loss': ['LossOp'],
+                                                          'mean_squared_error': ['MeanSquaredError'],
+                                                          'mix_loss': ['MixLoss'],
+                                                          'super_loss': ['SuperLoss'],
+                                                          'l1_loss': ['L1_Loss']
+                                                          })
+
+if TYPE_CHECKING:
+    from fastestimator.op.tensorop.loss.cross_entropy import CrossEntropy
+    from fastestimator.op.tensorop.loss.hinge import Hinge
+    from fastestimator.op.tensorop.loss.l2_regularization import L2Regularizaton
+    from fastestimator.op.tensorop.loss.loss import LossOp
+    from fastestimator.op.tensorop.loss.mean_squared_error import MeanSquaredError
+    from fastestimator.op.tensorop.loss.mix_loss import MixLoss
+    from fastestimator.op.tensorop.loss.super_loss import SuperLoss
+    from fastestimator.op.tensorop.loss.l2_regularization import L2Regularizaton
+    from fastestimator.op.tensorop.loss.l1_loss import L1_Loss

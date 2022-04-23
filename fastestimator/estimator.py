@@ -25,9 +25,9 @@ from tensorflow.python.distribute.input_lib import DistributedDataset
 from torch.utils.data import DataLoader
 
 import fastestimator as fe
-from fastestimator.backend.to_shape import to_shape
-from fastestimator.backend.to_tensor import to_tensor
-from fastestimator.backend.to_type import to_type
+from fastestimator.backend._to_shape import to_shape
+from fastestimator.backend._to_tensor import to_tensor
+from fastestimator.backend._to_type import to_type
 from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
 from fastestimator.pipeline import Pipeline
 from fastestimator.schedule.schedule import Scheduler, get_current_items, get_signature_epochs
@@ -41,7 +41,8 @@ from fastestimator.trace.trace import EvalEssential, Logger, PerDSTrace, TestEss
     sort_traces
 from fastestimator.util.data import Data, FilteredData
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import NonContext, Suppressor, draw, to_list, to_set
+from fastestimator.util.util import draw
+from fastestimator.util.base_util import to_set, to_list, NonContext, Suppressor
 
 
 @traceable()

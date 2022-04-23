@@ -18,7 +18,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 import torch
 
-from fastestimator.backend.cast import cast
+from fastestimator.backend._cast import cast
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 

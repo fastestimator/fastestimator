@@ -17,8 +17,8 @@ from typing import Any, Dict, Iterable, List, Tuple, TypeVar, Union
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.hinge import hinge
-from fastestimator.backend.reduce_mean import reduce_mean
+from fastestimator.backend._hinge import hinge
+from fastestimator.backend._reduce_mean import reduce_mean
 from fastestimator.op.tensorop.loss.loss import LossOp
 from fastestimator.util.traceability_util import traceable
 

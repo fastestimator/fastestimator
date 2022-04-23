@@ -19,12 +19,13 @@ from typing import Iterable, List, Set, Union
 import numpy as np
 from natsort import humansorted
 
-from fastestimator.backend.get_lr import get_lr
+from fastestimator.backend._get_lr import get_lr
 from fastestimator.summary.summary import ValWithError
 from fastestimator.summary.system import System
 from fastestimator.util.data import Data, DSData
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import check_ds_id, check_io_names, parse_modes, to_list, to_number, to_set
+from fastestimator.util.util import to_number
+from fastestimator.util.base_util import to_set, to_list, check_io_names, parse_modes, check_ds_id
 
 
 @traceable()

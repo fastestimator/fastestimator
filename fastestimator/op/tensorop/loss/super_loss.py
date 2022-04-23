@@ -18,12 +18,12 @@ from typing import Any, Dict, List, Optional, TypeVar, Union
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.exp import exp
-from fastestimator.backend.lambertw import lambertw
-from fastestimator.backend.maximum import maximum
-from fastestimator.backend.ones_like import ones_like
-from fastestimator.backend.pow import pow
-from fastestimator.backend.reduce_mean import reduce_mean
+from fastestimator.backend._exp import exp
+from fastestimator.backend._lambertw import lambertw
+from fastestimator.backend._maximum import maximum
+from fastestimator.backend._ones_like import ones_like
+from fastestimator.backend._pow import pow
+from fastestimator.backend._reduce_mean import reduce_mean
 from fastestimator.op.tensorop.loss.loss import LossOp
 from fastestimator.util.util import to_number
 

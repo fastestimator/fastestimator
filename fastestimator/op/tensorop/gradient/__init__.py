@@ -12,6 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.tensorop.gradient.fgsm import FGSM
-from fastestimator.op.tensorop.gradient.gradient import GradientOp
-from fastestimator.op.tensorop.gradient.watch import Watch
+from typing import TYPE_CHECKING
+
+import lazy_loader as lazy
+
+__getattr__, __dir__, __all__ = lazy.attach(__name__,
+                                            submod_attrs={'fgsm': ['FGSM'],
+                                                          'gradient': ['GradientOp'],
+                                                          'watch': ['Watch'],
+                                                          })
+
+if TYPE_CHECKING:
+    from fastestimator.op.tensorop.gradient.fgsm import FGSM
+    from fastestimator.op.tensorop.gradient.gradient import GradientOp
+    from fastestimator.op.tensorop.gradient.watch import Watch

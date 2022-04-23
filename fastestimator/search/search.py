@@ -17,7 +17,7 @@ import json
 import os
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from fastestimator.network import build
+import fastestimator as fe
 
 
 class Search:
@@ -66,7 +66,7 @@ class Search:
             result = self.evaluation_cache[hash_value]
         else:
             self.search_idx += 1
-            build.count = 0  # Resetting the build count to refresh the model names
+            fe.fe_build_count = 0  # Resetting the build count to refresh the model names
             kwargs["search_idx"] = self.search_idx
             result = self.eval_fn(**kwargs)
             if not isinstance(result, dict):

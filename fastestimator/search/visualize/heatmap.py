@@ -21,7 +21,7 @@ from plotly.subplots import make_subplots
 
 from fastestimator.search.search import Search
 from fastestimator.search.visualize.vis_util import SearchData, _load_search_file
-from fastestimator.util.util import in_notebook, visualize_figure
+from fastestimator.util.base_util import in_notebook, visualize_figure
 
 
 def _heatmap_supports_data(data: SearchData, throw_on_invalid: bool = True) -> bool:

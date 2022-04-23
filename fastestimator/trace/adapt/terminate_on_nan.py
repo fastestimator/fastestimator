@@ -14,7 +14,7 @@
 # ==============================================================================
 from typing import Iterable, Set, Union
 
-from fastestimator.backend.check_nan import check_nan
+from fastestimator.backend._check_nan import check_nan
 from fastestimator.schedule.schedule import get_current_items
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data

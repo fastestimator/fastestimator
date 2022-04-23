@@ -17,8 +17,7 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
-from fastestimator.backend import to_tensor
-from fastestimator.backend.tensor_normalize import normalize
+from fastestimator.backend import to_tensor, normalize
 
 
 class TestNormalize(unittest.TestCase):

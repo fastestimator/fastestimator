@@ -27,20 +27,21 @@ from tensorflow.python.keras.callbacks import keras_model_summary
 from tensorflow.python.ops import summary_ops_v2
 from torch.utils.tensorboard import SummaryWriter
 
-from fastestimator.backend.abs import abs
-from fastestimator.backend.concat import concat
-from fastestimator.backend.expand_dims import expand_dims
-from fastestimator.backend.permute import permute
-from fastestimator.backend.reduce_sum import reduce_sum
-from fastestimator.backend.reshape import reshape
-from fastestimator.backend.squeeze import squeeze
-from fastestimator.backend.to_tensor import to_tensor
+from fastestimator.backend._abs import abs
+from fastestimator.backend._concat import concat
+from fastestimator.backend._expand_dims import expand_dims
+from fastestimator.backend._permute import permute
+from fastestimator.backend._reduce_sum import reduce_sum
+from fastestimator.backend._reshape import reshape
+from fastestimator.backend._squeeze import squeeze
+from fastestimator.backend._to_tensor import to_tensor
 from fastestimator.network import BaseNetwork, TFNetwork
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.img_data import ImgData
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import DefaultKeyDict, is_number, to_list, to_number, to_set
+from fastestimator.util.util import to_number
+from fastestimator.util.base_util import to_set, to_list, is_number, DefaultKeyDict
 
 # https://github.com/pytorch/pytorch/issues/30966
 tf.io.gfile = tb.compat.tensorflow_stub.io.gfile

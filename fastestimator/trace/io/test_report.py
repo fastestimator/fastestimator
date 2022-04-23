@@ -31,7 +31,8 @@ from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.latex_util import IterJoin, WrapText
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import to_list, to_number, to_set
+from fastestimator.util.util import to_number
+from fastestimator.util.base_util import to_set, to_list
 
 
 @traceable()
