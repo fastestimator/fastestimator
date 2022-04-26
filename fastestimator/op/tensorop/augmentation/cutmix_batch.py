@@ -39,8 +39,8 @@ class CutMixBatch(TensorOp):
     attacks (https://arxiv.org/pdf/1905.04899.pdf).
 
     Args:
-        inputs: Key of the image batch to be cut-mixed.
-        outputs: Keys under which to store the cut-mixed images and lambda value.
+        inputs: Keys of the image batch and label batch to be cut-mixed.
+        outputs: Keys under which to store the cut-mixed images and cut-mixed label.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
@@ -59,6 +59,8 @@ class CutMixBatch(TensorOp):
                  ds_id: Union[None, str, Iterable[str]] = None,
                  alpha: Union[float, Tensor] = 1.0) -> None:
         assert alpha > 0, "Alpha value must be greater than zero"
+        assert len(inputs) == 2, "Cut-Mix must have exactly 2 inputs"
+        assert len(outputs) == 2, "Cut-Mix must have exactly 2 outputs"
         super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.alpha = alpha
         self.beta = None

@@ -34,8 +34,8 @@ class MixUpBatch(TensorOp):
     over-fitting, stabilize GAN training, and against adversarial attacks (https://arxiv.org/abs/1710.09412).
 
     Args:
-        inputs: Key of the input to be mixed up.
-        outputs: Key to store the mixed-up outputs.
+        inputs: Keys of the image batch and label batch to be mixed up.
+        outputs: Keys under which to store the mixed up images and mixed up label.
         mode: What mode to execute in. Probably 'train'.
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
@@ -46,13 +46,15 @@ class MixUpBatch(TensorOp):
         AssertionError: If input arguments are invalid.
     """
     def __init__(self,
-                 inputs: Union[str, Iterable[str]],
+                 inputs: Iterable[str],
                  outputs: Iterable[str],
                  mode: Union[None, str, Iterable[str]] = 'train',
                  ds_id: Union[None, str, Iterable[str]] = None,
                  alpha: float = 1.0,
                  shared_beta: bool = False):
         assert alpha > 0, "MixUp alpha value must be greater than zero"
+        assert len(inputs) == 2, "MixUp must have exactly 2 inputs"
+        assert len(outputs) == 2, "MixUp must have exactly 2 outputs"
         super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.alpha = alpha
         self.beta = None
@@ -62,7 +64,6 @@ class MixUpBatch(TensorOp):
         if framework == 'tf':
             self.beta = tfp.distributions.Beta(self.alpha, self.alpha)
         elif framework == 'torch':
-            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
             self.beta = torch.distributions.beta.Beta(
                 torch.tensor([self.alpha]).to(device), torch.tensor([self.alpha]).to(device))
         else:
