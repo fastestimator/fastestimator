@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Iterable, Optional, Tuple, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -20,9 +20,9 @@ import torch
 
 from fastestimator.backend._cast import cast
 from fastestimator.backend._clip_by_value import clip_by_value
+from fastestimator.backend._roll import roll
 from fastestimator.backend._get_image_dims import get_image_dims
 from fastestimator.backend._maximum import maximum
-from fastestimator.backend._roll import roll
 from fastestimator.backend._tensor_round import tensor_round
 from fastestimator.backend._tensor_sqrt import tensor_sqrt
 from fastestimator.op.tensorop.tensorop import TensorOp
@@ -53,14 +53,13 @@ class CutMixBatch(TensorOp):
         AssertionError: If the provided inputs are invalid.
     """
     def __init__(self,
-                 inputs: str,
+                 inputs: Iterable[str],
                  outputs: Iterable[str],
                  mode: Union[None, str, Iterable[str]] = 'train',
                  ds_id: Union[None, str, Iterable[str]] = None,
                  alpha: Union[float, Tensor] = 1.0) -> None:
         assert alpha > 0, "Alpha value must be greater than zero"
         super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
-        assert len(self.outputs) == len(self.inputs) + 1, "CutMixBatch should generate 1 more output than it has inputs"
         self.alpha = alpha
         self.beta = None
         self.uniform = None
@@ -98,32 +97,42 @@ class CutMixBatch(TensorOp):
         """
         _, img_height, img_width = get_image_dims(tensor)
 
-        cut_x = img_width * x
-        cut_y = img_height * y
-        cut_w = img_width * tensor_sqrt(1 - lam)
-        cut_h = img_height * tensor_sqrt(1 - lam)
+        if tf.is_tensor(tensor):
+            ht = cast(img_height, "float32")
+            wd = cast(img_width, "float32")
+        else:
+            ht = img_height
+            wd = img_width
+
+        cut_x = wd * x
+        cut_y = ht * y
+        cut_w = wd * tensor_sqrt(1 - lam)
+        cut_h = ht * tensor_sqrt(1 - lam)
         bbox_x1 = cast(tensor_round(clip_by_value(cut_x - cut_w / 2, min_value=0)), "int32")
-        bbox_x2 = cast(tensor_round(clip_by_value(cut_x + cut_w / 2, max_value=img_width)), "int32")
+        bbox_x2 = cast(tensor_round(clip_by_value(cut_x + cut_w / 2, max_value=wd)), "int32")
         bbox_y1 = cast(tensor_round(clip_by_value(cut_y - cut_h / 2, min_value=0)), "int32")
-        bbox_y2 = cast(tensor_round(clip_by_value(cut_y + cut_h / 2, max_value=img_height)), "int32")
+        bbox_y2 = cast(tensor_round(clip_by_value(cut_y + cut_h / 2, max_value=ht)), "int32")
         return bbox_x1, bbox_x2, bbox_y1, bbox_y2, img_width, img_height
 
-    def forward(self, data: Tensor, state: Dict[str, Any]) -> Tuple[Tensor, Tensor]:
+    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tuple[Tensor, Tensor]:
+        x, y = data
         lam = self.beta.sample()
         lam = maximum(lam, (1 - lam))
         cut_x = self.uniform.sample()
         cut_y = self.uniform.sample()
-        bbox_x1, bbox_x2, bbox_y1, bbox_y2, width, height = self._get_patch_coordinates(data, cut_x, cut_y, lam=lam)
-        if tf.is_tensor(data):
-            patches = roll(data, shift=1, axis=0)[:, bbox_y1:bbox_y2,
-                                                  bbox_x1:bbox_x2, :] - data[:, bbox_y1:bbox_y2, bbox_x1:bbox_x2, :]
+        bbox_x1, bbox_x2, bbox_y1, bbox_y2, width, height = self._get_patch_coordinates(x, cut_x, cut_y, lam=lam)
+        if tf.is_tensor(x):
+            rolled_x = roll(x, shift=1, axis=0)
+            patches = rolled_x[:, bbox_y1:bbox_y2, bbox_x1:bbox_x2, :] - x[:, bbox_y1:bbox_y2, bbox_x1:bbox_x2, :]
             patches = tf.pad(patches, [[0, 0], [bbox_y1, height - bbox_y2], [bbox_x1, width - bbox_x2], [0, 0]],
                              mode="CONSTANT",
                              constant_values=0)
-            data = data + patches
+            x = x + patches
         else:
-            data[:, :, bbox_y1:bbox_y2, bbox_x1:bbox_x2] = roll(data, shift=1,
-                                                                axis=0)[:, :, bbox_y1:bbox_y2, bbox_x1:bbox_x2]
+            rolled_x = roll(x, shift=1, axis=0)
+            x[:, :, bbox_y1:bbox_y2, bbox_x1:bbox_x2] = rolled_x[:, :, bbox_y1:bbox_y2, bbox_x1:bbox_x2]
         # adjust lambda to match pixel ratio
-        lam = 1 - cast(((bbox_x2 - bbox_x1) * (bbox_y2 - bbox_y1)), dtype="float32") / (width * height)
-        return data, lam
+        lam = 1 - cast(((bbox_x2 - bbox_x1) * (bbox_y2 - bbox_y1)), dtype="float32") / cast((width * height), "float32")
+        rolled_y = roll(y, shift=1, axis=0) * (1. - lam)
+        mixed_y = (y * lam) + rolled_y
+        return x, mixed_y
