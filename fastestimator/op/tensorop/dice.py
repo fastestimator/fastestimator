@@ -18,7 +18,7 @@ import numpy as np
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.dice_score import dice_score
+from fastestimator.backend._dice_score import dice_score
 from fastestimator.op.tensorop.tensorop import TensorOp
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.array)

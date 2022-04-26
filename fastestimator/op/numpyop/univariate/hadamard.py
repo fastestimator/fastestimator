@@ -17,7 +17,7 @@ from typing import Any, Dict, Iterable, List, Optional, Union
 import numpy as np
 from scipy.linalg import hadamard
 
-from fastestimator.backend.gather import gather
+from fastestimator.backend._gather import gather
 from fastestimator.op.numpyop.numpyop import NumpyOp
 from fastestimator.util.traceability_util import traceable
 

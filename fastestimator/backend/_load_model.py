@@ -21,7 +21,7 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 import torch
 
-from fastestimator.backend.set_lr import set_lr
+from fastestimator.backend._set_lr import set_lr
 
 
 def load_model(model: Union[tf.keras.Model, torch.nn.Module], weights_path: str, load_optimizer: bool = False):

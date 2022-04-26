@@ -25,18 +25,19 @@ import tensorflow as tf
 import tensorflow.keras.mixed_precision as mixed_precision_tf
 import torch
 from tensorflow.python.distribute.values import DistributedValues
-from tensorflow.python.eager import context
 from tensorflow.python.keras.engine.sequential import Sequential
 
-from fastestimator.backend.load_model import load_model
-from fastestimator.backend.to_tensor import to_tensor
+import fastestimator as fe
+from fastestimator.backend._load_model import load_model
+from fastestimator.backend._to_tensor import to_tensor
 from fastestimator.op.numpyop import Batch, NumpyOp, RemoveIf, forward_numpyop
 from fastestimator.op.op import get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.tensorop.model.update import UpdateOp
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
 from fastestimator.util.traceability_util import trace_model, traceable
-from fastestimator.util.util import NonContext, get_batch_size, to_list
+from fastestimator.util.util import get_batch_size
+from fastestimator.util.base_util import to_list, NonContext
 
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 T = TypeVar('T')
@@ -872,12 +873,11 @@ def build(model_fn: Callable[[], Union[Model, List[Model]]],
         models: The model(s) built by FastEstimator.
     """
     def _generate_model_names(num_names):
-        names = ["model" if i + build.count == 0 else "model{}".format(i + build.count) for i in range(num_names)]
-        build.count += num_names
+        names = ["model" if i + fe.fe_build_count == 0 else "model{}".format(i + fe.fe_build_count) for i in
+                 range(num_names)]
+        fe.fe_build_count += num_names
         return names
 
-    if not hasattr(build, "count"):
-        build.count = 0
     # The following garbage collection is needed for if a TF model was running, but then died due to an exception being
     # thrown, but the exception was then caught, whereupon the user wanted to switch to a pytorch model instead. Absent
     # this collection, you would see: "Failed setting context: CUDA_ERROR_NOT_INITIALIZED: initialization error". This

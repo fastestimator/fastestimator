@@ -20,7 +20,7 @@ from typing import Iterable, List, Tuple, Union
 import numpy as np
 from nltk.translate.bleu_score import SmoothingFunction, brevity_penalty, modified_precision, sentence_bleu
 
-from fastestimator.trace.meta.per_ds import per_ds
+from fastestimator.trace.meta._per_ds import per_ds
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable

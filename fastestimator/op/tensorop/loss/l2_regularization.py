@@ -17,7 +17,7 @@ from typing import Any, Dict, Iterable, List, TypeVar, Union
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.l2_regularization import l2_regularization
+from fastestimator.backend._l2_regularization import l2_regularization
 from fastestimator.op.tensorop.tensorop import TensorOp
 
 from fastestimator.util.traceability_util import traceable

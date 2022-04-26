@@ -23,7 +23,7 @@ import numpy as np
 import tensorflow as tf
 import wget
 
-from fastestimator.backend.zscore import zscore
+from fastestimator.backend._zscore import zscore
 from fastestimator.util.traceability_util import traceable
 
 

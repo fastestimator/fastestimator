@@ -17,11 +17,11 @@ from typing import Any, Dict, Iterable, List, Optional, TypeVar, Union
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.clip_by_value import clip_by_value
-from fastestimator.backend.get_gradient import get_gradient
-from fastestimator.backend.reduce_max import reduce_max
-from fastestimator.backend.reduce_min import reduce_min
-from fastestimator.backend.sign import sign
+from fastestimator.backend._clip_by_value import clip_by_value
+from fastestimator.backend._get_gradient import get_gradient
+from fastestimator.backend._reduce_max import reduce_max
+from fastestimator.backend._reduce_min import reduce_min
+from fastestimator.backend._sign import sign
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 

@@ -18,7 +18,7 @@ from typing import Any, Iterable, List, Mapping, MutableMapping, Set, Union
 import numpy as np
 
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import check_ds_id, check_io_names, parse_modes, to_list, to_set
+from fastestimator.util.base_util import to_set, to_list, check_io_names, parse_modes, check_ds_id
 
 
 @traceable()

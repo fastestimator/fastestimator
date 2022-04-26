@@ -17,10 +17,9 @@ import re
 from collections import defaultdict
 from typing import List, Optional, Set, Iterable
 
-from fastestimator.dataset.dir_dataset import DirDataset
 from fastestimator.summary.logs.log_plot import visualize_logs
 from fastestimator.summary.summary import Summary, ValWithError, average_summaries
-from fastestimator.util.util import strip_suffix
+from fastestimator.util.base_util import strip_suffix, list_files
 
 
 def parse_log_iter(source: Iterable[str], sync: Summary) -> Summary:
@@ -172,8 +171,7 @@ def parse_log_dir(dir_path: str,
         group_by: Combine multiple log files by a regex to visualize their mean+-stddev. For example, to group together
             files like [a_1.txt, a_2.txt] vs [b_1.txt, b_2.txt] you can use: r'(.*)_[\d]+\.txt'.
     """
-    loader = DirDataset(root_dir=dir_path, file_extension=log_extension, recursive_search=recursive_search)
-    file_paths = list(map(lambda d: d['x'], loader.data.values()))
+    file_paths = list_files(root_dir=dir_path, file_extension=log_extension, recursive_search=recursive_search)
 
     parse_log_files(file_paths,
                     log_extension,

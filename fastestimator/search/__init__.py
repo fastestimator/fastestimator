@@ -12,6 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.search.golden_section import GoldenSection
-from fastestimator.search.grid_search import GridSearch
-from fastestimator.search.search import Search
+from typing import TYPE_CHECKING
+
+import lazy_loader as lazy
+
+__getattr__, __dir__, __all__ = lazy.attach(__name__,
+                                            submodules={'visualize'},
+                                            submod_attrs={'golden_section': ['GoldenSection'],
+                                                          'grid_search': ['GridSearch'],
+                                                          'search': ['Search']})
+
+if TYPE_CHECKING:
+    from fastestimator.search import visualize
+    from fastestimator.search.golden_section import GoldenSection
+    from fastestimator.search.grid_search import GridSearch
+    from fastestimator.search.search import Search

@@ -12,5 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.tensorop.model.model import ModelOp
-from fastestimator.op.tensorop.model.update import UpdateOp
+from typing import TYPE_CHECKING
+
+import lazy_loader as lazy
+
+__getattr__, __dir__, __all__ = lazy.attach(__name__,
+                                            submod_attrs={'model': ['ModelOp'],
+                                                          'update': ['UpdateOp'],
+                                                          })
+
+if TYPE_CHECKING:
+    from fastestimator.op.tensorop.model.model import ModelOp
+    from fastestimator.op.tensorop.model.update import UpdateOp

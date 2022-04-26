@@ -12,8 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.trace.xai.eigen_cam import EigenCAM
-from fastestimator.trace.xai.grad_cam import GradCAM
-from fastestimator.trace.xai.instance_tracker import InstanceTracker
-from fastestimator.trace.xai.label_tracker import LabelTracker
-from fastestimator.trace.xai.saliency import Saliency
+from typing import TYPE_CHECKING
+
+import lazy_loader as lazy
+
+__getattr__, __dir__, __all__ = lazy.attach(__name__,
+                                            submod_attrs={'eigen_cam': ['EigenCAM'],
+                                                          'grad_cam': ['GradCAM'],
+                                                          'instance_tracker': ['InstanceTracker'],
+                                                          'label_tracker': ['LabelTracker'],
+                                                          'saliency': ['Saliency'], })
+
+if TYPE_CHECKING:
+    from fastestimator.trace.xai.eigen_cam import EigenCAM
+    from fastestimator.trace.xai.grad_cam import GradCAM
+    from fastestimator.trace.xai.instance_tracker import InstanceTracker
+    from fastestimator.trace.xai.label_tracker import LabelTracker
+    from fastestimator.trace.xai.saliency import Saliency

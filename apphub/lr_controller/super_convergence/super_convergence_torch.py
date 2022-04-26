@@ -25,7 +25,7 @@ from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.adapt import LRScheduler
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
-from fastestimator.util.util import Suppressor
+from fastestimator.util import Suppressor
 
 
 def super_schedule(step, lr_max, lr_min, mid, end):

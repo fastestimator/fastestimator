@@ -19,7 +19,7 @@ from typing import Dict, List, Union, Iterable
 import numpy as np
 from pycocotools import mask as maskUtils
 
-from fastestimator.trace.meta.per_ds import per_ds
+from fastestimator.trace.meta._per_ds import per_ds
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable

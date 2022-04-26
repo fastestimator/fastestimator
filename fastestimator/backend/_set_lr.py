@@ -18,7 +18,7 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 import torch
 
-from fastestimator.backend.get_lr import get_lr
+from fastestimator.backend._get_lr import get_lr
 
 
 def set_lr(model: Union[tf.keras.Model, torch.nn.Module], lr: float, weight_decay: Optional[float] = None):

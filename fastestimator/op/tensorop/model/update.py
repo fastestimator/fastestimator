@@ -17,12 +17,12 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Set, TypeVar, 
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.get_gradient import get_gradient
-from fastestimator.backend.reduce_mean import reduce_mean
-from fastestimator.backend.update_model import update_model
+from fastestimator.backend._get_gradient import get_gradient
+from fastestimator.backend._reduce_mean import reduce_mean
+from fastestimator.backend._update_model import update_model
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import to_set
+from fastestimator.util.base_util import to_set
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)

@@ -12,7 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.op.tensorop.meta.fuse import Fuse
-from fastestimator.op.tensorop.meta.one_of import OneOf
-from fastestimator.op.tensorop.meta.repeat import Repeat
-from fastestimator.op.tensorop.meta.sometimes import Sometimes
+from typing import TYPE_CHECKING
+
+import lazy_loader as lazy
+
+__getattr__, __dir__, __all__ = lazy.attach(__name__,
+                                            submod_attrs={'fuse': ['Fuse'],
+                                                          'one_of': ['OneOf'],
+                                                          'repeat': ['Repeat'],
+                                                          'sometimes': ['Sometimes'],
+                                                          })
+
+if TYPE_CHECKING:
+    from fastestimator.op.tensorop.meta.fuse import Fuse
+    from fastestimator.op.tensorop.meta.one_of import OneOf
+    from fastestimator.op.tensorop.meta.repeat import Repeat
+    from fastestimator.op.tensorop.meta.sometimes import Sometimes

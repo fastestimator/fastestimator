@@ -20,7 +20,7 @@ import torch
 from fastestimator.network import BaseNetwork
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import to_list
+from fastestimator.util.base_util import to_list
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)

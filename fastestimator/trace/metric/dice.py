@@ -16,8 +16,8 @@ from typing import Iterable, Union
 
 import numpy as np
 
-from fastestimator.backend.dice_score import dice_score
-from fastestimator.trace.meta.per_ds import per_ds
+from fastestimator.backend._dice_score import dice_score
+from fastestimator.trace.meta._per_ds import per_ds
 from fastestimator.trace.trace import Trace
 from fastestimator.util import Data
 from fastestimator.util.traceability_util import traceable

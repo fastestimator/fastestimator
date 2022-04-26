@@ -62,13 +62,13 @@ def get_dependency():
         'pandas>=1.4.1',
         'wget>=3.2',
         'pillow>=9.0.1',
-        'seaborn>=0.11.2',
         'jsonpickle>=2.1.0',
         'python-docx>=0.8.11',
         'plotly==5.7.0',
         'kaleido>=0.2.1',
         'orjson>=3.6.7',
         'sklearn',
+        'lazy_loader',
     ]
     if os.name == "nt":
         dependencies.append(

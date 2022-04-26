@@ -17,9 +17,9 @@ from typing import TypeVar
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.cast import cast
-from fastestimator.backend.clip_by_value import clip_by_value
-from fastestimator.backend.reduce_mean import reduce_mean
+from fastestimator.backend._cast import cast
+from fastestimator.backend._clip_by_value import clip_by_value
+from fastestimator.backend._reduce_mean import reduce_mean
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 

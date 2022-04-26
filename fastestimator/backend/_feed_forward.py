@@ -18,7 +18,7 @@ import numpy as np
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.to_tensor import to_tensor
+from fastestimator.backend._to_tensor import to_tensor
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 

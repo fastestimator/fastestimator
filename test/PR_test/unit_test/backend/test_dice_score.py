@@ -18,7 +18,7 @@ import numpy as np
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.dice_score import dice_score
+from fastestimator.backend import dice_score
 
 
 class TestDiceScore(unittest.TestCase):

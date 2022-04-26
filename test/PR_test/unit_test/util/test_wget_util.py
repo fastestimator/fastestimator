@@ -23,4 +23,4 @@ class TestWgetUtil(unittest.TestCase):
         cls.op = " 10% [......                                                        ] 0.00 / 0.00 MB"
 
     def test_bar_custom(self):
-        self.assertEqual(fe.util.wget_util.bar_custom(10, 100), self.op)
+        self.assertEqual(fe.util.bar_custom(10, 100), self.op)

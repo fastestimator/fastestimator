@@ -18,8 +18,8 @@ import numpy as np
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.reduce_mean import reduce_mean
-from fastestimator.backend.reduce_sum import reduce_sum
+from fastestimator.backend._reduce_mean import reduce_mean
+from fastestimator.backend._reduce_sum import reduce_sum
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 

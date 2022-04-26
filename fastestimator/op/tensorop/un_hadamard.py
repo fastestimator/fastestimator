@@ -20,10 +20,10 @@ import tensorflow as tf
 import torch
 from scipy.linalg import hadamard
 
-from fastestimator.backend.expand_dims import expand_dims
-from fastestimator.backend.iwd import iwd
-from fastestimator.backend.reduce_sum import reduce_sum
-from fastestimator.backend.to_tensor import to_tensor
+from fastestimator.backend._expand_dims import expand_dims
+from fastestimator.backend._iwd import iwd
+from fastestimator.backend._reduce_sum import reduce_sum
+from fastestimator.backend._to_tensor import to_tensor
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 

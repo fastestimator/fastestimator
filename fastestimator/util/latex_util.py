@@ -19,7 +19,7 @@ from pylatex.base_classes import Container, ContainerCommand, Environment, Latex
 from pylatex.lists import Enumerate
 from pylatex.utils import bold, dumps_list
 
-from fastestimator.util.util import FEID
+from fastestimator.util.base_util import FEID
 
 
 class ContainerList(Container):

@@ -12,6 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.dataset.data import breast_cancer, cifair10, cifair100, cifar10, cifar100, cub200, food101, \
-    horse2zebra, imdb_review, mendeley, mitmovie_ner, mnist, montgomery, mscoco, nih_chestxray, omniglot, \
-    penn_treebank, shakespeare, skl_digits, svhn, svhn_cropped, tednmt, usps
+from typing import TYPE_CHECKING
+
+import lazy_loader as lazy
+
+__getattr__, __dir__, __all__ = lazy.attach(__name__,
+                                            submodules={'breast_cancer', 'cifair10', 'cifair100', 'cifar10',
+                                                        'cifar100', 'cub200', 'food101', 'horse2zebra', 'imdb_review',
+                                                        'mendeley', 'mitmovie_ner', 'mnist', 'montgomery', 'mscoco',
+                                                        'nih_chestxray', 'omniglot', 'penn_treebank', 'shakespeare',
+                                                        'skl_digits', 'svhn', 'svhn_cropped', 'tednmt', 'usps'}
+                                            )
+
+if TYPE_CHECKING:
+    from fastestimator.dataset.data import breast_cancer, cifair10, cifair100, cifar10, cifar100, cub200, food101, \
+        horse2zebra, imdb_review, mendeley, mitmovie_ner, mnist, montgomery, mscoco, nih_chestxray, omniglot, \
+        penn_treebank, shakespeare, skl_digits, svhn, svhn_cropped, tednmt, usps

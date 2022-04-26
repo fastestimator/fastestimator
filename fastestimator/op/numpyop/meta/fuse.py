@@ -19,7 +19,7 @@ import numpy as np
 
 from fastestimator.op.numpyop.numpyop import Batch, Delete, NumpyOp, forward_numpyop
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import to_list
+from fastestimator.util.base_util import to_list
 
 
 @traceable()

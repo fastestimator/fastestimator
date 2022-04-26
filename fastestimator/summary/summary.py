@@ -15,9 +15,10 @@
 import re
 import statistics
 from collections import defaultdict
-from typing import Any, Dict, List, NamedTuple, Optional, Union
+from typing import Any, Dict, List, NamedTuple, Optional, TYPE_CHECKING, Union
 
-from fastestimator.util.traceability_util import FeSummaryTable
+if TYPE_CHECKING:
+    from fastestimator.util.traceability_util import FeSummaryTable
 
 
 class ValWithError(NamedTuple):
@@ -41,7 +42,7 @@ class Summary:
         system_config: A description of the initialization parameters defining the estimator associated with this
             experiment.
     """
-    def __init__(self, name: Optional[str], system_config: Optional[List[FeSummaryTable]] = None) -> None:
+    def __init__(self, name: Optional[str], system_config: Optional[List['FeSummaryTable']] = None) -> None:
         self.name = name
         self.system_config = system_config
         self.history = defaultdict(lambda: defaultdict(dict))  # {mode: {key: {step: value}}}

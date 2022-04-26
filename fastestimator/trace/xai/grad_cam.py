@@ -19,11 +19,11 @@ import numpy as np
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.argmax import argmax
-from fastestimator.backend.concat import concat
-from fastestimator.backend.get_image_dims import get_image_dims
-from fastestimator.backend.reduce_max import reduce_max
-from fastestimator.backend.squeeze import squeeze
+from fastestimator.backend._argmax import argmax
+from fastestimator.backend._concat import concat
+from fastestimator.backend._get_image_dims import get_image_dims
+from fastestimator.backend._reduce_max import reduce_max
+from fastestimator.backend._squeeze import squeeze
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.img_data import ImgData

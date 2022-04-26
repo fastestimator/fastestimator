@@ -20,7 +20,7 @@ from PIL import Image, ImageEnhance
 
 from fastestimator.op.numpyop.numpyop import NumpyOp
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import param_to_range
+from fastestimator.util.base_util import param_to_range
 
 
 @traceable()

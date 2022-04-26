@@ -12,7 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.cli.logs import configure_log_parser
-from fastestimator.cli.main import run_main
-from fastestimator.cli.run import configure_run_parser
-from fastestimator.cli.train import configure_test_parser, configure_train_parser
+from typing import TYPE_CHECKING
+
+import lazy_loader as lazy
+
+__getattr__, __dir__, __all__ = lazy.attach(__name__,
+                                            submod_attrs={'logs': ['configure_log_parser'],
+                                                          'main': ['run_main'],
+                                                          'plot': ['configure_plot_parser'],
+                                                          'run': ['configure_run_parser'],
+                                                          'train': ['configure_test_parser', 'configure_train_parser']})
+
+if TYPE_CHECKING:
+    from fastestimator.cli.logs import configure_log_parser
+    from fastestimator.cli.main import run_main
+    from fastestimator.cli.plot import configure_plot_parser
+    from fastestimator.cli.run import configure_run_parser
+    from fastestimator.cli.train import configure_test_parser, configure_train_parser

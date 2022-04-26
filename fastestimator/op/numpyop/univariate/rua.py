@@ -33,7 +33,7 @@ from fastestimator.op.numpyop.univariate.shear_y import ShearY
 from fastestimator.op.numpyop.univariate.translate_x import TranslateX
 from fastestimator.op.numpyop.univariate.translate_y import TranslateY
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import param_to_range, to_list, to_set
+from fastestimator.util.base_util import to_set, to_list, param_to_range
 
 
 @traceable()

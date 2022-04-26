@@ -17,10 +17,10 @@ from typing import Any, Dict, Iterable, List, Optional, TypeVar, Union
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.get_gradient import get_gradient
+from fastestimator.backend._get_gradient import get_gradient
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import to_list
+from fastestimator.util.base_util import to_list
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 

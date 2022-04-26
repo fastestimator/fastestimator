@@ -23,7 +23,7 @@ import numpy as np
 from torch.utils.data import Dataset
 
 from fastestimator.util.traceability_util import FeSplitSummary, traceable
-from fastestimator.util.util import FEID, get_shape, get_type
+from fastestimator.util.base_util import get_type, FEID, get_shape
 
 
 class KeySummary:

@@ -17,24 +17,24 @@ from typing import TypeVar
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.reduce_mean import reduce_mean
+from fastestimator.backend._reduce_mean import reduce_mean
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
-def smooth_l1_loss(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
-    """Calculate Smooth L1 Loss between two tensors.
+def huber(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
+    """Calculate Huber Loss between two tensors.
 
     This method can be used with TensorFlow tensors:
     ```python
 
     true = tf.constant([[0,1,0,0], [0,0,0,1], [0,0,1,0], [1,0,0,0]])
     pred = tf.constant([[0.1,0.9,0.05,0.05], [0.1,0.2,0.0,0.7], [0.0,0.15,0.8,0.05], [1.0,0.0,0.0,0.0]])
-    Smooth_L1 = fe.backend.smooth_l1_loss(y_pred=pred, y_true=true, loss_type='smooth', beta=0.65)   #[0.0048, 0.0269, 0.0125, 0.0000]
+    Huber_Loss = fe.backend.huber(y_pred=pred, y_true=true, loss_type='huber', beta=0.65)   #[0.0031, 0.0175, 0.0081, 0.0000]
 
     true = tf.constant([[1], [3], [2], [0]])
     pred = tf.constant([[2.0], [0.0], [2.0], [1.0]])
-    Smooth_L1 = fe.backend.smooth_l1_loss(y_pred=pred, y_true=true, loss_type='smooth', beta=0.65)   #[0.6750, 2.6750, 0.0000, 0.6750]
+    Huber_Loss = fe.backend.huber(y_pred=pred, y_true=true, loss_type='huber', beta=0.65)   #[0.4387, 1.7387, 0.0000, 0.4387]
     ```
 
     This method can be used with PyTorch tensors:
@@ -42,11 +42,11 @@ def smooth_l1_loss(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
 
     true = torch.tensor([[0,1,0,0], [0,0,0,1], [0,0,1,0], [1,0,0,0]])
     pred = torch.tensor([[0.1,0.9,0.05,0.05], [0.1,0.2,0.0,0.7], [0.0,0.15,0.8,0.05], [1.0,0.0,0.0,0.0]])
-    Smooth_L1 = fe.backend.smooth_l1_loss(y_pred=pred, y_true=true, loss_type='smooth', beta=0.65)   #[0.0048, 0.0269, 0.0125, 0.0000]
+    Huber_Loss = fe.backend.huber(y_pred=pred, y_true=true, loss_type='huber', beta=0.65)   #[0.0031, 0.0175, 0.0081, 0.0000]
 
     true = torch.tensor([[1], [3], [2], [0]])
     pred = torch.tensor([[2.0], [0.0], [2.0], [1.0]])
-    Smooth_L1 = fe.backend.smooth_l1_loss(y_pred=pred, y_true=true, loss_type='smooth', beta=0.65)   #[0.6750, 2.6750, 0.0000, 0.6750]
+    Huber_Loss = fe.backend.huber(y_pred=pred, y_true=true, loss_type='huber', beta=0.65)   #[0.4387, 1.7387, 0.0000, 0.4387]
     ```
 
     Args:
@@ -55,25 +55,25 @@ def smooth_l1_loss(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
         beta: Threshold factor. Needs to be a positive number. dtype: float16 or float32.
 
     Returns:
-        Smooth L1 between `y_true` and `y_pred` wrt beta.
+        The Huber loss between `y_true` and `y_pred` wrt beta.
 
     Raises:
         ValueError: If `y_pred` is an unacceptable data type.
-        ValueError: If beta is less than 1 for Smooth L1 loss.
+        ValueError: If beta is less than 1 for Smooth L1 loss and Huber Loss
     """
     if beta <= 0:
         raise ValueError("Beta cannot be less than or equal to 0")
 
     if tf.is_tensor(y_pred):
-        y_true = tf.cast(y_true, y_pred.dtype)
-        regression_diff = tf.math.abs(y_true - y_pred)  # |y - f(x)|
-        regression_loss = tf.where(tf.math.less(regression_diff, beta),
-                                   0.5 * tf.math.pow(regression_diff, 2) / beta,
-                                   regression_diff - 0.5 * beta)
-        smooth_mae = reduce_mean(regression_loss, axis=[*range(regression_loss.ndim)][1:])
+        if y_pred.ndim == 1:
+            y_true = tf.expand_dims(y_true, axis=-1)
+            y_pred = tf.expand_dims(y_pred, axis=-1)
+        regression_loss = tf.keras.losses.huber(y_true, y_pred, delta=beta)
+        huber_loss = reduce_mean(regression_loss, axis=[*range(regression_loss.ndim)][1:])
     elif isinstance(y_pred, torch.Tensor):
-        smooth_mae = reduce_mean(
-            torch.nn.SmoothL1Loss(reduction="none", beta=beta)(y_pred, y_true), axis=[*range(y_pred.ndim)][1:])
+        huber_loss = reduce_mean(
+            torch.nn.HuberLoss(reduction="none", delta=beta)(y_pred, y_true),
+            axis=[*range(y_pred.ndim)][1:])
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(y_pred)))
-    return smooth_mae
+    return huber_loss

@@ -12,4 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.xai.saliency import SaliencyNet
+from typing import TYPE_CHECKING
+
+import lazy_loader as lazy
+
+__getattr__, __dir__, __all__ = lazy.attach(__name__,
+                                            submod_attrs={'saliency': ['SaliencyNet'],
+                                                          })
+
+if TYPE_CHECKING:
+    from fastestimator.xai.saliency import SaliencyNet

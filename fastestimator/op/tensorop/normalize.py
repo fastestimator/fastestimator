@@ -18,7 +18,7 @@ import numpy as np
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.tensor_normalize import normalize
+from fastestimator.backend._tensor_normalize import normalize
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 

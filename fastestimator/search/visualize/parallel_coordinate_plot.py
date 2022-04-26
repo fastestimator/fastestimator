@@ -19,7 +19,7 @@ from plotly.graph_objects import Figure, Parcoords
 
 from fastestimator.search.search import Search
 from fastestimator.search.visualize.vis_util import SearchData, _load_search_file
-from fastestimator.util.util import visualize_figure
+from fastestimator.util.base_util import visualize_figure
 
 
 def plot_parallel_coordinates(search: Union[Search, str],

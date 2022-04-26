@@ -16,7 +16,7 @@ from typing import Any, Dict, Generator, Iterable, List, Optional, Sequence, Siz
 
 from fastestimator.dataset.dataset import DatasetSummary, FEDataset, KeySummary
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import get_shape, get_type
+from fastestimator.util.base_util import get_type, get_shape
 
 
 @traceable(blacklist='_summary')

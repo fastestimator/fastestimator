@@ -18,7 +18,7 @@ import numpy as np
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.convert_tensor_precision import convert_tensor_precision
+from fastestimator.backend._convert_tensor_precision import convert_tensor_precision
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 

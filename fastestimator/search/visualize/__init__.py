@@ -12,8 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.search.visualize.cartesian import plot_cartesian, visualize_cartesian
-from fastestimator.search.visualize.heatmap import plot_heatmap, visualize_heatmap
-from fastestimator.search.visualize.parallel_coordinate_plot import plot_parallel_coordinates, \
-    visualize_parallel_coordinates
-from fastestimator.search.visualize.visualize import visualize_search
+from typing import TYPE_CHECKING
+
+import lazy_loader as lazy
+
+__getattr__, __dir__, __all__ = lazy.attach(__name__,
+                                            submod_attrs={
+                                                'cartesian': ['plot_cartesian', 'visualize_cartesian'],
+                                                'heatmap': ['plot_heatmap', 'visualize_heatmap'],
+                                                'parallel_coordinate_plot': ['plot_parallel_coordinates',
+                                                                             'visualize_parallel_coordinates'],
+                                                'visualize': ['visualize_search']
+                                            })
+
+if TYPE_CHECKING:
+    from fastestimator.search.visualize.cartesian import plot_cartesian, visualize_cartesian
+    from fastestimator.search.visualize.heatmap import plot_heatmap, visualize_heatmap
+    from fastestimator.search.visualize.parallel_coordinate_plot import plot_parallel_coordinates, \
+        visualize_parallel_coordinates
+    from fastestimator.search.visualize.visualize import visualize_search

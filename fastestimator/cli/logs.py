@@ -16,7 +16,6 @@ import argparse
 import sys
 from typing import Any, Dict, List
 
-from fastestimator.summary.logs import parse_log_dir
 from fastestimator.util.cli_util import SaveAction
 
 
@@ -38,6 +37,7 @@ def logs(args: Dict[str, Any], unknown: List[str]) -> None:
         group_by = group_by[0]
     if group_by == '_n':
         group_by = r'(.*)_[\d]+' + '\\' + args['extension']
+    from fastestimator.summary.logs import parse_log_dir
     parse_log_dir(args['log_dir'],
                   args['extension'],
                   args['recursive'],

@@ -12,8 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from fastestimator.architecture.tensorflow.attention_unet import AttentionUNet
-from fastestimator.architecture.tensorflow.lenet import LeNet
-from fastestimator.architecture.tensorflow.resnet9 import ResNet9
-from fastestimator.architecture.tensorflow.unet import UNet
-from fastestimator.architecture.tensorflow.wideresnet import WideResidualNetwork
+from typing import TYPE_CHECKING
+
+import lazy_loader as lazy
+
+__getattr__, __dir__, __all__ = lazy.attach(__name__,
+                                            submod_attrs={'attention_unet': ['AttentionUNet'],
+                                                          'lenet': ['LeNet'],
+                                                          'resnet9': ['ResNet9'],
+                                                          'unet': ['UNet'],
+                                                          'wideresnet': ['WideResidualNetwork']})
+
+if TYPE_CHECKING:
+    from fastestimator.architecture.tensorflow.attention_unet import AttentionUNet
+    from fastestimator.architecture.tensorflow.lenet import LeNet
+    from fastestimator.architecture.tensorflow.resnet9 import ResNet9
+    from fastestimator.architecture.tensorflow.unet import UNet
+    from fastestimator.architecture.tensorflow.wideresnet import WideResidualNetwork

@@ -20,7 +20,7 @@ import tensorflow as tf
 import torch
 from tensorflow_probability.python.stats import percentile as tf_percentile
 
-from fastestimator.util.util import to_list
+from fastestimator.util.base_util import to_list
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 

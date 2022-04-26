@@ -19,11 +19,11 @@ import numpy as np
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.maximum import maximum
-from fastestimator.backend.reduce_sum import reduce_sum
-from fastestimator.backend.reshape import reshape
-from fastestimator.backend.tensor_pow import tensor_pow
-from fastestimator.backend.to_tensor import to_tensor
+from fastestimator.backend._maximum import maximum
+from fastestimator.backend._reduce_sum import reduce_sum
+from fastestimator.backend._reshape import reshape
+from fastestimator.backend._tensor_pow import tensor_pow
+from fastestimator.backend._to_tensor import to_tensor
 from fastestimator.util.util import TENSOR_TO_NP_DTYPE
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)

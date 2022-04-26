@@ -17,7 +17,7 @@ from typing import Any, Dict, Iterable, List, Tuple, TypeVar, Union
 import tensorflow as tf
 import torch
 
-from fastestimator.backend.reshape import reshape
+from fastestimator.backend._reshape import reshape
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 

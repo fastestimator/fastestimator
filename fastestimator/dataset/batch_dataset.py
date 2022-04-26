@@ -21,7 +21,7 @@ import numpy as np
 from fastestimator.dataset.dataset import DatasetSummary, FEDataset
 from fastestimator.dataset.extend_dataset import ExtendDataset
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import to_list
+from fastestimator.util.base_util import to_list
 
 
 @traceable()
