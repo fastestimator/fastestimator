@@ -21,7 +21,7 @@ import torch
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
 
-def flip(tensor: Tensor, axis: List[int] = [0]) -> Tensor:
+def flip(tensor: Tensor, axis: List[int]) -> Tensor:
     """Reverse the order of a given `tensor` elements along a given axis.
 
     This method can be used with Numpy data:
