@@ -25,7 +25,7 @@ from fastestimator.backend._reduce_min import reduce_min
 from fastestimator.backend._squeeze import squeeze
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
-from fastestimator.util.img_data import ImgData
+from fastestimator.util.img_data import BatchDisplay, GridDisplay
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
 from fastestimator.util.base_util import to_list
@@ -139,36 +139,37 @@ class Saliency(Trace):
                                                        nintegration=n_integration)
 
         # Arrange the outputs
-        args = {}
+        columns = []
         if self.class_key:
             classes = self.samples[mode][self.class_key]
             if self.label_mapping:
                 classes = np.array([self.label_mapping[clazz] for clazz in to_number(squeeze(classes))])
-            args[self.class_key] = classes
+            columns.append(BatchDisplay(text=classes, title=self.class_key))
         for key in self.model_outputs:
             classes = masks[key]
             if self.label_mapping:
                 classes = np.array([self.label_mapping[clazz] for clazz in to_number(squeeze(classes))])
-            args[key] = classes
+            columns.append(BatchDisplay(text=classes, title=key))
         sal = smint or integrated or smoothed or masks
         for key, val in self.samples[mode].items():
             if key is not self.class_key:
-                args[key] = val
+                columns.append(BatchDisplay(image=val, title=key))
                 # Create a linear combination of the original image, the saliency mask, and the product of the two in
                 # order to highlight regions of importance
                 min_val = reduce_min(val)
                 diff = reduce_max(val) - min_val
                 for outkey in self.outputs:
-                    args["{} {}".format(key, outkey)] = (0.3 * (sal[outkey] * (val - min_val) + min_val) + 0.3 * val +
-                                                         0.4 * sal[outkey] * diff + min_val)
+                    columns.append(BatchDisplay(image=(0.3 * (sal[outkey] * (val - min_val) + min_val) + 0.3 * val +
+                                                       0.4 * sal[outkey] * diff + min_val),
+                                                title="{} {}".format(key, outkey)))
         for key in self.outputs:
-            args[key] = masks[key]
+            columns.append(BatchDisplay(image=masks[key], title=key, color_map="inferno"))
             if smoothed:
-                args["Smoothed {}".format(key)] = smoothed[key]
+                columns.append(BatchDisplay(image=smoothed[key], title=f"Smoothed {key}", color_map="inferno"))
             if integrated:
-                args["Integrated {}".format(key)] = integrated[key]
+                columns.append(BatchDisplay(image=integrated[key], title=f"Integrated {key}", color_map="inferno"))
             if smint:
-                args["SmInt {}".format(key)] = smint[key]
-        result = ImgData(colormap="inferno", **args)
+                columns.append(BatchDisplay(image=smint[key], title=f"SmInt {key}", color_map="inferno"))
+        result = GridDisplay(columns=columns)
 
         data.write_without_log(self.outputs[0], result)

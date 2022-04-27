@@ -18,7 +18,7 @@ import lazy_loader as lazy
 
 __getattr__, __dir__, __all__ = lazy.attach(__name__,
                                             submod_attrs={'data': ['Data'],
-                                                          'img_data': ['ImgData'],
+                                                          'img_data': ['ImageDisplay', 'BatchDisplay', 'GridDisplay'],
                                                           'latex_util': ['AdjustBox', 'Center', 'ContainerList',
                                                                          'HrefFEID', 'PyContainer', 'Verbatim'],
                                                           'traceability_util': ['FeSplitSummary', 'trace_model',
@@ -29,24 +29,23 @@ __getattr__, __dir__, __all__ = lazy.attach(__name__,
                                                                         'strip_prefix', 'get_type', 'check_io_names',
                                                                         'parse_modes', 'check_ds_id', 'is_number',
                                                                         'DefaultKeyDict', 'FEID', 'Flag', 'in_notebook',
-                                                                        'get_shape', 'get_colors', 'visualize_figure',
-                                                                        'list_files'],
+                                                                        'get_shape', 'get_colors', 'list_files'],
                                                           'util': ['Timer', 'cpu_count', 'draw', 'get_batch_size',
                                                                    'get_num_devices', 'pad_batch', 'pad_data',
-                                                                   'show_image', 'to_number'],
+                                                                   'to_number'],
                                                           'cli_util': ['parse_string_to_python'],
                                                           'wget_util': ['bar_custom', 'callback_progress']
                                                           })
 
 if TYPE_CHECKING:
     from fastestimator.util.data import Data
-    from fastestimator.util.img_data import ImgData
+    from fastestimator.util.img_data import ImageDisplay, BatchDisplay, GridDisplay
     from fastestimator.util.latex_util import AdjustBox, Center, ContainerList, HrefFEID, PyContainer, Verbatim
     from fastestimator.util.traceability_util import FeSplitSummary, trace_model, traceable
     from fastestimator.util.base_util import to_set, to_list, param_to_range, NonContext, Suppressor, LogSplicer, \
         prettify_metric_name, strip_suffix, strip_prefix, get_type, check_io_names, parse_modes, check_ds_id, \
-        is_number, DefaultKeyDict, FEID, Flag, in_notebook, get_shape, get_colors, visualize_figure, list_files
+        is_number, DefaultKeyDict, FEID, Flag, in_notebook, get_shape, get_colors, list_files
     from fastestimator.util.cli_util import parse_string_to_python
     from fastestimator.util.util import Timer, cpu_count, draw, get_batch_size, get_num_devices, pad_batch, pad_data, \
-        show_image, to_number
+        to_number
     from fastestimator.util.wget_util import bar_custom, callback_progress

@@ -15,15 +15,12 @@
 import os
 from typing import Sequence, Union, Iterable
 
-import matplotlib.pyplot as plt
-
 from fastestimator.summary.logs.log_plot import visualize_logs
 from fastestimator.summary.summary import Summary
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
-from fastestimator.util.img_data import ImgData
+from fastestimator.util.img_data import Display, ImageDisplay
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import show_image
 
 
 @traceable()
@@ -33,19 +30,17 @@ class ImageSaver(Trace):
     Args:
         inputs: Key(s) of images to be saved.
         save_dir: The directory into which to write the images.
-        dpi: How many dots per inch to save.
         mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
     """
+
     def __init__(self,
                  inputs: Union[str, Sequence[str]],
                  save_dir: str = os.getcwd(),
-                 dpi: int = 300,
                  mode: Union[None, str, Iterable[str]] = ("eval", "test")) -> None:
         super().__init__(inputs=inputs, mode=mode)
         self.save_dir = save_dir
-        self.dpi = dpi
 
     def on_epoch_end(self, data: Data) -> None:
         self._save_images(data)
@@ -59,10 +54,8 @@ class ImageSaver(Trace):
                 imgs = data[key]
                 im_path = os.path.join(self.save_dir,
                                        "{}_{}_epoch_{}.png".format(key, self.system.mode, self.system.epoch_idx))
-                if isinstance(imgs, ImgData):
-                    f = imgs.paint_figure()
-                    plt.savefig(im_path, dpi=self.dpi, bbox_inches="tight")
-                    plt.close(f)
+                if isinstance(imgs, Display):
+                    imgs.show(save_path=im_path, verbose=False)
                     print("FastEstimator-ImageSaver: saved image to {}".format(im_path))
                 elif isinstance(imgs, Summary):
                     visualize_logs([imgs], save_path=im_path, verbose=False)
@@ -72,10 +65,9 @@ class ImageSaver(Trace):
                     print("FastEstimator-ImageSaver: saved image to {}".format(im_path))
                 else:
                     for idx, img in enumerate(imgs):
-                        f = show_image(img, title=key)
+                        f = ImageDisplay(image=img, title=key)
                         im_path = os.path.join(
                             self.save_dir,
                             "{}_{}_epoch_{}_elem_{}.png".format(key, self.system.mode, self.system.epoch_idx, idx))
-                        plt.savefig(im_path, dpi=self.dpi, bbox_inches="tight")
-                        plt.close(f)
+                        f.show(save_path=im_path, verbose=False)
                         print("FastEstimator-ImageSaver: saved image to {}".format(im_path))

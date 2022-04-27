@@ -26,7 +26,7 @@ from fastestimator.backend._reduce_max import reduce_max
 from fastestimator.backend._squeeze import squeeze
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
-from fastestimator.util.img_data import ImgData
+from fastestimator.util.img_data import GridDisplay, BatchDisplay
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
 
@@ -156,22 +156,22 @@ class EigenCAM(Trace):
         activations = to_number(concat(self.activations)[:self.n_samples or self.n_found])
         if tf.is_tensor(images):
             activations = np.moveaxis(activations, source=-1, destination=1)  # Activations should be channel first
-        args = {}
+        columns = []
         labels = None if not self.labels else concat(self.labels)[:self.n_samples or self.n_found]
         if labels is not None:
             if len(labels.shape) > 1:
                 labels = argmax(labels, axis=-1)
             if self.label_mapping:
                 labels = np.array([self.label_mapping[clazz] for clazz in to_number(squeeze(labels))])
-            args[self.true_label_key] = labels
+            columns.append(BatchDisplay(text=labels, title=self.true_label_key))
         preds = None if not self.preds else concat(self.preds)[:self.n_samples or self.n_found]
         if preds is not None:
             if len(preds.shape) > 1:
                 preds = argmax(preds, axis=-1)
             if self.label_mapping:
                 preds = np.array([self.label_mapping[clazz] for clazz in to_number(squeeze(preds))])
-            args[self.pred_label_key] = preds
-        args[self.image_key] = images
+            columns.append(BatchDisplay(text=preds, title=self.pred_label_key))
+        columns.append(BatchDisplay(image=images, title=self.image_key))
         # Clear memory
         self._reset()
         # Make the image
@@ -199,7 +199,7 @@ class EigenCAM(Trace):
             components.append(np.array(batch, dtype=np.float32))
 
         for idx, elem in enumerate(components):
-            args[f"Component {idx}"] = elem
+            columns.append(BatchDisplay(image=elem, title=f"Component {idx}"))
 
-        result = ImgData(**args)
+        result = GridDisplay(columns=columns)
         data.write_without_log(self.outputs[0], result)
