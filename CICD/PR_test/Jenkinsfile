@@ -61,7 +61,7 @@ pipeline {
                         }
                         finally {
                             sh 'docker images'
-                            sd 'docker image prune -a'
+                            sh 'docker image prune -a'
                             sh 'docker images --filter "reference=*pr*"'
                             sh 'docker rmi $(docker images --filter "reference=*pr*" -q)'
                             sh 'docker rmi "$IMAGE_TAG"'
