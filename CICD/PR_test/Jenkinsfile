@@ -16,9 +16,9 @@ pipeline {
             steps {
                 script {
                         customImage = docker.build("$IMAGE_TAG", "--no-cache --build-arg InstallFE=False - < docker/nightly/Dockerfile.cpu")
-                        customImage.inside('-u root') {
-                            sh 'pip install --no-cache-dir .'
-                            sh 'pip install coverage'
+                        //customImage.inside('-u root') {
+                            //sh 'pip install --no-cache-dir .'
+                            //sh 'pip install coverage'
                             //sh 'coverage run --source fastestimator -m unittest test.run_pr_test'
                             //sh 'coverage html'
                             //sh 'coverage xml'
@@ -61,8 +61,11 @@ pipeline {
                         }
                         finally {
                             sh 'docker images'
+                            sd 'docker image prune -a'
                             sh 'docker images --filter "reference=*pr*"'
+                            sh 'docker rmi $(docker images --filter "reference=*pr*" -q)'
                             sh 'docker rmi "$IMAGE_TAG"'
+                            sh 'docker images'
                         }
                     }
                 }
