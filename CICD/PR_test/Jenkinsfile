@@ -62,7 +62,7 @@ pipeline {
                         }
                         finally {
                             //sh 'docker rmi "$IMAGE_TAG"'
-                            if [ $(docker images --filter "reference=*pr*" -q) ]; then
+                            if ( $(docker images --filter "reference=*pr*" -q) ); then
                                 sh docker rmi $(docker images --filter "reference=*pr*" -q)
                             fi
                             //sh 'docker rmi $(docker images --filter "reference=*pr*" -q)'
