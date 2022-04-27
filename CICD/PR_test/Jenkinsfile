@@ -1,6 +1,7 @@
 // the original regex is [^a-zA-Z0-9\-_\.], but \ is a reserved character for Jenkinsfile and need \\ to escape \ first
 def IMAGE_TAG = "$BUILD_TAG".replaceAll("[^a-zA-Z0-9\\-_\\.]", "").toLowerCase()
 def customImage
+def prImages
 
 pipeline {
     agent {label 'master'}
@@ -12,20 +13,20 @@ pipeline {
         CODACY_PROJECT_TOKEN = credentials('codacy_project_api')
     }
     stages {
-        stage('PR-test') {
-            steps {
-                script {
-                        customImage = docker.build("$IMAGE_TAG", "--no-cache --build-arg InstallFE=False - < docker/nightly/Dockerfile.cpu")
-                        //customImage.inside('-u root') {
-                        //    sh 'pip install --no-cache-dir .'
-                        //    sh 'pip install coverage'
-                        //    sh 'coverage run --source fastestimator -m unittest test.run_pr_test'
-                        //    sh 'coverage html'
-                        //    sh 'coverage xml'
-                    //}
-                }
-            }
-        }
+        //stage('PR-test') {
+        //    steps {
+        //        script {
+        //                customImage = docker.build("$IMAGE_TAG", "--no-cache --build-arg InstallFE=False - < docker/nightly/Dockerfile.cpu")
+        //                //customImage.inside('-u root') {
+        //                //    sh 'pip install --no-cache-dir .'
+        //                //    sh 'pip install coverage'
+        //                //    sh 'coverage run --source fastestimator -m unittest test.run_pr_test'
+        //                //    sh 'coverage html'
+        //                //    sh 'coverage xml'
+        //            //}
+        //        }
+        //    }
+        //}
         //stage('Host html') {
         //    steps{
         //        publishHTML (target :
@@ -60,8 +61,11 @@ pipeline {
                             }
                         }
                         finally {
-                            sh 'docker rmi "$IMAGE_TAG"'
-                            sh 'docker rmi $(docker images --filter "reference=*pr*" -q)'
+                            //sh 'docker rmi "$IMAGE_TAG"'
+                            if [ $(docker images --filter "reference=*pr*" -q) ]; then
+                                sh docker rmi $(docker images --filter "reference=*pr*" -q)
+                            fi
+                            //sh 'docker rmi $(docker images --filter "reference=*pr*" -q)'
                         }
                     }
                 }
