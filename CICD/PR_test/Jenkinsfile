@@ -65,7 +65,7 @@ pipeline {
                             //sh "sudo echo ${env.FAIL}"
                             //sh 'docker rmi "$IMAGE_TAG"'
                             //def artifactsList = sh(label: 'verify', returnStdout: true, script: 'docker images --filter "reference=*pr*" -q')
-                            if($(docker images --filter "reference=*pr*" -q) != ""){
+                            if($(sh 'docker rmi $(docker images --filter "reference=*pr*" -q)') != ""){
                                 echo "Hello world"
                             //   sh 'docker rmi $(docker images --filter "reference=*pr*" -q)'
                             //}
