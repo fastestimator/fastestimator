@@ -13,7 +13,9 @@
 [![PyPI stable Download](https://img.shields.io/pypi/dm/fastestimator-nightly?label=nightly%20downloads&color=16D1B4)](https://pypistats.org/packages/fastestimator-nightly)
 
 
-FastEstimator is a high-level deep learning library built on TensorFlow2 and PyTorch. With the help of FastEstimator, you can easily build a high-performance deep learning model and run it anywhere. :wink: For more information, please visit our [website](https://www.fastestimator.org/).
+FastEstimator is a high-level deep learning library built on TensorFlow2 and PyTorch. With the help of FastEstimator, you can easily build a high-performance deep learning model and run it anywhere. :wink:
+
+For more information, please visit our [website](https://www.fastestimator.org/).
 
 ## Prerequisites:
 * Stable:
