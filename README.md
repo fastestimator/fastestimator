@@ -14,15 +14,15 @@ FastEstimator is a high-level deep learning library built on TensorFlow2 and PyT
 
 ## Prerequisites:
 * Python >= 3.6
-* TensorFlow == 2.4.1
-* PyTorch == 1.7.1
+* TensorFlow == 2.8.0
+* PyTorch == 1.10.1
 
 ## Installation:
 ### 1. Install Dependencies:
 
 * Install TensorFlow
     ```bash
-    pip install tensorflow==2.4.1
+    pip install tensorflow==2.8.0
     ```
 
 * Install PyTorch
