@@ -30,11 +30,13 @@ __getattr__, __dir__, __all__ = lazy.attach(__name__,
                                                           '_exp': ['exp'],
                                                           '_expand_dims': ['expand_dims'],
                                                           '_feed_forward': ['feed_forward'],
+                                                          '_flip': ['flip'],
                                                           '_gather': ['gather'],
                                                           '_gather_from_batch': ['gather_from_batch'],
                                                           '_get_gradient': ['get_gradient'],
                                                           '_get_image_dims': ['get_image_dims'],
                                                           '_get_lr': ['get_lr'],
+                                                          '_get_shape':['get_shape'],
                                                           '_hinge': ['hinge'],
                                                           '_huber': ['huber'],
                                                           '_iwd': ['iwd'],
@@ -93,11 +95,13 @@ if TYPE_CHECKING:
     from fastestimator.backend._exp import exp
     from fastestimator.backend._expand_dims import expand_dims
     from fastestimator.backend._feed_forward import feed_forward
+    from fastestimator.backend._flip import flip
     from fastestimator.backend._gather import gather
     from fastestimator.backend._gather_from_batch import gather_from_batch
     from fastestimator.backend._get_gradient import get_gradient
     from fastestimator.backend._get_image_dims import get_image_dims
     from fastestimator.backend._get_lr import get_lr
+    from fastestimator.backend._get_shape import get_shape
     from fastestimator.backend._hinge import hinge
     from fastestimator.backend._huber import huber
     from fastestimator.backend._iwd import iwd
