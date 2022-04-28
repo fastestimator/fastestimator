@@ -66,9 +66,9 @@ pipeline {
                             //sh "sudo echo ${env.FAIL}"
                             //sh 'docker rmi "$IMAGE_TAG"'
                             //def artifactsList = sh(label: 'verify', returnStdout: true, script: 'docker images --filter "reference=*pr*" -q')
-                            GIT_COMMIT_EMAIL = sh(script: 'docker images --filter "reference=*pr*" -q', returnStdout: true).trim()
-                            echo "Git committer email: ${GIT_COMMIT_EMAIL}"
-                            if($(GIT_COMMIT_EMAIL) == ""){
+                            //GIT_COMMIT_EMAIL = sh(script: 'docker images --filter "reference=*pr*" -q', returnStdout: true).trim()
+                            //echo "Git committer email: ${GIT_COMMIT_EMAIL}"
+                            if($(docker images --filter "reference=*pr*" -q).isEmpty()){
                                 echo "Hello world"
                             //   sh 'docker rmi $(docker images --filter "reference=*pr*" -q)'
                             }
