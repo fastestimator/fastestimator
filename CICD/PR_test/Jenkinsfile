@@ -62,8 +62,15 @@ pipeline {
                         }
                         finally {
                             //sh 'docker rmi "$IMAGE_TAG"'
-                            if ( $(docker images --filter "reference=*pr*" -q) ); then
-                                sh docker rmi $(docker images --filter "reference=*pr*" -q)
+                            my_string=$(docker images --filter "reference=*pr*" -q)
+                            if [ ${#my_string} ];
+                            then
+                                # if file exist the it will be printed
+                                echo "File is exist"
+                                sh 'docker rmi $(docker images --filter "reference=*pr*" -q)'
+                            else
+                                # is it is not exist then it will be printed
+                                echo "File is not exist"
                             fi
                             //sh 'docker rmi $(docker images --filter "reference=*pr*" -q)'
                         }
