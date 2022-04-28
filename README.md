@@ -1,4 +1,7 @@
 # FastEstimator
+<p align="center">
+  <img src="./tutorial/resources/icon.png" title="we are cool">
+</p>
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-informational.svg)](LICENSE)
 [![Build Status](http://jenkins.fastestimator.org:8080/buildStatus/icon?subject=PR-build&job=fastestimator%2Ffastestimator%2Fmaster)](http://jenkins.fastestimator.org:8080/job/fastestimator/job/fastestimator/job/master/)
@@ -12,29 +15,42 @@
 
 FastEstimator is a high-level deep learning library built on TensorFlow2 and PyTorch. With the help of FastEstimator, you can easily build a high-performance deep learning model and run it anywhere. :wink:
 
-## Prerequisites:
-* Python >= 3.6
-* TensorFlow == 2.4.1
-* PyTorch == 1.7.1
+For more information, please visit our [website](https://www.fastestimator.org/).
 
 ## Installation:
 ### 1. Install Dependencies:
 
 * Install TensorFlow
-    ```bash
-    pip install tensorflow==2.8.0
-    ```
+    * Stable:
+        ```bash
+        pip install tensorflow==2.4.1
+        ```
+    * Nightly:
+        ```bash
+        pip install tensorflow==2.8.0
+        ```
 
 * Install PyTorch
-    * CPU:
-        ```bash
-        pip install torch==1.10.1+cpu torchvision==0.11.2+cpu torchaudio==0.10.1 -f https://download.pytorch.org/whl/torch_stable.html
-        ```
+    * Stable:
+        * CPU:
+            ```bash
+            pip install torch==1.7.1 torchvision==0.8.2 torchaudio==0.7.2
+            ```
 
-    * GPU:
-        ```bash
-        pip install torch==1.10.1+cu111 torchvision==0.11.2+cu113 torchaudio==0.10.1 -f https://download.pytorch.org/whl/torch_stable.html
-        ```
+        * GPU:
+            ```bash
+            pip install torch==1.7.1+cu110 torchvision==0.8.2+cu110 torchaudio===0.7.2 -f https://download.pytorch.org/whl/torch_stable.html
+            ```
+    * Nightly:
+        * CPU:
+            ```bash
+            pip install torch==1.10.2+cpu torchvision==0.11.3+cpu torchaudio==0.10.2+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
+            ```
+
+        * GPU:
+            ```bash
+            pip install torch==1.10.2+cu113 torchvision==0.11.3+cu113 torchaudio==0.10.2+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
+            ```
 * Extra Dependencies:
 
     * Windows:
