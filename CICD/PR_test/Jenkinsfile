@@ -61,16 +61,17 @@ pipeline {
                             }
                         }
                         finally {
+                            sh 'docker images'
                             //env.FAIL=sh([script: "sudo ssh -i ${env.SSH_KEY} ${env.SSH_URL} -tt \"cd ${env.SSH_HOME}/; md5sum -c ${env.SSH_HOME}/MD5SUM.MD5\"", returnStdout: true ]).trim()
                             //sh "sudo echo ${env.FAIL}"
                             //sh 'docker rmi "$IMAGE_TAG"'
                             //def artifactsList = sh(label: 'verify', returnStdout: true, script: 'docker images --filter "reference=*pr*" -q')
                             GIT_COMMIT_EMAIL = sh(script: 'docker images --filter "reference=*pr*" -q', returnStdout: true).trim()
                             echo "Git committer email: ${GIT_COMMIT_EMAIL}"
-                            //if($(sh 'docker rmi $(docker images --filter "reference=*pr*" -q)') != ""){
-                            //    echo "Hello world"
+                            if($(GIT_COMMIT_EMAIL) == ""){
+                                echo "Hello world"
                             //   sh 'docker rmi $(docker images --filter "reference=*pr*" -q)'
-                            //}
+                            }
                             //else{
                             //    echo "No images found."
                             //}
