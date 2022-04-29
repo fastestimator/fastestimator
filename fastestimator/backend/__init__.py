@@ -31,12 +31,13 @@ __getattr__, __dir__, __all__ = lazy.attach(__name__,
                                                           '_expand_dims': ['expand_dims'],
                                                           '_feed_forward': ['feed_forward'],
                                                           '_flip': ['flip'],
+                                                          '_focal_loss': ['focal_loss'],
                                                           '_gather': ['gather'],
                                                           '_gather_from_batch': ['gather_from_batch'],
                                                           '_get_gradient': ['get_gradient'],
                                                           '_get_image_dims': ['get_image_dims'],
                                                           '_get_lr': ['get_lr'],
-                                                          '_get_shape':['get_shape'],
+                                                          '_get_shape': ['get_shape'],
                                                           '_hinge': ['hinge'],
                                                           '_huber': ['huber'],
                                                           '_iwd': ['iwd'],
@@ -96,6 +97,7 @@ if TYPE_CHECKING:
     from fastestimator.backend._expand_dims import expand_dims
     from fastestimator.backend._feed_forward import feed_forward
     from fastestimator.backend._flip import flip
+    from fastestimator.backend._focal_loss import focal_loss
     from fastestimator.backend._gather import gather
     from fastestimator.backend._gather_from_batch import gather_from_batch
     from fastestimator.backend._get_gradient import get_gradient
