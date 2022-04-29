@@ -23,7 +23,7 @@ from fastestimator.util.util import STRING_TO_TF_DTYPE, STRING_TO_TORCH_DTYPE
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
 
-def cast(data: Union[Collection, Tensor], dtype: str) -> Union[Collection, Tensor]:
+def cast(data: Union[Collection, Tensor], dtype: Union[str, Tensor]) -> Union[Collection, Tensor]:
     """Cast the data to a specific data type recursively.
 
    This method can be used with Numpy data:
@@ -54,22 +54,32 @@ def cast(data: Union[Collection, Tensor], dtype: str) -> Union[Collection, Tenso
 
     Args:
         data: A tensor or possibly nested collection of tensors.
-        dtype: Target data type, can be one of following: uint8, int8, int16, int32, int64, float16, float32, float64.
+        dtype: Target reference data type, can be one of following: uint8, int8, int16, int32, int64, float16, float32, float64. Tensor.
 
     Returns:
-        A collection with the same structure as `data` with target data type.
+        A collection with the same structure as `data` with reference data type.
     """
-    if isinstance(data, dict):
-        return {key: cast(value, dtype) for (key, value) in data.items()}
-    elif isinstance(data, list):
-        return [cast(val, dtype) for val in data]
-    elif isinstance(data, tuple):
-        return tuple([cast(val, dtype) for val in data])
-    elif isinstance(data, set):
-        return set([cast(val, dtype) for val in data])
-    elif tf.is_tensor(data):
-        return tf.cast(data, STRING_TO_TF_DTYPE[dtype])
-    elif isinstance(data, torch.Tensor):
-        return data.type(STRING_TO_TORCH_DTYPE[dtype])
+    if isinstance(dtype, str):
+        if isinstance(data, dict):
+            return {key: cast(value, dtype) for (key, value) in data.items()}
+        elif isinstance(data, list):
+            return [cast(val, dtype) for val in data]
+        elif isinstance(data, tuple):
+            return tuple([cast(val, dtype) for val in data])
+        elif isinstance(data, set):
+            return set([cast(val, dtype) for val in data])
+        elif tf.is_tensor(data):
+            return tf.cast(data, STRING_TO_TF_DTYPE[dtype])
+        elif isinstance(data, torch.Tensor):
+            return data.type(STRING_TO_TORCH_DTYPE[dtype])
+        else:
+            return np.array(data, dtype=dtype)
+    elif tf.is_tensor(dtype) or isinstance(dtype, torch.Tensor) or isinstance(dtype, np.ndarray):
+        if tf.is_tensor(dtype):
+            return tf.cast(data, dtype.dtype)
+        elif isinstance(dtype, torch.Tensor):
+            return torch.tensor(data).type(dtype.dtype)
+        else:
+            return np.array(data, dtype=dtype.dtype)
     else:
-        return np.array(data, dtype=dtype)
+        ValueError("Unexpected reference data type.")
