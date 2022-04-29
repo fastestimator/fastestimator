@@ -17,7 +17,9 @@ from typing import TypeVar
 import tensorflow as tf
 import torch
 
-from fastestimator.backend import cast, reduce_mean, reduce_sum
+from fastestimator.backend._cast import cast
+from fastestimator.backend._reduce_mean import reduce_mean
+from fastestimator.backend._reduce_sum import reduce_sum
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
