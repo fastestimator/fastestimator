@@ -1,5 +1,8 @@
 FROM tensorflow/tensorflow:2.8.0-gpu
 
+RUN rm /etc/apt/sources.list.d/cuda.list
+RUN rm /etc/apt/sources.list.d/nvidia-ml.list
+
 # change python library to root owner
 # it fixes "container ID cannot be mapped to a host ID" issue that happens later while upgrading python packages
 RUN chown -R root:root /usr/local/lib/python*
