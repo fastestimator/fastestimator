@@ -1,5 +1,6 @@
 # Tensorflow Windows Installation
 
+Note : We are currently working with python 3.8, so before moving forward please ensure that you have it installed. (For tensorflow 2.8, you can use python version 3.7-3.10)
 ## Step 1 : Finding appropriate cuda version
 
 Current version of Fastestimator supports Tensorflow 2.8, so we need to get CUDA version 11.2.x and cuDNN version 8.1.x.
@@ -64,5 +65,41 @@ This will install a zip folder. Extract the content of the zip folder and migrat
 
 ## Step 5 : Add CUDA toolkit to the PATH:
 
+Now lets make Windows know of CUDA's location by adding few folders to environment variables. In the destination "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.2", there exist a "bin" folder. Copy the path to this folder.
 
+In the windows search bar type "Environment Variables"
+
+<p align="center">
+  <img src="./images/EV.png" title="Lets save our Environment" width=500 height=450>
+</p>
+
+Clicking on the first result would lead to opening system properties, where we need to select "Environment Variables..."
+
+<p align="center">
+  <img src="./images/System_prop.PNG" title="Lets save our Environment" width=500 height=450>
+</p>
+
+Once you do that, you will see a pop up similar to following. In the "User variables", choose "Path" and click edit. Click "New" and paste the path we copied earlier.
+
+<p align="center">
+  <img src="./images/EV_path.PNG" title="Lets save our Environment" width=500 height=450>
+</p>
+
+Now lets go back to the destination "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA", there exist a "libnvvp" folder. Copy the path to this folder and follow the same steps as above to add this path to environment variables.
+
+## Step 5 : Install Tensorflow
+
+Now finally we are ready to install tensorflow 2.8. A complete guide for tensorflow installation can be found [here](https://www.tensorflow.org/install). Here for simplicity we perform a system install using pip.
+
+Open Powershell or Command Prompt and type :
+ `pip3 install --user --upgrade tensorflow`
+
+<p align="center">
+  <img src="./images/WndPS.PNG" title="Lets save our Environment" width=500 height=450>
+</p>
+
+Lets ensure that our tensorflow is able to detect the GPU. In your Powershell or Command Prompt type :
+`python3 -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"`
+
+If the output of above mentioned command is something like `[PhysicalDevice(name='/physical_device:GPU:0', device_type='GPU')]` then congratulations, now you know the secret too.
 
