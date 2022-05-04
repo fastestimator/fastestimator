@@ -22,8 +22,8 @@ from torch import Tensor
 from torch.utils.data import DataLoader, Dataset, Sampler, _DatasetKind
 from torch.utils.data._utils.collate import default_collate, default_convert
 from torch.utils.data._utils.fetch import _MapDatasetFetcher
-from torch.utils.data.dataloader import _BaseDataLoaderIter, _MultiProcessingDataLoaderIter
-from torch.utils.data.dataloader import _SingleProcessDataLoaderIter
+from torch.utils.data.dataloader import _BaseDataLoaderIter, _MultiProcessingDataLoaderIter, \
+    _SingleProcessDataLoaderIter
 
 from fastestimator.dataset.extend_dataset import ExtendDataset
 from fastestimator.dataset.op_dataset import OpDataset
@@ -64,23 +64,29 @@ class FEDataLoader(DataLoader):
 
     def __init__(self,
                  dataset: Union[Dataset, Sized],
-                 postprocess_fn: Optional[Callable[[Dict[str, Any]], Union[Dict[str, Any], FilteredData]]] = None,
+                 postprocess_fn: Optional[Callable[[
+                     Dict[str, Any]], Union[Dict[str, Any], FilteredData]]] = None,
                  batch_size: Optional[int] = 1,
                  steps_per_epoch: Optional[int] = None,
                  shuffle: bool = False,
                  num_workers: int = 0,
                  collate_fn: Callable = None,
                  drop_last: bool = False):
-        reset_fn = dataset.fe_reset_ds if hasattr(dataset, 'fe_reset_ds') else None
-        convert_fn = dataset.fe_batch_indices if hasattr(dataset, 'fe_batch_indices') else None
-        sampler = InfiniteSampler(data_source=dataset, shuffle=shuffle, reset_fn=reset_fn, convert_fn=convert_fn)
+        reset_fn = dataset.fe_reset_ds if hasattr(
+            dataset, 'fe_reset_ds') else None
+        convert_fn = dataset.fe_batch_indices if hasattr(
+            dataset, 'fe_batch_indices') else None
+        sampler = InfiniteSampler(
+            data_source=dataset, shuffle=shuffle, reset_fn=reset_fn, convert_fn=convert_fn)
         if batch_size is not None and batch_size < 1:
-            raise ValueError(f"batch_size must be None or a positive integer, but got {batch_size}")
+            raise ValueError(
+                f"batch_size must be None or a positive integer, but got {batch_size}")
         # Figure out the real batch size. This is already done in OpDataset, but if user manually instantiates this
         # loader without using an OpDataset we still want to know the batch size
         if not hasattr(dataset, "fe_batch"):
             sample_item = dataset[0]
-            dataset.fe_batch = len(sample_item) if isinstance(sample_item, list) else 0
+            dataset.fe_batch = len(sample_item) if isinstance(
+                sample_item, list) else 0
         if dataset.fe_batch:
             # The batch size where torch is concerned is probably None, but we know that it is secretly batched
             self.fe_batch_size = dataset.fe_batch
@@ -141,7 +147,8 @@ class FEDataLoader(DataLoader):
         self.shutdown()
         self._iterator = self._get_fe_iterator()
         if isinstance(self._iterator, _MultiProcessingDataLoaderIter):
-            FEDataLoader._current_threads.extend([w.pid for w in self._iterator._workers])
+            FEDataLoader._current_threads.extend(
+                [w.pid for w in self._iterator._workers])
         return self._iterator
 
     def _get_fe_iterator(self):
@@ -155,6 +162,9 @@ class FEDataLoader(DataLoader):
                 # We use 'fake' batch size here to identify datasets which perform their own batching
                 return _MPPostBatchIter(self)
             return _MPPreBatchIter(self)
+
+    def __len__(self):
+        return self.fe_samples_to_yield
 
 
 def _pre_collate(data: List[Union[FilteredData, Dict[str, Any]]],
@@ -193,6 +203,7 @@ class _BaseFELoaderIter(_BaseDataLoaderIter, ABC):
     Args:
         loader: The parent loader object that will own this iterator.
     """
+
     def __init__(self, loader: FEDataLoader):
         super().__init__(loader)
         self.fe_batch_size = loader.fe_batch_size
@@ -244,7 +255,8 @@ def _next_pre_batch(self: _BaseFELoaderIter) -> Dict[str, Tensor]:
             # This batch was collated but filtered during a batch filter. It was returned here just in case there was
             # extra data lying around, but there isn't any. We can safely avoid processing it a second time.
             if not collated.replacement:
-                self.fe_samples_yielded += min(len(candidate_batch), self.fe_samples_to_yield - self.fe_samples_yielded)
+                self.fe_samples_yielded += min(len(candidate_batch),
+                                               self.fe_samples_to_yield - self.fe_samples_yielded)
         else:
             for instance in candidate_batch:
                 if self.fe_samples_yielded + len(self.fe_extra_data) == self.fe_samples_to_yield:
@@ -255,7 +267,8 @@ def _next_pre_batch(self: _BaseFELoaderIter) -> Dict[str, Tensor]:
                         self.fe_samples_yielded += 1
                     continue
                 self.fe_extra_data.append(instance)
-    n_keep = min(self.fe_batch_size, self.fe_samples_to_yield - self.fe_samples_yielded)
+    n_keep = min(self.fe_batch_size, self.fe_samples_to_yield -
+                 self.fe_samples_yielded)
     real_batch = self.fe_extra_data[:n_keep]
     self.fe_extra_data = self.fe_extra_data[n_keep:]
     self.fe_samples_yielded += len(real_batch)
@@ -343,6 +356,7 @@ class InfiniteSampler(Sampler):
         convert_fn: A function to be invoked (using the current index) every sample in order to convert an integer index
             into some arbitrary alternative index representation.
     """
+
     def __init__(self,
                  data_source: Sized,
                  shuffle: bool = True,

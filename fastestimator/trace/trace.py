@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import time
-from collections import deque, defaultdict
+from collections import defaultdict, deque
 from typing import Iterable, List, Set, Union
 
 import numpy as np
@@ -22,10 +22,10 @@ from natsort import humansorted
 from fastestimator.backend._get_lr import get_lr
 from fastestimator.summary.summary import ValWithError
 from fastestimator.summary.system import System
+from fastestimator.util.base_util import check_ds_id, check_io_names, parse_modes, to_list, to_set
 from fastestimator.util.data import Data, DSData
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
-from fastestimator.util.base_util import to_set, to_list, check_io_names, parse_modes, check_ds_id
 
 
 @traceable()
@@ -87,7 +87,8 @@ class Trace:
         self.outputs = check_io_names(to_list(outputs))
         self.mode = parse_modes(to_set(mode))
         self.ds_id = check_ds_id(to_set(ds_id))
-        self.fe_monitor_names = set()  # The use-case here is rare enough that we don't want to add this to the init sig
+        # The use-case here is rare enough that we don't want to add this to the init sig
+        self.fe_monitor_names = set()
 
     def on_begin(self, data: Data) -> None:
         """Runs once at the beginning of training or testing.
@@ -161,8 +162,10 @@ class TrainEssential(Trace):
     Args:
         monitor_names: Which keys from the data dictionary to monitor during training.
     """
+
     def __init__(self, monitor_names: Set[str]) -> None:
-        super().__init__(inputs=monitor_names, mode="train", outputs=["steps/sec", "epoch_time", "total_time"])
+        super().__init__(inputs=monitor_names, mode="train",
+                         outputs=["steps/sec", "epoch_time", "total_time"])
         self.elapse_times = []
         self.train_start = None
         self.epoch_start = None
@@ -188,18 +191,21 @@ class TrainEssential(Trace):
                     data.write_with_log(key, data[key])
             if self.system.global_step > 1:
                 self.elapse_times.append(time.perf_counter() - self.step_start)
-                data.write_with_log("steps/sec", round(self.system.log_steps / np.sum(self.elapse_times), 2))
+                data.write_with_log(
+                    "steps/sec", round(self.system.log_steps / np.sum(self.elapse_times), 2))
             self.elapse_times = []
             self.step_start = time.perf_counter()
 
     def on_epoch_end(self, data: Data) -> None:
         if self.system.log_steps:
             self.elapse_times.append(time.perf_counter() - self.step_start)
-            data.write_with_log("epoch_time", "{} sec".format(round(time.perf_counter() - self.epoch_start, 2)))
+            data.write_with_log("epoch_time", "{} sec".format(
+                round(time.perf_counter() - self.epoch_start, 2)))
 
     def on_end(self, data: Data) -> None:
         self.system.mode = 'train'  # Set mode to 'train' for better log visualization
-        data.write_with_log("total_time", "{} sec".format(round(time.perf_counter() - self.train_start, 2)))
+        data.write_with_log("total_time", "{} sec".format(
+            round(time.perf_counter() - self.train_start, 2)))
         for model in self.system.network.models:
             if hasattr(model, "current_optimizer"):
                 data.write_with_log(model.model_name + "_lr", get_lr(model))
@@ -214,17 +220,36 @@ class EvalEssential(Trace):
     Args:
         monitor_names: Any keys which should be collected over the course of an eval epoch.
     """
+
     def __init__(self, monitor_names: Set[str]) -> None:
-        super().__init__(mode="eval", inputs=monitor_names)
+        super().__init__(mode="eval", inputs=monitor_names,
+                         outputs=["steps/sec"])
+        self.elapse_times = []
+        self.eval_print = None
+        self.step_start = None
         self.eval_results = defaultdict(lambda: defaultdict(list))
 
     def on_epoch_begin(self, data: Data) -> None:
         self.eval_results = defaultdict(lambda: defaultdict(list))
+        self.eval_step = 0
+        self.elapse_times = []
+
+        if self.system.log_steps:
+            self.step_start = time.perf_counter()
+
+    def on_batch_begin(self, data: Data) -> None:
+        self.eval_step += 1
 
     def on_batch_end(self, data: Data) -> None:
         for key in self.inputs:
             if key in data:
                 self.eval_results[key][self.system.ds_id].append(data[key])
+
+        if self.system.mode == "eval" and self.eval_step in self.system.eval_log_steps:
+            self.elapse_times.append(time.perf_counter() - self.step_start)
+            data.write_with_log(
+                "steps/sec", round(self.eval_step / np.sum(self.elapse_times), 2))
+            self.step_start = time.perf_counter()
 
     def on_epoch_end(self, data: Data) -> None:
         for key, ds_vals in self.eval_results.items():
@@ -232,7 +257,9 @@ class EvalEssential(Trace):
                 if ds_id != '':
                     d = DSData(ds_id, data)
                     d.write_with_log(key, np.mean(np.array(vals), axis=0))
-            data.write_with_log(key, np.mean(np.array([e for x in ds_vals.values() for e in x]), axis=0))
+            data.write_with_log(key, np.mean(
+                np.array([e for x in ds_vals.values() for e in x]), axis=0))
+        self.eval_step = 0
 
 
 @traceable()
@@ -244,6 +271,7 @@ class TestEssential(Trace):
     Args:
         monitor_names: Any keys which should be collected over the course of an test epoch.
     """
+
     def __init__(self, monitor_names: Set[str]) -> None:
         super().__init__(mode="test", inputs=monitor_names)
         self.test_results = defaultdict(lambda: defaultdict(list))
@@ -262,7 +290,8 @@ class TestEssential(Trace):
                 if ds_id != '':
                     d = DSData(ds_id, data)
                     d.write_with_log(key, np.mean(np.array(vals), axis=0))
-            data.write_with_log(key, np.mean(np.array([e for x in ds_vals.values() for e in x]), axis=0))
+            data.write_with_log(key, np.mean(
+                np.array([e for x in ds_vals.values() for e in x]), axis=0))
 
 
 @traceable()
@@ -271,30 +300,49 @@ class Logger(Trace):
 
     Please don't add this trace into an estimator manually. FastEstimator will add it automatically.
     """
+
     def __init__(self) -> None:
         super().__init__(inputs="*")
+        self.eval_print = None
 
     def on_begin(self, data: Data) -> None:
         if not self.system.mode == "test":
             start_step = 1 if not self.system.global_step else self.system.global_step
-            self._print_message("FastEstimator-Start: step: {}; ".format(start_step), data)
+            self._print_message(
+                "FastEstimator-Start: step: {}; ".format(start_step), data)
+
+    def on_epoch_begin(self, data: Data) -> None:
+        if self.system.mode == 'eval':
+            self.eval_step = 0
+
+    def on_batch_begin(self, data: Data) -> None:
+        if self.system.mode == 'eval':
+            self.eval_step += 1
 
     def on_batch_end(self, data: Data) -> None:
         if self.system.mode == "train" and self.system.log_steps and (self.system.global_step % self.system.log_steps
                                                                       == 0 or self.system.global_step == 1):
-            self._print_message("FastEstimator-Train: step: {}; ".format(self.system.global_step), data)
+            self._print_message(
+                "FastEstimator-Train: step: {}; ".format(self.system.global_step), data)
+
+        if self.system.mode == "eval" and self.eval_step in self.system.eval_log_steps:
+            self._print_message(
+                "FastEstimator-Eval: progress: {}/{}; ".format(self.eval_step, self.system.eval_log_steps[-1]), data)
 
     def on_epoch_end(self, data: Data) -> None:
         if self.system.mode == "train":
-            self._print_message("FastEstimator-Train: step: {}; ".format(self.system.global_step), data, True)
-        elif self.system.mode == "eval":
-            self._print_message("FastEstimator-Eval: step: {}; ".format(self.system.global_step), data, True)
+            self._print_message(
+                "FastEstimator-Train: step: {}; ".format(self.system.global_step), data, True)
+        elif self.system.mode == 'eval':
+            self.eval_step = 0
         elif self.system.mode == "test":
-            self._print_message("FastEstimator-Test: step: {}; ".format(self.system.global_step), data, True)
+            self._print_message(
+                "FastEstimator-Test: step: {}; ".format(self.system.global_step), data, True)
 
     def on_end(self, data: Data) -> None:
         if not self.system.mode == "test":
-            self._print_message("FastEstimator-Finish: step: {}; ".format(self.system.global_step), data)
+            self._print_message(
+                "FastEstimator-Finish: step: {}; ".format(self.system.global_step), data)
 
     def _print_message(self, header: str, data: Data, log_epoch: bool = False) -> None:
         """Print a log message to the screen, and record the `data` into the `system` summary.
@@ -315,7 +363,8 @@ class Logger(Trace):
             else:
                 val = to_number(val)
                 if val.size > 1:
-                    deferred.append("\n{}:\n{};".format(key, np.array2string(val, separator=',')))
+                    deferred.append("\n{}:\n{};".format(
+                        key, np.array2string(val, separator=',')))
                 else:
                     log_message += "{}: {}; ".format(key, str(val))
             self.system.write_summary(key, val)
@@ -346,10 +395,12 @@ def sort_traces(traces: List[Trace], ds_ids: List[str], available_outputs: Union
         AssertionError: If Traces have circular dependencies or require input keys which are not available.
     """
     sorted_traces = []
-    trace_outputs = {output for trace in traces for output in trace.get_outputs(ds_ids=ds_ids)}
+    trace_outputs = {
+        output for trace in traces for output in trace.get_outputs(ds_ids=ds_ids)}
     if available_outputs is None:
         # Assume that anything not generated by a Trace is provided by the system
-        available_outputs = {inp for trace in traces for inp in trace.inputs} - trace_outputs
+        available_outputs = {
+            inp for trace in traces for inp in trace.inputs} - trace_outputs
         weak_sort = True
     else:
         available_outputs = to_set(available_outputs)
