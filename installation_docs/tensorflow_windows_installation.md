@@ -95,7 +95,7 @@ Open Powershell or Command Prompt and type :
  `pip3 install --user --upgrade tensorflow`
 
 <p align="center">
-  <img src="./images/WndPS.PNG" title="Lets save our Environment" width=500 height=450>
+  <img src="./images/WndPS.PNG" title="Lets save our Environment" width=500 height=100>
 </p>
 
 Lets ensure that our tensorflow is able to detect the GPU. In your Powershell or Command Prompt type :
