@@ -27,7 +27,7 @@ Run the downloadable executable to install the community version. the installati
 Finally we are at a point where we can start with geting CUDA to work, but before that lets ensure if we already have an existing CUDA toolkit and if its compatible with the required Tensorflow version. Go to Windows setting and choose "Apps and Features" and search for "NVIDIA", you will see something like this.
 
 <p align="center">
-  <img src="./images/SearchNvidia.PNG" title="Lets see if you are ready" width=300 height=600>
+  <img src="./images/SearchNvidia.PNG" title="Lets see if you are ready" width=350 height=600>
 </p>
 
 For Tensorflow 2.8.0, we want NVIDIA CUDA Toolkit version 11.2. Above it can be seen that CUDA Toolkit 11.2 is already installed, but in case your drivers are of any other version we might need to get rid of them. Uninstall all the drivers with "NVIDIA CUDA" in their title and please do NOT touch anything else. Then go to folder "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA" and delete the folder with CUDA version as its name.
@@ -35,7 +35,7 @@ For Tensorflow 2.8.0, we want NVIDIA CUDA Toolkit version 11.2. Above it can be 
 If in your search for "NVIDIA" in "Apps and Features" and you find that you dont have any CUDA Toolkit installed, go this this [page](https://developer.nvidia.com/cuda-toolkit-archive) which looks like following.
 
 <p align="center">
-  <img src="./images/CUDA_toolkit.PNG" title="Finally we are here">
+  <img src="./images/CUDA_toolkit.PNG" title="Finally we are here" width=450 height=500>
 </p>
 
 Here we see that there are three different versions of 11.2 (You can choose any one of them). Click on the version you want (in our case we choose 11.2.2), then choose Windows 10 followed by network installer and click download.
