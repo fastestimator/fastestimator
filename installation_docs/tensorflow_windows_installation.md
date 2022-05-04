@@ -15,7 +15,7 @@ Note : For other versions of tensorflow please refer to this [link](https://www.
 Currently the latest version of Visual Studios (2022) is not supported by CUDA. For CUDA 11.2.x we need to install community version of [Visual Studio 2019 16.x](https://docs.microsoft.com/en-us/visualstudio/releases/2019/release-notes).
 
 <p align="center">
-  <img src="./images/VS.PNG" title="Nvidia likes to hide stuff" width=600 height=300>
+  <img src="./images/VS.PNG" title="Nvidia likes to hide stuff" width=600 height=350>
 </p>
 
 Run the downloadable executable to install the community version. the installation process will ask to choose what workload to install, for this installation we dont require any workload, hence press continue. Once installation is complete, Visual Studio would want you to sign in, but lets ignore them.
@@ -51,13 +51,13 @@ Run the downloaded executable and follow on screen prompts with the default conf
 For Tensorflow 2.8, we need cuDNN 8.1. So follow this [link](https://developer.nvidia.com/cudnn) and press download. (As shown below)
 
 <p align="center">
-  <img src="./images/cuDNN.PNG" title="Finally we are here">
+  <img src="./images/cuDNN.PNG" title="Finally we are here" width=700 height=250>
 </p>
 
 To install cuDNN you need a NVIDIA Developer account. So if you already have an account login or else create a new account. Then go to the [cuDNN archive download page](https://developer.nvidia.com/rdp/cudnn-archive) and search for "Download cuDNN v8.1.x (Feburary 26th, 2021), for CUDA 11.0,11.1 and 11.2" and install the driver for Windows as shown below.
 
 <p align="center">
-  <img src="./images/cuDNN_8_1.PNG" title="Finally we are here">
+  <img src="./images/cuDNN_8_1.PNG" title="Finally we are here" width=700 height=250>
 </p>
 
 This will install a zip folder. Extract the content of the zip folder and migrate to the cuda folder inside the extracted folder. Copy all the content of the folder and paste it at "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.2". (If they already exist you should replace the files at the destination)
