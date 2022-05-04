@@ -41,7 +41,7 @@ If in your search for "NVIDIA" in "Apps and Features" and you find that you dont
 Here we see that there are three different versions of 11.2 (You can choose any one of them). Click on the version you want (in our case we choose 11.2.2), then choose Windows 10 followed by network installer and click download.
 
 <p align="center">
-  <img src="./images/CUDA_dwnld.PNG" title="Finally we are here">
+  <img src="./images/CUDA_dwnld.PNG" title="Finally we are here" width=550 height=500>
 </p>
 
 Run the downloaded executable and follow on screen prompts with the default configurations. After this its recommended to restart the computer.
