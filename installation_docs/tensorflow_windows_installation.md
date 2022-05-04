@@ -5,7 +5,7 @@
 Current version of Fastestimator supports Tensorflow 2.8, so we need to get CUDA version 11.2.x and cuDNN version 8.1.x.
 
 <p align="center">
-  <img src="./images/tf_drivers.PNG" title="Lets find out TF secrets" width =100 height=200>
+  <img src="./images/tf_drivers.PNG" title="Lets find out TF secrets" width =400 height=200>
 </p>
 
 Note : For other versions of tensorflow please refer to this [link](https://www.tensorflow.org/install/source#gpu).
