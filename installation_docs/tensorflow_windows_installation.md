@@ -8,14 +8,14 @@ Current version of Fastestimator supports Tensorflow 2.8, so we need to get CUDA
   <img src="./images/tf_drivers.PNG" title="Lets find out TF secrets" width=500 height=250>
 </p>
 
-Note : For other versions of tensorflow please refer to this [link](https://www.tensorflow.org/install/source#gpu).
+Note : For other versions of tensorflow please refer to this [link](https://www.tensorflow.org/install/source_windows#gpu).
 
 ## Step 2 : Installing Microsoft Visual Studio
 
 Currently the latest version of Visual Studios (2022) is not supported by CUDA. For CUDA 11.2.x we need to install community version of [Visual Studio 2019 16.x](https://docs.microsoft.com/en-us/visualstudio/releases/2019/release-notes).
 
 <p align="center">
-  <img src="./images/VS.PNG" title="Nvidia likes to hide stuff" width=500 height=250>
+  <img src="./images/VS.PNG" title="Nvidia likes to hide stuff" width=600 height=250>
 </p>
 
 Run the downloadable executable to install the community version. the installation process will ask to choose what workload to install, for this installation we dont require any workload, hence press continue. Once installation is complete, Visual Studio would want you to sign in, but lets ignore them.
@@ -27,7 +27,7 @@ Run the downloadable executable to install the community version. the installati
 Finally we are at a point where we can start with geting CUDA to work, but before that lets ensure if we already have an existing CUDA toolkit and if its compatible with the required Tensorflow version. Go to Windows setting and choose "Apps and Features" and search for "NVIDIA", you will see something like this.
 
 <p align="center">
-  <img src="./images/SearchNvidia.PNG" title="Lets see if you are ready">
+  <img src="./images/SearchNvidia.PNG" title="Lets see if you are ready" width=600 height=250>
 </p>
 
 For Tensorflow 2.8.0, we want NVIDIA CUDA Toolkit version 11.2. Above it can be seen that CUDA Toolkit 11.2 is already installed, but in case your drivers are of any other version we might need to get rid of them. Uninstall all the drivers with "NVIDIA CUDA" in their title and please do NOT touch anything else. Then go to folder "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA" and delete the folder with CUDA version as its name.
