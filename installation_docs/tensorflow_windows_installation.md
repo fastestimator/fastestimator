@@ -5,7 +5,7 @@
 Current version of Fastestimator supports Tensorflow 2.8, so we need to get CUDA version 11.2.x and cuDNN version 8.1.x.
 
 <p align="center">
-  <img src="./images/tf_drivers.PNG" title="Lets find out TF secrets" width =400 height=200>
+  <img src="./images/tf_drivers.PNG" title="Lets find out TF secrets" width=500 height=250>
 </p>
 
 Note : For other versions of tensorflow please refer to this [link](https://www.tensorflow.org/install/source#gpu).
@@ -15,7 +15,7 @@ Note : For other versions of tensorflow please refer to this [link](https://www.
 Currently the latest version of Visual Studios (2022) is not supported by CUDA. For CUDA 11.2.x we need to install community version of [Visual Studio 2019 16.x](https://docs.microsoft.com/en-us/visualstudio/releases/2019/release-notes).
 
 <p align="center">
-  <img src="./images/VS.PNG" title="Nvidia likes to hide stuff">
+  <img src="./images/VS.PNG" title="Nvidia likes to hide stuff" width=500 height=250>
 </p>
 
 Run the downloadable executable to install the community version. the installation process will ask to choose what workload to install, for this installation we dont require any workload, hence press continue. Once installation is complete, Visual Studio would want you to sign in, but lets ignore them.
