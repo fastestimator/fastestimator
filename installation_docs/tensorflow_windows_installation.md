@@ -51,13 +51,13 @@ Run the downloaded executable and follow on screen prompts with the default conf
 For Tensorflow 2.8, we need cuDNN 8.1. So follow this [link](https://developer.nvidia.com/cudnn) and press download. (As shown below)
 
 <p align="center">
-  <img src="./images/cuDNN.PNG" title="Finally we are here" width=700 height=250>
+  <img src="./images/cuDNN.PNG" title="Finally we are here" width=700 height=150>
 </p>
 
 To install cuDNN you need a NVIDIA Developer account. So if you already have an account login or else create a new account. Then go to the [cuDNN archive download page](https://developer.nvidia.com/rdp/cudnn-archive) and search for "Download cuDNN v8.1.x (Feburary 26th, 2021), for CUDA 11.0,11.1 and 11.2" and install the driver for Windows as shown below.
 
 <p align="center">
-  <img src="./images/cuDNN_8_1.PNG" title="Finally we are here" width=700 height=250>
+  <img src="./images/cuDNN_8_1.PNG" title="Finally we are here" width=700 height=150>
 </p>
 
 This will install a zip folder. Extract the content of the zip folder and migrate to the cuda folder inside the extracted folder. Copy all the content of the folder and paste it at "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.2". (If they already exist you should replace the files at the destination)
