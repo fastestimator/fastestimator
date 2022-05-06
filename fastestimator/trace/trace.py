@@ -222,8 +222,8 @@ class EvalEssential(Trace):
     """
 
     def __init__(self, monitor_names: Set[str]) -> None:
-        super().__init__(mode="eval", inputs=monitor_names,
-                         outputs=["steps/sec"])
+        super().__init__(mode="eval",
+                         inputs=monitor_names, outputs=["steps/sec"])
         self.elapse_times = []
         self.eval_print = None
         self.step_start = None
@@ -308,8 +308,7 @@ class Logger(Trace):
     def on_begin(self, data: Data) -> None:
         if not self.system.mode == "test":
             start_step = 1 if not self.system.global_step else self.system.global_step
-            self._print_message(
-                "FastEstimator-Start: step: {}; ".format(start_step), data)
+            self._print_message("FastEstimator-Start: step: {}; ".format(start_step), data)
 
     def on_epoch_begin(self, data: Data) -> None:
         if self.system.mode == 'eval':
@@ -326,8 +325,8 @@ class Logger(Trace):
                 "FastEstimator-Train: step: {}; ".format(self.system.global_step), data)
 
         if self.system.mode == "eval" and self.eval_step in self.system.eval_log_steps:
-            self._print_message(
-                "FastEstimator-Eval: progress: {}/{}; ".format(self.eval_step, self.system.eval_log_steps[-1]), data)
+            self._print_message("FastEstimator-Eval: progress: {}/{}; ".format(
+                self.eval_step, self.system.eval_log_steps[-1]), data)
 
     def on_epoch_end(self, data: Data) -> None:
         if self.system.mode == "train":
