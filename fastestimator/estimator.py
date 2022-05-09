@@ -69,6 +69,7 @@ class Estimator:
         traces: What Traces to run during training. If None, only the system's default Traces will be included.
         log_steps: Frequency (in steps) for printing log messages. 0 to disable all step-based printing (though epoch
             information will still print). None to completely disable printing.
+        eval_log_steps:
         monitor_names: Additional keys from the data dictionary to be written into the logs.
     """
     monitor_names: Set[str]
@@ -82,11 +83,14 @@ class Estimator:
                  epochs: int,
                  train_steps_per_epoch: Optional[int] = None,
                  eval_steps_per_epoch: Optional[int] = None,
-                 traces: Union[None, Trace, Scheduler[Trace], Iterable[Union[Trace, Scheduler[Trace]]]] = None,
+                 traces: Union[None, Trace, Scheduler[Trace],
+                               Iterable[Union[Trace, Scheduler[Trace]]]] = None,
                  log_steps: Optional[int] = 100,
+                 eval_log_steps: List = [],
                  monitor_names: Union[None, str, Iterable[str]] = None):
         self.traces_in_use = []
-        self.filepath = os.path.realpath(inspect.stack()[2].filename) # Record this for history tracking
+        # Record this for history tracking
+        self.filepath = os.path.realpath(inspect.stack()[2].filename)
         assert log_steps is None or log_steps >= 0, \
             "log_steps must be None or positive (or 0 to disable only train logging)"
         self.monitor_names = to_set(monitor_names) | network.get_loss_keys()
@@ -97,6 +101,7 @@ class Estimator:
                              total_epochs=epochs,
                              train_steps_per_epoch=train_steps_per_epoch,
                              eval_steps_per_epoch=eval_steps_per_epoch,
+                             eval_log_steps=eval_log_steps,
                              system_config=self.fe_summary())
 
     @property
@@ -155,17 +160,21 @@ class Estimator:
             extra_monitor_keys.update(trace.fe_monitor_names - trace_outputs)
         # Add the essential traces
         if "train" in run_modes:
-            self.traces_in_use.insert(0, TrainEssential(monitor_names=self.monitor_names.union(extra_monitor_keys)))
+            self.traces_in_use.insert(0, TrainEssential(
+                monitor_names=self.monitor_names.union(extra_monitor_keys)))
             no_save_warning = True
             for trace in get_current_items(self.traces_in_use, run_modes=run_modes):
                 if isinstance(trace, (ModelSaver, BestModelSaver)):
                     no_save_warning = False
             if no_save_warning:
-                print("FastEstimator-Warn: No ModelSaver Trace detected. Models will not be saved.")
+                print(
+                    "FastEstimator-Warn: No ModelSaver Trace detected. Models will not be saved.")
         if "eval" in run_modes and "eval" in self.pipeline.get_modes():
-            self.traces_in_use.insert(1, EvalEssential(monitor_names=self.monitor_names.union(extra_monitor_keys)))
+            self.traces_in_use.insert(1, EvalEssential(
+                monitor_names=self.monitor_names.union(extra_monitor_keys)))
         if "test" in run_modes and "test" in self.pipeline.get_modes():
-            self.traces_in_use.insert(0, TestEssential(monitor_names=self.monitor_names.union(extra_monitor_keys)))
+            self.traces_in_use.insert(0, TestEssential(
+                monitor_names=self.monitor_names.union(extra_monitor_keys)))
         # insert system instance to trace
         for trace in get_current_items(self.traces_in_use, run_modes=run_modes):
             trace.system = self.system
@@ -208,22 +217,28 @@ class Estimator:
         for mode in self.pipeline.get_modes() - {"test"}:
             scheduled_items = self.pipeline.get_scheduled_items(mode) + self.network.get_scheduled_items(
                 mode) + self.get_scheduled_items(mode)
-            signature_epochs = get_signature_epochs(scheduled_items, self.system.total_epochs, mode=mode)
-            epochs_with_data = self.pipeline.get_epochs_with_data(total_epochs=self.system.total_epochs, mode=mode)
+            signature_epochs = get_signature_epochs(
+                scheduled_items, self.system.total_epochs, mode=mode)
+            epochs_with_data = self.pipeline.get_epochs_with_data(
+                total_epochs=self.system.total_epochs, mode=mode)
             for epoch in signature_epochs:
                 if epoch not in epochs_with_data:
                     continue
                 ds_ids = self.pipeline.get_ds_ids(epoch, mode)
                 for ds_id in ds_ids:
-                    network_output_keys = self.network.get_all_output_keys(mode, epoch, ds_id=ds_id)
-                    network_input_keys = self.network.get_effective_input_keys(mode, epoch, ds_id=ds_id)
+                    network_output_keys = self.network.get_all_output_keys(
+                        mode, epoch, ds_id=ds_id)
+                    network_input_keys = self.network.get_effective_input_keys(
+                        mode, epoch, ds_id=ds_id)
                     trace_input_keys = set()
                     trace_output_keys = {"*"}
-                    traces = get_current_items(self.traces_in_use, run_modes=mode, epoch=epoch, ds_id=ds_id)
+                    traces = get_current_items(
+                        self.traces_in_use, run_modes=mode, epoch=epoch, ds_id=ds_id)
                     for idx, trace in enumerate(traces):
                         if idx > 0:  # ignore TrainEssential and EvalEssential's inputs for unmet requirement checking
                             trace_input_keys.update(trace.inputs)
-                        trace_output_keys.update(trace.get_outputs(ds_ids=ds_ids))
+                        trace_output_keys.update(
+                            trace.get_outputs(ds_ids=ds_ids))
                     # key checking
                     with self.pipeline(mode=mode,
                                        epoch=epoch,
@@ -242,15 +257,18 @@ class Estimator:
                         batch, dict), "please make sure data output format is dictionary"
                     pipeline_output_keys = to_set(batch.keys())
 
-                    monitor_names = monitor_names - (pipeline_output_keys | network_output_keys)
+                    monitor_names = monitor_names - \
+                        (pipeline_output_keys | network_output_keys)
                     unmet_requirements = trace_input_keys - (pipeline_output_keys | network_output_keys
                                                              | trace_output_keys)
                     assert not unmet_requirements, \
                         "found missing key(s) during epoch {} mode {} ds_id {}: {}".format(epoch, mode, ds_id,
                                                                                            unmet_requirements)
-                    sort_traces(traces, ds_ids=ds_ids, available_outputs=pipeline_output_keys | network_output_keys)
+                    sort_traces(
+                        traces, ds_ids=ds_ids, available_outputs=pipeline_output_keys | network_output_keys)
                     trace_input_keys.update(traces[0].inputs)
-                    self.network.load_epoch(mode, epoch, ds_id, output_keys=trace_input_keys, warmup=True, eager=eager)
+                    self.network.load_epoch(
+                        mode, epoch, ds_id, output_keys=trace_input_keys, warmup=True, eager=eager)
                     self.network.run_step(batch)
                     self.network.unload_epoch()
         assert not monitor_names, "found missing key(s): {}".format(
@@ -278,7 +296,8 @@ class Estimator:
             eager: Whether to run the training in eager mode. This is only related to TensorFlow training because
                 PyTorch by nature is always in eager mode.
         """
-        all_traces = sort_traces(get_current_items(self.traces_in_use, run_modes=run_modes), ds_ids=[])
+        all_traces = sort_traces(get_current_items(
+            self.traces_in_use, run_modes=run_modes), ds_ids=[])
         with NonContext() if fe.fe_history_path is False else HistoryRecorder(self.system, self.filepath, db_path=fe.fe_history_path):
             try:
                 self._run_traces_on_begin(traces=all_traces)
@@ -309,8 +328,10 @@ class Estimator:
             eager: Whether to run the training in eager mode. This is only related to TensorFlow training because
                 PyTorch by nature is always in eager mode.
         """
-        ds_ids = self.pipeline.get_ds_ids(self.system.epoch_idx, self.system.mode)
-        epoch_traces = sort_traces(get_current_items(self.traces_in_use, run_modes=self.system.mode, epoch=self.system.epoch_idx), ds_ids=ds_ids)
+        ds_ids = self.pipeline.get_ds_ids(
+            self.system.epoch_idx, self.system.mode)
+        epoch_traces = sort_traces(get_current_items(
+            self.traces_in_use, run_modes=self.system.mode, epoch=self.system.epoch_idx), ds_ids=ds_ids)
         self._run_traces_on_epoch_begin(traces=epoch_traces)
         self.system.batch_idx = None
         # We will aggregate data over on_ds_end and put it into on_epoch_end for printing
@@ -342,9 +363,9 @@ class Estimator:
                                steps_per_epoch=self.system.steps_per_epoch,
                                output_keys=trace_input_keys - network_output_keys | network_input_keys) as loader:
 
-                self.system.eval_log_steps = []
                 if self.system.mode == 'eval':
-                    log_steps_per_epoch = len(loader) if not self.system.steps_per_epoch else self.system.steps_per_epoch
+                    log_steps_per_epoch = len(
+                        loader) if not self.system.steps_per_epoch else self.system.steps_per_epoch
                     self.system.eval_log_steps = [
                         1, log_steps_per_epoch//3, (2*log_steps_per_epoch)//3, log_steps_per_epoch]
 
@@ -356,7 +377,8 @@ class Estimator:
                                         available_outputs=to_set(
                                             batch.keys()) | network_output_keys,
                                         ds_ids=ds_ids)
-                per_ds_traces = [trace for trace in ds_traces if isinstance(trace, PerDSTrace)]
+                per_ds_traces = [
+                    trace for trace in ds_traces if isinstance(trace, PerDSTrace)]
                 self._run_traces_on_ds_begin(traces=per_ds_traces)
                 while True:
                     try:
@@ -364,9 +386,11 @@ class Estimator:
                             self.system.update_global_step()
                         self.system.update_batch_idx()
                         batch = self._configure_tensor(loader, batch)
-                        self._run_traces_on_batch_begin(batch, traces=ds_traces)
+                        self._run_traces_on_batch_begin(
+                            batch, traces=ds_traces)
                         batch, prediction = self.network.run_step(batch)
-                        self._run_traces_on_batch_end(batch, prediction, traces=ds_traces)
+                        self._run_traces_on_batch_end(
+                            batch, prediction, traces=ds_traces)
                         if isinstance(loader, DataLoader) and (
                             (self.system.batch_idx ==
                              self.system.train_steps_per_epoch and self.system.mode == "train")
@@ -417,8 +441,10 @@ class Estimator:
                     add_batch = False
             data_instance = to_tensor(data_instance, target_type="tf")
             data_type = to_type(data_instance)
-            data_shape = to_shape(data_instance, add_batch=add_batch, exact_shape=False)
-            new_loader = tf.data.Dataset.from_generator(lambda: loader, data_type, output_shapes=data_shape)
+            data_shape = to_shape(
+                data_instance, add_batch=add_batch, exact_shape=False)
+            new_loader = tf.data.Dataset.from_generator(
+                lambda: loader, data_type, output_shapes=data_shape)
             new_loader = new_loader.prefetch(1)
         if isinstance(new_loader, tf.data.Dataset):
             if self.system.train_steps_per_epoch and self.system.mode == "train":

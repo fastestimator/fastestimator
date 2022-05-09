@@ -308,15 +308,12 @@ class Logger(Trace):
     def on_begin(self, data: Data) -> None:
         if not self.system.mode == "test":
             start_step = 1 if not self.system.global_step else self.system.global_step
-            self._print_message("FastEstimator-Start: step: {}; ".format(start_step), data)
+            self._print_message(
+                "FastEstimator-Start: step: {}; ".format(start_step), data)
 
     def on_epoch_begin(self, data: Data) -> None:
         if self.system.mode == 'eval':
             self.eval_step = 0
-
-    def on_batch_begin(self, data: Data) -> None:
-        if self.system.mode == 'eval':
-            self.eval_step += 1
 
     def on_batch_end(self, data: Data) -> None:
         if self.system.mode == "train" and self.system.log_steps and (self.system.global_step % self.system.log_steps
@@ -324,9 +321,11 @@ class Logger(Trace):
             self._print_message(
                 "FastEstimator-Train: step: {}; ".format(self.system.global_step), data)
 
-        if self.system.mode == "eval" and self.eval_step in self.system.eval_log_steps:
-            self._print_message("FastEstimator-Eval: progress: {}/{}; ".format(
-                self.eval_step, self.system.eval_log_steps[-1]), data)
+        if self.system.mode == "eval":
+            self.eval_step += 1
+            if self.eval_step in self.system.eval_log_steps:
+                self._print_message("Eval Progress: {}/{}; ".format(
+                    self.eval_step, self.system.eval_log_steps[-1]), data)
 
     def on_epoch_end(self, data: Data) -> None:
         if self.system.mode == "train":

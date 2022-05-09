@@ -17,9 +17,10 @@ import datetime
 import json
 import os
 import uuid
-from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING, Tuple, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
 
-import dill as pickle  # Need to use dill since tf.Variable is a weakref object on multi-gpu machines
+# Need to use dill since tf.Variable is a weakref object on multi-gpu machines
+import dill as pickle
 import tensorflow as tf
 import torch
 from tensorflow.python.distribute.mirrored_strategy import MirroredStrategy
@@ -69,6 +70,7 @@ class System:
             to completion)
         eval_steps_per_epoch: Whether evaluation iterations will be cut short or extended to complete N steps (or use None if they will run
             to completion)
+        eval_log_steps: The list of epochs on which the evalution logs needs to be printed.
         system_config: A description of the initialization parameters defining the associated estimator.
 
     Attributes:
@@ -109,6 +111,7 @@ class System:
     traces: List[Union['Trace', Scheduler['Trace']]]
     train_steps_per_epoch: Optional[int]
     eval_steps_per_epoch: Optional[int]
+    eval_log_steps: List
     summary: Summary
     experiment_time: str
     custom_graphs: Dict[str, List[Summary]]
@@ -124,10 +127,12 @@ class System:
                  total_epochs: int = 0,
                  train_steps_per_epoch: Optional[int] = None,
                  eval_steps_per_epoch: Optional[int] = None,
+                 eval_log_steps: List = [],
                  system_config: Optional[List[FeSummaryTable]] = None) -> None:
 
         self.network = network
         self.pipeline = pipeline
+        self.eval_log_steps = eval_log_steps
         self.traces = traces
         self.mode = mode
         self.ds_id = ds_id
@@ -158,7 +163,8 @@ class System:
         self.global_step = None
         self.epoch_idx = 0
         # Get a 64 bit random id related to current time
-        self.exp_id = int.from_bytes(uuid.uuid1().bytes, byteorder='big', signed=True) >> 64
+        self.exp_id = int.from_bytes(
+            uuid.uuid1().bytes, byteorder='big', signed=True) >> 64
 
     def update_global_step(self) -> None:
         """Increment the current `global_step`.
@@ -198,13 +204,15 @@ class System:
         Args:
             summary_name: The name of the experiment. If not provided, the system will re-use the previous summary name.
         """
-        self.experiment_time = self.experiment_time or datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        self.experiment_time = self.experiment_time or datetime.datetime.now(
+        ).strftime("%Y%m%d-%H%M%S")
         self.mode = "test"
         self.ds_id = ''
         if not self.stop_training:
             self.epoch_idx = self.total_epochs
         self.stop_training = False
-        self.summary.name = summary_name or self.summary.name  # Keep old experiment name if new one not provided
+        # Keep old experiment name if new one not provided
+        self.summary.name = summary_name or self.summary.name
         self.summary.history.pop('test', None)
         for graph_set in self.custom_graphs.values():
             for graph in graph_set:
@@ -242,7 +250,8 @@ class System:
         """
         os.makedirs(save_dir, exist_ok=True)
         # Start with the high-level info. We could use pickle for this but having it human readable is nice.
-        state = {key: value for key, value in self.__dict__.items() if is_restorable(value)[0]}
+        state = {key: value for key, value in self.__dict__.items()
+                 if is_restorable(value)[0]}
         with open(os.path.join(save_dir, 'system.json'), 'w') as fp:
             json.dump(state, fp, indent=4)
         # Save all of the models / optimizer states
@@ -282,7 +291,8 @@ class System:
         # Reload the high-level system information
         system_path = os.path.join(load_dir, 'system.json')
         if not os.path.exists(system_path):
-            raise FileNotFoundError(f"Could not find system summary file at {system_path}")
+            raise FileNotFoundError(
+                f"Could not find system summary file at {system_path}")
         with open(system_path, 'r') as fp:
             state = json.load(fp)
         self.__dict__.update(state)
@@ -292,7 +302,8 @@ class System:
         # Reload everything else
         objects_path = os.path.join(load_dir, 'objects.pkl')
         if not os.path.exists(objects_path):
-            raise FileNotFoundError(f"Could not find the objects summary file at {objects_path}")
+            raise FileNotFoundError(
+                f"Could not find the objects summary file at {objects_path}")
         with open(objects_path, 'rb') as file:
             objects = pickle.load(file)
         self.summary.__dict__.update(objects['summary'].__dict__)
@@ -321,12 +332,16 @@ class System:
             model_ext, optimizer_ext = 'pt', 'pt'
         else:
             raise ValueError(f"Unknown model type: {type(model)}")
-        weights_path = os.path.join(base_path, f"{model.model_name}.{model_ext}")
+        weights_path = os.path.join(
+            base_path, f"{model.model_name}.{model_ext}")
         if not os.path.exists(weights_path):
-            raise FileNotFoundError(f"Cannot find model weights file at {weights_path}")
-        optimizer_path = os.path.join(base_path, f"{model.model_name}_opt.{optimizer_ext}")
+            raise FileNotFoundError(
+                f"Cannot find model weights file at {weights_path}")
+        optimizer_path = os.path.join(
+            base_path, f"{model.model_name}_opt.{optimizer_ext}")
         if not os.path.exists(optimizer_path):
-            raise FileNotFoundError(f"Cannot find model optimizer file at {optimizer_path}")
+            raise FileNotFoundError(
+                f"Cannot find model optimizer file at {optimizer_path}")
         load_model(model, weights_path=weights_path, load_optimizer=True)
 
     @staticmethod
@@ -343,7 +358,8 @@ class System:
         """
         states = states[state_key]
         if not isinstance(states, list):
-            raise ValueError(f"Expected {state_key} to contain a list, but found a {type(states)}")
+            raise ValueError(
+                f"Expected {state_key} to contain a list, but found a {type(states)}")
         if len(states) != len(in_memory_objects):
             raise ValueError("Expected saved {} to contain {} objects, but found {} instead".format(
                 state_key, len(in_memory_objects), len(states)))
@@ -371,7 +387,8 @@ class System:
         """
         states = states[state_key]
         if not isinstance(states, dict):
-            raise ValueError(f"Expected {state_key} to contain a dict, but found a {type(states)}")
+            raise ValueError(
+                f"Expected {state_key} to contain a dict, but found a {type(states)}")
         # Note that not being a subset is different from being a superset
         if not states.keys() <= in_memory_objects.keys():
             raise ValueError("Saved {} contained unexpected keys: {}".format(state_key,
