@@ -35,9 +35,9 @@ from fastestimator.op.op import get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.tensorop.model.update import UpdateOp
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
+from fastestimator.util.base_util import NonContext, to_list
 from fastestimator.util.traceability_util import trace_model, traceable
 from fastestimator.util.util import get_batch_size
-from fastestimator.util.base_util import to_list, NonContext
 
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 T = TypeVar('T')
@@ -603,10 +603,11 @@ class TFNetwork(BaseNetwork):
         super().load_epoch(mode=mode, epoch=epoch, ds_id=ds_id, output_keys=output_keys, warmup=warmup, eager=eager)
         # Don't cause a re-trace just because epoch changed
         self.epoch_state["epoch"] = tf.convert_to_tensor(self.epoch_state["epoch"])
-        # Need to re-trace the TF graph if the optimizer is changing due to scheduling:
+        # Need to re-trace the TF graph if optimizer or layer trainable setting is changing:
+        trainable_str = "".join([str(layer.trainable) for model in self.epoch_models for layer in model.layers])
         opt_str = "x".join(
             [str(id(model.current_optimizer)) for model in self.epoch_models if hasattr(model, 'current_optimizer')])
-        self.epoch_state["_force_tf_retrace"] = hash(opt_str)  # Hash to keep at fixed memory overhead
+        self.epoch_state["_force_tf_retrace"] = hash(trainable_str + opt_str)  # Hash to keep at fixed memory overhead
 
     def unload_epoch(self) -> None:
         # This prevents a tf graph memory leak that would slow down long trainings. Since we
