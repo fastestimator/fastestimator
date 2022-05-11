@@ -76,6 +76,7 @@ def get_gradient(target: Tensor,
                                         grad_outputs=torch.ones_like(target),
                                         retain_graph=retain_graph,
                                         create_graph=higher_order,
+                                        allow_unused=True,
                                         only_inputs=True)
 
         if isinstance(sources, torch.Tensor):
