@@ -22,6 +22,7 @@ from fastestimator.util.data import Data
 
 
 class TestLogger(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.data = Data({})
@@ -43,22 +44,19 @@ class TestLogger(unittest.TestCase):
         logger = Logger()
         logger.system = sample_system_object()
         logger.system.global_step = 2
-        self._test_print_msg(func=logger.on_begin,
-                             data=self.data, msg=self.on_begin_global_step_msg)
+        self._test_print_msg(func=logger.on_begin, data=self.data, msg=self.on_begin_global_step_msg)
 
     def test_on_begin_global_step_not_none(self):
         logger = Logger()
         logger.system = sample_system_object()
-        self._test_print_msg(func=logger.on_begin,
-                             data=self.data, msg=self.on_begin_msg)
+        self._test_print_msg(func=logger.on_begin, data=self.data, msg=self.on_begin_msg)
 
     def test_on_batch_end(self):
         logger = Logger()
         logger.system = sample_system_object()
         logger.system.global_step = 1
         logger.system.log_steps = 3
-        self._test_print_msg(func=logger.on_batch_end,
-                             data=self.data, msg=self.on_batch_end_msg)
+        self._test_print_msg(func=logger.on_batch_end, data=self.data, msg=self.on_batch_end_msg)
 
     def test_on_batch_end_mode_eval(self):
         logger = Logger()
@@ -68,16 +66,14 @@ class TestLogger(unittest.TestCase):
         logger.system.eval_log_steps = [1, 2, 3]
         logger.system.log_steps = 3
         logger.on_epoch_begin(self.data)
-        self._test_print_msg(func=logger.on_batch_end,
-                             data=self.data, msg=self.on_batch_end_eval_msg)
+        self._test_print_msg(func=logger.on_batch_end, data=self.data, msg=self.on_batch_end_eval_msg)
 
     def test_on_epoch_end_mode_train(self):
         logger = Logger()
         logger.system = sample_system_object()
         logger.system.global_step = 2
         logger.system.log_steps = 3
-        self._test_print_msg(func=logger.on_epoch_end,
-                             data=self.data, msg=self.on_epoch_end_train_msg)
+        self._test_print_msg(func=logger.on_epoch_end, data=self.data, msg=self.on_epoch_end_train_msg)
 
     def test_on_epoch_end_mode_test(self):
         logger = Logger()
@@ -85,13 +81,11 @@ class TestLogger(unittest.TestCase):
         logger.system.mode = 'test'
         logger.system.global_step = 2
         logger.system.log_steps = 3
-        self._test_print_msg(func=logger.on_epoch_end,
-                             data=self.data, msg=self.on_epoch_end_test_msg)
+        self._test_print_msg(func=logger.on_epoch_end, data=self.data, msg=self.on_epoch_end_test_msg)
 
     def test_on_end(self):
         logger = Logger()
         logger.system = sample_system_object()
         logger.system.global_step = 2
         logger.system.log_steps = 3
-        self._test_print_msg(func=logger.on_end,
-                             data=self.data, msg=self.on_end_msg)
+        self._test_print_msg(func=logger.on_end, data=self.data, msg=self.on_end_msg)
