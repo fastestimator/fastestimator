@@ -87,8 +87,7 @@ class Trace:
         self.outputs = check_io_names(to_list(outputs))
         self.mode = parse_modes(to_set(mode))
         self.ds_id = check_ds_id(to_set(ds_id))
-        # The use-case here is rare enough that we don't want to add this to the init sig
-        self.fe_monitor_names = set()
+        self.fe_monitor_names = set()  # The use-case here is rare enough that we don't want to add this to the init sig
 
     def on_begin(self, data: Data) -> None:
         """Runs once at the beginning of training or testing.

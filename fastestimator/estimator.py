@@ -16,7 +16,7 @@ import inspect
 import os
 import random
 from collections import ChainMap
-from typing import Any, Dict, Iterable, List, Optional, Set, Union
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Union
 
 import numpy as np
 import tensorflow as tf
@@ -69,7 +69,7 @@ class Estimator:
         traces: What Traces to run during training. If None, only the system's default Traces will be included.
         log_steps: Frequency (in steps) for printing log messages. 0 to disable all step-based printing (though epoch
             information will still print). None to completely disable printing.
-        eval_log_steps:
+        eval_log_steps: The list of steps when we want to print eval logs.
         monitor_names: Additional keys from the data dictionary to be written into the logs.
     """
     monitor_names: Set[str]
@@ -85,11 +85,10 @@ class Estimator:
                  eval_steps_per_epoch: Optional[int] = None,
                  traces: Union[None, Trace, Scheduler[Trace], Iterable[Union[Trace, Scheduler[Trace]]]] = None,
                  log_steps: Optional[int] = 100,
-                 eval_log_steps: List = [],
+                 eval_log_steps: Sequence[int] = (),
                  monitor_names: Union[None, str, Iterable[str]] = None):
         self.traces_in_use = []
-        # Record this for history tracking
-        self.filepath = os.path.realpath(inspect.stack()[2].filename)
+        self.filepath = os.path.realpath(inspect.stack()[2].filename)  # Record this for history tracking
         assert log_steps is None or log_steps >= 0, \
             "log_steps must be None or positive (or 0 to disable only train logging)"
         self.monitor_names = to_set(monitor_names) | network.get_loss_keys()
@@ -205,8 +204,7 @@ class Estimator:
                 PyTorch by nature is always in eager mode.
         """
         all_traces = get_current_items(self.traces_in_use, run_modes={"train", "eval"})
-        # This ensures that the traces can sort properly for on_begin and on_end
-        sort_traces(all_traces, ds_ids=[])
+        sort_traces(all_traces, ds_ids=[])  # This ensures that the traces can sort properly for on_begin and on_end
         monitor_names = self.monitor_names
         for mode in self.pipeline.get_modes() - {"test"}:
             scheduled_items = self.pipeline.get_scheduled_items(mode) + self.network.get_scheduled_items(
@@ -244,8 +242,7 @@ class Estimator:
                     assert isinstance(batch, dict), "please make sure data output format is dictionary"
                     pipeline_output_keys = to_set(batch.keys())
 
-                    monitor_names = monitor_names - \
-                        (pipeline_output_keys | network_output_keys)
+                    monitor_names = monitor_names - (pipeline_output_keys | network_output_keys)
                     unmet_requirements = trace_input_keys - (pipeline_output_keys | network_output_keys
                                                              | trace_output_keys)
                     assert not unmet_requirements, \
@@ -318,8 +315,7 @@ class Estimator:
             ds_ids=ds_ids)
         self._run_traces_on_epoch_begin(traces=epoch_traces)
         self.system.batch_idx = None
-        # We will aggregate data over on_ds_end and put it into on_epoch_end for printing
-        end_epoch_data = Data()
+        end_epoch_data = Data()  # We will aggregate data over on_ds_end and put it into on_epoch_end for printing
         # run for each dataset
         for self.system.ds_id in ds_ids:
             ds_traces = get_current_items(self.traces_in_use,

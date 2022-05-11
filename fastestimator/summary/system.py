@@ -17,7 +17,7 @@ import datetime
 import json
 import os
 import uuid
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
 
 import dill as pickle  # Need to use dill since tf.Variable is a weakref object on multi-gpu machines
 import tensorflow as tf
@@ -110,7 +110,7 @@ class System:
     traces: List[Union['Trace', Scheduler['Trace']]]
     train_steps_per_epoch: Optional[int]
     eval_steps_per_epoch: Optional[int]
-    eval_log_steps: List
+    eval_log_steps: Sequence[int]
     summary: Summary
     experiment_time: str
     custom_graphs: Dict[str, List[Summary]]
@@ -126,7 +126,7 @@ class System:
                  total_epochs: int = 0,
                  train_steps_per_epoch: Optional[int] = None,
                  eval_steps_per_epoch: Optional[int] = None,
-                 eval_log_steps: List = [],
+                 eval_log_steps: Sequence[int] = (),
                  system_config: Optional[List[FeSummaryTable]] = None) -> None:
 
         self.network = network
@@ -208,8 +208,7 @@ class System:
         if not self.stop_training:
             self.epoch_idx = self.total_epochs
         self.stop_training = False
-        # Keep old experiment name if new one not provided
-        self.summary.name = summary_name or self.summary.name
+        self.summary.name = summary_name or self.summary.name  # Keep old experiment name if new one not provided
         self.summary.history.pop('test', None)
         for graph_set in self.custom_graphs.values():
             for graph in graph_set:
