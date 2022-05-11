@@ -18,6 +18,9 @@ import tensorflow as tf
 import torch
 
 
+_ALREADY_GAVE_FE_GRAD_WARNING = False
+
+
 def update_model(model: Union[tf.keras.Model, torch.nn.Module],
                  gradients: List[Union[tf.Tensor, torch.Tensor]],
                  defer: bool = False,
@@ -75,6 +78,13 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
     elif isinstance(model, torch.nn.Module):
         trainable_params = [p for p in model.parameters() if p.requires_grad]
         for gradient, parameter in zip(gradients, trainable_params):
+            if gradient is None:
+                global _ALREADY_GAVE_FE_GRAD_WARNING
+                if not _ALREADY_GAVE_FE_GRAD_WARNING:
+                    print("\033[93m{}\033[00m".format("FastEstimator-Warn: 'None' detected in gradients. Some or all "
+                                                      "of your computation graph may not be connected to your loss."))
+                    _ALREADY_GAVE_FE_GRAD_WARNING = True
+                continue
             if parameter.grad is not None:
                 parameter.grad += gradient
             else:
