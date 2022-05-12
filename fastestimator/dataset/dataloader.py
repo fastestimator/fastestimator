@@ -22,8 +22,8 @@ from torch import Tensor
 from torch.utils.data import DataLoader, Dataset, Sampler, _DatasetKind
 from torch.utils.data._utils.collate import default_collate, default_convert
 from torch.utils.data._utils.fetch import _MapDatasetFetcher
-from torch.utils.data.dataloader import _BaseDataLoaderIter, _MultiProcessingDataLoaderIter
-from torch.utils.data.dataloader import _SingleProcessDataLoaderIter
+from torch.utils.data.dataloader import _BaseDataLoaderIter, _MultiProcessingDataLoaderIter, \
+    _SingleProcessDataLoaderIter
 
 from fastestimator.dataset.extend_dataset import ExtendDataset
 from fastestimator.dataset.op_dataset import OpDataset
@@ -111,15 +111,14 @@ class FEDataLoader(DataLoader):
         # We could disable pre-collating when num_workers=0, but this would lead to inconsistent batch ordering between
         # single- and multi-processing.
 
-        super().__init__(dataset=dataset,
-                         batch_size=batch_size,
-                         sampler=sampler,
-                         num_workers=num_workers,
-                         persistent_workers=False,
-                         collate_fn=functools.partial(_pre_collate,
-                                                      try_fn=self.fe_collate_fn,
-                                                      postprocess_fn=postprocess_fn),
-                         worker_init_fn=lambda _: np.random.seed(random.randint(0, 2 ** 32 - 1)))
+        super().__init__(
+            dataset=dataset,
+            batch_size=batch_size,
+            sampler=sampler,
+            num_workers=num_workers,
+            persistent_workers=False,
+            collate_fn=functools.partial(_pre_collate, try_fn=self.fe_collate_fn, postprocess_fn=postprocess_fn),
+            worker_init_fn=lambda _: np.random.seed(random.randint(0, 2**32 - 1)))
         if self.batch_size is not None:
             # We need a special fetcher type later in order to build batches correctly
             self._dataset_kind = self.FE_LOADER_KIND
@@ -155,6 +154,12 @@ class FEDataLoader(DataLoader):
                 # We use 'fake' batch size here to identify datasets which perform their own batching
                 return _MPPostBatchIter(self)
             return _MPPreBatchIter(self)
+
+    def __len__(self):
+        return self.fe_samples_to_yield
+
+    def get_batch_size(self) -> int:
+        return self.fe_batch_size
 
 
 def _pre_collate(data: List[Union[FilteredData, Dict[str, Any]]],
@@ -193,6 +198,7 @@ class _BaseFELoaderIter(_BaseDataLoaderIter, ABC):
     Args:
         loader: The parent loader object that will own this iterator.
     """
+
     def __init__(self, loader: FEDataLoader):
         super().__init__(loader)
         self.fe_batch_size = loader.fe_batch_size
@@ -343,6 +349,7 @@ class InfiniteSampler(Sampler):
         convert_fn: A function to be invoked (using the current index) every sample in order to convert an integer index
             into some arbitrary alternative index representation.
     """
+
     def __init__(self,
                  data_source: Sized,
                  shuffle: bool = True,
@@ -389,7 +396,9 @@ class InfiniteSampler(Sampler):
 # pytorch usage since our reserved 'kind' value is 7 whereas pytorch only uses 0 and 1.
 ###
 
+
 class _IdxMapDatasetFetcher(_MapDatasetFetcher):
+
     def fetch(self, possibly_batched_index):
         if self.auto_collation:
             data = [self.dataset[idx] for idx in possibly_batched_index]

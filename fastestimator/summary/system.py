@@ -17,7 +17,7 @@ import datetime
 import json
 import os
 import uuid
-from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING, Tuple, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
 
 import dill as pickle  # Need to use dill since tf.Variable is a weakref object on multi-gpu machines
 import tensorflow as tf
@@ -69,6 +69,7 @@ class System:
             to completion)
         eval_steps_per_epoch: Whether evaluation iterations will be cut short or extended to complete N steps (or use None if they will run
             to completion)
+        eval_log_steps: The list of steps on which evaluation progress logs need to be printed.
         system_config: A description of the initialization parameters defining the associated estimator.
 
     Attributes:
@@ -89,6 +90,7 @@ class System:
             exhausted. If None, all data will be used.
         eval_steps_per_epoch: Evaluation will be cut short or extended to complete N steps even if loader is not yet
             exhausted. If None, all data will be used.
+        eval_log_steps: The list of steps on which evaluation progress logs need to be printed.
         summary: An object to write experiment results to.
         experiment_time: A timestamp indicating when this model was trained.
         custom_graphs: A place to store extra graphs which are too complicated for the primary history.
@@ -109,6 +111,7 @@ class System:
     traces: List[Union['Trace', Scheduler['Trace']]]
     train_steps_per_epoch: Optional[int]
     eval_steps_per_epoch: Optional[int]
+    eval_log_steps: Sequence[int]
     summary: Summary
     experiment_time: str
     custom_graphs: Dict[str, List[Summary]]
@@ -124,10 +127,12 @@ class System:
                  total_epochs: int = 0,
                  train_steps_per_epoch: Optional[int] = None,
                  eval_steps_per_epoch: Optional[int] = None,
+                 eval_log_steps: Sequence[int] = (),
                  system_config: Optional[List[FeSummaryTable]] = None) -> None:
 
         self.network = network
         self.pipeline = pipeline
+        self.eval_log_steps = eval_log_steps
         self.traces = traces
         self.mode = mode
         self.ds_id = ds_id
@@ -259,7 +264,8 @@ class System:
             'ds': {
                 mode: {key: value.__getstate__()
                        for key, value in ds.items() if hasattr(value, '__getstate__')}
-                for mode, ds in self.pipeline.data.items()
+                for mode,
+                ds in self.pipeline.data.items()
             }
         }
         with open(os.path.join(save_dir, 'objects.pkl'), 'wb') as file:
