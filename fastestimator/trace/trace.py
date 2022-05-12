@@ -226,6 +226,7 @@ class EvalEssential(Trace):
     def on_epoch_begin(self, data: Data) -> None:
         self.eval_results = defaultdict(lambda: defaultdict(list))
         self.eval_step = 0
+        self.step_start = time.perf_counter()
         self.elapse_times = []
 
     def on_batch_begin(self, data: Data) -> None:
@@ -248,8 +249,6 @@ class EvalEssential(Trace):
                     d = DSData(ds_id, data)
                     d.write_with_log(key, np.mean(np.array(vals), axis=0))
             data.write_with_log(key, np.mean(np.array([e for x in ds_vals.values() for e in x]), axis=0))
-        self.eval_step = 0
-        self.step_start = time.perf_counter()
 
 
 @traceable()
@@ -318,7 +317,6 @@ class Logger(Trace):
         if self.system.mode == "train":
             self._print_message("FastEstimator-Train: step: {}; ".format(self.system.global_step), data, True)
         elif self.system.mode == 'eval':
-            self.eval_step = 0
             self._print_message("FastEstimator-Eval: step: {}; ".format(self.system.global_step), data, True)
         elif self.system.mode == "test":
             self._print_message("FastEstimator-Test: step: {}; ".format(self.system.global_step), data, True)

@@ -69,7 +69,7 @@ class System:
             to completion)
         eval_steps_per_epoch: Whether evaluation iterations will be cut short or extended to complete N steps (or use None if they will run
             to completion)
-        eval_log_steps: The list of epochs on which the evalution logs needs to be printed.
+        eval_log_steps: The list of steps on which evaluation progress logs need to be printed.
         system_config: A description of the initialization parameters defining the associated estimator.
 
     Attributes:

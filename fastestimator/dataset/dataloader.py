@@ -158,7 +158,7 @@ class FEDataLoader(DataLoader):
     def __len__(self):
         return self.fe_samples_to_yield
 
-    def get_batch_size(self):
+    def get_batch_size(self) -> int:
         return self.fe_batch_size
 
 
