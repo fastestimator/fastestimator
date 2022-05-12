@@ -90,6 +90,7 @@ class System:
             exhausted. If None, all data will be used.
         eval_steps_per_epoch: Evaluation will be cut short or extended to complete N steps even if loader is not yet
             exhausted. If None, all data will be used.
+        eval_log_steps: The list of steps on which evaluation progress logs need to be printed.
         summary: An object to write experiment results to.
         experiment_time: A timestamp indicating when this model was trained.
         custom_graphs: A place to store extra graphs which are too complicated for the primary history.

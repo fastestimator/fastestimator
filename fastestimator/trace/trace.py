@@ -220,16 +220,13 @@ class EvalEssential(Trace):
         super().__init__(mode="eval", inputs=monitor_names, outputs=["steps/sec"])
         self.elapse_times = []
         self.eval_print = None
-        self.step_start = None
+        self.step_start = time.perf_counter()
         self.eval_results = defaultdict(lambda: defaultdict(list))
 
     def on_epoch_begin(self, data: Data) -> None:
         self.eval_results = defaultdict(lambda: defaultdict(list))
         self.eval_step = 0
         self.elapse_times = []
-
-        if self.system.log_steps:
-            self.step_start = time.perf_counter()
 
     def on_batch_begin(self, data: Data) -> None:
         self.eval_step += 1
@@ -252,6 +249,7 @@ class EvalEssential(Trace):
                     d.write_with_log(key, np.mean(np.array(vals), axis=0))
             data.write_with_log(key, np.mean(np.array([e for x in ds_vals.values() for e in x]), axis=0))
         self.eval_step = 0
+        self.step_start = time.perf_counter()
 
 
 @traceable()

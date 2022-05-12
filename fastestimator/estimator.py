@@ -69,7 +69,7 @@ class Estimator:
         traces: What Traces to run during training. If None, only the system's default Traces will be included.
         log_steps: Frequency (in steps) for printing log messages. 0 to disable all step-based printing (though epoch
             information will still print). None to completely disable printing.
-        eval_log_steps: The list of steps when we want to print eval logs.
+        eval_log_steps: The list of steps on which evaluation progress logs need to be printed.
         monitor_names: Additional keys from the data dictionary to be written into the logs.
     """
     monitor_names: Set[str]
