@@ -29,7 +29,7 @@ class Dice(TensorOp):
     Calculate Element-Wise Dice Score.
 
         Args:
-            inputs: Keys of tensors to be averaged.
+            inputs: A tuple or list of keys representing prediction and ground truth, like: ("y_pred", "y_true").
             outputs: The key under which to save the output.
             mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
                 regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
@@ -69,6 +69,5 @@ class Dice(TensorOp):
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
         y_pred, y_true = data
-        dice = dice_score(
-            y_pred, y_true, self.soft_dice, self.sample_average, self.channel_average, self.epsilon)
+        dice = dice_score(y_pred, y_true, self.soft_dice, self.sample_average, self.channel_average, self.epsilon)
         return -dice if self.negate else dice
