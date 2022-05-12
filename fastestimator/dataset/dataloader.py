@@ -158,6 +158,9 @@ class FEDataLoader(DataLoader):
     def __len__(self):
         return self.fe_samples_to_yield
 
+    def get_batch_size(self):
+        return self.fe_batch_size
+
 
 def _pre_collate(data: List[Union[FilteredData, Dict[str, Any]]],
                  try_fn: Callable[[List[Union[FilteredData, Dict[str, Any]]]], Dict[str, Any]],

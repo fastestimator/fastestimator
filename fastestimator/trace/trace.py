@@ -321,6 +321,7 @@ class Logger(Trace):
             self._print_message("FastEstimator-Train: step: {}; ".format(self.system.global_step), data, True)
         elif self.system.mode == 'eval':
             self.eval_step = 0
+            self._print_message("FastEstimator-Eval: step: {}; ".format(self.system.global_step), data, True)
         elif self.system.mode == "test":
             self._print_message("FastEstimator-Test: step: {}; ".format(self.system.global_step), data, True)
 
