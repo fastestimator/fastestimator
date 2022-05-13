@@ -112,6 +112,8 @@ class ModelOp(TensorOp):
                 self.multi_inputs = len(inspect.signature(self.model.module.forward).parameters.keys()) > 1
             else:
                 self.multi_inputs = len(inspect.signature(self.model.forward).parameters.keys()) > 1
+        elif framework == "tf" and "keras.engine.functional.Functional" not in str(type(self.model)):
+            self.multi_inputs = len(inspect.signature(self.model.call).parameters.keys()) > 1
 
     def get_fe_models(self) -> Set[Model]:
         return {self.model}
