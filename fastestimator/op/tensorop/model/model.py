@@ -113,7 +113,9 @@ class ModelOp(TensorOp):
             else:
                 self.multi_inputs = len(inspect.signature(self.model.forward).parameters.keys()) > 1
         elif framework == "tf" and "keras.engine" not in str(type(self.model)):
-            self.multi_inputs = len(inspect.signature(self.model.call).parameters.keys()) > 1
+            model_call_args = {x for x in inspect.signature(self.model.call).parameters.keys()}
+            assert len({"training", "mask"} & model_call_args) == 0, "Cannot use 'traiing 'or 'mask' as input args"
+            self.multi_inputs = len(model_call_args) > 1
 
     def get_fe_models(self) -> Set[Model]:
         return {self.model}
