@@ -21,14 +21,20 @@ For more information, please visit our [website](https://www.fastestimator.org/)
 ### 1. Install Dependencies:
 
 * Install TensorFlow
-    Note : The below mentioned instructions must only be used for linux or mac. For windows based installation follow [this](.\installation_docs\tensorflow_windows_installation.md)
-    * Stable:
-        ```bash
-        pip install tensorflow==2.4.1
-        ```
-    * Nightly:
-        ```bash
-        pip install tensorflow==2.8.0
+
+    * Linux/MAC:
+
+        * Stable:
+            ```bash
+            pip install tensorflow==2.4.1
+            ```
+        * Nightly:
+            ```bash
+            pip install tensorflow==2.8.0
+
+    * Windows:
+
+        Please follow [this](.\installation_docs\tensorflow_windows_installation.md) installation guide.
         ```
 
 * Install PyTorch
