@@ -33,6 +33,7 @@ For more information, please visit our [website](https://www.fastestimator.org/)
             ```
     * Windows:
         Please follow [this](.\installation_docs\tensorflow_windows_installation.md) installation guide.
+
 * Install PyTorch
     * Stable:
         * CPU:
