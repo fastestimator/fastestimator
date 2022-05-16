@@ -218,16 +218,14 @@ class EvalEssential(Trace):
 
     def __init__(self, monitor_names: Set[str]) -> None:
         super().__init__(mode="eval", inputs=monitor_names, outputs=["steps/sec"])
-        self.elapse_times = []
-        self.eval_print = None
         self.step_start = time.perf_counter()
         self.eval_results = defaultdict(lambda: defaultdict(list))
 
     def on_epoch_begin(self, data: Data) -> None:
         self.eval_results = defaultdict(lambda: defaultdict(list))
         self.eval_step = 0
+        self.elapsed_step = 0
         self.step_start = time.perf_counter()
-        self.elapse_times = []
 
     def on_batch_begin(self, data: Data) -> None:
         self.eval_step += 1
@@ -238,8 +236,11 @@ class EvalEssential(Trace):
                 self.eval_results[key][self.system.ds_id].append(data[key])
 
         if self.system.mode == "eval" and self.eval_step in self.system.eval_log_steps:
-            self.elapse_times.append(time.perf_counter() - self.step_start)
-            data.write_with_log("steps/sec", round(self.eval_step / np.sum(self.elapse_times), 2))
+            if self.eval_step > 1:
+                elapsed_time = time.perf_counter() - self.step_start
+                elapsed_step = self.eval_step - self.elapsed_step
+                data.write_with_log("steps/sec", round(elapsed_step / elapsed_time, 2))
+            self.elapsed_step = self.eval_step
             self.step_start = time.perf_counter()
 
     def on_epoch_end(self, data: Data) -> None:
@@ -291,7 +292,6 @@ class Logger(Trace):
 
     def __init__(self) -> None:
         super().__init__(inputs="*")
-        self.eval_print = None
 
     def on_begin(self, data: Data) -> None:
         if not self.system.mode == "test":
