@@ -61,10 +61,16 @@ pipeline {
                         }
                         finally {
                             sh 'docker rmi "$IMAGE_TAG"'
-                            def PR_IMAGE_ID = sh(script: 'docker images --filter "reference=*pr*" --format "{{.ID}}"', returnStdout: true).trim() as String
-                            if(PR_IMAGE_ID !=  "")
-                            {
-                                sh 'docker rmi $(docker images --filter "reference=*pr*" -q)'
+                            //To avoid throwing error when multiple pr are running in parallel
+                            try {
+                                def PR_IMAGE_ID = sh(script: 'docker images --filter "reference=*pr*" --format "{{.ID}}"', returnStdout: true).trim() as String
+                                if(PR_IMAGE_ID !=  "")
+                                {
+                                    sh 'docker rmi $(docker images --filter "reference=*pr*" -q)'
+                                }
+                            } catch (Exception e) {
+                                echo 'Exception occurred: ' + e.toString()
+                                sh 'Handle the exception!'
                             }
                         }
                     }
