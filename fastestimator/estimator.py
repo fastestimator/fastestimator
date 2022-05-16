@@ -16,7 +16,7 @@ import inspect
 import os
 import random
 from collections import ChainMap
-from typing import Any, Dict, Iterable, List, Optional, Set, Union
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Union
 
 import numpy as np
 import tensorflow as tf
@@ -39,10 +39,10 @@ from fastestimator.trace.io.restore_wizard import RestoreWizard
 from fastestimator.trace.io.traceability import Traceability
 from fastestimator.trace.trace import EvalEssential, Logger, PerDSTrace, TestEssential, Trace, TrainEssential, \
     sort_traces
+from fastestimator.util.base_util import NonContext, Suppressor, to_list, to_set
 from fastestimator.util.data import Data, FilteredData
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import draw
-from fastestimator.util.base_util import to_set, to_list, NonContext, Suppressor
 
 
 @traceable()
@@ -69,6 +69,7 @@ class Estimator:
         traces: What Traces to run during training. If None, only the system's default Traces will be included.
         log_steps: Frequency (in steps) for printing log messages. 0 to disable all step-based printing (though epoch
             information will still print). None to completely disable printing.
+        eval_log_steps: The list of steps on which evaluation progress logs need to be printed.
         monitor_names: Additional keys from the data dictionary to be written into the logs.
     """
     monitor_names: Set[str]
@@ -84,6 +85,7 @@ class Estimator:
                  eval_steps_per_epoch: Optional[int] = None,
                  traces: Union[None, Trace, Scheduler[Trace], Iterable[Union[Trace, Scheduler[Trace]]]] = None,
                  log_steps: Optional[int] = 100,
+                 eval_log_steps: Sequence[int] = (),
                  monitor_names: Union[None, str, Iterable[str]] = None):
         self.traces_in_use = []
         self.filepath = os.path.realpath(inspect.stack()[2].filename)  # Record this for history tracking
@@ -97,6 +99,7 @@ class Estimator:
                              total_epochs=epochs,
                              train_steps_per_epoch=train_steps_per_epoch,
                              eval_steps_per_epoch=eval_steps_per_epoch,
+                             eval_log_steps=eval_log_steps,
                              system_config=self.fe_summary())
 
     @property
@@ -339,6 +342,14 @@ class Estimator:
                                ds_id=self.system.ds_id,
                                steps_per_epoch=self.system.steps_per_epoch,
                                output_keys=trace_input_keys - network_output_keys | network_input_keys) as loader:
+
+                if self.system.mode == 'eval':
+                    log_steps_per_epoch = len(loader) // loader.get_batch_size(
+                    ) if not self.system.steps_per_epoch else self.system.steps_per_epoch
+                    self.system.eval_log_steps = [
+                        1, log_steps_per_epoch // 3, (2 * log_steps_per_epoch) // 3, log_steps_per_epoch
+                    ] if not self.system.eval_log_steps else self.system.eval_log_steps
+
                 loader = self._configure_loader(loader)
                 iterator = iter(loader)
                 with Suppressor():
@@ -355,6 +366,7 @@ class Estimator:
                         self.system.update_batch_idx()
                         batch = self._configure_tensor(loader, batch)
                         self._run_traces_on_batch_begin(batch, traces=ds_traces)
+
                         batch, prediction = self.network.run_step(batch)
                         self._run_traces_on_batch_end(batch, prediction, traces=ds_traces)
                         if isinstance(loader, DataLoader) and (
@@ -382,6 +394,7 @@ class Estimator:
         Returns:
             The potentially modified dataloader to be used for training.
         """
+
         new_loader = loader
         if isinstance(new_loader, DataLoader) and isinstance(self.network, TFNetwork):
             add_batch = bool(new_loader.batch_size)

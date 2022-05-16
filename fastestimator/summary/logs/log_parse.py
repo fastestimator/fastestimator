@@ -15,11 +15,11 @@
 import os
 import re
 from collections import defaultdict
-from typing import List, Optional, Set, Iterable
+from typing import Iterable, List, Optional, Set
 
 from fastestimator.summary.logs.log_plot import visualize_logs
 from fastestimator.summary.summary import Summary, ValWithError, average_summaries
-from fastestimator.util.base_util import strip_suffix, list_files
+from fastestimator.util.base_util import list_files, strip_suffix
 
 
 def parse_log_iter(source: Iterable[str], sync: Summary) -> Summary:
@@ -36,11 +36,11 @@ def parse_log_iter(source: Iterable[str], sync: Summary) -> Summary:
     last_epoch = 0
     for line in source:
         mode = None
-        if line.startswith("FastEstimator-Train") or line.startswith("FastEstimator-Finish"):
+        if line.startswith("FastEstimator-Train: step") or line.startswith("FastEstimator-Finish"):
             mode = "train"
-        elif line.startswith("FastEstimator-Eval"):
+        elif line.startswith("FastEstimator-Eval: step"):
             mode = "eval"
-        elif line.startswith("FastEstimator-Test"):
+        elif line.startswith("FastEstimator-Test: step"):
             mode = "test"
         if mode is None:
             continue

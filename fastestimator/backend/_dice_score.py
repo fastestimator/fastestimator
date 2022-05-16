@@ -23,9 +23,19 @@ from fastestimator.backend._reduce_sum import reduce_sum
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
-allowed_data_types = [torch.float, torch.float16, torch.float32, torch.float64,
-                      np.float, np.float16, np.float32, np.float64,
-                      tf.float16, tf.float32, tf.float64]
+allowed_data_types = [
+    torch.float,
+    torch.float16,
+    torch.float32,
+    torch.float64,
+    np.float,
+    np.float16,
+    np.float32,
+    np.float64,
+    tf.float16,
+    tf.float32,
+    tf.float64
+]
 
 
 def get_denominator(y_true: Tensor, y_pred: Tensor, soft_dice: bool) -> Tensor:
@@ -57,7 +67,7 @@ def get_axis(y_true: Tensor, channel_average: bool) -> Tensor:
         Returns:
             The axis on which reduce_sum needs to be applied.
     """
-    dims = y_true.ndim
+    dims = len(y_true.shape)
     if dims <= 2:
         return None
     else:
@@ -90,8 +100,8 @@ def cast(y_true, epsilon, dtype):
             AssertionError: If `y_true` are unacceptable data types. if data type is other than np.array, tensor.Tensor, tf.Tensor.
     """
     if dtype not in allowed_data_types:
-        raise ValueError(
-            "Provided datatype {} is not supported, only {} data types are supported".format(dtype, allowed_data_types))
+        raise ValueError("Provided datatype {} is not supported, only {} data types are supported".format(
+            dtype, allowed_data_types))
 
     if tf.is_tensor(y_true):
         return tf.cast(y_true, dtype), tf.cast(epsilon, dtype)
@@ -164,13 +174,13 @@ def dice_score(y_pred: Tensor,
     if axis == None:
         keep_dims = True
 
-    numerator = reduce_sum(y_true*y_pred, axis=axis, keepdims=keep_dims)
+    numerator = reduce_sum(y_true * y_pred, axis=axis, keepdims=keep_dims)
 
     denominator = get_denominator(y_true, y_pred, soft_dice)
 
     denominator = reduce_sum(denominator, axis=axis, keepdims=keep_dims)
 
-    dice_score = ((2 * numerator) + epsilon) / (denominator + epsilon)
+    dice_score = (2 * numerator) / (denominator + epsilon)
 
     if channel_average:
         dice_score = reduce_mean(dice_score, axis=-1)

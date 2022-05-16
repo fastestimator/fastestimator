@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import time
-from collections import deque, defaultdict
+from collections import defaultdict, deque
 from typing import Iterable, List, Set, Union
 
 import numpy as np
@@ -22,10 +22,10 @@ from natsort import humansorted
 from fastestimator.backend._get_lr import get_lr
 from fastestimator.summary.summary import ValWithError
 from fastestimator.summary.system import System
+from fastestimator.util.base_util import check_ds_id, check_io_names, parse_modes, to_list, to_set
 from fastestimator.util.data import Data, DSData
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
-from fastestimator.util.base_util import to_set, to_list, check_io_names, parse_modes, check_ds_id
 
 
 @traceable()
@@ -161,6 +161,7 @@ class TrainEssential(Trace):
     Args:
         monitor_names: Which keys from the data dictionary to monitor during training.
     """
+
     def __init__(self, monitor_names: Set[str]) -> None:
         super().__init__(inputs=monitor_names, mode="train", outputs=["steps/sec", "epoch_time", "total_time"])
         self.elapse_times = []
@@ -214,17 +215,33 @@ class EvalEssential(Trace):
     Args:
         monitor_names: Any keys which should be collected over the course of an eval epoch.
     """
+
     def __init__(self, monitor_names: Set[str]) -> None:
-        super().__init__(mode="eval", inputs=monitor_names)
+        super().__init__(mode="eval", inputs=monitor_names, outputs=["steps/sec"])
+        self.step_start = time.perf_counter()
         self.eval_results = defaultdict(lambda: defaultdict(list))
 
     def on_epoch_begin(self, data: Data) -> None:
         self.eval_results = defaultdict(lambda: defaultdict(list))
+        self.eval_step = 0
+        self.elapsed_step = 0
+        self.step_start = time.perf_counter()
+
+    def on_batch_begin(self, data: Data) -> None:
+        self.eval_step += 1
 
     def on_batch_end(self, data: Data) -> None:
         for key in self.inputs:
             if key in data:
                 self.eval_results[key][self.system.ds_id].append(data[key])
+
+        if self.system.mode == "eval" and self.eval_step in self.system.eval_log_steps:
+            if self.eval_step > 1:
+                elapsed_time = time.perf_counter() - self.step_start
+                elapsed_step = self.eval_step - self.elapsed_step
+                data.write_with_log("steps/sec", round(elapsed_step / elapsed_time, 2))
+            self.elapsed_step = self.eval_step
+            self.step_start = time.perf_counter()
 
     def on_epoch_end(self, data: Data) -> None:
         for key, ds_vals in self.eval_results.items():
@@ -244,6 +261,7 @@ class TestEssential(Trace):
     Args:
         monitor_names: Any keys which should be collected over the course of an test epoch.
     """
+
     def __init__(self, monitor_names: Set[str]) -> None:
         super().__init__(mode="test", inputs=monitor_names)
         self.test_results = defaultdict(lambda: defaultdict(list))
@@ -271,6 +289,7 @@ class Logger(Trace):
 
     Please don't add this trace into an estimator manually. FastEstimator will add it automatically.
     """
+
     def __init__(self) -> None:
         super().__init__(inputs="*")
 
@@ -279,15 +298,25 @@ class Logger(Trace):
             start_step = 1 if not self.system.global_step else self.system.global_step
             self._print_message("FastEstimator-Start: step: {}; ".format(start_step), data)
 
+    def on_epoch_begin(self, data: Data) -> None:
+        if self.system.mode == 'eval':
+            self.eval_step = 0
+
     def on_batch_end(self, data: Data) -> None:
         if self.system.mode == "train" and self.system.log_steps and (self.system.global_step % self.system.log_steps
                                                                       == 0 or self.system.global_step == 1):
             self._print_message("FastEstimator-Train: step: {}; ".format(self.system.global_step), data)
 
+        if self.system.mode == "eval":
+            self.eval_step += 1
+            if self.eval_step in self.system.eval_log_steps:
+                self._print_message("Eval Progress: {}/{}; ".format(self.eval_step, self.system.eval_log_steps[-1]),
+                                    data)
+
     def on_epoch_end(self, data: Data) -> None:
         if self.system.mode == "train":
             self._print_message("FastEstimator-Train: step: {}; ".format(self.system.global_step), data, True)
-        elif self.system.mode == "eval":
+        elif self.system.mode == 'eval':
             self._print_message("FastEstimator-Eval: step: {}; ".format(self.system.global_step), data, True)
         elif self.system.mode == "test":
             self._print_message("FastEstimator-Test: step: {}; ".format(self.system.global_step), data, True)
@@ -401,6 +430,7 @@ def sort_traces(traces: List[Trace], ds_ids: List[str], available_outputs: Union
 
 
 class PerDSTrace(Trace):
+
     def on_ds_begin(self, data: Data) -> None:
         """Runs at the beginning of each dataset.
 
