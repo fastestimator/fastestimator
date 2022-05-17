@@ -45,6 +45,17 @@ from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import draw
 
 
+def _verify_dependency_versions() -> None:
+    """Print warning messages if the user is using unexpected versions of TF or torch.
+    """
+    if tf.__version__ != '2.8.0':
+        print("\033[93m{}\033[00m".format("FastEstimator-Warn: Expected TensorFlow version 2.8.0 but found "
+                                          f"{tf.__version__}. The framework may not work as expected."))
+    if torch.__version__ != '1.10.2':
+        print("\033[93m{}\033[00m".format("FastEstimator-Warn: Expected PyTorch version 1.10.2 but found "
+                                          f"{torch.__version__}. The framework may not work as expected."))
+
+
 @traceable()
 class Estimator:
     """One class to rule them all.
@@ -130,6 +141,7 @@ class Estimator:
         Returns:
             A summary object containing the training history for this session iff a `summary` name was provided.
         """
+        _verify_dependency_versions()
         os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # Prevent tf from constantly printing useless information
         draw()
         self.system.reset(summary, self.fe_summary())
@@ -187,6 +199,7 @@ class Estimator:
             A summary object containing the training history for this session iff the `summary` name is not None (after
             considering the default behavior above).
         """
+        _verify_dependency_versions()
         os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # Prevent tf from constantly printing useless information
         self.system.reset_for_test(summary)
         self._prepare_traces(run_modes={"test"})
