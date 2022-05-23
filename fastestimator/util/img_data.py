@@ -18,7 +18,7 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 import torch
-from plotly.colors import unlabel_rgb, sample_colorscale
+from plotly.colors import sample_colorscale
 from plotly.graph_objects import Figure, Image
 from plotly.subplots import make_subplots
 
@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 
 class Display(ABC):
     @abstractmethod
-    def prepare(self) -> FigureFE:
+    def prepare(self, **kwargs) -> FigureFE:
         raise NotImplementedError()
 
     def show(self,
