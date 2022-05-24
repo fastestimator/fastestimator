@@ -15,11 +15,12 @@
 from collections import ChainMap
 from typing import Any, Dict
 
-import matplotlib.pyplot as plt
+import cv2
 import numpy as np
 import tensorflow as tf
 import torch
 from PIL import Image
+from plotly.graph_objects import Figure
 
 import fastestimator as fe
 from fastestimator.dataset.numpy_dataset import NumpyDataset
@@ -251,7 +252,7 @@ def img_to_rgb_array(path: str) -> np.ndarray:
     return np.asarray(Image.open(path).convert('RGB'))
 
 
-def fig_to_rgb_array(fig: plt.Figure) -> np.ndarray:
+def fig_to_rgb_array(fig: Figure) -> np.ndarray:
     """Convert image in plt.Figure to numpy array
 
     Args:
@@ -260,10 +261,10 @@ def fig_to_rgb_array(fig: plt.Figure) -> np.ndarray:
     Returns:
         Image array
     """
-    fig.canvas.draw()
-    buf = fig.canvas.tostring_rgb()
-    ncols, nrows = fig.canvas.get_width_height()
-    return np.frombuffer(buf, dtype=np.uint8).reshape(nrows, ncols, 3)
+    p = fig.to_image(format='png')
+    decoded = cv2.imdecode(np.frombuffer(p, np.uint8), cv2.IMREAD_COLOR)
+    decoded = cv2.cvtColor(decoded, cv2.COLOR_BGR2RGB)
+    return decoded
 
 
 class TraceRun:

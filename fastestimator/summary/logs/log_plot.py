@@ -20,7 +20,6 @@ from itertools import cycle
 from typing import Any, Dict, List, Optional, Set, Union, Tuple
 
 import numpy as np
-from plotly.graph_objects import Figure
 import plotly.graph_objects as go
 from natsort import humansorted
 from plotly.io import _html, _kaleido
@@ -29,8 +28,7 @@ from plotly.subplots import make_subplots
 from scipy.ndimage.filters import gaussian_filter1d
 
 from fastestimator.summary.summary import Summary, ValWithError
-from fastestimator.util.base_util import get_colors, to_set, to_list, prettify_metric_name, in_notebook, \
-    visualize_figure
+from fastestimator.util.base_util import get_colors, to_set, to_list, prettify_metric_name, in_notebook, FigureFE
 
 
 class _MetricGroup:
@@ -188,7 +186,7 @@ def plot_logs(experiments: List[Summary],
               smooth_factor: float = 0,
               ignore_metrics: Optional[Set[str]] = None,
               pretty_names: bool = False,
-              include_metrics: Optional[Set[str]] = None) -> Figure:
+              include_metrics: Optional[Set[str]] = None) -> FigureFE:
     """A function which will plot experiment histories for comparison viewing / analysis.
 
     Args:
@@ -205,7 +203,7 @@ def plot_logs(experiments: List[Summary],
     experiments = humansorted(to_list(experiments), lambda exp: exp.name)
     n_experiments = len(experiments)
     if n_experiments == 0:
-        return make_subplots()
+        return FigureFE.from_figure(make_subplots())
 
     ignore_keys = ignore_metrics or set()
     ignore_keys = to_set(ignore_keys)
@@ -237,7 +235,7 @@ def plot_logs(experiments: List[Summary],
 
     metric_list = list(sorted(metric_histories.keys()))
     if len(metric_list) == 0:
-        return make_subplots()
+        return FigureFE.from_figure(make_subplots())
     ds_ids = humansorted(ds_ids)  # Sort them to have consistent ordering (and thus symbols) between plot runs
     n_plots = len(metric_list)
     if len(ds_ids) > 9:  # 9 b/c None is included
@@ -477,7 +475,7 @@ def plot_logs(experiments: List[Summary],
     if in_notebook():
         fig.update_layout(height=280 * n_rows)
 
-    return fig
+    return FigureFE.from_figure(fig)
 
 
 def visualize_logs(experiments: List[Summary],
@@ -503,7 +501,7 @@ def visualize_logs(experiments: List[Summary],
                     pretty_names=pretty_names,
                     ignore_metrics=ignore_metrics,
                     include_metrics=include_metrics)
-    visualize_figure(fig=fig, save_path=save_path, verbose=verbose, scale=5)
+    fig.show(save_path=save_path, verbose=verbose, scale=5)
 
 
 def _symbol_mash(base_symbol: str, ds_symbol: Optional[int]) -> int:

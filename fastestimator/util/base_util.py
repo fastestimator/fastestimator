@@ -19,10 +19,9 @@ import os
 import re
 import string
 import sys
-from typing import Any, Set, KeysView, List, Union, Tuple, Optional, Type, TypeVar, TYPE_CHECKING, Dict, Callable
+from typing import Any, Set, KeysView, List, Union, Tuple, Optional, Type, TypeVar, Dict, Callable
 # DO NOT IMPORT FE, TF, Torch, Numpy, Seaborn, OR Matplotlib IN THIS FILE
-if TYPE_CHECKING:
-    from plotly.graph_objs import Figure
+from plotly.graph_objs import Figure
 # DO NOT IMPORT FE, TF, Torch, Numpy, Seaborn, OR Matplotlib IN THIS FILE
 
 KT = TypeVar('KT')  # Key type.
@@ -206,6 +205,9 @@ class LogSplicer:
     def flush(self) -> None:
         self.stdout.flush()
         self.log_file.flush()
+
+    def getvalue(self) -> str:
+        return self.stdout.getvalue()
 
 
 def prettify_metric_name(metric: str) -> str:
@@ -586,12 +588,15 @@ def list_files(root_dir: str,
     return paths
 
 
-def get_colors(n_colors: int, alpha: float = 1.0) -> List[str]:
+def get_colors(n_colors: int,
+               alpha: float = 1.0,
+               as_numbers: bool = False) -> List[Union[str, Tuple[float, float, float, float]]]:
     """Get a list of colors to use in plotting.
 
     Args:
         n_colors: How many colors to return.
         alpha: What opacity value to use (0 to 1).
+        as_numbers: Whether to return the values as a list of numbers [r,g,b,a] or as a string
 
     Returns:
         A list of rgba string colors.
@@ -606,47 +611,64 @@ def get_colors(n_colors: int, alpha: float = 1.0) -> List[str]:
         colors = [color - 1 if color >= 1 else color for color in colors]
         colors = [colorsys.hls_to_rgb(color, 0.6, 0.95) for color in colors]
         colors = [f'rgba({int(256*r)},{int(256*g)},{int(256*b)},{alpha})' for r, g, b in colors]
-    return colors[:n_colors]
+    colors = colors[:n_colors]
+    if as_numbers:
+        colors = [[float(x) for x in elem.strip('rgba(').strip(')').split(',')] for elem in colors]
+    return colors
 
 
-def visualize_figure(fig: 'Figure',
-                     save_path: Optional[str] = None,
-                     verbose: bool = True,
-                     scale: int = 1) -> None:
-    """A function which will save or display plotly figures.
+class FigureFE(Figure):
+    @classmethod
+    def from_figure(cls, fig: Figure) -> 'FigureFE':
+        new_fig = FigureFE()
+        new_fig.__dict__ = fig.__dict__.copy()
+        return new_fig
 
-    Args:
-        fig: The figure to display.
-        save_path: The path where the figure should be saved, or None to display the figure to the screen.
-        verbose: Whether to print out the save location.
-        scale: A scaling factor to apply when exporting to static images (to increase resolution).
-    """
-    config = {
-        'displaylogo': False,
-        'toImageButtonOptions': {
-            'format': 'png',  # one of png, svg, jpeg, webp
-            'height': None,
-            'width': None,
-            'filename': 'figure',
-            'scale': scale  # Multiply title/legend/axis/canvas sizes by this factor (high resolution save)
-        }}
-    if save_path is None:
-        fig.show(config=config)
-    else:
-        save_path = os.path.normpath(save_path)
-        root_dir = os.path.dirname(save_path)
-        if root_dir == "":
-            root_dir = "."
-        os.makedirs(root_dir, exist_ok=True)
-        save_file = os.path.join(root_dir, os.path.basename(save_path) or 'figure.html')
-        config['toImageButtonOptions']['filename'] = os.path.splitext(os.path.basename(save_file))[0]
-        ext = os.path.splitext(save_file)[1]
-        if ext == '':
-            ext = '.html'
-            save_file = save_file + ext  # Use html by default
-        if verbose:
-            print("Saving to {}".format(save_file))
-        if ext == '.html':
-            fig.write_html(save_file, config=config)
+    def show(self,
+             save_path: Optional[str] = None,
+             verbose: bool = True,
+             scale: int = 1,
+             interactive: bool = True) -> None:
+        """A function which will save or display plotly figures.
+
+        Args:
+            save_path: The path where the figure should be saved, or None to display the figure to the screen.
+            verbose: Whether to print out the save location.
+            scale: A scaling factor to apply when exporting to static images (to increase resolution).
+            interactive: Whether the figure should be interactive or static. This is only applicable when
+                save_path is None and when running inside a jupyter notebook. The advantage is that the file size of the
+                resulting jupyter notebook can be dramatically reduced.
+        """
+        config = {
+            'displaylogo': False,
+            'toImageButtonOptions': {
+                'format': 'png',  # one of png, svg, jpeg, webp
+                'height': None,
+                'width': None,
+                'filename': 'figure',
+                'scale': scale  # Multiply title/legend/axis/canvas sizes by this factor (high resolution save)
+            }}
+        if save_path is None:
+            if not interactive and in_notebook():
+                from IPython.display import Image, display
+                display(Image(self.to_image(format='png', scale=scale)))
+            else:
+                super().show(config=config)
         else:
-            fig.write_image(save_file, width=1920, height=1080, scale=scale)
+            save_path = os.path.normpath(save_path)
+            root_dir = os.path.dirname(save_path)
+            if root_dir == "":
+                root_dir = "."
+            os.makedirs(root_dir, exist_ok=True)
+            save_file = os.path.join(root_dir, os.path.basename(save_path) or 'figure.html')
+            config['toImageButtonOptions']['filename'] = os.path.splitext(os.path.basename(save_file))[0]
+            ext = os.path.splitext(save_file)[1]
+            if ext == '':
+                ext = '.html'
+                save_file = save_file + ext  # Use html by default
+            if verbose:
+                print("Saving to {}".format(save_file))
+            if ext == '.html':
+                self.write_html(save_file, config=config)
+            else:
+                self.write_image(save_file, width=1920, height=1080, scale=scale)
