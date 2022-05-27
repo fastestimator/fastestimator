@@ -64,9 +64,10 @@ def l1_loss(y_true: Tensor, y_pred: Tensor) -> Tensor:
             y_true = tf.expand_dims(y_true, axis=-1)
             y_pred = tf.expand_dims(y_pred, axis=-1)
         regression_loss = tf.keras.losses.MAE(y_true, y_pred)
-        mae = reduce_mean(regression_loss, axis=[ax for ax in range(regression_loss.ndim)][1:])
+        mae = reduce_mean(regression_loss, axis=[ax for ax in range(len(regression_loss.shape))][1:])
     elif isinstance(y_pred, torch.Tensor):
-        mae = reduce_mean(torch.nn.L1Loss(reduction="none")(y_pred, y_true), axis=[ax for ax in range(y_pred.ndim)][1:])
+        mae = reduce_mean(
+            torch.nn.L1Loss(reduction="none")(y_pred, y_true), axis=[ax for ax in range(len(y_pred.shape))][1:])
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(y_pred)))
     return mae
