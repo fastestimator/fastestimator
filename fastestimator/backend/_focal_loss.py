@@ -35,7 +35,7 @@ def pytorch_focal_loss(y_pred: torch.Tensor,
     Calculate the focal loss between two tensors.
 
     Args:
-        y_true: Ground truth class labels which should take values of 1 or 0.
+        y_true: Ground truth class labels with shape([batch_size, d0, .. dN]), which should take values of 1 or 0.
         y_pred: Prediction score for each class, with a shape like y_true. dtype: float32 or float16.
         alpha: Weighting factor in range (0,1) to balance
                 positive vs negative examples or (-1/None) to ignore. Default = 0.25
@@ -91,7 +91,7 @@ def focal_loss(y_true: Tensor,
     ```
 
     Args:
-        y_true: Ground truth class labels which should take values of 1 or 0.
+        y_true: Ground truth class labels with shape([batch_size, d0, .. dN]), which should take values of 1 or 0.
         y_pred: Prediction score for each class, with a shape like y_true. dtype: float32 or float16.
         alpha: Weighting factor in range (0,1) to balance
                 positive vs negative examples or (-1/None) to ignore. Default = 0.25
