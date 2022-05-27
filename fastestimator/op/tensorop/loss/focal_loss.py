@@ -42,7 +42,8 @@ class FocalLoss(LossOp):
                  'none': No reduction will be applied to the output.
                  'mean': The output will be averaged.
                  'sum': The output will be summed.
-        from_logits: Whether y_pred is logits (without softmax).
+        from_logits: Whether y_pred is logits (without sigmoid).
+        normalize: Whether to normalize focal loss along samples based on number of positive classes per samples.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an
             argument like "!infer" or "!train".
@@ -55,13 +56,21 @@ class FocalLoss(LossOp):
                  alpha: float = 0.25,
                  reduction: str = 'mean',
                  from_logits: bool = False,
+                 normalize: bool = True,
                  mode: Union[None, str, Iterable[str]] = None,):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.gamma = gamma
         self.alpha = alpha
         self.reduction = reduction
         self.from_logits = from_logits
+        self.normalize = normalize
 
     def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> Tensor:
         y_pred, y_true = data
-        return focal_loss(y_true, y_pred, gamma=self.gamma, alpha=self.alpha, from_logits=self.from_logits, reduction=self.reduction)
+        return focal_loss(y_true,
+                          y_pred,
+                          gamma=self.gamma,
+                          alpha=self.alpha,
+                          from_logits=self.from_logits,
+                          reduction=self.reduction,
+                          normalize=self.normalize)

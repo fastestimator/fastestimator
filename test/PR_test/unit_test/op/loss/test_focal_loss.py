@@ -14,6 +14,7 @@
 # ==============================================================================
 import unittest
 
+import numpy as np
 import tensorflow as tf
 import torch
 
@@ -22,31 +23,61 @@ from fastestimator.op.tensorop.loss.focal_loss import focal_loss
 
 
 class TestFocalLoss(unittest.TestCase):
-    def test_focal_loss_bc_tf(self):
-        true = tf.constant([[1], [1], [1], [0], [0], [0]])
-        pred = tf.constant([[0.97], [0.91], [0.73], [0.27], [0.09], [0.03]])
-        fl = focal_loss(y_pred=pred, y_true=true,
-                        gamma=None, alpha=None)  # 0.1464
-        bc = binary_crossentropy(y_pred=pred, y_true=true)
-        self.assertAlmostEqual(bc, fl, delta=0.0001)
+
+    @classmethod
+    def setUpClass(self):
+        self.true = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [1, 0, 0, 0], [1, 0, 0, 0], [0, 1, 0, 0]],
+                             dtype=np.float32)
+        self.pred = np.array([[0.6, 0.2, 0.1, 0.1], [0.3, 0.4, 0.2, 0.1], [0.2, 0.2, 0.5, 0.1], [0.6, 0.1, 0.1, 0.2],
+                              [0.4, 0.1, 0.2, 0.3], [0.0, 0.4, 0.6, 0.0]],
+                             dtype=np.float32)
+
+        self.true_tf_seg = np.array(
+            [[[[1], [0], [0], [0]], [[0], [1], [0], [0]], [[0], [0], [1], [0]], [[1], [0], [0], [0]]],
+             [[[1], [0], [0], [0]], [[0], [1], [0], [0]], [[1], [0], [0], [0]], [[0], [1], [0], [0]]]],
+            dtype=np.float32)
+
+        self.pred_tf_seg = np.array([[[[0.6], [0.2], [0.6], [0.1]], [[0.3], [0.9], [0.4], [0.2]],
+                                      [[0.3], [0.2], [0.7], [0]], [[0.4], [0.1], [0.2], [0.4]]],
+                                     [[[0.9], [0.3], [0.5], [0.3]], [[0.4], [0.8], [0.2], [0.3]],
+                                      [[0.7], [0.1], [0.2], [0.5]], [[0.4], [0.6], [0.3], [0.4]]]],
+                                    dtype=np.float32)
 
     def test_focal_loss_tf(self):
-        true = tf.constant([[1], [1], [1], [0], [0], [0]])
-        pred = tf.constant([[0.97], [0.91], [0.73], [0.27], [0.09], [0.03]])
-        fl = focal_loss(y_pred=pred, y_true=true, gamma=2.0, alpha=0.25)
-        self.assertAlmostEqual(0.004, fl, delta=0.0001)
+        fl = focal_loss(
+            y_pred=tf.constant(self.pred),
+            y_true=tf.constant(self.true),
+            gamma=2.0,
+            alpha=0.25,
+        )
+        self.assertAlmostEqual(0.112, fl, delta=0.01)
 
-    def test_focal_loss_bc_torch(self):
-        true = torch.tensor([[1], [1], [1], [0], [0], [0]]).to(torch.float32)
-        pred = torch.tensor([[0.97], [0.91], [0.73], [0.27], [
-                            0.09], [0.03]]).to(torch.float32)
-        fl = focal_loss(y_pred=pred, y_true=true, gamma=None, alpha=None)
-        bc = binary_crossentropy(y_pred=pred, y_true=true)
-        self.assertAlmostEqual(bc, fl, delta=0.0001)
+    def test_focal_loss_tf_3d(self):
+        fl = focal_loss(y_pred=tf.constant(self.pred_tf_seg),
+                        y_true=tf.constant(self.true_tf_seg),
+                        gamma=2.0,
+                        alpha=0.25)
+        self.assertAlmostEqual(0.142, fl, delta=0.01)
+
+    def test_focal_loss_tf_4d(self):
+        true = tf.reshape(tf.constant(self.true_tf_seg), (2, 1, 4, 4, 1))
+        pred = tf.reshape(tf.constant(self.pred_tf_seg), (2, 1, 4, 4, 1))
+        fl = focal_loss(y_pred=pred, y_true=true, gamma=2.0, alpha=0.25)
+        self.assertAlmostEqual(0.142, fl, delta=0.01)
 
     def test_focal_loss_torch(self):
-        true = torch.tensor([[1], [1], [1], [0], [0], [0]]).to(torch.float32)
-        pred = torch.tensor([[0.97], [0.91], [0.73], [0.27], [
-                            0.09], [0.03]]).to(torch.float32)
+        fl = focal_loss(y_pred=torch.tensor(self.pred), y_true=torch.tensor(self.true), gamma=2.0, alpha=0.25)
+        self.assertAlmostEqual(0.112, fl, delta=0.01)
+
+    def test_focal_loss_torch_3d(self):
+        fl = focal_loss(y_pred=torch.tensor(self.pred_tf_seg),
+                        y_true=torch.tensor(self.true_tf_seg),
+                        gamma=2.0,
+                        alpha=0.25)
+        self.assertAlmostEqual(0.142, fl, delta=0.01)
+
+    def test_focal_loss_torch_4d(self):
+        true = torch.tensor(self.true_tf_seg).view((2, 1, 4, 4, 1))
+        pred = torch.tensor(self.pred_tf_seg).view((2, 1, 4, 4, 1))
         fl = focal_loss(y_pred=pred, y_true=true, gamma=2.0, alpha=0.25)
-        self.assertAlmostEqual(0.004, fl, delta=0.0001)
+        self.assertAlmostEqual(0.142, fl, delta=0.01)
