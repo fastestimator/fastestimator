@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:2.8.0-gpu
+FROM tensorflow/tensorflow:2.9.1-gpu
 
 RUN rm /etc/apt/sources.list.d/cuda.list
 RUN rm /etc/apt/sources.list.d/nvidia-ml.list

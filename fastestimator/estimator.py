@@ -48,7 +48,7 @@ from fastestimator.util.util import draw
 def _verify_dependency_versions() -> None:
     """Print warning messages if the user is using unexpected versions of TF or torch.
     """
-    if tf.__version__ != '2.8.0':
+    if tf.__version__ != '2.9.1':
         print("\033[93m{}\033[00m".format("FastEstimator-Warn: Expected TensorFlow version 2.8.0 but found "
                                           f"{tf.__version__}. The framework may not work as expected."))
     if torch.__version__ not in ('1.10.2', '1.10.2+cu113'):
@@ -603,6 +603,8 @@ def enable_deterministic(seed: int) -> None:
     np.random.seed(seed)
     tf.random.set_seed(seed)
     torch.manual_seed(seed)
+    tf.keras.utils.set_random_seed(seed)
+    tf.config.experimental.enable_op_determinism()
 
 
 def record_history(path: Union[bool, str]) -> None:
