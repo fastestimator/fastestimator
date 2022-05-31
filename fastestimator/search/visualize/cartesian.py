@@ -31,12 +31,12 @@ from collections import defaultdict
 from typing import List, Optional, Sequence, Union
 
 from natsort import humansorted
-from plotly.graph_objects import Figure, Scatter
+from plotly.graph_objects import Scatter
 from plotly.subplots import make_subplots
 
 from fastestimator.search.search import Search
 from fastestimator.search.visualize.vis_util import SearchData, _load_search_file
-from fastestimator.util.base_util import get_colors, in_notebook, visualize_figure
+from fastestimator.util.base_util import get_colors, in_notebook, FigureFE
 
 
 def _cartesian_supports_data(data: SearchData, throw_on_invalid: bool = True) -> bool:
@@ -68,7 +68,7 @@ def _cartesian_supports_data(data: SearchData, throw_on_invalid: bool = True) ->
 def plot_cartesian(search: Union[Search, str],
                    title: Optional[str] = None,
                    ignore_keys: Union[None, str, Sequence[str]] = None,
-                   groups: Optional[List[List[str]]] = None) -> Figure:
+                   groups: Optional[List[List[str]]] = None) -> FigureFE:
     """Draw cartesian plot(s) based on search results.
 
     Requires exactly 1 param and 1+ results (after accounting for the ignore_keys).
@@ -155,7 +155,7 @@ def plot_cartesian(search: Union[Search, str],
     if in_notebook():
         fig.update_layout(height=280 * n_rows)
 
-    return fig
+    return FigureFE.from_figure(fig)
 
 
 def visualize_cartesian(search: Union[Search, str],
@@ -175,4 +175,4 @@ def visualize_cartesian(search: Union[Search, str],
         verbose: Whether to print out the save location.
     """
     fig = plot_cartesian(search=search, title=title, ignore_keys=ignore_keys, groups=groups)
-    visualize_figure(fig=fig, save_path=save_path, verbose=verbose, scale=5)
+    fig.show(save_path=save_path, verbose=verbose, scale=5)

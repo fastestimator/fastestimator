@@ -17,10 +17,12 @@ import re
 from collections import defaultdict, namedtuple
 from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 
-import matplotlib.pyplot as plt
+import cv2
+import numpy as np
 import tensorboard as tb
 import tensorflow as tf
 import torch
+from plotly.graph_objs import Figure
 from tensorflow.keras import backend
 from tensorflow.python.framework import ops as tfops
 from tensorflow.python.keras.callbacks import keras_model_summary
@@ -37,11 +39,11 @@ from fastestimator.backend._squeeze import squeeze
 from fastestimator.backend._to_tensor import to_tensor
 from fastestimator.network import BaseNetwork, TFNetwork
 from fastestimator.trace.trace import Trace
+from fastestimator.util.base_util import to_set, to_list, is_number, DefaultKeyDict
 from fastestimator.util.data import Data
-from fastestimator.util.img_data import ImgData
+from fastestimator.util.img_data import Display
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
-from fastestimator.util.base_util import to_set, to_list, is_number, DefaultKeyDict
 
 # https://github.com/pytorch/pytorch/issues/30966
 tf.io.gfile = tb.compat.tensorflow_stub.io.gfile
@@ -109,10 +111,13 @@ class _BaseWriter:
             step: The current training step.
         """
         for key, img in images:
-            if isinstance(img, ImgData):
-                img = img.paint_figure()
-            if isinstance(img, plt.Figure):
-                self.summary_writers[mode].add_figure(tag=key, figure=img, global_step=step)
+            if isinstance(img, Display):
+                img = img.prepare()
+            if isinstance(img, Figure):
+                img = img.to_image(format='png')
+                img = cv2.imdecode(np.frombuffer(img, np.uint8), cv2.IMREAD_COLOR)
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                self.summary_writers[mode].add_image(tag=key, img_tensor=img, global_step=step, dataformats='HWC')
             else:
                 self.summary_writers[mode].add_images(tag=key,
                                                       img_tensor=to_number(img),
@@ -298,6 +303,7 @@ class TensorBoard(Trace):
     """
     Freq = namedtuple('Freq', ['is_step', 'freq'])
     writer: _BaseWriter
+
     # TODO - support for per-instance tracking
 
     def __init__(self,
@@ -312,7 +318,7 @@ class TensorBoard(Trace):
                  embedding_labels: Union[None, str, List[str]] = None,
                  embedding_images: Union[None, str, List[str]] = None) -> None:
         super().__init__(inputs=["*"] + to_list(write_images) + to_list(write_embeddings) + to_list(embedding_labels) +
-                         to_list(embedding_images))
+                                to_list(embedding_images))
         self.root_log_dir = log_dir
         self.update_freq = self._parse_freq(update_freq)
         self.write_graph = write_graph
@@ -345,8 +351,9 @@ class TensorBoard(Trace):
         else:
             embedding_images = [None for _ in range(len(write_embeddings))]
         self.write_embeddings = [(feature, label, img_label) for feature,
-                                 label,
-                                 img_label in zip(write_embeddings, embedding_labels, embedding_images)]
+                                                                 label,
+                                                                 img_label in
+                                 zip(write_embeddings, embedding_labels, embedding_images)]
         self.collected_embeddings = defaultdict(list)
 
     def _parse_freq(self, freq: Union[None, str, int]) -> Freq:
@@ -385,7 +392,7 @@ class TensorBoard(Trace):
             os.path.abspath(os.path.join(self.root_log_dir, self.system.experiment_time))))
         self.writer = _TfWriter(self.root_log_dir, self.system.experiment_time, self.system.network) if isinstance(
             self.system.network, TFNetwork) else _TorchWriter(
-                self.root_log_dir, self.system.experiment_time, self.system.network)
+            self.root_log_dir, self.system.experiment_time, self.system.network)
         if self.write_graph and self.system.global_step == 1:
             self.painted_graphs = set()
 

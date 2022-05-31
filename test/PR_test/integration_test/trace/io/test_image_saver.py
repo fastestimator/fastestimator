@@ -16,13 +16,13 @@ import os
 import tempfile
 import unittest
 
-import matplotlib.pyplot as plt
+import cv2
 import numpy as np
 
 from fastestimator.test.unittest_util import sample_system_object
 from fastestimator.trace.io import ImageSaver
 from fastestimator.util.data import Data
-from fastestimator.util.img_data import ImgData
+from fastestimator.util.img_data import BatchDisplay, GridDisplay
 
 
 class TestImageSaver(unittest.TestCase):
@@ -35,7 +35,8 @@ class TestImageSaver(unittest.TestCase):
         cls.mask = np.zeros_like(cls.input_img)
         cls.mask[0, 10:20, 10:30, :] = [1, 0, 0]
         bbox = np.array([[[3, 7, 10, 6, 'box1'], [20, 20, 8, 8, 'box2']]] * 1)
-        d = ImgData(y=np.ones((1, )), x=[cls.input_img, cls.mask, bbox])
+        d = GridDisplay([BatchDisplay(text=np.ones((1, )), title='y'),
+                         BatchDisplay(image=cls.input_img, masks=cls.mask, bboxes=bbox, title='x')])
         cls.data = Data({'img': cls.input_img, 'img_data': d})
 
     def test_on_epoch_end(self):
@@ -45,7 +46,7 @@ class TestImageSaver(unittest.TestCase):
         with self.subTest('Check if image is saved'):
             self.assertTrue(os.path.exists(self.image_path))
         with self.subTest('Check image is valid or not'):
-            im = plt.imread(self.image_path)
+            im = cv2.imread(self.image_path)
             self.assertFalse(np.any(im[:, 0] == np.nan))
 
     def test_on_epoch_end_img_data(self):
@@ -57,5 +58,5 @@ class TestImageSaver(unittest.TestCase):
         with self.subTest('Check if image is saved'):
             self.assertTrue(os.path.exists(self.img_data_path))
         with self.subTest('Check image is valid or not'):
-            im = plt.imread(self.img_data_path)
+            im = cv2.imread(self.image_path)
             self.assertFalse(np.any(im[:, 0] == np.nan))

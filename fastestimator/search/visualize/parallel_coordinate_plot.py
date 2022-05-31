@@ -15,17 +15,17 @@
 from typing import Optional, Sequence, Union
 
 from natsort import humansorted
-from plotly.graph_objects import Figure, Parcoords
+from plotly.graph_objects import Parcoords
 
 from fastestimator.search.search import Search
 from fastestimator.search.visualize.vis_util import SearchData, _load_search_file
-from fastestimator.util.base_util import visualize_figure
+from fastestimator.util.base_util import in_notebook, FigureFE
 
 
 def plot_parallel_coordinates(search: Union[Search, str],
                               color_by: Optional[str] = None,
                               title: Optional[str] = None,
-                              ignore_keys: Union[None, str, Sequence[str]] = None) -> Figure:
+                              ignore_keys: Union[None, str, Sequence[str]] = None) -> FigureFE:
     """Draw a parallel coordinate plot based on search results.
 
     Args:
@@ -46,7 +46,7 @@ def plot_parallel_coordinates(search: Union[Search, str],
     reverse_colors = search.best_mode == 'min'
     search = SearchData(search=search, ignore_keys=ignore_keys)
     if not search.data:
-        return Figure()
+        return FigureFE()
 
     # Finalize the result column to color by if none has been inferred yet
     if color_by is None:
@@ -77,7 +77,13 @@ def plot_parallel_coordinates(search: Union[Search, str],
                     tickfont={'size': 11},
                     rangefont={'size': 12})
 
-    return Figure(data=fig, layout={'title': title, 'title_x': 0.5})
+    fig = FigureFE(data=fig, layout={'title': title, 'title_x': 0.5})
+
+    # If inside a jupyter notebook then force the height larger
+    if in_notebook():
+        fig.update_layout(height=500)
+
+    return fig
 
 
 def visualize_parallel_coordinates(search: Union[Search, str],
@@ -97,4 +103,4 @@ def visualize_parallel_coordinates(search: Union[Search, str],
         verbose: Whether to print out the save location.
     """
     fig = plot_parallel_coordinates(search=search, color_by=color_by, title=title, ignore_keys=ignore_keys)
-    visualize_figure(fig=fig, save_path=save_path, verbose=verbose, scale=2)
+    fig.show(save_path=save_path, verbose=verbose, scale=2)

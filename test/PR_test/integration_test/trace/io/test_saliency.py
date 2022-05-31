@@ -32,7 +32,7 @@ class TestSaliency(unittest.TestCase):
     * fe.estimator.enable_deterministic
     """
     def test_saliency(self):
-        fe.estimator.enable_deterministic(200)
+        fe.enable_deterministic(200)
         label_mapping = {
             'airplane': 0,
             'automobile': 1,

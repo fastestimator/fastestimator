@@ -116,6 +116,8 @@ class SearchData:
     def _parse_value(value: Any) -> Union[int, float, str, None]:
         if isinstance(value, (list, tuple)) and len(value) == 1:
             value = value[0]
+        if hasattr(value, 'item') and hasattr(value, 'size') and value.size == 1:
+            value = value.item()
         if isinstance(value, ValWithError):
             value = value.y
         if not isinstance(value, (int, float, str, type(None))):

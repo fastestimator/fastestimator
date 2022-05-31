@@ -18,13 +18,11 @@ import time
 from contextlib import ContextDecorator
 from typing import Any, Dict, List, MutableMapping, Optional, Tuple, Type, TypeVar, Union
 
-import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 import torch
-from matplotlib.collections import PatchCollection
-from matplotlib.patches import Rectangle
 from pyfiglet import Figlet
+
 
 STRING_TO_TORCH_DTYPE = {
     None: None,
@@ -250,140 +248,6 @@ def cpu_count(limit: Optional[int] = None) -> int:
     return cores
 
 
-def show_image(im: Union[np.ndarray, Tensor],
-               axis: plt.Axes = None,
-               fig: plt.Figure = None,
-               title: Optional[str] = None,
-               color_map: str = "inferno",
-               stack_depth: int = 0) -> Optional[plt.Figure]:
-    """Plots a given image onto an axis. The repeated invocation of this function will cause figure plot overlap.
-
-    If `im` is 2D and the length of second dimension are 4 or 5, it will be viewed as bounding box data (x0, y0, w, h,
-    <label>).
-
-    ```python
-    boxes = np.array([[0, 0, 10, 20, "apple"],
-                      [10, 20, 30, 50, "dog"],
-                      [40, 70, 200, 200, "cat"],
-                      [0, 0, 0, 0, "not_shown"],
-                      [0, 0, -10, -20, "not_shown2"]])
-
-    img = np.zeros((150, 150))
-    fig, axis = plt.subplots(1, 1)
-    fe.util.show_image(img, fig=fig, axis=axis) # need to plot image first
-    fe.util.show_image(boxes, fig=fig, axis=axis)
-    ```
-
-    Users can also directly plot text
-
-    ```python
-    fig, axis = plt.subplots(1, 1)
-    fe.util.show_image("apple", fig=fig, axis=axis)
-    ```
-
-    Args:
-        axis: The matplotlib axis to plot on, or None for a new plot.
-        fig: A reference to the figure to plot on, or None if new plot.
-        im: The image (width X height) / bounding box / text to display.
-        title: A title for the image.
-        color_map: Which colormap to use for greyscale images.
-        stack_depth: Multiple images can be drawn onto the same axis. When stack depth is greater than zero, the `im`
-            will be alpha blended on top of a given axis.
-
-    Returns:
-        plotted figure. It will be the same object as user have provided in the argument.
-    """
-    if axis is None:
-        fig, axis = plt.subplots(1, 1)
-    axis.axis('off')
-    # Compute width of axis for text font size
-    bbox = axis.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-    width, height = bbox.width * fig.dpi, bbox.height * fig.dpi
-    space = min(width, height)
-    if not hasattr(im, 'shape') or len(im.shape) < 2:
-        # text data
-        im = to_number(im)
-        if hasattr(im, 'shape') and len(im.shape) == 1:
-            im = im[0]
-        im = im.item()
-        if isinstance(im, bytes):
-            im = im.decode('utf8')
-        text = "{}".format(im)
-        axis.text(0.5,
-                  0.5,
-                  im,
-                  ha='center',
-                  transform=axis.transAxes,
-                  va='center',
-                  wrap=False,
-                  family='monospace',
-                  fontsize=min(45, space // len(text)))
-    elif len(im.shape) == 2 and (im.shape[1] == 4 or im.shape[1] == 5):
-        # Bounding Box Data. Should be (x0, y0, w, h, <label>)
-        boxes = []
-        im = to_number(im)
-        color = ["m", "r", "c", "g", "y", "b"][stack_depth % 6]
-        for box in im:
-            # Unpack the box, which may or may not have a label
-            x0 = float(box[0])
-            y0 = float(box[1])
-            width = float(box[2])
-            height = float(box[3])
-            label = None if len(box) < 5 else str(box[4])
-
-            # Don't draw empty boxes, or invalid box
-            if width <= 0 or height <= 0:
-                continue
-            r = Rectangle((x0, y0), width=width, height=height, fill=False, edgecolor=color, linewidth=3)
-            boxes.append(r)
-            if label:
-                axis.text(r.get_x() + 3,
-                          r.get_y() + 3,
-                          label,
-                          ha='left',
-                          va='top',
-                          color=color,
-                          fontsize=max(8, min(14, width // len(label))),
-                          fontweight='bold',
-                          family='monospace')
-        pc = PatchCollection(boxes, match_original=True)
-        axis.add_collection(pc)
-    else:
-        if isinstance(im, torch.Tensor) and len(im.shape) > 2:
-            # Move channel first to channel last
-            channels = list(range(len(im.shape)))
-            channels.append(channels.pop(0))
-            im = im.permute(*channels)
-        # image data
-        im = to_number(im)
-        im_max = np.max(im)
-        im_min = np.min(im)
-        if np.issubdtype(im.dtype, np.integer):
-            # im is already in int format
-            im = im.astype(np.uint8)
-        elif 0 <= im_min <= im_max <= 1:  # im is [0,1]
-            im = (im * 255).astype(np.uint8)
-        elif -0.5 <= im_min < 0 < im_max <= 0.5:  # im is [-0.5, 0.5]
-            im = ((im + 0.5) * 255).astype(np.uint8)
-        elif -1 <= im_min < 0 < im_max <= 1:  # im is [-1, 1]
-            im = ((im + 1) * 127.5).astype(np.uint8)
-        else:  # im is in some arbitrary range, probably due to the Normalize Op
-            ma = abs(np.max(im, axis=tuple([i for i in range(len(im.shape) - 1)]) if len(im.shape) > 2 else None))
-            mi = abs(np.min(im, axis=tuple([i for i in range(len(im.shape) - 1)]) if len(im.shape) > 2 else None))
-            im = (((im + mi) / (ma + mi)) * 255).astype(np.uint8)
-        # matplotlib doesn't support (x,y,1) images, so convert them to (x,y)
-        if len(im.shape) == 3 and im.shape[2] == 1:
-            im = np.reshape(im, (im.shape[0], im.shape[1]))
-        alpha = 1 if stack_depth == 0 else 0.3
-        if len(im.shape) == 2:
-            axis.imshow(im, cmap=plt.get_cmap(name=color_map), alpha=alpha)
-        else:
-            axis.imshow(im, alpha=alpha)
-    if title is not None:
-        axis.set_title(title, fontsize=min(20, 1 + width // len(title)), family='monospace')
-    return fig
-
-
 def get_batch_size(data: Dict[str, Any]) -> int:
     """Infer batch size from a batch dictionary. It will ignore all dictionary value with data type that
     doesn't have "shape" attribute.
@@ -400,7 +264,7 @@ def get_batch_size(data: Dict[str, Any]) -> int:
     return batch_size.pop()
 
 
-def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray, int, float]) -> np.ndarray:
+def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray, int, float, str]) -> np.ndarray:
     """Convert an input value into a Numpy ndarray.
 
     This method can be used with Python and Numpy data:
