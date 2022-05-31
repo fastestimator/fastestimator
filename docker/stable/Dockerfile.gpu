@@ -33,7 +33,8 @@ RUN pip install --no-cache-dir \
     ipython \
     ipykernel \
     ipywidgets \
-    papermill
+    papermill \ 
+    traitlets==5.2.2.post1
 
 # specify jupyter_client version To address "ValueError: Duplicate Signature" (https://github.com/jupyter/jupyter_client/issues/541)
 # the latest release hasn't fixed this issues but the latest master branch seems to has fixed that.
