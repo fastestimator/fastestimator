@@ -69,11 +69,10 @@ def huber(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
             y_true = tf.expand_dims(y_true, axis=-1)
             y_pred = tf.expand_dims(y_pred, axis=-1)
         regression_loss = tf.keras.losses.huber(y_true, y_pred, delta=beta)
-        huber_loss = reduce_mean(regression_loss, axis=[*range(regression_loss.ndim)][1:])
+        huber_loss = reduce_mean(regression_loss, axis=[*range(len(regression_loss.shape))][1:])
     elif isinstance(y_pred, torch.Tensor):
         huber_loss = reduce_mean(
-            torch.nn.HuberLoss(reduction="none", delta=beta)(y_pred, y_true),
-            axis=[*range(y_pred.ndim)][1:])
+            torch.nn.HuberLoss(reduction="none", delta=beta)(y_pred, y_true), axis=[*range(len(y_pred.shape))][1:])
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(y_pred)))
     return huber_loss

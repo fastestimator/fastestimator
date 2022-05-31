@@ -16,12 +16,12 @@ import math
 from typing import Optional, Sequence, Union
 
 from natsort import humansorted
-from plotly.graph_objects import Figure, Heatmap
+from plotly.graph_objects import Heatmap
 from plotly.subplots import make_subplots
 
 from fastestimator.search.search import Search
 from fastestimator.search.visualize.vis_util import SearchData, _load_search_file
-from fastestimator.util.base_util import in_notebook, visualize_figure
+from fastestimator.util.base_util import in_notebook, FigureFE
 
 
 def _heatmap_supports_data(data: SearchData, throw_on_invalid: bool = True) -> bool:
@@ -56,7 +56,7 @@ def _heatmap_supports_data(data: SearchData, throw_on_invalid: bool = True) -> b
 
 def plot_heatmap(search: Union[Search, str],
                  title: Optional[str] = None,
-                 ignore_keys: Union[None, str, Sequence[str]] = None) -> Figure:
+                 ignore_keys: Union[None, str, Sequence[str]] = None) -> FigureFE:
     """Draw a colormap plot based on search results.
 
     Requires exactly 2 params and 1 result (after accounting for the ignore_keys).
@@ -141,11 +141,21 @@ def plot_heatmap(search: Union[Search, str],
                       row=row + 1,
                       col=col + 1)
 
+        # Make sure that the image aspect ratio doesn't get messed up
+        x_axis_name = fig.get_subplot(row=row + 1, col=col + 1).xaxis.plotly_name
+        y_axis_name = fig.get_subplot(row=row + 1, col=col + 1).yaxis.plotly_name
+        fig['layout'][x_axis_name]['scaleanchor'] = 'x'
+        fig['layout'][x_axis_name]['scaleratio'] = 1
+        fig['layout'][x_axis_name]['constrain'] = 'domain'
+        fig['layout'][y_axis_name]['scaleanchor'] = 'x'
+        fig['layout'][y_axis_name]['constrain'] = 'domain'
+
     # If inside a jupyter notebook then force the height based on number of rows
     if in_notebook():
-        fig.update_layout(height=280 * n_rows)
+        fig.update_layout(height=500 * max(1.0, len(y_labels)/5.0) * n_rows)
+        fig.update_layout(width=500 * max(1.0, len(x_labels)/5.0) * n_cols)
 
-    return fig
+    return FigureFE.from_figure(fig)
 
 
 def visualize_heatmap(search: Union[Search, str],
@@ -163,4 +173,4 @@ def visualize_heatmap(search: Union[Search, str],
         verbose: Whether to print out the save location.
     """
     fig = plot_heatmap(search=search, title=title, ignore_keys=ignore_keys)
-    visualize_figure(fig=fig, save_path=save_path, verbose=verbose, scale=3)
+    fig.show(save_path=save_path, verbose=verbose, scale=3)

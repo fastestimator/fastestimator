@@ -32,7 +32,7 @@ For more information, please visit our [website](https://www.fastestimator.org/)
             pip install tensorflow==2.8.0
             ```
     * Windows:
-        Please follow [this](.\installation_docs\tensorflow_windows_installation.md) installation guide.
+        Please follow [this](https://github.com/fastestimator/fastestimator/blob/master/installation_docs/tensorflow_windows_installation.md) installation guide.
 
 * Install PyTorch
     * Stable:
