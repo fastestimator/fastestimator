@@ -51,7 +51,7 @@ def _verify_dependency_versions() -> None:
     if tf.__version__ != '2.9.1':
         print("\033[93m{}\033[00m".format("FastEstimator-Warn: Expected TensorFlow version 2.9.1 but found "
                                           f"{tf.__version__}. The framework may not work as expected."))
-    if torch.__version__ not in ('1.10.2', '1.10.2+cu113'):
+    if torch.__version__ not in ('1.10.2', '1.10.2+cpu', '1.10.2+cu113'):
         print("\033[93m{}\033[00m".format("FastEstimator-Warn: Expected PyTorch version 1.10.2 but found "
                                           f"{torch.__version__}. The framework may not work as expected."))
 
