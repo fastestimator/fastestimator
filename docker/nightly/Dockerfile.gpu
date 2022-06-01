@@ -1,7 +1,8 @@
 FROM tensorflow/tensorflow:2.9.1-gpu
 
+# Resolves a "Release no longer has a Release file" error on apt-get update later
 RUN rm /etc/apt/sources.list.d/cuda.list
-RUN rm /etc/apt/sources.list.d/nvidia-ml.list
+RUN rm /etc/apt/sources.list.d/tensorRT.list
 
 # change python library to root owner
 # it fixes "container ID cannot be mapped to a host ID" issue that happens later while upgrading python packages

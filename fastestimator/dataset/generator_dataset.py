@@ -26,7 +26,7 @@ class GeneratorDataset(FEDataset):
     Args:
         generator: The generator function to invoke in order to get a data sample.
         samples_per_epoch: How many samples should be drawn from the generator during an epoch. Note that the generator
-            function will actually be invoke more times than the number specified here due to backend validation
+            function will actually be invoked more times than the number specified here due to backend validation
             routines.
     """
     def __init__(self, generator: Generator[Dict[str, Any], int, None], samples_per_epoch: int) -> None:
