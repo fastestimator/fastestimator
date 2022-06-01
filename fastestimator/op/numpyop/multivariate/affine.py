@@ -73,7 +73,7 @@ class Affine(MultiVariateAlbumentation):
                  scale: Union[float, Tuple[float, float]] = 1.0,
                  shear: Union[Number, Tuple[Number, Number]] = 0,
                  translate: Union[Number, Tuple[Number, Number]] = 0,
-                 border_handling: Union[str, List[str]] = "reflect",
+                 border_handling: Union[str, List[str]] = "constant",
                  fill_value: Number = 0,
                  interpolation: str = "bilinear",
                  mode: Union[None, str, Iterable[str]] = None,

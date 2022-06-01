@@ -18,6 +18,10 @@ FastEstimator is a high-level deep learning library built on TensorFlow2 and PyT
 For more information, please visit our [website](https://www.fastestimator.org/).
 
 ## Installation:
+### Prerequisites
+* Stable: Python 3.6-3.8
+* Nightly: Python >=3.7
+
 ### 1. Install Dependencies:
 
 * Install TensorFlow
@@ -33,6 +37,12 @@ For more information, please visit our [website](https://www.fastestimator.org/)
             ```
     * Windows:
         Please follow [this](https://github.com/fastestimator/fastestimator/blob/master/installation_docs/tensorflow_windows_installation.md) installation guide.
+
+
+    Some tensorflow releases have unbounded `protobuf` dependency, which can cause issue during tensorflow import. To resolve this, you can install `protobuf==3.20.0` after the TensorFlow installation:
+    ```bash
+    pip install --upgrade protobuf==3.20.0
+    ```
 
 * Install PyTorch
     * Stable:
