@@ -33,7 +33,7 @@ For more information, please visit our [website](https://www.fastestimator.org/)
 
         * Nightly:
             ```bash
-            pip install tensorflow==2.8.0
+            pip install tensorflow==2.9.1
             ```
     * Windows:
         Please follow [this](https://github.com/fastestimator/fastestimator/blob/master/installation_docs/tensorflow_windows_installation.md) installation guide.
