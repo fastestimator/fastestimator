@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 from copy import deepcopy
+from multiprocessing import Lock
 from typing import Any, Dict, List, Mapping, Optional, Set, Union
 
 import numpy as np
@@ -34,12 +35,13 @@ class _DelayedDeepDict(dict):
     Args:
         base: The dictionary to be wrapped.
     """
-    warned: Set[str] = set()
+    to_warn: Set[str] = set()
 
     def __init__(self, base: Dict[str, Any]):
         super().__init__()
         self.base = base
         self.mask = set()
+        self.warn = False
 
     def __getitem__(self, key: str) -> Any:
         if key not in self and key in self.base and key not in self.mask:
@@ -72,10 +74,9 @@ class _DelayedDeepDict(dict):
             if key in self.mask:
                 continue
             if retain and key not in retain:
-                if not key in self.warned:
-                    self.warned.add(key)
-                    print("FastEstimator-Warn: the key '{}' is being pruned since it is unused outside of the Pipeline."
-                          " To prevent this, you can declare the key as an input of a Trace or TensorOp.".format(key))
+                if key not in self.to_warn:
+                    self.to_warn.add(key)
+                    self.warn = True
                 continue
             if key not in self:
                 if deep_remainder:
@@ -84,10 +85,9 @@ class _DelayedDeepDict(dict):
                     self[key] = self.base[key]
         if retain:
             for key in self.keys() - retain:
-                if not key in self.warned:
-                    self.warned.add(key)
-                    print("FastEstimator-Warn: the key '{}' is being pruned since it is unused outside of the Pipeline."
-                          " To prevent this, you can declare the key as an input of a Trace or TensorOp.".format(key))
+                if key not in self.to_warn:
+                    self.to_warn.add(key)
+                    self.warn = True
                 del self[key]
         self.base = {}
         # We need to mark all of the arrays as writeable again to avoid warnings from pytorch. Once torch wraps the
@@ -97,7 +97,7 @@ class _DelayedDeepDict(dict):
                 val.flags.writeable = True
 
 
-@traceable()
+@traceable(blacklist='lock')
 class OpDataset(Dataset):
     """A wrapper for datasets which allows operators to be applied to them in a pipeline.
 
@@ -112,6 +112,9 @@ class OpDataset(Dataset):
         deep_remainder: Whether data which is not modified by Ops should be deep copied or not. This argument is used to
             help with RAM management, but end users can almost certainly ignore it.
     """
+    to_warn: Set[str] = set()
+    warned: Set[str] = set()
+
     def __init__(self,
                  dataset: Dataset,
                  ops: List[NumpyOp],
@@ -132,6 +135,7 @@ class OpDataset(Dataset):
         self.mode = mode
         self.output_keys = output_keys
         self.deep_remainder = deep_remainder
+        self.lock = Lock()
 
     def __getitem__(self, index: int) -> Union[Mapping[str, Any], List[Mapping[str, Any]], FilteredData]:
         """Fetch a data instance at a specified index, and apply transformations to it.
@@ -158,6 +162,8 @@ class OpDataset(Dataset):
                     else:
                         data.finalize(retain=self.output_keys, deep_remainder=self.deep_remainder)
                         results.append(data)
+                        if data.warn:
+                            self.to_warn |= (data.to_warn - self.warned)
                     unique_samples[data_id] = idx
                 else:
                     results.append(results[unique_samples[data_id]])
@@ -167,6 +173,15 @@ class OpDataset(Dataset):
             if filter_data:
                 return filter_data
             results.finalize(retain=self.output_keys, deep_remainder=self.deep_remainder)
+            if results.warn:
+                self.to_warn |= (results.to_warn - self.warned)
+        if self.to_warn and self.lock.acquire(block=False):
+            self.warned.update(self.to_warn)
+            print("FastEstimator-Warn: The following key(s) are being pruned since they are unused outside of the "
+                  "Pipeline. To prevent this, you can declare the key(s) as inputs to Traces or TensorOps: "
+                  f"{', '.join(self.to_warn)}")
+            self.to_warn.clear()
+            # We intentionally never release the lock so that during multi-threading only 1 message can be printed
         return results
 
     def __len__(self):

@@ -138,6 +138,10 @@ class Suppressor(object):
 
     This class is intentionally not @traceable.
 
+    Args:
+        allow_pyprint: Whether to allow python printing to occur still within this scope (and therefore only silence
+            printing from non-python sources like c).
+
     ```python
     x = lambda: print("hello")
     x()  # "hello"
@@ -146,6 +150,8 @@ class Suppressor(object):
     x()  # "hello"
     ```
     """
+    def __init__(self, allow_pyprint: bool = False):
+        self.allow_pyprint = allow_pyprint
 
     def __enter__(self) -> None:
         # This is not necessary to block printing, but lets the system know what's happening
@@ -171,6 +177,8 @@ class Suppressor(object):
         Args:
             dummy: The string which wanted to be printed.
         """
+        if self.allow_pyprint:
+            os.write(self.reals[0], dummy.encode('utf-8'))
 
     def flush(self) -> None:
         """A function to empty the current print buffer. No-op in this case.
