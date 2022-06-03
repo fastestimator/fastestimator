@@ -4,7 +4,7 @@ First, go to this [link](https://www.tensorflow.org/install/source_windows#gpu) 
 
 ## Step 1 : Finding appropriate cuda version
 
-Depending on your TensorFlow version, you will need different CUDA version. For example, in Tensorflow 2.8, you need to get CUDA version 11.2 and cuDNN version 8.1.
+Depending on your TensorFlow version, you will need different CUDA version. For example, in Tensorflow 2.9, you need to get CUDA version 11.2 and cuDNN version 8.1.
 
 ## Step 2 : Installing Microsoft Visual Studio
 
@@ -26,7 +26,7 @@ Finally we are at a point where we can start with geting CUDA to work, but befor
   <img src="./images/SearchNvidia.PNG" title="Lets see if you are ready" width=350 height=600>
 </p>
 
-For example, to use Tensorflow 2.8.0, we need NVIDIA CUDA Toolkit version 11.2. From the figure above it can be seen that CUDA Toolkit 11.2 is already installed, but in case your drivers are of any other version we might need to get rid of them. Uninstall all the drivers with "NVIDIA CUDA" in their title and please do NOT touch anything else. Then go to folder "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA" and delete the folder with CUDA version as its name.
+For example, to use Tensorflow 2.9.0, we need NVIDIA CUDA Toolkit version 11.2. From the figure above it can be seen that CUDA Toolkit 11.2 is already installed, but in case your drivers are of any other version we might need to get rid of them. Uninstall all the drivers with "NVIDIA CUDA" in their title and please do NOT touch anything else. Then go to folder "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA" and delete the folder with CUDA version as its name.
 
 If in your search for "NVIDIA" in "Apps and Features" and you find that you dont have any CUDA Toolkit installed, go this this [page](https://developer.nvidia.com/cuda-toolkit-archive) which looks like following.
 
