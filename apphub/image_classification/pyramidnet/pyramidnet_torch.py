@@ -246,3 +246,8 @@ def get_estimator(epochs=150,
                              train_steps_per_epoch=train_steps_per_epoch,
                              eval_steps_per_epoch=eval_steps_per_epoch)
     return estimator
+
+
+if __name__ == "__main__":
+    est = get_estimator()
+    est.fit()

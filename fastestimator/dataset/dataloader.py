@@ -27,6 +27,7 @@ from torch.utils.data.dataloader import _BaseDataLoaderIter, _MultiProcessingDat
 
 from fastestimator.dataset.extend_dataset import ExtendDataset
 from fastestimator.dataset.op_dataset import OpDataset
+from fastestimator.util.base_util import Suppressor
 from fastestimator.util.data import FilteredData
 
 
@@ -150,10 +151,11 @@ class FEDataLoader(DataLoader):
                 return _SPPostBatchIter(self)
             return _SPPreBatchIter(self)
         else:
-            if self.batch_size is None:
-                # We use 'fake' batch size here to identify datasets which perform their own batching
-                return _MPPostBatchIter(self)
-            return _MPPreBatchIter(self)
+            with Suppressor(allow_pyprint=True):  # Prevent unnecessary warnings about resetting numbers of threads
+                if self.batch_size is None:
+                    # We use 'fake' batch size here to identify datasets which perform their own batching
+                    return _MPPostBatchIter(self)
+                return _MPPreBatchIter(self)
 
     def __len__(self):
         return self.fe_samples_to_yield
