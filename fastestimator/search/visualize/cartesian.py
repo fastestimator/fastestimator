@@ -36,7 +36,7 @@ from plotly.subplots import make_subplots
 
 from fastestimator.search.search import Search
 from fastestimator.search.visualize.vis_util import SearchData, _load_search_file
-from fastestimator.util.base_util import get_colors, in_notebook, FigureFE
+from fastestimator.util.base_util import FigureFE, get_colors, in_notebook
 
 
 def _cartesian_supports_data(data: SearchData, throw_on_invalid: bool = True) -> bool:
@@ -108,15 +108,23 @@ def plot_cartesian(search: Union[Search, str],
 
     # Get basic plot layout
     fig = make_subplots(rows=n_rows, cols=n_cols, shared_xaxes='all')
-    fig.update_layout({'plot_bgcolor': '#FFF',
-                       'hovermode': 'closest',
-                       'margin': {'t': 50},
-                       'modebar': {'add': ['hoverclosest', 'hovercompare'],
-                                   'remove': ['select2d', 'lasso2d']},
-                       'legend': {'tracegroupgap': 5,
-                                  'font': {'size': 11}},
-                       'title': title,
-                       'title_x': 0.5})
+    fig.update_layout({
+        'plot_bgcolor': '#FFF',
+        'hovermode': 'closest',
+        'margin': {
+            't': 50
+        },
+        'modebar': {
+            'add': ['hoverclosest', 'hovercompare'], 'remove': ['select2d', 'lasso2d']
+        },
+        'legend': {
+            'tracegroupgap': 5, 'font': {
+                'size': 11
+            }
+        },
+        'title': title,
+        'title_x': 0.5
+    })
 
     # Configure x and y labels
     for idx, group in enumerate(groups, start=1):
@@ -127,7 +135,10 @@ def plot_cartesian(search: Union[Search, str],
         fig['layout'][x_axis_name]['showticklabels'] = True
         fig['layout'][x_axis_name]['linecolor'] = "#BCCCDC"
         fig['layout'][y_axis_name]['linecolor'] = "#BCCCDC"
-        fig['layout'][y_axis_name]['title'] = ", ".join(group)
+        if len(group) > 1:
+            fig['layout'][y_axis_name]['title'] = ''
+        else:
+            fig['layout'][y_axis_name]['title'] = group[0]
 
     n_results = len(search.results)
     colors = get_colors(n_colors=n_results)
@@ -139,16 +150,17 @@ def plot_cartesian(search: Union[Search, str],
         row = idx // n_cols
         col = idx % n_cols
         for y_key in group:
-            fig.add_trace(Scatter(x=search.data[search.params[0]],
-                                  y=search.data[y_key],
-                                  name=y_key,
-                                  legendgroup=y_key,
-                                  showlegend=add_label[y_key],
-                                  mode="markers" if search.ignored_params else "lines+markers",
-                                  line={'color': colors[y_key]},
-                                  marker={'symbol': 'circle'}),
-                          row=row + 1,
-                          col=col + 1)
+            fig.add_trace(
+                Scatter(x=search.data[search.params[0]],
+                        y=search.data[y_key],
+                        name=y_key,
+                        legendgroup=y_key,
+                        showlegend=add_label[y_key],
+                        mode="markers" if search.ignored_params else "lines+markers",
+                        line={'color': colors[y_key]},
+                        marker={'symbol': 'circle'}),
+                row=row + 1,
+                col=col + 1)
             add_label[y_key] = False
 
     # If inside a jupyter notebook then force the height based on number of rows
