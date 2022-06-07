@@ -19,54 +19,28 @@ For more information, please visit our [website](https://www.fastestimator.org/)
 
 ## Installation:
 ### Prerequisites
-* Stable: Python 3.6-3.8
-* Nightly: Python >=3.7
+* Python >=3.7
 
 ### 1. Install Dependencies:
 
 * Install TensorFlow
     * Linux/MAC:
-        * Stable:
-            ```bash
-            pip install tensorflow==2.4.1
-            ```
-
-        * Nightly:
-            ```bash
-            pip install tensorflow==2.9.1
-            ```
+        ```bash
+        pip install tensorflow==2.9.1
+        ```
     * Windows:
         Please follow [this](https://github.com/fastestimator/fastestimator/blob/master/installation_docs/tensorflow_windows_installation.md) installation guide.
 
-
-    Some tensorflow releases have unbounded `protobuf` dependency, which can cause issue during tensorflow import. To resolve this, you can install `protobuf==3.20.0` after the TensorFlow installation:
-    ```bash
-    pip install --upgrade protobuf==3.20.0
-    ```
-
 * Install PyTorch
-    * Stable:
-        * CPU:
-            ```bash
-            pip install torch==1.7.1 torchvision==0.8.2 torchaudio==0.7.2
-            ```
-
-        * GPU:
-            ```bash
-            pip install torch==1.7.1+cu110 torchvision==0.8.2+cu110 torchaudio===0.7.2 -f https://download.pytorch.org/whl/torch_stable.html
-            ```
-    * Nightly:
-        * CPU:
-            ```bash
-            pip install torch==1.10.2+cpu torchvision==0.11.3+cpu torchaudio==0.10.2+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
-            ```
-
-        * GPU:
-            ```bash
-            pip install torch==1.10.2+cu113 torchvision==0.11.3+cu113 torchaudio==0.10.2+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
-            ```
+    * CPU:
+        ```bash
+        pip install torch==1.10.2+cpu torchvision==0.11.3+cpu torchaudio==0.10.2+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
+        ```
+    * GPU:
+        ```bash
+        pip install torch==1.10.2+cu113 torchvision==0.11.3+cu113 torchaudio==0.10.2+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
+        ```
 * Extra Dependencies:
-
     * Windows:
 
         * Install Build Tools for Visual Studio 2019 [here](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2019).
