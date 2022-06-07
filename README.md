@@ -20,6 +20,8 @@ For more information, please visit our [website](https://www.fastestimator.org/)
 ## Installation:
 ### Prerequisites
 * Python >=3.7
+* Nvidia Driver >= 450 (GPU only)
+* CUDA >= 11.0 (GPU only)
 
 ### 1. Install Dependencies:
 
