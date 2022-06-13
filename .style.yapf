@@ -9,3 +9,4 @@ split_before_first_argument = False
 split_before_named_assigns = False
 split_all_top_level_comma_separated_values = True
 use_tabs = False
+blank_line_before_nested_class_or_def = False
