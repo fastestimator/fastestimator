@@ -34,8 +34,8 @@ class CutMixBatch(TensorOp):
     """This class performs cutmix augmentation on a batch of tensors.
 
     In this augmentation technique patches are cut and pasted among training images where the ground truth labels are
-    also mixed proportionally to the area of the patches. This class should be used in conjunction with MixLoss to
-    perform CutMix training, which helps to reduce over-fitting, perform object detection, and against adversarial
+    also mixed proportionally to the area of the patches. This class helps to reduce over-fitting, perform object
+    detection, and against adversarial
     attacks (https://arxiv.org/pdf/1905.04899.pdf).
 
     Args:

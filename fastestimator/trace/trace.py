@@ -202,7 +202,7 @@ class TrainEssential(Trace):
         self.system.mode = 'train'  # Set mode to 'train' for better log visualization
         data.write_with_log("total_time", "{} sec".format(round(time.perf_counter() - self.train_start, 2)))
         for model in self.system.network.models:
-            if hasattr(model, "current_optimizer"):
+            if hasattr(model, "current_optimizer") and model.current_optimizer:
                 data.write_with_log(model.model_name + "_lr", get_lr(model))
 
 

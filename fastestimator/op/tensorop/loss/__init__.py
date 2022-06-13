@@ -23,7 +23,6 @@ __getattr__, __dir__, __all__ = lazy.attach(__name__,
                                                           'l2_regularization': ['L2Regularizaton'],
                                                           'loss': ['LossOp'],
                                                           'mean_squared_error': ['MeanSquaredError'],
-                                                          'mix_loss': ['MixLoss'],
                                                           'super_loss': ['SuperLoss'],
                                                           'l1_loss': ['L1_Loss']
                                                           })
@@ -36,5 +35,4 @@ if TYPE_CHECKING:
     from fastestimator.op.tensorop.loss.l2_regularization import L2Regularizaton
     from fastestimator.op.tensorop.loss.loss import LossOp
     from fastestimator.op.tensorop.loss.mean_squared_error import MeanSquaredError
-    from fastestimator.op.tensorop.loss.mix_loss import MixLoss
     from fastestimator.op.tensorop.loss.super_loss import SuperLoss

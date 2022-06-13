@@ -874,8 +874,9 @@ def build(model_fn: Callable[[], Union[Model, List[Model]]],
         models: The model(s) built by FastEstimator.
     """
     def _generate_model_names(num_names):
-        names = ["model" if i + fe.fe_build_count == 0 else "model{}".format(i + fe.fe_build_count) for i in
-                 range(num_names)]
+        names = [
+            "model" if i + fe.fe_build_count == 0 else "model{}".format(i + fe.fe_build_count) for i in range(num_names)
+        ]
         fe.fe_build_count += num_names
         return names
 
