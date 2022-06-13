@@ -30,8 +30,8 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 class MixUpBatch(TensorOp):
     """MixUp augmentation for tensors.
 
-    This class should be used in conjunction with MixLoss to perform mix-up training, which helps to reduce
-    over-fitting, stabilize GAN training, and against adversarial attacks (https://arxiv.org/abs/1710.09412).
+    This class helps to reduce over-fitting, stabilize GAN training, and against adversarial attacks
+    (https://arxiv.org/abs/1710.09412).
 
     Args:
         inputs: Keys of the image batch and label batch to be mixed up.

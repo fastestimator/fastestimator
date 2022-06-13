@@ -57,7 +57,7 @@ class FocalLoss(LossOp):
                  reduction: str = 'mean',
                  from_logits: bool = False,
                  normalize: bool = True,
-                 mode: Union[None, str, Iterable[str]] = None,):
+                 mode: Union[None, str, Iterable[str]] = "!infer"):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.gamma = gamma
         self.alpha = alpha
