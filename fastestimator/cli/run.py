@@ -16,6 +16,7 @@ import argparse
 import json
 import os
 import sys
+from ast import literal_eval
 from typing import Any, Dict, List, Optional
 
 from fastestimator.util.cli_util import parse_cli_to_dictionary
@@ -45,11 +46,11 @@ def run(args: Dict[str, Any], unknown: Optional[List[str]]) -> None:
     elif hasattr(spec_module, "get_estimator"):
         est = spec_module.get_estimator(**hyperparameters)
         if "train" in est.pipeline.data:
-            est.fit()
+            est.fit(summary=args['summary'], warmup=args['warmup'], eager=args['eager'])
         if "test" in est.pipeline.data:
-            est.test()
+            est.test(summary=args['summary'], eager=args['eager'])
     else:
-        raise ValueError("The file {} does not contain 'fastestimator_run' or 'get_estimator'".format(module_name))
+        raise ValueError("The file {} does not have 'fastestimator_run' or 'get_estimator' defined".format(module_name))
 
 
 def configure_run_parser(subparsers: argparse._SubParsersAction) -> None:
@@ -68,6 +69,17 @@ def configure_run_parser(subparsers: argparse._SubParsersAction) -> None:
                         dest='hyperparameters_json',
                         type=str,
                         help="The path to the hyperparameters JSON file")
+    parser.add_argument('--warmup',
+                        type=literal_eval,
+                        help="Warmup setting, can be True or False",
+                        choices=[True, False],
+                        default=True)
+    parser.add_argument('--eager',
+                        type=literal_eval,
+                        help="Eager setting, can be True or False",
+                        choices=[True, False],
+                        default=False)
+    parser.add_argument('--summary', type=str, help="Experiment name", default=None)
     parser.add_argument_group(
         'hyperparameter arguments',
         'Arguments to be passed through to the fastestimator_run() call. \

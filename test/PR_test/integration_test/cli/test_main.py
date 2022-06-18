@@ -63,6 +63,43 @@ class TestMain(unittest.TestCase):
             with self.subTest("unknown"):
                 self.assertEqual(unknown, ["--randon", "200"])
 
+    def test_cli_main_run_run(self):
+        with patch('fastestimator.cli.run.run') as fake:
+            fe.cli.run_main([
+                "run",
+                "example_entry.py",
+                "--randon",
+                "200",
+                "--warmup",
+                "False",
+                "--summary",
+                "example_summary",
+                "--eager",
+                "True"
+            ])
+            args, unknown = fake.call_args[0]
+
+            with self.subTest('args["mode"]'):
+                self.assertEqual(args["mode"], "run")
+
+            with self.subTest('args["entry_point"]'):
+                self.assertEqual(args["entry_point"], "example_entry.py")
+
+            with self.subTest('args["hyperparameters_json"]'):
+                self.assertEqual(args["hyperparameters_json"], None)
+
+            with self.subTest('args["warmup"]'):
+                self.assertEqual(args["warmup"], False)
+
+            with self.subTest('args["eager"]'):
+                self.assertEqual(args["eager"], True)
+
+            with self.subTest('args["summary"]'):
+                self.assertEqual(args["summary"], "example_summary")
+
+            with self.subTest("unknown"):
+                self.assertEqual(unknown, ["--randon", "200"])
+
     def test_cli_main_run_logs(self):
         with patch('fastestimator.cli.logs.logs') as fake:
             fe.cli.run_main(["logs", "example_entry.py", "-b", "-v"])
