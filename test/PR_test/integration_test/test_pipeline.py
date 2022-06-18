@@ -1638,7 +1638,7 @@ class TestPipelineFilter(unittest.TestCase):
             with self.subTest("proc status", workers=n_process):
                 pipeline = fe.Pipeline(train_data=data,
                                        num_process=n_process,
-                                       ops=RemoveIf(fn=lambda x: x in list(range(18)),
+                                       ops=RemoveIf(fn=lambda x: x in list(range(19)),
                                                     replacement=False,
                                                     inputs="idx"))
                 with self.subTest("shuffle False"):
