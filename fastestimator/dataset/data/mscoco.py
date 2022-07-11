@@ -15,6 +15,7 @@
 import os
 import zipfile
 from copy import deepcopy
+from curses import has_key
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -23,8 +24,8 @@ import wget
 from pycocotools.coco import COCO
 
 from fastestimator.dataset.dir_dataset import DirDataset
-from fastestimator.util.traceability_util import traceable
 from fastestimator.util.base_util import Suppressor
+from fastestimator.util.traceability_util import traceable
 from fastestimator.util.wget_util import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress
@@ -40,12 +41,15 @@ class MSCOCODataset(DirDataset):
         image_dir: The path the directory containing MSOCO images.
         annotation_file: The path to the file containing annotation data.
         caption_file: The path the file containing caption data.
+        keypoint_file: The path the file containing keypoint data.
         include_bboxes: Whether images should be paired with their associated bounding boxes. If true, images without
             bounding boxes will be ignored and other images may be oversampled in order to take their place.
         include_masks: Whether images should be paired with their associated masks. If true, images without masks will
             be ignored and other images may be oversampled in order to take their place.
         include_captions: Whether images should be paired with their associated captions. If true, images without
             captions will be ignored and other images may be oversampled in order to take their place.
+        include_keypoints: Whether images should be paired with keypoints. If true, images without keypoint will be
+            ignored and other images may be oversampled in order to take their place.
         min_bbox_area: Bounding boxes with a total area less than `min_bbox_area` will be discarded.
     """
 
@@ -56,9 +60,11 @@ class MSCOCODataset(DirDataset):
                  image_dir: str,
                  annotation_file: str,
                  caption_file: str,
+                 keypoint_file: str,
                  include_bboxes: bool = True,
                  include_masks: bool = False,
                  include_captions: bool = False,
+                 include_keypoints: bool = False,
                  min_bbox_area=1.0) -> None:
         super().__init__(root_dir=image_dir, data_key="image", recursive_search=False)
         if include_masks:
@@ -67,8 +73,9 @@ class MSCOCODataset(DirDataset):
         self.include_masks = include_masks
         self.min_bbox_area = min_bbox_area
         with Suppressor():
-            self.instances = COCO(annotation_file)
+            self.instances = COCO(annotation_file) if include_bboxes or include_masks else None
             self.captions = COCO(caption_file) if include_captions else None
+            self.keypoints = COCO(keypoint_file) if include_keypoints else None
 
     def __getitem__(self, index: Union[int, str]) -> Union[Dict[str, Any], np.ndarray, List[Any]]:
         """Look up data from the dataset.
@@ -85,7 +92,7 @@ class MSCOCODataset(DirDataset):
         has_data = False
         response = {}
         while not has_data:
-            has_box, has_mask, has_caption = True, True, True
+            has_box, has_mask, has_caption, has_keypoint = True, True, True, True
             response = self._get_single_item(index)
             if isinstance(index, str):
                 return response
@@ -95,7 +102,9 @@ class MSCOCODataset(DirDataset):
                 has_mask = False
             if self.captions and not response["caption"]:
                 has_caption = False
-            has_data = has_box and has_mask and has_caption
+            if self.keypoints and not response["keypoint"]:
+                has_keypoint = False
+            has_data = has_box and has_mask and has_caption and has_keypoint
             index = np.random.randint(len(self))
         return response
 
@@ -117,10 +126,12 @@ class MSCOCODataset(DirDataset):
         image = response["image"]
         image_id = int(os.path.splitext(os.path.basename(image))[0])
         response["image_id"] = image_id
-        if self.include_bboxes:
+        if self.include_bboxes or self.include_masks:
             self._populate_instance_data(response, image_id)
         if self.captions:
             self._populate_caption_data(response, image_id)
+        if self.keypoints:
+            self._populate_keypoint_data(response, image_id)
         return response
 
     def _populate_instance_data(self, data: Dict[str, Any], image_id: int) -> None:
@@ -130,15 +141,17 @@ class MSCOCODataset(DirDataset):
             data: The dictionary to be augmented.
             image_id: The id of the image for which to find data.
         """
-        data["bbox"] = []
+        if self.include_bboxes:
+            data["bbox"] = []
         if self.include_masks:
             data["mask"] = []
-        annotation_ids = self.instances.getAnnIds(imgIds=image_id, iscrowd=False)
+        annotation_ids = self.instances.getAnnIds(imgIds=image_id, iscrowd=None)
         if annotation_ids:
             annotations = self.instances.loadAnns(annotation_ids)
             for annotation in annotations:
                 if annotation["bbox"][2] * annotation["bbox"][3] > self.min_bbox_area:
-                    data["bbox"].append(tuple(annotation['bbox'] + [annotation['category_id']]))
+                    if self.include_bboxes:
+                        data["bbox"].append(tuple(annotation['bbox'] + [annotation['category_id']]))
                     if self.include_masks:
                         data["mask"].append(self.instances.annToMask(annotation))
 
@@ -156,11 +169,27 @@ class MSCOCODataset(DirDataset):
             for annotation in annotations:
                 data["caption"].append(annotation['caption'])
 
+    def _populate_keypoint_data(self, data: Dict[str, Any], image_id: int) -> None:
+        """Add keypoints to a data dictionary.
+
+        Args:
+            data: The dictionary to be augmented.
+            image_id: The id of the image for which to find captions.
+        """
+        data["keypoint"] = []
+        annotation_ids = self.keypoints.getAnnIds(imgIds=image_id)
+        if annotation_ids:
+            annotations = self.keypoints.loadAnns(annotation_ids)
+            for annotation in annotations:
+                if annotation['num_keypoints'] > 0:
+                    data["keypoint"].append(np.array(annotation['keypoints']).reshape(17, 3).astype('int32'))
+
 
 def load_data(root_dir: Optional[str] = None,
               load_bboxes: bool = True,
               load_masks: bool = False,
-              load_captions: bool = False) -> Tuple[MSCOCODataset, MSCOCODataset]:
+              load_captions: bool = False,
+              load_keypoints: bool = False) -> Tuple[MSCOCODataset, MSCOCODataset]:
     """Load and return the COCO dataset.
 
     Args:
@@ -169,6 +198,9 @@ def load_data(root_dir: Optional[str] = None,
         load_bboxes: Whether to load bbox-related data.
         load_masks: Whether to load mask data (in the form of an array of 1-hot images).
         load_captions: Whether to load caption-related data.
+        load_keypoints: Whether to load keypoint data, in format of [array(17, 3)]. 17 is the number of keypoints, 3
+            is the keypoint format in (x,y,v) with x,y being coordinate and v being visibility. v=0 means not labeled,
+            v=1 means labeled but not visible, and v=2 means labeled and visible.
 
     Returns:
         (train_data, eval_data)
@@ -200,21 +232,20 @@ def load_data(root_dir: Optional[str] = None,
             print("Extracting {}".format(zip_name))
             with zipfile.ZipFile(zip_path, 'r') as zip_file:
                 zip_file.extractall(os.path.dirname(zip_path))
-
-    train_annotation = os.path.join(annotation_data, "instances_train2017.json")
-    eval_annotation = os.path.join(annotation_data, "instances_val2017.json")
-    train_captions = os.path.join(annotation_data, "captions_train2017.json")
-    eval_captions = os.path.join(annotation_data, "captions_val2017.json")
     train_ds = MSCOCODataset(train_data,
-                             train_annotation,
-                             train_captions,
+                             annotation_file=os.path.join(annotation_data, "instances_train2017.json"),
+                             caption_file=os.path.join(annotation_data, "captions_train2017.json"),
+                             keypoint_file=os.path.join(annotation_data, "person_keypoints_train2017.json"),
                              include_bboxes=load_bboxes,
                              include_masks=load_masks,
-                             include_captions=load_captions)
+                             include_captions=load_captions,
+                             include_keypoints=load_keypoints)
     eval_ds = MSCOCODataset(eval_data,
-                            eval_annotation,
-                            eval_captions,
+                            annotation_file=os.path.join(annotation_data, "instances_val2017.json"),
+                            caption_file=os.path.join(annotation_data, "captions_val2017.json"),
+                            keypoint_file=os.path.join(annotation_data, "person_keypoints_val2017.json"),
                             include_bboxes=load_bboxes,
                             include_masks=load_masks,
-                            include_captions=load_captions)
+                            include_captions=load_captions,
+                            include_keypoints=load_keypoints)
     return train_ds, eval_ds
