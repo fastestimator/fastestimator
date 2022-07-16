@@ -30,7 +30,7 @@ import jsonpickle
 import matplotlib
 import numpy as np
 import pydot
-import pytorch_model_summary as pms
+from torchinfo import summary as pms
 import tensorflow as tf
 import torch
 from natsort import humansorted
@@ -434,9 +434,12 @@ class Traceability(Trace):
                             inputs = model.fe_input_spec.get_dummy_input()
                             self.doc.append(
                                 Verbatim(
-                                    pms.summary(model.module if self.system.num_devices > 1 else model,
-                                                inputs,
-                                                print_summary=False)))
+                                    self._resolve_unicode_error(
+                                        str(
+                                            pms(model.module if self.system.num_devices > 1 else model,
+                                                input_data=inputs,
+                                                verbose=0)))))
+
                             with self.doc.create(Center()):
                                 self.doc.append(HrefFEID(FEID(id(model)), model.model_name))
                             # Visual Summary
@@ -478,6 +481,14 @@ class Traceability(Trace):
                             fig.add_image(os.path.relpath(file_path, start=self.save_dir),
                                           width=NoEscape(r'1.0\textwidth,height=0.95\textheight,keepaspectratio'))
                             fig.add_caption(NoEscape(HrefFEID(FEID(id(model)), model.model_name).dumps()))
+
+    def _resolve_unicode_error(self, summ):
+        """Remove Unicode Characters unexepted by Latex for Pytorch Summary
+        """
+        summ = summ.replace('├─', '-')
+        summ = summ.replace('└─', '-')
+        summ = summ.replace('│', ' ')
+        return summ
 
     def _document_sys_config(self) -> None:
         """Add a system config summary to the traceability document.

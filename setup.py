@@ -42,7 +42,7 @@ def get_dependency():
         'tensorflow_probability==0.16.0',
         'tensorflow-addons==0.17.0',
         'transformers==4.16.2',
-        'pytorch-model-summary==0.1.2',
+        'torchinfo==1.7.0',
         'graphviz==0.19.1',
         'hiddenlayer==0.3',
         'pydot==1.4.2',
