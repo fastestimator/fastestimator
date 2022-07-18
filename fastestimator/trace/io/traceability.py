@@ -30,7 +30,7 @@ import jsonpickle
 import matplotlib
 import numpy as np
 import pydot
-import pytorch_model_summary as pms
+from torchinfo import summary as pms
 import tensorflow as tf
 import torch
 from natsort import humansorted
@@ -434,9 +434,13 @@ class Traceability(Trace):
                             inputs = model.fe_input_spec.get_dummy_input()
                             self.doc.append(
                                 Verbatim(
-                                    pms.summary(model.module if self.system.num_devices > 1 else model,
-                                                inputs,
-                                                print_summary=False)))
+                                    str(pms(model.module if self.system.num_devices > 1 else model,
+                                            input_data=inputs,
+                                            col_names = ( "output_size", "num_params", "trainable"),
+                                            col_width =20,
+                                            row_settings = ["ascii_only"],
+                                            verbose=0))))
+
                             with self.doc.create(Center()):
                                 self.doc.append(HrefFEID(FEID(id(model)), model.model_name))
                             # Visual Summary
