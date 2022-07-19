@@ -32,7 +32,8 @@ def cosine_decay(time: int,
                  init_lr: float,
                  min_lr: float = 1e-6,
                  start: int = 1,
-                 cycle_multiplier: int = 1):
+                 cycle_multiplier: int = 1,
+                 warmup: bool = False):
     """Learning rate cosine decay function (using half of cosine curve).
 
     This method is useful for scheduling learning rates which oscillate over time:
@@ -50,12 +51,16 @@ def cosine_decay(time: int,
         min_lr: Minimum learning rate.
         start: The step or epoch to start the decay schedule.
         cycle_multiplier: The factor by which next cycle length will be multiplied.
+        warmup: Whether to do a linear warmup from 0 up until `start'.
 
     Returns:
         lr: learning rate given current step or epoch.
     """
     if time < start:
-        lr = init_lr
+        if warmup:
+            lr = init_lr * time / start
+        else:
+            lr = init_lr
     else:
         time = time - start + 1
         if cycle_multiplier > 1:
