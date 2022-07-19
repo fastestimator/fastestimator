@@ -22,53 +22,45 @@ from fastestimator.op.tensorop.loss import L1_Loss
 
 
 class Test_L1_Loss(unittest.TestCase):
-    def test_L1_tf(self):
-        tf_true = tf.constant([[0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0], [1, 0, 0, 0]])
-        tf_pred = tf.constant([[0.1, 0.9, 0.05, 0.05], [0.1, 0.2, 0.0, 0.7], [0.0, 0.15, 0.8, 0.05],
-                               [1.0, 0.0, 0.0, 0.0]])
+    @classmethod
+    def setUpClass(cls):
+        # TensorFlow
+        cls.tf_true = tf.constant([[0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0], [1, 0, 0, 0]])
+        cls.tf_pred = tf.constant([[0.1, 0.9, 0.05, 0.05], [0.1, 0.2, 0.0, 0.7], [0.0, 0.15, 0.8, 0.05],
+                                   [1.0, 0.0, 0.0, 0.0]])
+        # PyTorch
+        cls.torch_true = torch.tensor([[0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0], [1, 0, 0, 0]])
+        cls.torch_pred = torch.tensor([[0.1, 0.9, 0.05, 0.05], [0.1, 0.2, 0.0, 0.7], [0.0, 0.15, 0.8, 0.05],
+                                       [1.0, 0.0, 0.0, 0.0]])
+        # State Definition
+        cls.state = {'warmup': False, 'epoch': 1, 'mode': 'train'}
 
+    def test_L1_tf(self):
         l1 = L1_Loss(inputs='x', outputs='x')
-        output = l1.forward(data=[tf_pred, tf_true], state={})
+        output = l1.forward(data=[self.tf_pred, self.tf_true], state={})
         self.assertTrue(np.allclose(output.numpy(), 0.081250004))
 
     def test_L1_torch(self):
-        torch_true = torch.tensor([[0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0], [1, 0, 0, 0]])
-        torch_pred = torch.tensor([[0.1, 0.9, 0.05, 0.05], [0.1, 0.2, 0.0, 0.7], [0.0, 0.15, 0.8, 0.05],
-                                   [1.0, 0.0, 0.0, 0.0]])
         l1 = L1_Loss(inputs='x', outputs='x')
-        output = l1.forward(data=[torch_pred, torch_true], state={})
+        output = l1.forward(data=[self.torch_pred, self.torch_true], state={})
         self.assertTrue(np.allclose(output.detach().numpy(), 0.081250004))
 
     def test_Smooth_L1_tf(self):
-        tf_true = tf.constant([[0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0], [1, 0, 0, 0]])
-        tf_pred = tf.constant([[0.1, 0.9, 0.05, 0.05], [0.1, 0.2, 0.0, 0.7], [0.0, 0.15, 0.8, 0.05],
-                               [1.0, 0.0, 0.0, 0.0]])
-
         smooth_l1 = L1_Loss(inputs='x', outputs='x', loss_type='Smooth', beta=0.65)
-        output = smooth_l1.forward(data=[tf_pred, tf_true], state={})
+        output = smooth_l1.forward(data=[self.tf_pred, self.tf_true], state={})
         self.assertTrue(np.allclose(output.numpy(), 0.011057693))
 
     def test_Smooth_L1_torch(self):
-        torch_true = torch.tensor([[0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0], [1, 0, 0, 0]])
-        torch_pred = torch.tensor([[0.1, 0.9, 0.05, 0.05], [0.1, 0.2, 0.0, 0.7], [0.0, 0.15, 0.8, 0.05],
-                                   [1.0, 0.0, 0.0, 0.0]])
         smooth_l1 = L1_Loss(inputs='x', outputs='x', loss_type='Smooth', beta=0.65)
-        output = smooth_l1.forward(data=[torch_pred, torch_true], state={})
+        output = smooth_l1.forward(data=[self.torch_pred, self.torch_true], state={})
         self.assertTrue(np.allclose(output.detach().numpy(), 0.011057693))
 
     def test_Huber_tf(self):
-        tf_true = tf.constant([[0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0], [1, 0, 0, 0]])
-        tf_pred = tf.constant([[0.1, 0.9, 0.05, 0.05], [0.1, 0.2, 0.0, 0.7], [0.0, 0.15, 0.8, 0.05],
-                               [1.0, 0.0, 0.0, 0.0]])
-
         Huber = L1_Loss(inputs='x', outputs='x', loss_type='Huber', beta=0.65)
-        output = Huber.forward(data=[tf_pred, tf_true], state={})
+        output = Huber.forward(data=[self.tf_pred, self.tf_true], state={})
         self.assertTrue(np.allclose(output.numpy(), 0.0071875006))
 
     def test_Huber_torch(self):
-        torch_true = torch.tensor([[0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0], [1, 0, 0, 0]])
-        torch_pred = torch.tensor([[0.1, 0.9, 0.05, 0.05], [0.1, 0.2, 0.0, 0.7], [0.0, 0.15, 0.8, 0.05],
-                                   [1.0, 0.0, 0.0, 0.0]])
         Huber = L1_Loss(inputs='x', outputs='x', loss_type='Huber', beta=0.65)
-        output = Huber.forward(data=[torch_pred, torch_true], state={})
+        output = Huber.forward(data=[self.torch_pred, self.torch_true], state={})
         self.assertTrue(np.allclose(output.detach().numpy(), 0.0071875006))

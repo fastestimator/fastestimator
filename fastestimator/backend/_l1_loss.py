@@ -60,11 +60,10 @@ def l1_loss(y_true: Tensor, y_pred: Tensor) -> Tensor:
         ValueError: If `y_pred` is an unacceptable data type.
     """
     if tf.is_tensor(y_pred):
-        if y_pred.ndim == 1:
+        if tf.rank(y_pred) == 1:
             y_true = tf.expand_dims(y_true, axis=-1)
             y_pred = tf.expand_dims(y_pred, axis=-1)
-        regression_loss = tf.keras.losses.MAE(y_true, y_pred)
-        mae = reduce_mean(regression_loss, axis=[ax for ax in range(len(regression_loss.shape))][1:])
+        mae = tf.losses.MAE(y_true,y_pred)
     elif isinstance(y_pred, torch.Tensor):
         mae = reduce_mean(
             torch.nn.L1Loss(reduction="none")(y_pred, y_true), axis=[ax for ax in range(len(y_pred.shape))][1:])

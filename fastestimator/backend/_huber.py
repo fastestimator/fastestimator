@@ -65,11 +65,10 @@ def huber(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
         raise ValueError("Beta cannot be less than or equal to 0")
 
     if tf.is_tensor(y_pred):
-        if y_pred.ndim == 1:
+        if tf.rank(y_pred) == 1:
             y_true = tf.expand_dims(y_true, axis=-1)
             y_pred = tf.expand_dims(y_pred, axis=-1)
-        regression_loss = tf.keras.losses.huber(y_true, y_pred, delta=beta)
-        huber_loss = reduce_mean(regression_loss, axis=[*range(len(regression_loss.shape))][1:])
+        huber_loss = tf.keras.losses.huber(y_true, y_pred, delta=beta)
     elif isinstance(y_pred, torch.Tensor):
         huber_loss = reduce_mean(
             torch.nn.HuberLoss(reduction="none", delta=beta)(y_pred, y_true), axis=[*range(len(y_pred.shape))][1:])

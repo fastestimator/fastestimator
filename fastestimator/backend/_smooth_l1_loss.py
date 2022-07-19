@@ -70,7 +70,7 @@ def smooth_l1_loss(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
         regression_loss = tf.where(tf.math.less(regression_diff, beta),
                                    0.5 * tf.math.pow(regression_diff, 2) / beta,
                                    regression_diff - 0.5 * beta)
-        smooth_mae = reduce_mean(regression_loss, axis=[*range(len(regression_loss.shape))][1:])
+        smooth_mae = reduce_mean(regression_loss, axis=[*range(len(tf.shape(regression_loss)))][1:])
     elif isinstance(y_pred, torch.Tensor):
         smooth_mae = reduce_mean(
             torch.nn.SmoothL1Loss(reduction="none", beta=beta)(y_pred, y_true), axis=[*range(len(y_pred.shape))][1:])
