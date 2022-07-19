@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import re
 import time
-from collections import defaultdict, deque
+from collections import defaultdict, deque, namedtuple
 from typing import Iterable, List, Set, Union
 
 import numpy as np
@@ -447,3 +448,38 @@ class PerDSTrace(Trace):
                 across all available datasets and then logged during on_epoch_end.
         """
         pass
+
+
+Freq = namedtuple('Freq', ['is_step', 'freq'])
+
+
+def parse_freq(freq: Union[None, str, int]) -> Freq:
+    """A helper function to convert string based frequency inputs into epochs or steps
+
+    Args:
+        freq: One of either None, "step", "epoch", "#s", "#e", or #, where # is an integer.
+
+    Returns:
+        A `Freq` object recording whether the trace should run on an epoch basis or a step basis, as well as the
+        frequency with which it should run.
+    """
+    if freq is None:
+        return Freq(False, 0)
+    if isinstance(freq, int):
+        if freq < 1:
+            raise ValueError(f"Frequency argument must be a positive integer but got {freq}")
+        return Freq(True, freq)
+    if isinstance(freq, str):
+        if freq in {'step', 's'}:
+            return Freq(True, 1)
+        if freq in {'epoch', 'e'}:
+            return Freq(False, 1)
+        parts = re.match(r"^([0-9]+)([se])$", freq)
+        if parts is None:
+            raise ValueError(f"Frequency argument must be formatted like <int><s|e> but got {freq}")
+        freq = int(parts[1])
+        if freq < 1:
+            raise ValueError(f"Frequency argument must be a positive integer but got {freq}")
+        return Freq(parts[2] == 's', freq)
+    else:
+        raise ValueError(f"Unrecognized type passed as frequency: {type(freq)}")
