@@ -13,8 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import os
-import re
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import cv2
@@ -38,8 +37,8 @@ from fastestimator.backend._reshape import reshape
 from fastestimator.backend._squeeze import squeeze
 from fastestimator.backend._to_tensor import to_tensor
 from fastestimator.network import BaseNetwork, TFNetwork
-from fastestimator.trace.trace import Trace
-from fastestimator.util.base_util import to_set, to_list, is_number, DefaultKeyDict
+from fastestimator.trace.trace import Trace, parse_freq
+from fastestimator.util.base_util import DefaultKeyDict, is_number, to_list, to_set
 from fastestimator.util.data import Data
 from fastestimator.util.img_data import Display
 from fastestimator.util.traceability_util import traceable
@@ -125,10 +124,10 @@ class _BaseWriter:
                                                       dataformats='NCHW' if isinstance(img, torch.Tensor) else 'NHWC')
 
     def write_embeddings(
-        self,
-        mode: str,
-        embeddings: Iterable[Tuple[str, Tensor, Optional[List[Any]], Optional[Tensor]]],
-        step: int,
+            self,
+            mode: str,
+            embeddings: Iterable[Tuple[str, Tensor, Optional[List[Any]], Optional[Tensor]]],
+            step: int,
     ):
         """Write embeddings (like UMAP) to TensorBoard.
 
@@ -301,7 +300,6 @@ class TensorBoard(Trace):
         embedding_labels: Keys corresponding to label information for the `write_embeddings`.
         embedding_images: Keys corresponding to raw images to be associated with the `write_embeddings`.
     """
-    Freq = namedtuple('Freq', ['is_step', 'freq'])
     writer: _BaseWriter
 
     # TODO - support for per-instance tracking
@@ -320,11 +318,11 @@ class TensorBoard(Trace):
         super().__init__(inputs=["*"] + to_list(write_images) + to_list(write_embeddings) + to_list(embedding_labels) +
                                 to_list(embedding_images))
         self.root_log_dir = log_dir
-        self.update_freq = self._parse_freq(update_freq)
+        self.update_freq = parse_freq(update_freq)
         self.write_graph = write_graph
         self.painted_graphs = set()
         self.write_images = to_set(write_images)
-        self.histogram_freq = self._parse_freq(weight_histogram_freq)
+        self.histogram_freq = parse_freq(weight_histogram_freq)
         if paint_weights and self.histogram_freq.freq == 0:
             self.histogram_freq.is_step = False
             self.histogram_freq.freq = 1
@@ -332,7 +330,7 @@ class TensorBoard(Trace):
         if write_embeddings is None and embedding_labels is None and embedding_images is None:
             # Speed up if-check short-circuiting later
             embedding_freq = None
-        self.embedding_freq = self._parse_freq(embedding_freq)
+        self.embedding_freq = parse_freq(embedding_freq)
         write_embeddings = to_list(write_embeddings)
         embedding_labels = to_list(embedding_labels)
         if embedding_labels:
@@ -356,37 +354,6 @@ class TensorBoard(Trace):
                                  zip(write_embeddings, embedding_labels, embedding_images)]
         self.collected_embeddings = defaultdict(list)
 
-    def _parse_freq(self, freq: Union[None, str, int]) -> Freq:
-        """A helper function to convert string based frequency inputs into epochs or steps
-
-        Args:
-            freq: One of either None, "step", "epoch", "#s", "#e", or #, where # is an integer.
-
-        Returns:
-            A `Freq` object recording whether the trace should run on an epoch basis or a step basis, as well as the
-            frequency with which it should run.
-        """
-        if freq is None:
-            return self.Freq(False, 0)
-        if isinstance(freq, int):
-            if freq < 1:
-                raise ValueError(f"Tensorboard frequency argument must be a positive integer but got {freq}")
-            return self.Freq(True, freq)
-        if isinstance(freq, str):
-            if freq in {'step', 's'}:
-                return self.Freq(True, 1)
-            if freq in {'epoch', 'e'}:
-                return self.Freq(False, 1)
-            parts = re.match(r"^([0-9]+)([se])$", freq)
-            if parts is None:
-                raise ValueError(f"Tensorboard frequency argument must be formatted like <int><s|e> but got {freq}")
-            freq = int(parts[1])
-            if freq < 1:
-                raise ValueError(f"Tensorboard frequency argument must be a positive integer but got {freq}")
-            return self.Freq(parts[2] == 's', freq)
-        else:
-            raise ValueError(f"Unrecognized type passed as Tensorboard frequency: {type(freq)}")
-
     def on_begin(self, data: Data) -> None:
         print("FastEstimator-Tensorboard: writing logs to {}".format(
             os.path.abspath(os.path.join(self.root_log_dir, self.system.experiment_time))))
@@ -401,13 +368,15 @@ class TensorBoard(Trace):
             self.writer.write_epoch_models(mode=self.system.mode, epoch=self.system.epoch_idx)
             self.painted_graphs = self.system.network.epoch_models
         # Collect embeddings if present in batch but viewing per epoch. Don't aggregate during training though
-        if self.system.mode != 'train' and self.embedding_freq.freq and not self.embedding_freq.is_step and self.system.epoch_idx % self.embedding_freq.freq == 0:
+        if self.system.mode != 'train' and self.embedding_freq.freq and not self.embedding_freq.is_step and \
+                self.system.epoch_idx % self.embedding_freq.freq == 0:
             for elem in self.write_embeddings:
                 name, lbl, img = elem
                 if name in data:
                     self.collected_embeddings[name].append((data.get(name), data.get(lbl), data.get(img)))
         # Handle embeddings if viewing per step
-        if self.embedding_freq.freq and self.embedding_freq.is_step and self.system.global_step % self.embedding_freq.freq == 0:
+        if self.embedding_freq.freq and self.embedding_freq.is_step and \
+                self.system.global_step % self.embedding_freq.freq == 0:
             self.writer.write_embeddings(
                 mode=self.system.mode,
                 step=self.system.global_step,
