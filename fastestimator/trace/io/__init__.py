@@ -25,11 +25,15 @@ __getattr__, __dir__, __all__ = lazy.attach(__name__,
                                                           'restore_wizard': ['RestoreWizard'],
                                                           'tensorboard': ['TensorBoard'],
                                                           'test_report': ['TestReport'],
-                                                          'traceability': ['Traceability'], })
+                                                          'traceability': ['Traceability'],
+                                                          'batch_display': ['BatchDisplay'],
+                                                          'grid_display': ['GridDisplay']})
 
 if TYPE_CHECKING:
+    from fastestimator.trace.io.batch_display import BatchDisplay
     from fastestimator.trace.io.best_model_saver import BestModelSaver
     from fastestimator.trace.io.csv_logger import CSVLogger
+    from fastestimator.trace.io.grid_display import GridDisplay
     from fastestimator.trace.io.image_saver import ImageSaver
     from fastestimator.trace.io.image_viewer import ImageViewer
     from fastestimator.trace.io.model_saver import ModelSaver
