@@ -38,30 +38,36 @@ class FocalLoss(LossOp):
                 positive vs negative examples or -1 to ignore. Default = 0.25
         gamma: Exponent of the modulating factor (1 - p_t) to
                balance easy vs hard examples.
-        reduction: 'none' | 'mean' | 'sum'
+        sample_reduction: 'none' | 'mean' | 'sum'
                  'none': No reduction will be applied to the output.
                  'mean': The output will be averaged.
                  'sum': The output will be summed.
+        shape_reduction:
+                 'none' | 'mean' | 'sum'
+                 'none': No reduction will be applied to the output.
+                 'mean': The output will be averaged across classes.
+                 'sum': The output will be summed across classes.
         from_logits: Whether y_pred is logits (without sigmoid).
         normalize: Whether to normalize focal loss along samples based on number of positive classes per samples.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an
             argument like "!infer" or "!train".
     """
-
     def __init__(self,
                  inputs: Union[Tuple[str, str], List[str]],
                  outputs: str,
                  gamma: float = 2.0,
                  alpha: float = 0.25,
-                 reduction: str = 'mean',
+                 sample_reduction: str = 'mean',
+                 shape_reduction: str = 'sum',
                  from_logits: bool = False,
                  normalize: bool = True,
                  mode: Union[None, str, Iterable[str]] = "!infer"):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.gamma = gamma
         self.alpha = alpha
-        self.reduction = reduction
+        self.sample_reduction = sample_reduction
+        self.shape_reduction = shape_reduction
         self.from_logits = from_logits
         self.normalize = normalize
 
@@ -72,5 +78,6 @@ class FocalLoss(LossOp):
                           gamma=self.gamma,
                           alpha=self.alpha,
                           from_logits=self.from_logits,
-                          reduction=self.reduction,
+                          sample_reduction=self.sample_reduction,
+                          shape_reduction=self.shape_reduction,
                           normalize=self.normalize)

@@ -68,8 +68,8 @@ def focal_loss(y_true: Tensor,
                alpha: float = 0.25,
                from_logits: bool = False,
                normalize: bool = True,
-               class_reduction: str = "sum",
-               reduction: str = "mean") -> Tensor:
+               shape_reduction: str = "sum",
+               sample_reduction: str = "mean") -> Tensor:
     """Calculate the focal loss between two tensors.
 
     Original implementation from https://github.com/facebookresearch/fvcore/blob/master/fvcore/nn/focal_loss.py .
@@ -99,13 +99,13 @@ def focal_loss(y_true: Tensor,
         gamma: Exponent of the modulating factor (1 - p_t) to
                balance easy vs hard examples.
         normalize: Whether to normalize focal loss along samples based on number of positive classes per samples.
-        class_reduction:
+        shape_reduction:
                  'none' | 'mean' | 'sum'
                  'none': No reduction will be applied to the output.
                  'mean': The output will be averaged across classes.
                  'sum': The output will be summed across classes.
         from_logits: Whether y_pred is logits (without sigmoid).
-        reduction: 'none' | 'mean' | 'sum'
+        sample_reduction: 'none' | 'mean' | 'sum'
                  'none': No reduction will be applied to the output.
                  'mean': The output will be averaged across batch size.
                  'sum': The output will be summed across batch size.
@@ -123,32 +123,36 @@ def focal_loss(y_true: Tensor,
 
     if tf.is_tensor(y_true):
         y_true = tf.cast(y_true, dtype=y_pred.dtype)
-        focal_loss = SigmoidFocalCrossEntropy(from_logits=from_logits,
-                                              alpha=alpha,
-                                              gamma=gamma,
-                                              reduction=tf.keras.losses.Reduction.NONE)(y_pred=y_pred, y_true=y_true)
+        fl = SigmoidFocalCrossEntropy(from_logits=from_logits,
+                                      alpha=alpha,
+                                      gamma=gamma,
+                                      reduction=tf.keras.losses.Reduction.NONE)(y_pred=y_pred, y_true=y_true)
+        gt_shape = tf.shape(y_true)
+        fl_shape = tf.shape(fl)
     elif isinstance(y_true, torch.Tensor):
         y_true = y_true.to(y_pred.dtype)
-        focal_loss = pytorch_focal_loss(y_pred=y_pred, y_true=y_true, alpha=alpha, gamma=gamma, from_logits=from_logits)
+        fl = pytorch_focal_loss(y_pred=y_pred, y_true=y_true, alpha=alpha, gamma=gamma, from_logits=from_logits)
+        gt_shape = y_true.shape
+        fl_shape = fl.shape
     else:
         raise ValueError("Unsupported tensor type.")
 
-    focal_reduce_axis = [*range(1, len(focal_loss.shape))]
+    focal_reduce_axis = [*range(1, len(fl_shape))]
     # normalize along the batch size based on number of positive classes
     if normalize:
-        gt_reduce_axis = [*range(1, len(y_true.shape))]
+        gt_reduce_axis = [*range(1, len(gt_shape))]
         gt_count = clip_by_value(reduce_sum(y_true, axis=gt_reduce_axis), min_value=1)
         gt_count = gt_count[(..., ) + (None, ) * len(focal_reduce_axis)]
-        focal_loss = focal_loss / gt_count
+        fl = fl / gt_count
 
-    if class_reduction == "sum":
-        focal_loss = reduce_sum(focal_loss, axis=focal_reduce_axis)
-    elif class_reduction == "mean":
-        focal_loss = reduce_mean(focal_loss, axis=focal_reduce_axis)
+    if shape_reduction == "sum":
+        fl = reduce_sum(fl, axis=focal_reduce_axis)
+    elif shape_reduction == "mean":
+        fl = reduce_mean(fl, axis=focal_reduce_axis)
 
-    if reduction == "mean":
-        focal_loss = reduce_mean(focal_loss)
-    elif reduction == "sum":
-        focal_loss = reduce_sum(focal_loss)
+    if sample_reduction == "mean":
+        fl = reduce_mean(fl)
+    elif sample_reduction == "sum":
+        fl = reduce_sum(fl)
 
-    return focal_loss
+    return fl
