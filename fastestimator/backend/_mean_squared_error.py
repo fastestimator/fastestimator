@@ -58,8 +58,7 @@ def mean_squared_error(y_true: Tensor, y_pred: Tensor) -> Tensor:
     if tf.is_tensor(y_pred):
         mse = tf.losses.MSE(y_true, y_pred)
     elif isinstance(y_pred, torch.Tensor):
-        mse = reduce_mean(
-            torch.nn.MSELoss(reduction="none")(y_pred, y_true), axis=[ax for ax in range(y_pred.ndim)][1:])
+        mse = reduce_mean(torch.nn.MSELoss(reduction="none")(y_pred, y_true), axis=-1)
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(y_pred)))
     return mse

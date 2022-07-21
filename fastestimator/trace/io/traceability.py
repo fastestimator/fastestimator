@@ -22,7 +22,7 @@ import shutil
 import sys
 import types
 from collections import defaultdict
-from typing import Any, Dict, List, Set, Tuple, Union, Optional
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 from unittest.mock import Base, MagicMock
 
 import dot2tex as d2t
@@ -30,7 +30,6 @@ import jsonpickle
 import matplotlib
 import numpy as np
 import pydot
-from torchinfo import summary as pms
 import tensorflow as tf
 import torch
 from natsort import humansorted
@@ -40,15 +39,16 @@ from pylatex.base_classes import Arguments
 from pylatex.section import Paragraph
 from pylatex.utils import bold
 from torch.utils.data import Dataset
+from torchinfo import summary as pms
 
 import fastestimator as fe
 from fastestimator.dataset.dataset import FEDataset
 from fastestimator.network import BaseNetwork
-from fastestimator.op.numpyop.numpyop import Batch
 from fastestimator.op.numpyop.meta.fuse import Fuse
 from fastestimator.op.numpyop.meta.one_of import OneOf
 from fastestimator.op.numpyop.meta.repeat import Repeat
 from fastestimator.op.numpyop.meta.sometimes import Sometimes
+from fastestimator.op.numpyop.numpyop import Batch
 from fastestimator.op.op import Op
 from fastestimator.op.tensorop.meta.fuse import Fuse as FuseT
 from fastestimator.op.tensorop.meta.one_of import OneOf as OneOfT
@@ -60,11 +60,11 @@ from fastestimator.schedule.schedule import Scheduler, get_current_items, get_si
 from fastestimator.summary.logs.log_plot import visualize_logs
 from fastestimator.trace.io.restore_wizard import RestoreWizard
 from fastestimator.trace.trace import Trace, sort_traces
+from fastestimator.util.base_util import FEID, DefaultKeyDict, LogSplicer, NonContext, Suppressor, \
+    prettify_metric_name, to_list
 from fastestimator.util.data import Data
 from fastestimator.util.latex_util import AdjustBox, Center, ContainerList, HrefFEID, Verbatim
 from fastestimator.util.traceability_util import FeSummaryTable, traceable
-from fastestimator.util.base_util import to_list, NonContext, Suppressor, LogSplicer, prettify_metric_name, \
-    DefaultKeyDict, FEID
 
 
 @traceable()
@@ -434,11 +434,12 @@ class Traceability(Trace):
                             inputs = model.fe_input_spec.get_dummy_input()
                             self.doc.append(
                                 Verbatim(
-                                    str(pms(model.module if self.system.num_devices > 1 else model,
+                                    str(
+                                        pms(model.module if self.system.num_devices > 1 else model,
                                             input_data=inputs,
-                                            col_names = ( "output_size", "num_params", "trainable"),
-                                            col_width =20,
-                                            row_settings = ["ascii_only"],
+                                            col_names=("output_size", "num_params", "trainable"),
+                                            col_width=20,
+                                            row_settings=["ascii_only"],
                                             verbose=0))))
 
                             with self.doc.create(Center()):
@@ -453,6 +454,7 @@ class Traceability(Trace):
                                 sys.modules.setdefault('IPython', MagicMock())
                                 sys.modules.setdefault('IPython.display', MagicMock())
                                 import hiddenlayer as hl
+                                model.to(inputs.device)
                                 with Suppressor():
                                     graph = hl.build_graph(model.module if self.system.num_devices > 1 else model,
                                                            inputs)
