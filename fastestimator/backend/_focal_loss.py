@@ -68,6 +68,7 @@ def focal_loss(y_true: Tensor,
                alpha: float = 0.25,
                from_logits: bool = False,
                normalize: bool = True,
+               class_reduction: str = "sum",
                reduction: str = "mean") -> Tensor:
     """Calculate the focal loss between two tensors.
 
@@ -98,11 +99,16 @@ def focal_loss(y_true: Tensor,
         gamma: Exponent of the modulating factor (1 - p_t) to
                balance easy vs hard examples.
         normalize: Whether to normalize focal loss along samples based on number of positive classes per samples.
+        class_reduction:
+                 'none' | 'mean' | 'sum'
+                 'none': No reduction will be applied to the output.
+                 'mean': The output will be averaged across classes.
+                 'sum': The output will be summed across classes.
         from_logits: Whether y_pred is logits (without sigmoid).
         reduction: 'none' | 'mean' | 'sum'
                  'none': No reduction will be applied to the output.
-                 'mean': The output will be averaged.
-                 'sum': The output will be summed.
+                 'mean': The output will be averaged across batch size.
+                 'sum': The output will be summed across batch size.
     Returns:
         The Focal loss between `y_true` and `y_pred`
 
@@ -127,14 +133,18 @@ def focal_loss(y_true: Tensor,
     else:
         raise ValueError("Unsupported tensor type.")
 
+    focal_reduce_axis = [*range(1, len(focal_loss.shape))]
     # normalize along the batch size based on number of positive classes
     if normalize:
-        focal_reduce_axis = [*range(len(focal_loss.shape))][1:]
-        focal_loss = reduce_sum(focal_loss, axis=focal_reduce_axis)
-
-        gt_reduce_axis = [*range(len(y_true.shape))][1:]
+        gt_reduce_axis = [*range(1, len(y_true.shape))]
         gt_count = clip_by_value(reduce_sum(y_true, axis=gt_reduce_axis), min_value=1)
+        gt_count = gt_count[(..., ) + (None, ) * len(focal_reduce_axis)]
         focal_loss = focal_loss / gt_count
+
+    if class_reduction == "sum":
+        focal_loss = reduce_sum(focal_loss, axis=focal_reduce_axis)
+    elif class_reduction == "mean":
+        focal_loss = reduce_mean(focal_loss, axis=focal_reduce_axis)
 
     if reduction == "mean":
         focal_loss = reduce_mean(focal_loss)
