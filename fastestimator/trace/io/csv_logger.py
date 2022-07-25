@@ -78,7 +78,7 @@ class CSVLogger(Trace):
             if col not in tmpdic.keys():
                 tmpdic[col] = ''
 
-        self.df_agg = self.df_agg.append(tmpdic, ignore_index=True)
+        self.df_agg = pd.concat(objs=[self.df_agg, pd.DataFrame([tmpdic])], ignore_index=True)
         self._save()  # Write on epoch end so that people can see results sooner if debugging
 
     def on_batch_end(self, data: Data) -> None:
@@ -102,7 +102,7 @@ class CSVLogger(Trace):
                         if col not in row.keys():
                             row[col] = ''
                     rows.append(row)
-                self.df_ins = self.df_ins.append(rows, ignore_index=True)
+                self.df_ins = pd.concat(objs=[self.df_ins, pd.DataFrame(rows)], ignore_index=True)
 
         if self.system.mode == "train" and self.system.log_steps and (self.system.global_step % self.system.log_steps
                                                                       == 0 or self.system.global_step == 1):
@@ -125,7 +125,7 @@ class CSVLogger(Trace):
                 if col not in tmpdic.keys():
                     tmpdic[col] = ''
 
-            self.df_agg = self.df_agg.append(tmpdic, ignore_index=True)
+            self.df_agg = pd.concat(objs=[self.df_agg, pd.DataFrame([tmpdic])], ignore_index=True)
 
     def _save(self) -> None:
         """Write the current state to disk.
