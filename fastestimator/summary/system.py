@@ -17,7 +17,7 @@ import datetime
 import json
 import os
 import uuid
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, Tuple, TypeVar, Union, Set
 
 import dill as pickle  # Need to use dill since tf.Variable is a weakref object on multi-gpu machines
 import tensorflow as tf
@@ -90,7 +90,8 @@ class System:
             exhausted. If None, all data will be used.
         eval_steps_per_epoch: Evaluation will be cut short or extended to complete N steps even if loader is not yet
             exhausted. If None, all data will be used.
-        eval_log_steps: The list of steps on which evaluation progress logs need to be printed.
+        eval_log_steps_request: The list of steps on which the user wants eval log printing.
+        eval_log_steps: (The steps on which eval logs will be printed, The total number of eval steps in this epoch).
         summary: An object to write experiment results to.
         experiment_time: A timestamp indicating when this model was trained.
         custom_graphs: A place to store extra graphs which are too complicated for the primary history.
@@ -111,7 +112,8 @@ class System:
     traces: List[Union['Trace', Scheduler['Trace']]]
     train_steps_per_epoch: Optional[int]
     eval_steps_per_epoch: Optional[int]
-    eval_log_steps: Sequence[int]
+    eval_log_steps_request: Sequence[int]
+    eval_log_steps: Tuple[Set[int], int]
     summary: Summary
     experiment_time: str
     custom_graphs: Dict[str, List[Summary]]
@@ -132,7 +134,8 @@ class System:
 
         self.network = network
         self.pipeline = pipeline
-        self.eval_log_steps = eval_log_steps
+        self.eval_log_steps_request = eval_log_steps
+        self.eval_log_steps = (set(), 0)
         self.traces = traces
         self.mode = mode
         self.ds_id = ds_id
