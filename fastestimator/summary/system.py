@@ -17,7 +17,7 @@ import datetime
 import json
 import os
 import uuid
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, Tuple, TypeVar, Union, Set
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
 
 import dill as pickle  # Need to use dill since tf.Variable is a weakref object on multi-gpu machines
 import tensorflow as tf
