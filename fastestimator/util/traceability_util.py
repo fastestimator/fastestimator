@@ -1095,6 +1095,10 @@ def _setdata(current: Any, new: Any) -> Any:
         for idx, elem in enumerate(current):
             current[idx] = _setdata(elem, new[idx])
         return current
+    # Check for named tuple
+    if isinstance(current, tuple) and hasattr(current, '_fields') and hasattr(current, '_make') and \
+            isinstance(new, (tuple, list)) and len(current) == len(new):
+        return current._make([_setdata(cu, cr) for cu, cr in zip(current, new)])
     if isinstance(current, tuple) and isinstance(new, (tuple, list)) and len(current) == len(new):
         return tuple([_setdata(cu, cr) for cu, cr in zip(current, new)])
     if isinstance(current, dict) and isinstance(new, dict) and current.keys() == new.keys():
