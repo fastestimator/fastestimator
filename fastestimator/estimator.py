@@ -359,9 +359,9 @@ class Estimator:
                 if self.system.mode == 'eval':
                     log_steps_per_epoch = len(loader) // loader.get_batch_size(
                     ) if not self.system.steps_per_epoch else self.system.steps_per_epoch
-                    self.system.eval_log_steps = ({
+                    self.system.eval_log_steps = ([
                         1, log_steps_per_epoch // 3, (2 * log_steps_per_epoch) // 3, log_steps_per_epoch
-                    }, log_steps_per_epoch) if not self.system.eval_log_steps_request else \
+                    ], log_steps_per_epoch) if not self.system.eval_log_steps_request else \
                         (self.system.eval_log_steps_request, log_steps_per_epoch)
 
                 loader = self._configure_loader(loader)
