@@ -63,7 +63,7 @@ class TestLogger(unittest.TestCase):
         logger.system = sample_system_object()
         logger.system.mode = 'eval'
         logger.system.global_step = 2
-        logger.system.eval_log_steps = [1, 2, 3]
+        logger.system.eval_log_steps = ([1, 2, 3], 3)
         logger.system.log_steps = 3
         logger.on_epoch_begin(self.data)
         self._test_print_msg(func=logger.on_batch_end, data=self.data, msg=self.on_batch_end_eval_msg)

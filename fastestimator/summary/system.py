@@ -30,6 +30,7 @@ from fastestimator.network import BaseNetwork
 from fastestimator.pipeline import Pipeline
 from fastestimator.schedule.schedule import Scheduler
 from fastestimator.summary.summary import Summary
+from fastestimator.util.base_util import to_list
 from fastestimator.util.traceability_util import FeSummaryTable, is_restorable
 
 if TYPE_CHECKING:
@@ -112,8 +113,8 @@ class System:
     traces: List[Union['Trace', Scheduler['Trace']]]
     train_steps_per_epoch: Optional[int]
     eval_steps_per_epoch: Optional[int]
-    eval_log_steps_request: Sequence[int]
-    eval_log_steps: Tuple[Set[int], int]
+    eval_log_steps_request: List[int]
+    eval_log_steps: Tuple[List[int], int]
     summary: Summary
     experiment_time: str
     custom_graphs: Dict[str, List[Summary]]
@@ -134,8 +135,8 @@ class System:
 
         self.network = network
         self.pipeline = pipeline
-        self.eval_log_steps_request = eval_log_steps
-        self.eval_log_steps = (set(), 0)
+        self.eval_log_steps_request = to_list(eval_log_steps)
+        self.eval_log_steps = ([], 0)
         self.traces = traces
         self.mode = mode
         self.ds_id = ds_id
