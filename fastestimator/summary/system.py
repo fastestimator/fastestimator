@@ -30,6 +30,7 @@ from fastestimator.network import BaseNetwork
 from fastestimator.pipeline import Pipeline
 from fastestimator.schedule.schedule import Scheduler
 from fastestimator.summary.summary import Summary
+from fastestimator.util.base_util import to_list
 from fastestimator.util.traceability_util import FeSummaryTable, is_restorable
 
 if TYPE_CHECKING:
@@ -90,7 +91,8 @@ class System:
             exhausted. If None, all data will be used.
         eval_steps_per_epoch: Evaluation will be cut short or extended to complete N steps even if loader is not yet
             exhausted. If None, all data will be used.
-        eval_log_steps: The list of steps on which evaluation progress logs need to be printed.
+        eval_log_steps_request: The list of steps on which the user wants eval log printing.
+        eval_log_steps: The steps on which eval logs will be printed, The total number of eval steps in this epoch.
         summary: An object to write experiment results to.
         experiment_time: A timestamp indicating when this model was trained.
         custom_graphs: A place to store extra graphs which are too complicated for the primary history.
@@ -111,7 +113,8 @@ class System:
     traces: List[Union['Trace', Scheduler['Trace']]]
     train_steps_per_epoch: Optional[int]
     eval_steps_per_epoch: Optional[int]
-    eval_log_steps: Sequence[int]
+    eval_log_steps_request: List[int]
+    eval_log_steps: Tuple[List[int], int]
     summary: Summary
     experiment_time: str
     custom_graphs: Dict[str, List[Summary]]
@@ -132,7 +135,8 @@ class System:
 
         self.network = network
         self.pipeline = pipeline
-        self.eval_log_steps = eval_log_steps
+        self.eval_log_steps_request = to_list(eval_log_steps)
+        self.eval_log_steps = ([], 0)
         self.traces = traces
         self.mode = mode
         self.ds_id = ds_id

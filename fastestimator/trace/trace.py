@@ -221,27 +221,27 @@ class EvalEssential(Trace):
         super().__init__(mode="eval", inputs=monitor_names, outputs=["steps/sec"])
         self.step_start = time.perf_counter()
         self.eval_results = defaultdict(lambda: defaultdict(list))
+        self.eval_steps = defaultdict(lambda: 0)
+        self.elapsed_step = 0
 
     def on_epoch_begin(self, data: Data) -> None:
         self.eval_results = defaultdict(lambda: defaultdict(list))
-        self.eval_step = 0
+        self.eval_steps.clear()
         self.elapsed_step = 0
         self.step_start = time.perf_counter()
-
-    def on_batch_begin(self, data: Data) -> None:
-        self.eval_step += 1
 
     def on_batch_end(self, data: Data) -> None:
         for key in self.inputs:
             if key in data:
                 self.eval_results[key][self.system.ds_id].append(data[key])
 
-        if self.system.mode == "eval" and self.eval_step in self.system.eval_log_steps:
-            if self.eval_step > 1:
+        self.eval_steps[self.system.ds_id] += 1
+        if self.eval_steps[self.system.ds_id] in self.system.eval_log_steps[0]:
+            if self.eval_steps[self.system.ds_id] > 1:
                 elapsed_time = time.perf_counter() - self.step_start
-                elapsed_step = self.eval_step - self.elapsed_step
+                elapsed_step = self.eval_steps[self.system.ds_id] - self.elapsed_step
                 data.write_with_log("steps/sec", round(elapsed_step / elapsed_time, 2))
-            self.elapsed_step = self.eval_step
+            self.elapsed_step = self.eval_steps[self.system.ds_id]
             self.step_start = time.perf_counter()
 
     def on_epoch_end(self, data: Data) -> None:
@@ -290,18 +290,14 @@ class Logger(Trace):
 
     Please don't add this trace into an estimator manually. FastEstimator will add it automatically.
     """
-
     def __init__(self) -> None:
         super().__init__(inputs="*")
+        self.eval_steps = defaultdict(lambda: 0)
 
     def on_begin(self, data: Data) -> None:
         if not self.system.mode == "test":
             start_step = 1 if not self.system.global_step else self.system.global_step
             self._print_message("FastEstimator-Start: step: {}; ".format(start_step), data)
-
-    def on_epoch_begin(self, data: Data) -> None:
-        if self.system.mode == 'eval':
-            self.eval_step = 0
 
     def on_batch_end(self, data: Data) -> None:
         if self.system.mode == "train" and self.system.log_steps and (self.system.global_step % self.system.log_steps
@@ -309,15 +305,18 @@ class Logger(Trace):
             self._print_message("FastEstimator-Train: step: {}; ".format(self.system.global_step), data)
 
         if self.system.mode == "eval":
-            self.eval_step += 1
-            if self.eval_step in self.system.eval_log_steps:
-                self._print_message("Eval Progress: {}/{}; ".format(self.eval_step, self.system.eval_log_steps[-1]),
+            self.eval_steps[self.system.ds_id] += 1
+            step = self.eval_steps[self.system.ds_id]
+            if step in self.system.eval_log_steps[0]:
+                ds_str = f" ({self.system.ds_id})" if self.system.ds_id else ''
+                self._print_message(f"Eval Progress{ds_str}: {step}/{self.system.eval_log_steps[1]}; ",
                                     data)
 
     def on_epoch_end(self, data: Data) -> None:
         if self.system.mode == "train":
             self._print_message("FastEstimator-Train: step: {}; ".format(self.system.global_step), data, True)
         elif self.system.mode == 'eval':
+            self.eval_steps.clear()
             self._print_message("FastEstimator-Eval: step: {}; ".format(self.system.global_step), data, True)
         elif self.system.mode == "test":
             self._print_message("FastEstimator-Test: step: {}; ".format(self.system.global_step), data, True)
