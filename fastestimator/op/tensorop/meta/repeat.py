@@ -27,6 +27,7 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
 
+@traceable()
 class Repeat(TensorOp):
     """Repeat a TensorOp several times in a row.
 
@@ -99,7 +100,7 @@ class Repeat(TensorOp):
         self.op.fe_retain_graph(True)
         data = {key: elem for key, elem in zip(self.inputs, data)}
         if isinstance(self.repeat, int):
-            for i in self.for_range:
+            for _ in self.for_range:
                 # Perform n-1 rounds with all ops having retain_graph == True
                 BaseNetwork._forward_batch(data, state, self.ops)
             # Let retain be whatever it was meant to be for the final sequence
