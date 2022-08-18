@@ -76,10 +76,12 @@ class Repeat(TensorOp):
         self.op.build(framework, device)
         if framework == 'tf':
             self.while_fn = self._tf_while
-            self.for_range = tf.range(self.repeat - 1)
+            if isinstance(self.repeat, int):
+                self.for_range = tf.range(self.repeat - 1)
         else:
             self.while_fn = self._torch_while
-            self.for_range = range(self.repeat - 1)
+            if isinstance(self.repeat, int):
+                self.for_range = range(self.repeat - 1)
 
     def get_fe_models(self) -> Set[Model]:
         return self.op.get_fe_models()
