@@ -27,7 +27,6 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
 
-@traceable()
 class Repeat(TensorOp):
     """Repeat a TensorOp several times in a row.
 
@@ -66,6 +65,7 @@ class Repeat(TensorOp):
         self.ops = [op]
         self.retain_graph = None
         self.while_fn = None
+        self.for_range = None
 
     @property
     def op(self) -> TensorOp:
@@ -75,8 +75,10 @@ class Repeat(TensorOp):
         self.op.build(framework, device)
         if framework == 'tf':
             self.while_fn = self._tf_while
+            self.for_range = tf.range(self.repeat - 1)
         else:
             self.while_fn = self._torch_while
+            self.for_range = range(self.repeat - 1)
 
     def get_fe_models(self) -> Set[Model]:
         return self.op.get_fe_models()
@@ -95,10 +97,9 @@ class Repeat(TensorOp):
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
         # Set retain to true since might loop over a gradient aware op
         self.op.fe_retain_graph(True)
-
         data = {key: elem for key, elem in zip(self.inputs, data)}
         if isinstance(self.repeat, int):
-            for i in range(self.repeat - 1):
+            for i in self.for_range:
                 # Perform n-1 rounds with all ops having retain_graph == True
                 BaseNetwork._forward_batch(data, state, self.ops)
             # Let retain be whatever it was meant to be for the final sequence
@@ -106,6 +107,7 @@ class Repeat(TensorOp):
             # Final round of ops
             BaseNetwork._forward_batch(data, state, self.ops)
         else:
+            # Run once to update the data dictionary to maintain data dictionary key consistency in while loop
             BaseNetwork._forward_batch(data, state, self.ops)
             data = self.while_fn(data, state)
             # TODO - Find some magic way to invoke this at the right moment
