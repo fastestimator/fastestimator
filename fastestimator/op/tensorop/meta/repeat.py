@@ -28,7 +28,7 @@ Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
 
 @traceable()
-class WhileRepeat(TensorOp):
+class Repeat(TensorOp):
     """Repeat a TensorOp several times in a row.
     Repeat takes an Op and runs it multiple times in a row. It can be set to repeat for a fixed (static) number of times,
     or to repeat until a given input function evaluates to False (dynamic).
