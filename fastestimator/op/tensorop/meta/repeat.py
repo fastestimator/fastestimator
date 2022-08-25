@@ -30,6 +30,24 @@ Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 @traceable()
 class WhileRepeat(TensorOp):
     """Repeat a TensorOp several times in a row.
+    Repeat takes an Op and runs it multiple times in a row. It can be set to repeat for a fixed (static) number of times,
+    or to repeat until a given input function evaluates to False (dynamic).
+
+    Static example:
+
+        ops=[
+            LambdaOp(fn=lambda: 0, outputs="z"),
+            Repeat(AddOne(inputs="z", outputs="z"), repeat=5)
+            ]
+
+    Dynamic example:
+
+        ops=[
+            LambdaOp(fn=lambda: 0, outputs="z"),
+            Repeat(AddOne(inputs="z", outputs="z"), repeat=lambda z: z < 6.5)
+            ]
+
+        Note : Here the argument ('z') of the lambda function used as repeat callable function is the key used by the ops passed to the Repeat Op.
 
     Args:
         op: A TensorOp to be run one or more times in a row.

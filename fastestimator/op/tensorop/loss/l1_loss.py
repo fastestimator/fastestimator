@@ -32,15 +32,15 @@ class L1_Loss(LossOp):
     """Calculate the L1 loss between two tensors.
 
     This LossOp can be used to Implement:
-        L1 loss: Is a criterion that calculates Mean Absolute Error between the elements ([<y_pred>, <y_true>]).
-        Smooth_L1 loss: Is a criterion that uses squared loss if absolute element wise subtraction ('y_pred - y_true') is less than
+        L1 loss: Is a criterion that calculates Mean Absolute Error between the elements ([y_pred, y_true]).
+        Smooth_L1 loss: Is a criterion that uses squared loss if absolute element wise subtraction (y_pred - y_true) is less than
                         'beta' and vanilla L1 loss otherwise.
-        Huber loss: Is a criterion that uses squared loss if absolute element wise subtraction ('y_pred - y_true') is less than
+        Huber loss: Is a criterion that uses squared loss if absolute element wise subtraction (y_pred - y_true) is less than
                     'beta' and a 'beta' scaled L1 loss otherwise.
 
 
     Args:
-        inputs: A tuple or list like: [<y_pred>, <y_true>].
+        inputs: A tuple or list like: [y_pred, y_true].
         outputs: String key under which to store the computed loss.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
