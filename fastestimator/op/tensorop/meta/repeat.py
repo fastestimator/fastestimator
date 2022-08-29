@@ -30,8 +30,8 @@ Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 @traceable()
 class Repeat(TensorOp):
     """Repeat a TensorOp several times in a row.
-    Repeat takes an Op and runs it multiple times in a row. It can be set to repeat for a fixed (static) number of times,
-    or to repeat until a given input function evaluates to False (dynamic).
+    Repeat takes an Op and runs it multiple times in a row. It can be set to repeat for a fixed (static) number of
+    times, or to repeat until a given input function evaluates to False (dynamic).
 
     Static example:
 
@@ -47,7 +47,8 @@ class Repeat(TensorOp):
             Repeat(AddOne(inputs="z", outputs="z"), repeat=lambda z: z < 6.5)
             ]
 
-        Note : Here the argument ('z') of the lambda function used as repeat callable function is the key used by the ops passed to the Repeat Op.
+        Note : Here the argument ('z') of the lambda function used as repeat callable function is the key used by the
+               ops passed to the Repeat Op.
 
     Args:
         op: A TensorOp to be run one or more times in a row.
@@ -91,7 +92,9 @@ class Repeat(TensorOp):
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
         self.op.build(framework, device)
+        # Below the while function is chosen based on framework
         if framework == 'tf':
+            # For tensorflow the while function is decided based of object type of 'self.repeat'.
             if isinstance(self.repeat, int):
                 self.while_fn = self._tf_while_int
             else:
@@ -129,7 +132,7 @@ class Repeat(TensorOp):
         return [data[key] for key in self.outputs]
 
     def _torch_while(self, data: Dict[str, Tensor], state: Dict[str, Any]) -> Dict[str, Tensor]:
-        """A helper function to invoke a while loop.
+        """A helper function to invoke a loop.
 
         Args:
             data: A data dictionary to be used during looping.
@@ -144,7 +147,7 @@ class Repeat(TensorOp):
                 BaseNetwork._forward_batch(data, state, self.ops)
             # Let retain be whatever it was meant to be for the final sequence
             self.op.fe_retain_graph(self.retain_graph)
-            # Final round of ops
+            # Final round of ops to ensure accurate graph building in case we dont retain the graph
             BaseNetwork._forward_batch(data, state, self.ops)
 
         else:
@@ -168,15 +171,21 @@ class Repeat(TensorOp):
         """
         if self.repeat == 1:
             # Let retain be whatever it was meant to be for the final sequence
+            # This is done right before the only forward pass to ensure accurate graph building in case
+            # we dont retain the graph
             self.op.fe_retain_graph(self.retain_graph)
+            # Final round of ops
             BaseNetwork._forward_batch(data, state, self.ops)
         elif self.repeat == 2:
             BaseNetwork._forward_batch(data, state, self.ops)
             # Let retain be whatever it was meant to be for the final sequence
+            # This is done right before the last forward pass to ensure accurate graph building in case
+            # we dont retain the graph
             self.op.fe_retain_graph(self.retain_graph)
             # Final round of ops
             BaseNetwork._forward_batch(data, state, self.ops)
         else:
+            # Run a forward pass to ensure that data dictionary structure doesn't change during while loop execution
             BaseNetwork._forward_batch(data, state, self.ops)
             args = (tf.constant(1), data)
             # Use functools.partial since state may contain objects which cannot be cast to tensors (ex. gradient tape)
@@ -185,9 +194,11 @@ class Repeat(TensorOp):
                                  args,
                                  maximum_iterations=self.max_iter)
             # Let retain be whatever it was meant to be for the final sequence
+            # This is done right before the last forward pass to ensure accurate graph building in case
+            # we dont retain the graph
             self.op.fe_retain_graph(self.retain_graph)
-            # Final round of ops
             data = args[1]
+            # Final round of ops
             BaseNetwork._forward_batch(data, state, self.ops)
         return data
 
@@ -224,7 +235,8 @@ class Repeat(TensorOp):
             Whether to continue looping.
         """
         if isinstance(self.repeat, int):
-            #We have 2 Forward calls for tf (one before and one after the while loop (For Tf while loop functioning))
+            # In this case we have 2 Forward calls for tf (one before and one after the while loop
+            # (For accurate Tf while loop functioning))
             return tf.less(cnd, self.repeat - 1)
         return self.repeat(*cnd)
 
@@ -243,7 +255,9 @@ class Repeat(TensorOp):
         Returns:
             The updated `cnd` values, along with the modified data and state dictionaries.
         """
+        # Run a round of ops
         BaseNetwork._forward_batch(data, state, self.ops)
         if isinstance(self.repeat, int):
+            # Updating the while condition
             return tf.add(cnd, 1), data
         return [data[var_name] for var_name in self.repeat_inputs], data
