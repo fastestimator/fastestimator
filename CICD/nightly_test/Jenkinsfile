@@ -4,7 +4,7 @@ def IMAGE_TAG = "$BUILD_TAG".replaceAll("[^a-zA-Z0-9\\-_\\.]", "").toLowerCase()
 pipeline {
     agent {label 'master'}
     options {
-        timeout(time: 6, unit: 'HOURS')
+        timeout(time: 7, unit: 'HOURS')
     }
     environment {
         IMAGE_TAG = "$IMAGE_TAG"
