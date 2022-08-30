@@ -19,6 +19,7 @@ import re
 import sys
 import types
 from collections import ChainMap, deque, namedtuple
+from itertools import islice
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 import numpy as np
@@ -31,8 +32,8 @@ from pylatex.utils import bold, escape_latex, italic
 
 from fastestimator.backend._to_shape import to_shape
 from fastestimator.backend._to_type import to_type
-from fastestimator.util.latex_util import ContainerList, HrefFEID, PyContainer
 from fastestimator.util.base_util import strip_prefix, FEID, Flag
+from fastestimator.util.latex_util import ContainerList, HrefFEID, PyContainer
 
 _Function = namedtuple('_Function', ['func', 'name'])
 _BoundFn = namedtuple('_BoundFn', ['func', 'args'])
@@ -187,9 +188,9 @@ class FeSplitSummary(LatexObject):
             f"{HrefFEID(parent, name='').dumps() if isinstance(parent, FEID) else parent}({escape_latex(fraction)}" +
             (f", seed={seed}" if seed is not None else "") +
             (f", stratify=`{escape_latex(stratify)}'" if stratify is not None else "") + ")" for parent,
-            fraction,
-            seed,
-            stratify in self.data
+                                                                                                 fraction,
+                                                                                                 seed,
+                                                                                                 stratify in self.data
         ])
 
 
@@ -314,10 +315,14 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
             # Prevent extremely long strings from overflowing the table
             return NoEscape(r'\seqsplit{' + inp + '}')
         return inp
-    elif isinstance(inp, (int, float, bool, type(None), HrefFEID, FEID, PyContainer)):
-        if isinstance(inp, (int, float)):
+    elif isinstance(inp, (int, float, bool, type(None), HrefFEID, FEID, PyContainer, np.number)):
+        if isinstance(inp, (int, float, np.number)):
             # Prevent extremely long numbers from overflowing the table
-            return NoEscape(r'\seqsplit{' + str(inp) + '}')
+            inp = str(inp)
+            if len(inp) < 2:
+                # Seqsplit doesn't wrap properly with single character inputs
+                return NoEscape(r'\seqsplit{\thinspace ' + inp + '}')
+            return NoEscape(r'\seqsplit{' + inp + '}')
         return inp
     elif hasattr(inp, '_fe_traceability_summary'):
         # The first time a traceable object goes through here it won't have it's summary instantiated yet, so it will
@@ -460,20 +465,25 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
         ret_ref.set_true()
         return HrefFEID(inp_id, name)
     elif isinstance(inp, list):
-        return PyContainer(data=[_trace_value(x, tables, ret_ref, wrap_str) for x in inp],
+        # For list, tuple, and set, limit tracing to the first limit+1 elements so that constructing objects with huge
+        #  collections as input arguments doesn't take unnecessary long (ex. a NumpyDataset built using lists). Use N+1
+        #  rather than N so that the report shows an ellipse when it trucates the input.
+        return PyContainer(data=[_trace_value(x, tables, ret_ref, wrap_str) for x in inp[:_CollectionSizeLimit + 1]],
                            truncate=_CollectionSizeLimit)
     elif isinstance(inp, tuple):
-        return PyContainer(data=tuple([_trace_value(x, tables, ret_ref, wrap_str) for x in inp]),
-                           truncate=_CollectionSizeLimit)
+        return PyContainer(
+            data=tuple([_trace_value(x, tables, ret_ref, wrap_str) for x in inp[:_CollectionSizeLimit + 1]]),
+            truncate=_CollectionSizeLimit)
     elif isinstance(inp, set):
-        return PyContainer(data=set([_trace_value(x, tables, ret_ref, wrap_str) for x in inp]),
-                           truncate=_CollectionSizeLimit)
+        return PyContainer(
+            data=set([_trace_value(x, tables, ret_ref, wrap_str) for x in islice(inp, _CollectionSizeLimit + 1)]),
+            truncate=_CollectionSizeLimit)
     elif isinstance(inp, dict):
         return PyContainer(
             data={
                 _trace_value(k, tables, ret_ref, wrap_str=wrap_str): _trace_value(v, tables, ret_ref, wrap_str=True)
                 for k,
-                v in inp.items()
+                    v in inp.items()
             },
             truncate=_CollectionSizeLimit)
     elif isinstance(inp, (tf.Tensor, torch.Tensor, np.ndarray, tf.Variable)):
@@ -811,8 +821,8 @@ def _parse_lambda_fallback(function: types.FunctionType, tables: Dict[FEID, FeSu
         closure_vars = inspect.getclosurevars(function)
         ref_map = {
             ref:
-            closure_vars.nonlocals.get(ref,
-                                       closure_vars.globals.get(ref, closure_vars.builtins.get(ref, _VarWrap(ref))))
+                closure_vars.nonlocals.get(ref,
+                                           closure_vars.globals.get(ref, closure_vars.builtins.get(ref, _VarWrap(ref))))
             for ref in refs
         }
         response['kwargs'] = _trace_value(ref_map, tables, ret_ref=ret_ref, wrap_str=False).raw_input
@@ -1172,9 +1182,9 @@ def traceable(whitelist: Union[str, Tuple[str, ...]] = (), blacklist: Union[str,
         The decorated class.
     """
     if isinstance(whitelist, str):
-        whitelist = (whitelist, )
+        whitelist = (whitelist,)
     if isinstance(blacklist, str):
-        blacklist = (blacklist, )
+        blacklist = (blacklist,)
     if whitelist and blacklist:
         raise ValueError("Traceable objects may specify a whitelist or a blacklist, but not both")
 

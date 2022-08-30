@@ -402,7 +402,7 @@ class Traceability(Trace):
                 if not isinstance(model, (tf.keras.Model, torch.nn.Module)):
                     continue
                 self.doc.append(NoEscape(r'\FloatBarrier'))
-                with self.doc.create(Subsection(f"{model.model_name.capitalize()}")):
+                with self.doc.create(Subsection(f"{model.model_name.capitalize()}", label=model.model_name)):
                     if isinstance(model, tf.keras.Model):
                         # Text Summary
                         summary = []
