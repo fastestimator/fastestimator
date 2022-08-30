@@ -188,9 +188,9 @@ class FeSplitSummary(LatexObject):
             f"{HrefFEID(parent, name='').dumps() if isinstance(parent, FEID) else parent}({escape_latex(fraction)}" +
             (f", seed={seed}" if seed is not None else "") +
             (f", stratify=`{escape_latex(stratify)}'" if stratify is not None else "") + ")" for parent,
-                                                                                                 fraction,
-                                                                                                 seed,
-                                                                                                 stratify in self.data
+            fraction,
+            seed,
+            stratify in self.data
         ])
 
 
@@ -483,7 +483,7 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
             data={
                 _trace_value(k, tables, ret_ref, wrap_str=wrap_str): _trace_value(v, tables, ret_ref, wrap_str=True)
                 for k,
-                    v in inp.items()
+                v in inp.items()
             },
             truncate=_CollectionSizeLimit)
     elif isinstance(inp, (tf.Tensor, torch.Tensor, np.ndarray, tf.Variable)):
