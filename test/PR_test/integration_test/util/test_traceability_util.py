@@ -108,7 +108,7 @@ class TestParseLambdaFallback(unittest.TestCase):
                          resp['function'])
         self.assertIn('kwargs', resp, "response should contain kwargs")
         self.assertIsInstance(resp['kwargs'], dict, "kwargs should be a dictionary")
-        self.assertDictEqual({NoEscape('epochs'): NoEscape(r'\seqsplit{8}')}, resp['kwargs'])
+        self.assertDictEqual({NoEscape('epochs'): NoEscape(r'\seqsplit{\thinspace 8}')}, resp['kwargs'])
 
     def test_lambda_inlining(self):
         tables = {}
