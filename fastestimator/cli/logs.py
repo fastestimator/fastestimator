@@ -63,7 +63,7 @@ def configure_log_parser(subparsers: argparse._SubParsersAction) -> None:
     parser.add_argument('log_dir',
                         metavar='<Log Dir>',
                         type=str,
-                        help="The path to a folder containing one or more log files")
+                        help="The path to a folder containing one or more log files, or the path to a single log file")
     parser.add_argument('--extension',
                         metavar='E',
                         type=str,
