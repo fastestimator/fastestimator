@@ -82,12 +82,13 @@ class UNet(nn.Module):
 
     Args:
         input_size: The size of the input tensor (channels, height, width).
+        output_channel: The number of output channels.
 
     Raises:
         ValueError: Length of `input_size` is not 3.
         ValueError: `input_size`[1] or `input_size`[2] is not a multiple of 16.
     """
-    def __init__(self, input_size: Tuple[int, int, int] = (1, 128, 128)) -> None:
+    def __init__(self, input_size: Tuple[int, int, int] = (1, 128, 128), output_channel: int = 1) -> None:
         UNet._check_input_size(input_size)
         super().__init__()
         self.input_size = input_size
@@ -103,7 +104,7 @@ class UNet(nn.Module):
                                   nn.ReLU(inplace=True),
                                   nn.Conv2d(64, 64, 3, padding=1),
                                   nn.ReLU(inplace=True),
-                                  nn.Conv2d(64, 1, 1),
+                                  nn.Conv2d(64, output_channel, 1),
                                   nn.Sigmoid())
 
         for layer in self.dec1:
