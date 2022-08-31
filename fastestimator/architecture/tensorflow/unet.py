@@ -20,11 +20,12 @@ from tensorflow.keras.models import Model
 
 
 # noinspection PyPep8Naming
-def UNet(input_size: Tuple[int, int, int] = (128, 128, 1)) -> tf.keras.Model:
+def UNet(input_size: Tuple[int, int, int] = (128, 128, 1), output_channel: int = 1) -> tf.keras.Model:
     """A standard UNet implementation in TensorFlow
 
     Args:
         input_size: The size of the input tensor (height, width, channels).
+        output_channel: The number of output channels.
 
     Raises:
         ValueError: Length of `input_size` is not 3.
@@ -77,7 +78,7 @@ def UNet(input_size: Tuple[int, int, int] = (128, 128, 1)) -> tf.keras.Model:
     merge9 = concatenate([conv1, up9], axis=-1)
     conv9 = Conv2D(64, 3, **conv_config)(merge9)
     conv9 = Conv2D(64, 3, **conv_config)(conv9)
-    conv10 = Conv2D(1, 1, activation='sigmoid')(conv9)
+    conv10 = Conv2D(output_channel, 1, activation='sigmoid')(conv9)
     model = Model(inputs=inputs, outputs=conv10)
     return model
 

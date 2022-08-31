@@ -41,15 +41,13 @@ class MSCOCODataset(DirDataset):
         annotation_file: The path to the file containing annotation data.
         caption_file: The path the file containing caption data.
         keypoint_file: The path the file containing keypoint data.
-        include_bboxes: Whether images should be paired with their associated bounding boxes. If true, images without
-            bounding boxes will be ignored and other images may be oversampled in order to take their place.
-        include_masks: Whether images should be paired with their associated masks. If true, images without masks will
-            be ignored and other images may be oversampled in order to take their place.
-        include_captions: Whether images should be paired with their associated captions. If true, images without
-            captions will be ignored and other images may be oversampled in order to take their place.
-        include_keypoints: Whether images should be paired with keypoints. If true, images without keypoint will be
-            ignored and other images may be oversampled in order to take their place.
+        include_bboxes: Whether images should be paired with their associated bounding boxes.
+        include_masks: Whether images should be paired with their associated masks.
+        include_captions: Whether images should be paired with their associated captions.
+        include_keypoints: Whether images should be paired with keypoints.
         min_bbox_area: Bounding boxes with a total area less than `min_bbox_area` will be discarded.
+        replacement: If true, images without requested attributes will be ignored and other images may be oversampled in
+            order to take their place.
     """
 
     instances: Optional[COCO]
@@ -64,13 +62,15 @@ class MSCOCODataset(DirDataset):
                  include_masks: bool = False,
                  include_captions: bool = False,
                  include_keypoints: bool = False,
-                 min_bbox_area=1.0) -> None:
+                 min_bbox_area=1.0,
+                 replacement: bool = True) -> None:
         super().__init__(root_dir=image_dir, data_key="image", recursive_search=False)
         if include_masks:
             assert include_bboxes, "must include bboxes with mask data"
         self.include_bboxes = include_bboxes
         self.include_masks = include_masks
         self.min_bbox_area = min_bbox_area
+        self.replacement = replacement
         with Suppressor():
             self.instances = COCO(annotation_file) if include_bboxes or include_masks else None
             self.captions = COCO(caption_file) if include_captions else None
@@ -103,7 +103,7 @@ class MSCOCODataset(DirDataset):
                 has_caption = False
             if self.keypoints and not response["keypoint"]:
                 has_keypoint = False
-            has_data = has_box and has_mask and has_caption and has_keypoint
+            has_data = has_box and has_mask and has_caption and has_keypoint if self.replacement else True
             index = np.random.randint(len(self))
         return response
 
@@ -176,30 +176,36 @@ class MSCOCODataset(DirDataset):
             image_id: The id of the image for which to find captions.
         """
         data["keypoint"] = []
+        data["keypoint_bbox"] = []
         annotation_ids = self.keypoints.getAnnIds(imgIds=image_id)
         if annotation_ids:
             annotations = self.keypoints.loadAnns(annotation_ids)
             for annotation in annotations:
                 if annotation['num_keypoints'] > 0:
                     data["keypoint"].append(np.array(annotation['keypoints']).reshape(17, 3).astype('int32'))
+                    data["keypoint_bbox"].append(tuple(annotation['bbox']))
 
 
 def load_data(root_dir: Optional[str] = None,
               load_bboxes: bool = True,
               load_masks: bool = False,
               load_captions: bool = False,
-              load_keypoints: bool = False) -> Tuple[MSCOCODataset, MSCOCODataset]:
+              load_keypoints: bool = False,
+              replacement: bool = True) -> Tuple[MSCOCODataset, MSCOCODataset]:
     """Load and return the COCO dataset.
 
     Args:
         root_dir: The path to store the downloaded data. When `path` is not provided, the data will be saved into
             `fastestimator_data` under the user's home directory.
-        load_bboxes: Whether to load bbox-related data.
+        load_bboxes: Whether to load bbox-related data, in [x1, y1, w, h] format.
         load_masks: Whether to load mask data (in the form of an array of 1-hot images).
         load_captions: Whether to load caption-related data.
         load_keypoints: Whether to load keypoint data, in format of [array(17, 3)]. 17 is the number of keypoints, 3
             is the keypoint format in (x,y,v) with x,y being coordinate and v being visibility. v=0 means not labeled,
-            v=1 means labeled but not visible, and v=2 means labeled and visible.
+            v=1 means labeled but not visible, and v=2 means labeled and visible. In addition, the bbox of keypoint
+            object will also be available under 'keypoint_bbox' key.
+        replacement: If the specific attribute is missing (like bbox), whether to replace the sample with another random
+            sample.
 
     Returns:
         (train_data, eval_data)
@@ -238,7 +244,8 @@ def load_data(root_dir: Optional[str] = None,
                              include_bboxes=load_bboxes,
                              include_masks=load_masks,
                              include_captions=load_captions,
-                             include_keypoints=load_keypoints)
+                             include_keypoints=load_keypoints,
+                             replacement=replacement)
     eval_ds = MSCOCODataset(eval_data,
                             annotation_file=os.path.join(annotation_data, "instances_val2017.json"),
                             caption_file=os.path.join(annotation_data, "captions_val2017.json"),
@@ -246,5 +253,6 @@ def load_data(root_dir: Optional[str] = None,
                             include_bboxes=load_bboxes,
                             include_masks=load_masks,
                             include_captions=load_captions,
-                            include_keypoints=load_keypoints)
+                            include_keypoints=load_keypoints,
+                            replacement=replacement)
     return train_ds, eval_ds
