@@ -55,6 +55,8 @@ class Pipeline:
         batch_size: The batch size to be used by the pipeline. If the batch_size is also set by a Batch Op, that value
             will take precedence over this one (for example, if you want to set the batch_size based on mode or ds_is).
             NOTE: This argument is only applicable when using a FastEstimator Dataset.
+            NOTE: This is the global batch size regardless of the number of GPUs available in the machine. If you have
+                multiple (N) GPUs, each will recieve batch_size/N elements during a training step.
         ops: NumpyOps to be used for pre-processing. NOTE: This argument is only applicable when using a FastEstimator
             Dataset.
         num_process: Number of CPU threads to use for data pre-processing. NOTE: This argument is only applicable when
