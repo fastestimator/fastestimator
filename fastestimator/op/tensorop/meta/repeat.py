@@ -18,7 +18,6 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Uni
 
 import tensorflow as tf
 import torch
-
 from fastestimator.network import BaseNetwork
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
@@ -30,6 +29,7 @@ Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 @traceable()
 class Repeat(TensorOp):
     """Repeat a TensorOp several times in a row.
+
     Repeat takes an Op and runs it multiple times in a row. It can be set to repeat for a fixed (static) number of
     times, or to repeat until a given input function evaluates to False (dynamic).
 
@@ -55,8 +55,7 @@ class Repeat(TensorOp):
         repeat: How many times to repeat the `op`. This can also be a function return, in which case the function input
             names will be matched to keys in the data dictionary, and the `op` will be repeated until the function
             evaluates to False. The function evaluation will happen at the end of a forward call, so the `op` will
-            always be evaluated at least once. If a function is provided, any TF ops which are wrapped by Repeat will
-            not have access to the gradient tape, nor to previously deferred model update functions.
+            always be evaluated at least once.
         max_iter: A limit to how many iterations will be run (or None for no limit).
 
     Raises:
@@ -142,7 +141,7 @@ class Repeat(TensorOp):
             A reference to the updated data dictionary.
         """
         if isinstance(self.repeat, int):
-            for i in range(self.repeat - 1):
+            for _ in range(self.repeat - 1):
                 # Perform n-1 rounds with all ops having retain_graph == True
                 BaseNetwork._forward_batch(data, state, self.ops)
             # Let retain be whatever it was meant to be for the final sequence
@@ -161,6 +160,12 @@ class Repeat(TensorOp):
 
     def _tf_while_int(self, data: Dict[str, Tensor], state: Dict[str, Any]) -> Dict[str, Tensor]:
         """A helper function to invoke a while loop in case self.repeat is an integer.
+
+        Experiment were conducted to compare performance of tf.while_loop() with tf.range(), where tf.range outperformed
+        tf.while_loop() in most scenarios. But it was found that tensors cannot be overwritten inside the scope of
+        tf.range() and hence the RepeatOp failed on few Ops (eg: Ops which were updating the inputs). Creating a copy
+        of tensor in every iteration of tf.range() resolved this issue, but also dissolved all the advantages of
+        tf.range().
 
         Args:
             data: A data dictionary to be used during looping.
