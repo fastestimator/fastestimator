@@ -159,7 +159,7 @@ def parse_log_dir(dir_path: str,
     """A function which will gather all log files within a given folder and pass them along for visualization.
 
     Args:
-        dir_path: The path to a directory containing log files.
+        dir_path: The path to a directory containing log files (or the path to a specific single log file).
         log_extension: The extension of the log files.
         recursive_search: Whether to recursively search sub-directories for log files.
         smooth_factor: A non-negative float representing the magnitude of gaussian smoothing to apply (zero for none).
@@ -171,7 +171,11 @@ def parse_log_dir(dir_path: str,
         group_by: Combine multiple log files by a regex to visualize their mean+-stddev. For example, to group together
             files like [a_1.txt, a_2.txt] vs [b_1.txt, b_2.txt] you can use: r'(.*)_[\d]+\.txt'.
     """
-    file_paths = list_files(root_dir=dir_path, file_extension=log_extension, recursive_search=recursive_search)
+    if os.path.isdir(dir_path):
+        file_paths = list_files(root_dir=dir_path, file_extension=log_extension, recursive_search=recursive_search)
+    else:
+        file_paths = [dir_path]
+        log_extension = os.path.splitext(dir_path)[1]
 
     parse_log_files(file_paths,
                     log_extension,
