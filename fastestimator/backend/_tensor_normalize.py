@@ -17,6 +17,7 @@ from typing import Optional, Sequence, Tuple, TypeVar, Union
 import numpy as np
 import tensorflow as tf
 import torch
+import torchvision.transforms as T
 
 from fastestimator.backend._convert_tensor_precision import convert_tensor_precision
 
@@ -67,11 +68,15 @@ def normalize(tensor: Tensor,
     """
     framework, device = get_framework(tensor)
 
-    mean = get_scaled_data(mean, max_pixel_value, framework, device)
-    std = get_scaled_data(std, max_pixel_value, framework, device)
+    mean = convert_tensor_precision(get_scaled_data(mean, max_pixel_value, framework, device))
+    std = convert_tensor_precision(get_scaled_data(std, max_pixel_value, framework, device))
+    tensor = convert_tensor_precision(tensor)
 
-    tensor = (convert_tensor_precision(tensor) - convert_tensor_precision(mean)) / (convert_tensor_precision(std) +
-                                                                                    epsilon)
+    if framework == 'torch':
+        transform = T.Normalize(mean=mean, std=std + epsilon)
+        tensor = transform(tensor)
+    else:
+        tensor = (tensor - mean) / (std + epsilon)
 
     return tensor
 

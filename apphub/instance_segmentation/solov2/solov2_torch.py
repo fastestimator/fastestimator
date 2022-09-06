@@ -585,8 +585,8 @@ def get_estimator(data_dir=None,
     init_lr = 1e-2 / 16 * batch_size
     model = fe.build(model_fn=SoloV2, optimizer_fn=lambda x: torch.optim.SGD(x, lr=init_lr, momentum=0.9))
     network = fe.Network(ops=[
-        Normalize(inputs="image", outputs="image", mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         Permute(inputs="image", outputs='image'),
+        Normalize(inputs="image", outputs="image", mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         ModelOp(model=model, inputs="image", outputs=("feat_seg", "feat_cls_list", "feat_kernel_list")),
         LambdaOp(fn=lambda x: x, inputs="feat_cls_list", outputs=("cls1", "cls2", "cls3", "cls4", "cls5")),
         LambdaOp(fn=lambda x: x, inputs="feat_kernel_list", outputs=("k1", "k2", "k3", "k4", "k5")),

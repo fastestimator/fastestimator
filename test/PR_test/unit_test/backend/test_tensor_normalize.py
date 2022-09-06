@@ -29,6 +29,10 @@ class TestNormalize(unittest.TestCase):
                                           [[0.14484136, 0.4345241, 0.7242068], [1.0138896, 1.3035723, 1.593255]]]],
                                         dtype=np.float32)
 
+        self.numpy_array_float = np.moveaxis(self.numpy_array, -1, 1)
+        self.numpy_array_int_float = np.moveaxis(self.numpy_array_int, -1, 1)
+        self.expected_result_torch = np.moveaxis(self.expected_result, -1, 1)
+
     def test_normalize_np_value(self):
         np.testing.assert_array_almost_equal(normalize(self.numpy_array, 0.5, 0.31382295, 11.0), self.expected_result)
 
@@ -45,8 +49,9 @@ class TestNormalize(unittest.TestCase):
 
     def test_normalize_torch_value(self):
         np.testing.assert_array_almost_equal(
-            normalize(to_tensor(self.numpy_array, 'torch'), 0.5, 0.31382295, 11.0).numpy(), self.expected_result)
+            normalize(to_tensor(self.numpy_array_float, 'torch'), 0.5, 0.31382295, 11.0).numpy(), self.expected_result_torch)
 
     def test_normalize_torch_value_int(self):
         np.testing.assert_array_almost_equal(
-            normalize(to_tensor(self.numpy_array_int, 'torch'), 0.5, 0.31382295, 11.0).numpy(), self.expected_result)
+            normalize(to_tensor(self.numpy_array_int_float, 'torch'), 0.5, 0.31382295, 11.0).numpy(),
+            self.expected_result_torch)
