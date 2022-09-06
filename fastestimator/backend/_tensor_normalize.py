@@ -73,8 +73,7 @@ def normalize(tensor: Tensor,
     tensor = convert_tensor_precision(tensor)
 
     if framework == 'torch':
-        transform = T.Normalize(mean=mean, std=std + epsilon)
-        tensor = transform(tensor)
+        tensor = T.Normalize(mean=mean, std=std + epsilon)(tensor)
     else:
         tensor = (tensor - mean) / (std + epsilon)
 

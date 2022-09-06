@@ -30,11 +30,10 @@ from fastestimator.dataset.data import mscoco
 from fastestimator.op.numpyop import Batch, Delete, NumpyOp, RemoveIf
 from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import HorizontalFlip, LongestMaxSize, PadIfNeeded, Resize
-from fastestimator.op.numpyop.univariate import ReadImage
+from fastestimator.op.numpyop.univariate import ChannelTranspose, ReadImage
 from fastestimator.op.tensorop.loss import L2Regularizaton
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.op.tensorop.normalize import Normalize
-from fastestimator.op.tensorop.permute import Permute
 from fastestimator.op.tensorop.tensorop import LambdaOp, TensorOp
 from fastestimator.schedule import EpochScheduler, cosine_decay
 from fastestimator.trace.adapt import LRScheduler
@@ -577,6 +576,7 @@ def get_estimator(data_dir=None,
                                      mode="train")),
             Resize(height=im_size // 4, width=im_size // 4, image_in='mask'),  # downscale mask for memory efficiency
             Gt2Target(inputs=("mask", "bbox"), outputs=("gt_match", "mask", "classes")),
+            ChannelTranspose(inputs="image", outputs="image"),
             Delete(keys="bbox"),
             Delete(keys="image_id", mode="!test"),
             Batch(batch_size=batch_size, pad_value=0)
@@ -585,7 +585,6 @@ def get_estimator(data_dir=None,
     init_lr = 1e-2 / 16 * batch_size
     model = fe.build(model_fn=SoloV2, optimizer_fn=lambda x: torch.optim.SGD(x, lr=init_lr, momentum=0.9))
     network = fe.Network(ops=[
-        Permute(inputs="image", outputs='image'),
         Normalize(inputs="image", outputs="image", mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         ModelOp(model=model, inputs="image", outputs=("feat_seg", "feat_cls_list", "feat_kernel_list")),
         LambdaOp(fn=lambda x: x, inputs="feat_cls_list", outputs=("cls1", "cls2", "cls3", "cls4", "cls5")),
