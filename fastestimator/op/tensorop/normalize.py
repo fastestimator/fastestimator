@@ -54,6 +54,7 @@ class Normalize(TensorOp):
         self.mean = mean
         self.std = std
         self.max_pixel_value = max_pixel_value
+        self.in_list, self.out_list = True, True
 
-    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
-        return normalize(data, self.mean, self.std, self.max_pixel_value)
+    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
+        return [normalize(elem, self.mean, self.std, self.max_pixel_value) for elem in data]
