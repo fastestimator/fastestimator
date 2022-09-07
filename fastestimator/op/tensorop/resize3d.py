@@ -48,7 +48,7 @@ class Resize3D(TensorOp):
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None):
 
-        super().__init__(inputs=to_list(inputs), outputs=to_list(outputs), mode=mode)
+        super().__init__(inputs=to_list(inputs), outputs=to_list(outputs), mode=mode, ds_id=ds_id)
         assert resize_mode in ['nearest', 'area'], "Only following resize modes are supported: 'nearest', 'area' "
         self.output_shape = output_shape
         self.reize_mode = resize_mode
