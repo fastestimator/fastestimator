@@ -42,11 +42,17 @@ class TestNormalize(unittest.TestCase):
               ]], [[0.7897793, 0.7794554, 0.7691316], [1.176926, 1.1666021, 1.1562784],
                    [1.5640727, 1.5537488, 1.5434251]]]],
             dtype=np.float32)
+        self.numpy_array_torch = np.moveaxis(self.numpy_array, -1, 1)
+        self.numpy_array_int_torch = np.moveaxis(self.numpy_array_int, -1, 1)
+        self.expected_result_torch = np.moveaxis(self.expected_result, -1, 1)
+        self.expected_result_multi_torch = np.moveaxis(self.expected_result_multi, -1, 1)
+
 
     def test_normalize_tf_int(self):
         op = Normalize(inputs="image", outputs="image", mean=0.482, std=0.289, max_pixel_value=27)
-        data = op.forward(data=tf.convert_to_tensor(self.numpy_array), state={})
-        np.testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
+        data = op.forward(data=[tf.convert_to_tensor(self.numpy_array)], state={})
+        print(data)
+        np.testing.assert_array_almost_equal(data[0].numpy(), self.expected_result, 2)
 
     def test_normalize_tf_multi_int(self):
         op = Normalize(inputs="image",
@@ -54,13 +60,13 @@ class TestNormalize(unittest.TestCase):
                        mean=(0.44, 0.48, 0.52),
                        std=(0.287, 0.287, 0.287),
                        max_pixel_value=27)
-        data = op.forward(data=tf.convert_to_tensor(self.numpy_array), state={})
-        np.testing.assert_array_almost_equal(data.numpy(), self.expected_result_multi, 2)
+        data = op.forward(data=[tf.convert_to_tensor(self.numpy_array)], state={})
+        np.testing.assert_array_almost_equal(data[0].numpy(), self.expected_result_multi, 2)
 
     def test_normalize_torch(self):
         op = Normalize(inputs="image", outputs="image", mean=0.482, std=0.289, max_pixel_value=27.0)
-        data = op.forward(data=to_tensor(self.numpy_array, "torch"), state={})
-        np.testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
+        data = op.forward(data=[to_tensor(self.numpy_array_int_torch, "torch")], state={})
+        np.testing.assert_array_almost_equal(data[0].numpy(), self.expected_result_torch, 2)
 
     def test_normalize_torch_multi(self):
         op = Normalize(inputs="image",
@@ -68,13 +74,13 @@ class TestNormalize(unittest.TestCase):
                        mean=(0.44, 0.48, 0.52),
                        std=(0.287, 0.287, 0.287),
                        max_pixel_value=27)
-        data = op.forward(data=to_tensor(self.numpy_array, "torch"), state={})
-        np.testing.assert_array_almost_equal(data.numpy(), self.expected_result_multi, 2)
+        data = op.forward(data=[to_tensor(self.numpy_array_int_torch, "torch")], state={})
+        np.testing.assert_array_almost_equal(data[0].numpy(), self.expected_result_multi_torch, 2)
 
     def test_normalize_torch_float(self):
         op = Normalize(inputs="image", outputs="image", mean=0.482, std=0.289, max_pixel_value=27.0)
-        data = op.forward(data=to_tensor(self.numpy_array, "torch"), state={})
-        np.testing.assert_array_almost_equal(data.numpy(), self.expected_result, 2)
+        data = op.forward(data=[to_tensor(self.numpy_array_torch, "torch")], state={})
+        np.testing.assert_array_almost_equal(data[0].numpy(), self.expected_result_torch, 2)
 
     def test_normalize_torch_multi_float(self):
         op = Normalize(inputs="image",
@@ -82,13 +88,13 @@ class TestNormalize(unittest.TestCase):
                        mean=(0.44, 0.48, 0.52),
                        std=(0.287, 0.287, 0.287),
                        max_pixel_value=27)
-        data = op.forward(data=to_tensor(self.numpy_array, "torch"), state={})
-        np.testing.assert_array_almost_equal(data.numpy(), self.expected_result_multi, 2)
+        data = op.forward(data=[to_tensor(self.numpy_array_torch, "torch")], state={})
+        np.testing.assert_array_almost_equal(data[0].numpy(), self.expected_result_multi_torch, 2)
 
     def test_normalize_numpy_float(self):
         op = Normalize(inputs="image", outputs="image", mean=0.482, std=0.289, max_pixel_value=27.0)
-        data = op.forward(data=self.numpy_array, state={})
-        np.testing.assert_array_almost_equal(data, self.expected_result, 2)
+        data = op.forward(data=[self.numpy_array], state={})
+        np.testing.assert_array_almost_equal(data[0], self.expected_result, 2)
 
     def test_normalize_numpy_multi_float(self):
         op = Normalize(inputs="image",
@@ -96,5 +102,5 @@ class TestNormalize(unittest.TestCase):
                        mean=(0.44, 0.48, 0.52),
                        std=(0.287, 0.287, 0.287),
                        max_pixel_value=27)
-        data = op.forward(data=self.numpy_array, state={})
-        np.testing.assert_array_almost_equal(data, self.expected_result_multi, 2)
+        data = op.forward(data=[self.numpy_array], state={})
+        np.testing.assert_array_almost_equal(data[0], self.expected_result_multi, 2)
