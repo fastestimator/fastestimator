@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import List, TypeVar
+from typing import Sequence, TypeVar
 
 import tensorflow as tf
 import torch
@@ -20,7 +20,7 @@ import torch
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
-def resize_3d(tensor: Tensor, output_shape: List[int], resize_mode: str = 'nearest') -> Tensor:
+def resize_3d(tensor: Tensor, output_shape: Sequence[int], resize_mode: str = 'nearest') -> Tensor:
     """Reshape a `tensor` to conform to a given shape.
 
     This method can be used with TensorFlow tensors:
@@ -31,8 +31,9 @@ def resize_3d(tensor: Tensor, output_shape: List[int], resize_mode: str = 'neare
                                                             [[[4.], [4.], [5.], [5.]], [[4.], [4.], [5.], [5.]], [[6.], [6.], [7.], [7.]], [[6.], [6.], [7.], [7.]]],
                                                             [[[4.], [4.], [5.], [5.]], [[4.], [4.], [5.], [5.]], [[6.], [6.], [7.], [7.]], [[6.], [6.], [7.], [7.]]]]]
     ```
-
+    Currently torch only support 32 bit tensors.
     This method can be used with PyTorch tensors:
+
     ```python
     p = torch.tensor([[[[[0., 1.], [2., 3.]], [[4., 5.], [6., 7.]]]]])
     b = fe.backend.resize_3d(p, output_shape=[3, 3, 3])  # [[[[[0., 0., 1., 1.], [0., 0., 1., 1.], [2., 2., 3., 3.], [2., 2., 3., 3.]],
@@ -62,7 +63,7 @@ def resize_3d(tensor: Tensor, output_shape: List[int], resize_mode: str = 'neare
         raise ValueError("Unrecognized tensor type {}".format(type(tensor)))
 
 
-def resize_tensorflow_tensor(data: tf.Tensor, output_shape: List[int], resize_mode: str) -> tf.Tensor:
+def resize_tensorflow_tensor(data: tf.Tensor, output_shape: Sequence[int], resize_mode: str) -> tf.Tensor:
     """
         Resize tensorflow tensor
 
