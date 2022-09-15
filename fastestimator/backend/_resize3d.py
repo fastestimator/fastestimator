@@ -21,7 +21,7 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 def resize_3d(tensor: Tensor, output_shape: Sequence[int], resize_mode: str = 'nearest') -> Tensor:
-    """Reshape a `tensor` to conform to a given shape.
+    """Reshape a `tensor` to conform to a given shape.Currently torch doesn't support 16 bit tensors on cpu.
 
     This method can be used with TensorFlow tensors:
     ```python
@@ -31,7 +31,7 @@ def resize_3d(tensor: Tensor, output_shape: Sequence[int], resize_mode: str = 'n
                                                             [[[4.], [4.], [5.], [5.]], [[4.], [4.], [5.], [5.]], [[6.], [6.], [7.], [7.]], [[6.], [6.], [7.], [7.]]],
                                                             [[[4.], [4.], [5.], [5.]], [[4.], [4.], [5.], [5.]], [[6.], [6.], [7.], [7.]], [[6.], [6.], [7.], [7.]]]]]
     ```
-    Currently torch only support 32 bit tensors.
+
     This method can be used with PyTorch tensors:
 
     ```python

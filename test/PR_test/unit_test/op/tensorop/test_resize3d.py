@@ -60,7 +60,7 @@ class TestResize3d(unittest.TestCase):
         data = op.forward(data=[to_tensor(self.input_data_torch, 'torch')], state={})
         self.assertTrue(is_equal(data[0].numpy(), self.output_data_torch))
 
-    def test_resize_mode_area_(self):
+    def test_resize_mode_area(self):
         op = Resize3D(inputs="image", outputs="image", output_shape=[1, 1, 1], resize_mode='area')
         data = op.forward(data=[to_tensor(self.input_data, 'tf')], state={})
         self.assertEqual(data[0].numpy()[0, 0, 0, 0, 0], 4.5)

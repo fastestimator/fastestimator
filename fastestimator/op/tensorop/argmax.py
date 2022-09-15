@@ -26,7 +26,7 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 @traceable()
 class Argmax(TensorOp):
-    """Get the argmax from a tensor(Support multi io).
+    """Get the argmax from a tensor (supports multi-io).
 
     Args:
         inputs: The tensor(s) to gather values from.

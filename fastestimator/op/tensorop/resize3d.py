@@ -27,12 +27,12 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 @traceable()
 class Resize3D(TensorOp):
-    """Resize a 3D tensor.
+    """Resize a 3D tensor (supports multi-io).
 
         Args:
-            inputs: Key of the input tensor.
-            outputs: Key of the output tensor.
-            output_shape: The desired output shape for the input tensor exculding batch and channels(H, W, D).
+            inputs: Key(s) of the input tensor.
+            outputs: Key(s) of the output tensor.
+            output_shape: The desired output shape for the input tensor exculding batch and channels (H, W, D).
             resize_mode: The resize mode of the operation ('area' or 'nearest').
                 'area' : Uses pixel area relation for resampling. This is best suited for reducing the size of an image
                         (shrinking). When used for zooming into the image, it uses the nearest method.
