@@ -126,9 +126,17 @@ class ImageDisplay(Display):
                 "Masks must be tuples of the form (<tensor>, <label>) or else simply a raw tensor"
             assert len(mask_tuple) == 2, "Masks must be tuples of the form (<tensor>, <label>)"
             assert isinstance(mask_tuple[1], str), "Masks must be tuples of the form (<tensor>, <label>)"
-            mask = to_number(mask_tuple[0])
+            mask = mask_tuple[0]
+            if isinstance(mask, torch.Tensor) and len(mask.shape) == 3 and self.image is not None:
+                # Unfortunately we can't just permute all torch tensors since TF users also might have torch tensors if
+                #  they were using pipeline.get_results(). If there's an accompanying image though we can figure it out
+                if mask.shape[1] == self.image.shape[0] and mask.shape[2] == self.image.shape[1]:
+                    # Move channel first to channel last
+                    mask = mask.permute(1, 2, 0)
+            mask = to_number(mask)
             assert len(mask.shape) in (2, 3), "Masks must be 2 dimensional, or 3 dimensional with the last " \
-                                              f"dimension indicating multiple masks, but found {len(mask.shape)}"
+                                              f"dimension (tf/np) or first dimension (torch) indicating multiple " \
+                                              f"masks, but found {len(mask.shape)}"
             # Give all masks a channel dimension for consistency
             if len(mask.shape) == 2:
                 mask = np.expand_dims(mask, axis=-1)
