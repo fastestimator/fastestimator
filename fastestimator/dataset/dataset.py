@@ -435,6 +435,8 @@ class InMemoryDataset(FEDataset):
             A data dictionary if the index was an int, otherwise a column of data in list format.
         """
         if isinstance(index, int):
+            if index >= len(self):
+                raise StopIteration
             return self.data[index]
         else:
             result = [elem[index] for elem in self.data.values()]

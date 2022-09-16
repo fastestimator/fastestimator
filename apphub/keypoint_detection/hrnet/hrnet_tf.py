@@ -147,8 +147,7 @@ def hrnet(input_shape=(256, 256, 3), num_classes=17):
 
 def collect_single_keypoint_ds(ds, cache_limit=None):
     images, keypoints, keypoint_bboxes = [], [], []
-    for idx in range(len(ds)):
-        item = ds[idx]
+    for idx, item in enumerate(ds):
         for keypoint, keypoint_bbox in zip(item['keypoint'], item['keypoint_bbox']):
             images.append(item['image'])
             keypoints.append(keypoint)
