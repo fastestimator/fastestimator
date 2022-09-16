@@ -27,11 +27,11 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
 
 @traceable()
 class Normalize(TensorOp):
-    """Normalize a input tensor.
+    """Normalize a input tensor (supports multi-io).
 
     Args:
-        inputs: Key of the input tensor that is to be normalized.
-        outputs: Key of the output tensor that has been normalized.
+        inputs: Key(s) of the input tensor that is to be normalized.
+        outputs: Key(s) of the output tensor that has been normalized.
         mean: The mean which needs to applied (eg: None, 0.54, (0.24, 0.34, 0.35))
         std: The standard deviation which needs to applied (eg: None, 0.4, (0.1, 0.25, 0.45))
         max_pixel_value: The max value of the input data(eg: 255, 65025) to be multipled with mean and std to get actual mean and std.

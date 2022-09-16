@@ -19,21 +19,24 @@ import torch
 
 from fastestimator.backend._resize3d import resize_3d
 from fastestimator.op.tensorop.tensorop import TensorOp
-from fastestimator.util.traceability_util import traceable
 from fastestimator.util.base_util import to_list
+from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 @traceable()
 class Resize3D(TensorOp):
-    """Resize a 3D tensor.
+    """Resize a 3D tensor (supports multi-io).
 
         Args:
-            inputs: Key of the input tensor.
-            outputs: Key of the output tensor.
-            output_shape: The desired output shape for the input tensor.
+            inputs: Key(s) of the input tensor.
+            outputs: Key(s) of the output tensor.
+            output_shape: The desired output shape for the input tensor exculding batch and channels (H, W, D).
             resize_mode: The resize mode of the operation ('area' or 'nearest').
+                'area' : Uses pixel area relation for resampling. This is best suited for reducing the size of an image
+                        (shrinking). When used for zooming into the image, it uses the nearest method.
+                'nearest' : Uses the nearest neighbor concept for interpolation.
             mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
                 regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
                 like "!infer" or "!train".
@@ -50,8 +53,10 @@ class Resize3D(TensorOp):
 
         super().__init__(inputs=to_list(inputs), outputs=to_list(outputs), mode=mode, ds_id=ds_id)
         assert resize_mode in ['nearest', 'area'], "Only following resize modes are supported: 'nearest', 'area' "
+        if len(output_shape) != 3:
+            raise ValueError("The output shape is expected to be (H, W, D) excluding batch size and channels.")
         self.output_shape = output_shape
-        self.reize_mode = resize_mode
+        self.resize_mode = resize_mode
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
         return [resize_3d(elem, self.output_shape, self.resize_mode) for elem in data]

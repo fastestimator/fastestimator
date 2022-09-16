@@ -16,7 +16,6 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import torch
 
 from fastestimator.backend import to_tensor
 from fastestimator.op.tensorop.normalize import Normalize
@@ -51,7 +50,6 @@ class TestNormalize(unittest.TestCase):
     def test_normalize_tf_int(self):
         op = Normalize(inputs="image", outputs="image", mean=0.482, std=0.289, max_pixel_value=27)
         data = op.forward(data=[tf.convert_to_tensor(self.numpy_array)], state={})
-        print(data)
         np.testing.assert_array_almost_equal(data[0].numpy(), self.expected_result, 2)
 
     def test_normalize_tf_multi_int(self):
