@@ -300,6 +300,7 @@ def get_estimator(data_dir=None,
                              eval_steps_per_epoch=eval_steps_per_epoch)
     return estimator
 
+
 if __name__ == "__main__":
     est = get_estimator()
     est.fit()
