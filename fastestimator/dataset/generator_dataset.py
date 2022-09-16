@@ -39,6 +39,8 @@ class GeneratorDataset(FEDataset):
         return self.samples_per_epoch
 
     def __getitem__(self, index: int):
+        if index >= len(self):
+            raise StopIteration
         return self.generator.send(index)
 
     def _do_split(self, splits: Sequence[Iterable[int]]) -> List['GeneratorDataset']:

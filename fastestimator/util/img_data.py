@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from itertools import zip_longest
-from typing import Optional, Sequence, Tuple, TypeVar, TYPE_CHECKING, Union
 from abc import ABC, abstractmethod
+from itertools import zip_longest
+from typing import TYPE_CHECKING, Optional, Sequence, Tuple, TypeVar, Union
 
 import numpy as np
 import torch
@@ -22,7 +22,7 @@ from plotly.colors import sample_colorscale
 from plotly.graph_objects import Figure, Image
 from plotly.subplots import make_subplots
 
-from fastestimator.util.base_util import to_list, FigureFE, in_notebook, get_colors
+from fastestimator.util.base_util import FigureFE, get_colors, in_notebook, to_list
 from fastestimator.util.util import to_number
 
 if TYPE_CHECKING:
@@ -42,10 +42,7 @@ class Display(ABC):
     def prepare(self, **kwargs) -> FigureFE:
         raise NotImplementedError()
 
-    def show(self,
-             save_path: Optional[str] = None,
-             verbose: bool = True,
-             scale: int = 1,
+    def show(self, save_path: Optional[str] = None, verbose: bool = True, scale: int = 1,
              interactive: bool = False) -> None:
         """A function which will save or display the image as a plotly figure.
 
@@ -83,13 +80,12 @@ class ImageDisplay(Display):
     def __init__(self,
                  image: Union[None, 'Tensor'] = None,
                  text: Union[None, str, 'Tensor'] = None,
-                 masks: Union[None, 'Tensor', Tuple['Tensor', str], Sequence['Tensor'],
-                              Sequence[Tuple['Tensor', str]]] = None,
+                 masks: Union[None, 'Tensor', Tuple['Tensor', str], Sequence['Tensor'], Sequence[Tuple['Tensor',
+                                                                                                       str]]] = None,
                  bboxes: Union[None, 'BoundingBox', 'Tensor', Sequence['BoundingBox'], Sequence['Tensor']] = None,
                  keypoints: Union[None, 'KeyPoint', 'Tensor', Sequence['KeyPoint'], Sequence['Tensor']] = None,
                  title: Union[None, str] = None,
-                 color_map: str = "gray"
-                 ):
+                 color_map: str = "gray"):
 
         if image is not None:
             shape = image.shape
@@ -130,9 +126,17 @@ class ImageDisplay(Display):
                 "Masks must be tuples of the form (<tensor>, <label>) or else simply a raw tensor"
             assert len(mask_tuple) == 2, "Masks must be tuples of the form (<tensor>, <label>)"
             assert isinstance(mask_tuple[1], str), "Masks must be tuples of the form (<tensor>, <label>)"
-            mask = to_number(mask_tuple[0])
+            mask = mask_tuple[0]
+            if isinstance(mask, torch.Tensor) and len(mask.shape) == 3 and self.image is not None:
+                # Unfortunately we can't just permute all torch tensors since TF users also might have torch tensors if
+                #  they were using pipeline.get_results(). If there's an accompanying image though we can figure it out
+                if mask.shape[1] == self.image.shape[0] and mask.shape[2] == self.image.shape[1]:
+                    # Move channel first to channel last
+                    mask = mask.permute(1, 2, 0)
+            mask = to_number(mask)
             assert len(mask.shape) in (2, 3), "Masks must be 2 dimensional, or 3 dimensional with the last " \
-                                              f"dimension indicating multiple masks, but found {len(mask.shape)}"
+                                              f"dimension (tf/np) or first dimension (torch) indicating multiple " \
+                                              f"masks, but found {len(mask.shape)}"
             # Give all masks a channel dimension for consistency
             if len(mask.shape) == 2:
                 mask = np.expand_dims(mask, axis=-1)
@@ -192,15 +196,14 @@ class ImageDisplay(Display):
             im = np.expand_dims(im, axis=-1)
         # Manually apply a colormap to 1-channel images
         if im.shape[2] == 1:
-            im = np.array(sample_colorscale(colorscale=self.color_map,
-                                            samplepoints=np.reshape(im, (-1)) / 255.0,
-                                            colortype='tuple')).reshape((im.shape[0], im.shape[1], 3))
+            im = np.array(
+                sample_colorscale(colorscale=self.color_map,
+                                  samplepoints=np.reshape(im, (-1)) / 255.0,
+                                  colortype='tuple')).reshape((im.shape[0], im.shape[1], 3))
             im = np.rint(im * 255)
         return Image(z=im)
 
-    def prepare(self,
-                fig: Optional[Figure] = None,
-                axis: Optional[Tuple[int, int]] = None,
+    def prepare(self, fig: Optional[Figure] = None, axis: Optional[Tuple[int, int]] = None,
                 col_width: int = 280) -> FigureFE:
         if axis is None:
             axis = (1, 1)
@@ -224,9 +227,7 @@ class ImageDisplay(Display):
 
         if self.image is not None:
             im = self._make_image(im=self.image)
-            fig.add_trace(im,
-                          row=row,
-                          col=col)
+            fig.add_trace(im, row=row, col=col)
 
         empty_color = np.array((0.0, 0.0, 0.0, 0.0))  # RGBA
         mask_colors = get_colors(n_colors=self.n_masks, alpha=0.4, as_numbers=True)
@@ -235,9 +236,21 @@ class ImageDisplay(Display):
             mask, label = mask_tuple
             # Mask will be channel x width x height x 1
             for color_idx, msk in enumerate(mask):
-                positive_color = mask_colors[color_idx]
-                msk = np.where(msk, positive_color, empty_color)
-                # TODO - handle labeling
+                if np.max(msk) > 1:
+                    msk = msk / 255.0
+                if self.n_masks == 1 and np.unique(msk).size > 2:
+                    # continuous heatmap
+                    msk_heatmap = np.array(
+                        sample_colorscale(colorscale=self.color_map,
+                                          samplepoints=np.reshape(msk, (-1)),
+                                          colortype='tuple')).reshape((msk.shape[0], msk.shape[1], 3))
+                    msk_heatmap = np.rint(msk_heatmap * 255)
+                    # add alpha channel
+                    msk = np.concatenate([msk_heatmap, 0.5 * np.ones_like(msk)], axis=-1)
+                else:
+                    positive_color = mask_colors[color_idx]
+                    msk = np.where(msk, positive_color, empty_color)
+                    # TODO - handle labeling
                 msk = Image(z=msk, colormodel='rgba', hoverinfo=None)
                 fig.add_trace(msk, row=row, col=col)
 
@@ -279,28 +292,31 @@ class ImageDisplay(Display):
                 # Don't draw empty boxes, or invalid box
                 if width <= 0 or height <= 0:
                     continue
-                fig.add_shape({'type': 'rect',
-                               'x0': x0,
-                               'x1': x0 + width,
-                               'y0': y0,
-                               'y1': y0 + height,
-                               'line_color': color,
-                               'line_width': 3},
-                              row=row,
-                              col=col,
-                              exclude_empty_subplots=False)
+                fig.add_shape(
+                    {
+                        'type': 'rect',
+                        'x0': x0,
+                        'x1': x0 + width,
+                        'y0': y0,
+                        'y1': y0 + height,
+                        'line_color': color,
+                        'line_width': 3
+                    },
+                    row=row,
+                    col=col,
+                    exclude_empty_subplots=False)
                 if label is not None:
                     font_size = max(8, min(14, int(width // len(label or ' '))))
                     # One annotation with translucent background
                     fig.add_annotation(x=x0,
                                        y=y0,
-                                       xshift=len(label)*font_size/2,
+                                       xshift=len(label) * font_size / 2,
                                        yshift=font_size,
                                        text=label,
                                        showarrow=False,
-                                       font={'size': font_size,
-                                             'color': 'white',
-                                             'family': 'monospace'},
+                                       font={
+                                           'size': font_size, 'color': 'white', 'family': 'monospace'
+                                       },
                                        bgcolor='white',
                                        opacity=0.6,
                                        exclude_empty_subplots=False,
@@ -309,32 +325,33 @@ class ImageDisplay(Display):
                     # Another to make the text opaque
                     fig.add_annotation(x=x0,
                                        y=y0,
-                                       xshift=len(label)*font_size/2,
+                                       xshift=len(label) * font_size / 2,
                                        yshift=font_size,
                                        text=label,
                                        showarrow=False,
-                                       font={'size': font_size,
-                                             'color': color,
-                                             'family': 'monospace'},
+                                       font={
+                                           'size': font_size, 'color': color, 'family': 'monospace'
+                                       },
                                        exclude_empty_subplots=False,
                                        row=row,
                                        col=col)
 
         if self.text:
-            fig.add_annotation(text=self.text,
-                               font={'size': min(45, col_width // len(self.text or ' ')),
-                                     'color': 'Black',
-                                     'family': 'monospace'},
-                               showarrow=False,
-                               xref=x_axis_domain,
-                               xanchor='center',
-                               x=0.5,
-                               yref=y_axis_domain,
-                               yanchor='middle',
-                               y=0.5,
-                               exclude_empty_subplots=False,
-                               row=row,
-                               col=col)
+            fig.add_annotation(
+                text=self.text,
+                font={
+                    'size': min(45, col_width // len(self.text or ' ')), 'color': 'Black', 'family': 'monospace'
+                },
+                showarrow=False,
+                xref=x_axis_domain,
+                xanchor='center',
+                x=0.5,
+                yref=y_axis_domain,
+                yanchor='middle',
+                y=0.5,
+                exclude_empty_subplots=False,
+                row=row,
+                col=col)
 
         if not isinstance(fig, FigureFE):
             fig = FigureFE.from_figure(fig)
@@ -366,15 +383,25 @@ class BatchDisplay(Display):
     def __init__(self,
                  image: Union[None, 'Tensor', Sequence['Tensor']] = None,
                  text: Union[None, Sequence[str], 'Tensor', Sequence['Tensor']] = None,
-                 masks: Union[None, 'Tensor', Sequence[Tuple['Tensor', str]], Sequence[Sequence['Tensor']],
+                 masks: Union[None,
+                              'Tensor',
+                              Sequence[Tuple['Tensor', str]],
+                              Sequence[Sequence['Tensor']],
                               Sequence[Sequence[Tuple['Tensor', str]]]] = None,
-                 bboxes: Union[None, Sequence['BoundingBox'], 'Tensor', Sequence['Tensor'],
-                               Sequence[Sequence['BoundingBox']], Sequence[Sequence['Tensor']]] = None,
-                 keypoints: Union[None, Sequence['KeyPoint'], 'Tensor', Sequence['Tensor'],
-                                  Sequence[Sequence['KeyPoint']], Sequence[Sequence['Tensor']]] = None,
+                 bboxes: Union[None,
+                               Sequence['BoundingBox'],
+                               'Tensor',
+                               Sequence['Tensor'],
+                               Sequence[Sequence['BoundingBox']],
+                               Sequence[Sequence['Tensor']]] = None,
+                 keypoints: Union[None,
+                                  Sequence['KeyPoint'],
+                                  'Tensor',
+                                  Sequence['Tensor'],
+                                  Sequence[Sequence['KeyPoint']],
+                                  Sequence[Sequence['Tensor']]] = None,
                  title: Union[None, str] = None,
-                 color_map: str = "greys"
-                 ):
+                 color_map: str = "greys"):
         self.batch = []
         for img, txt, mask, bbox, keypoint in zip_longest([] if image is None else image,
                                                           [] if text is None else text,
@@ -382,31 +409,26 @@ class BatchDisplay(Display):
                                                           [] if bboxes is None else bboxes,
                                                           [] if keypoints is None else keypoints,
                                                           fillvalue=None):
-            self.batch.append(ImageDisplay(image=img,
-                                           text=txt,
-                                           masks=mask,
-                                           bboxes=bbox,
-                                           keypoints=keypoint,
-                                           title=None,
-                                           color_map=color_map))
+            self.batch.append(
+                ImageDisplay(image=img,
+                             text=txt,
+                             masks=mask,
+                             bboxes=bbox,
+                             keypoints=keypoint,
+                             title=None,
+                             color_map=color_map))
         self.batch_size = len(self.batch) or 1
         self.title = title or ''
 
-    def prepare(self,
-                fig: Optional[Figure] = None,
-                col: Optional[int] = None,
-                col_width: int = 400) -> FigureFE:
+    def prepare(self, fig: Optional[Figure] = None, col: Optional[int] = None, col_width: int = 400) -> FigureFE:
 
         if fig is None:
-            fig = make_subplots(rows=self.batch_size,
-                                cols=1,
-                                column_titles=[self.title],
-                                vertical_spacing=0.005)
+            fig = make_subplots(rows=self.batch_size, cols=1, column_titles=[self.title], vertical_spacing=0.005)
             # Update the figure title text size
-            fig.for_each_annotation(lambda a: a.update(font={
-                'size': min(20, 3 + int(1 + col_width) // len(a.text or ' ')),
-                'family': 'monospace'
-            }))
+            fig.for_each_annotation(
+                lambda a: a.update(font={
+                    'size': min(20, 3 + int(1 + col_width) // len(a.text or ' ')), 'family': 'monospace'
+                }))
         if col is None:
             col = 1
         for row, elem in enumerate(self.batch, start=1):
@@ -414,8 +436,9 @@ class BatchDisplay(Display):
 
         fig.update_layout(width=col_width,
                           height=col_width * self.batch_size,
-                          margin={'l': 0, 'r': 0, 'b': 40, 't': 60}
-                          )
+                          margin={
+                              'l': 0, 'r': 0, 'b': 40, 't': 60
+                          })
 
         if not isinstance(fig, FigureFE):
             fig = FigureFE.from_figure(fig)
@@ -461,8 +484,7 @@ class GridDisplay(Display):
                             horizontal_spacing=horizontal_gap)
         # Update the figure title text size
         fig.for_each_annotation(lambda a: a.update(font={
-            'size': min(20, 3 + int(1 + col_width) // len(a.text or ' ')),
-            'family': 'monospace'
+            'size': min(20, 3 + int(1 + col_width) // len(a.text or ' ')), 'family': 'monospace'
         }))
 
         for col_idx, col in enumerate(self.columns, start=1):
@@ -471,9 +493,7 @@ class GridDisplay(Display):
             else:
                 fig = col.prepare(fig=fig, axis=(1, col_idx), col_width=col_width)
 
-        fig.update_layout(width=im_width,
-                          height=im_height,
-                          margin={'l': 0, 'r': 0, 'b': 40, 't': 60})
+        fig.update_layout(width=im_width, height=im_height, margin={'l': 0, 'r': 0, 'b': 40, 't': 60})
 
         if not isinstance(fig, FigureFE):
             fig = FigureFE.from_figure(fig)

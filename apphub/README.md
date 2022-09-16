@@ -100,6 +100,10 @@ $ fastestimator train lenet_mnist.py --batch_size 64 --epochs 4
 ### Instance Segmentation
 * **SOLOv2:** Multi-instance segmentation on the COCO2017 dataset. [[paper](https://arxiv.org/abs/2003.10152)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/instance_segmentation/solov2/solov2_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/instance_segmentation/solov2/solov2_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/instance_segmentation/solov2/solov2.ipynb)]
 
+### Keypoint Detection
+* **HRNet:** High-Resolution Network detecting human pose in COCO2017 dataset. [[paper](https://arxiv.org/abs/1902.09212)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/keypoint_detection/hrnet/hrnet_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/keypoint_detection/hrnet/hrnet_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/keypoint_detection/hrnet/hrnet.ipynb)]
+
+
 ### Image Style Transfer
 * **Fast Style Transfer:** Altering the source image style to a target art style using the MSCOCO 2017 dataset. [[paper](https://cs.stanford.edu/people/jcjohns/papers/eccv16/JohnsonECCV16.pdf)][[tensorflow code](https://github.com/fastestimator/fastestimator/blob/master/apphub/style_transfer/fst_coco/fst_tf.py)][[pytorch code](https://github.com/fastestimator/fastestimator/blob/master/apphub/style_transfer/fst_coco/fst_torch.py)][[notebook](https://github.com/fastestimator/fastestimator/blob/master/apphub/style_transfer/fst_coco/fst.ipynb)]
 
