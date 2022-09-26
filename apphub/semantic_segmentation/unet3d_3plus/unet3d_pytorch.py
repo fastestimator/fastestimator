@@ -14,7 +14,7 @@
 # ==============================================================================
 """U-Net3d 3plus example."""
 import tempfile
-from typing import Any, Dict, List, Tuple
+from typing import Tuple
 
 import cv2
 import numpy as np

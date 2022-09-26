@@ -34,7 +34,7 @@ from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Dice
 
-conv_config = {'padding': 'same', 'kernel_initializer': 'he_normal'}
+conv_config = {'activation': None, 'padding': 'same', 'kernel_initializer': 'he_normal'}
 
 
 def encoderblock(x, filters, skip_fbn=False):
@@ -69,7 +69,6 @@ def stdconvblock(x, filters):
 
 def unet3d_3plus(input_size=(288, 288, 160, 1), output_classes=7, filters=64, attention=False):
     inputs = Input(input_size)
-    conv_config = {'activation': None, 'padding': 'same', 'kernel_initializer': 'he_normal'}
     upchannels = filters
     if attention:
         attention_upchannels = upchannels

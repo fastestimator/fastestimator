@@ -40,22 +40,22 @@ color_mapping = {
 }
 
 
-def _download_file_from_google_drive(id: str, destination: str) -> None:
+def _download_file_from_google_drive(file_id: str, destination: str) -> None:
     """Download the data from the Google drive public URL.
     This method will create a session instance to persist the requests and reuse TCP connection for the large files.
     Args:
-        id: File ID of Google drive URL.
+        file_id: File ID of Google drive URL.
         destination: Destination path where the data needs to be stored.
     """
     URL = "https://drive.google.com/uc?export=download&confirm=t"
     CHUNK_SIZE = 4096
     session = requests.Session()
 
-    response = session.get(URL, params={'id': id}, stream=True)
+    response = session.get(URL, params={'id': file_id}, stream=True)
     token = _get_confirm_token(response)
 
     if token:
-        params = {'id': id, 'confirm': token}
+        params = {'id': file_id, 'confirm': token}
         response = session.get(URL, params=params, stream=True)
 
     total_size = int(response.headers.get('Content-Length', 0))
@@ -89,7 +89,7 @@ def _get_confirm_token(response: Response) -> str:
 
 def generate_tiles(train_data, tile_size=256, overlap=128):
     stride = tile_size - overlap
-    c, height, width = train_data.shape
+    _, height, width = train_data.shape
     tiles = []
     for i in range(0, height, stride):
         for j in range(0, width, stride):
