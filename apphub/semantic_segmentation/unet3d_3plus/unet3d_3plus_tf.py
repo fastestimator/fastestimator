@@ -31,6 +31,8 @@ from fastestimator.op.numpyop.univariate import Minmax
 from fastestimator.op.numpyop.univariate.expand_dims import ExpandDims
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
+from fastestimator.op.tensorop.resize3d import Resize3D
+from fastestimator.trace.adapt import EarlyStopping, ReduceLROnPlateau
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Dice
 
@@ -178,10 +180,11 @@ class ClassEncoding(NumpyOp):
 
 def get_estimator(epochs=20,
                   batch_size=1,
-                  input_shape=(256, 256, 24, 1),
+                  input_shape=(256, 256, 24),
+                  channels=(1, ),
                   num_classes=7,
                   filters=64,
-                  learning_rate=1e-4,
+                  learning_rate=1e-3,
                   train_steps_per_epoch=None,
                   eval_steps_per_epoch=None,
                   save_dir=tempfile.mkdtemp(),
@@ -200,18 +203,20 @@ def get_estimator(epochs=20,
             Sometimes(numpy_op=VerticalFlip(image_in="image", mask_in="label", mode='train')),
             Sometimes(numpy_op=Rotate(
                 image_in="image", mask_in="label", limit=(-10, 10), border_mode=cv2.BORDER_CONSTANT, mode='train')),
+            ClassEncoding(inputs="label", outputs="label", no_of_classes=num_classes),
             Minmax(inputs="image", outputs="image"),
-            ClassEncoding(inputs="label", outputs="label", no_of_classes=7),
             Minmax(inputs="label", outputs="label", mode='!infer'),
             ExpandDims(inputs="image", outputs="image"),
         ])
 
     # step 2
-    model = fe.build(model_fn=lambda: unet3d_3plus(input_shape, num_classes, filters),
+    model = fe.build(model_fn=lambda: unet3d_3plus(input_shape + channels, num_classes, filters),
                      optimizer_fn=lambda: tf.keras.optimizers.Adam(learning_rate=learning_rate),
                      model_name="unet3d_3plus")
 
     network = fe.Network(ops=[
+        Resize3D(inputs="image", outputs="image", output_shape=input_shape),
+        Resize3D(inputs="label", outputs="label", output_shape=input_shape, mode='!infer'),
         ModelOp(inputs="image", model=model, outputs="pred_segment"),
         CrossEntropy(inputs=("pred_segment", "label"), outputs="ce_loss", form="binary"),
         UpdateOp(model=model, loss_name="ce_loss")
@@ -220,7 +225,9 @@ def get_estimator(epochs=20,
     # step 3
     traces = [
         Dice(true_key="label", pred_key="pred_segment"),
-        BestModelSaver(model=model, save_dir=save_dir, metric='Dice', save_best_mode='max')
+        ReduceLROnPlateau(model=model, metric="Dice", patience=7, factor=0.5, best_mode="max"),
+        BestModelSaver(model=model, save_dir=save_dir, metric='Dice', save_best_mode='max'),
+        EarlyStopping(monitor="Dice", compare='max', min_delta=0.005, patience=20),
     ]
 
     estimator = fe.Estimator(network=network,
