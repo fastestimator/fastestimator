@@ -18,12 +18,12 @@ import tempfile
 import cv2
 import numpy as np
 import tensorflow as tf
-from electron_microscopy import load_data
 from tensorflow import sigmoid
 from tensorflow.keras.layers import BatchNormalization, Conv3D, Input, MaxPooling3D, ReLU, UpSampling3D, concatenate
 from tensorflow.keras.models import Model
 
 import fastestimator as fe
+from fastestimator.dataset.data.em_3d import load_data
 from fastestimator.op.numpyop import NumpyOp
 from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import HorizontalFlip, Rotate, VerticalFlip
@@ -186,7 +186,7 @@ def get_estimator(epochs=20,
                   eval_steps_per_epoch=None,
                   save_dir=tempfile.mkdtemp(),
                   log_steps=20,
-                  data_dir='.'):
+                  data_dir=None):
 
     # step 1
     train_data, eval_data = load_data(data_dir)
