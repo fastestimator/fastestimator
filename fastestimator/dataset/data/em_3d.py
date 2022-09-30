@@ -77,7 +77,7 @@ def _get_confirm_token(response: Response) -> str:
     """Retrieve the token from the cookie jar of HTTP request to keep the session alive.
     Args:
         response: Response object of the HTTP request.
-    Returns"
+    Returns:
         The value of cookie in the response object.
     """
     for key, value in response.cookies.items():
@@ -87,18 +87,38 @@ def _get_confirm_token(response: Response) -> str:
     return None
 
 
-def generate_tiles(train_data, tile_size=256, overlap=128):
+def generate_tiles(input_image, tile_size=256, overlap=128):
+    """
+        This method to crop the image into smaller crops.
+
+        Args:
+            input_image: numpy array of input image
+            tile_size: The crop size
+            overlap: Overlap between two crops
+
+        Returns:
+            tiles: numpy array of image crops
+    """
     stride = tile_size - overlap
-    _, height, width = train_data.shape
+    _, height, width = input_image.shape
     tiles = []
     for i in range(0, height, stride):
         for j in range(0, width, stride):
             if i + tile_size < height and j + tile_size < width:
-                tiles.append(train_data[:, i:i + tile_size, j:j + tile_size])
+                tiles.append(input_image[:, i:i + tile_size, j:j + tile_size])
     return np.array(tiles)
 
 
 def get_encode_label(label_data):
+    """
+        One hot encode the input mask
+
+        Args:
+            label_data: Color encoded input label
+
+        Returns:
+            encoded_label: one hot encoded label
+    """
     encoded_label = np.zeros(label_data.shape[:-1])
     for i, value in color_mapping.items():
         encoded_label[np.all(label_data == value, axis=-1)] = i
@@ -107,7 +127,29 @@ def get_encode_label(label_data):
 
 def load_data(root_dir: Optional[str] = None, image_key: str = "image",
               label_key: str = "label") -> Tuple[NumpyDataset, NumpyDataset]:
+    """Load and return the 3d electron microscope plattet dataset.
 
+
+    Sourced from https://bio3d-vision.github.io/platelet-description. Electronic Microscopy 3D cell dataset, consists of 2 3D images, one 800x800x50 and the other 800x800x24. The 800x800x50 is used as training dataset and 800x800x24 is used for validation. Instead of using the entire 800x800 images, the 800x800x50 is tiled into 256x256x24 tiles with an overlap of 128 producing around 75 training images and similarly the 800x800x24 image is tiled to produce 25 validation images.
+
+    The method downloads the dataset from google drive and provides train and validation NumpyDataset.
+        Index	Class name
+        0		Background
+        1		Cell
+        2		Mitochondria
+        3		Alpha granule
+        4		Canalicular vessel
+        5		Dense granule body
+        6		Dense granule core
+
+    Args:
+        root_dir: The path to store the downloaded data. When `path` is not provided, the data will be saved into `fastestimator_data` under the user's home directory.
+        image_key: The key for image.
+        label_key: The key for label.
+
+    Returns:
+        (train_data, eval_data)
+    """
     home = str(Path.home())
 
     if root_dir is None:
