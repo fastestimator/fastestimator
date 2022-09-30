@@ -22,7 +22,7 @@ example_name="unet3d_3plus"
 # 1. Usually we set the epochs:2, batch_size:2, train_steps_per_epoch:2
 # 2. The expression for the following setup is "--epochs 2 --batch_size 2 --train_steps_per_epoch 2"
 # 3. The syntax of this expression is different from run_notebook.py
-train_info=(--epochs 2 --batch_size 4 --train_steps_per_epoch 2 --eval_steps_per_epoch 2 --input_shape \(32, 32, 16\))
+train_info=(--epochs 2 --batch_size 4 --train_steps_per_epoch 2 --eval_steps_per_epoch 2 --input_shape "(32, 32, 16)")
 
 # Do you want to run "fastestimator test"? (bool)
 need_test=0

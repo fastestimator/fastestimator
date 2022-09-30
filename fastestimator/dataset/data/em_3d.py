@@ -130,7 +130,11 @@ def load_data(root_dir: Optional[str] = None, image_key: str = "image",
     """Load and return the 3d electron microscope plattet dataset.
 
 
-    Sourced from https://bio3d-vision.github.io/platelet-description. Electronic Microscopy 3D cell dataset, consists of 2 3D images, one 800x800x50 and the other 800x800x24. The 800x800x50 is used as training dataset and 800x800x24 is used for validation. Instead of using the entire 800x800 images, the 800x800x50 is tiled into 256x256x24 tiles with an overlap of 128 producing around 75 training images and similarly the 800x800x24 image is tiled to produce 25 validation images.
+    Sourced from https://bio3d-vision.github.io/platelet-description.
+    Electronic Microscopy 3D cell dataset, consists of 2 3D images, one 800x800x50 and the other 800x800x24.
+    The 800x800x50 is used as training dataset and 800x800x24 is used for validation. Instead of using the entire
+    800x800 images, the 800x800x50 is tiled into 256x256x24 tiles with an overlap of 128 producing around 75 training
+    images and similarly the 800x800x24 image is tiled to produce 25 validation images.
 
     The method downloads the dataset from google drive and provides train and validation NumpyDataset.
         Index	Class name
@@ -143,7 +147,8 @@ def load_data(root_dir: Optional[str] = None, image_key: str = "image",
         6		Dense granule core
 
     Args:
-        root_dir: The path to store the downloaded data. When `path` is not provided, the data will be saved into `fastestimator_data` under the user's home directory.
+        root_dir: The path to store the downloaded data. When `path` is not provided,
+            the data will be saved into `fastestimator_data` under the user's home directory.
         image_key: The key for image.
         label_key: The key for label.
 
