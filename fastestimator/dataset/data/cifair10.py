@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2022 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,15 +14,67 @@
 # ==============================================================================
 import os
 import pickle
-from typing import Tuple, List
+import shutil
+from pathlib import Path
+from typing import List, Tuple, TypeVar
 
 import numpy as np
-from tensorflow.keras.utils import get_file
+import requests
+import wget
+from tqdm import tqdm
 
 from fastestimator.dataset.numpy_dataset import NumpyDataset
+from fastestimator.util.wget_util import callback_progress
+
+wget.callback_progress = callback_progress
+Response = TypeVar('Response', bound=requests.models.Response)
 
 
-def load_data(image_key: str = "x", label_key: str = "y") -> Tuple[NumpyDataset, NumpyDataset]:
+def _get_confirm_token(response: Response) -> str:
+    """Retrieve the token from the cookie jar of HTTP request to keep the session alive.
+    Args:
+        response: Response object of the HTTP request.
+    Returns:
+        The value of cookie in the response object.
+    """
+    for key, value in response.cookies.items():
+        if key.startswith('download_warning'):
+            return value
+
+    return None
+
+
+def _download_file_from_google_drive(file_id: str, destination: str) -> None:
+    """Download the data from the Google drive public URL.
+
+    This method will create a session instance to persist the requests and reuse TCP connection for the large files.
+
+    Args:
+        file_id: File ID of Google drive URL.
+        destination: Destination path where the data needs to be stored.
+    """
+    URL = "https://drive.google.com/uc?export=download&confirm=t"
+    CHUNK_SIZE = 128
+    session = requests.Session()
+
+    response = session.get(URL, params={'id': file_id}, stream=True)
+    token = _get_confirm_token(response)
+
+    if token:
+        params = {'id': id, 'confirm': token}
+        response = session.get(URL, params=params, stream=True)
+
+    total_size = int(response.headers.get('Content-Length', 0))
+    progress = tqdm(total=total_size, unit='B', unit_scale=True)
+    with open(destination, "wb") as f:
+        for chunk in response.iter_content(CHUNK_SIZE):
+            if chunk:  # filter out keep-alive new chunks
+                progress.update(len(chunk))
+                f.write(chunk)
+    progress.close()
+
+
+def load_data(root_dir: str = None, image_key: str = "x", label_key: str = "y") -> Tuple[NumpyDataset, NumpyDataset]:
     """Load and return the ciFAIR10 dataset.
 
     This is the cifar10 dataset but with test set duplicates removed and replaced. See
@@ -30,32 +82,43 @@ def load_data(image_key: str = "x", label_key: str = "y") -> Tuple[NumpyDataset,
     dataset.
 
     Args:
+        root_dir: The path to store the downloaded data. When `path` is not provided, the data will be saved into
+            `fastestimator_data` under the user's home directory.
         image_key: The key for image.
         label_key: The key for label.
 
     Returns:
         (train_data, test_data)
     """
-    dirname = 'ciFAIR-10'
-    archive_name = 'ciFAIR-10.zip'
-    origin = 'https://github.com/cvjena/cifair/releases/download/v1.0/ciFAIR-10.zip'
-    md5_hash = 'ca08fd390f0839693d3fc45c4e49585f'
+    home = str(Path.home())
 
-    path = get_file(archive_name, origin=origin, file_hash=md5_hash, hash_algorithm='md5', extract=True,
-                    archive_format='zip')
-    path = os.path.join(os.path.dirname(path), dirname)
+    if root_dir is None:
+        root_dir = os.path.join(home, 'fastestimator_data', 'ciFAIR10')
+    else:
+        root_dir = os.path.join(os.path.abspath(root_dir), 'ciFAIR10')
+    os.makedirs(root_dir, exist_ok=True)
+
+    image_compressed_path = os.path.join(root_dir, 'ciFAIR10.zip')
+    image_extracted_path = os.path.join(root_dir, 'ciFAIR-10')
+
+    if not os.path.exists(image_extracted_path):
+        if not os.path.exists(image_compressed_path):
+            print("Downloading data to {}".format(root_dir))
+            _download_file_from_google_drive('1dqTgqMVvgx_FZNAC7TqzoA0hYX1ttOUq', image_compressed_path)
+
+        print("Extracting data to {}".format(root_dir))
+        shutil.unpack_archive(image_compressed_path, root_dir)
 
     num_train_samples = 50000
 
     x_train = np.empty((num_train_samples, 3, 32, 32), dtype='uint8')
-    y_train = np.empty((num_train_samples,), dtype='uint8')
+    y_train = np.empty((num_train_samples, ), dtype='uint8')
 
     for i in range(1, 6):
-        fpath = os.path.join(path, f'data_batch_{i}')
-        (x_train[(i - 1) * 10000:i * 10000, :, :, :],
-         y_train[(i - 1) * 10000:i * 10000]) = _load_batch(fpath)
+        fpath = os.path.join(image_extracted_path, f'data_batch_{i}')
+        (x_train[(i - 1) * 10000:i * 10000, :, :, :], y_train[(i - 1) * 10000:i * 10000]) = _load_batch(fpath)
 
-    fpath = os.path.join(path, 'test_batch')
+    fpath = os.path.join(image_extracted_path, 'test_batch')
     x_test, y_test = _load_batch(fpath)
 
     y_train = np.reshape(y_train, (len(y_train), 1))
