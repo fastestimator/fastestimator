@@ -82,7 +82,7 @@ Once you do that, you will see a pop up similar to following. In the "User varia
 
 Now let's go back to the destination "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA", there exist a "libnvvp" folder. Copy the path to this folder and follow the same steps as above to add this path to environment variables.
 
-## Step 5 : Install Tensorflow
+## Step 6 : Install Tensorflow
 
 Now finally we are ready to install tensorflow. A complete guide for tensorflow installation can be found [here](https://www.tensorflow.org/install). Here for simplicity we perform a system install using pip.
 
