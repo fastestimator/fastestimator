@@ -55,7 +55,8 @@ class Onehot(NumpyOp):
         return [self._apply_onehot(elem) for elem in data]
 
     def _apply_onehot(self, data: Union[int, np.ndarray]) -> np.ndarray:
-        data = np.array(data).astype(np.uint8)
+        data = np.array(data)
+        assert "int" in str(data.dtype)
         max_class = np.max(data)
         assert max_class < self.num_classes, "label value should be smaller than num_classes"
 

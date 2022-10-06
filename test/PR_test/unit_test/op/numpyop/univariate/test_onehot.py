@@ -49,7 +49,7 @@ class TestOnehot(unittest.TestCase):
         np.testing.assert_array_equal(data, label_smoothing_output)
 
     def test_two_d(self):
-        two_d_input = [np.ones((2, 2))]
+        two_d_input = [np.ones((2, 2)).astype(np.int8)]
         two_d_input[0][1, 1] = 0
         two_d_output = np.array([[[0., 1., 0., 0.], [0., 1., 0., 0.]], [[0., 1., 0., 0.], [1., 0., 0., 0.]]])
         op = Onehot(inputs='x', outputs='x', num_classes=4)
