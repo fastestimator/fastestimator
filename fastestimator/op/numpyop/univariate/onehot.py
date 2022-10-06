@@ -22,7 +22,7 @@ from fastestimator.util.traceability_util import traceable
 
 @traceable()
 class Onehot(NumpyOp):
-    """Transform an integer label to one-hot-encoding.
+    """Transform an integer label to one-hot-encoding.The label value start from 0.
 
     This can be desirable for increasing robustness against incorrect labels:
     https://towardsdatascience.com/label-smoothing-making-model-robust-to-incorrect-labels-2fae037ffbd0
@@ -56,7 +56,8 @@ class Onehot(NumpyOp):
 
     def _apply_onehot(self, data: Union[int, np.ndarray]) -> np.ndarray:
         data = np.array(data)
-        assert "int" in str(data.dtype)
+        assert "int" in str(data.dtype), "data type must be an integer"
+
         max_class = np.max(data)
         assert max_class < self.num_classes, "label value should be smaller than num_classes"
 
@@ -64,6 +65,6 @@ class Onehot(NumpyOp):
 
         if self.label_smoothing != 0:
             smooth_label = self.label_smoothing / self.num_classes
-            output = np.where(output!=0, 1.0 - self.label_smoothing + smooth_label, smooth_label)
+            output = np.where(output != 0, 1.0 - self.label_smoothing + smooth_label, smooth_label)
 
         return output

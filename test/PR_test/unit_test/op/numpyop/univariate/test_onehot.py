@@ -17,14 +17,9 @@ import unittest
 import numpy as np
 
 from fastestimator.op.numpyop.univariate import Onehot
-from fastestimator.test.unittest_util import is_equal
 
 
 class TestOnehot(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        pass
-
     def test_one_d(self):
         single_input = [[1], [2], [3], [3]]
         single_output = [
