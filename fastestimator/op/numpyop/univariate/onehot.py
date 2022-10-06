@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2022 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ from fastestimator.util.traceability_util import traceable
 
 @traceable()
 class Onehot(NumpyOp):
-    """Transform an integer label to one-hot-encoding.
+    """Transform an integer label to one-hot-encoding.The label value start from 0.
 
     This can be desirable for increasing robustness against incorrect labels:
     https://towardsdatascience.com/label-smoothing-making-model-robust-to-incorrect-labels-2fae037ffbd0
@@ -55,11 +55,16 @@ class Onehot(NumpyOp):
         return [self._apply_onehot(elem) for elem in data]
 
     def _apply_onehot(self, data: Union[int, np.ndarray]) -> np.ndarray:
-        class_index = np.array(data)
-        assert "int" in str(class_index.dtype)
-        assert class_index.size == 1, "data must have only one item"
-        class_index = class_index.item()
-        assert class_index < self.num_classes, "label value should be smaller than num_classes"
-        output = np.full((self.num_classes), fill_value=self.label_smoothing / self.num_classes, dtype="float32")
-        output[class_index] = 1.0 - self.label_smoothing + self.label_smoothing / self.num_classes
+        data = np.array(data)
+        assert "int" in str(data.dtype), "data type must be an integer"
+
+        max_class = np.max(data)
+        assert max_class < self.num_classes, "label value should be smaller than num_classes"
+
+        output = np.eye(self.num_classes, dtype=np.float32)[data]
+
+        if self.label_smoothing != 0:
+            smooth_label = self.label_smoothing / self.num_classes
+            output = np.where(output != 0, 1.0 - self.label_smoothing + smooth_label, smooth_label)
+
         return output

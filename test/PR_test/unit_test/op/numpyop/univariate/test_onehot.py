@@ -1,4 +1,4 @@
-# Copyright 2020 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2022 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,21 +17,36 @@ import unittest
 import numpy as np
 
 from fastestimator.op.numpyop.univariate import Onehot
-from fastestimator.test.unittest_util import is_equal
 
 
 class TestOnehot(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.single_input = [[1], [2], [3], [3]]
-        cls.single_output = [
-            np.array([0., 1., 0., 0.]),
-            np.array([0., 0., 1., 0.]),
-            np.array([0., 0., 0., 1.]),
-            np.array([0., 0., 0., 1.])
+    def test_one_d(self):
+        single_input = [[1], [2], [3], [3]]
+        single_output = [
+            np.array([[0, 1, 0, 0]]), np.array([[0, 0, 1, 0]]), np.array([[0, 0, 0, 1]]), np.array([[0, 0, 0, 1]])
         ]
-
-    def test_input_labels(self):
         op = Onehot(inputs='x', outputs='x', num_classes=4)
-        data = op.forward(data=self.single_input, state={})
-        self.assertTrue(is_equal(data, self.single_output))
+        data = op.forward(data=single_input, state={})
+        np.testing.assert_array_equal(data, single_output)
+
+    def test_int_input(self):
+        int_input = [2]
+        int_output = [np.array([0., 0., 1., 0.])]
+        op = Onehot(inputs='x', outputs='x', num_classes=4)
+        data = op.forward(data=int_input, state={})
+        np.testing.assert_array_equal(data, int_output)
+
+    def test_label_smoothing(self):
+        label_smoothing_input = [2]
+        label_smoothing_output = [np.array([0.025, 0.025, 0.925, 0.025])]
+        op = Onehot(inputs='x', outputs='x', num_classes=4, label_smoothing=0.1)
+        data = op.forward(data=label_smoothing_input, state={})
+        np.testing.assert_array_equal(data, label_smoothing_output)
+
+    def test_two_d(self):
+        two_d_input = [np.ones((2, 2)).astype(np.int8)]
+        two_d_input[0][1, 1] = 0
+        two_d_output = np.array([[[0., 1., 0., 0.], [0., 1., 0., 0.]], [[0., 1., 0., 0.], [1., 0., 0., 0.]]])
+        op = Onehot(inputs='x', outputs='x', num_classes=4)
+        data = op.forward(data=two_d_input, state={})
+        np.testing.assert_array_equal(data[0], two_d_output)
