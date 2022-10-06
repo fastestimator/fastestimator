@@ -15,19 +15,13 @@
 import os
 import shutil
 from pathlib import Path
-from typing import Optional, Tuple, TypeVar
+from typing import Optional, Tuple
 
 import numpy as np
-import requests
 import tifffile
-import wget
-from tqdm import tqdm
 
 from fastestimator.dataset.numpy_dataset import NumpyDataset
-from fastestimator.util.wget_util import callback_progress
-
-wget.callback_progress = callback_progress
-Response = TypeVar('Response', bound=requests.models.Response)
+from fastestimator.util.google_download_util import _download_file_from_google_drive
 
 color_mapping = {
     0: [0, 0, 0, 0],
@@ -38,53 +32,6 @@ color_mapping = {
     5: [255, 70, 0, 255],
     6: [255, 229, 0, 255]
 }
-
-
-def _download_file_from_google_drive(file_id: str, destination: str) -> None:
-    """Download the data from the Google drive public URL.
-    This method will create a session instance to persist the requests and reuse TCP connection for the large files.
-    Args:
-        file_id: File ID of Google drive URL.
-        destination: Destination path where the data needs to be stored.
-    """
-    URL = "https://drive.google.com/uc?export=download&confirm=t"
-    CHUNK_SIZE = 4096
-    session = requests.Session()
-
-    response = session.get(URL, params={'id': file_id}, stream=True)
-    token = _get_confirm_token(response)
-
-    if token:
-        params = {'id': file_id, 'confirm': token}
-        response = session.get(URL, params=params, stream=True)
-
-    total_size = int(response.headers.get('Content-Length', 0))
-    progress = tqdm(total=total_size, unit='B', unit_scale=False)
-    ch = 0
-    with open(destination, "wb") as f:
-        for chunk in response.iter_content(CHUNK_SIZE):
-            if chunk:  # filter out keep-alive new chunks
-                ch += len(chunk)
-                if ch > 9531513:
-                    progress.update(ch)
-                    ch = 0
-                f.write(chunk)
-        progress.update(ch)
-    progress.close()
-
-
-def _get_confirm_token(response: Response) -> str:
-    """Retrieve the token from the cookie jar of HTTP request to keep the session alive.
-    Args:
-        response: Response object of the HTTP request.
-    Returns:
-        The value of cookie in the response object.
-    """
-    for key, value in response.cookies.items():
-        if key.startswith('download_warning'):
-            return value
-
-    return None
 
 
 def generate_tiles(input_image, tile_size=256, overlap=128):
