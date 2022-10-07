@@ -55,13 +55,16 @@ class Onehot(NumpyOp):
         return [self._apply_onehot(elem) for elem in data]
 
     def _apply_onehot(self, data: Union[int, np.ndarray]) -> np.ndarray:
-        data = np.array(data)
-        assert "int" in str(data.dtype), "data type must be an integer"
+        data = np.atleast_1d(data)
+        assert "int" in str(data.dtype).lower(), "data type must be an integer"
 
         max_class = np.max(data)
         assert max_class < self.num_classes, "label value should be smaller than num_classes"
 
-        output = np.eye(self.num_classes, dtype=np.float32)[data]
+        if data.size == 1:
+            output = np.eye(self.num_classes, dtype=np.float32)[data[0]]
+        else:
+            output = np.eye(self.num_classes, dtype=np.float32)[data]
 
         if self.label_smoothing != 0:
             smooth_label = self.label_smoothing / self.num_classes
