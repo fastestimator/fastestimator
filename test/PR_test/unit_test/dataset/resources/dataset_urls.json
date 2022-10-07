@@ -37,6 +37,8 @@
     "penn_tree_bank_test": "https://raw.githubusercontent.com/wojzaremba/lstm/master/data/ptb.test.txt",
     "cifair10": "https://drive.google.com/uc?id=1dqTgqMVvgx_FZNAC7TqzoA0hYX1ttOUq&export=download&confirm=t",
     "cifair100": "https://drive.google.com/uc?id=1ZE_wf5UTd9fJqBgikb7MJtfFEeAfXybS&export=download&confirm=t",
+    "cifar10": "https://drive.google.com/uc?id=1mYURe_Oq90Sg47uSK26v-fs3zzxqupCM&export=download&confirm=t",
+    "cifar100": "https://drive.google.com/uc?id=1ntXqOaXMaq4TcvpCaOCpqqNCjYy2oVsb&export=download&confirm=t",
     "svhn_cropped_train": "http://ufldl.stanford.edu/housenumbers/train_32x32.mat",
     "svhn_cropped_test": "http://ufldl.stanford.edu/housenumbers/test_32x32.mat",
     "tednmt": "http://www.phontron.com/data/qi18naacl-dataset.tar.gz",
