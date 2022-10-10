@@ -30,8 +30,7 @@ def binary_crossentropy(y_pred: Tensor,
                         class_weights: Optional[Weight_Dict] = None) -> Tensor:
     """Compute binary crossentropy.
 
-    This method is applicable when there are only two label classes (zero and one). There should be a single floating
-    point prediction per example.
+    This method is applicable when there are only two label classes (zero and one).
 
     This method can be used with TensorFlow tensors:
     ```python
