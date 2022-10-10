@@ -83,7 +83,6 @@ def sparse_categorical_crossentropy(y_pred: Tensor,
                 tf.cast(tf.reshape(y_true, tf.shape(ce)), dtype=class_weights.key_dtype))
             ce = ce * sample_weights
     else:
-        y_true = torch.squeeze(y_true)
         if from_logits:
             ce = torch.nn.CrossEntropyLoss(reduction="none")(input=y_pred, target=y_true.long())
         else:
