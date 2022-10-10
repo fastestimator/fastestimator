@@ -428,11 +428,11 @@ class TestNetworkTransform(unittest.TestCase):
         batch = network.transform(data=batch, mode="train")
 
         with self.subTest("output y_pred check"):
-            ans = np.array([6], dtype=np.float32)  # 1*1 + 1*2 + 1*3
+            ans = np.array([[6]], dtype=np.float32)  # 1*1 + 1*2 + 1*3
             self.assertTrue(np.array_equal(batch["y_pred"].numpy(), ans))
 
         with self.subTest("postprocessing y_pred check"):
-            ans = np.array([7], dtype=np.float32)  # 1*1 + 1*2 + 1*3 + 1
+            ans = np.array([[7]], dtype=np.float32)  # 1*1 + 1*2 + 1*3 + 1
             self.assertTrue(np.array_equal(batch["y_pred_processed"], ans))
 
         with self.subTest("output ce check"):
@@ -462,11 +462,11 @@ class TestNetworkTransform(unittest.TestCase):
         batch = network.transform(data=batch, mode="train")
 
         with self.subTest("output y_pred check"):
-            ans = np.array([6], dtype=np.float32)  # 1*1 + 1*2 + 1*3
+            ans = np.array([[6]], dtype=np.float32)  # 1*1 + 1*2 + 1*3
             self.assertTrue(np.array_equal(batch["y_pred"].numpy(), ans))
 
         with self.subTest("postprocessing y_pred check"):
-            ans = torch.Tensor([7.0])  # 1*1 + 1*2 + 1*3 + 1
+            ans = torch.Tensor([[7.0]])  # 1*1 + 1*2 + 1*3 + 1
             self.assertTrue(torch.equal(batch["y_pred_processed"], ans))
 
         with self.subTest("output ce check"):
