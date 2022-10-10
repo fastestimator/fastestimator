@@ -424,15 +424,15 @@ class TestNetworkTransform(unittest.TestCase):
                 UpdateOp(model=model, loss_name="ce")
             ],
             pops=PlusOneNumpyOp(inputs="y_pred", outputs="y_pred_processed"))
-        batch = {"x": np.array([[1, 1, 1]]), "y": np.array([[1]])}
+        batch = {"x": np.array([[1, 1, 1]]), "y": np.array([1])}
         batch = network.transform(data=batch, mode="train")
 
         with self.subTest("output y_pred check"):
-            ans = np.array([[6]], dtype=np.float32)  # 1*1 + 1*2 + 1*3
+            ans = np.array([6], dtype=np.float32)  # 1*1 + 1*2 + 1*3
             self.assertTrue(np.array_equal(batch["y_pred"].numpy(), ans))
 
         with self.subTest("postprocessing y_pred check"):
-            ans = np.array([[7]], dtype=np.float32)  # 1*1 + 1*2 + 1*3 + 1
+            ans = np.array([7], dtype=np.float32)  # 1*1 + 1*2 + 1*3 + 1
             self.assertTrue(np.array_equal(batch["y_pred_processed"], ans))
 
         with self.subTest("output ce check"):
@@ -457,16 +457,16 @@ class TestNetworkTransform(unittest.TestCase):
                 1,
                 1,
                 1,
-            ]], dtype=np.float32), "y": np.array([[1]], dtype=np.float32)
+            ]], dtype=np.float32), "y": np.array([1], dtype=np.float32)
         }
         batch = network.transform(data=batch, mode="train")
 
         with self.subTest("output y_pred check"):
-            ans = np.array([[6]], dtype=np.float32)  # 1*1 + 1*2 + 1*3
+            ans = np.array([6], dtype=np.float32)  # 1*1 + 1*2 + 1*3
             self.assertTrue(np.array_equal(batch["y_pred"].numpy(), ans))
 
         with self.subTest("postprocessing y_pred check"):
-            ans = torch.Tensor([[7.0]])  # 1*1 + 1*2 + 1*3 + 1
+            ans = torch.Tensor([7.0])  # 1*1 + 1*2 + 1*3 + 1
             self.assertTrue(torch.equal(batch["y_pred_processed"], ans))
 
         with self.subTest("output ce check"):
@@ -485,7 +485,7 @@ class TestNetworkTransform(unittest.TestCase):
             UpdateOp(model=model, loss_name="ce")
         ])
 
-        batch = {"x": np.ones((1, 28, 28, 1)), "y": np.array([[1]])}
+        batch = {"x": np.ones((1, 28, 28, 1)), "y": np.array([1])}
         batch = network.transform(data=batch, mode="train")
         with self.subTest("output y_pred check"):
             self.assertTrue("y_pred" in batch.keys())
@@ -507,7 +507,7 @@ class TestNetworkTransform(unittest.TestCase):
             CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),
             UpdateOp(model=model, loss_name="ce")
         ])
-        batch = {"x": np.ones((1, 1, 28, 28), dtype=np.float32), "y": np.array([[1]], dtype=np.float32)}
+        batch = {"x": np.ones((1, 1, 28, 28), dtype=np.float32), "y": np.array([1], dtype=np.float32)}
         batch = network.transform(data=batch, mode="train")
 
         with self.subTest("output y_pred check"):
