@@ -1,6 +1,6 @@
 # FastEstimator
 <p align="center">
-  <img src="./tutorial/resources/icon.png" title="we are cool">
+  <img src="https://github.com/fastestimator-util/fastestimator-misc/blob/master/resource/pictures/icon.png?raw=true" title="we are cool">
 </p>
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-informational.svg)](LICENSE)

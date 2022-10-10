@@ -16,62 +16,12 @@ import os
 import random
 import tarfile
 from pathlib import Path
-from typing import Optional, TypeVar
+from typing import Optional
 
 import pandas as pd
-import requests
-from tqdm import tqdm
 
 from fastestimator.dataset.csv_dataset import CSVDataset
-
-Response = TypeVar('Response', bound=requests.models.Response)
-
-
-def _download_file_from_google_drive(id: str, destination: str) -> None:
-    """Download the data from the Google drive public URL.
-
-    This method will create a session instance to persist the requests and reuse TCP connection for the large files.
-
-    Args:
-        id: File ID of Google drive URL.
-        destination: Destination path where the data needs to be stored.
-    """
-    URL = "https://drive.google.com/uc?export=download&confirm=t"
-    CHUNK_SIZE = 128
-    session = requests.Session()
-
-    response = session.get(URL, params={'id': id}, stream=True)
-    token = _get_confirm_token(response)
-
-    if token:
-        params = {'id': id, 'confirm': token}
-        response = session.get(URL, params=params, stream=True)
-
-    total_size = int(response.headers.get('Content-Length', 0))
-    progress = tqdm(total=total_size, unit='B', unit_scale=True)
-    with open(destination, "wb") as f:
-        for chunk in response.iter_content(CHUNK_SIZE):
-            if chunk:  # filter out keep-alive new chunks
-                progress.update(len(chunk))
-                f.write(chunk)
-    progress.close()
-
-
-def _get_confirm_token(response: Response) -> str:
-    """Retrieve the token from the cookie jar of HTTP request to keep the session alive.
-
-    Args:
-        response: Response object of the HTTP request.
-
-    Returns"
-        The value of cookie in the response object.
-
-    """
-    for key, value in response.cookies.items():
-        if key.startswith('download_warning'):
-            return value
-
-    return None
+from fastestimator.util.google_download_util import _download_file_from_google_drive
 
 
 def load_data(root_dir: Optional[str] = None) -> CSVDataset:

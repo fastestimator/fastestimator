@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2022 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,17 +13,18 @@
 # limitations under the License.
 # ==============================================================================
 import os
+import shutil
+from pathlib import Path
 from typing import Tuple
 
 import numpy as np
-from tensorflow.keras.utils import get_file
 
 from fastestimator.dataset.data.cifair10 import _load_batch
 from fastestimator.dataset.numpy_dataset import NumpyDataset
+from fastestimator.util.google_download_util import _download_file_from_google_drive
 
 
-def load_data(image_key: str = "x",
-              label_key: str = "y",
+def load_data(root_dir: str = None, image_key: str = "x", label_key: str = "y",
               label_mode: str = "fine") -> Tuple[NumpyDataset, NumpyDataset]:
     """Load and return the ciFAIR100 dataset.
 
@@ -32,32 +33,37 @@ def load_data(image_key: str = "x",
     dataset.
 
     Args:
+        root_dir: The path to store the downloaded data. When `path` is not provided, the data will be saved into
+            `fastestimator_data` under the user's home directory.
         image_key: The key for image.
         label_key: The key for label.
-        label_mode: Either "fine" for 100 classes or "coarse" for 20 classes.
 
     Returns:
         (train_data, test_data)
-
-    Raises:
-        ValueError: If the label_mode is invalid.
     """
-    if label_mode not in ['fine', 'coarse']:
-        raise ValueError("label_mode must be one of either 'fine' or 'coarse'.")
+    home = str(Path.home())
 
-    dirname = 'ciFAIR-100'
-    archive_name = 'ciFAIR-100.zip'
-    origin = 'https://github.com/cvjena/cifair/releases/download/v1.0/ciFAIR-100.zip'
-    md5_hash = 'ddc236ab4b12eeb8b20b952614861a33'
+    if root_dir is None:
+        root_dir = os.path.join(home, 'fastestimator_data', 'ciFAIR100')
+    else:
+        root_dir = os.path.join(os.path.abspath(root_dir), 'ciFAIR100')
+    os.makedirs(root_dir, exist_ok=True)
 
-    path = get_file(archive_name, origin=origin, file_hash=md5_hash, hash_algorithm='md5', extract=True,
-                    archive_format='zip')
-    path = os.path.join(os.path.dirname(path), dirname)
+    image_compressed_path = os.path.join(root_dir, 'ciFAIR100.zip')
+    image_extracted_path = os.path.join(root_dir, 'ciFAIR-100')
 
-    fpath = os.path.join(path, 'train')
+    if not os.path.exists(image_extracted_path):
+        if not os.path.exists(image_compressed_path):
+            print("Downloading data to {}".format(root_dir))
+            _download_file_from_google_drive('1ZE_wf5UTd9fJqBgikb7MJtfFEeAfXybS', image_compressed_path)
+
+        print("Extracting data to {}".format(root_dir))
+        shutil.unpack_archive(image_compressed_path, root_dir)
+
+    fpath = os.path.join(image_extracted_path, 'train')
     x_train, y_train = _load_batch(fpath, label_key=label_mode + '_labels')
 
-    fpath = os.path.join(path, 'test')
+    fpath = os.path.join(image_extracted_path, 'test')
     x_test, y_test = _load_batch(fpath, label_key=label_mode + '_labels')
 
     y_train = np.reshape(y_train, (len(y_train), 1))
