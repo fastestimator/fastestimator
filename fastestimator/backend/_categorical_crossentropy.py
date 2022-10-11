@@ -84,7 +84,7 @@ def categorical_crossentropy(y_pred: Tensor,
         y_true = y_true.to(torch.float)
         ce = _categorical_crossentropy_torch(y_pred=y_pred, y_true=y_true, from_logits=from_logits)
         if class_weights is not None:
-            y_class = torch.argmax(y_true, dim=-1)
+            y_class = torch.argmax(y_true, dim=1)
             sample_weights = torch.ones_like(y_class, dtype=torch.float)
             for key in class_weights.keys():
                 sample_weights[y_class == key] = class_weights[key]
