@@ -41,7 +41,9 @@ class CrossEntropy(LossOp):
         from_logits: Whether y_pred is logits (without softmax).
         average_loss: Whether to average the element-wise loss after the Loss Op.
         form: What form of cross entropy should be performed ('binary', 'categorical', 'sparse', or None). None will
-            automatically infer the correct form based on tensor shape.
+            automatically infer the correct form based on tensor shape: if the both y_pred and y_true are rank-2 tensors
+            then 'categorical' will be used, if y_pred is rank-2 tensors but y_true is rank-1 tensor, then `sparse` will
+            be chosen, otherwise `binary` will be applied.
         class_weights: Dictionary mapping class indices to a weight for weighting the loss function. Useful when you
             need to pay more attention to samples from an under-represented class.
 

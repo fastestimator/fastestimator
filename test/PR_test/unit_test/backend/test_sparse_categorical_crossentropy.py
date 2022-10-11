@@ -24,11 +24,11 @@ from fastestimator.backend import sparse_categorical_crossentropy
 class TestSparseCategoricalCrossEntropy(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tf_true = tf.constant([[0], [1], [0]])
+        cls.tf_true = tf.constant([0, 1, 0])
         cls.tf_pred = tf.constant([[0.1, 0.8, 0.1], [0.9, 0.05, 0.05], [0.1, 0.2, 0.7]])
         cls.tf_weights = tf.lookup.StaticHashTable(
             tf.lookup.KeyValueTensorInitializer(tf.constant([1]), tf.constant([2.0])), default_value=1.0)
-        cls.torch_true = torch.Tensor([[0], [1], [0]])
+        cls.torch_true = torch.Tensor([0, 1, 0])
         cls.torch_pred = torch.Tensor([[0.1, 0.8, 0.1], [0.9, 0.05, 0.05], [0.1, 0.2, 0.7]])
         cls.torch_weights = {1: 2.0}
 

@@ -58,8 +58,10 @@ def sparse_categorical_crossentropy(y_pred: Tensor,
     ```
 
     Args:
-        y_pred: Prediction with a shape like (Batch, C). dtype: float32 or float16.
-        y_true: Ground truth class labels with a shape like (Batch) or (Batch, 1). dtype: int.
+        y_pred: Prediction with a shape like (Batch, ..., C) for tensorflow and (Batch, C, ...) for PyTorch. dtype:
+            float32 or float16.
+        y_true: Ground truth class labels with a shape like (Batch, ...), with each element representing the label index
+            starting from 0. dtype: int.
         from_logits: Whether y_pred is from logits. If True, a softmax will be applied to the prediction.
         average_loss: Whether to average the element-wise loss.
         class_weights: Mapping of class indices to a weight for weighting the loss function. Useful when you need to pay
@@ -81,7 +83,6 @@ def sparse_categorical_crossentropy(y_pred: Tensor,
                 tf.cast(tf.reshape(y_true, tf.shape(ce)), dtype=class_weights.key_dtype))
             ce = ce * sample_weights
     else:
-        y_true = y_true.view(-1)
         if from_logits:
             ce = torch.nn.CrossEntropyLoss(reduction="none")(input=y_pred, target=y_true.long())
         else:
