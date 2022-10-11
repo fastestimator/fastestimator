@@ -22,7 +22,7 @@ from fastestimator.util.img_data import BatchDisplay as BatchDisplayF
 from fastestimator.util.traceability_util import traceable
 
 
-@traceable
+@traceable()
 class BatchDisplay(Trace):
     """A Trace to display a batch of images.
 

@@ -23,7 +23,7 @@ from fastestimator.util.img_data import GridDisplay as GridDisplayF
 from fastestimator.util.traceability_util import traceable
 
 
-@traceable
+@traceable()
 class GridDisplay(Trace):
     """A Trace to display of grid of images.
 
