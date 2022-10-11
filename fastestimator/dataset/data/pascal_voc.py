@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2022 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -180,7 +180,7 @@ class PascalVoc(FEDataset):
         Args:
             filename: The filename of the image for which to find data.
         """
-        if self.box_images.get(filename) == None:
+        if self.box_images.get(filename) is None:
             return None, [], False
 
         image = cv2.imread(self.box_images[filename])
@@ -235,7 +235,7 @@ class PascalVoc(FEDataset):
         Args:
             filename: The filename of the image for which to find data.
         """
-        if self.seg_images.get(filename) == None:
+        if self.seg_images.get(filename) is None:
             return None, [], False
 
         image = cv2.imread(self.seg_images[filename])
