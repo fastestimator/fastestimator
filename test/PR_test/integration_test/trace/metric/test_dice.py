@@ -24,31 +24,26 @@ from fastestimator.util import Data
 class TestDice(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        x = np.array([[[[0, 1, 1], [1, 0, 1], [1, 0, 1]],
-                       [[0, 0, 1], [1, 1, 1], [1, 0, 1]],
-                       [[0, 1, 1], [1, 0, 1], [1, 0, 1]]]], dtype=np.float32)
+        cls.x = np.array([[[[0, 1, 1], [1, 0, 1], [1, 0, 1]],
+                           [[0, 0, 1], [1, 1, 1], [1, 0, 1]],
+                           [[0, 1, 1], [1, 0, 1], [1, 0, 1]]]], dtype=np.float32)
 
-        x_pred = np.array([[[[0, 1, 0], [1, 0, 0], [1, 0, 1]],
-                            [[1, 0, 1], [1, 0, 1], [0, 1, 0]],
-                            [[0, 0, 1], [1, 0, 1], [1, 0, 1]]]], dtype=np.float32)
-        cls.data = Data({'x': x, 'x_pred': x_pred})
-        cls.dice_output = [0.750]
+        cls.x_pred = np.array([[[[0, 1, 0], [1, 0, 0], [1, 0, 1]],
+                                [[1, 0, 1], [1, 0, 1], [0, 1, 0]],
+                                [[0, 0, 1], [1, 0, 1], [1, 0, 1]]]], dtype=np.float32)
+        cls.dice_output = 0.67777777
         cls.dice = Dice(true_key='x', pred_key='x_pred')
         cls.dice.system = sample_system_object()
 
-    def test_on_epoch_begin(self):
-        self.dice.on_epoch_begin(data=self.data)
-        self.assertEqual(self.dice.dice, [])
-
-    def test_on_batch_end(self):
-        self.dice.dice = []
-        self.dice.on_batch_end(data=self.data)
-        self.assertEqual(self.dice.dice, self.dice_output)
-
-    def test_on_epoch_end(self):
-        self.dice.dice = [0.750]
-        self.dice.on_epoch_end(data=self.data)
+    def test_sanity(self):
+        data = Data()
+        self.dice.on_epoch_begin(data=data)
+        self.assertTrue(len(data) == 0)
+        data = Data({'x': self.x, 'x_pred': self.x_pred})
+        self.dice.on_batch_end(data=data)
+        data = Data()
+        self.dice.on_epoch_end(data=data)
         with self.subTest('Check if dice exists'):
-            self.assertIn('Dice', self.data)
+            self.assertIn('Dice', data)
         with self.subTest('Check the value of dice'):
-            self.assertEqual(self.data['Dice'], 0.750)
+            self.assertAlmostEqual(data['Dice'], self.dice_output, places=4)

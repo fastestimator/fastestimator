@@ -31,6 +31,21 @@ class ValWithError(NamedTuple):
     def __str__(self):
         return f"({self.y_min}, {self.y}, {self.y_max})"
 
+    def __lt__(self, other):
+        return self.y < other
+
+    def __le__(self, other):
+        return self.y <= other
+
+    def __ge__(self, other):
+        return self.y >= other
+
+    def __gt__(self, other):
+        return self.y > other
+
+    def __eq__(self, other):
+        return self.y == other
+
 
 class Summary:
     """A summary object that records training history.

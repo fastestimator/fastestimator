@@ -12,14 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Iterable, Union
+from collections import defaultdict
+from typing import Dict, Iterable, Optional, Union
 
 import numpy as np
 
 from fastestimator.backend._dice_score import dice_score
+from fastestimator.summary.summary import ValWithError
 from fastestimator.trace.meta._per_ds import per_ds
 from fastestimator.trace.trace import Trace
-from fastestimator.util import Data
+from fastestimator.util.base_util import to_set
+from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
 
@@ -32,8 +35,13 @@ class Dice(Trace):
     Args:
         true_key: The key of the ground truth mask.
         pred_key: The key of the prediction values.
-        threshold: The threshold for binarizing the prediction.
-        channel_average: Whether the average channel-wise dice loss.
+        threshold: The threshold for binarizing the prediction. Set this to 0.0 if you are using a background class. To
+            skip binarization, set this to None.
+        mutually_exclusive_channels: Whether an individual pixel can belong to only 1 class (True) or more than 1 class
+            (False). If True, a threshold of 0.0 can be used to binarize by whatever the maximum predicted class is.
+        exclude_channels: A collection of channel indices to be ignored.
+        channel_mapping: Optional names to give to each channel.
+        include_std: Whether to also report standard deviations when computing dice scores.
         mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
@@ -48,8 +56,11 @@ class Dice(Trace):
     def __init__(self,
                  true_key: str,
                  pred_key: str,
-                 threshold: float = 0.5,
-                 channel_average: bool = False,
+                 threshold: Optional[float] = 0.5,
+                 mutually_exclusive_channels: bool = True,
+                 exclude_channels: Union[None, int, Iterable[int]] = None,
+                 channel_mapping: Optional[Dict[int, str]] = None,
+                 include_std: bool = False,
                  mode: Union[None, str, Iterable[str]] = ("eval", "test"),
                  ds_id: Union[None, str, Iterable[str]] = None,
                  output_name: str = "Dice",
@@ -57,10 +68,13 @@ class Dice(Trace):
         super().__init__(inputs=(true_key, pred_key),
                          mode=mode, outputs=output_name, ds_id=ds_id)
         self.threshold = threshold
+        self.mutually_exclusive_channels = mutually_exclusive_channels
         self.smooth = 1e-8
-        self.channel_average = channel_average
-        self.dice = []
+        self.per_ch_dice = {}
         self.per_ds = per_ds
+        self.include_std = include_std
+        self.exclude_channels = to_set(exclude_channels)
+        self.channel_mapping = channel_mapping or {}
 
     @property
     def true_key(self) -> str:
@@ -70,21 +84,59 @@ class Dice(Trace):
     def pred_key(self) -> str:
         return self.inputs[1]
 
-    def on_epoch_begin(self, data: Data) -> None:
-        self.dice = []
+    def on_epoch_begin(self, data) -> None:
+        self.per_ch_dice = defaultdict(list)
 
     def on_batch_end(self, data: Data) -> None:
-        y_true, y_pred = to_number(
-            data[self.true_key]), to_number(data[self.pred_key])
+        y_true, y_pred = data[self.true_key], data[self.pred_key]
 
-        y_pred = np.where(y_pred > self.threshold, 1.0,
-                          0.0).astype(y_pred.dtype)
+        dice = to_number(dice_score(y_pred=y_pred,
+                                    y_true=y_true,
+                                    sample_average=False,
+                                    channel_average=False,
+                                    mutually_exclusive_channels=self.mutually_exclusive_channels,
+                                    threshold=self.threshold,
+                                    epsilon=self.smooth))
+        # Dice will be Batch x Channels
+        for instance in dice:
+            for idx, channel_dice in enumerate(instance):
+                # TODO - if y_true and y_pred for a channel are both within epsilon of 0, that dice value should be
+                #  excluded from the list rather than being counted as a 0 in the mean
+                self.per_ch_dice[idx].append(channel_dice)
 
-        dice = dice_score(y_pred=y_pred, y_true=y_true,
-                          channel_average=self.channel_average, epsilon=self.smooth)
-
-        data.write_per_instance_log(self.outputs[0], dice)
-        self.dice.extend(list(dice))
+        n_elem, n_channels = dice.shape
+        data.write_per_instance_log(self.outputs[0], dice[:, 0])
+        if n_channels > 1:
+            for ch_idx in range(n_channels):
+                if ch_idx in self.exclude_channels:
+                    continue
+                ch_name = ch_idx
+                if ch_name in self.channel_mapping:
+                    ch_name = self.channel_mapping[ch_name]
+                data.write_per_instance_log(f"{self.outputs[0]}_{ch_name}", dice[:, ch_idx])
 
     def on_epoch_end(self, data: Data) -> None:
-        data.write_with_log(self.outputs[0], np.mean(self.dice))
+        means = []
+        stds = []
+        for ch_name, ch_vals in self.per_ch_dice.items():
+            if ch_name in self.exclude_channels:
+                continue
+            if ch_name in self.channel_mapping:
+                ch_name = self.channel_mapping[ch_name]
+            mean = np.mean(ch_vals)
+            means.append(mean)
+            # If there are multiple channels then report each of them
+            if len(self.per_ch_dice.items()) > 1:
+                if self.include_std:
+                    std = np.std(ch_vals)
+                    stds.append(std)
+                    data.write_with_log(f"{self.outputs[0]}_{ch_name}", ValWithError(mean - std, mean, mean + std))
+                else:
+                    data.write_with_log(f"{self.outputs[0]}_{ch_name}", mean)
+        mean = np.mean(means)
+        if self.include_std:
+            std = np.mean(stds)
+            data.write_with_log(self.outputs[0], ValWithError(mean - std, mean, mean + std))
+        else:
+            data.write_with_log(self.outputs[0], mean)
+        self.per_ch_dice.clear()

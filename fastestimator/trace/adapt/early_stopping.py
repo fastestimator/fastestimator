@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from operator import lt, gt
 from typing import Optional
 
 import numpy as np
@@ -63,17 +64,17 @@ class EarlyStopping(Trace):
         self.patience = patience
         self.baseline = baseline
         if compare == 'min':
-            self.monitor_op = np.less
+            self.monitor_op = lt
             self.min_delta *= -1
         else:
-            self.monitor_op = np.greater
+            self.monitor_op = gt
 
     def on_begin(self, data: Data) -> None:
         self.wait = 0
         if self.baseline is not None:
             self.best = self.baseline
         else:
-            self.best = np.Inf if self.monitor_op == np.less else -np.Inf
+            self.best = np.Inf if self.monitor_op == lt else -np.Inf
 
     def on_epoch_end(self, data: Data) -> None:
         current = data[self.monitored_key]

@@ -78,6 +78,7 @@ __getattr__, __dir__, __all__ = lazy.attach(__name__,
                                                           '_transpose': ['transpose'],
                                                           '_update_model': ['update_model'],
                                                           '_watch': ['watch'],
+                                                          '_where': ['where'],
                                                           '_zeros_like': ['zeros_like'],
                                                           '_zscore': ['zscore'],
                                                           })
@@ -144,5 +145,6 @@ if TYPE_CHECKING:
     from fastestimator.backend._transpose import transpose
     from fastestimator.backend._update_model import update_model
     from fastestimator.backend._watch import watch
+    from fastestimator.backend._where import where
     from fastestimator.backend._zeros_like import zeros_like
     from fastestimator.backend._zscore import zscore
