@@ -15,8 +15,7 @@
 import os
 import tarfile
 import collections
-from xml.etree.ElementTree import Element as ET_Element
-from xml.etree.ElementTree import parse as ET_parse
+from defusedxml.ElementTree import parse as ET_parse
 
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -196,7 +195,7 @@ class PascalVoc(FEDataset):
         return image, bbox, True
 
     @staticmethod
-    def parse_voc_xml(node: ET_Element) -> Dict[str, Any]:
+    def parse_voc_xml(node) -> Dict[str, Any]:
         '''
         Parse xml file to read Bounding Box annotations of individual image files
         '''
