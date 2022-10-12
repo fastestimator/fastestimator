@@ -416,7 +416,7 @@ class BatchDisplay(Display):
                              bboxes=bbox,
                              keypoints=keypoint,
                              title=None,
-                             color_map=color_map)) 
+                             color_map=color_map))
         self.batch_size = len(self.batch) or 1
         self.title = title or ''
 
