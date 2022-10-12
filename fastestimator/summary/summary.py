@@ -15,18 +15,39 @@
 import re
 import statistics
 from collections import defaultdict
-from typing import Any, Dict, List, NamedTuple, Optional, TYPE_CHECKING, Union
+from typing import Any, Dict, List, Optional, TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
     from fastestimator.util.traceability_util import FeSummaryTable
 
 
-class ValWithError(NamedTuple):
+class ValWithError:
     """A class to record values with error bars (for special visualization in the logger).
     """
-    y_min: float
-    y: float
-    y_max: float
+    __slots__ = 'y_min', 'y', 'y_max'
+
+    def __init__(self, y_min: float, y: float, y_max: float):
+        self.y_min = y_min
+        self.y = y
+        self.y_max = y_max
+
+    def __getitem__(self, idx: int):
+        if idx == 0:
+            return self.y_min
+        elif idx == 1:
+            return self.y
+        elif idx == 2:
+            return self.y_max
+        else:
+            raise IndexError()
+
+    def __getstate__(self):
+        return {'y_min': self.y_min, 'y': self.y, 'y_max': self.y_max}
+
+    def __setstate__(self, state):
+        self.y_min = state['y_min']
+        self.y = state['y']
+        self.y_max = state['y_max']
 
     def __str__(self):
         return f"({self.y_min}, {self.y}, {self.y_max})"
