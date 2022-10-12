@@ -108,7 +108,7 @@ class Dice(Trace):
                     continue
                 self.per_ch_dice[idx].append(channel_dice)
 
-        n_elem, n_channels = dice.shape
+        _, n_channels = dice.shape
         dice_slices = []
         if n_channels > 1:
             for ch_idx in range(n_channels):
