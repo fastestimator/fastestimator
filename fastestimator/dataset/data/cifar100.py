@@ -76,8 +76,7 @@ def load_data(root_dir: str = None,
     eval_data_path = os.path.join(image_extracted_path, "test")
     x_eval, y_eval = load_batch(eval_data_path, label_key=label_mode + "_labels")
 
-    y_train = np.expand_dims(y_train, -1)
-    y_eval = np.expand_dims(y_eval, -1)
+    y_eval = np.array(y_eval)
 
     if channels_last:
         x_train = x_train.transpose(0, 2, 3, 1)
