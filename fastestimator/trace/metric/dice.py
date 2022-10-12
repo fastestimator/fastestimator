@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import math
 from collections import defaultdict
 from typing import Dict, Iterable, Optional, Union
 
@@ -69,7 +70,7 @@ class Dice(Trace):
                          mode=mode, outputs=output_name, ds_id=ds_id)
         self.threshold = threshold
         self.mask_overlap = mask_overlap
-        self.smooth = 1e-8
+        self.epsilon = 1e-8
         self.per_ch_dice = {}
         self.per_ds = per_ds
         self.include_std = include_std
@@ -96,12 +97,15 @@ class Dice(Trace):
                                     channel_average=False,
                                     mask_overlap=self.mask_overlap,
                                     threshold=self.threshold,
-                                    epsilon=self.smooth))
+                                    empty_nan=True,
+                                    epsilon=self.epsilon))
         # Dice will be Batch x Channels
         for instance in dice:
             for idx, channel_dice in enumerate(instance):
-                # TODO - if y_true and y_pred for a channel are both within epsilon of 0, that dice value should be
-                #  excluded from the list rather than being counted as a 0 in the mean
+                if math.isnan(channel_dice):
+                    # If y_true and y_pred for a channel are both within epsilon of 0, the dice value should be
+                    # excluded from the list rather than being counted as 0 in the mean
+                    continue
                 self.per_ch_dice[idx].append(channel_dice)
 
         n_elem, n_channels = dice.shape

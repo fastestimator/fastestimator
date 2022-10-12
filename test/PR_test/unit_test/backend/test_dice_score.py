@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import math
 import unittest
 
 import numpy as np
@@ -64,6 +65,21 @@ class TestDiceScore(unittest.TestCase):
         torch_dice_score = dice_score(self.torch_pred, self.torch_true)
 
         target = np.array([[0.0, 0.0, 0.0],
+                           [0.0, 0.0, 0.0],
+                           [0.0, 0.0, 0.0],
+                           [0.75472, 0.82353, 0.24],
+                           [1.0, 1.0, 1.0]])
+
+        np.testing.assert_array_almost_equal(np_dice_score, target, 4)
+        np.testing.assert_array_almost_equal(tf_dice_score, target, 4)
+        np.testing.assert_array_almost_equal(torch_dice_score, target, 4)
+
+    def test_empty_nan(self):
+        np_dice_score = dice_score(self.np_pred, self.np_true, empty_nan=True)
+        tf_dice_score = dice_score(self.tf_pred, self.tf_true, empty_nan=True)
+        torch_dice_score = dice_score(self.torch_pred, self.torch_true, empty_nan=True)
+
+        target = np.array([[math.nan, math.nan, math.nan],
                            [0.0, 0.0, 0.0],
                            [0.0, 0.0, 0.0],
                            [0.75472, 0.82353, 0.24],

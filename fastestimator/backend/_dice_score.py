@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import math
 from typing import List, Optional, TypeVar
 
 import numpy as np
@@ -51,6 +52,7 @@ def dice_score(y_pred: Tensor,
                channel_weights: Optional[Tensor] = None,
                mask_overlap: bool = True,
                threshold: Optional[float] = None,
+               empty_nan: bool = False,
                epsilon: float = 1e-6) -> Tensor:
     """Compute Dice score.
 
@@ -106,6 +108,8 @@ def dice_score(y_pred: Tensor,
             (True). If False, a threshold of 0.0 can be used to binarize by whatever the maximum predicted class is.
         threshold: The threshold for binarizing the prediction. Set this to 0.0 if you are using a background class. Set
             to None if continuous values are desired (ex. for a loss).
+        empty_nan: If a target mask is totally empty (object is missing) and the prediction is also empty, should this
+            function return 0.0 (False) or NaN (True) for that particular mask channel.
         epsilon: floating point value to avoid divide by zero error.
 
     Returns:
@@ -140,6 +144,10 @@ def dice_score(y_pred: Tensor,
     if channel_weights is not None:
         channel_weights = cast(channel_weights, 'float32')
         dice = dice * channel_weights
+    if empty_nan:
+        dice = where(reduce_max(y_true, axis=spacial_axes) + reduce_max(y_pred, axis=spacial_axes) < epsilon,
+                     math.nan,
+                     dice)
     if channel_average:
         dice = reduce_mean(dice, axis=channel_axis)  # N
     if sample_average:
