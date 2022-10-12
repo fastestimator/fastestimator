@@ -122,7 +122,7 @@ class Dice(Trace):
                 dice_slices.append(dice[:, ch_idx])
             dice_slices = np.mean(dice_slices, axis=0)
         else:
-            dice_slices = dice
+            dice_slices = np.squeeze(dice, axis=-1)
         data.write_per_instance_log(self.outputs[0], dice_slices)
 
     def on_epoch_end(self, data: Data) -> None:
