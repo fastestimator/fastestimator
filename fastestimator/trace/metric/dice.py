@@ -105,7 +105,7 @@ class Dice(Trace):
                 self.per_ch_dice[idx].append(channel_dice)
 
         n_elem, n_channels = dice.shape
-        data.write_per_instance_log(self.outputs[0], dice[:, 0])
+        dice_slices = []
         if n_channels > 1:
             for ch_idx in range(n_channels):
                 if ch_idx in self.exclude_channels:
@@ -114,6 +114,11 @@ class Dice(Trace):
                 if ch_name in self.channel_mapping:
                     ch_name = self.channel_mapping[ch_name]
                 data.write_per_instance_log(f"{self.outputs[0]}_{ch_name}", dice[:, ch_idx])
+                dice_slices.append(dice[:, ch_idx])
+            dice_slices = np.mean(dice_slices, axis=0)
+        else:
+            dice_slices = dice
+        data.write_per_instance_log(self.outputs[0], dice_slices)
 
     def on_epoch_end(self, data: Data) -> None:
         means = []
