@@ -15,7 +15,7 @@
 import re
 import statistics
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, TYPE_CHECKING, Union
+from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
     from fastestimator.util.traceability_util import FeSummaryTable
@@ -40,6 +40,9 @@ class ValWithError:
             return self.y_max
         else:
             raise IndexError()
+
+    def as_tuple(self) -> Tuple[float, float, float]:
+        return self.y_min, self.y, self.y_max
 
     def __getstate__(self):
         return {'y_min': self.y_min, 'y': self.y, 'y_max': self.y_max}
