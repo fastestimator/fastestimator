@@ -103,8 +103,9 @@ class Dice(Trace):
         for instance in dice:
             for idx, channel_dice in enumerate(instance):
                 if math.isnan(channel_dice):
-                    # If y_true and y_pred for a channel are both within epsilon of 0, the dice value should be
-                    # excluded from the list rather than being counted as 0 in the mean
+                    # If y_true and y_pred for a channel are both empty (less than 1e-4), the dice value should be
+                    # excluded from the list rather than being counted as 0 in the mean (the object is missing and the
+                    # model correctly identified that it is missing)
                     continue
                 self.per_ch_dice[idx].append(channel_dice)
 

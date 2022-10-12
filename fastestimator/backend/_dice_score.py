@@ -145,7 +145,7 @@ def dice_score(y_pred: Tensor,
         channel_weights = cast(channel_weights, 'float32')
         dice = dice * channel_weights
     if empty_nan:
-        dice = where(reduce_max(y_true, axis=spacial_axes) + reduce_max(y_pred, axis=spacial_axes) < epsilon,
+        dice = where(reduce_max(y_true, axis=spacial_axes) + reduce_max(y_pred, axis=spacial_axes) < 1e-4,
                      math.nan,
                      dice)
     if channel_average:

@@ -46,6 +46,27 @@ class ValWithError(NamedTuple):
     def __eq__(self, other):
         return self.y == other
 
+    def __add__(self, other):
+        return self.y + other
+
+    def __sub__(self, other):
+        return self.y - other
+
+    def __mul__(self, other):
+        return self.y * other
+
+    def __abs__(self):
+        return abs(self.y)
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __rsub__(self, other):
+        return self.__sub__(other)
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
 
 class Summary:
     """A summary object that records training history.
