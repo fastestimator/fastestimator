@@ -20,13 +20,13 @@ import torch
 
 from fastestimator.backend._dice_score import dice_score
 from fastestimator.backend._to_tensor import to_tensor
-from fastestimator.op.tensorop.tensorop import TensorOp
+from fastestimator.op.tensorop.loss.loss import LossOp
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.array)
 
 
-class Dice(TensorOp):
-    """Calculate Dice Scores.
+class DiceLoss(LossOp):
+    """Calculate Dice Loss Scores.
 
     Args:
         inputs: A tuple or list of keys representing prediction and ground truth, like: ("y_pred", "y_true").
@@ -37,11 +37,10 @@ class Dice(TensorOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
         soft_dice: Whether to square elements in the denominator.
-        sample_average: Whether to average the dice score along the batch dimension.
+        average_loss: Whether to average the element-wise loss after the Loss Op.
         channel_average: Whether to average the dice score along the channel dimension.
         channel_weights: Dictionary mapping channel indices to a weight for weighting the loss function. Useful when you
             need to pay more attention to a particular channel.
-        negate: Whether to negate the dice score (for use as a loss).
         epsilon: A small value to prevent numeric instability in the division.
 
     Returns:
@@ -58,17 +57,14 @@ class Dice(TensorOp):
                  mode: Union[None, str, Iterable[str]] = "!infer",
                  ds_id: Union[None, str, Iterable[str]] = None,
                  soft_dice: bool = False,
-                 sample_average: bool = False,
-                 channel_average: bool = False,
+                 average_loss: bool = True,
+                 channel_average: bool = True,
                  channel_weights: Optional[Dict[int, float]] = None,
-                 negate: bool = False,
                  epsilon: float = 1e-6):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id, average_loss=average_loss)
         self.channel_average = channel_average
         self.soft_dice = soft_dice
         self.epsilon = epsilon
-        self.sample_average = sample_average
-        self.negate = negate
         if channel_weights:
             assert isinstance(channel_weights, dict), \
                 "channel_weights should be a dictionary or have None value, got {}".format(type(channel_weights))
@@ -98,8 +94,8 @@ class Dice(TensorOp):
         dice = dice_score(y_pred=y_pred,
                           y_true=y_true,
                           soft_dice=self.soft_dice,
-                          sample_average=self.sample_average,
+                          sample_average=self.average_loss,
                           channel_average=self.channel_average,
                           channel_weights=self.weights,
                           epsilon=self.epsilon)
-        return -dice if self.negate else dice
+        return 1.0 - dice

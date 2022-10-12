@@ -18,6 +18,7 @@ import lazy_loader as lazy
 
 __getattr__, __dir__, __all__ = lazy.attach(__name__,
                                             submod_attrs={'cross_entropy': ['CrossEntropy'],
+                                                          'dice_loss': ['DiceLoss'],
                                                           'hinge': ['Hinge'],
                                                           'focal_loss': ['FocalLoss'],
                                                           'l2_regularization': ['L2Regularizaton'],
@@ -29,6 +30,7 @@ __getattr__, __dir__, __all__ = lazy.attach(__name__,
 
 if TYPE_CHECKING:
     from fastestimator.op.tensorop.loss.cross_entropy import CrossEntropy
+    from fastestimator.op.tensorop.loss.dice_loss import DiceLoss
     from fastestimator.op.tensorop.loss.focal_loss import FocalLoss
     from fastestimator.op.tensorop.loss.hinge import Hinge
     from fastestimator.op.tensorop.loss.l1_loss import L1_Loss
