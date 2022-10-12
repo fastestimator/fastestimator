@@ -49,7 +49,7 @@ def dice_score(y_pred: Tensor,
                sample_average: bool = False,
                channel_average: bool = False,
                channel_weights: Optional[Tensor] = None,
-               mutually_exclusive_channels: bool = False,
+               mask_overlap: bool = True,
                threshold: Optional[float] = None,
                epsilon: float = 1e-6) -> Tensor:
     """Compute Dice score.
@@ -102,8 +102,8 @@ def dice_score(y_pred: Tensor,
         sample_average: Whether to average the dice score along the batch dimension.
         channel_average: Whether to average the dice score along the channel dimension.
         channel_weights: A tensor of weights (size 1xN_Channels) to apply to each channel before reduction.
-        mutually_exclusive_channels: Whether an individual pixel can belong to only 1 class (True) or more than 1 class
-            (False). If True, a threshold of 0.0 can be used to binarize by whatever the maximum predicted class is.
+        mask_overlap: Whether an individual pixel can belong to only 1 class (False) or more than 1 class
+            (True). If False, a threshold of 0.0 can be used to binarize by whatever the maximum predicted class is.
         threshold: The threshold for binarizing the prediction. Set this to 0.0 if you are using a background class. Set
             to None if continuous values are desired (ex. for a loss).
         epsilon: floating point value to avoid divide by zero error.
@@ -118,7 +118,7 @@ def dice_score(y_pred: Tensor,
     channel_axis = _get_channel_axis(y_pred)
     spacial_axes = _get_spacial_axes(y_pred, channel_axis=channel_axis)
 
-    if mutually_exclusive_channels:
+    if not mask_overlap:
         # Find the max prediction per channel
         pick = reduce_max(y_pred, axis=channel_axis, keepdims=True)
         # Assign each pixel only to the max prediction across the channels

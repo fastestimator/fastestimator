@@ -37,8 +37,8 @@ class Dice(Trace):
         pred_key: The key of the prediction values.
         threshold: The threshold for binarizing the prediction. Set this to 0.0 if you are using a background class. To
             skip binarization, set this to None.
-        mutually_exclusive_channels: Whether an individual pixel can belong to only 1 class (True) or more than 1 class
-            (False). If True, a threshold of 0.0 can be used to binarize by whatever the maximum predicted class is.
+        mask_overlap: Whether an individual pixel can belong to only 1 class (False) or more than 1 class
+            (True). If False, a threshold of 0.0 can be used to binarize by whatever the maximum predicted class is.
         exclude_channels: A collection of channel indices to be ignored.
         channel_mapping: Optional names to give to each channel.
         include_std: Whether to also report standard deviations when computing dice scores.
@@ -57,7 +57,7 @@ class Dice(Trace):
                  true_key: str,
                  pred_key: str,
                  threshold: Optional[float] = 0.5,
-                 mutually_exclusive_channels: bool = True,
+                 mask_overlap: bool = True,
                  exclude_channels: Union[None, int, Iterable[int]] = None,
                  channel_mapping: Optional[Dict[int, str]] = None,
                  include_std: bool = False,
@@ -68,7 +68,7 @@ class Dice(Trace):
         super().__init__(inputs=(true_key, pred_key),
                          mode=mode, outputs=output_name, ds_id=ds_id)
         self.threshold = threshold
-        self.mutually_exclusive_channels = mutually_exclusive_channels
+        self.mask_overlap = mask_overlap
         self.smooth = 1e-8
         self.per_ch_dice = {}
         self.per_ds = per_ds
@@ -94,7 +94,7 @@ class Dice(Trace):
                                     y_true=y_true,
                                     sample_average=False,
                                     channel_average=False,
-                                    mutually_exclusive_channels=self.mutually_exclusive_channels,
+                                    mask_overlap=self.mask_overlap,
                                     threshold=self.threshold,
                                     epsilon=self.smooth))
         # Dice will be Batch x Channels

@@ -89,9 +89,9 @@ class TestDiceScore(unittest.TestCase):
         np.testing.assert_array_almost_equal(torch_dice_score, target, 4)
 
     def test_exclusive_channels(self):
-        np_dice_score = dice_score(self.np_pred, self.np_true, mutually_exclusive_channels=True)
-        tf_dice_score = dice_score(self.tf_pred, self.tf_true, mutually_exclusive_channels=True)
-        torch_dice_score = dice_score(self.torch_pred, self.torch_true, mutually_exclusive_channels=True)
+        np_dice_score = dice_score(self.np_pred, self.np_true, mask_overlap=False)
+        tf_dice_score = dice_score(self.tf_pred, self.tf_true, mask_overlap=False)
+        torch_dice_score = dice_score(self.torch_pred, self.torch_true, mask_overlap=False)
 
         target = np.array([[0.0, 0.0, 0.0],
                            [0.0, 0.0, 0.0],
