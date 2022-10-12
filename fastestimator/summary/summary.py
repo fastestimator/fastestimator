@@ -32,40 +32,62 @@ class ValWithError(NamedTuple):
         return f"({self.y_min}, {self.y}, {self.y_max})"
 
     def __lt__(self, other):
+        if isinstance(other, ValWithError):
+            return self.y < other.y
         return self.y < other
 
     def __le__(self, other):
+        if isinstance(other, ValWithError):
+            return self.y <= other.y
         return self.y <= other
 
     def __ge__(self, other):
+        if isinstance(other, ValWithError):
+            return self.y >= other.y
         return self.y >= other
 
     def __gt__(self, other):
+        if isinstance(other, ValWithError):
+            return self.y > other.y
         return self.y > other
 
     def __eq__(self, other):
+        if isinstance(other, ValWithError):
+            return self.y == other.y
         return self.y == other
 
     def __add__(self, other):
+        if isinstance(other, ValWithError):
+            return self.y + other.y
         return self.y + other
 
     def __sub__(self, other):
+        if isinstance(other, ValWithError):
+            return self.y - other.y
         return self.y - other
 
     def __mul__(self, other):
+        if isinstance(other, ValWithError):
+            return self.y * other.y
         return self.y * other
 
     def __abs__(self):
         return abs(self.y)
 
     def __radd__(self, other):
-        return self.__add__(other)
+        if isinstance(other, ValWithError):
+            return other.y + self.y
+        return other + self.y
 
     def __rsub__(self, other):
-        return self.__sub__(other)
+        if isinstance(other, ValWithError):
+            return other.y - self.y
+        return other - self.y
 
     def __rmul__(self, other):
-        return self.__mul__(other)
+        if isinstance(other, ValWithError):
+            return other.y * self.y
+        return other * self.y
 
 
 class Summary:

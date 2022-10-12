@@ -135,11 +135,12 @@ class Dice(Trace):
                 ch_name = self.channel_mapping[ch_name]
             mean = np.mean(ch_vals)
             means.append(mean)
+            if self.include_std:
+                std = np.std(ch_vals)
+                stds.append(std)
             # If there are multiple channels then report each of them
             if len(self.per_ch_dice.items()) > 1:
                 if self.include_std:
-                    std = np.std(ch_vals)
-                    stds.append(std)
                     data.write_with_log(f"{self.outputs[0]}_{ch_name}", ValWithError(mean - std, mean, mean + std))
                 else:
                     data.write_with_log(f"{self.outputs[0]}_{ch_name}", mean)
