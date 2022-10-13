@@ -140,7 +140,26 @@ def load_data(root_dir: Optional[str] = None) -> Tuple[PickleDataset, PickleData
         # extract
         print("\nExtracting files ...")
         with tarfile.open(train_compressed_path) as tar:
-            tar.extractall(root_dir)
+            def is_within_directory(directory, target):
+                
+                abs_directory = os.path.abspath(directory)
+                abs_target = os.path.abspath(target)
+            
+                prefix = os.path.commonprefix([abs_directory, abs_target])
+                
+                return prefix == abs_directory
+            
+            def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+            
+                for member in tar.getmembers():
+                    member_path = os.path.join(path, member.name)
+                    if not is_within_directory(path, member_path):
+                        raise Exception("Attempted Path Traversal in Tar File")
+            
+                tar.extractall(path, members, numeric_owner=numeric_owner) 
+                
+            
+            safe_extract(tar, root_dir)
 
     if not os.path.exists(test_folder_path):
         # download
@@ -150,7 +169,26 @@ def load_data(root_dir: Optional[str] = None) -> Tuple[PickleDataset, PickleData
         # extract
         print("\nExtracting files ...")
         with tarfile.open(test_compressed_path) as tar:
-            tar.extractall(root_dir)
+            def is_within_directory(directory, target):
+                
+                abs_directory = os.path.abspath(directory)
+                abs_target = os.path.abspath(target)
+            
+                prefix = os.path.commonprefix([abs_directory, abs_target])
+                
+                return prefix == abs_directory
+            
+            def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+            
+                for member in tar.getmembers():
+                    member_path = os.path.join(path, member.name)
+                    if not is_within_directory(path, member_path):
+                        raise Exception("Attempted Path Traversal in Tar File")
+            
+                tar.extractall(path, members, numeric_owner=numeric_owner) 
+                
+            
+            safe_extract(tar, root_dir)
 
     # glob and generate bbox files
     if not os.path.exists(train_file_path):
