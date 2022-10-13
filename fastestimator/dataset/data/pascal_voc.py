@@ -12,17 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import collections
 import os
 import tarfile
-import collections
-from defusedxml.ElementTree import parse as ET_parse
-
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import numpy as np
 import cv2
+import numpy as np
 import wget
+from defusedxml.ElementTree import parse as ET_parse
 
 from fastestimator.dataset.dataset import FEDataset
 from fastestimator.util.traceability_util import traceable
@@ -79,32 +78,24 @@ VOC_CLASSES = [
 
 @traceable()
 class PascalVoc(FEDataset):
-    """A specialized DirDataset to handle MSCOCO data.
+    """A specialized DirDataset to handle PascalVoc2012 data.
 
-    This dataset combines images from the MSCOCO data directory with their corresponding bboxes, masks, and captions.
+    This dataset combines images from the PascalVoc data directory with their corresponding bboxes, masks, and captions.
 
     Args:
-        image_dir: The path the directory containing MSOCO images.
+        root_dir: The path the directory containing MSOCO images.
         include_bboxes: Whether images should be paired with their associated bounding boxes.
         include_masks: Whether images should be paired with their associated masks.
-        include_captions: Whether images should be paired with their associated captions.
-        include_keypoints: Whether images should be paired with keypoints.
-        min_bbox_area: Bounding boxes with a total area less than `min_bbox_area` will be discarded.
-        replacement: If true, images without requested attributes will be ignored and other images may be oversampled in
-            order to take their place.
+        image_set: To choose Training data or Validation data. Must be one of ["train", "trainval", "val"]
+
     """
     def __init__(self,
                  root_dir: str,
                  include_bboxes: bool = False,
                  include_masks: bool = True,
-                 min_bbox_area: float = 1.0,
                  image_set: str = "train") -> None:
         self.include_bboxes = include_bboxes
         self.include_masks = include_masks
-
-        # TO-DO
-        # Pick only those Bounding boxes with area greater than the "min_bbox_area"
-        self.min_bbox_area = min_bbox_area
 
         valid_image_sets = ["train", "trainval", "val"]
 
@@ -143,9 +134,11 @@ class PascalVoc(FEDataset):
             self.bbox_file_names = []
 
         # Merge filenames
+        self.image_dir = os.path.join(root_dir, "JPEGImages")
         self.filenames = list(set(self.bbox_file_names).union(set(self.seg_file_names)))
 
     def __len__(self):
+        # Return Length of Dataset
         return len(self.filenames)
 
     def __getitem__(self, index: Union[int, str]) -> Union[Dict[str, Any], np.ndarray, List[Any]]:
@@ -157,22 +150,21 @@ class PascalVoc(FEDataset):
             The data dictionary from the specified index.
         """
         filename = self.filenames[index]
-        ifbox = False
-        ifseg = False
-        bbox = []
-        mask = []
+        response = {}
+        # Read Image
+        image = os.path.join(self.image_dir, filename + ".jpg")
+        image = cv2.imread(image)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        response['image'] = image
+        # Read Annotations
         if self.include_bboxes:
-            box_img, bbox, ifbox = self._populate_bbox_data(filename)
+            bbox = self._populate_bbox_data(filename)
+            response['bbox'] = bbox
         if self.include_masks:
-            seg_img, mask, ifseg = self._populate_mask_data(filename)
+            mask = self._populate_mask_data(filename)
+            response['mask'] = mask
 
-        if ifbox:
-            image = box_img
-        elif ifseg:
-            image = seg_img
-        else:
-            image = []
-        return {'image': image, 'mask': mask, 'bbox': bbox}
+        return response
 
     def _populate_bbox_data(self, filename: str) -> None:
         """Add Bounding boxes data to a data dictionary.
@@ -181,10 +173,7 @@ class PascalVoc(FEDataset):
             filename: The filename of the image for which to find data.
         """
         if self.box_images.get(filename) is None:
-            return None, [], False
-
-        image = cv2.imread(self.box_images[filename])
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            return []
 
         target = self.parse_voc_xml(ET_parse(self.box_targets[filename]).getroot())
 
@@ -192,7 +181,7 @@ class PascalVoc(FEDataset):
         # The following function can also be used to output pose for each bbox
         bbox = self.get_objects(target)
 
-        return image, bbox, True
+        return bbox
 
     @staticmethod
     def parse_voc_xml(node) -> Dict[str, Any]:
@@ -225,7 +214,7 @@ class PascalVoc(FEDataset):
         for obj in objects:
             xmin, ymin, xmax, ymax = obj['bndbox']['xmin'], obj['bndbox']['ymin'], obj['bndbox']['xmax'], obj['bndbox']['ymax']
             cid = self.cls2ind[obj['name']]
-            bbox.append([xmin, ymin, xmax, ymax, cid])
+            bbox.append((int(xmin), int(ymin), int(xmax), int(ymax), cid))
 
         return bbox
 
@@ -236,10 +225,8 @@ class PascalVoc(FEDataset):
             filename: The filename of the image for which to find data.
         """
         if self.seg_images.get(filename) is None:
-            return None, [], False
+            return None
 
-        image = cv2.imread(self.seg_images[filename])
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         mask = cv2.imread(self.seg_targets[filename])
         mask = cv2.cvtColor(mask, cv2.COLOR_BGR2RGB)
 
@@ -249,17 +236,17 @@ class PascalVoc(FEDataset):
         for label_index, label in enumerate(VOC_COLORMAP):
             segmentation_mask[:, :, label_index] = np.all(mask == label, axis=-1).astype(float)
 
-        return image, segmentation_mask, True
+        return segmentation_mask
 
 
 def load_data(root_dir: Optional[str] = None, load_bboxes: bool = False,
               load_masks: bool = True) -> Tuple[PascalVoc, PascalVoc]:
-    """Load and return the COCO dataset.
+    """Load and return the PascalVoc dataset.
 
     Args:
         root_dir: The path to store the downloaded data. When `path` is not provided, the data will be saved into
             `fastestimator_data` under the user's home directory.
-        load_bboxes: Whether to load bbox-related data, in [x1, y1, w, h] format.
+        load_bboxes: Whether to load bbox-related data, in [x1, y1, x2, y2, class] format.
         load_masks: Whether to load mask data (in the form of an array of 1-hot images).
 
 
@@ -267,7 +254,7 @@ def load_data(root_dir: Optional[str] = None, load_bboxes: bool = False,
         (train_data, eval_data)
     """
     if root_dir is None:
-        root_dir = os.path.join(str(Path.home()), 'fastestimator_data', 'Pascal_Voc')
+        root_dir = os.path.join(str(Path.home()), 'fastestimator_data', 'PascalVoc')
     else:
         root_dir = os.path.join(os.path.abspath(root_dir), 'PascalVoc')
     os.makedirs(root_dir, exist_ok=True)
