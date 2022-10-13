@@ -71,13 +71,13 @@ def load_data(root_dir: str = None, image_key: str = "x", label_key: str = "y") 
     fpath = os.path.join(image_extracted_path, 'test_batch')
     x_test, y_test = _load_batch(fpath)
 
-    y_test = np.array(y_test)
+    y_train = np.array(y_train, dtype=np.uint8)
+    y_test = np.array(y_test, dtype=np.uint8)
 
     x_train = x_train.transpose((0, 2, 3, 1))
     x_test = x_test.transpose((0, 2, 3, 1))
 
     x_test = x_test.astype(x_train.dtype)
-    y_test = y_test.astype(y_train.dtype)
 
     train_data = NumpyDataset({image_key: x_train, label_key: y_train})
     test_data = NumpyDataset({image_key: x_test, label_key: y_test})
