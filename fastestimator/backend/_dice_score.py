@@ -17,6 +17,7 @@ from typing import List, Optional, TypeVar
 
 import numpy as np
 import tensorflow as tf
+import tensorflow.keras.mixed_precision as mixed_precision
 import torch
 
 from fastestimator.backend._cast import cast
@@ -132,12 +133,19 @@ def dice_score(y_pred: Tensor,
         y_pred = where(y_pred > threshold, 1.0, 0.0)
         y_pred = cast(y_pred, dtype=y_true)
 
-    numerator = reduce_sum(y_pred * y_true, axis=spacial_axes)
+    if mixed_precision.global_policy().compute_dtype == 'float16':
+        # In mixed precision large masks can be too big to reduce without overflowing. Use reduce_mean instead in such
+        # cases in both numerator and denominator: (x/N)/(y/N) = x/y
+        reduce = reduce_mean
+    else:
+        reduce = reduce_sum
+
+    numerator = reduce(y_pred * y_true, axis=spacial_axes)
 
     if soft_dice:
-        denominator = reduce_sum(y_pred ** 2, axis=spacial_axes) + reduce_sum(y_true ** 2, axis=spacial_axes)
+        denominator = reduce(y_pred ** 2, axis=spacial_axes) + reduce(y_true ** 2, axis=spacial_axes)
     else:
-        denominator = reduce_sum(y_pred, axis=spacial_axes) + reduce_sum(y_true, axis=spacial_axes)
+        denominator = reduce(y_pred, axis=spacial_axes) + reduce(y_true, axis=spacial_axes)
 
     dice = 2.0 * numerator / (denominator + epsilon)  # N x C
 

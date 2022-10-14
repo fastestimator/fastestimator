@@ -18,6 +18,7 @@ from typing import Dict, Iterable, Optional, Union
 
 import numpy as np
 
+from fastestimator.backend._cast import cast
 from fastestimator.backend._dice_score import dice_score
 from fastestimator.summary.summary import ValWithError
 from fastestimator.trace.meta._per_ds import per_ds
@@ -89,7 +90,7 @@ class Dice(Trace):
         self.per_ch_dice = defaultdict(list)
 
     def on_batch_end(self, data: Data) -> None:
-        y_true, y_pred = data[self.true_key], data[self.pred_key]
+        y_true, y_pred = cast(data[self.true_key], 'float32'), cast(data[self.pred_key], 'float32')
 
         dice = to_number(dice_score(y_pred=y_pred,
                                     y_true=y_true,
