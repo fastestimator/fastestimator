@@ -78,7 +78,9 @@ def cast(data: Union[Collection, Tensor], dtype: Union[str, Tensor]) -> Union[Co
         if tf.is_tensor(dtype):
             return tf.cast(data, dtype.dtype)
         elif isinstance(dtype, torch.Tensor):
-            return torch.tensor(data).type(dtype.dtype)
+            if isinstance(data, torch.Tensor):
+                return data.to(dtype.dtype)
+            return torch.tensor(data, dtype=dtype.dtype, device=dtype.device)
         else:
             return np.array(data, dtype=dtype.dtype)
     else:
