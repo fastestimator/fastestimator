@@ -26,7 +26,7 @@ Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.array)
 
 
 class DiceLoss(LossOp):
-    """Calculate Dice Loss Scores.
+    """Calculate Dice Loss.
 
     Args:
         inputs: A tuple or list of keys representing prediction and ground truth, like: ("y_pred", "y_true").
@@ -98,4 +98,4 @@ class DiceLoss(LossOp):
                           channel_average=self.channel_average,
                           channel_weights=self.weights,
                           epsilon=self.epsilon)
-        return 1.0 - dice
+        return -dice
