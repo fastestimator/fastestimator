@@ -44,9 +44,10 @@ def zscore(data: Tensor, epsilon: float = 1e-7) -> Tensor:
 
     Args:
         data: The input tensor or array.
+        epsilon: A numerical stability constant.
 
     Returns:
-        Data after substracting mean and divided by standard deviation.
+        Data after subtracting mean and divided by standard deviation.
 
     Raises:
         ValueError: If `tensor` is an unacceptable data type.

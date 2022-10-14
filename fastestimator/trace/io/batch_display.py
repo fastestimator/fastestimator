@@ -19,8 +19,10 @@ from fastestimator.trace import Trace
 from fastestimator.trace.trace import parse_freq
 from fastestimator.util.data import Data
 from fastestimator.util.img_data import BatchDisplay as BatchDisplayF
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class BatchDisplay(Trace):
     """A Trace to display a batch of images.
 

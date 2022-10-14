@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from operator import lt, gt
 from typing import Optional, Union
 
 import numpy as np
@@ -65,10 +66,10 @@ class ReduceLROnPlateau(Trace):
         self.wait = 0
         if self.best_mode == "min":
             self.best = np.Inf
-            self.monitor_op = np.less
+            self.monitor_op = lt
         elif self.best_mode == "max":
             self.best = -np.Inf
-            self.monitor_op = np.greater
+            self.monitor_op = gt
         else:
             raise ValueError("best_mode must be either 'min' or 'max'")
 

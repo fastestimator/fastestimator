@@ -20,8 +20,10 @@ from fastestimator.trace.io.batch_display import BatchDisplay
 from fastestimator.trace.trace import parse_freq
 from fastestimator.util.data import Data
 from fastestimator.util.img_data import GridDisplay as GridDisplayF
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class GridDisplay(Trace):
     """A Trace to display of grid of images.
 

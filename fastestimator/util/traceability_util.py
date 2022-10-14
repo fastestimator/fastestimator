@@ -32,6 +32,7 @@ from pylatex.utils import bold, escape_latex, italic
 
 from fastestimator.backend._to_shape import to_shape
 from fastestimator.backend._to_type import to_type
+from fastestimator.summary.summary import ValWithError
 from fastestimator.util.base_util import strip_prefix, FEID, Flag
 from fastestimator.util.latex_util import ContainerList, HrefFEID, PyContainer
 
@@ -74,6 +75,7 @@ _RestorableClasses = (int,
                       bool,
                       str,
                       type(None),
+                      ValWithError,
                       tf.Tensor,
                       tf.Variable,
                       torch.Tensor,

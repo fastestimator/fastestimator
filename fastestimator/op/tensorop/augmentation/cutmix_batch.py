@@ -134,7 +134,7 @@ class CutMixBatch(TensorOp):
             rolled_x = roll(x, shift=1, axis=0)
             x[:, :, bbox_y1:bbox_y2, bbox_x1:bbox_x2] = rolled_x[:, :, bbox_y1:bbox_y2, bbox_x1:bbox_x2]
         # adjust lambda to match pixel ratio
-        lam = 1 - cast(((bbox_x2 - bbox_x1) * (bbox_y2 - bbox_y1)), dtype="float32") / cast((width * height), "float32")
+        lam = 1 - cast(((bbox_x2 - bbox_x1) * (bbox_y2 - bbox_y1)), dtype=y) / cast((width * height), dtype=y)
         rolled_y = roll(y, shift=1, axis=0) * (1. - lam)
         mixed_y = (y * lam) + rolled_y
         return x, mixed_y

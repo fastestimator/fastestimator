@@ -39,7 +39,7 @@ class ChannelTranspose(NumpyOp):
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
-                 axes: List[int] = (2, 0, 1)):
+                 axes: Iterable[int] = (2, 0, 1)):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.axes = axes
         self.in_list, self.out_list = True, True

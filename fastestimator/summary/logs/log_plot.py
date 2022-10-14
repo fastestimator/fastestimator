@@ -405,7 +405,7 @@ def plot_logs(experiments: List[Summary],
                             y_min = None
                             y_max = None
                             if isinstance(y[0], ValWithError):
-                                y = np.stack(y)
+                                y = np.stack([e.as_tuple() for e in y])
                                 y_min = y[:, 0]
                                 y_max = y[:, 2]
                                 y = y[:, 1]

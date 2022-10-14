@@ -20,7 +20,6 @@ __getattr__, __dir__, __all__ = lazy.attach(__name__,
                                             submodules={'augmentation', 'gradient', 'loss', 'meta', 'model'},
                                             submod_attrs={'argmax': ['Argmax'],
                                                           'average': ['Average'],
-                                                          'dice': ['Dice'],
                                                           'gather': ['Gather'],
                                                           'normalize': ['Normalize'],
                                                           'permute': ['Permute'],
@@ -33,7 +32,6 @@ if TYPE_CHECKING:
     from fastestimator.op.tensorop import augmentation, gradient, loss, meta, model
     from fastestimator.op.tensorop.argmax import Argmax
     from fastestimator.op.tensorop.average import Average
-    from fastestimator.op.tensorop.dice import Dice
     from fastestimator.op.tensorop.gather import Gather
     from fastestimator.op.tensorop.normalize import Normalize
     from fastestimator.op.tensorop.permute import Permute

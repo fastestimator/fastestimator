@@ -84,14 +84,14 @@ def binary_crossentropy(y_pred: Tensor,
         ce = tf.reshape(ce, [tf.shape(ce)[0], -1])
         ce = tf.reduce_mean(ce, 1)
     else:
-        y_true = y_true.to(torch.float)
+        y_true = y_true.to(y_pred.dtype)
         if from_logits:
             ce = torch.nn.BCEWithLogitsLoss(reduction="none")(input=y_pred, target=y_true.view(y_pred.size()))
         else:
             ce = torch.nn.BCELoss(reduction="none")(input=y_pred, target=y_true.view(y_pred.size()))
 
         if class_weights is not None:
-            sample_weights = torch.ones_like(y_true, dtype=torch.float)
+            sample_weights = torch.ones_like(y_true)
             for key in class_weights.keys():
                 sample_weights[y_true == key] = class_weights[key]
             ce = ce * sample_weights.reshape(ce.shape)
