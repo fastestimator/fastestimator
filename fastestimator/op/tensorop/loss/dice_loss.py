@@ -18,6 +18,7 @@ import numpy as np
 import tensorflow as tf
 import torch
 
+from fastestimator.backend._convert_tensor_precision import convert_tensor_precision
 from fastestimator.backend._dice_score import dice_score
 from fastestimator.backend._to_tensor import to_tensor
 from fastestimator.op.tensorop.loss.loss import LossOp
@@ -81,10 +82,10 @@ class DiceLoss(LossOp):
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
         if framework == 'tf':
             if self.weights is not None:
-                self.weights = to_tensor(self.weights, 'tf')
+                self.weights = convert_tensor_precision(to_tensor(self.weights, 'tf'))
         elif framework == 'torch':
             if self.weights is not None:
-                self.weights = to_tensor(self.weights, 'torch')
+                self.weights = convert_tensor_precision(to_tensor(self.weights, 'torch'))
                 self.weights.to(device)
         else:
             raise ValueError("unrecognized framework: {}".format(framework))
