@@ -90,7 +90,7 @@ class Dice(Trace):
         self.per_ch_dice = defaultdict(list)
 
     def on_batch_end(self, data: Data) -> None:
-        y_true, y_pred = cast(data[self.true_key], 'float32'), cast(data[self.pred_key], 'float32')
+        y_true, y_pred = data[self.true_key], data[self.pred_key]
 
         dice = to_number(dice_score(y_pred=y_pred,
                                     y_true=y_true,
