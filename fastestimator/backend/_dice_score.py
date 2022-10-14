@@ -118,7 +118,7 @@ def dice_score(y_pred: Tensor,
     Raises:
         AssertionError: If `y_true` or `y_pred` something other than np.array, tensor.Tensor, or tf.Tensor.
     """
-    y_true = cast(y_true, y_pred)
+    y_true = cast(y_true, dtype=y_pred)
     channel_axis = _get_channel_axis(y_pred)
     spacial_axes = _get_spacial_axes(y_pred, channel_axis=channel_axis)
 
@@ -130,7 +130,7 @@ def dice_score(y_pred: Tensor,
     if threshold is not None:
         # Only accept predictions which are over the given confidence threshold
         y_pred = where(y_pred > threshold, 1.0, 0.0)
-        y_pred = cast(y_pred, y_true)
+        y_pred = cast(y_pred, dtype=y_true)
 
     numerator = reduce_sum(y_pred * y_true, axis=spacial_axes)
 
@@ -142,7 +142,7 @@ def dice_score(y_pred: Tensor,
     dice = 2.0 * numerator / (denominator + epsilon)  # N x C
 
     if channel_weights is not None:
-        channel_weights = cast(channel_weights, y_pred)
+        channel_weights = cast(channel_weights, dtype=y_pred)
         dice = dice * channel_weights
     if empty_nan:
         dice = where(reduce_max(y_true, axis=spacial_axes) + reduce_max(y_pred, axis=spacial_axes) < 1e-4,

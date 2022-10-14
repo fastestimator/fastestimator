@@ -51,5 +51,5 @@ def hinge(y_true: Tensor, y_pred: Tensor) -> Tensor:
     Raises:
         ValueError: If `y_pred` is an unacceptable data type.
     """
-    y_true = cast(y_true, 'float32')
+    y_true = cast(y_true, dtype=y_pred)
     return reduce_mean(clip_by_value(1.0 - y_true * y_pred, min_value=0), axis=-1)
