@@ -18,7 +18,6 @@ from typing import Dict, Iterable, Optional, Union
 
 import numpy as np
 
-from fastestimator.backend._cast import cast
 from fastestimator.backend._dice_score import dice_score
 from fastestimator.summary.summary import ValWithError
 from fastestimator.trace.meta._per_ds import per_ds
