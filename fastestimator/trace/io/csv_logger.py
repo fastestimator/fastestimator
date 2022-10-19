@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import os
+from itertools import zip_longest
 from typing import Any, Iterable, List, Optional, Union
 
 import numpy as np
@@ -20,10 +21,10 @@ import pandas as pd
 
 from fastestimator.summary import ValWithError
 from fastestimator.trace.trace import Trace
+from fastestimator.util.base_util import to_list
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
-from fastestimator.util.base_util import to_list
 
 
 @traceable()
@@ -32,7 +33,9 @@ class CSVLogger(Trace):
 
     Args:
         filename: Output filename.
-        monitor_names: List of keys to monitor. If None then all metrics will be recorded.
+        monitor_names: List of keys to monitor. If None then all metrics will be recorded. If you want to record 'all
+            the usual stuff' plus a particular key which isn't normally recorded, you can use a '*' character here.
+            For example: monitor_names=['*', 'y_true']
         instance_id_key: A key corresponding to data instance ids. If provided, the CSV logger will record per-instance
             metric information into a second csv file.
         mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
@@ -60,39 +63,45 @@ class CSVLogger(Trace):
         self.df_ins = pd.DataFrame(columns=base_keys)
 
     def on_epoch_end(self, data: Data) -> None:
-        tmpdic = {"mode": self.system.mode, "step": self.system.global_step, "epoch": self.system.epoch_idx}
+        keys = set(self.inputs) if "*" not in self.inputs else set(self.inputs) | data.read_logs().keys()
+        keys = keys - {'*', self.instance_id_key}
 
-        if "*" in self.inputs:
-            for key, value in data.read_logs().items():
-                tmpdic[key] = self._parse_val(value)
-                if key not in self.df_agg.columns:
-                    self.df_agg[key] = ''
-        else:
-            for key in self.inputs:
-                if key == self.instance_id_key:
-                    continue
-                tmpdic[key] = self._parse_val(data[key])
-                if key not in self.df_agg.columns:
-                    self.df_agg[key] = ''
+        tmpdic = {}
+        for key in keys:
+            tmpdic[key] = self._parse_val(data.read_logs().get(key, ''))
+            if key not in self.df_agg.columns:
+                self.df_agg[key] = ''
         for col in self.df_agg.columns:
-            if col not in tmpdic.keys():
+            if col not in tmpdic.keys() | {'mode', 'step', 'epoch'}:
                 tmpdic[col] = ''
 
-        self.df_agg = pd.concat(objs=[self.df_agg, pd.DataFrame([tmpdic])], ignore_index=True)
+        # Only record an entry if there is at least one piece of actual information present
+        if any(tmpdic.values()):
+            self.df_agg = pd.concat(objs=[self.df_agg, pd.DataFrame([{"mode": self.system.mode,
+                                                                      "step": self.system.global_step,
+                                                                      "epoch": self.system.epoch_idx,
+                                                                      **tmpdic}])],
+                                    ignore_index=True)
         self._save()  # Write on epoch end so that people can see results sooner if debugging
 
     def on_batch_end(self, data: Data) -> None:
         if self.instance_id_key:
             ins_data = data.read_per_instance_logs()
-            if ins_data:
-                keys = list((ins_data.keys() if "*" in self.inputs else set(self.inputs)) - {self.instance_id_key})
-                ids = data[self.instance_id_key]
-                vals = [ins_data.get(key, data.get(key, '')) for key in keys]
+            keys = set(self.inputs) if "*" not in self.inputs else set(self.inputs) | ins_data.keys()
+            keys = list(keys - {'*', self.instance_id_key})
+            ids = data[self.instance_id_key]
+            batch_size = ids.shape[0]
+            vals = [ins_data.get(key, data.get(key, _SKIP())) for key in keys]
+            # Ignore vals which are not batched
+            vals = [val if (hasattr(val, 'ndim') and val.ndim > 0 and val.shape[0] == batch_size) or
+                           (isinstance(val, (list, tuple)) and len(val) == batch_size) else _SKIP() for val in vals]
+            # Don't bother recording instance if no data is available
+            if any((not isinstance(val, _SKIP) for val in vals)):
                 for key in keys:
                     if key not in self.df_ins.columns:
                         self.df_ins[key] = ''
                 rows = []
-                for sample in zip(ids, *vals):
+                for sample in zip_longest(ids, *vals, fillvalue=''):
                     row = {"instance_id": self._parse_val(sample[0]),
                            "mode": self.system.mode,
                            "step": self.system.global_step,
@@ -107,25 +116,28 @@ class CSVLogger(Trace):
         if self.system.mode == "train" and self.system.log_steps and (self.system.global_step % self.system.log_steps
                                                                       == 0 or self.system.global_step == 1):
 
-            tmpdic = {"mode": self.system.mode, "step": self.system.global_step, "epoch": self.system.epoch_idx}
+            keys = set(self.inputs) if "*" not in self.inputs else set(self.inputs) | data.read_logs().keys()
+            keys = keys - {'*', self.instance_id_key}
 
-            if "*" in self.inputs:
-                for key, value in data.read_logs().items():
-                    tmpdic[key] = self._parse_val(value)
-                    if key not in self.df_agg.columns:
-                        self.df_agg[key] = ''
-            else:
-                for key in self.inputs:
-                    if key == self.instance_id_key:
-                        continue
-                    tmpdic[key] = self._parse_val(data[key])
-                    if key not in self.df_agg.columns:
-                        self.df_agg[key] = ''
+            tmpdic = {}
+            for key in keys:
+                if self.instance_id_key:
+                    # If you are using an instance_id key, then don't report per-instance values at the agg level
+                    tmpdic[key] = self._parse_val(data.read_logs().get(key, ''))
+                else:
+                    tmpdic[key] = self._parse_val(data.get(key, ''))
+                if key not in self.df_agg.columns:
+                    self.df_agg[key] = ''
             for col in self.df_agg.columns:
-                if col not in tmpdic.keys():
+                if col not in tmpdic.keys() | {'mode', 'step', 'epoch'}:
                     tmpdic[col] = ''
-
-            self.df_agg = pd.concat(objs=[self.df_agg, pd.DataFrame([tmpdic])], ignore_index=True)
+            # Only record an entry if there's at least 1 piece of actual information
+            if any(tmpdic.values()):
+                self.df_agg = pd.concat(objs=[self.df_agg, pd.DataFrame([{"mode": self.system.mode,
+                                                                          "step": self.system.global_step,
+                                                                          "epoch": self.system.epoch_idx,
+                                                                          **tmpdic}])],
+                                        ignore_index=True)
 
     def _save(self) -> None:
         """Write the current state to disk.
@@ -133,7 +145,7 @@ class CSVLogger(Trace):
         stack = [self.df_ins, self.df_agg]
         if self.system.mode == "test":
             if os.path.exists(self.filename):
-                df1 = pd.read_csv(self.filename)
+                df1 = pd.read_csv(self.filename, dtype=str)
                 stack.insert(0, df1)
         stack = pd.concat(stack, axis=0, ignore_index=True)
         stack.to_csv(self.filename, index=False)
@@ -159,3 +171,9 @@ class CSVLogger(Trace):
             # remove the b'' from strings stored in tensors
             return str(val, 'utf-8')
         return str(val)
+
+
+class _SKIP:
+    # A class to signify that data should be ignored. Use this rather than None to work better with zip methods
+    def __iter__(self):
+        return iter(())
