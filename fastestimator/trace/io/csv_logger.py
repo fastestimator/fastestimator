@@ -71,9 +71,8 @@ class CSVLogger(Trace):
             tmpdic[key] = self._parse_val(data.read_logs().get(key, ''))
             if key not in self.df_agg.columns:
                 self.df_agg[key] = ''
-        for col in self.df_agg.columns:
-            if col not in {'mode', 'step', 'epoch'} | tmpdic.keys():
-                tmpdic[col] = ''
+        for col in set(self.df_agg.columns) - {'mode', 'step', 'epoch'} - tmpdic.keys():
+            tmpdic[col] = ''
 
         # Only record an entry if there is at least one piece of actual information present
         if any(tmpdic.values()):
@@ -128,9 +127,8 @@ class CSVLogger(Trace):
                     tmpdic[key] = self._parse_val(data.get(key, ''))
                 if key not in self.df_agg.columns:
                     self.df_agg[key] = ''
-            for col in self.df_agg.columns:
-                if col not in {'mode', 'step', 'epoch'} | tmpdic.keys():
-                    tmpdic[col] = ''
+            for col in set(self.df_agg.columns) - {'mode', 'step', 'epoch'} - tmpdic.keys():
+                tmpdic[col] = ''
             # Only record an entry if there's at least 1 piece of actual information
             if any(tmpdic.values()):
                 self.df_agg = pd.concat(objs=[self.df_agg, pd.DataFrame([{"mode": self.system.mode,
