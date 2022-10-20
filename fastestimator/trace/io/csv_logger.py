@@ -90,7 +90,7 @@ class CSVLogger(Trace):
             keys = set(self.inputs) if "*" not in self.inputs else set(self.inputs) | ins_data.keys()
             keys = list(keys - {'*', self.instance_id_key})
             ids = data[self.instance_id_key]
-            batch_size = ids.shape[0]
+            batch_size = len(ids)
             vals = [ins_data.get(key, data.get(key, _SKIP())) for key in keys]
             # Ignore vals which are not batched
             vals = [val if (hasattr(val, 'ndim') and val.ndim > 0 and val.shape[0] == batch_size) or

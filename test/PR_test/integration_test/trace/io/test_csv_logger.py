@@ -16,10 +16,8 @@ import csv
 import os
 import tempfile
 import unittest
-from collections import defaultdict
 
-import pandas as pd
-from pandas.testing import assert_frame_equal
+import numpy as np
 
 from fastestimator.test.unittest_util import sample_system_object
 from fastestimator.trace.io import CSVLogger
@@ -29,39 +27,155 @@ from fastestimator.util.data import Data
 class TestCSVLogger(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.data = Data({'mode': 'train', 'epoch': 1})
-        cls.df = pd.DataFrame([['train', None, 0]], columns=["mode", "step", "epoch"])
-        cls.csv_path = os.path.join(tempfile.mkdtemp(), 'test_csv_logger.csv')
+        cls.csv_root = tempfile.mkdtemp()
 
-    def test_on_begin(self):
-        csvlogger = CSVLogger(filename=self.csv_path)
-        csvlogger.on_begin(data=self.data)
-        assert_frame_equal(csvlogger.df_agg, pd.DataFrame(columns=["mode", "step", "epoch"]))
+    @staticmethod
+    def _run_fake_training(**csv_args):
+        csvlogger = CSVLogger(**csv_args)
+        system = sample_system_object()
+        system.epoch_idx = 1
+        system.global_step = 1
+        csvlogger.system = system
 
-    def test_on_epoch_end(self):
-        csvlogger = CSVLogger(filename=self.csv_path)
-        csvlogger.system = sample_system_object()
-        csvlogger.df_agg = pd.DataFrame(columns=["mode", "step", "epoch"])
-        csvlogger.on_epoch_end(data=self.data)
-        assert_frame_equal(csvlogger.df_agg, self.df, check_dtype=False)
+        batch_data = Data(batch_data={"idx": ['a', 'b', 'c'],
+                                      "x": np.ones((3, 5, 5)),
+                                      "y": np.ones((3, 1)),
+                                      "ce": 12.5})
+        batch_data.write_per_instance_log(key="dice", value=[0.1, 0.2, 0.3])
 
-    def test_save(self):
-        csvlogger = CSVLogger(filename=self.csv_path)
-        csvlogger.system = sample_system_object()
-        csvlogger.df_agg = pd.DataFrame([['train', None, 0]], columns=["mode", "step", "epoch"])
-        # remove csv file previously created if it exists
-        if os.path.exists(self.csv_path):
-            os.remove(self.csv_path)
-        csv_data = []
-        # call on_end here and create new csv
-        csvlogger.on_epoch_end(data=self.data)
-        with open(self.csv_path) as f:
+        epoch_data = Data()
+        epoch_data.write_with_log("ce", 12.5)
+
+        csvlogger.on_begin(Data())
+        csvlogger.on_epoch_begin(Data())
+        csvlogger.on_batch_begin(Data())
+        csvlogger.on_batch_end(batch_data)
+        csvlogger.on_epoch_end(epoch_data)
+        csvlogger.on_end(Data())
+
+    def test_basic_flow(self):
+        csv_path = os.path.join(self.csv_root, 'basic.csv')
+        self._run_fake_training(filename=csv_path)
+        with self.subTest('Check that file was generated'):
+            self.assertTrue(os.path.exists(csv_path))
+
+        rows = []
+        with open(csv_path) as f:
             records = csv.DictReader(f)
-            for param in records:
-                csv_data.append(defaultdict(list, dict(param)))
-        with self.subTest('Check if path exists'):
-            self.assertTrue(os.path.exists(self.csv_path))
-        with self.subTest('Check mode value stored in csv file'):
-            self.assertEqual(csv_data[0]['mode'], csvlogger.df_agg['mode'].iloc[0])
-        with self.subTest('Check epoch value stored in csv file'):
-            self.assertEqual(int(csv_data[0]['epoch']), csvlogger.df_agg['epoch'].iloc[0])
+            for row in records:
+                rows.append(row)
+
+        with self.subTest('Check number of rows'):
+            self.assertEqual(len(rows), 1)
+
+        with self.subTest('Check columns'):
+            self.assertEqual(rows[0].keys(), {'mode', 'step', 'epoch', 'ce'})
+
+        with self.subTest('Check values'):
+            row = rows[0]
+            self.assertEqual(row['mode'], 'train')
+            self.assertEqual(row['step'], '1')
+            self.assertEqual(row['epoch'], '1')
+            self.assertEqual(row['ce'], '12.5')
+
+    def test_per_instance(self):
+        csv_path = os.path.join(self.csv_root, 'per_instance.csv')
+        self._run_fake_training(filename=csv_path, instance_id_key='idx')
+        with self.subTest('Check that file was generated'):
+            self.assertTrue(os.path.exists(csv_path))
+
+        rows = []
+        with open(csv_path) as f:
+            records = csv.DictReader(f)
+            for row in records:
+                rows.append(row)
+
+        with self.subTest('Check number of rows'):
+            self.assertEqual(len(rows), 4)
+
+        with self.subTest('Check columns'):
+            self.assertEqual(rows[0].keys(), {'instance_id', 'mode', 'step', 'epoch', 'ce', 'dice'})
+
+        instance_ids = {'': {'instance_id': '',
+                             'mode': 'train',
+                             'step': '1',
+                             'epoch': '1',
+                             'ce': '12.5',
+                             'dice': ''},
+                        'a': {'instance_id': 'a',
+                              'mode': 'train',
+                              'step': '1',
+                              'epoch': '1',
+                              'ce': '',
+                              'dice': '0.1'},
+                        'b': {'instance_id': 'b',
+                              'mode': 'train',
+                              'step': '1',
+                              'epoch': '1',
+                              'ce': '',
+                              'dice': '0.2'},
+                        'c': {'instance_id': 'c',
+                              'mode': 'train',
+                              'step': '1',
+                              'epoch': '1',
+                              'ce': '',
+                              'dice': '0.3'}}
+        with self.subTest('Check values'):
+            for row in rows:
+                self.assertTrue('instance_id' in row)
+                target = instance_ids.pop(row['instance_id'])
+                self.assertDictEqual(row, target)
+        self.assertEqual(len(instance_ids), 0)
+
+    def test_per_instance_extra_key(self):
+        csv_path = os.path.join(self.csv_root, 'per_instance.csv')
+        self._run_fake_training(filename=csv_path, instance_id_key='idx', monitor_names=["*", "y"])
+        with self.subTest('Check that file was generated'):
+            self.assertTrue(os.path.exists(csv_path))
+
+        rows = []
+        with open(csv_path) as f:
+            records = csv.DictReader(f)
+            for row in records:
+                rows.append(row)
+
+        with self.subTest('Check number of rows'):
+            self.assertEqual(len(rows), 4)
+
+        with self.subTest('Check columns'):
+            self.assertEqual(rows[0].keys(), {'instance_id', 'mode', 'step', 'epoch', 'ce', 'y', 'dice'})
+
+        instance_ids = {'': {'instance_id': '',
+                             'mode': 'train',
+                             'step': '1',
+                             'epoch': '1',
+                             'ce': '12.5',
+                             'y': '',
+                             'dice': ''},
+                        'a': {'instance_id': 'a',
+                              'mode': 'train',
+                              'step': '1',
+                              'epoch': '1',
+                              'ce': '',
+                              'y': '[1.]',
+                              'dice': '0.1'},
+                        'b': {'instance_id': 'b',
+                              'mode': 'train',
+                              'step': '1',
+                              'epoch': '1',
+                              'ce': '',
+                              'y': '[1.]',
+                              'dice': '0.2'},
+                        'c': {'instance_id': 'c',
+                              'mode': 'train',
+                              'step': '1',
+                              'epoch': '1',
+                              'ce': '',
+                              'y': '[1.]',
+                              'dice': '0.3'}}
+        with self.subTest('Check values'):
+            for row in rows:
+                self.assertTrue('instance_id' in row)
+                target = instance_ids.pop(row['instance_id'])
+                self.assertDictEqual(row, target)
+        self.assertEqual(len(instance_ids), 0)
