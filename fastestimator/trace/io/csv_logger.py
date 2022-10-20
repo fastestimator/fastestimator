@@ -37,7 +37,7 @@ class CSVLogger(Trace):
             the usual stuff' plus a particular key which isn't normally recorded, you can use a '*' character here.
             For example: monitor_names=['*', 'y_true']
         instance_id_key: A key corresponding to data instance ids. If provided, the CSV logger will record per-instance
-            metric information into a second csv file.
+            metric information into the csv file in addition to the standard metrics.
         mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
@@ -72,7 +72,7 @@ class CSVLogger(Trace):
             if key not in self.df_agg.columns:
                 self.df_agg[key] = ''
         for col in self.df_agg.columns:
-            if col not in tmpdic.keys() | {'mode', 'step', 'epoch'}:
+            if col not in {'mode', 'step', 'epoch'} | tmpdic.keys():
                 tmpdic[col] = ''
 
         # Only record an entry if there is at least one piece of actual information present
@@ -129,7 +129,7 @@ class CSVLogger(Trace):
                 if key not in self.df_agg.columns:
                     self.df_agg[key] = ''
             for col in self.df_agg.columns:
-                if col not in tmpdic.keys() | {'mode', 'step', 'epoch'}:
+                if col not in {'mode', 'step', 'epoch'} | tmpdic.keys():
                     tmpdic[col] = ''
             # Only record an entry if there's at least 1 piece of actual information
             if any(tmpdic.values()):
