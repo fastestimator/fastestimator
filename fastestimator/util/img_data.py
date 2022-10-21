@@ -65,14 +65,17 @@ class ImageDisplay(Display):
         image: An image to be displayed. 3-dimensional torch tensors are generally assumed to be channel first,
             while tf and np are assumed to be channel last. Either way, only 1 or 3 channel images are supported.
         text: Text which will be printed in the center of this figure.
-        masks: One or more 2-dimensional tensors. They may be combined with labels if desired (<mask>, <label>).
-            Tensors may be 3-dimensional with the last dimension indicating multiple different masks.
+        masks: A 2D tensor representing a mask, or a 3D tensor indicating multiple 2D masks. They may be combined with
+            label(s) if desired (<mask>, <label>).
         bboxes: One or more bounding boxes of the form (x0, y0, width, height [, label]), where (x0, y0) is the top
             left corner of the box. These may also be encoded in a tensor of shape (4,) or (N,4) for multiple boxes.
         keypoints: One or more keypoints of the form (x, y [, label]). These may also be encoded in a tensor of shape
             (2,) or (N,2) for multiple keypoints.
         title: What should the title of this figure be.
-        color_map: How to color 1-channel images. Options from: https://plotly.com/python/builtin-colorscales/
+        mask_threshold: If provided, any masks will be binarized based on the given threshold value (1 if > t, else 0).
+        color_map: How to color 1-channel images. Options from: https://plotly.com/python/builtin-colorscales/. If 2
+            strings are provided, the first will be used to color grey-scale images and the second will be used to color
+            continuous (non-thresholded) masks. If a single string is provided it will be used for both image and masks.
 
     Raises:
         AssertionError: If the provided arguments violate expected type/shape constraints.
@@ -80,12 +83,12 @@ class ImageDisplay(Display):
     def __init__(self,
                  image: Union[None, 'Tensor'] = None,
                  text: Union[None, str, 'Tensor'] = None,
-                 masks: Union[None, 'Tensor', Tuple['Tensor', str], Sequence['Tensor'], Sequence[Tuple['Tensor',
-                                                                                                       str]]] = None,
+                 masks: Union[None, 'Tensor', Tuple['Tensor', Union[str, Sequence[str]]]] = None,
                  bboxes: Union[None, 'BoundingBox', 'Tensor', Sequence['BoundingBox'], Sequence['Tensor']] = None,
                  keypoints: Union[None, 'KeyPoint', 'Tensor', Sequence['KeyPoint'], Sequence['Tensor']] = None,
                  title: Union[None, str] = None,
-                 color_map: str = "gray"):
+                 mask_threshold: Optional[float] = None,
+                 color_map: Union[str, Tuple[str, str]] = ("gray", "turbo")):
 
         if image is not None:
             shape = image.shape
@@ -117,35 +120,44 @@ class ImageDisplay(Display):
             text = "{}".format(text)
         self.text = text
 
-        masks = to_list(masks)
-        masks = [(mask, '') if not isinstance(mask, tuple) else mask for mask in masks]
-        self.masks = []
-        self.n_masks = 0
-        for mask_tuple in masks:
-            assert isinstance(mask_tuple, tuple), \
-                "Masks must be tuples of the form (<tensor>, <label>) or else simply a raw tensor"
-            assert len(mask_tuple) == 2, "Masks must be tuples of the form (<tensor>, <label>)"
-            assert isinstance(mask_tuple[1], str), "Masks must be tuples of the form (<tensor>, <label>)"
-            mask = mask_tuple[0]
-            if isinstance(mask, torch.Tensor) and len(mask.shape) == 3 and self.image is not None:
+        masks, mask_labels, *_ = to_list(masks) + [None, None]
+        mask_labels = to_list(mask_labels)
+        if masks is not None:
+            if isinstance(masks, torch.Tensor) and len(masks.shape) == 3 and self.image is not None:
                 # Unfortunately we can't just permute all torch tensors since TF users also might have torch tensors if
                 #  they were using pipeline.get_results(). If there's an accompanying image though we can figure it out
-                if mask.shape[1] == self.image.shape[0] and mask.shape[2] == self.image.shape[1]:
+                if masks.shape[1] == self.image.shape[0] and masks.shape[2] == self.image.shape[1]:
                     # Move channel first to channel last
-                    mask = mask.permute(1, 2, 0)
-            mask = to_number(mask)
-            assert len(mask.shape) in (2, 3), "Masks must be 2 dimensional, or 3 dimensional with the last " \
-                                              f"dimension (tf/np) or first dimension (torch) indicating multiple " \
-                                              f"masks, but found {len(mask.shape)}"
+                    masks = masks.permute(1, 2, 0)
+            masks = to_number(masks)
+            assert len(masks.shape) in (2, 3), "Masks must be 2 dimensional, or 3 dimensional with the last " \
+                                               f"dimension (tf/np) or first dimension (torch) indicating multiple " \
+                                               f"masks, but found {len(masks.shape)}"
             # Give all masks a channel dimension for consistency
-            if len(mask.shape) == 2:
-                mask = np.expand_dims(mask, axis=-1)
+            if len(masks.shape) == 2:
+                masks = np.expand_dims(masks, axis=-1)
             # Move the channels to the front for easy iteration
-            mask = np.moveaxis(mask, -1, 0)
-            self.n_masks = max(self.n_masks, mask.shape[0])
+            masks = np.moveaxis(masks, -1, 0)
+            if mask_threshold is not None:
+                masks = np.where(masks > mask_threshold, 1.0, 0.0)
+            # If there are multiple continuous probability masks, compress them into a single mask since overlaying
+            # solid color patches over the entire image is pointless
+            if np.unique(masks).size > 2:
+                masks = np.max(masks, axis=0, keepdims=True)
+                assert len(mask_labels) == 0, "When probabilistic masks are provided and no mask_threshold is set, " \
+                                              "then mask labels cannot be used"
             # Add an axis on the end which will be used for colors later
-            mask = np.expand_dims(mask, -1)
-            self.masks.append((mask, mask_tuple[1]))
+            masks = np.expand_dims(masks, -1)
+            # Ensure mask labels are sufficient if provided
+            if mask_labels:
+                assert len(mask_labels) == len(masks), "If mask labels are provided they must be 1-1 with the number " \
+                                                       f"of masks, but found {len(mask_labels)} labels and " \
+                                                       f"{len(masks)} masks"
+            else:
+                # Make default blank labels for easy zip later
+                mask_labels = [''] * len(masks)
+        self.masks = [] if masks is None else masks
+        self.mask_labels = [] if mask_labels is None else mask_labels
 
         bboxes = to_list(bboxes)
         self.bboxes = []
@@ -173,7 +185,9 @@ class ImageDisplay(Display):
         # TODO - keypoint handling
         self.keypoints = keypoints
         self.title = title or ''
-        self.color_map = color_map
+        color_map = to_list(color_map)
+        self.img_color_map = color_map[0]
+        self.mask_color_map = color_map[-1]
 
     def _make_image(self, im: np.ndarray) -> Image:
         im_max = np.max(im)
@@ -197,7 +211,7 @@ class ImageDisplay(Display):
         # Manually apply a colormap to 1-channel images
         if im.shape[2] == 1:
             im = np.array(
-                sample_colorscale(colorscale=self.color_map,
+                sample_colorscale(colorscale=self.img_color_map,
                                   samplepoints=np.reshape(im, (-1)) / 255.0,
                                   colortype='tuple')).reshape((im.shape[0], im.shape[1], 3))
             im = np.rint(im * 255)
@@ -230,52 +244,53 @@ class ImageDisplay(Display):
             fig.add_trace(im, row=row, col=col)
 
         empty_color = np.array((0.0, 0.0, 0.0, 0.0))  # RGBA
-        mask_colors = get_colors(n_colors=self.n_masks, alpha=0.4, as_numbers=True)
+        mask_colors = get_colors(n_colors=len(self.masks), alpha=0.4, as_numbers=True)
         mask_colors = [np.array(color) for color in mask_colors]
-        for mask_tuple in self.masks:
-            mask, label = mask_tuple
-            # Mask will be channel x width x height x 1
-            for color_idx, msk in enumerate(mask):
-                if np.max(msk) > 1:
-                    msk = msk / 255.0
-                if self.n_masks == 1 and np.unique(msk).size > 2:
-                    # continuous heatmap
-                    msk_heatmap = np.array(
-                        sample_colorscale(colorscale=self.color_map,
-                                          samplepoints=np.reshape(msk, (-1)),
-                                          colortype='tuple')).reshape((msk.shape[0], msk.shape[1], 3))
-                    msk_heatmap = np.rint(msk_heatmap * 255)
-                    # add alpha channel
-                    msk = np.concatenate([msk_heatmap, 0.5 * np.ones_like(msk)], axis=-1)
-                else:
-                    positive_color = mask_colors[color_idx]
-                    msk = np.where(msk, positive_color, empty_color)
-                    # TODO - handle labeling
-                msk = Image(z=msk, colormodel='rgba', hoverinfo=None)
-                fig.add_trace(msk, row=row, col=col)
+        for color_idx, (mask, label) in enumerate(zip(self.masks, self.mask_labels)):
+            # Mask will be width x height x 1
+            if np.max(mask) > 1:
+                mask = mask / 255.0
+            if len(self.masks) == 1 and np.unique(mask).size > 2:
+                # continuous heatmap
+                msk_heatmap = np.array(
+                    sample_colorscale(colorscale=self.mask_color_map,
+                                      samplepoints=np.reshape(mask, (-1)),
+                                      colortype='tuple')).reshape((mask.shape[0], mask.shape[1], 3))
+                msk_heatmap = np.rint(msk_heatmap * 255)
+                # add alpha channel
+                mask = np.concatenate([msk_heatmap, 0.5 * np.ones_like(mask)], axis=-1)
+            else:
+                positive_color = mask_colors[color_idx]
+                mask = np.where(mask, positive_color, empty_color)
+            if label:
+                # TODO - handle labeling
+                mask = Image(z=mask, colormodel='rgba', hoverinfo=None, name=label)
+            else:
+                mask = Image(z=mask, colormodel='rgba', hoverinfo=None)
+            fig.add_trace(mask, row=row, col=col)
 
         # # Works, and legend interactivity, but slow
+        # from collections import defaultdict
+        # from plotly.graph_objs import Scatter
         # mask_legend = defaultdict(lambda: True)
-        # mask_colors = get_colors(n_colors=self.n_masks, alpha=0.3)
-        # for mask_tuple in self.masks:
-        #     mask, label = mask_tuple
-        #     # Mask will be channel x width x height x 1
-        #     for color_idx, msk in enumerate(mask):
-        #         y, x = np.where(np.squeeze(msk))
-        #         mask_title = label or f"{color_idx}"
-        #         for y_c, x_c in zip(y, x):
-        #             point = Scatter(x=[x_c-0.5, x_c+0.5, x_c+0.5, x_c-0.5],
-        #                             y=[y_c+0.5, y_c+0.5, y_c-0.5, y_c-0.5],
-        #                             mode='lines',
-        #                             fill='toself',
-        #                             fillcolor=mask_colors[color_idx],
-        #                             name=mask_title,
-        #                             legendgroup=mask_title,
-        #                             showlegend=mask_legend[mask_title],
-        #                             text=mask_title,
-        #                             line={'width': 0})
-        #             mask_legend[mask_title] = False
-        #             fig.add_trace(point, row=row, col=col)
+        # mask_colors = get_colors(n_colors=len(self.masks), alpha=0.3)
+        # for color_idx, (mask, label) in enumerate(zip(self.masks, self.mask_labels)):
+        #     # Mask will be width x height x 1
+        #     y, x = np.where(np.squeeze(mask))
+        #     mask_title = label or f"{color_idx}"
+        #     for y_c, x_c in zip(y, x):
+        #         point = Scatter(x=[x_c-0.5, x_c+0.5, x_c+0.5, x_c-0.5],
+        #                         y=[y_c+0.5, y_c+0.5, y_c-0.5, y_c-0.5],
+        #                         mode='lines',
+        #                         fill='toself',
+        #                         fillcolor=mask_colors[color_idx],
+        #                         name=mask_title,
+        #                         legendgroup=mask_title,
+        #                         showlegend=mask_legend[mask_title],
+        #                         text=mask_title,
+        #                         line={'width': 0})
+        #         mask_legend[mask_title] = False
+        #         fig.add_trace(point, row=row, col=col)
 
         bbox_colors = get_colors(n_colors=self.n_bboxes)
         for bbox_set in self.bboxes:
@@ -366,16 +381,19 @@ class BatchDisplay(Display):
         image: A batch of image to be displayed. 4-dimensional torch tensors are generally assumed to be channel first,
             while tf and np are assumed to be channel last. Either way, only 1 or 3 channel images are supported.
         text: Text which will be printed in the center of each figure.
-        masks: Batches of one or more 2-dimensional tensors. They may be combined with labels if desired:
-            Bx(<mask>, <label>). Tensors may be 3-dimensional with the second dimension indicating multiple different
-            masks: BxNx<mask>x<label>.
+        masks: A 3D tensor representing a batch of 2D masks, or a 4D tensor indicating a batch of 2D masks having
+            multiple channels. They may be combined with label(s) if desired (<mask>, <label>). For masks with C
+            channels, C labels should be provided (which will then be used for every element in the batch).
         bboxes: Batches of one or more bounding boxes of the form (x0, y0, width, height [, label]), where (x0, y0) is
             the top left corner of the box. These may also be encoded in a tensor of shape (4,) or (N,4) for multiple
             boxes.
         keypoints: Batches of one or more keypoints of the form (x, y [, label]). These may also be encoded in a tensor
             of shape (2,) or (N,2) for multiple keypoints.
         title: What should the title of this figure be.
-        color_map: How to color 1-channel images. Options from: https://plotly.com/python/builtin-colorscales/
+        mask_threshold: If provided, any masks will be binarized based on the given threshold value (1 if > t, else 0).
+        color_map: How to color 1-channel images. Options from: https://plotly.com/python/builtin-colorscales/. If 2
+            strings are provided, the first will be used to color grey-scale images and the second will be used to color
+            continuous (non-thresholded) masks. If a single string is provided it will be used for both image and masks.
 
     Raises:
         AssertionError: If the provided arguments violate expected type/shape constraints.
@@ -383,11 +401,7 @@ class BatchDisplay(Display):
     def __init__(self,
                  image: Union[None, 'Tensor', Sequence['Tensor']] = None,
                  text: Union[None, Sequence[str], 'Tensor', Sequence['Tensor']] = None,
-                 masks: Union[None,
-                              'Tensor',
-                              Sequence[Tuple['Tensor', str]],
-                              Sequence[Sequence['Tensor']],
-                              Sequence[Sequence[Tuple['Tensor', str]]]] = None,
+                 masks: Union[None, 'Tensor', Tuple['Tensor', Union[str, Sequence[str]]]] = None,
                  bboxes: Union[None,
                                Sequence['BoundingBox'],
                                'Tensor',
@@ -401,8 +415,11 @@ class BatchDisplay(Display):
                                   Sequence[Sequence['KeyPoint']],
                                   Sequence[Sequence['Tensor']]] = None,
                  title: Union[None, str] = None,
-                 color_map: str = "greys"):
+                 mask_threshold: Optional[float] = None,
+                 color_map: Union[str, Tuple[str, str]] = ("gray", "turbo")):
         self.batch = []
+        masks, mask_labels, *_ = to_list(masks) + [None, None]
+        mask_labels = to_list(mask_labels)
         for img, txt, mask, bbox, keypoint in zip_longest([] if image is None else image,
                                                           [] if text is None else text,
                                                           [] if masks is None else masks,
@@ -412,10 +429,11 @@ class BatchDisplay(Display):
             self.batch.append(
                 ImageDisplay(image=img,
                              text=txt,
-                             masks=mask,
+                             masks=(mask, mask_labels) if mask_labels else mask,
                              bboxes=bbox,
                              keypoints=keypoint,
                              title=None,
+                             mask_threshold=mask_threshold,
                              color_map=color_map))
         self.batch_size = len(self.batch) or 1
         self.title = title or ''

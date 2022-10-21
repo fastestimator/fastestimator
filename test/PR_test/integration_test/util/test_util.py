@@ -139,7 +139,7 @@ class TestShowImage(unittest.TestCase):
         bg_img = np.zeros((150, 150))
         boxes = np.array([[0, 0, 10, 20, "apple"], [10, 20, 30, 50, "dog"], [40, 70, 200, 200, "cat"],
                           [0, 0, 0, 0, "shouldn't shown"], [0, 0, -50, -30, "shouldn't shown2"]])
-        fig = fe.util.ImageDisplay(image=bg_img, bboxes=boxes).prepare()
+        fig = fe.util.ImageDisplay(image=bg_img, color_map='gray', bboxes=boxes).prepare()
         obj1 = fig_to_rgb_array(fig)
         obj2 = self.bb_img_ans
         self.assertTrue(check_img_similar(obj1, obj2))
