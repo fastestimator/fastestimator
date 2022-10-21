@@ -43,5 +43,5 @@
     "svhn_cropped_test": "http://ufldl.stanford.edu/housenumbers/test_32x32.mat",
     "tednmt": "http://www.phontron.com/data/qi18naacl-dataset.tar.gz",
     "tiny_imagenet": "http://cs231n.stanford.edu/tiny-imagenet-200.zip",
-    "pascal_voc2012": "http://host.robots.ox.ac.uk/pascal/VOC/voc2012/VOCtrainval_11-May-2012.tar"
+    "pascal_voc2012": "https://drive.google.com/uc?id=1jeGqQUNxClNoQgp7HxbRvOvkVWvkQCKl&export=download&confirm=t"
 }
