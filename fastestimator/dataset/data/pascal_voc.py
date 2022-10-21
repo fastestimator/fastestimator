@@ -14,7 +14,7 @@
 # ==============================================================================
 import collections
 import os
-import tarfile
+import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -24,8 +24,9 @@ import wget
 from defusedxml.ElementTree import parse as ET_parse
 
 from fastestimator.dataset.dataset import FEDataset
+from fastestimator.util.google_download_util import _download_file_from_google_drive
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.wget_util import bar_custom, callback_progress
+from fastestimator.util.wget_util import callback_progress
 
 wget.callback_progress = callback_progress
 
@@ -253,29 +254,25 @@ def load_data(root_dir: Optional[str] = None, load_bboxes: bool = False,
     Returns:
         (train_data, eval_data)
     """
+    home = str(Path.home())
+
     if root_dir is None:
-        root_dir = os.path.join(str(Path.home()), 'fastestimator_data', 'PascalVoc')
+        root_dir = os.path.join(home, 'fastestimator_data', 'PascalVoc')
     else:
         root_dir = os.path.join(os.path.abspath(root_dir), 'PascalVoc')
     os.makedirs(root_dir, exist_ok=True)
 
     data_folder = os.path.join(root_dir, "VOCdevkit", "VOC2012")
+    compressed_image_location = os.path.join(root_dir, 'VOCtrainval_11-May-2012.tar')
 
-    files = [(data_folder,
-              "VOCtrainval_11-May-2012.tar",
-              'http://host.robots.ox.ac.uk/pascal/VOC/voc2012/VOCtrainval_11-May-2012.tar')]
+    if not os.path.exists(data_folder):
+        if not os.path.exists(compressed_image_location):
+            print("Downloading data to {}".format(root_dir))
+            _download_file_from_google_drive('1jeGqQUNxClNoQgp7HxbRvOvkVWvkQCKl', compressed_image_location)
 
-    for data_dir, zip_name, download_url in files:
-        if not os.path.exists(data_dir):
-            zip_path = os.path.join(root_dir, zip_name)
-            # Download
-            if not os.path.exists(zip_path):
-                print("Downloading {} to {}".format(zip_name, root_dir))
-                wget.download(download_url, zip_path, bar=bar_custom)
-            # Extract
-            print("Extracting {}".format(zip_name))
-            with tarfile.open(zip_path) as tar_file:
-                tar_file.extractall(os.path.dirname(zip_path))
+        print("Extracting data to {}".format(root_dir))
+        shutil.unpack_archive(compressed_image_location, root_dir)
+
     train_ds = PascalVoc(data_folder, include_bboxes=load_bboxes, include_masks=load_masks, image_set="train")
     eval_ds = PascalVoc(data_folder, include_bboxes=load_bboxes, include_masks=load_masks, image_set='val')
     return train_ds, eval_ds
