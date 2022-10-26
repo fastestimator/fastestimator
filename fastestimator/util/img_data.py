@@ -19,10 +19,10 @@ from typing import TYPE_CHECKING, Optional, Sequence, Tuple, TypeVar, Union
 import numpy as np
 import torch
 from plotly.colors import sample_colorscale
-from plotly.graph_objects import Figure, Image
+from plotly.graph_objects import Figure, Image, Scatter
 from plotly.subplots import make_subplots
 
-from fastestimator.util.base_util import FigureFE, get_colors, in_notebook, to_list
+from fastestimator.util.base_util import FigureFE, in_notebook, to_list
 from fastestimator.util.util import to_number
 
 if TYPE_CHECKING:
@@ -32,9 +32,6 @@ if TYPE_CHECKING:
     BoundingBox = TypeVar('BoundingBox',
                           Tuple[Union[int, float], Union[int, float], Union[int, float], Union[int, float]],
                           Tuple[Union[int, float], Union[int, float], Union[int, float], Union[int, float], str])
-    KeyPoint = TypeVar('KeyPoint',
-                       Tuple[Union[int, float], Union[int, float]],
-                       Tuple[Union[int, float], Union[int, float], str])
 
 
 class Display(ABC):
@@ -69,8 +66,8 @@ class ImageDisplay(Display):
             label(s) if desired (<mask>, <label>).
         bboxes: One or more bounding boxes of the form (x0, y0, width, height [, label]), where (x0, y0) is the top
             left corner of the box. These may also be encoded in a tensor of shape (4,) or (N,4) for multiple boxes.
-        keypoints: One or more keypoints of the form (x, y [, label]). These may also be encoded in a tensor of shape
-            (2,) or (N,2) for multiple keypoints.
+        keypoints: A 1D tensor representing a keypoint of shape (2,), or a 2D tensor of shape (N,2) indicating multiple
+            1D keypoints. They may be combined with label(s) if desired: (<keypoint>, <label>).
         title: What should the title of this figure be.
         mask_threshold: If provided, any masks will be binarized based on the given threshold value (1 if > t, else 0).
         color_map: How to color 1-channel images. Options from: https://plotly.com/python/builtin-colorscales/. If 2
@@ -85,7 +82,7 @@ class ImageDisplay(Display):
                  text: Union[None, str, 'Tensor'] = None,
                  masks: Union[None, 'Tensor', Tuple['Tensor', Union[str, Sequence[str]]]] = None,
                  bboxes: Union[None, 'BoundingBox', 'Tensor', Sequence['BoundingBox'], Sequence['Tensor']] = None,
-                 keypoints: Union[None, 'KeyPoint', 'Tensor', Sequence['KeyPoint'], Sequence['Tensor']] = None,
+                 keypoints: Union[None, 'Tensor', Tuple['Tensor', Union[str, Sequence[str]]]] = None,
                  title: Union[None, str] = None,
                  mask_threshold: Optional[float] = None,
                  color_map: Union[str, Tuple[str, str]] = ("gray", "turbo")):
@@ -182,8 +179,31 @@ class ImageDisplay(Display):
                 bbox = [bbox]  # TODO - non-tensor bbox should stack together to get different colors?
             self.bboxes.append(bbox)
 
-        # TODO - keypoint handling
-        self.keypoints = keypoints
+        keypoints, keypoint_labels, *_ = to_list(keypoints) + [None, None]
+        keypoint_labels = to_list(keypoint_labels)
+        if keypoints is not None:
+            keypoints = to_number(keypoints)
+            assert len(keypoints.shape) in (1, 2), "Keypoints must be 1 dimensional, or 2 dimensional with the first " \
+                                                   "dimension indicating multiple keypoints, but found " \
+                                                   f"{len(keypoints.shape)}"
+            # Give all keypoints a channel dimension for consistency
+            if len(keypoints.shape) == 1:
+                keypoints = np.expand_dims(keypoints, axis=0)
+
+            assert keypoints.shape[1] == 2, "Keypoints should contain 2 coordinates (x,y) but found " \
+                                            f"{keypoints.shape[1]}"
+            # Ensure keypoint labels are sufficient if provided
+            if keypoint_labels:
+                assert len(keypoint_labels) == len(keypoints), "If keypoint labels are provided they must be 1-1 " \
+                                                               "with the number of keypoints, but found " \
+                                                               f"{len(keypoint_labels)} labels and {len(keypoints)} " \
+                                                               f"keypoints"
+            else:
+                # Make default blank labels for easy zip later
+                keypoint_labels = [''] * len(keypoints)
+        self.keypoints = [] if keypoints is None else keypoints
+        self.keypoint_labels = [] if keypoint_labels is None else keypoint_labels
+
         self.title = title or ''
         color_map = to_list(color_map)
         self.img_color_map = color_map[0]
@@ -227,7 +247,12 @@ class ImageDisplay(Display):
             fig = make_subplots(rows=1, cols=1, subplot_titles=[self.title] if self.title else None)
             if self.title:
                 fig['layout']['annotations'][0]['font'] = {'size': title_size, 'family': 'monospace'}
+
+        if not isinstance(fig, FigureFE):
+            fig = FigureFE.from_figure(fig)
+
         fig.update_layout({'plot_bgcolor': '#FFF'})
+        fig.update_layout(legend=dict(itemsizing='constant'))  # Make lines in legend thicker for masks
         x_axis_name = fig.get_subplot(row=row, col=col).xaxis.plotly_name
         y_axis_name = fig.get_subplot(row=row, col=col).yaxis.plotly_name
         fig['layout'][x_axis_name]['showticklabels'] = False
@@ -244,8 +269,6 @@ class ImageDisplay(Display):
             fig.add_trace(im, row=row, col=col)
 
         empty_color = np.array((0.0, 0.0, 0.0, 0.0))  # RGBA
-        mask_colors = get_colors(n_colors=len(self.masks), alpha=0.4, as_numbers=True)
-        mask_colors = [np.array(color) for color in mask_colors]
         for color_idx, (mask, label) in enumerate(zip(self.masks, self.mask_labels)):
             # Mask will be width x height x 1
             if np.max(mask) > 1:
@@ -259,40 +282,64 @@ class ImageDisplay(Display):
                 msk_heatmap = np.rint(msk_heatmap * 255)
                 # add alpha channel
                 mask = np.concatenate([msk_heatmap, 0.5 * np.ones_like(mask)], axis=-1)
+                fig.add_trace(Image(z=mask, colormodel='rgba', hoverinfo=None),
+                              row=row,
+                              col=col,
+                              exclude_empty_subplots=False)
             else:
-                positive_color = mask_colors[color_idx]
-                mask = np.where(mask, positive_color, empty_color)
-            if label:
-                # TODO - handle labeling
-                mask = Image(z=mask, colormodel='rgba', hoverinfo=None, name=label)
-            else:
-                mask = Image(z=mask, colormodel='rgba', hoverinfo=None)
-            fig.add_trace(mask, row=row, col=col)
+                if label:
+                    # Draw the mask out dynamically to allow legend interactivity
+                    for row_idx, mask_row in enumerate(np.squeeze(mask)):
+                        start = 0
+                        active = False
+                        for col_idx, mask_col in enumerate(mask_row):
+                            if mask_col == 1:
+                                if not active:
+                                    active = True
+                                    start = col_idx
+                            else:
+                                if active:
+                                    # Only reserve a color once we know for sure that we're active to avoid a batch
+                                    # situation where no legend is displayed
+                                    color, show = fig._get_color(clazz='mask', label=label, n_colors=len(self.masks))
+                                    line = Scatter(x=[start, col_idx],
+                                                   y=[row_idx, row_idx],
+                                                   mode='lines',
+                                                   line={'width': 1,
+                                                         'color': color},
+                                                   name=label,
+                                                   legendgroup=f"mask_{label}",
+                                                   legendrank=0,  # Sort mask labels higher than bbox and keypoint
+                                                   showlegend=show,
+                                                   text=label)
+                                    active = False
+                                    fig.add_trace(line, row=row, col=col, exclude_empty_subplots=False)
+                        if active:
+                            # The mask went all the way to the right side of the image
+                            color, show = fig._get_color(clazz='mask', label=label, n_colors=len(self.masks))
+                            line = Scatter(x=[start, len(mask_row) - 1],
+                                           y=[row_idx, row_idx],
+                                           mode='lines',
+                                           line={'width': 1,
+                                                 'color': color},
+                                           name=label,
+                                           legendgroup=f"mask_{label}",
+                                           legendrank=0,
+                                           showlegend=show,
+                                           text=label)
+                            fig.add_trace(line, row=row, col=col, exclude_empty_subplots=False)
+                else:
+                    # Draw the mask as a static image for efficiency
+                    positive_color, _ = fig._get_color(clazz='mask',
+                                                       label=label or color_idx,
+                                                       n_colors=len(self.masks),
+                                                       as_numbers=True)
+                    mask = np.where(mask, np.array(positive_color), empty_color)
+                    fig.add_trace(Image(z=mask, colormodel='rgba', hoverinfo=None),
+                                  row=row,
+                                  col=col,
+                                  exclude_empty_subplots=False)
 
-        # # Works, and legend interactivity, but slow
-        # from collections import defaultdict
-        # from plotly.graph_objs import Scatter
-        # mask_legend = defaultdict(lambda: True)
-        # mask_colors = get_colors(n_colors=len(self.masks), alpha=0.3)
-        # for color_idx, (mask, label) in enumerate(zip(self.masks, self.mask_labels)):
-        #     # Mask will be width x height x 1
-        #     y, x = np.where(np.squeeze(mask))
-        #     mask_title = label or f"{color_idx}"
-        #     for y_c, x_c in zip(y, x):
-        #         point = Scatter(x=[x_c-0.5, x_c+0.5, x_c+0.5, x_c-0.5],
-        #                         y=[y_c+0.5, y_c+0.5, y_c-0.5, y_c-0.5],
-        #                         mode='lines',
-        #                         fill='toself',
-        #                         fillcolor=mask_colors[color_idx],
-        #                         name=mask_title,
-        #                         legendgroup=mask_title,
-        #                         showlegend=mask_legend[mask_title],
-        #                         text=mask_title,
-        #                         line={'width': 0})
-        #         mask_legend[mask_title] = False
-        #         fig.add_trace(point, row=row, col=col)
-
-        bbox_colors = get_colors(n_colors=self.n_bboxes)
         for bbox_set in self.bboxes:
             for color_idx, bbox in enumerate(bbox_set):
                 # Bounding Box Data. Should be (x0, y0, w, h, <label>)
@@ -301,8 +348,8 @@ class ImageDisplay(Display):
                 y0 = float(bbox[1])
                 width = float(bbox[2])
                 height = float(bbox[3])
-                color = bbox_colors[color_idx]
                 label = None if len(bbox) < 5 else str(bbox[4])
+                color, _ = fig._get_color(clazz='bbox', label=label or color_idx, n_colors=self.n_bboxes)
 
                 # Don't draw empty boxes, or invalid box
                 if width <= 0 or height <= 0:
@@ -351,6 +398,22 @@ class ImageDisplay(Display):
                                        row=row,
                                        col=col)
 
+        for keypoint, label in zip(self.keypoints, self.keypoint_labels):
+            kwargs = {'x': [keypoint[0]],
+                      'y': [keypoint[1]],
+                      'mode': 'markers',
+                      'showlegend': False,
+                      'marker': {'color': 'red',
+                                 'size': 10,
+                                 'symbol': 'circle'}}
+            if label:
+                kwargs['name'] = label
+                kwargs['legendgroup'] = f"keypoint_{label}"
+                color, show = fig._get_color(clazz='keypoints', label=label, n_colors=len(self.keypoints))
+                kwargs['showlegend'] = show
+                kwargs['marker']['color'] = color
+            fig.add_trace(Scatter(**kwargs), row=row, col=col, exclude_empty_subplots=False)
+
         if self.text:
             fig.add_annotation(
                 text=self.text,
@@ -368,9 +431,6 @@ class ImageDisplay(Display):
                 row=row,
                 col=col)
 
-        if not isinstance(fig, FigureFE):
-            fig = FigureFE.from_figure(fig)
-
         return fig
 
 
@@ -387,8 +447,10 @@ class BatchDisplay(Display):
         bboxes: Batches of one or more bounding boxes of the form (x0, y0, width, height [, label]), where (x0, y0) is
             the top left corner of the box. These may also be encoded in a tensor of shape (4,) or (N,4) for multiple
             boxes.
-        keypoints: Batches of one or more keypoints of the form (x, y [, label]). These may also be encoded in a tensor
-            of shape (2,) or (N,2) for multiple keypoints.
+        keypoints: A 2D tensor representing a batch of 1D keypoints, or a 3D tensor indicating a batch of sets of
+            1D keypoints. They may be combined with label(s) if desired: (<keypoint>, <label>). For a batch N with C
+            keypoints per element, C labels should be provided (which will then be used for every element in the batch).
+            The keypoint shape should be (N, C, 2) or (N, 2).
         title: What should the title of this figure be.
         mask_threshold: If provided, any masks will be binarized based on the given threshold value (1 if > t, else 0).
         color_map: How to color 1-channel images. Options from: https://plotly.com/python/builtin-colorscales/. If 2
@@ -408,18 +470,15 @@ class BatchDisplay(Display):
                                Sequence['Tensor'],
                                Sequence[Sequence['BoundingBox']],
                                Sequence[Sequence['Tensor']]] = None,
-                 keypoints: Union[None,
-                                  Sequence['KeyPoint'],
-                                  'Tensor',
-                                  Sequence['Tensor'],
-                                  Sequence[Sequence['KeyPoint']],
-                                  Sequence[Sequence['Tensor']]] = None,
+                 keypoints: Union[None, 'Tensor', Tuple['Tensor', Union[str, Sequence[str]]]] = None,
                  title: Union[None, str] = None,
                  mask_threshold: Optional[float] = None,
                  color_map: Union[str, Tuple[str, str]] = ("gray", "turbo")):
         self.batch = []
         masks, mask_labels, *_ = to_list(masks) + [None, None]
+        keypoints, keypoint_labels, *_ = to_list(keypoints) + [None, None]
         mask_labels = to_list(mask_labels)
+        keypoint_labels = to_list(keypoint_labels)
         for img, txt, mask, bbox, keypoint in zip_longest([] if image is None else image,
                                                           [] if text is None else text,
                                                           [] if masks is None else masks,
@@ -431,7 +490,7 @@ class BatchDisplay(Display):
                              text=txt,
                              masks=(mask, mask_labels) if mask_labels else mask,
                              bboxes=bbox,
-                             keypoints=keypoint,
+                             keypoints=(keypoint, keypoint_labels) if keypoint_labels else keypoint,
                              title=None,
                              mask_threshold=mask_threshold,
                              color_map=color_map))
