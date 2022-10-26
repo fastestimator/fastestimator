@@ -632,6 +632,48 @@ class FigureFE(Figure):
         new_fig.__dict__ = fig.__dict__.copy()
         return new_fig
 
+    def _get_color(self,
+                   clazz: str,
+                   label: Union[int, str],
+                   as_numbers: bool = False,
+                   n_colors: int = 10) -> Tuple[Union[str, Tuple[float, float, float, float]], bool]:
+        """A function which determines what color a plot element ought to be.
+
+        Args:
+            clazz: The class of the thing to be plotted ('mask', 'keypoint' etc.).
+            label: The name of the thing to be plotted ('lung', 'patella', etc.).
+            as_numbers: Whether to return the color as a tuple of rgba floats or as a rgba string.
+            n_colors: How many colors you expect to need for the given clazz in this image.
+
+        Returns:
+            The color assigned to the given clazz and label, as well as whether this is the first time the given pair
+            has been assigned a color.
+        """
+        if clazz == 'mask':
+            alpha = 0.3
+        else:
+            alpha = 1.0
+        if not hasattr(self, '_fe_color_map'):
+            self._fe_color_map = {}  # ([remaining_colors], {label: assigned_color})
+        if clazz not in self._fe_color_map:
+            clazz_colors = get_colors(max(10, n_colors), alpha=alpha)
+            clazz_assignment = {}
+            self._fe_color_map[clazz] = (clazz_colors, clazz_assignment)
+        clazz_colors, clazz_assignment = self._fe_color_map[clazz]
+        if label in clazz_assignment:
+            val = clazz_assignment[label]
+            if as_numbers:
+                val = [float(x) for x in val.strip('rgba(').strip(')').split(',')]
+            return val, False
+        if not clazz_colors:
+            # The initial estimate of color requirements was insufficient
+            clazz_colors.extend(get_colors(max(20, n_colors), alpha=alpha))
+        clazz_assignment[label] = clazz_colors.pop(0)
+        val = clazz_assignment[label]
+        if as_numbers:
+            val = [float(x) for x in val.strip('rgba(').strip(')').split(',')]
+        return val, True
+
     def show(self,
              save_path: Optional[str] = None,
              verbose: bool = True,
