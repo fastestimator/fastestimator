@@ -67,7 +67,9 @@ class ImageDisplay(Display):
         bboxes: One or more bounding boxes of the form (x0, y0, width, height [, label]), where (x0, y0) is the top
             left corner of the box. These may also be encoded in a tensor of shape (4,) or (N,4) for multiple boxes.
         keypoints: A 1D tensor representing a keypoint of shape (2,), or a 2D tensor of shape (N,2) indicating multiple
-            1D keypoints. They may be combined with label(s) if desired: (<keypoint>, <label>).
+            1D keypoints. They may be combined with label(s) if desired: (<keypoint>, <label>). (x,y) coordinates
+            indicate distance from the top left of an image, with negative or None values indicating that a keypoint
+            was not detected.
         title: What should the title of this figure be.
         mask_threshold: If provided, any masks will be binarized based on the given threshold value (1 if > t, else 0).
         color_map: How to color 1-channel images. Options from: https://plotly.com/python/builtin-colorscales/. If 2
@@ -399,8 +401,12 @@ class ImageDisplay(Display):
                                        col=col)
 
         for keypoint, label in zip(self.keypoints, self.keypoint_labels):
-            kwargs = {'x': [keypoint[0]],
-                      'y': [keypoint[1]],
+            x, y = keypoint
+            if (x is None) or (x < 0) or (y is None) or (y < 0):
+                # Skip negative or None key-points
+                continue
+            kwargs = {'x': [x],
+                      'y': [y],
                       'mode': 'markers',
                       'showlegend': False,
                       'marker': {'color': 'red',
@@ -450,7 +456,8 @@ class BatchDisplay(Display):
         keypoints: A 2D tensor representing a batch of 1D keypoints, or a 3D tensor indicating a batch of sets of
             1D keypoints. They may be combined with label(s) if desired: (<keypoint>, <label>). For a batch N with C
             keypoints per element, C labels should be provided (which will then be used for every element in the batch).
-            The keypoint shape should be (N, C, 2) or (N, 2).
+            The keypoint shape should be (N, C, 2) or (N, 2). (x,y) coordinates indicate distance from the top left of
+            an image, with negative or None values indicating that a keypoint was not detected.
         title: What should the title of this figure be.
         mask_threshold: If provided, any masks will be binarized based on the given threshold value (1 if > t, else 0).
         color_map: How to color 1-channel images. Options from: https://plotly.com/python/builtin-colorscales/. If 2
