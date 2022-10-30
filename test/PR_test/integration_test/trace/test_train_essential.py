@@ -57,12 +57,12 @@ class TestTrainEssential(unittest.TestCase):
 
     def test_on_epoch_end(self):
         self.train_essential.on_epoch_end(data=self.data)
-        self.assertIsNotNone(self.data['epoch_time'])
+        self.assertIsNotNone(self.data['epoch_time(sec)'])
 
     def test_on_end(self):
         self.train_essential.on_end(data=self.data)
         model_name = self.train_essential.system.network.models[0].model_name
         with self.subTest('Check total time in data'):
-            self.assertIsNotNone(self.data['total_time'])
+            self.assertIsNotNone(self.data['total_time(sec)'])
         with self.subTest('Check model learning rate in data dictionary'):
             self.assertTrue(math.isclose(self.data[model_name + '_lr'], 0.001, rel_tol=1e-3))

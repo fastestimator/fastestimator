@@ -13,10 +13,11 @@
 # limitations under the License.
 # ==============================================================================
 import os
-from typing import Iterable, Optional, Union
+from typing import Iterable, Optional, Sequence, Tuple, Union
 
 from fastestimator.trace import Trace
 from fastestimator.trace.trace import parse_freq
+from fastestimator.util.base_util import to_list
 from fastestimator.util.data import Data
 from fastestimator.util.img_data import BatchDisplay as BatchDisplayF
 from fastestimator.util.traceability_util import traceable
@@ -29,10 +30,15 @@ class BatchDisplay(Trace):
     Args:
         image: Key corresponding to a batch of images to be displayed.
         text: Key corresponding to text to be printed in the center of the figure.
-        masks: Key corresponding to masks to be displayed over an image.
+        masks: Key corresponding to masks to be displayed over an image. May be accompanied by a sequence of mask labels
+            (1 per channel) if desired: (<mask_key>, [<c1_name>, <c2_name>, ...])
         bboxes: Key corresponding to bounding boxes to be displayed over the image.
-        keypoints: Key corresponding to keypoints to be displayed over the image.
-        color_map: How to color 1-channel images. Options from: https://plotly.com/python/builtin-colorscales/
+        keypoints: Key corresponding to keypoints to be displayed over the image. May be accompanied by a sequence of
+            keypoint labels (1 per keypoint) if desired: (<kp_key>, [<kp1_name>, <kp2_name>, ...])
+        mask_threshold: If provided, any masks will be binarized based on the given threshold value (1 if > t, else 0).
+        color_map: How to color 1-channel images. Options from: https://plotly.com/python/builtin-colorscales/. If 2
+            strings are provided, the first will be used to color grey-scale images and the second will be used to color
+            continuous (non-thresholded) masks. If a single string is provided it will be used for both image and masks.
         title: The title of the generated figure. If None it defaults to any image/text/mask/bbox/keypoint key which was
             provided (in that order).
         batch_limit: A limit on the number of batch elements to display.
@@ -52,10 +58,11 @@ class BatchDisplay(Trace):
     def __init__(self,
                  image: Optional[str] = None,
                  text: Optional[str] = None,
-                 masks: Optional[str] = None,
+                 masks: Union[None, str, Tuple[str, Sequence[str]]] = None,
                  bboxes: Optional[str] = None,
-                 keypoints: Optional[str] = None,
-                 color_map: str = "greys",
+                 keypoints: Union[None, str, Tuple[str, Sequence[str]]] = None,
+                 mask_threshold: Optional[float] = None,
+                 color_map: Union[str, Tuple[str, str]] = ("gray", "turbo"),
                  title: Optional[str] = None,
                  batch_limit: Optional[int] = None,
                  frequency: Union[None, int, str] = None,
@@ -68,11 +75,12 @@ class BatchDisplay(Trace):
         super().__init__(inputs=inputs, mode=mode, ds_id=ds_id)
         self._image = image
         self._text = text
-        self._masks = masks
+        self._masks, self._mask_labels, *_ = to_list(masks) + [None, None]
         self._bboxes = bboxes
-        self._keypoints = keypoints
+        self._keypoints, self._keypoint_labels, *_ = to_list(keypoints) + [None, None]
         self._title = title or image or text or masks or bboxes or keypoints or None
         self._color_map = color_map
+        self._mask_threshold = mask_threshold
         self.save_dir = save_dir
         if self.save_dir is not None:
             self.save_dir = os.path.normpath(os.path.abspath(self.save_dir))
@@ -87,9 +95,10 @@ class BatchDisplay(Trace):
     def make_image(self, data: Data, batch_limit: Optional[int] = None) -> BatchDisplayF:
         display = BatchDisplayF(image=data[self._image] if self._image else None,
                                 text=data[self._text] if self._text else None,
-                                masks=data[self._masks] if self._masks else None,
+                                masks=(data[self._masks], self._mask_labels) if self._masks else None,
                                 bboxes=data[self._bboxes] if self._bboxes else None,
-                                keypoints=data[self._keypoints] if self._keypoints else None,
+                                keypoints=(data[self._keypoints], self._keypoint_labels) if self._keypoints else None,
+                                mask_threshold=self._mask_threshold,
                                 color_map=self._color_map,
                                 title=self._title)
         if batch_limit and batch_limit < display.batch_size:
