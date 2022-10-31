@@ -83,7 +83,7 @@ class ImageDisplay(Display):
                  image: Union[None, 'Tensor'] = None,
                  text: Union[None, str, 'Tensor'] = None,
                  masks: Union[None, 'Tensor', Tuple['Tensor', Union[str, Sequence[str]]]] = None,
-                 bboxes: Union[None, 'BoundingBox', 'Tensor', Sequence['BoundingBox'], Sequence['Tensor']] = None,
+                 bboxes: Union[None, 'Tensor', Sequence['BoundingBox'], Sequence['Tensor']] = None,
                  keypoints: Union[None, 'Tensor', Tuple['Tensor', Union[str, Sequence[str]]]] = None,
                  title: Union[None, str] = None,
                  mask_threshold: Optional[float] = None,
@@ -351,54 +351,44 @@ class ImageDisplay(Display):
                 width = float(bbox[2])
                 height = float(bbox[3])
                 label = None if len(bbox) < 5 else str(bbox[4])
-                color, _ = fig._get_color(clazz='bbox', label=label or color_idx, n_colors=self.n_bboxes)
+                color, show = fig._get_color(clazz='bbox', label=label or color_idx, n_colors=self.n_bboxes)
 
                 # Don't draw empty boxes, or invalid box
                 if width <= 0 or height <= 0:
                     continue
-                fig.add_shape(
-                    {
-                        'type': 'rect',
-                        'x0': x0,
-                        'x1': x0 + width,
-                        'y0': y0,
-                        'y1': y0 + height,
-                        'line_color': color,
-                        'line_width': 3
-                    },
-                    row=row,
-                    col=col,
-                    exclude_empty_subplots=False)
-                if label is not None:
+                kwargs = {'x': [x0, x0, x0+width, x0+width, x0],
+                          'y': [y0, y0+height, y0+height, y0, y0],
+                          'mode': 'lines',
+                          'line': {'color': color, 'width': 3},
+                          'showlegend': False,
+                          }
+                if label:
+                    kwargs['name'] = label
+                    kwargs['legendrank'] = 1
+                    kwargs['legendgroup'] = f'bb_{label}'
+                    kwargs['showlegend'] = show
+                    # Add label text onto image
                     font_size = max(8, min(14, int(width // len(label or ' '))))
-                    # One annotation with translucent background
-                    fig.add_annotation(x=x0,
-                                       y=y0,
-                                       xshift=len(label) * font_size / 2,
-                                       yshift=font_size,
-                                       text=label,
-                                       showarrow=False,
-                                       font={
-                                           'size': font_size, 'color': 'white', 'family': 'monospace'
-                                       },
-                                       bgcolor='white',
-                                       opacity=0.6,
-                                       exclude_empty_subplots=False,
-                                       row=row,
-                                       col=col)
-                    # Another to make the text opaque
-                    fig.add_annotation(x=x0,
-                                       y=y0,
-                                       xshift=len(label) * font_size / 2,
-                                       yshift=font_size,
-                                       text=label,
-                                       showarrow=False,
-                                       font={
-                                           'size': font_size, 'color': color, 'family': 'monospace'
-                                       },
-                                       exclude_empty_subplots=False,
-                                       row=row,
-                                       col=col)
+                    fig.add_trace(Scatter(x=[x0],
+                                          y=[y0],
+                                          mode='text',
+                                          text='<span style="text-shadow: -1px 1px 0 #FFFFFF, '
+                                               '1px 1px 0px #FFFFFF, 1px -1px 0px #FFFFFF, -1px -1px 0px #FFFFFF;">'
+                                               f'{label}</span>',
+                                          textposition="top right",
+                                          legendgroup=f'bb_{label}',
+                                          textfont={'size': font_size,
+                                                    'color': color,
+                                                    'family': 'monospace'},
+                                          showlegend=False,
+                                          legendrank=1),
+                                  row=row,
+                                  col=col,
+                                  exclude_empty_subplots=False)
+                fig.add_trace(Scatter(**kwargs),
+                              row=row,
+                              col=col,
+                              exclude_empty_subplots=False)
 
         for keypoint, label in zip(self.keypoints, self.keypoint_labels):
             x, y = keypoint
@@ -472,7 +462,6 @@ class BatchDisplay(Display):
                  text: Union[None, Sequence[str], 'Tensor', Sequence['Tensor']] = None,
                  masks: Union[None, 'Tensor', Tuple['Tensor', Union[str, Sequence[str]]]] = None,
                  bboxes: Union[None,
-                               Sequence['BoundingBox'],
                                'Tensor',
                                Sequence['Tensor'],
                                Sequence[Sequence['BoundingBox']],
