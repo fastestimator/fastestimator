@@ -156,8 +156,7 @@ class BaseNetwork:
             "req_grad": len(gradient_ops) > 0,
             "epoch": epoch,
             "deferred": {},
-            "eager": eager,
-            "ds_id": ds_id
+            "eager": eager
         }
         # warmup: bool, mode: str, req_grad: bool, epoch: int, deferred: Dict[str, List[Callable]]]
         for model in self.epoch_models:
