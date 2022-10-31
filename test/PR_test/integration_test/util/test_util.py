@@ -57,6 +57,12 @@ class TestShowImage(unittest.TestCase):
 
         # Now we can save it to a numpy array.
         obj1 = fig_to_rgb_array(fig.prepare())
+
+        # If the target output image has changed, you can regenerate it with:
+        # from PIL import Image
+        # im = Image.fromarray(obj1)
+        # im.save("../resources/test.png")
+
         obj2 = self.color_img_ans
         self.assertTrue(check_img_similar(obj1, obj2))
 

@@ -370,13 +370,14 @@ class ImageDisplay(Display):
                     # Add label text onto image
                     font_size = max(8, min(14, int(width // len(label or ' '))))
                     fig.add_trace(Scatter(x=[x0],
-                                          y=[y0],
+                                          y=[y0-1],  # A slight offset to help text not run in to bbox
                                           mode='text',
                                           text='<span style="text-shadow: -1px 1px 0 #FFFFFF, '
                                                '1px 1px 0px #FFFFFF, 1px -1px 0px #FFFFFF, -1px -1px 0px #FFFFFF;">'
                                                f'{label}</span>',
                                           textposition="top right",
                                           legendgroup=f'bb_{label}',
+                                          hoverinfo='skip',
                                           textfont={'size': font_size,
                                                     'color': color,
                                                     'family': 'monospace'},
