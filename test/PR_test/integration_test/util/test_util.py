@@ -57,6 +57,12 @@ class TestShowImage(unittest.TestCase):
 
         # Now we can save it to a numpy array.
         obj1 = fig_to_rgb_array(fig.prepare())
+
+        # If the target output image has changed, you can regenerate it with:
+        # from PIL import Image
+        # im = Image.fromarray(obj1)
+        # im.save("../resources/test.png")
+
         obj2 = self.color_img_ans
         self.assertTrue(check_img_similar(obj1, obj2))
 
@@ -137,8 +143,8 @@ class TestShowImage(unittest.TestCase):
 
     def test_show_image_bounding_box_np(self):
         bg_img = np.zeros((150, 150))
-        boxes = np.array([[0, 0, 10, 20, "apple"], [10, 20, 30, 50, "dog"], [40, 70, 200, 200, "cat"],
-                          [0, 0, 0, 0, "shouldn't shown"], [0, 0, -50, -30, "shouldn't shown2"]])
+        boxes = np.array([[0, 0, 10, 20], [10, 20, 30, 50], [40, 70, 200, 200],
+                          [0, 0, 0, 0], [0, 0, -50, -30]])
         fig = fe.util.ImageDisplay(image=bg_img, color_map='gray', bboxes=boxes).prepare()
         obj1 = fig_to_rgb_array(fig)
         obj2 = self.bb_img_ans
