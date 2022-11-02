@@ -69,15 +69,15 @@ class BatchDisplay(Trace):
                  save_dir: Optional[str] = None,
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None):
-        inputs = {image, text, masks, bboxes, keypoints}
-        inputs.discard(None)
-        assert inputs, "At least one input key must be specified"
-        super().__init__(inputs=inputs, mode=mode, ds_id=ds_id)
         self._image = image
         self._text = text
         self._masks, self._mask_labels, *_ = to_list(masks) + [None, None]
         self._bboxes = bboxes
         self._keypoints, self._keypoint_labels, *_ = to_list(keypoints) + [None, None]
+        inputs = {self._image, self._text, self._masks, self._bboxes, self._keypoints}
+        inputs.discard(None)
+        assert inputs, "At least one input key must be specified"
+        super().__init__(inputs=inputs, mode=mode, ds_id=ds_id)
         self._title = title or image or text or masks or bboxes or keypoints or None
         self._color_map = color_map
         self._mask_threshold = mask_threshold
