@@ -28,7 +28,7 @@ from fastestimator.dataset.data.cifair10 import load_data
 from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import HorizontalFlip, PadIfNeeded, RandomCrop
 from fastestimator.op.numpyop.univariate import ChannelTranspose, ColorJitter, GaussianBlur, ToFloat, ToGray
-from fastestimator.op.tensorop import LambdaOp, TensorOp
+from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import ModelSaver
@@ -116,8 +116,8 @@ class NTXentOp(TensorOp):
 
     def forward(self, data, state):
         arg1, arg2 = data
-        loss = NTXent(arg1, arg2, self.temperature)
-        return loss
+        loss, logit, label = NTXent(arg1, arg2, self.temperature)
+        return loss, logit, label
 
 
 def NTXent(A, B, temperature):
@@ -181,10 +181,9 @@ def pretrain_model(epochs, batch_size, train_steps_per_epoch, save_dir):
 
     model_con = fe.build(model_fn=lambda: ResNet9OneLayerHead(length=128), optimizer_fn="adam")
     network = fe.Network(ops=[
-        LambdaOp(lambda x, y: torch.cat([x, y], dim=0), inputs=["x_aug", "x_aug2"], outputs="x_com"),
-        ModelOp(model=model_con, inputs="x_com", outputs="y_com"),
-        LambdaOp(lambda x: torch.chunk(x, 2, dim=0), inputs="y_com", outputs=["y_pred", "y_pred2"], mode="train"),
-        NTXentOp(arg1="y_pred", arg2="y_pred2", outputs=["NTXent", "logit", "label"], mode="train"),
+        ModelOp(model=model_con, inputs="x_aug", outputs="y_pred"),
+        ModelOp(model=model_con, inputs="x_aug2", outputs="y_pred2"),
+        NTXentOp(arg1="y_pred", arg2="y_pred2", outputs=["NTXent", "logit", "label"]),
         UpdateOp(model=model_con, loss_name="NTXent")
     ])
 
@@ -202,7 +201,7 @@ def pretrain_model(epochs, batch_size, train_steps_per_epoch, save_dir):
     return model_con
 
 
-def finetune_model(model, epochs, batch_size, train_steps_per_epoch, save_dir):
+def finetune_model(model, epochs, batch_size, train_steps_per_epoch):
     train_data, test_data = load_data()
     train_data = train_data.split(0.1)
     pipeline = fe.Pipeline(train_data=train_data,
@@ -239,7 +238,7 @@ def fastestimator_run(epochs_pretrain=50,
     model_con = pretrain_model(epochs_pretrain, batch_size, train_steps_per_epoch, save_dir)
     model_finetune = fe.build(model_fn=lambda: ResNet9OneLayerHead(length=10), optimizer_fn="adam")
     model_finetune.encoder.load_state_dict(model_con.encoder.state_dict())  # load the encoder weight
-    finetune_model(model_finetune, epochs_finetune, batch_size, train_steps_per_epoch, save_dir)
+    finetune_model(model_finetune, epochs_finetune, batch_size, train_steps_per_epoch)
 
 
 if __name__ == "__main__":
