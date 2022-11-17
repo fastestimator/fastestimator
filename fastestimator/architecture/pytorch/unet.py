@@ -62,7 +62,7 @@ class UNetDecoderBlock(nn.Module):
                                     nn.ReLU(inplace=True),
                                     nn.Conv2d(mid_channels, mid_channels, 3, padding=1),
                                     nn.ReLU(inplace=True),
-                                    nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
+                                    nn.Upsample(scale_factor=2),
                                     nn.Conv2d(mid_channels, out_channels, 3, padding=1),
                                     nn.ReLU(inplace=True))
 
