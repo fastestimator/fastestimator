@@ -176,6 +176,7 @@ class Search:
                 search_idx = kwargs.pop('search_idx')  # This won't appear in the hash later
                 self.search_idx = self.search_idx if self.search_idx > search_idx else search_idx
                 # Each python session uses a unique salt for hash, so can't save the hashes to disk for re-use
+                self._make_hashable(kwargs)
                 self.evaluation_cache[hash(tuple(sorted(kwargs.items())))] = summary['result']
             print("FastEstimator-Search: Loading the search state from {}".format(file_path))
         elif not not_exist_ok:
@@ -199,3 +200,8 @@ class Search:
 
     def _fit(self) -> None:
         raise NotImplementedError
+
+    def _make_hashable(self, kwargs):
+        for key in kwargs:
+            if isinstance(kwargs[key], list):
+                kwargs[key] = tuple(kwargs[key])
