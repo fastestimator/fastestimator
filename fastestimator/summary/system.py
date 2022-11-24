@@ -256,7 +256,8 @@ class System:
             json.dump(state, fp, indent=4)
         # Save all of the models / optimizer states
         for model in self.network.models:
-            save_model(model, save_dir=save_dir, save_optimizer=True)
+            if hasattr(model, "optimizer") and model.optimizer is not None:
+                save_model(model, save_dir=save_dir, save_optimizer=True)
         # Save everything else
         objects = {
             'summary': self.summary,
@@ -335,9 +336,10 @@ class System:
         if not os.path.exists(weights_path):
             raise FileNotFoundError(f"Cannot find model weights file at {weights_path}")
         optimizer_path = os.path.join(base_path, f"{model.model_name}_opt.{optimizer_ext}")
-        if not os.path.exists(optimizer_path):
-            raise FileNotFoundError(f"Cannot find model optimizer file at {optimizer_path}")
-        load_model(model, weights_path=weights_path, load_optimizer=True)
+        if os.path.exists(optimizer_path):
+            load_model(model, weights_path=weights_path, load_optimizer=True)
+        else:
+            load_model(model, weights_path=weights_path)
 
     @staticmethod
     def _load_list(states: Dict[str, Any], state_key: str, in_memory_objects: List[Any]) -> None:
