@@ -1,4 +1,18 @@
-import pdb
+# Copyright 2022 The FastEstimator Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+"""Line Search example."""
 import tempfile
 
 import cv2
@@ -48,7 +62,7 @@ class BoundingBoxFromMask(fe.op.numpyop.NumpyOp):
                 cord = np.empty((0, 5))
             box_cord.extend(cord)
 
-        for i in range(len(box_cord)):
+        for i,j in enumerate(box_cord):
             box = box_cord[i]
             mask[box[1]:box[3]+1,box[0]:box[2]+1,box[4]] = 1
 
