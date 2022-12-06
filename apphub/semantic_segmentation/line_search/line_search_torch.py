@@ -62,7 +62,7 @@ class BoundingBoxFromMask(fe.op.numpyop.NumpyOp):
                 cord = np.empty((0, 5))
             box_cord.extend(cord)
 
-        for i,j in enumerate(box_cord):
+        for i,_ in enumerate(box_cord):
             box = box_cord[i]
             mask[box[1]:box[3]+1,box[0]:box[2]+1,box[4]] = 1
 
