@@ -34,6 +34,13 @@ class TestBatchDataset(unittest.TestCase):
 
         self.assertEqual(len(unpaired_ds), 5)
 
+    def test_dataset_probability(self):
+        ds1 = GeneratorDataset(generator=inputs(), samples_per_epoch=10)
+        ds2 = GeneratorDataset(generator=inputs(), samples_per_epoch=10)
+        unpaired_ds = fe.dataset.BatchDataset(datasets=[ds1, ds2], num_samples=4, probability=[0.5, 0.5])
+
+        self.assertEqual(len(unpaired_ds), 5)
+
     def test_split(self):
         (x_train, y_train), _ = tf.keras.datasets.mnist.load_data()
         train_data = fe.dataset.NumpyDataset({"x": x_train, "y": y_train})

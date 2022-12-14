@@ -276,8 +276,8 @@ class BatchDataset(FEDataset):
             A list of data instance dictionaries corresponding to the current `batch_idx`.
         """
         if self.probability:
-            index = list(np.random.choice(range(self.n_datasets), size=self.num_samples, p=self.probability))
-            num_samples = [index.count(i) for i in range(self.n_datasets)]
+            index = list(np.random.choice(range(len(self.datasets)), size=self.num_samples, p=self.probability))
+            num_samples = [index.count(i) for i in range(len(self.datasets))]
         else:
             num_samples = self.num_samples
         indices = [[index_map[batch_idx * num_sample + idx] for idx in range(num_sample)] for num_sample, index_map
