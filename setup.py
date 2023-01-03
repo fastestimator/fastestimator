@@ -70,10 +70,11 @@ def get_dependency():
         'sklearn',
         'lazy_loader',
     ]
-
-    dependencies.append(
-        "pycocotools @ git+https://github.com/fastestimator-util/cocoapi.git#egg=pycocotools&subdirectory=PythonAPI")
-
+    if os.name == "nt":
+        dependencies.append(
+            "pycocotools @ git+https://github.com/philferriere/cocoapi.git#egg=pycocotools&subdirectory=PythonAPI")
+    else:
+        dependencies.append('pycocotools-fix')
     return dependencies
 
 
