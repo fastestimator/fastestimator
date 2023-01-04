@@ -27,83 +27,67 @@ from fastestimator.op.numpyop import Delete
 from fastestimator.op.numpyop import LambdaOp as NLambdaOp
 from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import Resize, Rotate
-from fastestimator.op.numpyop.univariate import Minmax, ReadImage, Binarize
+from fastestimator.op.numpyop.univariate import Binarize, Minmax, ReadImage
 from fastestimator.op.tensorop import LambdaOp
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Dice
 
+
 class BoundingBoxFromMask(fe.op.numpyop.NumpyOp):
     """
-
     Args:
         inputs: Key(s) of  masks to be combined.
         outputs: Key(s) into which to write the combined masks.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer".
     """
-
     def __init__(self, inputs, outputs, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
 
     def forward(self, data, state):
         y_true = data
-        if len(y_true.shape)==2:
+        if len(y_true.shape) == 2:
             y_true = np.expand_dims(y_true, axis=-1)
-        channels = y_true.shape[-1]
         mask = np.zeros_like(y_true)
-        box_cord = []
 
-        for ch in range(channels):
-            cord = self.binary2boxcoords(y_true[:,:,ch],ch)
-            if len(cord) > 0:
-                cord = np.vstack(cord)
-            else:
-                cord = np.empty((0, 5))
-            box_cord.extend(cord)
-
-        for i,_ in enumerate(box_cord):
-            box = box_cord[i]
-            mask[box[1]:box[3]+1,box[0]:box[2]+1,box[4]] = 1
-
-        return mask
-
-    def binary2boxcoords(self, seg, channel):
-        """
-        Find bounding box from binary masks
-        """
-        blobs, n_blob = measure.label(seg, background=0, return_num=True)
-        obj_coords = []
+        blobs, n_blob = measure.label(y_true[:, :, 0], background=0, return_num=True)
         for b in range(1, n_blob + 1):
             blob_mask = blobs == b
             coords = np.argwhere(blob_mask)
             x1, y1 = coords.min(axis=0)
             x2, y2 = coords.max(axis=0)
-            obj_coords.append([y1, x1, y2, x2, channel])
-        return obj_coords
+            box = [y1, x1, y2, x2, 0]
+            mask[box[1]:box[3] + 1, box[0]:box[2] + 1, box[4]] = 1
+
+        return mask
+
 
 def get_estimator(epochs=60,
                   batch_size=8,
                   train_steps_per_epoch=500,
                   eval_steps_per_epoch=None,
                   save_dir=tempfile.mkdtemp(),
-                  data_dir="/raid/shared_data",
-                  line_degree=10):
-    csv = montgomery.load_data(root_dir=data_dir)
+                  data_dir=None,
+                  line_degree=45):
+    csv_dataset = montgomery.load_data(root_dir=data_dir)
     pipeline = fe.Pipeline(
-        train_data=csv,
-        eval_data=csv.split(0.2),
+        train_data=csv_dataset,
+        eval_data=csv_dataset.split(0.2),
         batch_size=batch_size,
         ops=[
-            ReadImage(inputs="image", parent_path=csv.parent_path, outputs="image", color_flag='gray'),
-            ReadImage(inputs="mask_left", parent_path=csv.parent_path, outputs="mask_left", color_flag='gray'),
-            ReadImage(inputs="mask_right", parent_path=csv.parent_path, outputs="mask_right", color_flag='gray'),
-            NLambdaOp(
-                fn=lambda x, y: x+y, inputs=("mask_left", "mask_right"), outputs="mask"),
+            ReadImage(inputs="image", parent_path=csv_dataset.parent_path, outputs="image", color_flag='gray'),
+            ReadImage(inputs="mask_left", parent_path=csv_dataset.parent_path, outputs="mask_left", color_flag='gray'),
+            ReadImage(inputs="mask_right", parent_path=csv_dataset.parent_path, outputs="mask_right",
+                      color_flag='gray'),
+            NLambdaOp(fn=lambda x, y: x + y, inputs=("mask_left", "mask_right"), outputs="mask"),
             Resize(image_in="image", width=512, height=512),
             Resize(image_in="mask", width=512, height=512),
-            Sometimes(numpy_op=Rotate(
-                image_in="image", mask_in="mask", limit=(-line_degree, line_degree), border_mode=cv2.BORDER_CONSTANT, mode='train')),
+            Sometimes(numpy_op=Rotate(image_in="image",
+                                      mask_in="mask",
+                                      limit=(-line_degree, line_degree),
+                                      border_mode=cv2.BORDER_CONSTANT,
+                                      mode='train')),
             Minmax(inputs="image", outputs="image"),
             Minmax(inputs="mask", outputs="mask"),
             Binarize(inputs="mask", outputs="mask", threshold=0.5),
@@ -121,8 +105,8 @@ def get_estimator(epochs=60,
         LambdaOp(fn=lambda x: tf.reduce_max(x, axis=2), inputs="box_mask", outputs="mask_y"),
         CrossEntropy(inputs=("pred_x", "mask_x"), outputs="loss_x", form="binary"),
         CrossEntropy(inputs=("pred_y", "mask_y"), outputs="loss_y", form="binary"),
-        CrossEntropy(inputs=("pred_segment", "mask"), outputs="ce", form="binary"),
-        LambdaOp(fn=lambda x, y: x + y, inputs=("loss_x", "loss_y"), outputs="loss"),
+        CrossEntropy(inputs=("pred_segment", "mask"), outputs="ce", form="binary"),  # To track model performance ONLY
+        LambdaOp(fn=lambda x, y: x + y, inputs=("loss_x", "loss_y"), outputs="loss", mode="!infer"),
         UpdateOp(model=model, loss_name="loss")
     ])
 
