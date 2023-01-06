@@ -37,7 +37,7 @@ class CombineLeftRightMask(NumpyOp):
     """NumpyOp to combine left lung mask and right lung mask."""
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
         mask_left, mask_right = data
-        data = mask_left + mask_right
+        data = np.maximum(mask_left, mask_right)
         return data
 
 
