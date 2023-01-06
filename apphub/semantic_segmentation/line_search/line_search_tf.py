@@ -35,20 +35,18 @@ from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Dice
 
 
-class BoundingBoxFromMask(fe.op.numpyop.NumpyOp):
-    """
+class BoundingBoxMask(fe.op.numpyop.NumpyOp):
+    """Converting Pixel Level Binary Mask to a Bounding Box binary mask.
+
+    Bounding box coordinates are calculated using the Pixel level binary mask. These coordinates are then used to
+    create a Binary mask of Bounding Boxes.
     Args:
         inputs: Key(s) of  masks to be combined.
         outputs: Key(s) into which to write the combined masks.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer".
     """
-    def __init__(self, inputs, outputs, mode=None):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-
     def forward(self, data, state):
         y_true = data
-        if len(y_true.shape) == 2:
-            y_true = np.expand_dims(y_true, axis=-1)
         mask = np.zeros_like(y_true)
 
         blobs, n_blob = measure.label(y_true[:, :, 0], background=0, return_num=True)
@@ -57,8 +55,8 @@ class BoundingBoxFromMask(fe.op.numpyop.NumpyOp):
             coords = np.argwhere(blob_mask)
             x1, y1 = coords.min(axis=0)
             x2, y2 = coords.max(axis=0)
-            box = [y1, x1, y2, x2, 0]
-            mask[box[1]:box[3] + 1, box[0]:box[2] + 1, box[4]] = 1
+            box = [y1, x1, y2, x2]
+            mask[box[1]:box[3] + 1, box[0]:box[2] + 1, 0] = 1
 
         return mask
 
@@ -69,6 +67,7 @@ def get_estimator(epochs=20,
                   eval_steps_per_epoch=None,
                   save_dir=tempfile.mkdtemp(),
                   data_dir=None,
+                  im_size=512,
                   line_degree=45):
     csv_dataset = montgomery.load_data(root_dir=data_dir)
     pipeline = fe.Pipeline(
@@ -80,9 +79,9 @@ def get_estimator(epochs=20,
             ReadImage(inputs="mask_left", parent_path=csv_dataset.parent_path, outputs="mask_left", color_flag='gray'),
             ReadImage(inputs="mask_right", parent_path=csv_dataset.parent_path, outputs="mask_right",
                       color_flag='gray'),
-            NLambdaOp(fn=lambda x, y: x + y, inputs=("mask_left", "mask_right"), outputs="mask"),
-            Resize(image_in="image", width=512, height=512),
-            Resize(image_in="mask", width=512, height=512),
+            NLambdaOp(fn=lambda x, y: np.maximum(x, y), inputs=("mask_left", "mask_right"), outputs="mask"),
+            Resize(image_in="image", width=im_size, height=im_size),
+            Resize(image_in="mask", width=im_size, height=im_size),
             Sometimes(numpy_op=Rotate(image_in="image",
                                       mask_in="mask",
                                       limit=(-line_degree, line_degree),
@@ -90,12 +89,13 @@ def get_estimator(epochs=20,
                                       mode='train')),
             Minmax(inputs="image", outputs="image"),
             Minmax(inputs="mask", outputs="mask"),
-            Binarize(inputs="mask", outputs="mask", threshold=0.5),
-            BoundingBoxFromMask(inputs="mask", outputs="box_mask"),
+            Binarize(inputs="mask", outputs="mask",
+                     threshold=0.5),  # To generate Bounding Box mask, it is necessary for input mask to be Binarized.
+            BoundingBoxMask(inputs="mask", outputs="box_mask"),
             Delete(keys=("mask_left", "mask_right"))
         ])
     # step 2
-    model = fe.build(model_fn=lambda: UNet(input_size=(512, 512, 1)),
+    model = fe.build(model_fn=lambda: UNet(input_size=(im_size, im_size, 1)),
                      optimizer_fn=lambda: tf.keras.optimizers.Adam(learning_rate=0.0001))
     network = fe.Network(ops=[
         ModelOp(inputs="image", model=model, outputs="pred_segment"),
@@ -105,9 +105,10 @@ def get_estimator(epochs=20,
         LambdaOp(fn=lambda x: tf.reduce_max(x, axis=2), inputs="box_mask", outputs="mask_y"),
         CrossEntropy(inputs=("pred_x", "mask_x"), outputs="loss_x", form="binary"),
         CrossEntropy(inputs=("pred_y", "mask_y"), outputs="loss_y", form="binary"),
-        CrossEntropy(inputs=("pred_segment", "mask"), outputs="ce", form="binary"),  # To track model performance ONLY
         LambdaOp(fn=lambda x, y: x + y, inputs=("loss_x", "loss_y"), outputs="loss", mode="!infer"),
-        UpdateOp(model=model, loss_name="loss")
+        UpdateOp(model=model, loss_name="loss"),
+        CrossEntropy(inputs=("pred_segment", "mask"), outputs="ce", form="binary"
+                     )  # To track model performance on a pixel-level mask, this is for monitoring purpose ONLY
     ])
 
     # step 3
@@ -123,8 +124,3 @@ def get_estimator(epochs=20,
                              eval_steps_per_epoch=eval_steps_per_epoch,
                              monitor_names='ce')
     return estimator
-
-
-if __name__ == "__main__":
-    est = get_estimator()
-    est.fit()
