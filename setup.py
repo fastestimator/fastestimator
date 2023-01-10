@@ -67,7 +67,7 @@ def get_dependency():
         'plotly==5.7.0',
         'kaleido>=0.2.1',
         'orjson>=3.6.7',
-        'sklearn',
+        'scikit-learn',
         'lazy_loader',
     ]
     if os.name == "nt":
