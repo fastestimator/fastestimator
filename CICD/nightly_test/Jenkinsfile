@@ -84,7 +84,6 @@ pipeline {
                         stage('run_test') {
                             steps {
                                 script {
-                                    sh 'echo "$IMAGE_TAG"'
                                     def customImage = docker.build("${IMAGE_TAG}", \
                                                                 '--no-cache - < docker/nightly/Dockerfile.cpu')
                                     try {
