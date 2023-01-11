@@ -153,31 +153,6 @@ def attention_block(n_filters: int, decoder_input, encoder_input):
     return encoder_input * att
 
 
-class ClassEncoding(NumpyOp):
-    """
-    One hot encode the class labels
-
-    Args:
-        inputs: Key(s) of images to be modified.
-        outputs: Key(s) into which to write the modified images.
-        no_of_classes: number of classes
-        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
-            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
-            like "!infer" or "!train".
-        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
-            ds_ids except for a particular one, you can pass an argument like "!ds1".
-    """
-    def __init__(self, inputs, outputs, no_of_classes: int = 5, mode=None, ds_id=None):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
-        self.no_of_classes = no_of_classes
-
-    def forward(self, data, state):
-        encoded_label = np.zeros(list(data.shape) + [self.no_of_classes])
-        for i in range(self.no_of_classes):
-            encoded_label[:, :, :, i] = (data == i).astype(np.uint8)
-        return np.uint8(encoded_label)
-
-
 def get_estimator(epochs=40,
                   batch_size=1,
                   input_shape=(256, 256, 24),
@@ -201,9 +176,6 @@ def get_estimator(epochs=40,
         ops=[
             Sometimes(numpy_op=HorizontalFlip(image_in="image", mask_in="label", mode='train')),
             Sometimes(numpy_op=VerticalFlip(image_in="image", mask_in="label", mode='train')),
-            Sometimes(numpy_op=Rotate(
-                image_in="image", mask_in="label", limit=(-10, 10), border_mode=cv2.BORDER_CONSTANT, mode='train')),
-            ClassEncoding(inputs="label", outputs="label", no_of_classes=num_classes),
             Minmax(inputs="image", outputs="image"),
             ExpandDims(inputs="image", outputs="image"),
         ])
@@ -217,7 +189,12 @@ def get_estimator(epochs=40,
         Resize3D(inputs="image", outputs="image", output_shape=input_shape),
         Resize3D(inputs="label", outputs="label", output_shape=input_shape, mode='!infer'),
         ModelOp(inputs="image", model=model, outputs="pred_segment"),
-        CrossEntropy(inputs=("pred_segment", "label"), outputs="ce_loss", form="binary"),
+        CrossEntropy(inputs=("pred_segment", "label"),
+                     outputs="ce_loss",
+                     form="binary",
+                     class_weights={
+                         1: 1.168, 2: 111.327, 3: 12.546, 4: 1038.78769505, 5: 288.19618566, 6: 19.71502319
+                     }),
         UpdateOp(model=model, loss_name="ce_loss")
     ])
 
@@ -239,6 +216,10 @@ def get_estimator(epochs=40,
 
     return estimator
 
+
+if __name__ == "__main__":
+    est = get_estimator()
+    est.fit()
 
 if __name__ == "__main__":
     est = get_estimator()

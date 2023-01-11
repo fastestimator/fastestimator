@@ -66,7 +66,7 @@ def get_encode_label(label_data):
         Returns:
             encoded_label: one hot encoded label
     """
-    encoded_label = np.zeros(label_data.shape[:-1])
+    encoded_label = np.zeros(label_data.shape[:-1], np.uint8)
     for i, value in color_mapping.items():
         encoded_label[np.all(label_data == value, axis=-1)] = i
     return encoded_label
@@ -74,7 +74,7 @@ def get_encode_label(label_data):
 
 def load_data(root_dir: Optional[str] = None, image_key: str = "image",
               label_key: str = "label") -> Tuple[NumpyDataset, NumpyDataset]:
-    """Load and return the 3d electron microscope plattet dataset.
+    """Load and return the 3d electron microscope platelet dataset.
 
 
     Sourced from https://bio3d-vision.github.io/platelet-description.
@@ -135,6 +135,9 @@ def load_data(root_dir: Optional[str] = None, image_key: str = "image",
 
     val_data_tiles = np.moveaxis(generate_tiles(val_data), 1, -1)
     val_label_tiles = np.moveaxis(generate_tiles(encoded_val_label), 1, -1)
+
+    val_label_tiles = np.eye(7)[val_label_tiles].take(indices=range(1, 7), axis=-1)
+    training_label_tiles = np.eye(7)[training_label_tiles].take(indices=range(1, 7), axis=-1)
 
     train_data = NumpyDataset({image_key: training_data_tiles, label_key: training_label_tiles})
     eval_data = NumpyDataset({image_key: val_data_tiles, label_key: val_label_tiles})
