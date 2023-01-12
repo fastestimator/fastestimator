@@ -84,7 +84,8 @@ def load_data(root_dir: Optional[str] = None, image_key: str = "image",
     images and similarly the 800x800x24 image is tiled to produce 25 validation images.
 
     The method downloads the dataset from google drive and provides train and validation NumpyDataset.
-    While the dataset contains encoded value 0 as background, its omitted in the one hot encoded class label provided by this method. Below indexes represent the labels in channel layer.
+    While the dataset contains encoded value 0 as background, its omitted in the one hot encoded class label provided
+    by this method. Below indexes represent the labels in channel layer.
         Index	Class name
         0		Cell
         1		Mitochondria
