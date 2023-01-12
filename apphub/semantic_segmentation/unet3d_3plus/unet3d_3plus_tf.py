@@ -15,8 +15,7 @@
 """U-Net3d 3plus example."""
 import tempfile
 
-import cv2
-import numpy as np
+
 import tensorflow as tf
 from tensorflow import sigmoid
 from tensorflow.keras.layers import BatchNormalization, Conv3D, Input, MaxPooling3D, ReLU, UpSampling3D, concatenate
@@ -24,12 +23,12 @@ from tensorflow.keras.models import Model
 
 import fastestimator as fe
 from fastestimator.dataset.data.em_3d import load_data
-from fastestimator.op.numpyop import NumpyOp
 from fastestimator.op.numpyop.meta import Sometimes
-from fastestimator.op.numpyop.multivariate import HorizontalFlip, Rotate, VerticalFlip
+from fastestimator.op.numpyop.multivariate import HorizontalFlip, VerticalFlip
 from fastestimator.op.numpyop.univariate import Minmax
 from fastestimator.op.numpyop.univariate.expand_dims import ExpandDims
-from fastestimator.op.tensorop.loss import CrossEntropy
+from fastestimator.op.tensorop import TensorOp
+from fastestimator.op.tensorop.loss import CrossEntropy, FocalLoss
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.op.tensorop.resize3d import Resize3D
 from fastestimator.trace.adapt import EarlyStopping, ReduceLROnPlateau
@@ -153,6 +152,13 @@ def attention_block(n_filters: int, decoder_input, encoder_input):
     return encoder_input * att
 
 
+class TotalLoss(TensorOp):
+    def forward(self, data, state):
+        focal_loss, ce_loss = data
+        total_loss = focal_loss + ce_loss
+        return total_loss
+
+
 def get_estimator(epochs=40,
                   batch_size=1,
                   input_shape=(256, 256, 24),
@@ -189,18 +195,26 @@ def get_estimator(epochs=40,
         Resize3D(inputs="image", outputs="image", output_shape=input_shape),
         Resize3D(inputs="label", outputs="label", output_shape=input_shape, mode='!infer'),
         ModelOp(inputs="image", model=model, outputs="pred_segment"),
-        CrossEntropy(inputs=("pred_segment", "label"),
-                     outputs="ce_loss",
-                     form="binary",
-                     class_weights={
-                         1: 1.168, 2: 111.327, 3: 12.546, 4: 1038.78769505, 5: 288.19618566, 6: 19.71502319
-                     }),
-        UpdateOp(model=model, loss_name="ce_loss")
+        FocalLoss(
+            inputs=["pred_segment", "label"], outputs="focal_loss", sample_reduction="mean", shape_reduction="mean"),
+        CrossEntropy(inputs=("pred_segment", "label"), outputs="ce_loss", form="binary"),
+        TotalLoss(inputs=["focal_loss", "ce_loss"], outputs="total_loss"),
+        UpdateOp(model=model, loss_name="total_loss")
     ])
 
     # step 3
     traces = [
-        Dice(true_key="label", pred_key="pred_segment"),
+        Dice(
+            true_key="label",
+            pred_key="pred_segment",
+            channel_mapping={
+                0: 'Cell',
+                1: 'Mitochondria',
+                2: 'AlphaGranule',
+                3: 'CanalicularVessel',
+                4: 'GranuleBody',
+                5: 'GranuleCore'
+            }),
         ReduceLROnPlateau(model=model, metric="Dice", patience=4, factor=0.5, best_mode="max"),
         BestModelSaver(model=model, save_dir=save_dir, metric='Dice', save_best_mode='max'),
         EarlyStopping(monitor="Dice", compare='max', min_delta=0.005, patience=6),
@@ -216,10 +230,6 @@ def get_estimator(epochs=40,
 
     return estimator
 
-
-if __name__ == "__main__":
-    est = get_estimator()
-    est.fit()
 
 if __name__ == "__main__":
     est = get_estimator()
