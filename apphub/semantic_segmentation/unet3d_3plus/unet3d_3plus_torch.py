@@ -16,8 +16,6 @@
 import tempfile
 from typing import Tuple
 
-import cv2
-import numpy as np
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -25,9 +23,8 @@ from torch.nn.init import kaiming_normal_ as he_normal
 
 import fastestimator as fe
 from fastestimator.dataset.data.em_3d import load_data
-from fastestimator.op.numpyop import NumpyOp
 from fastestimator.op.numpyop.meta import Sometimes
-from fastestimator.op.numpyop.multivariate import HorizontalFlip, Rotate, VerticalFlip
+from fastestimator.op.numpyop.multivariate import HorizontalFlip, VerticalFlip
 from fastestimator.op.numpyop.univariate import ChannelTranspose, Minmax
 from fastestimator.op.numpyop.univariate.expand_dims import ExpandDims
 from fastestimator.op.tensorop.loss import CrossEntropy
@@ -180,7 +177,7 @@ class UNet3D3Plus(nn.Module):
         ValueError: `input_size`[1] or `input_size`[2] is not a multiple of 16.
     """
     def __init__(self,
-                 input_size: Tuple[int, int, int] = (1, 128, 128, 24),
+                 input_size: Tuple[int, int, int, int] = (1, 128, 128, 24),
                  output_channel: int = 1,
                  channels: int = 64) -> None:
         UNet3D3Plus._check_input_size(input_size)
@@ -269,31 +266,6 @@ class UNet3D3Plus(nn.Module):
                 "All three height, width and depth of input_size need to be multiples of 8 (8, 16, 32, 48...)")
 
 
-class ClassEncoding(NumpyOp):
-    """
-    One hot encode the class labels
-
-    Args:
-        inputs: Key(s) of images to be modified.
-        outputs: Key(s) into which to write the modified images.
-        no_of_classes: number of classes
-        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
-            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
-            like "!infer" or "!train".
-        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
-            ds_ids except for a particular one, you can pass an argument like "!ds1".
-    """
-    def __init__(self, inputs, outputs, no_of_classes: int = 5, mode=None, ds_id=None):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
-        self.no_of_classes = no_of_classes
-
-    def forward(self, data, state):
-        encoded_label = np.zeros(list(data.shape) + [self.no_of_classes])
-        for i in range(self.no_of_classes):
-            encoded_label[:, :, :, i] = (data == i).astype(np.uint8)
-        return np.uint8(encoded_label)
-
-
 def get_estimator(epochs=40,
                   batch_size=1,
                   input_shape=(256, 256, 24),
@@ -317,9 +289,6 @@ def get_estimator(epochs=40,
         ops=[
             Sometimes(numpy_op=HorizontalFlip(image_in="image", mask_in="label", mode='train')),
             Sometimes(numpy_op=VerticalFlip(image_in="image", mask_in="label", mode='train')),
-            Sometimes(numpy_op=Rotate(
-                image_in="image", mask_in="label", limit=(-10, 10), border_mode=cv2.BORDER_CONSTANT, mode='train')),
-            ClassEncoding(inputs="label", outputs="label", no_of_classes=num_classes),
             Minmax(inputs="image", outputs="image"),
             ExpandDims(inputs="image", outputs="image"),
             ChannelTranspose(inputs=("image", "label"), outputs=("image", "label"), axes=(3, 0, 1, 2))
@@ -334,13 +303,23 @@ def get_estimator(epochs=40,
         Resize3D(inputs="image", outputs="image", output_shape=input_shape),
         Resize3D(inputs="label", outputs="label", output_shape=input_shape, mode='!infer'),
         ModelOp(inputs="image", model=model, outputs="pred_segment"),
-        CrossEntropy(inputs=("pred_segment", "label"), outputs="loss", form="binary"),
-        UpdateOp(model=model, loss_name="loss")
+        CrossEntropy(inputs=("pred_segment", "label"), outputs="ce_loss", form="binary"),
+        UpdateOp(model=model, loss_name="ce_loss")
     ])
 
     # step 3
     traces = [
-        Dice(true_key="label", pred_key="pred_segment"),
+        Dice(
+            true_key="label",
+            pred_key="pred_segment",
+            channel_mapping={
+                0: 'Cell',
+                1: 'Mitochondria',
+                2: 'AlphaGranule',
+                3: 'CanalicularVessel',
+                4: 'GranuleBody',
+                5: 'GranuleCore'
+            }),
         ReduceLROnPlateau(model=model, metric="Dice", patience=4, factor=0.5, best_mode="max"),
         BestModelSaver(model=model, save_dir=save_dir, metric='Dice', save_best_mode='max'),
         EarlyStopping(monitor="Dice", compare='max', min_delta=0.005, patience=6),
