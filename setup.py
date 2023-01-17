@@ -69,12 +69,8 @@ def get_dependency():
         'orjson>=3.6.7',
         'scikit-learn',
         'lazy_loader',
+        'fe_pycocotools'
     ]
-    if os.name == "nt":
-        dependencies.append(
-            "pycocotools @ git+https://github.com/philferriere/cocoapi.git#egg=pycocotools&subdirectory=PythonAPI")
-    else:
-        dependencies.append('pycocotools-fix')
     return dependencies
 
 
