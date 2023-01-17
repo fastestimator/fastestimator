@@ -66,7 +66,7 @@ def get_encode_label(label_data):
         Returns:
             encoded_label: one hot encoded label
     """
-    encoded_label = np.zeros(label_data.shape[:-1])
+    encoded_label = np.zeros(label_data.shape[:-1], np.uint8)
     for i, value in color_mapping.items():
         encoded_label[np.all(label_data == value, axis=-1)] = i
     return encoded_label
@@ -74,7 +74,7 @@ def get_encode_label(label_data):
 
 def load_data(root_dir: Optional[str] = None, image_key: str = "image",
               label_key: str = "label") -> Tuple[NumpyDataset, NumpyDataset]:
-    """Load and return the 3d electron microscope plattet dataset.
+    """Load and return the 3d electron microscope platelet dataset.
 
 
     Sourced from https://bio3d-vision.github.io/platelet-description.
@@ -84,14 +84,15 @@ def load_data(root_dir: Optional[str] = None, image_key: str = "image",
     images and similarly the 800x800x24 image is tiled to produce 25 validation images.
 
     The method downloads the dataset from google drive and provides train and validation NumpyDataset.
+    While the dataset contains encoded value 0 as background, its omitted in the one hot encoded class label provided
+    by this method. Below indexes represent the labels in channel layer.
         Index	Class name
-        0		Background
-        1		Cell
-        2		Mitochondria
-        3		Alpha granule
-        4		Canalicular vessel
-        5		Dense granule body
-        6		Dense granule core
+        0		Cell
+        1		Mitochondria
+        2		Alpha granule
+        3		Canalicular vessel
+        4		Dense granule body
+        5		Dense granule core
 
     Args:
         root_dir: The path to store the downloaded data. When `path` is not provided,
@@ -135,6 +136,9 @@ def load_data(root_dir: Optional[str] = None, image_key: str = "image",
 
     val_data_tiles = np.moveaxis(generate_tiles(val_data), 1, -1)
     val_label_tiles = np.moveaxis(generate_tiles(encoded_val_label), 1, -1)
+
+    val_label_tiles = np.eye(7)[val_label_tiles].take(indices=range(1, 7), axis=-1)
+    training_label_tiles = np.eye(7)[training_label_tiles].take(indices=range(1, 7), axis=-1)
 
     train_data = NumpyDataset({image_key: training_data_tiles, label_key: training_label_tiles})
     eval_data = NumpyDataset({image_key: val_data_tiles, label_key: val_label_tiles})
