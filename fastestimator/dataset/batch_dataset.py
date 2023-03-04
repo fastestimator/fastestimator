@@ -106,7 +106,7 @@ class BatchDataset(FEDataset):
             assert len(self.datasets) == len(self.probability), "the length of dataset must match probability"
             assert len(self.num_samples) == 1, "num_sample must be scalar for probability mode"
             assert len(self.datasets) > 1, "number of datasets must be more than one to use probability mode"
-            assert sum(self.probability) == 1, "sum of probability must be 1"
+            assert abs(sum(self.probability) - 1) < 1e-6, "sum of probability must be 1"
             for p in self.probability:
                 assert isinstance(p, float) and p > 0, "must provide positive float for probability distribution"
         else:
