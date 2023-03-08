@@ -83,7 +83,7 @@ def iwd(tensor: Tensor,
         eps = to_tensor(
             eps, target_type='torch' if isinstance(tensor, torch.Tensor) else 'tf' if tf.is_tensor(tensor) else 'np')
         if isinstance(eps, torch.Tensor):
-            eps = eps.to("cuda:0" if torch.cuda.is_available() else "cpu")
+            eps = eps.to(tensor.device)
     tensor = maximum(tensor, eps)
     tensor = tensor_pow(1.0 / tensor, power)
     tensor = tensor / reshape(reduce_sum(tensor, axis=-1), shape=[-1, 1])

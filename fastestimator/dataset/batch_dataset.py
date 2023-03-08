@@ -20,8 +20,8 @@ import numpy as np
 
 from fastestimator.dataset.dataset import DatasetSummary, FEDataset
 from fastestimator.dataset.extend_dataset import ExtendDataset
+from fastestimator.util.base_util import to_list, warn
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.base_util import to_list
 
 
 @traceable()
@@ -210,7 +210,7 @@ class BatchDataset(FEDataset):
             A summary representation of this dataset.
         """
         if not self.all_fe_datasets:
-            print("FastEstimator-Warn: BatchDataset summary will be incomplete since non-FEDatasets were used.")
+            warn("BatchDataset summary will be incomplete since non-FEDatasets were used.")
             return DatasetSummary(num_instances=len(self), keys={})
         summaries = [ds.summary() for ds in self.datasets]
         keys = {k: v for summary in summaries for k, v in summary.keys.items()}
@@ -280,8 +280,8 @@ class BatchDataset(FEDataset):
             num_samples = [index.count(i) for i in range(len(self.datasets))]
         else:
             num_samples = self.num_samples
-        indices = [[index_map[batch_idx * num_sample + idx] for idx in range(num_sample)] for num_sample, index_map
-                   in zip(num_samples, self.index_maps)]
+        indices = [[index_map[batch_idx * num_sample + idx] for idx in range(num_sample)] for num_sample,
+                   index_map in zip(num_samples, self.index_maps)]
         return indices
 
     def fe_reset_ds(self, shuffle: bool = True, *, seed: Optional[int] = None) -> None:

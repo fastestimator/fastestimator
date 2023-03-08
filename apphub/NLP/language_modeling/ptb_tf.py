@@ -64,10 +64,10 @@ def get_estimator(epochs=30,
                   train_steps_per_epoch=None,
                   save_dir=tempfile.mkdtemp()):
     train_data, eval_data, _, _ = load_data(root_dir=data_dir, seq_length=seq_length + 1)
-    pipeline = fe.Pipeline(train_data=train_data,
-                           eval_data=eval_data,
-                           ops=[CreateInputAndTarget(inputs="x", outputs=("x", "y")),
-                                Batch(batch_size=batch_size, drop_last=True)])
+    pipeline = fe.Pipeline(
+        train_data=train_data,
+        eval_data=eval_data,
+        ops=[CreateInputAndTarget(inputs="x", outputs=("x", "y")), Batch(batch_size=batch_size, drop_last=True)])
     # step 2
     model = fe.build(model_fn=lambda: build_model(vocab_size, embedding_dim=300, rnn_units=600, seq_length=seq_length),
                      optimizer_fn=lambda: tf.optimizers.SGD(1.0, momentum=0.9))

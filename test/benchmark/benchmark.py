@@ -102,7 +102,7 @@ class FindApphubModule:
     """
     def __init__(self) -> None:
         self.available_framework = ['tf', 'torch']
-        self.folder_name = Path(fe.__file__).parent.parent.joinpath('apphub').as_posix()
+        self.folder_name = Path(__file__).parent.parent.parent.joinpath('apphub').as_posix()
         sys.path.append(self.folder_name)
         self.available_apphubs = self.get_available_apphubs()
 

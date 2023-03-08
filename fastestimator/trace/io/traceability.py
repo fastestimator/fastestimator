@@ -23,11 +23,10 @@ import sys
 import types
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
-from unittest.mock import Base, MagicMock
+from unittest.mock import Base
 
 import dot2tex as d2t
 import jsonpickle
-import matplotlib
 import numpy as np
 import pydot
 import tensorflow as tf
@@ -40,6 +39,7 @@ from pylatex.section import Paragraph
 from pylatex.utils import bold
 from torch.utils.data import Dataset
 from torchinfo import summary as pms
+from torchview import draw_graph
 
 import fastestimator as fe
 from fastestimator.dataset.dataset import FEDataset
@@ -60,11 +60,12 @@ from fastestimator.schedule.schedule import Scheduler, get_current_items, get_si
 from fastestimator.summary.logs.log_plot import visualize_logs
 from fastestimator.trace.io.restore_wizard import RestoreWizard
 from fastestimator.trace.trace import Trace, sort_traces
-from fastestimator.util.base_util import FEID, DefaultKeyDict, LogSplicer, NonContext, Suppressor, \
-    prettify_metric_name, to_list
+from fastestimator.util.base_util import FEID, DefaultKeyDict, LogSplicer, NonContext, prettify_metric_name, to_list, \
+    warn
 from fastestimator.util.data import Data
 from fastestimator.util.latex_util import AdjustBox, Center, ContainerList, HrefFEID, Verbatim
 from fastestimator.util.traceability_util import FeSummaryTable, traceable
+from fastestimator.util.util import Suppressor, get_num_gpus
 
 
 @traceable()
@@ -425,41 +426,35 @@ class Traceability(Trace):
                             dot.write(file_path, format='pdf')
                         except Exception:
                             file_path = None
-                            print(
-                                f"FastEstimator-Warn: Model {model.model_name} could not be visualized by Traceability")
+                            warn(f"Model {model.model_name} could not be visualized by Traceability")
                     elif isinstance(model, torch.nn.Module):
                         if hasattr(model, 'fe_input_spec'):
                             # Text Summary
                             # noinspection PyUnresolvedReferences
                             inputs = model.fe_input_spec.get_dummy_input()
-                            self.doc.append(
-                                Verbatim(
-                                    str(
-                                        pms(model.module if self.system.num_devices > 1 else model,
-                                            input_data=inputs,
-                                            col_names=("output_size", "num_params", "trainable"),
-                                            col_width=20,
-                                            row_settings=["ascii_only"],
-                                            verbose=0))))
+                            with Suppressor():
+                                self.doc.append(
+                                    Verbatim(
+                                        str(
+                                            pms(model.module if self.system.num_devices > 1 else model,
+                                                input_data=inputs,
+                                                col_names=("output_size", "num_params", "trainable"),
+                                                col_width=20,
+                                                row_settings=["ascii_only"],
+                                                verbose=0))))
 
                             with self.doc.create(Center()):
                                 self.doc.append(HrefFEID(FEID(id(model)), model.model_name))
                             # Visual Summary
-                            # Import has to be done while matplotlib is using the Agg backend
-                            old_backend = matplotlib.get_backend() or 'Agg'
-                            matplotlib.use('Agg')
                             # noinspection PyBroadException
                             try:
-                                # Fake the IPython import when user isn't running from Jupyter
-                                sys.modules.setdefault('IPython', MagicMock())
-                                sys.modules.setdefault('IPython.display', MagicMock())
-                                import hiddenlayer as hl
                                 model.to(inputs.device)
-                                with Suppressor():
-                                    graph = hl.build_graph(model.module if self.system.num_devices > 1 else model,
-                                                           inputs)
-                                graph = graph.build_dot()
-                                graph.attr(rankdir='TB')  # Switch it to Top-to-Bottom instead of Left-to-Right
+                                graph = draw_graph(model,
+                                                   input_data=inputs,
+                                                   device=inputs.device,
+                                                   graph_dir='TB',
+                                                   expand_nested=True,
+                                                   depth=7).visual_graph
                                 # LaTeX \maxdim is around 575cm (226 inches), so the image must have max dimension less
                                 # than 226 inches. However, the 'size' parameter doesn't account for the whole node
                                 # height, so set the limit lower (100 inches) to leave some wiggle room.
@@ -471,13 +466,13 @@ class Traceability(Trace):
                                                          cleanup=True)
                             except Exception:
                                 file_path = None
-                                print("FastEstimator-Warn: Model {} could not be visualized by Traceability".format(
-                                    model.model_name))
-                            finally:
-                                matplotlib.use(old_backend)
+                                warn("Model {} could not be visualized by Traceability".format(model.model_name))
                         else:
                             file_path = None
                             self.doc.append("This model was not used by the Network during training.")
+                    else:
+                        file_path = None
+                        self.doc.append(f"Model format: {type(model)} not recognized.")
                     if file_path:
                         with self.doc.create(Figure(position='ht!')) as fig:
                             fig.append(Label(Marker(name=str(FEID(id(model))), prefix="model")))
@@ -493,7 +488,7 @@ class Traceability(Trace):
                 itemize.add_item(escape_latex(f"FastEstimator {fe.__version__}"))
                 itemize.add_item(escape_latex(f"Python {platform.python_version()}"))
                 itemize.add_item(escape_latex(f"OS: {sys.platform}"))
-                itemize.add_item(f"Number of GPUs: {torch.cuda.device_count()}")
+                itemize.add_item(f"Number of GPUs: {get_num_gpus()}")
                 if fe.fe_deterministic_seed is not None:
                     itemize.add_item(escape_latex(f"Deterministic Seed: {fe.fe_deterministic_seed}"))
             with self.doc.create(LongTable('|lr|', pos=['h!'], booktabs=True)) as tabular:

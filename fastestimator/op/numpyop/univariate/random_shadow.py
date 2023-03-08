@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Iterable, Tuple, Union
+from typing import Iterable, Sequence, Tuple, Union
 
 from albumentations.augmentations.transforms import RandomShadow as RandomShadowAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
+from fastestimator.util.base_util import warn
 from fastestimator.util.traceability_util import traceable
 
 
@@ -43,17 +44,16 @@ class RandomShadow(ImageOnlyAlbumentation):
         uint8, float32
     """
     def __init__(self,
-                 inputs: Union[str, Iterable[str]],
-                 outputs: Union[str, Iterable[str]],
+                 inputs: Union[str, Sequence[str]],
+                 outputs: Union[str, Sequence[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
                  shadow_roi: Tuple[float, float, float, float] = (0.0, 0.5, 1.0, 1.0),
                  num_shadows_lower: int = 1,
                  num_shadows_upper: int = 2,
                  shadow_dimension: int = 5):
-        print("\033[93m {}\033[00m".format(
-            "Warning! RandomShadow does not work with multi-threaded Pipelines. Either do not use this Op or else " +
-            "set your Pipeline num_process=0"))
+        warn("RandomShadow does not work with multi-threaded Pipelines. Either do not use this Op or else " +
+             "set your Pipeline num_process=0")
         # TODO - Have pipeline look for bad ops and auto-magically set num_process correctly
         super().__init__(
             RandomShadowAlb(shadow_roi=shadow_roi,

@@ -21,10 +21,10 @@ import numpy as np
 import tensorboard as tb
 import tensorflow as tf
 import torch
+from keras import backend
+from keras.callbacks import keras_model_summary
 from plotly.graph_objs import Figure
-from tensorflow.keras import backend
 from tensorflow.python.framework import ops as tfops
-from tensorflow.python.keras.callbacks import keras_model_summary
 from tensorflow.python.ops import summary_ops_v2
 from torch.utils.tensorboard import SummaryWriter
 
@@ -42,10 +42,7 @@ from fastestimator.util.base_util import DefaultKeyDict, is_number, to_list, to_
 from fastestimator.util.data import Data
 from fastestimator.util.img_data import Display
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import to_number
-
-# https://github.com/pytorch/pytorch/issues/30966
-tf.io.gfile = tb.compat.tensorflow_stub.io.gfile
+from fastestimator.util.util import get_num_gpus, to_number
 
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
@@ -124,10 +121,10 @@ class _BaseWriter:
                                                       dataformats='NCHW' if isinstance(img, torch.Tensor) else 'NHWC')
 
     def write_embeddings(
-            self,
-            mode: str,
-            embeddings: Iterable[Tuple[str, Tensor, Optional[List[Any]], Optional[Tensor]]],
-            step: int,
+        self,
+        mode: str,
+        embeddings: Iterable[Tuple[str, Tensor, Optional[List[Any]], Optional[Tensor]]],
+        step: int,
     ):
         """Write embeddings (like UMAP) to TensorBoard.
 
@@ -150,12 +147,18 @@ class _BaseWriter:
                                                      tag=key,
                                                      global_step=step)
 
+    def flush(self) -> None:
+        """Flush all of the associated writers.
+        """
+        for writer in self.summary_writers.values():
+            writer.flush()
+
     def close(self) -> None:
         """A method to flush and close all connections to the files on disk.
         """
         modes = list(self.summary_writers.keys())  # break connection with dictionary so can delete in iteration
         for mode in modes:
-            self.summary_writers[mode].close()
+            self.summary_writers[mode].close()  # Close also flushes
             del self.summary_writers[mode]
 
     @staticmethod
@@ -253,8 +256,7 @@ class _TorchWriter(_BaseWriter):
     def write_epoch_models(self, mode: str, epoch: int) -> None:
         for model in self.network.epoch_models:
             inputs = model.fe_input_spec.get_dummy_input()
-            self.summary_writers[mode].add_graph(model.module if torch.cuda.device_count() > 1 else model,
-                                                 input_to_model=inputs)
+            self.summary_writers[mode].add_graph(model.module if get_num_gpus() > 1 else model, input_to_model=inputs)
 
     def write_weights(self, mode: str, models: Iterable[Model], step: int, visualize: bool) -> None:
         for model in models:
@@ -316,7 +318,7 @@ class TensorBoard(Trace):
                  embedding_labels: Union[None, str, List[str]] = None,
                  embedding_images: Union[None, str, List[str]] = None) -> None:
         super().__init__(inputs=["*"] + to_list(write_images) + to_list(write_embeddings) + to_list(embedding_labels) +
-                                to_list(embedding_images))
+                         to_list(embedding_images))
         self.root_log_dir = log_dir
         self.update_freq = parse_freq(update_freq)
         self.write_graph = write_graph
@@ -349,9 +351,8 @@ class TensorBoard(Trace):
         else:
             embedding_images = [None for _ in range(len(write_embeddings))]
         self.write_embeddings = [(feature, label, img_label) for feature,
-                                                                 label,
-                                                                 img_label in
-                                 zip(write_embeddings, embedding_labels, embedding_images)]
+                                 label,
+                                 img_label in zip(write_embeddings, embedding_labels, embedding_images)]
         self.collected_embeddings = defaultdict(list)
 
     def on_begin(self, data: Data) -> None:
@@ -359,7 +360,7 @@ class TensorBoard(Trace):
             os.path.abspath(os.path.join(self.root_log_dir, self.system.experiment_time))))
         self.writer = _TfWriter(self.root_log_dir, self.system.experiment_time, self.system.network) if isinstance(
             self.system.network, TFNetwork) else _TorchWriter(
-            self.root_log_dir, self.system.experiment_time, self.system.network)
+                self.root_log_dir, self.system.experiment_time, self.system.network)
         if self.write_graph and self.system.global_step == 1:
             self.painted_graphs = set()
 

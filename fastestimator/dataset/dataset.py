@@ -16,14 +16,15 @@ import math
 import random
 from collections import defaultdict
 from copy import deepcopy
-from typing import Any, Dict, Hashable, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import (Any, Dict, Hashable, Iterable, List, Optional, Sequence, Tuple, TypeVar, Union, cast, overload)
 
 import jsonpickle
 import numpy as np
 from torch.utils.data import Dataset
+from typing_extensions import Self
 
+from fastestimator.util.base_util import FEID, get_shape, get_type
 from fastestimator.util.traceability_util import FeSplitSummary, traceable
-from fastestimator.util.base_util import get_type, FEID, get_shape
 
 
 class KeySummary:
@@ -41,9 +42,10 @@ class KeySummary:
     shape: List[Optional[int]]
     dtype: str
 
-    def __init__(self, dtype: str, num_unique_values: Optional[int] = None, shape: List[Optional[int]] = ()) -> None:
+    def __init__(self, dtype: str, num_unique_values: Optional[int] = None,
+                 shape: Sequence[Optional[int]] = ()) -> None:
         self.num_unique_values = num_unique_values
-        self.shape = shape
+        self.shape = list(shape)
         self.dtype = dtype
 
     def __repr__(self):
@@ -170,10 +172,29 @@ class FEDataset(Dataset):
             for child in children:
                 child._fe_traceability_summary[parent_id] = deepcopy(table)
 
+    @overload
+    def split(self,
+              __fraction1: Union[float, int, Iterable[int]],
+              /,
+              *,
+              seed: Optional[int] = None,
+              stratify: Optional[str] = None) -> Self:
+        ...
+
+    @overload
+    def split(self,
+              __fraction1: Union[float, int, Iterable[int]],
+              __fraction2: Union[float, int, Iterable[int]],
+              /,
+              *fractions: Union[float, int, Iterable[int]],
+              seed: Optional[int] = None,
+              stratify: Optional[str] = None) -> List[Self]:
+        ...
+
     def split(self,
               *fractions: Union[float, int, Iterable[int]],
               seed: Optional[int] = None,
-              stratify: Optional[str] = None) -> Union['FEDataset', List['FEDataset']]:
+              stratify: Optional[str] = None) -> Union[Self, List[Self]]:
         """Split this dataset into multiple smaller datasets.
 
         This function enables several types of splitting:
@@ -252,7 +273,7 @@ class FEDataset(Dataset):
                 splits = self._get_fractional_splits(n_samples, seed)
         else:  # method == 'indices':
             assert stratify is None, "Stratify may only be specified when splitting by count or fraction, not by index"
-            splits = fractions
+            splits = cast(Sequence[Iterable[int]], fractions)
         splits = self._do_split(splits)
         FEDataset.fix_split_traceabilty(self, splits, fractions, seed, stratify)
         if len(fractions) == 1:
@@ -379,7 +400,7 @@ class FEDataset(Dataset):
         """
         return len(self)
 
-    def _do_split(self, splits: Sequence[Iterable[int]]) -> List['FEDataset']:
+    def _do_split(self, splits: Sequence[Iterable[int]]) -> List[Self]:
         """Split the current dataset apart into several smaller datasets.
 
         Args:
@@ -473,7 +494,7 @@ class InMemoryDataset(FEDataset):
                 self.data[i][key] = value[i]
         self._summary = None
 
-    def _skip_init(self, data: Dict[int, Dict[str, Any]], **kwargs) -> 'InMemoryDataset':
+    def _skip_init(self, data: Dict[int, Dict[str, Any]], **kwargs) -> Self:
         """A helper method to create new dataset instances without invoking their __init__ methods.
 
         Args:
@@ -490,7 +511,7 @@ class InMemoryDataset(FEDataset):
         obj._summary = None
         return obj
 
-    def _do_split(self, splits: Sequence[Iterable[int]]) -> List['InMemoryDataset']:
+    def _do_split(self, splits: Sequence[Iterable[int]]) -> List[Self]:
         """Split the current dataset apart into several smaller datasets.
 
         Args:

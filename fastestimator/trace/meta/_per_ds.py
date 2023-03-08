@@ -12,16 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, List
-
 import functools
+from typing import List, Union
 
-from fastestimator.trace.trace import Trace, PerDSTrace
-from fastestimator.util.data import Data, DSData
+from fastestimator.trace.trace import PerDSTrace
 from fastestimator.util.base_util import to_list
+from fastestimator.util.data import Data, DSData
 
 
-def per_ds(clz: type(Trace)):
+def per_ds(clz):
     """A class annotation which will convert regular traces into dataset-sensitive traces.
 
     Args:
@@ -32,8 +31,8 @@ def per_ds(clz: type(Trace)):
         which is set to False, or has outputs containing the '|' character, then a normal (non-ds-aware) instance will
         be returned instead.
     """
+    @functools.wraps(clz, updated=())
     class PerDS(clz, PerDSTrace):
-        @functools.wraps(clz.__new__)
         def __new__(cls, *args, **kwargs):
             # We will dynamically determine whether to return a base object or a PerDS variant
             # If any of the outputs already use the | character then we cannot make this a PerDS variant
@@ -48,17 +47,16 @@ def per_ds(clz: type(Trace)):
             # Otherwise we are good to go with the PerDS variant
             return super().__new__(cls)
 
-        @functools.wraps(clz.__init__)
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.fe_per_ds_trace = clz.__new__(clz)
             self.fe_per_ds_trace.__init__(*args, **kwargs)
 
         def get_outputs(self, ds_ids: Union[None, str, List[str]]) -> List[str]:
-            ds_ids = to_list(ds_ids)
+            ids = to_list(ds_ids)
             outputs = list(self.outputs)
             for output in self.outputs:
-                for ds_id in ds_ids:
+                for ds_id in ids:
                     outputs.append(f"{output}|{ds_id}")
             return outputs
 
@@ -91,8 +89,4 @@ def per_ds(clz: type(Trace)):
             super().on_end(data)
             self.fe_per_ds_trace.on_end(data)
 
-    PerDS.__name__ = clz.__name__
-    PerDS.__qualname__ = clz.__qualname__
-    PerDS.__module__ = clz.__module__
-    PerDS.__doc__ = clz.__doc__  # We want to preserve the docstring of the original class
     return PerDS

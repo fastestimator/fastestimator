@@ -19,13 +19,25 @@ import os
 import re
 import string
 import sys
-from typing import Any, Set, KeysView, List, Union, Tuple, Optional, Type, TypeVar, Dict, Callable
+from typing import Any, Callable, Dict, Iterable, KeysView, List, Literal, Optional, Set, TextIO, Tuple, Type, \
+    TypeVar, Union, overload
+
 # DO NOT IMPORT FE, TF, Torch, Numpy, Seaborn, OR Matplotlib IN THIS FILE
 from plotly.graph_objs import Figure
+
 # DO NOT IMPORT FE, TF, Torch, Numpy, Seaborn, OR Matplotlib IN THIS FILE
 
 KT = TypeVar('KT')  # Key type.
 VT = TypeVar('VT')  # Value type.
+
+
+def warn(message: str) -> None:
+    """Print a yellow warning message to catch the users' attention.
+
+    Args:
+        message: The warning to print.
+    """
+    print("\033[93m{}\033[00m".format("FastEstimator-Warn: " + message), flush=True)
 
 
 def to_set(data: Any) -> Set[Any]:
@@ -54,6 +66,36 @@ def to_set(data: Any) -> Set[Any]:
         else:
             data = {data}
     return data
+
+
+@overload
+def to_list(data: Union[None, VT, Iterable[VT]]) -> List[VT]:
+    ...
+
+
+@overload
+def to_list(data: Union[VT, Iterable[VT]]) -> List[VT]:
+    ...
+
+
+@overload
+def to_list(data: Union[None, Iterable[VT]]) -> List[VT]:
+    ...
+
+
+@overload
+def to_list(data: Union[None, VT]) -> List[VT]:
+    ...
+
+
+@overload
+def to_list(data: Iterable[VT]) -> List[VT]:
+    ...
+
+
+@overload
+def to_list(data: VT) -> List[VT]:
+    ...
 
 
 def to_list(data: Any) -> List[Any]:
@@ -125,64 +167,11 @@ class NonContext(object):
     print(a)  # 42
     ```
     """
-
     def __enter__(self) -> None:
         pass
 
     def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
         pass
-
-
-class Suppressor(object):
-    """A class which can be used to silence output of function calls.
-
-    This class is intentionally not @traceable.
-
-    Args:
-        allow_pyprint: Whether to allow python printing to occur still within this scope (and therefore only silence
-            printing from non-python sources like c).
-
-    ```python
-    x = lambda: print("hello")
-    x()  # "hello"
-    with fe.util.Suppressor():
-        x()  #
-    x()  # "hello"
-    ```
-    """
-    def __init__(self, allow_pyprint: bool = False):
-        self.allow_pyprint = allow_pyprint
-
-    def __enter__(self) -> None:
-        # This is not necessary to block printing, but lets the system know what's happening
-        self.py_reals = [sys.stdout, sys.stderr]
-        sys.stdout = sys.stderr = self
-        # This part does the heavy lifting
-        self.fakes = [os.open(os.devnull, os.O_RDWR), os.open(os.devnull, os.O_RDWR)]
-        self.reals = [os.dup(1), os.dup(2)]  # [stdout, stderr]
-        os.dup2(self.fakes[0], 1)
-        os.dup2(self.fakes[1], 2)
-
-    def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
-        os.dup2(self.reals[0], 1)
-        os.dup2(self.reals[1], 2)
-        for fd in self.fakes + self.reals:
-            os.close(fd)
-        # Set the python pointers back too
-        sys.stdout, sys.stderr = self.py_reals[0], self.py_reals[1]
-
-    def write(self, dummy: str) -> None:
-        """A function which is invoked during print calls.
-
-        Args:
-            dummy: The string which wanted to be printed.
-        """
-        if self.allow_pyprint:
-            os.write(self.reals[0], dummy.encode('utf-8'))
-
-    def flush(self) -> None:
-        """A function to empty the current print buffer. No-op in this case.
-        """
 
 
 class LogSplicer:
@@ -191,11 +180,13 @@ class LogSplicer:
     Args:
         log_path: The path/filename into which to append the current stdout.
     """
+    stdout: TextIO
+    log_file: TextIO
 
     def __init__(self, log_path: str):
         self.log_path = log_path
-        self.stdout = None
-        self.log_file = None
+        self.stdout = None  # type: ignore
+        self.log_file = None  # type: ignore
 
     def __enter__(self) -> None:
         self.log_file = open(self.log_path, 'a')
@@ -234,6 +225,16 @@ def prettify_metric_name(metric: str) -> str:
     return string.capwords(re.sub("([a-z])([A-Z])", r"\g<1> \g<2>", metric).replace("_", " "))
 
 
+@overload
+def strip_suffix(target: None, suffix: Optional[str]) -> None:
+    ...
+
+
+@overload
+def strip_suffix(target: str, suffix: Optional[str]) -> str:
+    ...
+
+
 def strip_suffix(target: Optional[str], suffix: Optional[str]) -> Optional[str]:
     """Remove the given `suffix` from the `target` if it is present there.
 
@@ -255,6 +256,16 @@ def strip_suffix(target: Optional[str], suffix: Optional[str]) -> Optional[str]:
     if target[-s_len:] == suffix:
         return target[:-s_len]
     return target
+
+
+@overload
+def strip_prefix(target: None, prefix: Optional[str]) -> None:
+    ...
+
+
+@overload
+def strip_prefix(target: str, prefix: Optional[str]) -> str:
+    ...
 
 
 def strip_prefix(target: Optional[str], prefix: Optional[str]) -> Optional[str]:
@@ -292,7 +303,7 @@ def get_type(obj: Any) -> str:
     ```
 
     For container to look into its element's type, its type needs to be either list or tuple, and the return string will
-    be List[...]. All container elements need to have the same data type becuase it will only check its first element.
+    be List[...]. All container elements need to have the same data type because it will only check its first element.
 
     ```python
     x = fe.util.get_type({"a":1, "b":2})  # "dict"
@@ -318,7 +329,7 @@ def get_type(obj: Any) -> str:
     return result
 
 
-def check_io_names(names: List[Optional[str]]) -> List[Optional[str]]:
+def check_io_names(names: List[str]) -> List[str]:
     forbidden_chars = {":", ";"}
     for name in names:
         assert not any(char in name for char in forbidden_chars), \
@@ -427,7 +438,6 @@ class DefaultKeyDict(Dict[KT, VT]):
         default: A function which takes a key and returns a default value based on the key.
         **kwargs: Initial key/value pairs for the dictionary.
     """
-
     def __init__(self, default: Callable[[Any], Any], **kwargs) -> None:
         super().__init__(**kwargs)
         self.factory = default
@@ -512,7 +522,7 @@ def in_notebook() -> bool:
         True iff the code is executing inside a Jupyter notebook
     """
     try:
-        from IPython import get_ipython
+        from IPython.core.getipython import get_ipython
         shell = get_ipython().__class__.__name__
         if shell == 'ZMQInteractiveShell':
             return True  # Jupyter notebook or qtconsole
@@ -546,7 +556,7 @@ def get_shape(obj: Any) -> List[Optional[int]]:
         result = list(obj.shape)
     elif isinstance(obj, (List, Tuple)):
         shapes = [get_shape(ob) for ob in obj]
-        result = [None]
+        result: List[Optional[int]] = [None]
         if shapes:
             rank = len(shapes[0])
             if any((len(shape) != rank for shape in shapes)):
@@ -561,9 +571,7 @@ def get_shape(obj: Any) -> List[Optional[int]]:
     return result
 
 
-def list_files(root_dir: str,
-               file_extension: Optional[str] = None,
-               recursive_search: bool = True) -> List[str]:
+def list_files(root_dir: str, file_extension: Optional[str] = None, recursive_search: bool = True) -> List[str]:
     """Get the paths of all files in a particular root directory subject to a particular file extension.
 
     Args:
@@ -585,8 +593,7 @@ def list_files(root_dir: str,
     try:
         for root, _, files in os.walk(root_dir):
             for file_name in files:
-                if file_name.startswith(".") or (file_extension is not None
-                                                 and not file_name.endswith(file_extension)):
+                if file_name.startswith(".") or (file_extension is not None and not file_name.endswith(file_extension)):
                     continue
                 paths.append(os.path.join(root, file_name))
             if not recursive_search:
@@ -596,9 +603,18 @@ def list_files(root_dir: str,
     return paths
 
 
-def get_colors(n_colors: int,
-               alpha: float = 1.0,
-               as_numbers: bool = False) -> List[Union[str, Tuple[float, float, float, float]]]:
+@overload
+def get_colors(n_colors: int, as_numbers: Literal[False] = False, alpha: float = 1.0) -> List[str]:
+    ...
+
+
+@overload
+def get_colors(n_colors: int, as_numbers: Literal[True], alpha: float = 1.0) -> List[Tuple[float, float, float, float]]:
+    ...
+
+
+def get_colors(n_colors: int, as_numbers: bool = False,
+               alpha: float = 1.0) -> Union[List[str], List[Tuple[float, float, float, float]]]:
     """Get a list of colors to use in plotting.
 
     Args:
@@ -610,10 +626,18 @@ def get_colors(n_colors: int,
         A list of rgba string colors.
     """
     if n_colors <= 10:
-        colors = [f'rgba(1,115,178,{alpha})', f'rgba(222,143,5,{alpha})', f'rgba(2,158,115,{alpha})',
-                  f'rgba(213,94,0,{alpha})', f'rgba(204,120,188,{alpha})', f'rgba(202,145,97,{alpha})',
-                  f'rgba(251,175,228,{alpha})', f'rgba(148,148,148,{alpha})', f'rgba(236,225,51,{alpha})',
-                  f'rgba(86,180,233,{alpha})']
+        colors = [
+            f'rgba(1,115,178,{alpha})',
+            f'rgba(222,143,5,{alpha})',
+            f'rgba(2,158,115,{alpha})',
+            f'rgba(213,94,0,{alpha})',
+            f'rgba(204,120,188,{alpha})',
+            f'rgba(202,145,97,{alpha})',
+            f'rgba(251,175,228,{alpha})',
+            f'rgba(148,148,148,{alpha})',
+            f'rgba(236,225,51,{alpha})',
+            f'rgba(86,180,233,{alpha})'
+        ]
     else:
         colors = [(i + 0.01) / n_colors for i in range(n_colors)]
         colors = [color - 1 if color >= 1 else color for color in colors]
@@ -621,7 +645,7 @@ def get_colors(n_colors: int,
         colors = [f'rgba({int(256*r)},{int(256*g)},{int(256*b)},{alpha})' for r, g, b in colors]
     colors = colors[:n_colors]
     if as_numbers:
-        colors = [[float(x) for x in elem.strip('rgba(').strip(')').split(',')] for elem in colors]
+        colors = [tuple(float(x) for x in elem.strip('rgba(').strip(')').split(',')) for elem in colors]
     return colors
 
 
@@ -632,10 +656,17 @@ class FigureFE(Figure):
         new_fig.__dict__ = fig.__dict__.copy()
         return new_fig
 
-    def _get_color(self,
-                   clazz: str,
-                   label: Union[int, str],
-                   as_numbers: bool = False,
+    @overload
+    def _get_color(self, clazz: str, label: Union[int, str], as_numbers: Literal[False] = False,
+                   n_colors: int = 10) -> Tuple[str, bool]:
+        ...
+
+    @overload
+    def _get_color(self, clazz: str, label: Union[int, str], as_numbers: Literal[True],
+                   n_colors: int = 10) -> Tuple[Tuple[float, float, float, float], bool]:
+        ...
+
+    def _get_color(self, clazz: str, label: Union[int, str], as_numbers: bool = False,
                    n_colors: int = 10) -> Tuple[Union[str, Tuple[float, float, float, float]], bool]:
         """A function which determines what color a plot element ought to be.
 
@@ -654,16 +685,18 @@ class FigureFE(Figure):
         else:
             alpha = 1.0
         if not hasattr(self, '_fe_color_map'):
-            self._fe_color_map = {}  # ([remaining_colors], {label: assigned_color})
+            self._fe_color_map: Dict[str, Tuple[List[str],
+                                                Dict[Union[int, str],
+                                                     str]]] = {}  # ([remaining_colors], {label: assigned_color})
         if clazz not in self._fe_color_map:
             clazz_colors = get_colors(max(10, n_colors), alpha=alpha)
-            clazz_assignment = {}
+            clazz_assignment: Dict[Union[int, str], str] = {}
             self._fe_color_map[clazz] = (clazz_colors, clazz_assignment)
         clazz_colors, clazz_assignment = self._fe_color_map[clazz]
         if label in clazz_assignment:
             val = clazz_assignment[label]
             if as_numbers:
-                val = [float(x) for x in val.strip('rgba(').strip(')').split(',')]
+                val = tuple([float(x) for x in val.strip('rgba(').strip(')').split(',')])
             return val, False
         if not clazz_colors:
             # The initial estimate of color requirements was insufficient
@@ -671,13 +704,10 @@ class FigureFE(Figure):
         clazz_assignment[label] = clazz_colors.pop(0)
         val = clazz_assignment[label]
         if as_numbers:
-            val = [float(x) for x in val.strip('rgba(').strip(')').split(',')]
+            val = tuple([float(x) for x in val.strip('rgba(').strip(')').split(',')])
         return val, True
 
-    def show(self,
-             save_path: Optional[str] = None,
-             verbose: bool = True,
-             scale: int = 1,
+    def show(self, save_path: Optional[str] = None, verbose: bool = True, scale: int = 1,
              interactive: bool = True) -> None:
         """A function which will save or display plotly figures.
 
@@ -697,10 +727,11 @@ class FigureFE(Figure):
                 'width': None,
                 'filename': 'figure',
                 'scale': scale  # Multiply title/legend/axis/canvas sizes by this factor (high resolution save)
-            }}
+            }
+        }
         if save_path is None:
             if not interactive and in_notebook():
-                from IPython.display import Image, display
+                from IPython.core.display import Image, display
                 display(Image(self.to_image(format='png', scale=scale)))
             else:
                 super().show(config=config)

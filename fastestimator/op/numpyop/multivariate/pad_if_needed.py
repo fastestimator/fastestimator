@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Iterable, List, Optional, Union
+from typing import Iterable, List, Optional, Sequence, Union
 
 import cv2
 from albumentations import BboxParams, KeypointParams
-from albumentations.augmentations.transforms import PadIfNeeded as PadIfNeededAlb
+from albumentations.augmentations.geometric.transforms import PadIfNeeded as PadIfNeededAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 from fastestimator.util.traceability_util import traceable
@@ -47,7 +47,8 @@ class PadIfNeeded(MultiVariateAlbumentation):
         min_height: Minimal result image height.
         min_width: Minimal result image width.
         border_mode: Flag that is used to specify the pixel extrapolation method. Should be one of:
-            cv2.BORDER_CONSTANT, cv2.BORDER_REPLICATE, cv2.BORDER_REFLECT, cv2.BORDER_WRAP, cv2.BORDER_REFLECT_101.        value: Padding value if border_mode is cv2.BORDER_CONSTANT.
+            cv2.BORDER_CONSTANT, cv2.BORDER_REPLICATE, cv2.BORDER_REFLECT, cv2.BORDER_WRAP, cv2.BORDER_REFLECT_101.
+        value: Padding value if border_mode is cv2.BORDER_CONSTANT.
         mask_value: Padding value for mask if border_mode is cv2.BORDER_CONSTANT.
 
     Image types:
@@ -57,8 +58,8 @@ class PadIfNeeded(MultiVariateAlbumentation):
                  min_height: int = 1024,
                  min_width: int = 1024,
                  border_mode: int = cv2.BORDER_REFLECT_101,
-                 value: Union[None, int, float, List[int], List[float]] = None,
-                 mask_value: Union[None, int, float, List[int], List[float]] = None,
+                 value: Union[None, int, float, Sequence[int], Sequence[float]] = None,
+                 mask_value: Union[None, int, float, Sequence[int], Sequence[float]] = None,
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
                  image_in: Optional[str] = None,

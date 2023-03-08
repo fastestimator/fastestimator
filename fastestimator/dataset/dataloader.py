@@ -27,8 +27,12 @@ from torch.utils.data.dataloader import _BaseDataLoaderIter, _MultiProcessingDat
 
 from fastestimator.dataset.extend_dataset import ExtendDataset
 from fastestimator.dataset.op_dataset import OpDataset
-from fastestimator.util.base_util import Suppressor
 from fastestimator.util.data import FilteredData
+from fastestimator.util.util import Suppressor
+
+
+class SizedDataset(Dataset, Sized):
+    pass
 
 
 class FEDataLoader(DataLoader):
@@ -64,13 +68,13 @@ class FEDataLoader(DataLoader):
     # https://github.com/python/typing/issues/213
 
     def __init__(self,
-                 dataset: Union[Dataset, Sized],
+                 dataset: SizedDataset,
                  postprocess_fn: Optional[Callable[[Dict[str, Any]], Union[Dict[str, Any], FilteredData]]] = None,
                  batch_size: Optional[int] = 1,
                  steps_per_epoch: Optional[int] = None,
                  shuffle: bool = False,
                  num_workers: int = 0,
-                 collate_fn: Callable = None,
+                 collate_fn: Optional[Callable] = None,
                  drop_last: bool = False):
         reset_fn = dataset.fe_reset_ds if hasattr(dataset, 'fe_reset_ds') else None
         convert_fn = dataset.fe_batch_indices if hasattr(dataset, 'fe_batch_indices') else None
@@ -200,7 +204,6 @@ class _BaseFELoaderIter(_BaseDataLoaderIter, ABC):
     Args:
         loader: The parent loader object that will own this iterator.
     """
-
     def __init__(self, loader: FEDataLoader):
         super().__init__(loader)
         self.fe_batch_size = loader.fe_batch_size
@@ -351,13 +354,12 @@ class InfiniteSampler(Sampler):
         convert_fn: A function to be invoked (using the current index) every sample in order to convert an integer index
             into some arbitrary alternative index representation.
     """
-
     def __init__(self,
                  data_source: Sized,
                  shuffle: bool = True,
                  reset_fn: Optional[Callable[[bool], None]] = None,
                  convert_fn: Optional[Callable[[int], Any]] = None):
-        super().__init__(data_source=data_source)
+        super().__init__(data_source=None)  # Arg is unused and triggers a warning in torch 2.1
         self.ds_len = len(data_source)
         if self.ds_len < 1:
             raise ValueError("dataset length must be at least 1")
@@ -400,7 +402,6 @@ class InfiniteSampler(Sampler):
 
 
 class _IdxMapDatasetFetcher(_MapDatasetFetcher):
-
     def fetch(self, possibly_batched_index):
         if self.auto_collation:
             data = [self.dataset[idx] for idx in possibly_batched_index]

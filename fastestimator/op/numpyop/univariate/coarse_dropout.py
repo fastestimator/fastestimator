@@ -14,7 +14,7 @@
 # ==============================================================================
 from typing import Iterable, List, Optional, Union
 
-from albumentations.augmentations.transforms import CoarseDropout as CoarseDropoutAlb
+from albumentations.augmentations.dropout import CoarseDropout as CoarseDropoutAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
 from fastestimator.util.traceability_util import traceable

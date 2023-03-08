@@ -20,7 +20,7 @@ import time
 from copy import deepcopy
 from operator import mul
 from threading import Lock
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union, cast
 
 import numpy as np
 import tensorflow as tf
@@ -33,13 +33,12 @@ from fastestimator.op.numpyop.meta.fuse import Fuse
 from fastestimator.op.numpyop.meta.one_of import OneOf
 from fastestimator.op.numpyop.meta.repeat import Repeat
 from fastestimator.op.numpyop.meta.sometimes import Sometimes
-from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop, Batch
-from fastestimator.schedule.schedule import Scheduler, get_current_items, EpochScheduler, \
-    RepeatScheduler
+from fastestimator.op.numpyop.numpyop import Batch, NumpyOp, forward_numpyop
+from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
+from fastestimator.util.base_util import to_list, to_set, warn
 from fastestimator.util.data import FilteredData
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import cpu_count, get_num_devices
-from fastestimator.util.base_util import to_set, to_list
 
 DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
 
@@ -56,15 +55,16 @@ class Pipeline:
             will take precedence over this one (for example, if you want to set the batch_size based on mode or ds_is).
             NOTE: This argument is only applicable when using a FastEstimator Dataset.
             NOTE: This is the global batch size regardless of the number of GPUs available in the machine. If you have
-                multiple (N) GPUs, each will recieve batch_size/N elements during a training step.
+                multiple (N) GPUs, each will receive batch_size/N elements during a training step.
         ops: NumpyOps to be used for pre-processing. NOTE: This argument is only applicable when using a FastEstimator
             Dataset.
         num_process: Number of CPU threads to use for data pre-processing. NOTE: This argument is only applicable when
             using a FastEstimator Dataset. None will default to min(n_cpus, max(32, 32*n_gpus)). Multiprocessing can be
             disabled by passing 0 here, which can be useful for debugging.
     """
+    mp_warned: bool = False
     ops: List[Union[NumpyOp, Scheduler[NumpyOp]]]
-    data: Dict[str, Dict[Optional[str], Union[DataSource, Scheduler[DataSource]]]]  # {"mode": {"ds_id": ds}}
+    data: Dict[str, Dict[str, Union[DataSource, Scheduler[DataSource]]]]  # {"mode": {"ds_id": ds}}
 
     def __init__(self,
                  train_data: Union[None,
@@ -82,10 +82,11 @@ class Pipeline:
         self.ops = to_list(ops)
         if mp.get_start_method(allow_none=True) is None and os.name != 'nt':
             mp.set_start_method('fork')
-        if mp.get_start_method(allow_none=True) != 'fork':
-            print("FastEstimator-Warn: Pipeline multiprocessing is disabled. OS must support the 'fork' start method.")
-            num_process = 0
         self.num_process = num_process if num_process is not None else min(cpu_count(), 32 * get_num_devices())
+        if mp.get_start_method(allow_none=True) != 'fork' and self.num_process > 0 and not self.mp_warned:
+            warn("Pipeline multiprocessing is disabled. OS must support the 'fork' start method.")
+            self.num_process = 0
+            self.mp_warned = True
         self._verify_inputs(**{k: v for k, v in locals().items() if k != 'self'})
         # Loader Variables
         self.ctx_lock = Lock()
@@ -103,9 +104,8 @@ class Pipeline:
 
     @staticmethod
     def _register_ds_ids(
-            data: Dict[
-                str, Union[DataSource, Scheduler[DataSource], Dict[str, Union[DataSource, Scheduler[DataSource]]]]]
-    ) -> Dict[str, Dict[Optional[str], Union[DataSource, Scheduler[DataSource]]]]:
+        data: Dict[str, Union[DataSource, Scheduler[DataSource], Dict[str, Union[DataSource, Scheduler[DataSource]]]]]
+    ) -> Dict[str, Dict[str, Union[DataSource, Scheduler[DataSource]]]]:
         """Associate dataset of each mode with a `ds_id`.
 
         Args:
@@ -166,8 +166,10 @@ class Pipeline:
         # After m*n steps all possible m and n combinations will be visited
         schedule_cycles = functools.reduce(mul, schedule_cycles, 1)
         # Consider x + m*n epochs for each epoch scheduler x value
-        schedule_epochs = sorted({epoch for base_epoch in schedule_epochs for epoch in
-                                  list(range(base_epoch, base_epoch + schedule_cycles))})
+        schedule_epochs = sorted({
+            epoch
+            for base_epoch in schedule_epochs for epoch in list(range(base_epoch, base_epoch + schedule_cycles))
+        })
         for mode, id_ds in self.data.items():
             for ds_id in id_ds.keys():
                 for epoch in schedule_epochs:
@@ -203,11 +205,11 @@ class Pipeline:
             return True
         elif isinstance(dataset, (DataLoader, tf.data.Dataset)):
             if kwargs['batch_size'] is not None:
-                print("FastEstimator-Warn: batch_size will only be used for built-in dataset")
+                warn("batch_size will only be used for built-in dataset")
             if kwargs['ops'] is not None:
-                print("FastEstimator-Warn: ops will only be used for built-in dataset")
+                warn("ops will only be used for built-in dataset")
             if kwargs['num_process'] is not None:
-                print("FastEstimator-Warn: num_process will only be used for built-in dataset")
+                warn("num_process will only be used for built-in dataset")
             return False
         else:
             raise ValueError("Unsupported dataset type: {}".format(type(dataset)))
@@ -257,7 +259,7 @@ class Pipeline:
                         all_modes.append(mode)
         return to_set(all_modes)
 
-    def get_ds_ids(self, epoch: int, mode: str) -> List[Union[str, None]]:
+    def get_ds_ids(self, epoch: int, mode: str) -> List[str]:
         """Get the ds_ids for a given epoch and mode.
 
         Args:
@@ -412,10 +414,12 @@ class Pipeline:
                             op_names.append(op.__class__.__name__)
 
                     max_op_len = max(len(op_name) for op_name in op_names)
-                    max_in_len = max([len(", ".join(op.inputs)) for op in
-                                      self.ctx_ops + [self.ctx_batch_info] + self.ctx_batch_ops] + [len("Inputs")])
-                    max_out_len = max([len(", ".join(op.outputs)) for op in
-                                       self.ctx_ops + [self.ctx_batch_info] + self.ctx_batch_ops] + [len("Outputs")])
+                    max_in_len = max(
+                        [len(", ".join(op.inputs))
+                         for op in self.ctx_ops + [self.ctx_batch_info] + self.ctx_batch_ops] + [len("Inputs")])
+                    max_out_len = max([
+                        len(", ".join(op.outputs)) for op in self.ctx_ops + [self.ctx_batch_info] + self.ctx_batch_ops
+                    ] + [len("Outputs")])
                     ms_visit_len = max(len("{:.3f}".format(max(normalized_times_ms))), len("ms / Visit"))
                     visit_len = max(len(f"{int(np.max(duration_list[:, 0]))}"), len("Visits"))
 
@@ -435,8 +439,10 @@ class Pipeline:
                             str(int(duration_list[i][0])).ljust(visit_len + 1),
                             100 * duration_list[i][1] / total_time))
                     if self.ctx_batch_ops:
-                        penalty = round(100*(duration_list[len(self.ctx_ops)][1] - extra_memory_management_time) /
-                                        duration_list[len(self.ctx_ops)][1], 1)
+                        penalty = round(
+                            100 * (duration_list[len(self.ctx_ops)][1] - extra_memory_management_time) /
+                            duration_list[len(self.ctx_ops)][1],
+                            1)
                         print(f"\nNote that collation time would be cut by ~{penalty}% if there were no batched ops.")
                 print("\n")  # to make printing more obvious
 
@@ -475,11 +481,7 @@ class Pipeline:
                 break
         return epochs_with_data
 
-    def transform(self,
-                  data: Dict[str, Any],
-                  mode: str,
-                  epoch: int = 1,
-                  ds_id: str = '',
+    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 1, ds_id: str = '',
                   target_type: str = 'np') -> Union[Dict[str, Any], FilteredData]:
         """Apply all pipeline operations on a given data instance for the specified `mode` and `epoch`.
 
@@ -677,9 +679,9 @@ def _batch_postprocess(data: Dict[str, Any], ops: List[NumpyOp], output_keys: Se
         return op_data
     if output_keys:
         for key in data.keys() - output_keys:
-            if key not in _DelayedDeepDict.warned:
-                _DelayedDeepDict.warned.add(key)
-                print("FastEstimator-Warn: the key '{}' is being pruned since it is unused outside of the Pipeline."
-                      " To prevent this, you can declare the key as an input of a Trace or TensorOp.".format(key))
+            if key not in OpDataset.warned:
+                OpDataset.warned.add(key)
+                warn(f"The key '{key}' is being pruned since it is unused outside of the Pipeline. To prevent this, "
+                     "you can declare the key as an input of a Trace or TensorOp.")
             data.pop(key)
     return data
