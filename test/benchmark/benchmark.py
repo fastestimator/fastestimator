@@ -242,11 +242,13 @@ def read_output_yml(output_file: str) -> Dict:
     """Read the output yml.
 
     Args:
-        output_file (Union[str, None]): Location of the output file.
+        output_file (Union[str, None]): Location of the output yaml file.
 
     Returns:
         output_benchmark(Dict): Information about already performed apphub benchmarking.
     """
+    assert Path(output_file).suffix in ['.yaml', '.yml'], "Please provide a yaml file"
+
     print("Output is saved at:", output_file)
 
     output_benchmark = {}
