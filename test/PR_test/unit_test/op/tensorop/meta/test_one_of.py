@@ -109,3 +109,40 @@ class TestOneOf(unittest.TestCase):
         for img_output in output:
             with self.subTest('Check output image shape'):
                 self.assertEqual(img_output.shape, self.output_shape)
+
+
+    def test_probability_left_tf(self):
+        op1 = LambdaOp(fn=lambda x: tf.convert_to_tensor(1.0), inputs="x", outputs="x")
+        op2 = LambdaOp(fn=lambda x: tf.convert_to_tensor(2.0), inputs="x", outputs="x")
+        oneof = OneOf(op1, op2, prob=[1.0, 0])
+        oneof.build('tf')
+        outputs = set(oneof.forward(data=self.single_input_tf, state={}).numpy() for _ in range(10))
+        self.assertEqual(len(outputs), 1)
+        self.assertEqual(outputs.pop(), 1.0)
+
+    def test_probability_right_tf(self):
+        op1 = LambdaOp(fn=lambda x: tf.convert_to_tensor(1.0), inputs="x", outputs="x")
+        op2 = LambdaOp(fn=lambda x: tf.convert_to_tensor(2.0), inputs="x", outputs="x")
+        oneof = OneOf(op1, op2, prob=[0, 1.0])
+        oneof.build('tf')
+        outputs = set(oneof.forward(data=self.single_input_tf, state={}).numpy() for _ in range(10))
+        self.assertEqual(len(outputs), 1)
+        self.assertEqual(outputs.pop(), 2.0)
+
+    def test_probability_left_torch(self):
+        op1 = LambdaOp(fn=lambda x: torch.zeros(1), inputs="x", outputs="x")
+        op2 = LambdaOp(fn=lambda x: torch.ones(1), inputs="x", outputs="x")
+        oneof = OneOf(op1, op2, prob=[1.0, 0])
+        oneof.build('torch')
+        outputs = set(oneof.forward(data=self.single_input_torch, state={}).numpy()[0] for _ in range(10))
+        self.assertEqual(len(outputs), 1)
+        self.assertEqual(outputs.pop(), 0)
+
+    def test_probability_left_torch(self):
+        op1 = LambdaOp(fn=lambda x: torch.zeros(1), inputs="x", outputs="x")
+        op2 = LambdaOp(fn=lambda x: torch.ones(1), inputs="x", outputs="x")
+        oneof = OneOf(op1, op2, prob=[0, 1.0])
+        oneof.build('torch')
+        outputs = set(oneof.forward(data=self.single_input_torch, state={}).numpy()[0] for _ in range(10))
+        self.assertEqual(len(outputs), 1)
+        self.assertEqual(outputs.pop(), 1)
