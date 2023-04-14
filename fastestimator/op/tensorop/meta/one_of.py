@@ -14,6 +14,7 @@
 # ==============================================================================
 from typing import Any, Dict, List, Optional, Set, TypeVar, Union
 
+import numpy as np
 import tensorflow as tf
 import torch
 
@@ -56,17 +57,13 @@ class OneOf(TensorOp):
         self.prob = prob
         self.prob_fn = None
         self.invoke_fn = None
+        self.framework = None
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
+        assert framework in {"tf", "torch"}, "unrecognized framework: {}".format(framework)
+        self.framework = framework
         for op in self.ops:
             op.build(framework, device)
-        if framework == 'tf':
-            self.invoke_fn = lambda idx, data, state: tf.switch_case(idx, [lambda op=op: op.forward(data, state) for op in
-                                                                           self.ops])
-        elif framework == 'torch':
-            self.invoke_fn = lambda idx, data, state: self.ops[idx].forward(data, state)
-        else:
-            raise ValueError("unrecognized framework: {}".format(framework))
 
     def get_fe_loss_keys(self) -> Set[str]:
         return set.union(*[op.get_fe_loss_keys() for op in self.ops])
@@ -93,5 +90,9 @@ class OneOf(TensorOp):
         Returns:
             The `data` after application of one of the available numpyOps.
         """
-        idx = cast(tf.random.categorical(tf.math.log([self.prob]), 1), dtype='int32')[0, 0]
-        return self.invoke_fn(idx, data, state)
+        if self.framework == 'tf':
+            idx = cast(tf.random.categorical(tf.math.log([self.prob]), 1), dtype='int32')[0, 0]
+            results = tf.switch_case(idx, [lambda op=op: op.forward(data, state) for op in self.ops])
+        else:
+            results = np.random.choice(self.ops, p=self.prob).forward(data, state)
+        return results
