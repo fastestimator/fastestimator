@@ -138,7 +138,7 @@ class TestOneOf(unittest.TestCase):
         self.assertEqual(len(outputs), 1)
         self.assertEqual(outputs.pop(), 0)
 
-    def test_probability_left_torch(self):
+    def test_probability_right_torch(self):
         op1 = LambdaOp(fn=lambda x: torch.zeros(1), inputs="x", outputs="x")
         op2 = LambdaOp(fn=lambda x: torch.ones(1), inputs="x", outputs="x")
         oneof = OneOf(op1, op2, prob=[0, 1.0])
