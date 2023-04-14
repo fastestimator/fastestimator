@@ -118,3 +118,7 @@ ENV/
 /test/apphub_scripts/**/*.txt
 /test/apphub_scripts/**/*.ipynb
 /test/tutorial_result
+
+# apphub benchmark outfile
+/test/benchmark/*.yml
+/test/benchmark/*.yaml
