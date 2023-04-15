@@ -31,9 +31,10 @@ class OneOf(TensorOp):
     """Perform one of several possible TensorOps.
 
     Args:
-        *tensor_ops: A list of ops to choose between with uniform probability.
+        *numpy_ops: Ops to choose between with a specified (or uniform) probability.
+        probs: List of probabilities, must sum to 1. When None, the probabilities will be equally distributed.
     """
-    def __init__(self, *tensor_ops: TensorOp, prob: Optional[List[float]] = None) -> None:
+    def __init__(self, *tensor_ops: TensorOp, probs: Optional[List[float]] = None) -> None:
         inputs = tensor_ops[0].inputs
         outputs = tensor_ops[0].outputs
         mode = tensor_ops[0].mode
@@ -48,15 +49,13 @@ class OneOf(TensorOp):
             assert self.out_list == op.out_list, "All ops within OneOf must share the same output configuration"
             assert mode == op.mode, "All ops within a OneOf must share the same mode"
             assert ds_id == op.ds_id, "All ops within a OneOf must share the same ds_id"
-        if prob:
-            assert len(tensor_ops) == len(prob), "The number of probabilities do not match with number of Operators"
-            assert abs(sum(prob) - 1) < 1e-8, "Probabilities must sum to 1"
+        if probs:
+            assert len(tensor_ops) == len(probs), "The number of probabilities do not match with number of Operators"
+            assert abs(sum(probs) - 1) < 1e-8, "Probabilities must sum to 1"
         else:
-            prob = [1 / len(tensor_ops) for _ in tensor_ops]
+            probs = [1 / len(tensor_ops) for _ in tensor_ops]
         self.ops = tensor_ops
-        self.prob = prob
-        self.prob_fn = None
-        self.invoke_fn = None
+        self.probs = probs
         self.framework = None
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
@@ -91,8 +90,8 @@ class OneOf(TensorOp):
             The `data` after application of one of the available numpyOps.
         """
         if self.framework == 'tf':
-            idx = cast(tf.random.categorical(tf.math.log([self.prob]), 1), dtype='int32')[0, 0]
+            idx = cast(tf.random.categorical(tf.math.log([self.probs]), 1), dtype='int32')[0, 0]
             results = tf.switch_case(idx, [lambda op=op: op.forward(data, state) for op in self.ops])
         else:
-            results = np.random.choice(self.ops, p=self.prob).forward(data, state)
+            results = np.random.choice(self.ops, p=self.probs).forward(data, state)
         return results
