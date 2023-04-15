@@ -55,7 +55,7 @@ class TestOneOf(unittest.TestCase):
     def test_probability_left(self):
         op1 = LambdaOp(fn=lambda x: 1.0, inputs="x", outputs="x")
         op2 = LambdaOp(fn=lambda x: 2.0, inputs="x", outputs="x")
-        oneof = OneOf(op1, op2, prob=[1.0, 0])
+        oneof = OneOf(op1, op2, probs=[1.0, 0])
         inputs = [{"x": None} for _ in range(10)]
         outputs = set(oneof.forward(data=inp, state={}) for inp in inputs)
         self.assertEqual(len(outputs), 1)
@@ -64,7 +64,7 @@ class TestOneOf(unittest.TestCase):
     def test_probability_right(self):
         op1 = LambdaOp(fn=lambda x: 1.0, inputs="x", outputs="x")
         op2 = LambdaOp(fn=lambda x: 2.0, inputs="x", outputs="x")
-        oneof = OneOf(op1, op2, prob=[0, 1.0])
+        oneof = OneOf(op1, op2, probs=[0, 1.0])
         inputs = [{"x": None} for _ in range(10)]
         outputs = set(oneof.forward(data=inp, state={}) for inp in inputs)
         self.assertEqual(len(outputs), 1)
