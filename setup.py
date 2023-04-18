@@ -70,7 +70,7 @@ def get_dependency():
         'scikit-learn==1.2.1',
         'lazy_loader==0.1',
         'fe_pycocotools==1.0',
-        'typing_extensions>=4.5.0',
+        'typing_extensions==4.4.0',
         'charset-normalizer==2.1.1'
     ]
     return dependencies
