@@ -31,7 +31,7 @@ class OneOf(TensorOp):
     """Perform one of several possible TensorOps.
 
     Args:
-        *numpy_ops: Ops to choose between with a specified (or uniform) probability.
+        *tensor_ops: Ops to choose between with a specified (or uniform) probability.
         probs: List of probabilities, must sum to 1. When None, the probabilities will be equally distributed.
     """
     def __init__(self, *tensor_ops: TensorOp, probs: Optional[List[float]] = None) -> None:
