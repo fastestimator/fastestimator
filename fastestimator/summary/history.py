@@ -415,7 +415,7 @@ class HistoryRecorder:
                 self.db.commit()
             except (sql.OperationalError, sql.DatabaseError) as err:
                 self.ident = (-2, -2)  # No threads should match this identity in the future
-                warn(f"There was a problem writing to the FastEstimator history database. Log " +
+                warn("There was a problem writing to the FastEstimator history database. Log " +
                      f"capture will be disabled for the rest of this experiment. Error: {err}")
 
     def flush(self) -> None:
