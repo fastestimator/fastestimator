@@ -26,6 +26,7 @@ import numpy as np
 import tensorflow as tf
 import torch
 from keras.engine.sequential import Sequential
+from keras.mixed_precision.loss_scale_optimizer import LossScaleOptimizer, LossScaleOptimizerV3
 from tensorflow.python.distribute.values import DistributedValues
 
 import fastestimator as fe
@@ -1064,12 +1065,15 @@ def _optimizer_fn_to_optimizer(
                     optimizer._create_hypers()
                 if hasattr(optimizer, '_create_slots'):
                     optimizer._create_slots(model.trainable_variables)
-            # handle mixed precision loss scaling
-            if mixed_precision:
-                optimizer = mixed_precision_tf.LossScaleOptimizer(optimizer)
             assert isinstance(optimizer, (tf.optimizers.Optimizer, tf.keras.optimizers.experimental.Optimizer,
                                           tf.optimizers.legacy.Optimizer)), \
                 f"optimizer_fn should generate tensorflow optimizer, but got {type(optimizer)}"
+            # handle mixed precision loss scaling
+            if mixed_precision:
+                if isinstance(optimizer, tf.optimizers.legacy.Optimizer):
+                    optimizer = LossScaleOptimizer(optimizer)
+                else:
+                    optimizer = LossScaleOptimizerV3(optimizer)
         else:
             try:
                 optimizer = optimizer_fn(model.parameters())
