@@ -33,7 +33,7 @@ from pylatex.utils import bold, escape_latex, italic
 from fastestimator.backend._to_shape import to_shape
 from fastestimator.backend._to_type import to_type
 from fastestimator.summary.summary import ValWithError
-from fastestimator.util.base_util import strip_prefix, FEID, Flag
+from fastestimator.util.base_util import FEID, Flag, strip_prefix
 from fastestimator.util.latex_util import ContainerList, HrefFEID, PyContainer
 
 _Function = namedtuple('_Function', ['func', 'name'])
@@ -823,8 +823,8 @@ def _parse_lambda_fallback(function: types.FunctionType, tables: Dict[FEID, FeSu
         closure_vars = inspect.getclosurevars(function)
         ref_map = {
             ref:
-                closure_vars.nonlocals.get(ref,
-                                           closure_vars.globals.get(ref, closure_vars.builtins.get(ref, _VarWrap(ref))))
+            closure_vars.nonlocals.get(ref,
+                                       closure_vars.globals.get(ref, closure_vars.builtins.get(ref, _VarWrap(ref))))
             for ref in refs
         }
         response['kwargs'] = _trace_value(ref_map, tables, ret_ref=ret_ref, wrap_str=False).raw_input
@@ -1184,9 +1184,9 @@ def traceable(whitelist: Union[str, Tuple[str, ...]] = (), blacklist: Union[str,
         The decorated class.
     """
     if isinstance(whitelist, str):
-        whitelist = (whitelist,)
+        whitelist = (whitelist, )
     if isinstance(blacklist, str):
-        blacklist = (blacklist,)
+        blacklist = (blacklist, )
     if whitelist and blacklist:
         raise ValueError("Traceable objects may specify a whitelist or a blacklist, but not both")
 

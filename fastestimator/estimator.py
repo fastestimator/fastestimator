@@ -16,7 +16,7 @@ import inspect
 import os
 import random
 from collections import ChainMap
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Union
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Union, overload
 
 import numpy as np
 import tensorflow as tf
@@ -39,7 +39,7 @@ from fastestimator.trace.io.restore_wizard import RestoreWizard
 from fastestimator.trace.io.traceability import Traceability
 from fastestimator.trace.trace import EvalEssential, Logger, PerDSTrace, TestEssential, Trace, TrainEssential, \
     sort_traces
-from fastestimator.util.base_util import NonContext, Suppressor, to_list, to_set
+from fastestimator.util.base_util import NonContext, to_list, to_set, warn
 from fastestimator.util.data import Data, FilteredData
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import draw
@@ -48,12 +48,10 @@ from fastestimator.util.util import draw
 def _verify_dependency_versions() -> None:
     """Print warning messages if the user is using unexpected versions of TF or torch.
     """
-    if tf.__version__ != '2.9.1':
-        print("\033[93m{}\033[00m".format("FastEstimator-Warn: Expected TensorFlow version 2.9.1 but found "
-                                          f"{tf.__version__}. The framework may not work as expected."))
-    if torch.__version__ not in ('1.10.2', '1.10.2+cpu', '1.10.2+cu113'):
-        print("\033[93m{}\033[00m".format("FastEstimator-Warn: Expected PyTorch version 1.10.2 but found "
-                                          f"{torch.__version__}. The framework may not work as expected."))
+    if tf.__version__ not in {'2.11.1', '2.11.0'}:
+        warn(f"Expected TensorFlow version 2.11.1 but found {tf.__version__}. The framework may not work as expected.")
+    if torch.__version__ not in ('2.0.0', '2.0.0+cpu', '2.0.0+cu118'):
+        warn(f"Expected PyTorch version 2.0.0 but found {torch.__version__}. The framework may not work as expected.")
 
 
 @traceable()
@@ -125,6 +123,14 @@ class Estimator:
     def traces(self) -> List[Union[Trace, Scheduler[Trace]]]:
         return self.system.traces
 
+    @overload
+    def fit(self, summary: None = None, warmup: bool = True, eager: bool = False) -> None:
+        ...
+
+    @overload
+    def fit(self, summary: str, warmup: bool = True, eager: bool = False) -> Summary:
+        ...
+
     def fit(self, summary: Optional[str] = None, warmup: bool = True, eager: bool = False) -> Optional[Summary]:
         """Train the network for the number of epochs specified by the estimator's constructor.
 
@@ -176,7 +182,7 @@ class Estimator:
                 if isinstance(trace, (ModelSaver, BestModelSaver)):
                     no_save_warning = False
             if no_save_warning:
-                print("FastEstimator-Warn: No ModelSaver Trace detected. Models will not be saved.")
+                warn("No ModelSaver Trace detected. Models will not be saved.")
         if "eval" in run_modes and "eval" in self.pipeline.get_modes():
             self.traces_in_use.insert(1, EvalEssential(monitor_names=self.monitor_names.union(extra_monitor_keys)))
         if "test" in run_modes and "test" in self.pipeline.get_modes():
@@ -184,6 +190,14 @@ class Estimator:
         # insert system instance to trace
         for trace in get_current_items(self.traces_in_use, run_modes=run_modes):
             trace.system = self.system
+
+    @overload
+    def test(self, summary: None = None, eager: bool = False) -> None:
+        ...
+
+    @overload
+    def test(self, summary: str, eager: bool = False) -> Summary:
+        ...
 
     def test(self, summary: Optional[str] = None, eager: bool = False) -> Optional[Summary]:
         """Run the pipeline / network in test mode for one epoch.
@@ -246,11 +260,10 @@ class Estimator:
                                        output_keys=trace_input_keys - network_output_keys
                                        | network_input_keys) as loader:
                         loader = self._configure_loader(loader)
-                        with Suppressor():
-                            if isinstance(loader, tf.data.Dataset):
-                                batch = list(loader.take(1))[0]
-                            else:
-                                batch = next(iter(loader))
+                        if isinstance(loader, tf.data.Dataset):
+                            batch = list(loader.take(1))[0]
+                        else:
+                            batch = next(iter(loader))
                         batch = self._configure_tensor(loader, batch)
                     assert isinstance(batch, dict), "please make sure data output format is dictionary"
                     pipeline_output_keys = to_set(batch.keys())
@@ -366,8 +379,7 @@ class Estimator:
 
                 loader = self._configure_loader(loader)
                 iterator = iter(loader)
-                with Suppressor():
-                    batch = next(iterator)
+                batch = next(iterator)
                 ds_traces = sort_traces(ds_traces,
                                         available_outputs=to_set(batch.keys()) | network_output_keys,
                                         ds_ids=ds_ids)
@@ -388,8 +400,7 @@ class Estimator:
                                 or
                             (self.system.batch_idx == self.system.eval_steps_per_epoch and self.system.mode == "eval")):
                             raise StopIteration
-                        with Suppressor():
-                            batch = next(iterator)
+                        batch = next(iterator)
                     except StopIteration:
                         break
                 self._run_traces_on_ds_end(traces=per_ds_traces, data=end_epoch_data)

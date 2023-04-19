@@ -17,15 +17,17 @@ import os
 import sys
 import tempfile
 from collections import ChainMap
-from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, Set, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, Sequence, Set, Tuple, TypeVar, \
+    Union, overload
 
 import gdown
+import keras.mixed_precision as mixed_precision_tf
 import numpy as np
 import tensorflow as tf
-import tensorflow.keras.mixed_precision as mixed_precision_tf
 import torch
+from keras.engine.sequential import Sequential
+from keras.mixed_precision.loss_scale_optimizer import LossScaleOptimizer, LossScaleOptimizerV3
 from tensorflow.python.distribute.values import DistributedValues
-from tensorflow.python.keras.engine.sequential import Sequential
 
 import fastestimator as fe
 from fastestimator.backend._load_model import load_model
@@ -35,14 +37,16 @@ from fastestimator.op.op import get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.tensorop.model.update import UpdateOp
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
-from fastestimator.util.base_util import NonContext, to_list
+from fastestimator.util.base_util import NonContext, to_list, warn
 from fastestimator.util.traceability_util import trace_model, traceable
-from fastestimator.util.util import get_batch_size
+from fastestimator.util.util import Suppressor, detach_tensors, get_batch_size, get_device, get_num_gpus, \
+    move_tensors_to_device
 
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 T = TypeVar('T')
 
 GOOGLE_DRIVE_URL = "https://drive.google.com"
+_MAC_BUILD_WARNING = False
 
 
 @traceable()
@@ -66,7 +70,7 @@ class BaseNetwork:
         target_type: str,
         device: Optional[torch.device],
         ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
-        postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp, Scheduler[NumpyOp]]]] = None
+        postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Sequence[Union[NumpyOp, Scheduler[NumpyOp]]]] = None
     ) -> None:
         self.ops = to_list(ops)
         self.target_type = target_type
@@ -323,7 +327,7 @@ def _collect_models(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> Set[
 # noinspection PyPep8Naming
 def Network(
         ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
-        pops: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp,
+        pops: Union[None, NumpyOp, Scheduler[NumpyOp], Sequence[Union[NumpyOp,
                                                                       Scheduler[NumpyOp]]]] = None) -> BaseNetwork:
     """A function to automatically instantiate the correct Network derived class based on the given `ops`.
 
@@ -380,15 +384,14 @@ class TorchNetwork(BaseNetwork):
             Unlike the NumpyOps found in the pipeline, these ops will run on batches of data rather than single points.
 
     """
+    device: torch.device
+
     def __init__(
         self,
         ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
-        postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp, Scheduler[NumpyOp]]]] = None
+        postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Sequence[Union[NumpyOp, Scheduler[NumpyOp]]]] = None
     ) -> None:
-        super().__init__(target_type='torch',
-                         device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu"),
-                         ops=ops,
-                         postprocessing=postprocessing)
+        super().__init__(target_type='torch', device=get_device(), ops=ops, postprocessing=postprocessing)
 
     def load_epoch(self,
                    mode: str,
@@ -412,7 +415,7 @@ class TorchNetwork(BaseNetwork):
                 PyTorch by nature is always in eager mode.
         """
         super().load_epoch(mode=mode, epoch=epoch, ds_id=ds_id, output_keys=output_keys, warmup=warmup, eager=eager)
-        if self.device.type == "cuda":
+        if self.device.type != "cpu":
             for model in self.epoch_models:
                 # move model variables to gpu
                 model.to(self.device)
@@ -449,7 +452,7 @@ class TorchNetwork(BaseNetwork):
 
         In this case we move all of the models from the GPU(s) back to the CPU.
         """
-        if self.device.type == "cuda":
+        if self.device.type != "cpu":
             for model in self.epoch_models:
                 # move model variables to cpu
                 model.to("cpu")
@@ -476,9 +479,9 @@ class TorchNetwork(BaseNetwork):
         Returns:
             The input data ready for use on GPU(s).
         """
-        if self.device.type == "cuda":
+        if self.device.type != "cpu":
             new_batch = {
-                key: self._move_tensor_between_device(batch[key], self.device)
+                key: move_tensors_to_device(batch[key], self.device)
                 for key in self.effective_inputs[mode] if key in batch
             }
         else:
@@ -502,65 +505,18 @@ class TorchNetwork(BaseNetwork):
         self.epoch_state["tape"] = NonContext()
         # gpu operation
         with torch.no_grad() if not self.epoch_state["req_grad"] else NonContext():
-            with torch.cuda.amp.autocast() if self.mixed_precision else NonContext():
+            with torch.autocast(device_type=self.device.type) if self.mixed_precision else NonContext():
                 self._forward_batch(batch_in, self.epoch_state, self.epoch_ops)
 
         # copy data to cpu
-        if self.device.type == "cuda":
+        if self.device.type != "cpu":
             prediction = {
-                key: self._move_tensor_between_device(self._detach_tensor(batch_in[key]), "cpu")
+                key: move_tensors_to_device(detach_tensors(batch_in[key]), "cpu")
                 for key in self.effective_outputs[mode] if key in batch_in
             }
         else:
-            prediction = {
-                key: self._detach_tensor(batch_in[key])
-                for key in self.effective_outputs[mode] if key in batch_in
-            }
+            prediction = {key: detach_tensors(batch_in[key]) for key in self.effective_outputs[mode] if key in batch_in}
         return batch, prediction
-
-    def _move_tensor_between_device(self, data: T, device: Union[str, torch.device]) -> T:
-        """Move tensor between gpu and cpu recursively.
-
-        Args:
-            data: The input data to be moved.
-            device: The target device.
-
-        Returns:
-            Output data.
-        """
-        if isinstance(data, dict):
-            return {key: self._move_tensor_between_device(value, device) for (key, value) in data.items()}
-        elif isinstance(data, list):
-            return [self._move_tensor_between_device(val, device) for val in data]
-        elif isinstance(data, tuple):
-            return tuple([self._move_tensor_between_device(val, device) for val in data])
-        elif isinstance(data, set):
-            return set([self._move_tensor_between_device(val, device) for val in data])
-        elif isinstance(data, torch.Tensor):
-            return data.to(device)
-        else:
-            return data
-
-    def _detach_tensor(self, data: T) -> T:
-        """Detach tensor from current graph recursively.
-
-        Args:
-            data: The data to be detached.
-
-        Returns:
-            Output data.
-        """
-        if isinstance(data, dict):
-            return {key: self._detach_tensor(value) for (key, value) in data.items()}
-        elif isinstance(data, list):
-            return [self._detach_tensor(val) for val in data]
-        elif isinstance(data, tuple):
-            return tuple([self._detach_tensor(val) for val in data])
-        elif isinstance(data, set):
-            return set([self._detach_tensor(val) for val in data])
-        elif isinstance(data, torch.Tensor):
-            return data.detach()
-        return data
 
 
 @traceable()
@@ -575,7 +531,7 @@ class TFNetwork(BaseNetwork):
     def __init__(
         self,
         ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
-        postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Iterable[Union[NumpyOp, Scheduler[NumpyOp]]]] = None
+        postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Sequence[Union[NumpyOp, Scheduler[NumpyOp]]]] = None
     ) -> None:
         super().__init__(target_type='tf', device=None, ops=ops, postprocessing=postprocessing)
 
@@ -651,10 +607,11 @@ class TFNetwork(BaseNetwork):
                                                       self.epoch_ops,
                                                       to_list(self.effective_outputs[mode]))
             else:
-                prediction = self._forward_step_static(batch_in,
-                                                       self.epoch_state,
-                                                       self.epoch_ops,
-                                                       to_list(self.effective_outputs[mode]))
+                with Suppressor(allow_pyprint=True, show_if_exception=True):
+                    prediction = self._forward_step_static(batch_in,
+                                                           self.epoch_state,
+                                                           self.epoch_ops,
+                                                           to_list(self.effective_outputs[mode]))
         return batch, prediction
 
     def _per_replica_to_global(self, data: T) -> T:
@@ -837,8 +794,26 @@ class TFNetwork(BaseNetwork):
             return data
 
 
-def build(model_fn: Callable[[], Union[Model, List[Model]]],
-          optimizer_fn: Union[str, Scheduler, Callable, List[str], List[Callable], List[Scheduler], None],
+@overload
+def build(model_fn: Callable[[], Model],
+          optimizer_fn: Union[None, str, Scheduler, Callable],
+          weights_path: Union[str, None, List[Union[str, None]]] = None,
+          model_name: Union[str, List[str], None] = None,
+          mixed_precision: bool = False) -> Model:
+    ...
+
+
+@overload
+def build(model_fn: Callable[[], Sequence[Model]],
+          optimizer_fn: Union[None, str, Scheduler, Callable, Sequence[Union[None, str, Callable, Scheduler]]],
+          weights_path: Union[str, None, List[Union[str, None]]] = None,
+          model_name: Union[str, List[str], None] = None,
+          mixed_precision: bool = False) -> List[Model]:
+    ...
+
+
+def build(model_fn: Callable[[], Union[Model, Sequence[Model]]],
+          optimizer_fn: Union[None, str, Scheduler, Callable, Sequence[Union[None, str, Callable, Scheduler]]],
           weights_path: Union[str, None, List[Union[str, None]]] = None,
           model_name: Union[str, List[str], None] = None,
           mixed_precision: bool = False) -> Union[Model, List[Model]]:
@@ -891,15 +866,14 @@ def build(model_fn: Callable[[], Union[Model, List[Model]]],
     # framework of model, setting the policy for both tf and pytorch here.
     if mixed_precision:
         if sys.platform == 'darwin':
-            print("\033[93m{}\033[00m".format("FastEstimator-Warn: Mixed Precision is not currently supported on Mac / "
-                                              "Metal. This flag will be ignored."))
+            warn("Mixed Precision is not currently supported on Mac / Metal. This flag will be ignored.")
             mixed_precision = False
         else:
             mixed_precision_tf.set_global_policy(mixed_precision_tf.Policy('mixed_float16'))
     else:
         mixed_precision_tf.set_global_policy(mixed_precision_tf.Policy('float32'))
     models = None
-    if torch.cuda.device_count() > 1:
+    if get_num_gpus() > 1:
         # We need to figure out whether model_fn returns tf models or torch models
         if not isinstance(tf.distribute.get_strategy(), tf.distribute.MirroredStrategy):
             # If we've already done this and gotten TF model, the above flag will be set and this will be skipped. If we
@@ -965,7 +939,7 @@ def _fe_compile(model: Model,
     else:
         raise ValueError("unrecognized model format: {}".format(type(model)))
     # torch multi-gpu handling
-    if framework == "torch" and torch.cuda.device_count() > 1:
+    if framework == "torch" and get_num_gpus() > 1:
         model = torch.nn.DataParallel(model)
     # mark models with its mixed_precision flag
     model.mixed_precision = mixed_precision
@@ -995,8 +969,9 @@ def _fe_compile(model: Model,
     return model
 
 
-def _build_optimizer(optimizer_fn: Union[str, Callable, None], model: Model, framework: str,
-                     mixed_precision: bool) -> Union[None, tf.optimizers.Optimizer, torch.optim.Optimizer]:
+def _build_optimizer(
+    optimizer_fn: Union[str, Callable, None], model: Model, framework: str, mixed_precision: bool
+) -> Union[None, tf.optimizers.Optimizer, tf.optimizers.legacy.Optimizer, torch.optim.Optimizer]:
     """A helper method to instantiate an optimizer.
 
     Args:
@@ -1025,13 +1000,15 @@ def _optimizer_fn_from_string(name: str, framework: str) -> Callable:
     Returns:
         An optimizer instance corresponding to the given `name` and `framework`.
     """
+    # The legacy optimizers appear to be faster than the new ones on both mac and linux. Revisit this speed test again
+    # after tf version > 2.12
     tf_optimizer_fn = {
-        'adadelta': tf.optimizers.Adadelta,
-        'adagrad': tf.optimizers.Adagrad,
-        'adam': tf.optimizers.Adam,
-        'adamax': tf.optimizers.Adamax,
-        'rmsprop': tf.optimizers.RMSprop,
-        'sgd': tf.optimizers.SGD
+        'adadelta': tf.optimizers.legacy.Adadelta,
+        'adagrad': tf.optimizers.legacy.Adagrad,
+        'adam': tf.optimizers.legacy.Adam,
+        'adamax': tf.optimizers.legacy.Adamax,
+        'rmsprop': tf.optimizers.legacy.RMSprop,
+        'sgd': tf.optimizers.legacy.SGD
     }
     pytorch_optimizer_fn = {
         'adadelta': lambda x: torch.optim.Adadelta(params=x),
@@ -1048,8 +1025,9 @@ def _optimizer_fn_from_string(name: str, framework: str) -> Callable:
     return optimizer_fn
 
 
-def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None], model: Model, framework: str,
-                               mixed_precision: bool) -> Union[None, tf.optimizers.Optimizer, torch.optim.Optimizer]:
+def _optimizer_fn_to_optimizer(
+        optimizer_fn: Union[Callable, None], model: Model, framework: str,
+        mixed_precision: bool) -> Union[None, tf.optimizers.legacy.Optimizer, torch.optim.Optimizer]:
     """A helper function to invoke an optimizer function.
 
     Args:
@@ -1069,14 +1047,33 @@ def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None], model: Model
             except:
                 raise AssertionError("optimizer_fn of Tensorflow backend should be callable without args. Please "
                                      "make sure model and optimizer_fn are using the same backend")
+            if sys.platform == 'darwin' and hasattr(optimizer, 'jit_compile'):
+                # Mac doesn't support XLA acceleration as of TF 2.11
+                # TODO - check compatibility again in future release
+                global _MAC_BUILD_WARNING
+                if not _MAC_BUILD_WARNING:
+                    warn("JIT compiling of optimizers is not currently supported by MacOS and will be disabled. You "
+                         "may want to use an optimizer from tf.optimizers.legacy instead for better speed.")
+                    _MAC_BUILD_WARNING = True
+                optimizer.jit_compile = False
             # initialize optimizer variables
-            _ = optimizer.iterations
-            optimizer._create_hypers()
-            optimizer._create_slots(model.trainable_variables)
+            if hasattr(optimizer, 'build'):
+                optimizer.build(var_list=model.trainable_variables)
+            else:
+                _ = optimizer.iterations
+                if hasattr(optimizer, '_create_hypers'):
+                    optimizer._create_hypers()
+                if hasattr(optimizer, '_create_slots'):
+                    optimizer._create_slots(model.trainable_variables)
+            assert isinstance(optimizer, (tf.optimizers.Optimizer, tf.keras.optimizers.experimental.Optimizer,
+                                          tf.optimizers.legacy.Optimizer)), \
+                f"optimizer_fn should generate tensorflow optimizer, but got {type(optimizer)}"
             # handle mixed precision loss scaling
             if mixed_precision:
-                optimizer = mixed_precision_tf.LossScaleOptimizer(optimizer)
-            assert isinstance(optimizer, tf.optimizers.Optimizer), "optimizer_fn should generate tensorflow optimizer"
+                if isinstance(optimizer, tf.optimizers.legacy.Optimizer):
+                    optimizer = LossScaleOptimizer(optimizer)
+                else:
+                    optimizer = LossScaleOptimizerV3(optimizer)
         else:
             try:
                 optimizer = optimizer_fn(model.parameters())

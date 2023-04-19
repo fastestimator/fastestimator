@@ -21,6 +21,7 @@ import numpy as np
 from keras.datasets.cifar import load_batch
 
 from fastestimator.dataset.numpy_dataset import NumpyDataset
+from fastestimator.util.base_util import warn
 from fastestimator.util.google_download_util import _download_file_from_google_drive
 
 
@@ -47,7 +48,7 @@ def load_data(root_dir: str = None,
     Raises:
         ValueError: If the label_mode is invalid.
     """
-    print("\033[93m {}\033[00m".format("FastEstimator-Warn: Consider using the ciFAIR100 dataset instead."))
+    warn("Consider using the ciFAIR100 dataset instead.")
     if label_mode not in ['fine', 'coarse']:
         raise ValueError("label_mode must be one of either 'fine' or 'coarse'.")
     home = str(Path.home())

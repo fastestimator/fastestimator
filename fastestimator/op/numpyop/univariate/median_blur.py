@@ -14,7 +14,7 @@
 # ==============================================================================
 from typing import Iterable, Tuple, Union
 
-from albumentations.augmentations.transforms import MedianBlur as MedianBlurAlb
+from albumentations.augmentations.blur import MedianBlur as MedianBlurAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
 from fastestimator.util.traceability_util import traceable

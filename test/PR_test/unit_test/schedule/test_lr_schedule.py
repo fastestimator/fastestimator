@@ -15,7 +15,7 @@
 import math
 import unittest
 
-from fastestimator.schedule.lr_shedule import cosine_decay
+from fastestimator.schedule.lr_schedule import cosine_decay
 
 
 class TestLRSchedule(unittest.TestCase):

@@ -23,10 +23,9 @@ from collections import defaultdict
 from contextlib import closing
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Type
+from typing import Any, Dict, Iterable, List, Optional, TextIO, Type
 
-import tensorflow.keras.mixed_precision as mixed_precision
-import torch
+from keras import mixed_precision
 from prettytable import PrettyTable, from_db_cursor
 
 from fastestimator.schedule.schedule import Scheduler
@@ -34,9 +33,9 @@ from fastestimator.summary.logs.log_parse import parse_log_iter
 from fastestimator.summary.logs.log_plot import visualize_logs
 from fastestimator.summary.summary import Summary, average_summaries
 from fastestimator.summary.system import System
+from fastestimator.util.base_util import NonContext, warn
 from fastestimator.util.cli_util import SaveAction, parse_string_to_python
-from fastestimator.util.util import cpu_count
-from fastestimator.util.base_util import NonContext
+from fastestimator.util.util import cpu_count, get_num_gpus
 
 _MAKE_HIST_TABLE = 'CREATE TABLE IF NOT EXISTS history (' \
                    'file TEXT, ' \
@@ -129,15 +128,15 @@ def connect(db_path: Optional[str] = None) -> sql.Connection:
         # Check to ensure the database isn't corrupted
         cur = connection.execute("PRAGMA integrity_check")
         response = cur.fetchall()[0]
-        if response != ('ok',):
+        if response != ('ok', ):
             connection.close()
-            corrupt_path = os.path.join(os.path.dirname(db_path),
-                                        f"corrupt_{datetime.now().strftime('%Y_%m_%d_%H_%M_%S')}_"
-                                        f"{os.path.basename(db_path)}")
+            corrupt_path = os.path.join(
+                os.path.dirname(db_path),
+                f"corrupt_{datetime.now().strftime('%Y_%m_%d_%H_%M_%S')}_"
+                f"{os.path.basename(db_path)}")
             os.renames(db_path, corrupt_path)
-            print(f"FastEstimator-Warn: The FastEstimator history database has been corrupted. It has been moved to "
-                  f"{corrupt_path} and a new one has been automatically created. The integrity check output is: "
-                  f"{response}")
+            warn(f"The FastEstimator history database has been corrupted. It has been moved to {corrupt_path} and " +
+                 f"a new one has been automatically created. The integrity check output is: {response}")
             connection = sql.connect(db_path, detect_types=sql.PARSE_DECLTYPES | sql.PARSE_COLNAMES)
     connection.execute("PRAGMA foreign_keys = 1")  # Enable FK constraints
     connection.row_factory = sql.Row  # Get nice query return objects
@@ -207,10 +206,11 @@ def update_settings(n_keep: Optional[int] = None, n_keep_logs: Optional[int] = N
     with closing(db.cursor()) as cursor:
         cursor.execute("SELECT * FROM settings")
         response = from_db_cursor(cursor)
-    # Hide implementation details from end user
-    response.del_column('pk')
-    response.del_column('schema_version')
-    print(response)
+    if response is not None:
+        # Hide implementation details from end user
+        response.del_column('pk')
+        response.del_column('schema_version')
+        print(response)
     db.close()
 
 
@@ -228,6 +228,9 @@ class HistoryRecorder:
             technically be any string).
         db_path: The path to the database, or None to use the default location.
     """
+    db: sql.Connection
+    stdout: TextIO
+
     def __init__(self, system: System, est_path: str, db_path: Optional[str] = None):
         # Prepare db adapters
         sql.register_adapter(bool, int)
@@ -238,7 +241,7 @@ class HistoryRecorder:
         self.filename = os.path.basename(est_path)
         self.db_path = db_path if db_path else os.path.join(str(Path.home()), 'fastestimator_data', 'history.db')
         self.system = system
-        self.db = None
+        self.db = None  # type: ignore
         self.ident = (multiprocessing.current_process().pid, threading.get_ident())
         self.pk = None
         self.stdout = None
@@ -262,7 +265,7 @@ class HistoryRecorder:
                     'args': sys.argv[1:],
                     'version': sys.modules['fastestimator'].__version__,
                     'start': datetime.now(),
-                    'gpus': torch.cuda.device_count(),
+                    'gpus': get_num_gpus(),
                     'cpus': cpu_count(),
                     'workers': self.system.pipeline.num_process
                 })
@@ -308,8 +311,7 @@ class HistoryRecorder:
             # This could happen if user has multiple trainings running simultaneously, the database becomes corrupted,
             # and then a new training is launched which detects the corrupted database of the old training and re-names
             # the old database before the old job completes.
-            print(f"FastEstimator-Warn: FastEstimator history tracking failed to capture the final status of the "
-                  f"experiment: {err}")
+            warn(f"FastEstimator history tracking failed to capture the final status of the experiment: {err}")
         self.db.close()
 
     def _check_for_restart(self) -> None:
@@ -413,8 +415,8 @@ class HistoryRecorder:
                 self.db.commit()
             except (sql.OperationalError, sql.DatabaseError) as err:
                 self.ident = (-2, -2)  # No threads should match this identity in the future
-                print(f"\nFastEstimator-Warn: There was a problem writing to the FastEstimator history database. Log "
-                      f"capture will be disabled for the rest of this experiment. Error: {err}")
+                warn("There was a problem writing to the FastEstimator history database. Log " +
+                     f"capture will be disabled for the rest of this experiment. Error: {err}")
 
     def flush(self) -> None:
         self.stdout.flush()
@@ -435,9 +437,11 @@ class HistoryReader:
     Args:
         db_path: The path to the database, or None to use the default location.
     """
+    db: sql.Connection
+
     def __init__(self, db_path: Optional[str] = None):
         self.db_path = db_path
-        self.db = None  # sql.Connection
+        self.db = None  # type: ignore
         self.response = None  # List[sql.Row]
 
     def __enter__(self) -> 'HistoryReader':
@@ -610,7 +614,7 @@ class HistoryReader:
         p_log = subparsers.add_parser(
             'log',
             description='Retrieve one or more output logs. This command requires '
-                        'that you currently have experiments selected.',
+            'that you currently have experiments selected.',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
             allow_abbrev=False)
         p_log.add_argument('indices',
@@ -637,8 +641,8 @@ class HistoryReader:
         """
         p_err = subparsers.add_parser(
             'err',
-            description='Retrieve one or more error tracebacks. This command requires '
-                        'that you currently have experiments selected.',
+            description='Retrieve one or more error tracebacks. This command requires that you currently have \
+                experiments selected.',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
             allow_abbrev=False)
         p_err.add_argument('indices',
@@ -656,8 +660,8 @@ class HistoryReader:
         """
         p_vis = subparsers.add_parser(
             'vis',
-            description='Visualize logs for one or more experiments. This command requires '
-                        'that you currently have experiments selected.',
+            description='Visualize logs for one or more experiments. This command requires that you currently '
+            'have experiments selected.',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
             allow_abbrev=False)
         p_vis.add_argument('indices',
@@ -828,7 +832,6 @@ class HistoryReader:
         visualize_logs(experiments,
                        save_path=save_dir,
                        smooth_factor=args['smooth'],
-                       share_legend=args['share_legend'],
                        pretty_names=args['pretty_names'],
                        ignore_metrics=args['ignore'],
                        include_metrics=args['include'])

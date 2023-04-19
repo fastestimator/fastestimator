@@ -16,11 +16,10 @@ import math
 import time
 import unittest
 
-import torch
-
 from fastestimator.test.unittest_util import sample_system_object
 from fastestimator.trace import TrainEssential
 from fastestimator.util.data import Data
+from fastestimator.util.util import get_num_gpus
 
 
 class TestTrainEssential(unittest.TestCase):
@@ -37,7 +36,7 @@ class TestTrainEssential(unittest.TestCase):
     def test_on_begin(self):
         self.train_essential.on_begin(data=self.data)
         with self.subTest('Check number of devices'):
-            self.assertEqual(self.data['num_device'], torch.cuda.device_count())
+            self.assertEqual(self.data['num_device'], get_num_gpus())
         with self.subTest('Check logging interval'):
             self.assertEqual(self.data['logging_interval'], 5)
 

@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:2.9.1-gpu
+FROM tensorflow/tensorflow:2.11.1-gpu
 
 # Resolves a "Release no longer has a Release file" error on apt-get update later
 RUN rm /etc/apt/sources.list.d/cuda.list
@@ -34,7 +34,7 @@ RUN pip install --no-cache-dir \
     ipython \
     ipykernel \
     ipywidgets \
-    papermill \ 
+    papermill \
     traitlets==5.2.2.post1
 
 # specify jupyter_client version To address "ValueError: Duplicate Signature" (https://github.com/jupyter/jupyter_client/issues/541)
@@ -48,7 +48,7 @@ RUN ipython kernel install --user --name nightly_build
 RUN apt-get install -y lsof
 
 # backend dependencies
-RUN pip install torch==1.10.2+cu113 torchvision==0.11.3+cu113 torchaudio==0.10.2+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
+RUN pip install torch==2.0.0+cu118 torchvision==0.15.1+cu118 torchaudio==2.0.1+cu118 -f https://download.pytorch.org/whl/cu118/torch_stable.html
 
 # install FastEstimator
 ARG InstallFE=True

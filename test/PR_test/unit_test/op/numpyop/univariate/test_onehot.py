@@ -36,10 +36,10 @@ class TestOnehot(unittest.TestCase):
 
     def test_label_smoothing(self):
         label_smoothing_input = [2]
-        label_smoothing_output = [np.array([0.025, 0.025, 0.925, 0.025])]
+        label_smoothing_output = [np.array([0.025, 0.025, 0.925, 0.025], dtype=np.float32)]
         op = Onehot(inputs='x', outputs='x', num_classes=4, label_smoothing=0.1)
         data = op.forward(data=label_smoothing_input, state={})
-        np.testing.assert_array_equal(data, label_smoothing_output)
+        np.testing.assert_array_almost_equal(data, label_smoothing_output, decimal=7)
 
     def test_two_d(self):
         two_d_input = [np.ones((2, 2)).astype(np.int8)]

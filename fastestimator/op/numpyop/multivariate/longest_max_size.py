@@ -16,7 +16,7 @@ from typing import Iterable, Optional, Union
 
 import cv2
 from albumentations import BboxParams, KeypointParams
-from albumentations.augmentations import LongestMaxSize as LongestMaxSizeAlb
+from albumentations.augmentations.geometric import LongestMaxSize as LongestMaxSizeAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 from fastestimator.util.traceability_util import traceable

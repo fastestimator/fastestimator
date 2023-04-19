@@ -179,28 +179,25 @@ class TestL2Regularization(unittest.TestCase):
         pytorch_l2 = fe.build(model_fn=MyNet_torch, optimizer_fn=lambda x: torch.optim.SGD(params=x, lr=0.01))
         # Initialize Pytorch pipeline
         pipeline = fe.Pipeline(train_data=t_d,
-                        eval_data=eval_data,
-                        batch_size=128,
-                        ops=[ExpandDims(inputs="x", outputs="x", axis=0),
-                                Minmax(inputs="x", outputs="x")])
+                               eval_data=eval_data,
+                               batch_size=128,
+                               ops=[ExpandDims(inputs="x", outputs="x", axis=0), Minmax(inputs="x", outputs="x")])
         # Initialize Pytorch Network
         network_l2 = fe.Network(ops=[
             ModelOp(model=pytorch_l2, inputs="x", outputs="y_pred"),
             CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),
-            L2Regularizaton(inputs="ce",outputs="l2",model=pytorch_l2,beta = self.beta),
+            L2Regularizaton(inputs="ce", outputs="l2", model=pytorch_l2, beta=self.beta),
             UpdateOp(model=pytorch_l2, loss_name="l2")
         ])
         # step 3
-        traces = [
-            Accuracy(true_key="y", pred_key="y_pred")
-        ]
+        traces = [Accuracy(true_key="y", pred_key="y_pred")]
         # Initialize Pytorch estimator
         estimator_l2 = fe.Estimator(pipeline=pipeline,
-                            network=network_l2,
-                            epochs=1,
-                            traces=traces,
-                            train_steps_per_epoch=1,
-                            monitor_names=["ce","l2"])
+                                    network=network_l2,
+                                    epochs=1,
+                                    traces=traces,
+                                    train_steps_per_epoch=1,
+                                    monitor_names=["ce", "l2"])
         print('********************************Pytorch L2 Regularization training************************************')
         estimator_l2.fit()
 
@@ -220,22 +217,19 @@ class TestL2Regularization(unittest.TestCase):
         network = fe.Network(ops=[
             ModelOp(model=model_tf, inputs="x", outputs="y_pred"),
             CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),
-            L2Regularizaton(inputs="ce",outputs="l2",model=model_tf,beta = self.beta),
+            L2Regularizaton(inputs="ce", outputs="l2", model=model_tf, beta=self.beta),
             UpdateOp(model=model_tf, loss_name="l2")
         ])
         # step 3
-        traces = [
-            Accuracy(true_key="y", pred_key="y_pred")
-        ]
+        traces = [Accuracy(true_key="y", pred_key="y_pred")]
         estimator = fe.Estimator(pipeline=pipeline,
-                                network=network,
-                                epochs=1,
-                                traces=traces,
-                                train_steps_per_epoch=1,
-                                monitor_names=["ce","l2"])
+                                 network=network,
+                                 epochs=1,
+                                 traces=traces,
+                                 train_steps_per_epoch=1,
+                                 monitor_names=["ce", "l2"])
         print('*******************************Tensorflow L2 Regularization training***********************************')
         estimator.fit()
-
 
         # Converting TF weights to numpy
         tf_wt = []
@@ -245,7 +239,7 @@ class TestL2Regularization(unittest.TestCase):
 
         # testing weights
         count = 0
-        for tf_t,tr in zip(tf_wt,torch_wt):
-            if np.sum(np.abs(tf_t-np.transpose(tr))) < (10**-5):
+        for tf_t, tr in zip(tf_wt, torch_wt):
+            if np.sum(np.abs(tf_t - np.transpose(tr))) < (10**-5):
                 count += 1
         self.assertTrue(count == 6)

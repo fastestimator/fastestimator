@@ -28,7 +28,7 @@ from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.adapt import LRScheduler
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
-from fastestimator.util import get_num_devices
+from fastestimator.util import get_device, get_num_devices
 
 
 class BasicBlock(nn.Module):
@@ -63,10 +63,10 @@ class BasicBlock(nn.Module):
         shortcut_channel = shortcut.size()[1]
         if residual_channel != shortcut_channel:
             padding = torch.autograd.Variable(
-                torch.cuda.FloatTensor(batch_size,
-                                       residual_channel - shortcut_channel,
-                                       featuremap_size[0],
-                                       featuremap_size[1]).fill_(0))
+                torch.zeros(
+                    size=(batch_size, residual_channel - shortcut_channel, featuremap_size[0], featuremap_size[1]),
+                    dtype=torch.float32,
+                    device=get_device()))
             out += torch.cat((shortcut, padding), 1)
         else:
             out += shortcut
@@ -111,17 +111,11 @@ class Bottleneck(nn.Module):
         shortcut_channel = shortcut.size()[1]
 
         if residual_channel != shortcut_channel:
-            if torch.cuda.is_available():
-                pad_var = torch.cuda.FloatTensor(batch_size,
-                                                 residual_channel - shortcut_channel,
-                                                 featuremap_size[0],
-                                                 featuremap_size[1]).fill_(0)
-            else:
-                pad_var = torch.FloatTensor(batch_size,
-                                            residual_channel - shortcut_channel,
-                                            featuremap_size[0],
-                                            featuremap_size[1]).fill_(0)
-            padding = torch.autograd.Variable(pad_var)
+            padding = torch.autograd.Variable(
+                torch.zeros(
+                    size=(batch_size, residual_channel - shortcut_channel, featuremap_size[0], featuremap_size[1]),
+                    dtype=torch.float32,
+                    device=get_device()))
             out += torch.cat((shortcut, padding), 1)
         else:
             out += shortcut

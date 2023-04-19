@@ -17,7 +17,7 @@ import unittest
 import numpy as np
 from pylatex.utils import NoEscape
 
-from fastestimator.schedule.lr_shedule import cosine_decay
+from fastestimator.schedule.lr_schedule import cosine_decay
 from fastestimator.util.latex_util import ContainerList, HrefFEID
 from fastestimator.util.traceability_util import _parse_lambda, _parse_lambda_fallback, _trace_value, traceable
 from fastestimator.util.base_util import Flag

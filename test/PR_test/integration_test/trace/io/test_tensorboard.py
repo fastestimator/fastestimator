@@ -141,6 +141,7 @@ class TestTensorboard(unittest.TestCase):
         if os.path.exists(self.train_path):
             shutil.rmtree(self.train_path)
         tensorboard.on_batch_end(data=self.torch_data)
+        tensorboard.writer.flush()
         filepath = getfilepath()
         for e in tf.compat.v1.train.summary_iterator(filepath):
             for v in e.summary.value:
