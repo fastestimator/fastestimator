@@ -30,7 +30,7 @@ RUN pip install --no-cache-dir \
     ipython \
     ipykernel \
     ipywidgets \
-    papermill \ 
+    papermill \
     traitlets==5.2.2.post1
 
 # specify jupyter_client version To address "ValueError: Duplicate Signature" (https://github.com/jupyter/jupyter_client/issues/541)
@@ -48,4 +48,4 @@ RUN pip install torch==1.10.2+cpu torchvision==0.11.3+cpu torchaudio==0.10.2+cpu
 
 # install FastEstimator
 ARG InstallFE=True
-RUN if [ $InstallFE = "True" ]; then pip install fastestimator; fi
+RUN if [ $InstallFE = "True" ]; then pip install fastestimator==1.5.1; fi

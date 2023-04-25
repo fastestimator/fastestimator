@@ -13,8 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import inspect
-import random
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 
@@ -25,11 +24,12 @@ from fastestimator.util.traceability_util import traceable
 @traceable()
 class OneOf(NumpyOp):
     """Perform one of several possible NumpyOps.
-
     Args:
-        *numpy_ops: A list of ops to choose between with uniform probability.
+        *numpy_ops: Ops to choose between with a specified (or uniform) probability.
+        probs: List of probabilities, must sum to 1. When None, the probabilities will be equally distributed.
     """
-    def __init__(self, *numpy_ops: NumpyOp) -> None:
+
+    def __init__(self, *numpy_ops: NumpyOp, probs: Optional[List[float]] = None) -> None:
         inputs = numpy_ops[0].inputs
         outputs = numpy_ops[0].outputs
         mode = numpy_ops[0].mode
@@ -45,19 +45,20 @@ class OneOf(NumpyOp):
             assert self.out_list == op.out_list, "All ops within OneOf must share the same output configuration"
             assert mode == op.mode, "All ops within a OneOf must share the same mode"
             assert ds_id == op.ds_id, "All ops within a OneOf must share the same ds_id"
+        if probs:
+            assert len(numpy_ops) == len(probs), "The number of probabilities do not match with number of Operators"
+            assert abs(sum(probs) - 1) < 1e-8, "Probabilities must sum to 1"
         self.ops = numpy_ops
+        self.probs = probs
 
     def __getstate__(self) -> Dict[str, List[Dict[Any, Any]]]:
         return {'ops': [elem.__getstate__() if hasattr(elem, '__getstate__') else {} for elem in self.ops]}
 
     def set_rua_level(self, magnitude_coef: float) -> None:
         """Set the augmentation intensity based on the magnitude_coef.
-
         This method is specifically designed to be invoked by the RUA Op.
-
         Args:
             magnitude_coef: The desired augmentation intensity (range [0-1]).
-
         Raises:
             AttributeError: If ops don't have a 'set_rua_level' method.
         """
@@ -72,17 +73,14 @@ class OneOf(NumpyOp):
     def forward(self, data: Union[np.ndarray, List[np.ndarray]],
                 state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
         """Execute a randomly selected op from the list of `numpy_ops`.
-
         Args:
             data: The information to be passed to one of the wrapped operators.
             state: Information about the current execution context, for example {"mode": "train"}.
-
         Returns:
             The `data` after application of one of the available numpyOps.
         """
-        return random.choice(self.ops).forward(data, state)
+        return np.random.choice(self.ops, p=self.probs).forward(data, state)
 
-    def forward_batch(self,
-                      data: Union[np.ndarray, List[np.ndarray]],
+    def forward_batch(self, data: Union[np.ndarray, List[np.ndarray]],
                       state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
-        return random.choice(self.ops).forward_batch(data, state)
+        return np.random.choice(self.ops, p=self.probs).forward_batch(data, state)
