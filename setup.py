@@ -49,7 +49,7 @@ def get_dependency():
         'dot2tex==2.11.3',
         'gdown==3.12.0',
         'PySocks==1.7.1',
-        'uncertainty-calibration==0.0.9',
+        'uncertainty-calibration==0.1.4',
         'dill==0.3.4',
         'scikit-image==0.19.1',
         'prettytable==3.1.0',
