@@ -86,27 +86,23 @@ Docker containers create isolated virtual environments that share resources with
 
 * Stable:
   * GPU:
-
-        ``` bash
-        docker pull fastestimator/fastestimator:latest-gpu
-        ```
+      ``` bash
+      docker pull fastestimator/fastestimator:latest-gpu
+      ```
   * CPU:
-
-        ``` bash
-        docker pull fastestimator/fastestimator:latest-cpu
-        ```
+      ``` bash
+      docker pull fastestimator/fastestimator:latest-cpu
+      ```
 
 * Nighly:
   * GPU:
-
-        ``` bash
-        docker pull fastestimator/fastestimator:nightly-gpu
-        ```
+      ``` bash
+      docker pull fastestimator/fastestimator:nightly-gpu
+      ```
   * CPU:
-
-        ``` bash
-        docker pull fastestimator/fastestimator:nightly-cpu
-        ```
+      ``` bash
+      docker pull fastestimator/fastestimator:nightly-cpu
+      ```
 
 ## Useful Links
 
