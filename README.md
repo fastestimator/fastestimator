@@ -17,22 +17,26 @@ FastEstimator is a high-level deep learning library built on TensorFlow2 and PyT
 
 For more information, please visit our [website](https://www.fastestimator.org/).
 
+## Support Matrix
+
+| FastEstimator  | Python | TensorFlow | PyTorch | CUDA |  Instruction |
+| -------------  | ------  | --------- | ------- | ---- | ----------- |
+| 1.6  | 3.8-3.10  | 2.11.1 | 2.0.0 | 11.8 | master branch |
+| 1.5  | 3.7-3.9  | 2.9.1 | 1.10.2 | 11.0 | [r1.5 branch](https://github.com/fastestimator/fastestimator/tree/r1.5) |
+| 1.4  | 3.6-3.8  | 2.4.1 | 1.7.1 | 11.0 | [r1.4 branch](https://github.com/fastestimator/fastestimator/tree/r1.4) |
+| 1.3  | 3.6-3.8  | 2.4.1 | 1.7.1 | 11.0 | [r1.3 branch](https://github.com/fastestimator/fastestimator/tree/r1.3) |
+| 1.2  | 3.6-3.8  | 2.4.1 | 1.7.1 | 11.0 | [r1.2 branch](https://github.com/fastestimator/fastestimator/tree/r1.2) |
+| 1.1  | 3.6-3.8  | 2.3.0 | 1.6.0 | 10.1 | [r1.1 branch](https://github.com/fastestimator/fastestimator/tree/r1.1) |
+
+
+
 ## Installation
-
-### Prerequisites
-
-* Python >=3.8
-* Nvidia Driver >= 450 (GPU only)
-* CUDA >= 11.8 (GPU only)
-
 ### 1. Install Dependencies
-
 * Install TensorFlow
   * Linux:
-
-        ```bash
-        pip install tensorflow==2.11.1
-        ```
+      ```bash
+      pip install tensorflow==2.11.1
+      ```
   * Mac (M1/M2):
         Please follow this [installation guide](https://github.com/fastestimator/fastestimator/blob/master/installation_docs/mac_installation.md)
 
@@ -41,47 +45,33 @@ For more information, please visit our [website](https://www.fastestimator.org/)
 
 * Install PyTorch
   * CPU:
-
-        ```bash
-        pip install torch==2.0.0+cpu torchvision==0.15.1+cpu torchaudio==2.0.1+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
-        ```
+      ```bash
+      pip install torch==2.0.0+cpu torchvision==0.15.1+cpu torchaudio==2.0.1+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
+      ```
   * GPU:
-
-        ```bash
-        RUN pip install torch==2.0.0+cu118 torchvision==0.15.1+cu118 torchaudio==2.0.1+cu118 -f <https://download.pytorch.org/whl/cu118/torch_stable.html>
-        ```
+      ```bash
+      RUN pip install torch==2.0.0+cu118 torchvision==0.15.1+cu118 torchaudio==2.0.1+cu118 -f <https://download.pytorch.org/whl/cu118/torch_stable.html>
+      ```
 
 * Extra Dependencies:
   * Windows:
-
     * Install Build Tools for Visual Studio 2019 [here](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2019).
 
     * Install latest Visual C++ redistributable [here](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads) and choose x86 for 32 bit OS, x64 for 64 bit OS.
 
   * Linux:
-
-        ``` bash
-        apt-get install libglib2.0-0 libsm6 libxrender1 libxext6
-        ```
+      ``` bash
+      apt-get install libglib2.0-0 libsm6 libxrender1 libxext6
+      ```
 
   * Mac:
-
     * Please follow this [installation guide](https://github.com/fastestimator/fastestimator/blob/master/installation_docs/mac_installation.md)
 
 ### 2. Install FastEstimator
 
-* Stable (Linux/Mac):
-
+* Stable:
     ``` bash
     pip install fastestimator
-    ```
-
-* Stable (Windows):
-
-    First download zip file from [available releases](https://github.com/fastestimator/fastestimator/releases)
-
-    ``` bash
-    pip install fastestimator-x.x.x.zip
     ```
 
 * Nightly (Linux/Mac):
@@ -90,41 +80,29 @@ For more information, please visit our [website](https://www.fastestimator.org/)
     pip install fastestimator-nightly
     ```
 
-* Nightly (Windows):
-
-    First download zip file [here](https://github.com/fastestimator/fastestimator/archive/master.zip)
-
-    ``` bash
-    pip install fastestimator-master.zip
-    ```
-
 ## Docker Hub
 
 Docker containers create isolated virtual environments that share resources with a host machine. Docker provides an easy way to set up a FastEstimator environment. You can simply pull our image from [Docker Hub](https://hub.docker.com/r/fastestimator/fastestimator/tags) and get started:
 
 * Stable:
   * GPU:
-
-        ``` bash
-        docker pull fastestimator/fastestimator:latest-gpu
-        ```
+      ``` bash
+      docker pull fastestimator/fastestimator:latest-gpu
+      ```
   * CPU:
-
-        ``` bash
-        docker pull fastestimator/fastestimator:latest-cpu
-        ```
+      ``` bash
+      docker pull fastestimator/fastestimator:latest-cpu
+      ```
 
 * Nighly:
   * GPU:
-
-        ``` bash
-        docker pull fastestimator/fastestimator:nightly-gpu
-        ```
+      ``` bash
+      docker pull fastestimator/fastestimator:nightly-gpu
+      ```
   * CPU:
-
-        ``` bash
-        docker pull fastestimator/fastestimator:nightly-cpu
-        ```
+      ``` bash
+      docker pull fastestimator/fastestimator:nightly-cpu
+      ```
 
 ## Useful Links
 
