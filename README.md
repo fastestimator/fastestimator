@@ -21,8 +21,8 @@ For more information, please visit our [website](https://www.fastestimator.org/)
 
 | FastEstimator  | Python | TensorFlow | PyTorch | CUDA |  Instruction |
 | -------------  | ------  | --------- | ------- | ---- | ----------- |
-| 1.6  | 3.8-3.10  | 2.11.1 | 2.0.0 | 11.8 | master branch |
-| 1.5  | 3.7-3.9  | 2.9.1 | 1.10.2 | 11.0 | [r1.5 branch](https://github.com/fastestimator/fastestimator/tree/r1.5) |
+| Nightly  | 3.8-3.10  | 2.11.1 | 2.0.0 | 11.8 | master branch |
+| 1.5 (Stable)  | 3.7-3.9  | 2.9.1 | 1.10.2 | 11.0 | [r1.5 branch](https://github.com/fastestimator/fastestimator/tree/r1.5) |
 | 1.4  | 3.6-3.8  | 2.4.1 | 1.7.1 | 11.0 | [r1.4 branch](https://github.com/fastestimator/fastestimator/tree/r1.4) |
 | 1.3  | 3.6-3.8  | 2.4.1 | 1.7.1 | 11.0 | [r1.3 branch](https://github.com/fastestimator/fastestimator/tree/r1.3) |
 | 1.2  | 3.6-3.8  | 2.4.1 | 1.7.1 | 11.0 | [r1.2 branch](https://github.com/fastestimator/fastestimator/tree/r1.2) |
