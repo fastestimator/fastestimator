@@ -50,7 +50,7 @@ For more information, please visit our [website](https://www.fastestimator.org/)
       ```
   * GPU:
       ```bash
-      RUN pip install torch==2.0.0+cu118 torchvision==0.15.1+cu118 torchaudio==2.0.1+cu118 -f <https://download.pytorch.org/whl/cu118/torch_stable.html>
+      pip install torch==2.0.0+cu118 torchvision==0.15.1+cu118 torchaudio==2.0.1+cu118 -f <https://download.pytorch.org/whl/cu118/torch_stable.html>
       ```
 
 * Extra Dependencies:
