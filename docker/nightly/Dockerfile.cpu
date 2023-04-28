@@ -27,7 +27,7 @@ RUN pip install --upgrade pip setuptools==51.3.3
 
 # nightly test related packages
 RUN pip install --no-cache-dir \
-    ipython \
+    ipython==8.12.0 \
     ipykernel \
     ipywidgets \
     papermill \
