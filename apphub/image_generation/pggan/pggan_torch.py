@@ -81,7 +81,7 @@ def mini_batch_std(x, group_size=4, eps=1e-8):
     b, c, h, w = x.shape
     group_size = min(group_size, b)
     y = x.reshape((group_size, -1, c, h, w))  # [G, M, C, H, W]
-    y -= torch.mean(y, dim=0, keepdim=True)  # [G, M, C, H, W]
+    y = y - torch.mean(y, dim=0, keepdim=True)  # [G, M, C, H, W], cannot use -= due to in-place operation
     y = torch.mean(y**2, axis=0)  # [M, C, H, W]
     y = torch.sqrt(y + eps)  # [M, C, H, W]
     y = torch.mean(y, dim=(1, 2, 3), keepdim=True)  # [M, 1, 1, 1]
@@ -398,11 +398,7 @@ class ImageSaving(Trace):
             print("on epoch {}, saving image to {}".format(self.system.epoch_idx, self.save_dir))
 
 
-def get_estimator(target_size=128,
-                  epochs=55,
-                  save_dir=tempfile.mkdtemp(),
-                  train_steps_per_epoch=None,
-                  data_dir=None):
+def get_estimator(target_size=128, epochs=55, save_dir=tempfile.mkdtemp(), train_steps_per_epoch=None, data_dir=None):
     # assert growth parameters
     num_grow = np.log2(target_size) - 2
     assert num_grow >= 1 and num_grow % 1 == 0, "need exponential of 2 and greater than 8 as target size"
