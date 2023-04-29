@@ -449,12 +449,13 @@ class Traceability(Trace):
                             # noinspection PyBroadException
                             try:
                                 model.to(inputs.device)
-                                graph = draw_graph(model,
-                                                   input_data=inputs,
-                                                   device=inputs.device,
-                                                   graph_dir='TB',
-                                                   expand_nested=True,
-                                                   depth=7).visual_graph
+                                graph = draw_graph(
+                                    model.module if isinstance(model, torch.nn.parallel.DataParallel) else model,
+                                    input_data=inputs,
+                                    device=inputs.device,
+                                    graph_dir='TB',
+                                    expand_nested=True,
+                                    depth=7).visual_graph
                                 # LaTeX \maxdim is around 575cm (226 inches), so the image must have max dimension less
                                 # than 226 inches. However, the 'size' parameter doesn't account for the whole node
                                 # height, so set the limit lower (100 inches) to leave some wiggle room.
