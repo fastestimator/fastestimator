@@ -1,4 +1,4 @@
-# Copyright 2022 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2023 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -44,11 +44,48 @@ dataset_ids = {
 
 
 def load_data(
+    dataset_name: str,
     root_dir: str = None,
-    dataset_name: str = None,
     image_key: str = "x",
     label_key: str = "y",
 ) -> Tuple[NumpyDataset, NumpyDataset, NumpyDataset]:
+    """
+    Download and load the medmnist data. Medmnist has 18 datasets. Here is the list of datasets available in Medmnist.
+    [
+        'chestmnist',
+        'adrenalmnist3d',
+        'bloodmnist',
+        'breastmnist',
+        'dermamnist',
+        'fracturemnist3d',
+        'nodulemnist3d',
+        'octmnist',
+        'organamnist',
+        'organcmnist',
+        'organmnist3d',
+        'organsmnist',
+        'pathmnist',
+        'pneumoniamnist',
+        'retinamnist',
+        'synapsemnist3d',
+        'tissuemnist',
+        'vesselmnist3d'
+    ]
+    For more details on the dataset, please check https://medmnist.com, https://zenodo.org/record/6496656
+    
+    Args:
+        dataset_name (str): Name of the dataset to download and load.
+        root_dir (str, optional): The path to store the downloaded data. When `path` is not provided, the data will be saved into
+            `fastestimator_data` under the user's home directory. Defaults to None.
+        image_key (str, optional): The key for image. Defaults to "x".
+        label_key (str, optional): The key for label. Defaults to "y".
+
+    Raises:
+        ValueError: if the dataset_name is invalid
+
+    Returns:
+        Tuple[NumpyDataset, NumpyDataset, NumpyDataset]: returns a tuple of traing, val and test data.
+    """
     if dataset_name not in dataset_ids:
         raise ValueError("Invalid value for dataset_name.")
 
