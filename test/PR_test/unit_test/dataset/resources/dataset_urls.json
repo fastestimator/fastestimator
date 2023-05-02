@@ -44,6 +44,24 @@
     "tednmt": "http://www.phontron.com/data/qi18naacl-dataset.tar.gz",
     "tiny_imagenet": "http://cs231n.stanford.edu/tiny-imagenet-200.zip",
     "pascal_voc2012": "https://drive.google.com/uc?id=1jeGqQUNxClNoQgp7HxbRvOvkVWvkQCKl&export=download&confirm=t",
-    "pathmnist": "https://drive.google.com/uc?id=12He-AovBA5ReIg1snhA6Jm2jQCvKKYp7&export=download&confirm=t",
-    "chestmnist": "https://drive.google.com/uc?id=1lGZtFjlviRf_vwmxB4NgApjCdfDuh8pk&export=download&confirm=t"
+    "medmnist": [
+        "https://drive.google.com/uc?id=1lGZtFjlviRf_vwmxB4NgApjCdfDuh8pk&export=download&confirm=t",
+        "https://drive.google.com/uc?id=1E__zT_PqXlaiyW3r6Ii98UVVv5-nDZ_q&export=download&confirm=t",
+        "https://drive.google.com/uc?id=17r9NENUnUoqnWZ-zJaveLU40R746A-ul&export=download&confirm=t",
+        "https://drive.google.com/uc?id=1E3fWybVlOXSIjg_kFSQ-nwOikLgrbsJc&export=download&confirm=t",
+        "https://drive.google.com/uc?id=1k-vw5otV5rCQLVQKyxmo1mhI3KqDbwU5&export=download&confirm=t",
+        "https://drive.google.com/uc?id=104OYiONKAsN2O-VeVGS7ReXZI4GtNsZk&export=download&confirm=t",
+        "https://drive.google.com/uc?id=1krf_Uv-bA5CEt_dCD6h8xJbzZk9ETWLU&export=download&confirm=t",
+        "https://drive.google.com/uc?id=1yRhEBDQwHu5jSnrzIm87Cazns3Eesv4b&export=download&confirm=t",
+        "https://drive.google.com/uc?id=1yRhEBDQwHu5jSnrzIm87Cazns3Eesv4b&export=download&confirm=t",
+        "https://drive.google.com/uc?id=1GqXyaV6arJq0O-3Fn2hvBw77MG9fHeoz&export=download&confirm=t",
+        "https://drive.google.com/uc?id=1RQiHLj35u3m6GCiBKJFnb9VH76u7yRi0&export=download&confirm=t",
+        "https://drive.google.com/uc?id=1spWIVxKaLvWAxLHGLSr0IJJBSm0MDBB4&export=download&confirm=t",
+        "https://drive.google.com/uc?id=12He-AovBA5ReIg1snhA6Jm2jQCvKKYp7&export=download&confirm=t",
+        "https://drive.google.com/uc?id=1ObI6UzRYZby9YCmk53m1WCXo747wzNqT&export=download&confirm=t",
+        "https://drive.google.com/uc?id=1dugDJx_Z9nvtbD9SidxkVjgvysA93IG7&export=download&confirm=t",
+        "https://drive.google.com/uc?id=1JCBppD-bCYQhjwufJ63OS8XgMaT3sRv5&export=download&confirm=t",
+        "https://drive.google.com/uc?id=1M5wec6b-iiLPjVs3MrCrAlKCxwjuEL2z&export=download&confirm=t",
+        "https://drive.google.com/uc?id=1orrps7d-SKB4kFPV0jaN3r_jfYpDtGpP&export=download&confirm=t"
+    ]
 }
