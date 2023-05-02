@@ -43,5 +43,7 @@
     "svhn_cropped_test": "http://ufldl.stanford.edu/housenumbers/test_32x32.mat",
     "tednmt": "http://www.phontron.com/data/qi18naacl-dataset.tar.gz",
     "tiny_imagenet": "http://cs231n.stanford.edu/tiny-imagenet-200.zip",
-    "pascal_voc2012": "https://drive.google.com/uc?id=1jeGqQUNxClNoQgp7HxbRvOvkVWvkQCKl&export=download&confirm=t"
+    "pascal_voc2012": "https://drive.google.com/uc?id=1jeGqQUNxClNoQgp7HxbRvOvkVWvkQCKl&export=download&confirm=t",
+    "pathmnist": "https://drive.google.com/uc?id=12He-AovBA5ReIg1snhA6Jm2jQCvKKYp7&export=download&confirm=t",
+    "chestmnist": "https://drive.google.com/uc?id=1lGZtFjlviRf_vwmxB4NgApjCdfDuh8pk&export=download&confirm=t"
 }
