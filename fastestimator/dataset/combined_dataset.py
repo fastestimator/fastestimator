@@ -13,11 +13,11 @@
 # limitations under the License.
 # ==============================================================================
 
+
 class CombinedDataset:
     def __init__(self, datasets: list) -> None:
         # Potential checks
-            # 1 check if datasets is empty or not
-            # 2 check if dataset is a type of pytorch dataset
+        # -- check if dataset is a type of pytorch dataset
         if len(datasets) < 2:
             raise AssertionError("Please provide atleast 2 datasets.")
         self.datasets = datasets
@@ -27,15 +27,14 @@ class CombinedDataset:
             if ds[0].keys() != keys:
                 raise KeyError("All datasets should have same keys.")
 
-
     def __len__(self):
         return sum([len(ds) for ds in self.datasets])
 
     def __getitem__(self, idx):
-        start = 0 
+        start = 0
         end = 0
         for ds in self.datasets:
             end += len(ds)
-            if idx >= start and idx< end:
-                return ds[idx-start]
+            if idx >= start and idx < end:
+                return ds[idx - start]
             start += end
