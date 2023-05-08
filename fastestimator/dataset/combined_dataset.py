@@ -14,6 +14,9 @@
 # ==============================================================================
 
 
+from typing import Any, Dict, Union
+
+
 class CombinedDataset:
     def __init__(self, datasets: list) -> None:
         """
@@ -39,14 +42,14 @@ class CombinedDataset:
 
     def __len__(self):
         """
-        Return combined len of datasets
+        Return combined length of datasets
 
         Returns:
             int: sum of the lengths of all datasets.
         """
         return sum([len(ds) for ds in self.datasets])
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int) -> Union[Dict[str, Any], None]:
         """
         Return data based on the input id.
 
