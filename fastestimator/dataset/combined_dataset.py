@@ -16,6 +16,16 @@
 
 class CombinedDataset:
     def __init__(self, datasets: list) -> None:
+        """
+        Combines a list of PyTorch datasets
+
+        Args:
+            datasets (list): List of PyTorch Datasets
+
+        Raises:
+            AssertionError: raise exception when the input list has less than 2 datasets.
+            KeyError: raise exception when the datasets does not have same keys.
+        """
         # Potential checks
         # -- check if dataset is a type of pytorch dataset
         if len(datasets) < 2:
@@ -28,11 +38,30 @@ class CombinedDataset:
                 raise KeyError("All datasets should have same keys.")
 
     def __len__(self):
+        """
+        Return combined len of datasets
+
+        Returns:
+            int: sum of the lengths of all datasets.
+        """
         return sum([len(ds) for ds in self.datasets])
 
     def __getitem__(self, idx):
+        """
+        Return data based on the input id.
+
+        Args:
+            idx (int): index of the data item to be returned
+
+        Returns:
+            dict: dict at the index `idx`
+        """
         start = 0
         end = 0
+        if idx >= len(self):
+            raise AssertionError(
+                "Index is out of range of the length of the dataset. Please provide a valid index."
+            )
         for ds in self.datasets:
             end += len(ds)
             if idx >= start and idx < end:
