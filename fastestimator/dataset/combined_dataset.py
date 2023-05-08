@@ -16,8 +16,10 @@
 
 from typing import Any, Dict, Union
 
+from fastestimator.dataset.dataset import FEDataset
 
-class CombinedDataset:
+
+class CombinedDataset(FEDataset):
     def __init__(self, datasets: list) -> None:
         """
         Combines a list of PyTorch datasets
