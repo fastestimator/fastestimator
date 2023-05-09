@@ -17,26 +17,32 @@ from typing import TYPE_CHECKING
 
 import lazy_loader as lazy
 
-__getattr__, __dir__, __all__ = lazy.attach(__name__,
-                                            submodules={'data'},
-                                            submod_attrs={'batch_dataset': ['BatchDataset'],
-                                                          'csv_dataset': ['CSVDataset'],
-                                                          'dir_dataset': ['DirDataset'],
-                                                          'generator_dataset': ['GeneratorDataset'],
-                                                          'labeled_dir_dataset': ['LabeledDirDataset'],
-                                                          'numpy_dataset': ['NumpyDataset'],
-                                                          'pickle_dataset': ['PickleDataset'],
-                                                          'siamese_dir_dataset': ['SiameseDirDataset'],
-                                                          'extend_dataset': ['ExtendDataset'], })
+__getattr__, __dir__, __all__ = lazy.attach(
+    __name__,
+    submodules={"data"},
+    submod_attrs={
+        "batch_dataset": ["BatchDataset"],
+        "csv_dataset": ["CSVDataset"],
+        "dir_dataset": ["DirDataset"],
+        "generator_dataset": ["GeneratorDataset"],
+        "labeled_dir_dataset": ["LabeledDirDataset"],
+        "numpy_dataset": ["NumpyDataset"],
+        "pickle_dataset": ["PickleDataset"],
+        "siamese_dir_dataset": ["SiameseDirDataset"],
+        "extend_dataset": ["ExtendDataset"],
+        "combined_dataset": ["CombinedDataset"],
+    },
+)
 
 if TYPE_CHECKING:
     from fastestimator.dataset import data
     from fastestimator.dataset.batch_dataset import BatchDataset
+    from fastestimator.dataset.combined_dataset import CombinedDataset
     from fastestimator.dataset.csv_dataset import CSVDataset
     from fastestimator.dataset.dir_dataset import DirDataset
+    from fastestimator.dataset.extend_dataset import ExtendDataset
     from fastestimator.dataset.generator_dataset import GeneratorDataset
     from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset
     from fastestimator.dataset.numpy_dataset import NumpyDataset
     from fastestimator.dataset.pickle_dataset import PickleDataset
     from fastestimator.dataset.siamese_dir_dataset import SiameseDirDataset
-    from fastestimator.dataset.extend_dataset import ExtendDataset
