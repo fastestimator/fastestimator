@@ -16,6 +16,8 @@
 
 from typing import Any, Dict, Union
 
+from torch.utils.data import Dataset
+
 from fastestimator.dataset.dataset import FEDataset
 
 
@@ -31,18 +33,23 @@ class CombinedDataset(FEDataset):
             AssertionError: raise exception when the input list has less than 2 datasets.
             KeyError: raise exception when the datasets does not have same keys.
         """
-        # Potential checks
-        # -- check if dataset is a type of pytorch dataset
-        if len(datasets) < 2:
-            raise AssertionError("Please provide atleast 2 datasets.")
+        if not isinstance(datasets, list) and len(datasets) < 2:
+            raise AssertionError("Please provide a list of atleast 2 datasets.")
         self.datasets = datasets
-        # match the keys of 0th index item of all the datasets
-        keys = datasets[0][0].keys()
-        for ds in datasets[1:]:
-            if ds[0].keys() != keys:
-                raise KeyError("All datasets should have same keys.")
+        keys = None
 
-    def __len__(self):
+        for ds in datasets:
+            if isinstance(ds, Dataset) and isinstance(ds[0], dict):
+                if keys is None:
+                    keys = ds[0].keys()
+                elif ds[0].keys() != keys:
+                    raise KeyError("All datasets should have same keys.")
+            else:
+                raise AssertionError(
+                    "Each dataset should be a type of PyTorch Dataset and should return a dictionary."
+                )
+
+    def __len__(self) -> int:
         """
         Return combined length of datasets
 
