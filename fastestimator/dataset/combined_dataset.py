@@ -19,8 +19,10 @@ from typing import Any, Dict, Union
 from torch.utils.data import Dataset
 
 from fastestimator.dataset.dataset import FEDataset
+from fastestimator.util.traceability_util import traceable
 
 
+@traceable()
 class CombinedDataset(FEDataset):
     def __init__(self, datasets: list) -> None:
         """
@@ -33,7 +35,7 @@ class CombinedDataset(FEDataset):
             AssertionError: raise exception when the input list has less than 2 datasets.
             KeyError: raise exception when the datasets does not have same keys.
         """
-        if not isinstance(datasets, list) and len(datasets) < 2:
+        if not isinstance(datasets, list) or len(datasets) < 2:
             raise AssertionError("Please provide a list of atleast 2 datasets.")
         self.datasets = datasets
         keys = None
