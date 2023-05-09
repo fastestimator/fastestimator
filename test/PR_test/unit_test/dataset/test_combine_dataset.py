@@ -16,6 +16,11 @@ def inputs2():
         yield {"x1": np.random.rand(16), "y1": np.random.randint(16)}
 
 
+def inputs3():
+    while True:
+        yield (np.random.rand(16), np.random.randint(16))
+
+
 class TestCombinedDataset(unittest.TestCase):
     def test_dataset(self):
         ds1 = GeneratorDataset(generator=inputs(), samples_per_epoch=10)
@@ -64,4 +69,14 @@ class TestCombinedDataset(unittest.TestCase):
             combined_ds = fe.dataset.CombinedDataset(datasets=[ds1, ds2])
         self.assertEqual(
             "All datasets should have same keys.", err_msg.exception.args[0]
+        )
+
+    def test_invalid_return_type_dataset(self):
+        ds1 = GeneratorDataset(generator=inputs(), samples_per_epoch=10)
+        ds2 = GeneratorDataset(generator=inputs3(), samples_per_epoch=5)
+        with self.assertRaises(AssertionError) as err_msg:
+            combined_ds = fe.dataset.CombinedDataset(datasets=[ds1, ds2])
+        self.assertEqual(
+            "Each dataset should be a type of PyTorch Dataset and should return a dictionary.",
+            str(err_msg.exception),
         )
