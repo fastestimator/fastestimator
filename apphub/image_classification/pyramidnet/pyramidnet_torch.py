@@ -28,7 +28,7 @@ from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.adapt import LRScheduler
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Accuracy
-from fastestimator.util import get_device, get_num_devices
+from fastestimator.util import get_num_devices
 
 
 class BasicBlock(nn.Module):
@@ -66,7 +66,7 @@ class BasicBlock(nn.Module):
                 torch.zeros(
                     size=(batch_size, residual_channel - shortcut_channel, featuremap_size[0], featuremap_size[1]),
                     dtype=torch.float32,
-                    device=get_device()))
+                    device=shortcut.device))
             out += torch.cat((shortcut, padding), 1)
         else:
             out += shortcut
@@ -115,7 +115,7 @@ class Bottleneck(nn.Module):
                 torch.zeros(
                     size=(batch_size, residual_channel - shortcut_channel, featuremap_size[0], featuremap_size[1]),
                     dtype=torch.float32,
-                    device=get_device()))
+                    device=shortcut.device))
             out += torch.cat((shortcut, padding), 1)
         else:
             out += shortcut
