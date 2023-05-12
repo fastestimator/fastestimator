@@ -263,7 +263,9 @@ class Estimator:
                         if isinstance(loader, tf.data.Dataset):
                             batch = list(loader.take(1))[0]
                         else:
-                            batch = next(iter(loader))
+                            with Suppressor(allow_pyprint=True, show_if_exception=True):
+                                # TF multi-gpu print-spams here in version 2.11
+                                batch = next(iter(loader))
                         batch = self._configure_tensor(loader, batch)
                     assert isinstance(batch, dict), "please make sure data output format is dictionary"
                     pipeline_output_keys = to_set(batch.keys())
