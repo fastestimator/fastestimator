@@ -63,7 +63,7 @@ def l1_loss(y_true: Tensor, y_pred: Tensor) -> Tensor:
         if tf.rank(y_pred) == 1:
             y_true = tf.expand_dims(y_true, axis=-1)
             y_pred = tf.expand_dims(y_pred, axis=-1)
-        mae = tf.losses.MAE(y_true,y_pred)
+        mae = tf.losses.MAE(y_true, y_pred)
     elif isinstance(y_pred, torch.Tensor):
         mae = reduce_mean(torch.nn.L1Loss(reduction="none")(y_pred, y_true), axis=-1)
     else:

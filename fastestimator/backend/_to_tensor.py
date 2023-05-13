@@ -12,17 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Collection, TypeVar, Union
+from typing import Collection, TypeVar, Union, overload
 
 import numpy as np
 import tensorflow as tf
 import torch
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+CollectionT = TypeVar('CollectionT', bound=Collection)
 
 
-def to_tensor(data: Union[Collection, Tensor, float, int, None],
-              target_type: str,
+@overload
+def to_tensor(data: CollectionT, target_type: str, shared_memory: bool = False) -> CollectionT:
+    ...
+
+
+@overload
+def to_tensor(data: Union[Tensor, float, int], target_type: str, shared_memory: bool = False) -> Tensor:
+    ...
+
+
+@overload
+def to_tensor(data: None, target_type: str, shared_memory: bool = False) -> None:
+    ...
+
+
+def to_tensor(data: Union[Collection, Tensor, float, int, None], target_type: str,
               shared_memory: bool = False) -> Union[Collection, Tensor, None]:
     """Convert tensors within a collection of `data` to a given `target_type` recursively.
 

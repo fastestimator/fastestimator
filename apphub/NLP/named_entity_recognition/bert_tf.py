@@ -46,7 +46,7 @@ def ner_model(max_len, pretrained_model, label_vocab):
     token_inputs = Input((max_len), dtype=tf.int32, name='input_words')
     mask_inputs = Input((max_len), dtype=tf.int32, name='input_masks')
     bert_model = TFBertModel.from_pretrained(pretrained_model)
-    bert_output = bert_model(token_inputs, attention_mask=mask_inputs) # use the last hidden state
+    bert_output = bert_model(token_inputs, attention_mask=mask_inputs)  # use the last hidden state
     output = Dense(len(label_vocab) + 1, activation='softmax')(bert_output[0])
     model = Model([token_inputs, mask_inputs], output)
     return model

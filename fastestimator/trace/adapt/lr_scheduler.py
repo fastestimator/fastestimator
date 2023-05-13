@@ -21,7 +21,7 @@ import torch
 
 from fastestimator.backend._get_lr import get_lr
 from fastestimator.backend._set_lr import set_lr
-from fastestimator.schedule.lr_shedule import ARC
+from fastestimator.schedule.lr_schedule import ARC
 from fastestimator.summary.system import System
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data

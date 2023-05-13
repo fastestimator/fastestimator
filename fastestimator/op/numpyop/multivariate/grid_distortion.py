@@ -15,7 +15,7 @@
 from typing import Iterable, List, Optional, Tuple, Union
 
 import cv2
-from albumentations.augmentations.transforms import GridDistortion as GridDistortionAlb
+from albumentations.augmentations.geometric.transforms import GridDistortion as GridDistortionAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 from fastestimator.util.traceability_util import traceable

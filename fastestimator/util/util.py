@@ -13,7 +13,10 @@
 # limitations under the License.
 # ==============================================================================
 """Utilities for FastEstimator."""
+import atexit
 import os
+import sys
+import tempfile
 import time
 from contextlib import ContextDecorator
 from typing import Any, Dict, List, MutableMapping, Optional, Tuple, Type, TypeVar, Union
@@ -21,8 +24,11 @@ from typing import Any, Dict, List, MutableMapping, Optional, Tuple, Type, TypeV
 import numpy as np
 import tensorflow as tf
 import torch
+import torch.backends.mps
 from pyfiglet import Figlet
+from tensorflow.python.ops.logging_ops import print_v2
 
+from fastestimator.util.base_util import warn
 
 STRING_TO_TORCH_DTYPE = {
     None: None,
@@ -93,6 +99,108 @@ TENSOR_TO_NP_DTYPE = {
 }
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+T = TypeVar('T')
+
+
+class Suppressor(object):
+    """A class which can be used to silence output of function calls.
+
+    This class is intentionally not @traceable.
+
+    Args:
+        allow_pyprint: Whether to allow python printing to occur still within this scope (and therefore only silence
+            printing from non-python sources like c).
+        show_if_exception: Whether to retroactively show print messages if an exception is raised from within the
+            suppressor scope.
+
+    ```python
+    x = lambda: print("hello")
+    x()  # "hello"
+    with fe.util.Suppressor():
+        x()  #
+    x()  # "hello"
+    ```
+    """
+    # Only create one file to save on disk IO
+    stash_fd, stash_name = tempfile.mkstemp()
+    os.close(stash_fd)
+    tf_print_fd, tf_print_name = tempfile.mkstemp()
+    os.close(tf_print_fd)
+    tf_print_name_f = 'file://' + tf_print_name
+
+    def __init__(self, allow_pyprint: bool = False, show_if_exception: bool = False):
+        self.allow_pyprint = allow_pyprint
+        self.show_if_exception = show_if_exception
+
+    def __enter__(self) -> None:
+        # This is not necessary to block printing, but lets the system know what's happening
+        self.py_reals = [sys.stdout, sys.stderr]
+        sys.stdout = sys.stderr = self
+        # This part does the heavy lifting
+        if self.show_if_exception:
+            self.fake = os.open(self.stash_name, os.O_RDWR)
+        else:
+            self.fake = os.open(os.devnull, os.O_RDWR)
+        self.reals = [os.dup(1), os.dup(2)]  # [stdout, stderr]
+        os.dup2(self.fake, 1)
+        os.dup2(self.fake, 2)
+        if self.allow_pyprint:
+            tf.print = _custom_tf_print
+
+    def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
+        # If there was an error, display any print messages
+        if exc[0] is not None and self.show_if_exception and not isinstance(exc[1],
+                                                                            (StopIteration, StopAsyncIteration)):
+            for line in open(self.stash_name):
+                os.write(self.reals[0], line.encode('utf-8'))
+        # Set the print pointers back
+        os.dup2(self.reals[0], 1)
+        os.dup2(self.reals[1], 2)
+        # Set the python pointers back too
+        sys.stdout, sys.stderr = self.py_reals[0], self.py_reals[1]
+        # Clean up the descriptors
+        for fd in self.reals:
+            os.close(fd)
+        os.close(self.fake)
+        if self.show_if_exception:
+            # Clear the file
+            open(self.stash_name, 'w').close()
+        if self.allow_pyprint:
+            tf.print = print_v2
+            for line in open(self.tf_print_name, 'r'):
+                print(line, end='')  # Endings already included from tf.print
+            open(self.tf_print_name, 'w').close()
+
+    def write(self, dummy: str) -> None:
+        """A function which is invoked during print calls.
+
+        Args:
+            dummy: The string which wanted to be printed.
+        """
+        if self.allow_pyprint:
+            os.write(self.reals[0], dummy.encode('utf-8'))
+        elif self.show_if_exception:
+            os.write(self.fake, dummy.encode('utf-8'))
+
+    def flush(self) -> None:
+        """A function to empty the current print buffer. No-op in this case.
+        """
+
+    @staticmethod
+    @atexit.register
+    def teardown() -> None:
+        """Clean up the stash files when the program exists
+        """
+        try:
+            os.remove(Suppressor.stash_name)
+            os.remove(Suppressor.tf_print_name)
+        except FileNotFoundError:
+            pass
+
+
+def _custom_tf_print(*args, **kwargs):
+    kwargs['output_stream'] = Suppressor.tf_print_name_f
+    print_v2(*args, **kwargs)
 
 
 class Timer(ContextDecorator):
@@ -187,7 +295,82 @@ def pad_data(data: np.ndarray, target_shape: Tuple[int, ...], pad_value: Union[f
     return np.pad(data, padded_shape, 'constant', constant_values=pad_value)
 
 
-def get_num_devices():
+def move_tensors_to_device(data: T, device: Union[str, torch.device]) -> T:
+    """Move torch tensor (collections) between gpu and cpu recursively.
+
+    Args:
+        data: The input data to be moved.
+        device: The target device.
+
+    Returns:
+        Output data.
+    """
+    if isinstance(data, dict):
+        return {key: move_tensors_to_device(value, device) for (key, value) in data.items()}
+    elif isinstance(data, list):
+        return [move_tensors_to_device(val, device) for val in data]
+    elif isinstance(data, tuple):
+        return tuple([move_tensors_to_device(val, device) for val in data])
+    elif isinstance(data, set):
+        return set([move_tensors_to_device(val, device) for val in data])
+    elif isinstance(data, torch.Tensor):
+        return data.to(device)
+    else:
+        return data
+
+
+def detach_tensors(data: T) -> T:
+    """Detach tensor (collections) from current graph recursively.
+
+    Args:
+        data: The data to be detached.
+
+    Returns:
+        Output data.
+    """
+    if isinstance(data, dict):
+        return {key: detach_tensors(value) for (key, value) in data.items()}
+    elif isinstance(data, list):
+        return [detach_tensors(val) for val in data]
+    elif isinstance(data, tuple):
+        return tuple([detach_tensors(val) for val in data])
+    elif isinstance(data, set):
+        return set([detach_tensors(val) for val in data])
+    elif isinstance(data, torch.Tensor):
+        return data.detach()
+    return data
+
+
+def get_device() -> torch.device:
+    """Get the torch device for the current hardware.
+
+    Returns:
+        The torch device most appropriate for the current hardware.
+    """
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+    elif torch.cuda.is_available():
+        device = torch.device("cuda:0")
+    else:
+        device = torch.device("cpu")
+    return device
+
+
+def get_num_gpus() -> int:
+    """Get the number of GPUs available.
+
+    Returns:
+        The number of GPUs available.
+    """
+    if torch.backends.mps.is_available():
+        return 1
+    elif torch.cuda.is_available():
+        return torch.cuda.device_count()
+    else:
+        return 0
+
+
+def get_num_devices() -> int:
     """Determine the number of available GPUs.
 
     Returns:
@@ -227,7 +410,7 @@ def cpu_count(limit: Optional[int] = None) -> int:
         try:
             env_limit = int(env_limit)
         except ValueError as err:
-            print(f"FastEstimator-Warn: FE_NUM_THREADS variable must be an integer, but was set to: {env_limit}")
+            warn(f"FE_NUM_THREADS variable must be an integer, but was set to: {env_limit}")
             raise err
     try:
         # In docker containers which have --cpuset-cpus, the limit won't be reflected by normal os.cpu_count() call

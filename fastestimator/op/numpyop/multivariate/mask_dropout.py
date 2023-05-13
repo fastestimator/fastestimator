@@ -14,7 +14,7 @@
 # ==============================================================================
 from typing import Iterable, Optional, Tuple, Union
 
-from albumentations.augmentations.transforms import MaskDropout as MaskDropoutAlb
+from albumentations.augmentations.dropout import MaskDropout as MaskDropoutAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 from fastestimator.util.traceability_util import traceable

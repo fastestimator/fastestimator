@@ -21,9 +21,9 @@ import torch
 
 from fastestimator.backend._feed_forward import feed_forward
 from fastestimator.op.tensorop.tensorop import TensorOp
+from fastestimator.util.base_util import to_list, warn
 from fastestimator.util.traceability_util import FeInputSpec, traceable
 from fastestimator.util.util import get_num_devices
-from fastestimator.util.base_util import to_list
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
@@ -67,8 +67,7 @@ class ModelOp(TensorOp):
         self.intermediate_outputs = []  # [{device: Tensor}]
         intermediate_layers = to_list(intermediate_layers)
         if intermediate_layers and get_num_devices() > 1:
-            print("\033[93m {}\033[00m".format(
-                "FastEstimator-Warn: Layer names / ids may be different between single-gpu and multi-gpu environments"))
+            warn("Layer names / ids may be different between single-gpu and multi-gpu environments")
         for intermediate_layer in intermediate_layers:
             storage = {}
             if isinstance(model, tf.keras.Model):

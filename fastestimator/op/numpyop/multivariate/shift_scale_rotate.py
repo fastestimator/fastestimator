@@ -16,7 +16,7 @@ from typing import Iterable, List, Optional, Tuple, Union
 
 import cv2
 from albumentations import BboxParams, KeypointParams
-from albumentations.augmentations import ShiftScaleRotate as ShiftScaleRotateAlb
+from albumentations.augmentations.geometric import ShiftScaleRotate as ShiftScaleRotateAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 from fastestimator.util.traceability_util import traceable

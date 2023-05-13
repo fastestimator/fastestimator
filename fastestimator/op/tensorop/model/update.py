@@ -21,8 +21,9 @@ from fastestimator.backend._get_gradient import get_gradient
 from fastestimator.backend._reduce_mean import reduce_mean
 from fastestimator.backend._update_model import update_model
 from fastestimator.op.tensorop.tensorop import TensorOp
+from fastestimator.util.base_util import to_set, warn
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.base_util import to_set
+from fastestimator.util.util import get_num_gpus
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
@@ -59,6 +60,8 @@ class UpdateOp(TensorOp):
         RuntimeError: If attempting to modify a PyTorch model which relied on gradients within a different PyTorch model
             which has in turn already undergone a non-deferred update.
     """
+    _old_defer: bool  # Used by the Network to automagically fix defer values
+
     def __init__(self,
                  model: Union[tf.keras.Model, torch.nn.Module],
                  loss_name: str,
@@ -75,11 +78,11 @@ class UpdateOp(TensorOp):
                 raise ValueError("Mixed precision training cannot take input gradients, because the gradients need to "
                                  "be computed in this module")
             if self.extra_loss:
-                print("FastEstimator-Warn: Extra model losses are detected and they will be ignored since the gradients"
-                      " are not computed in UpdateOp class.")
+                warn("Extra model losses are detected and they will be ignored since the gradients are not computed " +
+                     "in UpdateOp class.")
             super().__init__(inputs=gradients, outputs=None, mode=mode, ds_id=ds_id)
 
-        if torch.cuda.device_count() > 1 and merge_grad > 1:
+        if get_num_gpus() > 1 and merge_grad > 1:
             raise ValueError("Currently FastEstimator doesn't support merge_grad feature in multi-GPU configuration "
                              "and thus 'merge_grad' cannot be larger than 1")
 

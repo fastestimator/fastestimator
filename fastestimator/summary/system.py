@@ -32,6 +32,7 @@ from fastestimator.schedule.schedule import Scheduler
 from fastestimator.summary.summary import Summary
 from fastestimator.util.base_util import to_list
 from fastestimator.util.traceability_util import FeSummaryTable, is_restorable
+from fastestimator.util.util import get_num_gpus
 
 if TYPE_CHECKING:
     from fastestimator.trace.trace import Trace
@@ -105,7 +106,7 @@ class System:
     num_devices: int
     log_steps: Optional[int]
     total_epochs: int
-    epoch_idx: Optional[int]
+    epoch_idx: int
     batch_idx: Optional[int]
     stop_training: bool
     network: BaseNetwork
@@ -125,7 +126,7 @@ class System:
                  traces: List[Union['Trace', Scheduler['Trace']]],
                  mode: Optional[str] = None,
                  ds_id: str = '',
-                 num_devices: int = torch.cuda.device_count(),
+                 num_devices: int = get_num_gpus(),
                  log_steps: Optional[int] = None,
                  total_epochs: int = 0,
                  train_steps_per_epoch: Optional[int] = None,

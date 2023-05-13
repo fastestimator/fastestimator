@@ -14,7 +14,7 @@
 # ==============================================================================
 from typing import Iterable, Tuple, Union
 
-from albumentations.augmentations.transforms import Blur as BlurAlb
+from albumentations.augmentations.blur.transforms import Blur as BlurAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
 from fastestimator.util.traceability_util import traceable
@@ -43,4 +43,8 @@ class Blur(ImageOnlyAlbumentation):
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
                  blur_limit: Union[int, Tuple[int, int]] = 7):
-        super().__init__(BlurAlb(blur_limit=blur_limit, always_apply=True), inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
+        super().__init__(BlurAlb(blur_limit=blur_limit, always_apply=True),
+                         inputs=inputs,
+                         outputs=outputs,
+                         mode=mode,
+                         ds_id=ds_id)

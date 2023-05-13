@@ -71,15 +71,14 @@ class Buffer(TensorOp):
 
 class GLoss(TensorOp):
     """TensorOp to compute generator loss"""
-    def __init__(self, inputs, weight, device, outputs=None, mode=None, average_loss=True):
+    def __init__(self, inputs, weight, outputs=None, mode=None, average_loss=True):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.loss_fn = nn.MSELoss(reduction="none")
         self.LAMBDA = weight
-        self.device = device
         self.average_loss = average_loss
 
     def _adversarial_loss(self, fake_img):
-        return torch.mean(self.loss_fn(fake_img, torch.ones_like(fake_img, device=self.device)), dim=(2, 3))
+        return torch.mean(self.loss_fn(fake_img, torch.ones_like(fake_img)), dim=(2, 3))
 
     def _identity_loss(self, real_img, same_img):
         return 0.5 * self.LAMBDA * torch.mean(torch.abs(real_img - same_img), dim=(1, 2, 3))
@@ -100,16 +99,15 @@ class GLoss(TensorOp):
 
 class DLoss(TensorOp):
     """TensorOp to compute discriminator loss"""
-    def __init__(self, inputs, device, outputs=None, mode=None, average_loss=True):
+    def __init__(self, inputs, outputs=None, mode=None, average_loss=True):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.loss_fn = nn.MSELoss(reduction="none")
-        self.device = device
         self.average_loss = average_loss
 
     def forward(self, data, state):
         real_img, fake_img = data
-        real_img_loss = torch.mean(self.loss_fn(real_img, torch.ones_like(real_img, device=self.device)), dim=(2, 3))
-        fake_img_loss = torch.mean(self.loss_fn(fake_img, torch.zeros_like(real_img, device=self.device)), dim=(2, 3))
+        real_img_loss = torch.mean(self.loss_fn(real_img, torch.ones_like(real_img)), dim=(2, 3))
+        fake_img_loss = torch.mean(self.loss_fn(fake_img, torch.zeros_like(real_img)), dim=(2, 3))
         total_loss = real_img_loss + fake_img_loss
 
         if self.average_loss:
@@ -213,7 +211,6 @@ def get_estimator(weight=10.0,
                   data_dir=None):
     train_data, _ = load_data(batch_size=batch_size, root_dir=data_dir)
 
-    device = "cuda:0" if torch.cuda.is_available() else "cpu"
     pipeline = fe.Pipeline(
         train_data=train_data,
         ops=[
@@ -256,10 +253,10 @@ def get_estimator(weight=10.0,
         ModelOp(inputs="fake_B", model=g_BtoA, outputs="cycled_A"),
         ModelOp(inputs="real_B", model=g_AtoB, outputs="same_B"),
         ModelOp(inputs="fake_A", model=g_AtoB, outputs="cycled_B"),
-        GLoss(inputs=("real_A", "d_fake_B", "cycled_A", "same_A"), weight=weight, device=device, outputs="g_AtoB_loss"),
-        GLoss(inputs=("real_B", "d_fake_A", "cycled_B", "same_B"), weight=weight, device=device, outputs="g_BtoA_loss"),
-        DLoss(inputs=("d_real_A", "buffer_d_fake_A"), outputs="d_A_loss", device=device),
-        DLoss(inputs=("d_real_B", "buffer_d_fake_B"), outputs="d_B_loss", device=device),
+        GLoss(inputs=("real_A", "d_fake_B", "cycled_A", "same_A"), weight=weight, outputs="g_AtoB_loss"),
+        GLoss(inputs=("real_B", "d_fake_A", "cycled_B", "same_B"), weight=weight, outputs="g_BtoA_loss"),
+        DLoss(inputs=("d_real_A", "buffer_d_fake_A"), outputs="d_A_loss"),
+        DLoss(inputs=("d_real_B", "buffer_d_fake_B"), outputs="d_B_loss"),
         UpdateOp(model=g_AtoB, loss_name="g_AtoB_loss"),
         UpdateOp(model=g_BtoA, loss_name="g_BtoA_loss"),
         UpdateOp(model=d_A, loss_name="d_A_loss"),

@@ -166,11 +166,7 @@ def vision_transformer(num_class,
     return backbone, tf.keras.Model(inputs=inputs, outputs=x)
 
 
-def pretrain(batch_size,
-             epochs,
-             model_dir=tempfile.mkdtemp(),
-             train_steps_per_epoch=None,
-             eval_steps_per_epoch=None):
+def pretrain(batch_size, epochs, model_dir=tempfile.mkdtemp(), train_steps_per_epoch=None, eval_steps_per_epoch=None):
     train_data, eval_data = cifair100.load_data()
     pipeline = fe.Pipeline(
         train_data=train_data,

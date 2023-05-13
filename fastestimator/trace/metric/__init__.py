@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING
 import lazy_loader as lazy
 
 __getattr__, __dir__, __all__ = lazy.attach(__name__,
-                                            submod_attrs={'accuracy': ['Accuracy'],
+                                            submod_attrs={#'accuracy': ['Accuracy'],
                                                           'bleu_score': ['BleuScore'],
                                                           'calibration_error': ['CalibrationError'],
                                                           'confusion_matrix': ['ConfusionMatrix'],
@@ -27,6 +27,8 @@ __getattr__, __dir__, __all__ = lazy.attach(__name__,
                                                           'mean_average_precision': ['MeanAveragePrecision'],
                                                           'precision': ['Precision'],
                                                           'recall': ['Recall'], })
+
+from fastestimator.trace.metric.accuracy import Accuracy
 
 if TYPE_CHECKING:
     from fastestimator.trace.metric.accuracy import Accuracy

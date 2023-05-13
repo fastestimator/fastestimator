@@ -20,6 +20,7 @@ import torch.nn as nn
 import torch.nn.functional as fn
 from torch.nn.init import kaiming_normal_ as he_normal
 from torchvision import models
+from torchvision.models.resnet import ResNet50_Weights
 
 import fastestimator as fe
 from fastestimator.backend import reduce_mean
@@ -96,7 +97,7 @@ class ResUnet50(nn.Module):
     """Network Architecture"""
     def __init__(self, num_classes=200):
         super().__init__()
-        base_model = models.resnet50(pretrained=True)
+        base_model = models.resnet50(weights=ResNet50_Weights.IMAGENET1K_V2)
 
         self.enc1 = nn.Sequential(*list(base_model.children())[:3])
         self.input_pool = list(base_model.children())[3]
@@ -176,7 +177,7 @@ def get_estimator(batch_size=8,
                              mask_out="seg",
                              mode="train",
                              shift_limit=0.2,
-                             rotate_limit=15.0,
+                             rotate_limit=15,
                              scale_limit=0.2,
                              border_mode=cv2.BORDER_CONSTANT,
                              value=0,

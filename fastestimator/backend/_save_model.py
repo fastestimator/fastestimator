@@ -70,7 +70,11 @@ def save_model(model: Union[tf.keras.Model, torch.nn.Module],
             assert model.current_optimizer, "optimizer does not exist"
             optimizer_path = os.path.join(save_dir, "{}_opt.pkl".format(model_name))
             with open(optimizer_path, 'wb') as f:
-                saved_data = {'weights': model.current_optimizer.get_weights(), 'lr': get_lr(model)}
+                saved_data = {'lr': get_lr(model)}
+                if hasattr(model.current_optimizer, 'get_weights'):
+                    saved_data['weights'] = model.current_optimizer.get_weights()
+                else:
+                    saved_data['weights'] = model.current_optimizer.variables()
                 if isinstance(model.current_optimizer, tfa.optimizers.DecoupledWeightDecayExtension) or hasattr(
                         model.current_optimizer, "inner_optimizer") and isinstance(
                             model.current_optimizer.inner_optimizer, tfa.optimizers.DecoupledWeightDecayExtension):

@@ -23,22 +23,21 @@ import fastestimator as fe
 from fastestimator.op.tensorop.loss import CrossEntropy, Hinge, SuperLoss
 from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.test.unittest_util import sample_system_object
+from fastestimator.util.util import get_device
 
 
 class TestSuperLoss(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        device = get_device()
         # torch binary ce
-        cls.torch_true_binary = torch.tensor([[1], [0], [1], [0]]).to("cuda:0" if torch.cuda.is_available() else "cpu")
-        cls.torch_pred_binary = torch.tensor([[0.9], [0.3], [0.8],
-                                              [0.1]]).to("cuda:0" if torch.cuda.is_available() else "cpu")
+        cls.torch_true_binary = torch.tensor([[1], [0], [1], [0]]).to(device)
+        cls.torch_pred_binary = torch.tensor([[0.9], [0.3], [0.8], [0.1]]).to(device)
         # categorical ce
         cls.tf_true_cat = tf.constant([[0, 1, 0], [1, 0, 0], [0, 0, 1]])
         cls.tf_pred_cat = tf.constant([[0.1, 0.8, 0.1], [0.9, 0.05, 0.05], [0.1, 0.2, 0.7]])
-        cls.torch_true_cat = torch.tensor([[0, 1, 0], [1, 0, 0],
-                                           [0, 0, 1]]).to("cuda:0" if torch.cuda.is_available() else "cpu")
-        cls.torch_pred_cat = torch.tensor([[0.1, 0.8, 0.1], [0.9, 0.05, 0.05],
-                                           [0.1, 0.2, 0.7]]).to("cuda:0" if torch.cuda.is_available() else "cpu")
+        cls.torch_true_cat = torch.tensor([[0, 1, 0], [1, 0, 0], [0, 0, 1]]).to(device)
+        cls.torch_pred_cat = torch.tensor([[0.1, 0.8, 0.1], [0.9, 0.05, 0.05], [0.1, 0.2, 0.7]]).to(device)
         # sparse categorical ce
         cls.tf_true_sparse = tf.constant([[0], [1], [0]])
         cls.tf_pred_sparse = tf.constant([[0.1, 0.8, 0.1], [0.9, 0.05, 0.05], [0.1, 0.2, 0.7]])

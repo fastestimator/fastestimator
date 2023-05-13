@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, Sequence, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
@@ -71,8 +71,7 @@ class NumpyOp(Op):
         """
         return data
 
-    def forward_batch(self,
-                      data: Union[np.ndarray, List[np.ndarray]],
+    def forward_batch(self, data: Union[np.ndarray, List[np.ndarray]],
                       state: Dict[str, Any]) -> Union[None, FilteredData, np.ndarray, List[np.ndarray]]:
         """A method which will be invoked in order to transform a batch of data.
 
@@ -176,7 +175,7 @@ class Delete(NumpyOp):
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
     def __init__(self,
-                 keys: Union[str, List[str]],
+                 keys: Union[str, Sequence[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None) -> None:
         super().__init__(inputs=keys, mode=mode, ds_id=ds_id)
@@ -263,8 +262,7 @@ class RemoveIf(NumpyOp):
             return FilteredData(replacement=self.replacement)
         return None
 
-    def forward_batch(self, data: Union[Tensor, List[Tensor]], state: Dict[str,
-                                                                           Any]) -> Optional[FilteredData]:
+    def forward_batch(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> Optional[FilteredData]:
         return self.forward(data, state)
 
 

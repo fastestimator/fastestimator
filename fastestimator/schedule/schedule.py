@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Generic, Iterable, List, Optional, TypeVar, Union
+from typing import Any, Dict, Generic, Iterable, List, Optional, TypeVar, Union, overload
 
-from fastestimator.util.traceability_util import is_restorable, traceable
 from fastestimator.util.base_util import to_set
+from fastestimator.util.traceability_util import is_restorable, traceable
 
 T = TypeVar('T')
+T2 = TypeVar('T2')
 
 
 @traceable()
@@ -185,10 +186,26 @@ def get_signature_epochs(items: List[Any], total_epochs: int, mode: Optional[str
     return signature_epochs
 
 
+@overload
 def get_current_items(items: Iterable[Union[T, Scheduler[T]]],
                       run_modes: Optional[Union[str, Iterable[str]]] = None,
                       epoch: Optional[int] = None,
                       ds_id: Optional[str] = None) -> List[T]:
+    ...
+
+
+@overload
+def get_current_items(items: Iterable[Union[T, T2, Scheduler[T], Scheduler[T2]]],
+                      run_modes: Optional[Union[str, Iterable[str]]] = None,
+                      epoch: Optional[int] = None,
+                      ds_id: Optional[str] = None) -> List[Union[T, T2]]:
+    ...
+
+
+def get_current_items(items: Iterable[Union[Any, Scheduler[Any]]],
+                      run_modes: Optional[Union[str, Iterable[str]]] = None,
+                      epoch: Optional[int] = None,
+                      ds_id: Optional[str] = None) -> List[Any]:
     """Select items which should be executed for given mode and epoch.
 
     Args:

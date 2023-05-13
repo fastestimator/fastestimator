@@ -14,8 +14,8 @@
 # ==============================================================================
 from typing import Any, Dict, List, Optional, Set, TypeVar, Union
 
+import numpy as np
 import tensorflow as tf
-import tensorflow_probability as tfp
 import torch
 
 from fastestimator.backend._cast import cast
@@ -31,9 +31,10 @@ class OneOf(TensorOp):
     """Perform one of several possible TensorOps.
 
     Args:
-        *tensor_ops: A list of ops to choose between with uniform probability.
+        *tensor_ops: Ops to choose between with a specified (or uniform) probability.
+        probs: List of probabilities, must sum to 1. When None, the probabilities will be equally distributed.
     """
-    def __init__(self, *tensor_ops: TensorOp) -> None:
+    def __init__(self, *tensor_ops: TensorOp, probs: Optional[List[float]] = None) -> None:
         inputs = tensor_ops[0].inputs
         outputs = tensor_ops[0].outputs
         mode = tensor_ops[0].mode
@@ -48,22 +49,20 @@ class OneOf(TensorOp):
             assert self.out_list == op.out_list, "All ops within OneOf must share the same output configuration"
             assert mode == op.mode, "All ops within a OneOf must share the same mode"
             assert ds_id == op.ds_id, "All ops within a OneOf must share the same ds_id"
+        if probs:
+            assert len(tensor_ops) == len(probs), "The number of probabilities do not match with number of Operators"
+            assert abs(sum(probs) - 1) < 1e-8, "Probabilities must sum to 1"
+        else:
+            probs = [1 / len(tensor_ops) for _ in tensor_ops]
         self.ops = tensor_ops
-        self.prob_fn = None
-        self.invoke_fn = None
+        self.probs = probs
+        self.framework = None
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
+        assert framework in {"tf", "torch"}, "unrecognized framework: {}".format(framework)
+        self.framework = framework
         for op in self.ops:
             op.build(framework, device)
-        if framework == 'tf':
-            self.prob_fn = tfp.distributions.Uniform(low=0, high=len(self.ops))
-            self.invoke_fn = lambda idx, data, state: tf.switch_case(idx, [lambda: op.forward(data, state) for op in
-                                                                           self.ops])
-        elif framework == 'torch':
-            self.prob_fn = torch.distributions.uniform.Uniform(low=0, high=len(self.ops))
-            self.invoke_fn = lambda idx, data, state: self.ops[idx].forward(data, state)
-        else:
-            raise ValueError("unrecognized framework: {}".format(framework))
 
     def get_fe_loss_keys(self) -> Set[str]:
         return set.union(*[op.get_fe_loss_keys() for op in self.ops])
@@ -90,5 +89,9 @@ class OneOf(TensorOp):
         Returns:
             The `data` after application of one of the available numpyOps.
         """
-        idx = cast(self.prob_fn.sample(), dtype='int32')
-        return self.invoke_fn(idx, data, state)
+        if self.framework == 'tf':
+            idx = cast(tf.random.categorical(tf.math.log([self.probs]), 1), dtype='int32')[0, 0]
+            results = tf.switch_case(idx, [lambda op=op: op.forward(data, state) for op in self.ops])
+        else:
+            results = np.random.choice(self.ops, p=self.probs).forward(data, state)
+        return results

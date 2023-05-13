@@ -197,7 +197,7 @@ class TestNetworkBuildOptimizer(unittest.TestCase):
                                                         model=self.tf_model,
                                                         framework="tf",
                                                         mixed_precision=False)
-                self.assertIsInstance(optimizer, tf.optimizers.Optimizer)
+                self.assertIsInstance(optimizer, tf.optimizers.legacy.Optimizer)
 
     def test_network_build_optimizer_torch_model_optimizer_str(self):
         str_list = ['adadelta', 'adagrad', 'adam', 'adamax', 'rmsprop', 'sgd']
@@ -261,10 +261,10 @@ class TestNetworkFeCompile(unittest.TestCase):
 
         with self.subTest("check optimizer instantiation"):
             for optimizer in model.optimizer.get_all_values():
-                self.assertIsInstance(optimizer, tf.optimizers.Optimizer)
+                self.assertIsInstance(optimizer, tf.optimizers.legacy.Optimizer)
 
         with self.subTest("check current_optimizer"):
-            self.assertIsInstance(model.current_optimizer, tf.optimizers.Adam)
+            self.assertIsInstance(model.current_optimizer, tf.optimizers.legacy.Adam)
 
         with self.subTest("check model_name"):
             self.assertEqual(model.model_name, "test")
@@ -282,10 +282,10 @@ class TestNetworkFeCompile(unittest.TestCase):
 
         with self.subTest("check optimizer instantiation"):
             for optimizer in model.optimizer.get_all_values():
-                self.assertIsInstance(optimizer, tf.optimizers.Optimizer)
+                self.assertIsInstance(optimizer, tf.optimizers.legacy.Optimizer)
 
         with self.subTest("check current optimizer"):
-            self.assertIsInstance(model.current_optimizer, tf.optimizers.Adam)
+            self.assertIsInstance(model.current_optimizer, tf.optimizers.legacy.Adam)
 
     def test_network_fe_compile_optimizer_no_scheduler_tf_check_optimizer(self):
         optimizer = "adam"
@@ -295,7 +295,7 @@ class TestNetworkFeCompile(unittest.TestCase):
                                        name=None,
                                        mixed_precision=False)
         with self.subTest("check optimizer instantiation"):
-            self.assertIsInstance(model.optimizer, tf.optimizers.Optimizer)
+            self.assertIsInstance(model.optimizer, tf.optimizers.legacy.Optimizer)
 
         with self.subTest("check current optimizer"):
             self.assertEqual(model.current_optimizer, model.optimizer)
@@ -387,8 +387,12 @@ class TestNetworkBuild(unittest.TestCase):
 
     def test_network_build_torch_model_tf_optimizer_check_assertion_error(self):
         with self.subTest("optimizer_fn directly uses tf optimizer "):
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=tf.optimizers.Adadelta)
+
+        with self.subTest("optimizer_fn directly uses legacy tf optimizer "):
+            with self.assertRaises(AssertionError):
+                model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=tf.optimizers.legacy.Adadelta)
 
         with self.subTest("optimizer_fn use lambda function"):
             with self.assertRaises(ValueError):

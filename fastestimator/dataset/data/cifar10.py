@@ -21,6 +21,7 @@ import numpy as np
 from keras.datasets.cifar import load_batch
 
 from fastestimator.dataset.numpy_dataset import NumpyDataset
+from fastestimator.util.base_util import warn
 from fastestimator.util.google_download_util import _download_file_from_google_drive
 
 
@@ -40,7 +41,7 @@ def load_data(root_dir: str = None, image_key: str = "x", label_key: str = "y",
     Returns:
         (train_data, eval_data)
     """
-    print("\033[93m {}\033[00m".format("FastEstimator-Warn: Consider using the ciFAIR10 dataset instead."))
+    warn("Consider using the ciFAIR10 dataset instead.")
     home = str(Path.home())
 
     if root_dir is None:

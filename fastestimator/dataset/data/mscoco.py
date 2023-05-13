@@ -23,8 +23,8 @@ import wget
 from pycocotools.coco import COCO
 
 from fastestimator.dataset.dir_dataset import DirDataset
-from fastestimator.util.base_util import Suppressor
 from fastestimator.util.traceability_util import traceable
+from fastestimator.util.util import Suppressor
 from fastestimator.util.wget_util import bar_custom, callback_progress
 
 wget.callback_progress = callback_progress

@@ -12,14 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import ctypes
 from copy import deepcopy
-from multiprocessing import Lock
-from typing import Any, Dict, List, Mapping, Optional, Set, Union
+from multiprocessing import Array, Lock
+from typing import Any, Dict, List, Optional, Set, Union
 
 import numpy as np
+from natsort import humansorted
 from torch.utils.data import Dataset
 
 from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
+from fastestimator.util.base_util import warn
 from fastestimator.util.data import FilteredData
 from fastestimator.util.traceability_util import traceable
 
@@ -96,6 +99,9 @@ class _DelayedDeepDict(dict):
             if isinstance(val, np.ndarray):
                 val.flags.writeable = True
 
+    def as_dict(self) -> Dict[str, Any]:
+        return dict(self)
+
 
 @traceable(blacklist='lock')
 class OpDataset(Dataset):
@@ -112,9 +118,6 @@ class OpDataset(Dataset):
         deep_remainder: Whether data which is not modified by Ops should be deep copied or not. This argument is used to
             help with RAM management, but end users can almost certainly ignore it.
     """
-    to_warn: Set[str] = set()
-    warned: Set[str] = set()
-
     def __init__(self,
                  dataset: Dataset,
                  ops: List[NumpyOp],
@@ -136,8 +139,12 @@ class OpDataset(Dataset):
         self.output_keys = output_keys
         self.deep_remainder = deep_remainder
         self.lock = Lock()
+        self.to_warn: Set[str] = set()
+        if not hasattr(OpDataset, 'warned'):
+            # Declaring this outside the init would trigger mac multi-processing to pick a non-fork start method
+            OpDataset.warned = Array(ctypes.c_char, 200, lock=False)
 
-    def __getitem__(self, index: int) -> Union[Mapping[str, Any], List[Mapping[str, Any]], FilteredData]:
+    def __getitem__(self, index: int) -> Union[Dict[str, Any], List[Dict[str, Any]], FilteredData]:
         """Fetch a data instance at a specified index, and apply transformations to it.
 
         Args:
@@ -161,9 +168,9 @@ class OpDataset(Dataset):
                         results.append(filter_data)
                     else:
                         data.finalize(retain=self.output_keys, deep_remainder=self.deep_remainder)
-                        results.append(data)
                         if data.warn:
-                            self.to_warn |= (data.to_warn - self.warned)
+                            self.to_warn |= data.to_warn
+                        results.append(data.as_dict())
                     unique_samples[data_id] = idx
                 else:
                     results.append(results[unique_samples[data_id]])
@@ -174,13 +181,28 @@ class OpDataset(Dataset):
                 return filter_data
             results.finalize(retain=self.output_keys, deep_remainder=self.deep_remainder)
             if results.warn:
-                self.to_warn |= (results.to_warn - self.warned)
+                self.to_warn |= results.to_warn
+            results = results.as_dict()
         if self.to_warn and self.lock.acquire(block=False):
-            self.warned.update(self.to_warn)
-            print("FastEstimator-Warn: The following key(s) are being pruned since they are unused outside of the "
-                  "Pipeline. To prevent this, you can declare the key(s) as inputs to Traces or TensorOps: "
-                  f"{', '.join(self.to_warn)}")
-            self.to_warn.clear()
+            # Keys can't contain the ":" or ";" character due to check_io_names base_util function
+            warned = set((str(OpDataset.warned.value, 'utf8') or "").split(":"))
+            if ";" not in warned:
+                # We use ; as a special character to indicate that the warned buffer was overflowed by too many keys
+                self.to_warn -= warned
+                if self.to_warn:
+                    warn("The following key(s) are being pruned since they are unused outside of the "
+                         "Pipeline. To prevent this, you can declare the key(s) as inputs to Traces or TensorOps: "
+                         f"{', '.join(humansorted(self.to_warn))}")
+                    warned |= self.to_warn
+                    self.to_warn.clear()
+                    warned = bytes(":".join(warned), 'utf8')
+                    if len(warned) > 198:
+                        # This would overflow the warning buffer, so disable the warning mechanism in the future
+                        # Note that the warning will still happen the first time the overly-long keys appear.
+                        # 198 rather than 199 to allow for a null terminator at the end of the array.
+                        warn("Any further key pruning warnings in subsequent epochs will not be printed.")
+                        warned = bytes(";", 'utf8')
+                    OpDataset.warned.value = warned
             # We intentionally never release the lock so that during multi-threading only 1 message can be printed
         return results
 

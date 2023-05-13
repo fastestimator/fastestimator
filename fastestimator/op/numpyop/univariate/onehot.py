@@ -68,6 +68,6 @@ class Onehot(NumpyOp):
 
         if self.label_smoothing != 0:
             smooth_label = self.label_smoothing / self.num_classes
-            output = np.where(output != 0, 1.0 - self.label_smoothing + smooth_label, smooth_label)
+            output = np.where(output != 0, 1.0 - self.label_smoothing + smooth_label, smooth_label).astype(np.float32)
 
         return output

@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Iterable, Tuple, Union
+from typing import Any, Dict, Iterable, List, Sequence, Tuple, Union
 
+import numpy as np
 from albumentations.augmentations.transforms import Normalize as NormalizeAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
@@ -40,8 +41,8 @@ class Normalize(ImageOnlyAlbumentation):
         uint8, float32
     """
     def __init__(self,
-                 inputs: Union[str, Iterable[str]],
-                 outputs: Union[str, Iterable[str]],
+                 inputs: Union[str, Sequence[str]],
+                 outputs: Union[str, Sequence[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
                  mean: Union[float, Tuple[float, ...]] = (0.485, 0.456, 0.406),
@@ -52,3 +53,8 @@ class Normalize(ImageOnlyAlbumentation):
                          outputs=outputs,
                          mode=mode,
                          ds_id=ds_id)
+
+    def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
+        results = super().forward(data, state)
+        # Albumentation library casts the result to float64 iff the image is HxWx3, but we want consistent output
+        return [result.astype(np.float32) for result in results]

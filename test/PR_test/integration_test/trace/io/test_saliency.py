@@ -21,7 +21,7 @@ from fastestimator.architecture.tensorflow import LeNet
 from fastestimator.dataset.data import cifair10
 from fastestimator.op.numpyop.univariate import Normalize
 from fastestimator.op.tensorop.model import ModelOp
-from fastestimator.test.unittest_util import img_to_rgb_array, check_img_similar
+from fastestimator.test.unittest_util import check_img_similar, img_to_rgb_array
 from fastestimator.trace.io import ImageSaver
 from fastestimator.trace.xai import Saliency
 
@@ -29,10 +29,8 @@ from fastestimator.trace.xai import Saliency
 class TestSaliency(unittest.TestCase):
     """ This test has dependency on:
     * fe.trace.ImageSaver
-    * fe.estimator.enable_deterministic
     """
     def test_saliency(self):
-        fe.enable_deterministic(200)
         label_mapping = {
             'airplane': 0,
             'automobile': 1,
@@ -48,11 +46,9 @@ class TestSaliency(unittest.TestCase):
 
         batch_size = 32
 
-        train_data, eval_data = cifair10.load_data()
-        pipeline = fe.Pipeline(test_data=train_data,
-                               batch_size=batch_size,
-                               ops=[Normalize(inputs="x", outputs="x")],
-                               num_process=0)
+        train_data, _ = cifair10.load_data()
+        test_data = train_data.split([i for i in range(10)])
+        pipeline = fe.Pipeline(test_data=test_data, batch_size=batch_size, ops=[Normalize(inputs="x", outputs="x")])
 
         weight_path = os.path.abspath(os.path.join(__file__, "..", "resources", "lenet_cifar10_tf.h5"))
 
@@ -66,7 +62,9 @@ class TestSaliency(unittest.TestCase):
                      class_key="y",
                      model_outputs="y_pred",
                      samples=5,
-                     label_mapping=label_mapping),
+                     label_mapping=label_mapping,
+                     smoothing=0,
+                     integrating=0),
             ImageSaver(inputs="saliency", save_dir=save_dir)
         ]
 

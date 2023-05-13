@@ -14,7 +14,7 @@
 # ==============================================================================
 from typing import Iterable, Tuple, Union
 
-from albumentations.augmentations.transforms import GaussianBlur as GaussianBlurAlb
+from albumentations.augmentations import GaussianBlur as GaussianBlurAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
 from fastestimator.util.traceability_util import traceable

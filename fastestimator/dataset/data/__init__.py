@@ -21,10 +21,10 @@ __getattr__, __dir__, __all__ = lazy.attach(__name__,
                                                         'cifar100', 'cub200','em_3d', 'food101', 'horse2zebra', 'imdb_review',
                                                         'mendeley', 'mitmovie_ner', 'mnist', 'montgomery', 'mscoco',
                                                         'nih_chestxray', 'omniglot', 'penn_treebank', 'shakespeare',
-                                                        'skl_digits', 'svhn', 'svhn_cropped', 'tednmt', 'usps', 'pascal_voc'}
+                                                        'skl_digits', 'svhn', 'svhn_cropped', 'tednmt', 'usps', 'pascal_voc', 'medmnist'}
                                             )
 
 if TYPE_CHECKING:
     from fastestimator.dataset.data import breast_cancer, cifair10, cifair100, cifar10, cifar100, cub200, em_3d, \
         food101, horse2zebra, imdb_review, mendeley, mitmovie_ner, mnist, montgomery, mscoco, nih_chestxray, omniglot, \
-        penn_treebank, shakespeare, skl_digits, svhn, svhn_cropped, tednmt, usps, pascal_voc
+        penn_treebank, shakespeare, skl_digits, svhn, svhn_cropped, tednmt, usps, pascal_voc, medmnist

@@ -17,7 +17,7 @@ import re
 import tempfile
 from collections import defaultdict
 from itertools import cycle
-from typing import Any, Dict, List, Optional, Set, Union, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
 import plotly.graph_objects as go
@@ -28,7 +28,7 @@ from plotly.subplots import make_subplots
 from scipy.ndimage.filters import gaussian_filter1d
 
 from fastestimator.summary.summary import Summary, ValWithError
-from fastestimator.util.base_util import get_colors, to_set, to_list, prettify_metric_name, in_notebook, FigureFE
+from fastestimator.util.base_util import FigureFE, get_colors, in_notebook, prettify_metric_name, to_list, to_set, warn
 
 
 class _MetricGroup:
@@ -239,8 +239,7 @@ def plot_logs(experiments: List[Summary],
     ds_ids = humansorted(ds_ids)  # Sort them to have consistent ordering (and thus symbols) between plot runs
     n_plots = len(metric_list)
     if len(ds_ids) > 9:  # 9 b/c None is included
-        print("FastEstimator-Warn: Plotting more than 8 different datasets isn't well supported. Symbols will be "
-              "reused.")
+        warn("Plotting more than 8 different datasets isn't well supported. Symbols will be reused.")
 
     # Non-Shared legends aren't supported yet. If they get supported then maybe can have that feature here too.
     #  https://github.com/plotly/plotly.js/issues/5099
@@ -267,13 +266,21 @@ def plot_logs(experiments: List[Summary],
         titles = [prettify_metric_name(title) for title in titles]
 
     fig = make_subplots(rows=n_rows, cols=n_cols, subplot_titles=titles, shared_xaxes='all')
-    fig.update_layout({'plot_bgcolor': '#FFF',
-                       'hovermode': 'closest',
-                       'margin': {'t': 50},
-                       'modebar': {'add': ['hoverclosest', 'hovercompare'],
-                                   'remove': ['select2d', 'lasso2d']},
-                       'legend': {'tracegroupgap': 5,
-                                  'font': {'size': 11}}})
+    fig.update_layout({
+        'plot_bgcolor': '#FFF',
+        'hovermode': 'closest',
+        'margin': {
+            't': 50
+        },
+        'modebar': {
+            'add': ['hoverclosest', 'hovercompare'], 'remove': ['select2d', 'lasso2d']
+        },
+        'legend': {
+            'tracegroupgap': 5, 'font': {
+                'size': 11
+            }
+        }
+    })
 
     # Set x-labels
     for idx, metric in enumerate(titles, start=1):
@@ -376,26 +383,28 @@ def plot_logs(experiments: List[Summary],
                             limit_data = [(y_max, y_min)] if y_max is not None and y_min is not None else None
                             tip_text = "%{x}: (%{customdata[1]:.3f}, %{y:.3f}, %{customdata[0]:.3f})" if \
                                 limit_data is not None else "%{x}: %{y:.3f}"
-                            error_y = None if limit_data is None else {'type': 'data',
-                                                                       'symmetric': False,
-                                                                       'array': [y_max - y],
-                                                                       'arrayminus': [y - y_min]}
-                            z_order[2].append((go.Scatter(x=[x],
-                                                          y=[y],
-                                                          name=title,
-                                                          legendgroup=title,
-                                                          customdata=limit_data,
-                                                          hovertemplate=tip_text,
-                                                          mode='markers',
-                                                          marker={'color': color,
-                                                                  'size': 12,
-                                                                  'symbol': _symbol_mash(marker_style,
-                                                                                         ds_id_markers[ds_id]),
-                                                                  'line': {'width': 1.5,
-                                                                           'color': 'White'}},
-                                                          error_y=error_y,
-                                                          showlegend=add_label[exp_idx][mode][ds_id]['patch'],
-                                                          legendrank=legend_order[title]),
+                            error_y = None if limit_data is None else {
+                                'type': 'data', 'symmetric': False, 'array': [y_max - y], 'arrayminus': [y - y_min]
+                            }
+                            z_order[2].append((go.Scatter(
+                                x=[x],
+                                y=[y],
+                                name=title,
+                                legendgroup=title,
+                                customdata=limit_data,
+                                hovertemplate=tip_text,
+                                mode='markers',
+                                marker={
+                                    'color': color,
+                                    'size': 12,
+                                    'symbol': _symbol_mash(marker_style, ds_id_markers[ds_id]),
+                                    'line': {
+                                        'width': 1.5, 'color': 'White'
+                                    }
+                                },
+                                error_y=error_y,
+                                showlegend=add_label[exp_idx][mode][ds_id]['patch'],
+                                legendrank=legend_order[title]),
                                                row,
                                                col))
                             add_label[exp_idx][mode][ds_id]['patch'] = False
@@ -422,23 +431,28 @@ def plot_logs(experiments: List[Summary],
                                                                                        not None else None
                             tip_text = "%{x}: (%{customdata[1]:.3f}, %{y:.3f}, %{customdata[0]:.3f})" if \
                                 limit_data is not None else "%{x}: %{y:.3f}"
-                            z_order[1].append((go.Scatter(x=x,
-                                                          y=y,
-                                                          name=title,
-                                                          legendgroup=title,
-                                                          mode="lines+markers" if ds_id_markers[ds_id] else 'lines',
-                                                          marker={'color': color,
-                                                                  'size': 8,
-                                                                  'line': {'width': 2,
-                                                                           'color': 'DarkSlateGrey'},
-                                                                  'maxdisplayed': 10,
-                                                                  'symbol': ds_id_markers[ds_id]},
-                                                          line={'dash': linestyle,
-                                                                'color': color},
-                                                          customdata=limit_data,
-                                                          hovertemplate=tip_text,
-                                                          showlegend=add_label[exp_idx][mode][ds_id]['line'],
-                                                          legendrank=legend_order[title]),
+                            z_order[1].append((go.Scatter(
+                                x=x,
+                                y=y,
+                                name=title,
+                                legendgroup=title,
+                                mode="lines+markers" if ds_id_markers[ds_id] else 'lines',
+                                marker={
+                                    'color': color,
+                                    'size': 8,
+                                    'line': {
+                                        'width': 2, 'color': 'DarkSlateGrey'
+                                    },
+                                    'maxdisplayed': 10,
+                                    'symbol': ds_id_markers[ds_id]
+                                },
+                                line={
+                                    'dash': linestyle, 'color': color
+                                },
+                                customdata=limit_data,
+                                hovertemplate=tip_text,
+                                showlegend=add_label[exp_idx][mode][ds_id]['line'],
+                                legendrank=legend_order[title]),
                                                row,
                                                col))
                             add_label[exp_idx][mode][ds_id]['line'] = False
@@ -522,10 +536,9 @@ def _symbol_mash(base_symbol: str, ds_symbol: Optional[int]) -> int:
     ds_offsets = {37: 0, 38: 1, 39: 2, 40: 3, 34: 4, 33: 5, 35: 6, 36: 7}
     slots = {i for i in range(53)} - set(base_table.values()) - set(ds_offsets.keys())
     slots = sorted(list(slots))
-    base_offsets = {'circle': 0,
-                    'diamond': len(ds_offsets),
-                    'square': 2 * len(ds_offsets),
-                    'hexagram': 3 * len(ds_offsets)}
+    base_offsets = {
+        'circle': 0, 'diamond': len(ds_offsets), 'square': 2 * len(ds_offsets), 'hexagram': 3 * len(ds_offsets)
+    }
     mashed_symbol = slots[base_offsets[base_symbol] + ds_offsets[ds_symbol]]
     return mashed_symbol
 
@@ -542,18 +555,22 @@ def _get_vars(symbol: Union[str, int]) -> str:
         A minified string representation of the variables to be declared in javascript.
     """
     if isinstance(symbol, str):
-        return {'circle': 'var b1=n.round(t,2);',
-                'square': 'var b1=n.round(t,2);',
-                'diamond': 'var b1=n.round(t*1.3,2);',
-                'hexagram': 'var b1=n.round(t,2);var b2=n.round(t/2,2);var b3=n.round(t*Math.sqrt(3)/2,2);'}[symbol]
-    return {37: 'var d1=n.round(t*1.2,2);var d2=n.round(t*1.6,2);var d3=n.round(t*0.8,2);',
-            38: 'var d1=n.round(t*1.2,2);var d2=n.round(t*1.6,2);var d3=n.round(t*0.8,2);',
-            39: 'var d1=n.round(t*1.2,2);var d2=n.round(t*1.6,2);var d3=n.round(t*0.8,2);',
-            40: 'var d1=n.round(t*1.2,2);var d2=n.round(t*1.6,2);var d3=n.round(t*0.8,2);',
-            34: 'var d1=n.round(t,2);',
-            33: 'var d1=n.round(t*1.4,2);',
-            35: 'var d1=n.round(t*1.2,2);var d2=n.round(t*0.85,2);',
-            36: 'var d1=n.round(t/2,2);var d2=n.round(t,2);'}[symbol]
+        return {
+            'circle': 'var b1=n.round(t,2);',
+            'square': 'var b1=n.round(t,2);',
+            'diamond': 'var b1=n.round(t*1.3,2);',
+            'hexagram': 'var b1=n.round(t,2);var b2=n.round(t/2,2);var b3=n.round(t*Math.sqrt(3)/2,2);'
+        }[symbol]
+    return {
+        37: 'var d1=n.round(t*1.2,2);var d2=n.round(t*1.6,2);var d3=n.round(t*0.8,2);',
+        38: 'var d1=n.round(t*1.2,2);var d2=n.round(t*1.6,2);var d3=n.round(t*0.8,2);',
+        39: 'var d1=n.round(t*1.2,2);var d2=n.round(t*1.6,2);var d3=n.round(t*0.8,2);',
+        40: 'var d1=n.round(t*1.2,2);var d2=n.round(t*1.6,2);var d3=n.round(t*0.8,2);',
+        34: 'var d1=n.round(t,2);',
+        33: 'var d1=n.round(t*1.4,2);',
+        35: 'var d1=n.round(t*1.2,2);var d2=n.round(t*0.85,2);',
+        36: 'var d1=n.round(t/2,2);var d2=n.round(t,2);'
+    }[symbol]
 
 
 def _get_paths(symbol: Union[str, int]) -> str:
@@ -568,19 +585,27 @@ def _get_paths(symbol: Union[str, int]) -> str:
         A minified string representation of the paths to be declared in javascript.
     """
     if isinstance(symbol, str):
-        return {'circle': '"M"+b1+",0A"+b1+","+b1+" 0 1,1 0,-"+b1+"A"+b1+","+b1+" 0 0,1 "+b1+",0Z"',
-                'square': '"M"+b1+","+b1+"H-"+b1+"V-"+b1+"H"+b1+"Z"',
-                'diamond': '"M"+b1+",0L0,"+b1+"L-"+b1+",0L0,-"+b1+"Z"',
-                'hexagram': '"M-"+b3+",0l-"+b2+",-"+b1+"h"+b3+"l"+b2+",-"+b1+"l"+b2+","+b1+"h"+b3+"l-"+b2+","+b1+"l"+'
-                            'b2+","+b1+"h-"+b3+"l-"+b2+","+b1+"l-"+b2+",-"+b1+"h-"+b3+"Z"'}[symbol]
-    return {37: '"M-"+d1+","+d3+"L0,0M"+d1+","+d3+"L0,0M0,-"+d2+"L0,0"',
-            38: '"M-"+d1+",-"+d3+"L0,0M"+d1+",-"+d3+"L0,0M0,"+d2+"L0,0"',
-            39: '"M"+d3+","+d1+"L0,0M"+d3+",-"+d1+"L0,0M-"+d2+",0L0,0"',
-            40: '"M-"+d3+","+d1+"L0,0M-"+d3+",-"+d1+"L0,0M"+d2+",0L0,0"',
-            34: '"M"+d1+","+d1+"L-"+d1+",-"+d1+"M"+d1+",-"+d1+"L-"+d1+","+d1',
-            33: '"M0,"+d1+"V-"+d1+"M"+d1+",0H-"+d1',
-            35: '"M0,"+d1+"V-"+d1+"M"+d1+",0H-"+d1+"M"+d2+","+d2+"L-"+d2+",-"+d2+"M"+d2+",-"+d2+"L-"+d2+","+d2',
-            36: '"M"+d1+","+d2+"V-"+d2+"m-"+d2+",0V"+d2+"M"+d2+","+d1+"H-"+d2+"m0,-"+d2+"H"+d2'}[symbol]
+        return {
+            'circle':
+            '"M"+b1+",0A"+b1+","+b1+" 0 1,1 0,-"+b1+"A"+b1+","+b1+" 0 0,1 "+b1+",0Z"',
+            'square':
+            '"M"+b1+","+b1+"H-"+b1+"V-"+b1+"H"+b1+"Z"',
+            'diamond':
+            '"M"+b1+",0L0,"+b1+"L-"+b1+",0L0,-"+b1+"Z"',
+            'hexagram':
+            '"M-"+b3+",0l-"+b2+",-"+b1+"h"+b3+"l"+b2+",-"+b1+"l"+b2+","+b1+"h"+b3+"l-"+b2+","+b1+"l"+'
+            'b2+","+b1+"h-"+b3+"l-"+b2+","+b1+"l-"+b2+",-"+b1+"h-"+b3+"Z"'
+        }[symbol]
+    return {
+        37: '"M-"+d1+","+d3+"L0,0M"+d1+","+d3+"L0,0M0,-"+d2+"L0,0"',
+        38: '"M-"+d1+",-"+d3+"L0,0M"+d1+",-"+d3+"L0,0M0,"+d2+"L0,0"',
+        39: '"M"+d3+","+d1+"L0,0M"+d3+",-"+d1+"L0,0M-"+d2+",0L0,0"',
+        40: '"M-"+d3+","+d1+"L0,0M-"+d3+",-"+d1+"L0,0M"+d2+",0L0,0"',
+        34: '"M"+d1+","+d1+"L-"+d1+",-"+d1+"M"+d1+",-"+d1+"L-"+d1+","+d1',
+        33: '"M0,"+d1+"V-"+d1+"M"+d1+",0H-"+d1',
+        35: '"M0,"+d1+"V-"+d1+"M"+d1+",0H-"+d1+"M"+d2+","+d2+"L-"+d2+",-"+d2+"M"+d2+",-"+d2+"L-"+d2+","+d2',
+        36: '"M"+d1+","+d2+"V-"+d2+"m-"+d2+",0V"+d2+"M"+d2+","+d1+"H-"+d2+"m0,-"+d2+"H"+d2'
+    }[symbol]
 
 
 def _draw_mash(base_symbol: str, ds_symbol: int) -> Tuple[str, str]:
@@ -596,17 +621,61 @@ def _draw_mash(base_symbol: str, ds_symbol: int) -> Tuple[str, str]:
         (A regex pattern corresponding to an existing symbol to be replaced, a new javascript string to replace the old
          symbol)
     """
-    id_to_name = {0: 'circle', 1: 'square', 2: 'diamond', 3: 'cross', 4: 'x', 5: '"triangle-up"', 6: '"triangle-down"',
-                  7: '"triangle-left"', 8: '"triangle-right"', 9: '"triangle-ne"', 10: '"triangle-se"',
-                  11: '"triangle-sw"', 12: '"triangle-nw"', 13: 'pentagon', 14: 'hexagon', 15: 'hexagon2',
-                  16: 'octagon', 17: 'star', 18: 'hexagram', 19: '"star-triangle-up"', 20: '"star-triangle-down"',
-                  21: '"star-square"', 22: '"star-diamond"', 23: '"diamond-tall"', 24: '"diamond-wide"',
-                  25: 'hourglass', 26: 'bowtie', 27: '"circle-cross"', 28: '"circle-x"', 29: '"square-cross"',
-                  30: '"square-x"', 31: '"diamond-cross"', 32: '"diamond-x"', 33: '"cross-thin"', 34: '"x-thin"',
-                  35: 'asterisk', 36: 'hash', 37: '"y-up"', 38: '"y-down"', 39: '"y-left"', 40: '"y-right"',
-                  41: '"line-ew"', 42: '"line-ns"', 43: '"line-ne"', 44: '"line-nw"', 45: '"arrow-up"',
-                  46: '"arrow-down"', 47: '"arrow-left"', 48: '"arrow-right"', 49: '"arrow-bar-up"',
-                  50: '"arrow-bar-down"', 51: '"arrow-bar-left"', 52: '"arrow-bar-right"'}
+    id_to_name = {
+        0: 'circle',
+        1: 'square',
+        2: 'diamond',
+        3: 'cross',
+        4: 'x',
+        5: '"triangle-up"',
+        6: '"triangle-down"',
+        7: '"triangle-left"',
+        8: '"triangle-right"',
+        9: '"triangle-ne"',
+        10: '"triangle-se"',
+        11: '"triangle-sw"',
+        12: '"triangle-nw"',
+        13: 'pentagon',
+        14: 'hexagon',
+        15: 'hexagon2',
+        16: 'octagon',
+        17: 'star',
+        18: 'hexagram',
+        19: '"star-triangle-up"',
+        20: '"star-triangle-down"',
+        21: '"star-square"',
+        22: '"star-diamond"',
+        23: '"diamond-tall"',
+        24: '"diamond-wide"',
+        25: 'hourglass',
+        26: 'bowtie',
+        27: '"circle-cross"',
+        28: '"circle-x"',
+        29: '"square-cross"',
+        30: '"square-x"',
+        31: '"diamond-cross"',
+        32: '"diamond-x"',
+        33: '"cross-thin"',
+        34: '"x-thin"',
+        35: 'asterisk',
+        36: 'hash',
+        37: '"y-up"',
+        38: '"y-down"',
+        39: '"y-left"',
+        40: '"y-right"',
+        41: '"line-ew"',
+        42: '"line-ns"',
+        43: '"line-ne"',
+        44: '"line-nw"',
+        45: '"arrow-up"',
+        46: '"arrow-down"',
+        47: '"arrow-left"',
+        48: '"arrow-right"',
+        49: '"arrow-bar-up"',
+        50: '"arrow-bar-down"',
+        51: '"arrow-bar-left"',
+        52: '"arrow-bar-right"'
+    }
     mash_id = _symbol_mash(base_symbol, ds_symbol)
     mash_name = id_to_name[mash_id]
     target_str = mash_name + r':{n.*?}(,needLine:!0)?(,noDot:!0)?(,noFill:!0)?}'
