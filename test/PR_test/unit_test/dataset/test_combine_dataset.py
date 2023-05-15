@@ -34,7 +34,6 @@ class TestCombinedDataset(unittest.TestCase):
 
     def test_error_dataset(self):
         with self.assertRaises(AssertionError) as err_msg:
-            # ds1 = GeneratorDataset(generator=inputs(), samples_per_epoch=10)
             fe.dataset.CombinedDataset([])
         self.assertEqual(
             "datasets should not be an empty iterable", str(err_msg.exception)
