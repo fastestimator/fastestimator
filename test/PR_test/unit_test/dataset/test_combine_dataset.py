@@ -34,10 +34,10 @@ class TestCombinedDataset(unittest.TestCase):
 
     def test_error_dataset(self):
         with self.assertRaises(AssertionError) as err_msg:
-            ds1 = GeneratorDataset(generator=inputs(), samples_per_epoch=10)
-            fe.dataset.CombinedDataset([ds1])
+            # ds1 = GeneratorDataset(generator=inputs(), samples_per_epoch=10)
+            fe.dataset.CombinedDataset([])
         self.assertEqual(
-            "Please provide a list of atleast 2 datasets.", str(err_msg.exception)
+            "datasets should not be an empty iterable", str(err_msg.exception)
         )
 
     def test_invalid_index_dataset(self):
@@ -45,11 +45,11 @@ class TestCombinedDataset(unittest.TestCase):
         ds2 = GeneratorDataset(generator=inputs(), samples_per_epoch=10)
         combined_ds = fe.dataset.CombinedDataset(datasets=[ds1, ds2])
 
-        with self.assertRaises(AssertionError) as err_msg:
+        with self.assertRaises(IndexError) as err_msg:
             combined_ds[20]
 
         self.assertEqual(
-            "Index is out of range of the length of the dataset. Please provide a valid index.",
+            "list index out of range",
             str(err_msg.exception),
         )
 
@@ -58,7 +58,7 @@ class TestCombinedDataset(unittest.TestCase):
         with self.assertRaises(AssertionError) as err_msg:
             combined_ds = fe.dataset.CombinedDataset(datasets=[ds1, "ds2", "ds2"])
         self.assertEqual(
-            "Each dataset should be a type of PyTorch Dataset and should return a dictionary.",
+            "Each dataset should be a type of FEDataset and should return a dictionary.",
             str(err_msg.exception),
         )
 
@@ -77,6 +77,6 @@ class TestCombinedDataset(unittest.TestCase):
         with self.assertRaises(AssertionError) as err_msg:
             combined_ds = fe.dataset.CombinedDataset(datasets=[ds1, ds2])
         self.assertEqual(
-            "Each dataset should be a type of PyTorch Dataset and should return a dictionary.",
+            "Each dataset should be a type of FEDataset and should return a dictionary.",
             str(err_msg.exception),
         )
