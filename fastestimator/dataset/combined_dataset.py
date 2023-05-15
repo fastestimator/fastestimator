@@ -14,9 +14,9 @@
 # ==============================================================================
 
 
-from typing import Any, Dict, List, Union
+from typing import List
 
-from torch.utils.data import ConcatDataset, Dataset
+from torch.utils.data import ConcatDataset
 
 from fastestimator.dataset.dataset import FEDataset
 from fastestimator.util.traceability_util import traceable
