@@ -114,7 +114,6 @@ def load_data(root_dir: Optional[str] = None) -> Tuple[LabeledDirDataset, Labele
         if not os.path.exists(train_compressed_path):
             print("Downloading train data to {}".format(root_dir))
             _download_file_from_google_drive("1NlaCnlhV-PA_Rek8w8eQqJUeYCZJ0olG", train_compressed_path)
-            
         train_images, train_labels = _extract_images_labels(train_compressed_path)
         _write_data(train_images, train_labels, train_base_path, "train")
 
@@ -122,7 +121,6 @@ def load_data(root_dir: Optional[str] = None) -> Tuple[LabeledDirDataset, Labele
         if not os.path.exists(test_compressed_path):
             print("Downloading test data to {}".format(root_dir))
             _download_file_from_google_drive("1lagM-V1nmAdS3Uz9Uk4bB9cKqE_agt59", test_compressed_path)
-
         test_images, test_labels = _extract_images_labels(test_compressed_path)
         _write_data(test_images, test_labels, test_base_path, "test")
 
