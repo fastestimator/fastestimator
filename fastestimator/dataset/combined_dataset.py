@@ -16,33 +16,29 @@
 
 from typing import List
 
-from torch.utils.data import ConcatDataset
+from torch.utils.data import ConcatDataset, Dataset
 
-from fastestimator.dataset.dataset import FEDataset
 from fastestimator.util.traceability_util import traceable
 
 
 @traceable()
 class CombinedDataset(ConcatDataset):
-    def __init__(self, datasets: List[FEDataset]) -> None:
+    def __init__(self, datasets: List[Dataset]) -> None:
         """
-        Combines a list of PyTorch datasets
+        Combines a list of PyTorch Dataset
 
         Args:
-            datasets (List[FEDataset]): List of PyTorch Datasets or FEDataset
+            datasets (List[Dataset]): List of PyTorch Dataset
 
         Raises:
             AssertionError: raise exception when the input list has less than 2 datasets.
             KeyError: raise exception when the datasets does not have same keys.
         """
         super().__init__(datasets)
-        # if not isinstance(datasets, list) or len(datasets) < 2:
-        #     raise AssertionError("Please provide a list of atleast 2 datasets.")
-        # self.datasets = datasets
         keys = None
 
         for ds in datasets:
-            if isinstance(ds, FEDataset) and isinstance(ds[0], dict):
+            if isinstance(ds, Dataset) and isinstance(ds[0], dict):
                 if keys is None:
                     keys = ds[0].keys()
                 elif ds[0].keys() != keys:
