@@ -123,7 +123,7 @@ class ResidualBlock(nn.Module):
         self.layers = nn.Sequential(nn.ReflectionPad2d(1),
                                     nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size),
                                     nn.InstanceNorm2d(out_channels),
-                                    nn.ReLU(inplace=True),
+                                    nn.ReLU(),
                                     nn.ReflectionPad2d(1),
                                     nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size),
                                     nn.InstanceNorm2d(out_channels))
@@ -143,17 +143,17 @@ class Discriminator(nn.Module):
     def __init__(self):
         super().__init__()
         self.layers = nn.Sequential(nn.Conv2d(3, 64, kernel_size=4, stride=2, padding=1),
-                                    nn.LeakyReLU(0.2, inplace=True),
+                                    nn.LeakyReLU(0.2),
                                     nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1),
                                     nn.InstanceNorm2d(128),
-                                    nn.LeakyReLU(0.2, inplace=True),
+                                    nn.LeakyReLU(0.2),
                                     nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1),
                                     nn.InstanceNorm2d(256),
-                                    nn.LeakyReLU(0.2, inplace=True),
+                                    nn.LeakyReLU(0.2),
                                     nn.ReflectionPad2d(1),
                                     nn.Conv2d(256, 512, kernel_size=4, stride=1),
                                     nn.InstanceNorm2d(512),
-                                    nn.LeakyReLU(0.2, inplace=True),
+                                    nn.LeakyReLU(0.2),
                                     nn.ReflectionPad2d(1),
                                     nn.Conv2d(512, 1, kernel_size=4, stride=1))
 
@@ -173,20 +173,20 @@ class Generator(nn.Module):
         self.layers1 = nn.Sequential(nn.ReflectionPad2d(3),
                                      nn.Conv2d(3, 64, kernel_size=7, stride=1),
                                      nn.InstanceNorm2d(64),
-                                     nn.ReLU(inplace=True),
+                                     nn.ReLU(),
                                      nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1),
                                      nn.InstanceNorm2d(128),
-                                     nn.ReLU(inplace=True),
+                                     nn.ReLU(),
                                      nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1),
                                      nn.InstanceNorm2d(256),
-                                     nn.ReLU(inplace=True))
+                                     nn.ReLU())
         self.resblocks = nn.Sequential(*[ResidualBlock(256, 256) for i in range(num_blocks)])
         self.layers2 = nn.Sequential(nn.ConvTranspose2d(256, 128, kernel_size=3, stride=2, padding=1, output_padding=1),
                                      nn.InstanceNorm2d(128),
-                                     nn.ReLU(inplace=True),
+                                     nn.ReLU(),
                                      nn.ConvTranspose2d(128, 64, kernel_size=3, stride=2, padding=1, output_padding=1),
                                      nn.InstanceNorm2d(64),
-                                     nn.ReLU(inplace=True),
+                                     nn.ReLU(),
                                      nn.ReflectionPad2d(3),
                                      nn.Conv2d(64, 3, kernel_size=7, stride=1))
 
