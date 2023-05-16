@@ -35,7 +35,8 @@ class CSVLogger(Trace):
         filename: Output filename.
         monitor_names: List of keys to monitor. If None then all metrics will be recorded. If you want to record 'all
             the usual stuff' plus a particular key which isn't normally recorded, you can use a '*' character here.
-            For example: monitor_names=['*', 'y_true']
+            For example: monitor_names=['*', 'y_true']. When recording the average of per-step value in pipeline or
+            network, you will need to add the names in the `monitor_names` argument when calling fe.Estimator.
         instance_id_key: A key corresponding to data instance ids. If provided, the CSV logger will record per-instance
             metric information into the csv file in addition to the standard metrics.
         mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
@@ -76,11 +77,17 @@ class CSVLogger(Trace):
 
         # Only record an entry if there is at least one piece of actual information present
         if any(tmpdic.values()):
-            self.df_agg = pd.concat(objs=[self.df_agg, pd.DataFrame([{"mode": self.system.mode,
-                                                                      "step": self.system.global_step,
-                                                                      "epoch": self.system.epoch_idx,
-                                                                      **tmpdic}])],
-                                    ignore_index=True)
+            self.df_agg = pd.concat(
+                objs=[
+                    self.df_agg,
+                    pd.DataFrame([{
+                        "mode": self.system.mode,
+                        "step": self.system.global_step,
+                        "epoch": self.system.epoch_idx,
+                        **tmpdic
+                    }])
+                ],
+                ignore_index=True)
         self._save()  # Write on epoch end so that people can see results sooner if debugging
 
     def on_batch_end(self, data: Data) -> None:
@@ -92,8 +99,10 @@ class CSVLogger(Trace):
             batch_size = len(ids)
             vals = [ins_data.get(key, data.get(key, _SKIP())) for key in keys]
             # Ignore vals which are not batched
-            vals = [val if (hasattr(val, 'ndim') and val.ndim > 0 and val.shape[0] == batch_size) or
-                           (isinstance(val, (list, tuple)) and len(val) == batch_size) else _SKIP() for val in vals]
+            vals = [
+                val if (hasattr(val, 'ndim') and val.ndim > 0 and val.shape[0] == batch_size) or
+                (isinstance(val, (list, tuple)) and len(val) == batch_size) else _SKIP() for val in vals
+            ]
             # Don't bother recording instance if no data is available
             if any((not isinstance(val, _SKIP) for val in vals)):
                 for key in keys:
@@ -101,11 +110,16 @@ class CSVLogger(Trace):
                         self.df_ins[key] = ''
                 rows = []
                 for sample in zip_longest(ids, *vals, fillvalue=''):
-                    row = {"instance_id": self._parse_val(sample[0]),
-                           "mode": self.system.mode,
-                           "step": self.system.global_step,
-                           "epoch": self.system.epoch_idx,
-                           **{key: self._parse_val(val) for key, val in zip(keys, sample[1:])}}
+                    row = {
+                        "instance_id": self._parse_val(sample[0]),
+                        "mode": self.system.mode,
+                        "step": self.system.global_step,
+                        "epoch": self.system.epoch_idx,
+                        **{
+                            key: self._parse_val(val)
+                            for key, val in zip(keys, sample[1:])
+                        }
+                    }
                     for col in self.df_ins.columns:
                         if col not in row.keys():
                             row[col] = ''
@@ -131,11 +145,17 @@ class CSVLogger(Trace):
                 tmpdic[col] = ''
             # Only record an entry if there's at least 1 piece of actual information
             if any(tmpdic.values()):
-                self.df_agg = pd.concat(objs=[self.df_agg, pd.DataFrame([{"mode": self.system.mode,
-                                                                          "step": self.system.global_step,
-                                                                          "epoch": self.system.epoch_idx,
-                                                                          **tmpdic}])],
-                                        ignore_index=True)
+                self.df_agg = pd.concat(
+                    objs=[
+                        self.df_agg,
+                        pd.DataFrame([{
+                            "mode": self.system.mode,
+                            "step": self.system.global_step,
+                            "epoch": self.system.epoch_idx,
+                            **tmpdic
+                        }])
+                    ],
+                    ignore_index=True)
 
     def _save(self) -> None:
         """Write the current state to disk.
