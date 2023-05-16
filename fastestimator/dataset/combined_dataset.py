@@ -23,13 +23,13 @@ from fastestimator.util.traceability_util import traceable
 
 
 @traceable()
-class CombinedDataset(ConcatDataset, FEDataset):
+class CombinedDataset(ConcatDataset):
     def __init__(self, datasets: List[FEDataset]) -> None:
         """
         Combines a list of PyTorch datasets
 
         Args:
-            datasets (List[FEDataset]): List of PyTorch Datasets
+            datasets (List[FEDataset]): List of PyTorch Datasets or FEDataset
 
         Raises:
             AssertionError: raise exception when the input list has less than 2 datasets.
