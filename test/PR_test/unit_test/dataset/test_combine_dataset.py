@@ -57,7 +57,7 @@ class TestCombinedDataset(unittest.TestCase):
         with self.assertRaises(AssertionError) as err_msg:
             combined_ds = fe.dataset.CombinedDataset(datasets=[ds1, "ds2", "ds2"])
         self.assertEqual(
-            "Each dataset should be a type of FEDataset and should return a dictionary.",
+            "Each dataset should be a type of PyTorch Dataset and should return a dictionary.",
             str(err_msg.exception),
         )
 
@@ -76,6 +76,6 @@ class TestCombinedDataset(unittest.TestCase):
         with self.assertRaises(AssertionError) as err_msg:
             combined_ds = fe.dataset.CombinedDataset(datasets=[ds1, ds2])
         self.assertEqual(
-            "Each dataset should be a type of FEDataset and should return a dictionary.",
+            "Each dataset should be a type of PyTorch Dataset and should return a dictionary.",
             str(err_msg.exception),
         )
