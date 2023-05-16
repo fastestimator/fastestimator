@@ -23,6 +23,7 @@ import wget
 from PIL import Image
 
 from fastestimator.dataset.labeled_dir_dataset import LabeledDirDataset
+from fastestimator.util.google_download_util import _download_file_from_google_drive
 from fastestimator.util.util import cpu_count
 from fastestimator.util.wget_util import bar_custom, callback_progress
 
@@ -112,18 +113,16 @@ def load_data(root_dir: Optional[str] = None) -> Tuple[LabeledDirDataset, Labele
     if not os.path.exists(train_base_path):
         if not os.path.exists(train_compressed_path):
             print("Downloading train data to {}".format(root_dir))
-            wget.download('http://statweb.stanford.edu/~tibs/ElemStatLearn/datasets/zip.train.gz',
-                          root_dir,
-                          bar=bar_custom)
+            _download_file_from_google_drive("1NlaCnlhV-PA_Rek8w8eQqJUeYCZJ0olG", train_compressed_path)
+            
         train_images, train_labels = _extract_images_labels(train_compressed_path)
         _write_data(train_images, train_labels, train_base_path, "train")
 
     if not os.path.exists(test_base_path):
         if not os.path.exists(test_compressed_path):
             print("Downloading test data to {}".format(root_dir))
-            wget.download('http://statweb.stanford.edu/~tibs/ElemStatLearn/datasets/zip.test.gz',
-                          root_dir,
-                          bar=bar_custom)
+            _download_file_from_google_drive("1lagM-V1nmAdS3Uz9Uk4bB9cKqE_agt59", test_compressed_path)
+
         test_images, test_labels = _extract_images_labels(test_compressed_path)
         _write_data(test_images, test_labels, test_base_path, "test")
 
