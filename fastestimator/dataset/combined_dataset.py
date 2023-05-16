@@ -45,5 +45,5 @@ class CombinedDataset(ConcatDataset):
                     raise KeyError("All datasets should have same keys.")
             else:
                 raise AssertionError(
-                    "Each dataset should be a type of FEDataset and should return a dictionary."
+                    "Each dataset should be a type of PyTorch Dataset and should return a dictionary."
                 )
