@@ -35,8 +35,8 @@ class CSVLogger(Trace):
         filename: Output filename.
         monitor_names: List of keys to monitor. If None then all metrics will be recorded. If you want to record 'all
             the usual stuff' plus a particular key which isn't normally recorded, you can use a '*' character here.
-            For example: monitor_names=['*', 'y_true']. When recording the average of per-step value in pipeline or
-            network, you will need to add the names in the `monitor_names` argument when calling fe.Estimator.
+            For example: monitor_names=['*', 'y_true']. When recording intermediate variables in the pipeline or
+            network, you will need to add their names in the monitor_names argument when calling fe.Estimator.
         instance_id_key: A key corresponding to data instance ids. If provided, the CSV logger will record per-instance
             metric information into the csv file in addition to the standard metrics.
         mode: What mode(s) to execute this Trace in. For example, "train", "eval", "test", or "infer". To execute
