@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 """
-The FastEstimator implementation of Neural Architecture Search without Training on CIFAR10.
+The FastEstimator implementation of Neural Architecture Search without Training on CIFAIR10.
 The model architecture implementation took reference from https://github.com/D-X-Y/AutoDL-Projects.
 """
 import os
@@ -27,7 +27,7 @@ import wget
 from scipy import stats
 
 import fastestimator as fe
-from fastestimator.dataset.data import cifar10
+from fastestimator.dataset.data import cifair10
 from fastestimator.op.numpyop.univariate import ChannelTranspose, Normalize
 from fastestimator.search import GridSearch
 from fastestimator.util.wget_util import bar_custom, callback_progress
@@ -282,7 +282,7 @@ class NasbenchNetwork(nn.Module):
 
 
 def get_pipeline_data(batch_size=128):
-    train_data, _ = cifar10.load_data()
+    train_data, _ = cifair10.load_data()
     pipeline = fe.Pipeline(
         train_data=train_data,
         batch_size=batch_size,
