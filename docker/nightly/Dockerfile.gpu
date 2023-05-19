@@ -25,6 +25,8 @@ RUN apt-get install -y \
     texlive-latex-base \
     texlive-latex-extra
 
+# Resolve an issue encountered when doing pip install -e
+ENV SETUPTOOLS_USE_DISTUTILS stdlib
 # upgrade essential packages
 RUN pip install --upgrade pip setuptools
 
