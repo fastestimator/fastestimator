@@ -35,7 +35,7 @@ def get_dependency():
     dependencies = [
         'albumentations[imgaug]==1.3.0',
         'matplotlib==3.7.1',
-        'h5py==3.6.0',
+        'h5py==3.8.0',
         'scipy==1.9.1',
         'PyLaTeX==1.4.1',
         'natsort==8.3.1',
@@ -56,22 +56,22 @@ def get_dependency():
         'nltk==3.8.1',
         'requests==2.28.2',
         'tqdm==4.65.0',
-        'numpy==1.23.5',
+        'numpy==1.24.2',
         'pyfiglet==0.8.post1',
         'opencv-python==4.7.0.72',
-        'pandas==1.5.3',
+        'pandas==2.0.1',
         'wget==3.2',
-        'pillow==9.4.0',
+        'pillow==9.5.0',
         'jsonpickle==3.0.1',
         'python-docx==0.8.11',
         'plotly==5.13.1',
         'kaleido==0.2.1',
         'orjson==3.8.7',
-        'scikit-learn==1.2.1',
+        'scikit-learn==1.2.2',
         'lazy_loader==0.1',
         'fe_pycocotools==1.0',
-        'typing_extensions==4.4.0',
-        'charset-normalizer==2.1.1'
+        'typing_extensions==4.5.0',
+        'charset-normalizer==3.1.0'
     ]
     return dependencies
 
