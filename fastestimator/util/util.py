@@ -77,7 +77,7 @@ TENSOR_TO_NP_DTYPE = {
     torch.int16: np.int16,
     torch.int32: np.int32,
     torch.int64: np.int64,
-    torch.bool: np.bool,
+    torch.bool: bool,
     tf.float32: np.float32,
     tf.float64: np.float64,
     tf.float16: np.float16,
@@ -86,7 +86,7 @@ TENSOR_TO_NP_DTYPE = {
     tf.int16: np.int16,
     tf.int32: np.int32,
     tf.int64: np.int64,
-    tf.bool: np.bool,
+    tf.bool: bool,
     np.dtype('float32'): np.float32,
     np.dtype('float64'): np.float64,
     np.dtype('float16'): np.float16,
@@ -95,7 +95,7 @@ TENSOR_TO_NP_DTYPE = {
     np.dtype('int16'): np.int16,
     np.dtype('int32'): np.int32,
     np.dtype('int64'): np.int64,
-    np.dtype('bool'): np.bool,
+    np.dtype('bool'): bool,
 }
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)

@@ -119,7 +119,7 @@ class TestTensorboard(unittest.TestCase):
         with self.subTest('Check content of tensors.tsv'):
             self.assertEqual(tsv_data, 27 * ['1.0'])
         with self.subTest('Check embed image content'):
-            self.assertTrue(is_equal(output_img, 255 * np.ones(shape=(3, 3, 3), dtype=np.int)))
+            self.assertTrue(is_equal(output_img, 255 * np.ones(shape=(3, 3, 3), dtype=np.int32)))
 
     def test_torch_on_begin(self):
         tensorboard = TensorBoard(log_dir=self.log_dir)
@@ -181,4 +181,4 @@ class TestTensorboard(unittest.TestCase):
         with self.subTest('Check content of tensors.tsv'):
             self.assertEqual(tsv_data, 27 * ['1.0'])
         with self.subTest('Check embed image content'):
-            self.assertTrue(is_equal(output_img, 255 * np.ones(shape=(3, 3, 3), dtype=np.int)))
+            self.assertTrue(is_equal(output_img, 255 * np.ones(shape=(3, 3, 3), dtype=np.int32)))
