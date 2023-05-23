@@ -51,6 +51,8 @@ class RandomGridShuffle(MultiVariateAlbumentation):
                  image_out: Optional[str] = None,
                  mask_out: Optional[str] = None,
                  masks_out: Optional[str] = None):
+        import numpy as np  # Albumentations 1.3.0 is relying on deprecated np.int alias.
+        np.int = np.int32  # TODO - Remove this after they upgrade
         super().__init__(RandomGridShuffleAlb(grid=grid, always_apply=True),
                          image_in=image_in,
                          mask_in=mask_in,

@@ -14,7 +14,7 @@
 # ==============================================================================
 """COCO Mean average precisin (mAP) implementation."""
 from collections import defaultdict
-from typing import Dict, List, Union, Iterable
+from typing import Dict, Iterable, List, Optional, Union
 
 import numpy as np
 from pycocotools import mask as maskUtils
@@ -65,8 +65,8 @@ class MeanAveragePrecision(Trace):
 
         assert len(self.outputs) == 3, 'MeanAvgPrecision trace adds 3 fields mAP AP50 AP75 to state dict'
 
-        self.iou_thres = np.linspace(.5, 0.95, np.round((0.95 - .5) / .05).astype(np.int) + 1, endpoint=True)
-        self.recall_thres = np.linspace(.0, 1.00, np.round((1.00 - .0) / .01).astype(np.int) + 1, endpoint=True)
+        self.iou_thres = np.linspace(.5, 0.95, np.round((0.95 - .5) / .05).astype(np.int32) + 1, endpoint=True)
+        self.recall_thres = np.linspace(.0, 1.00, np.round((1.00 - .0) / .01).astype(np.int32) + 1, endpoint=True)
         self.categories = range(num_classes)
         self.max_detection = 100
         self.image_ids = []
@@ -343,8 +343,8 @@ class MeanAveragePrecision(Trace):
             tps = det_match > 0
             fps = det_match == 0
 
-            tp_sum = np.cumsum(tps, axis=1).astype(dtype=np.float)
-            fp_sum = np.cumsum(fps, axis=1).astype(dtype=np.float)
+            tp_sum = np.cumsum(tps, axis=1).astype(dtype=np.float32)
+            fp_sum = np.cumsum(fps, axis=1).astype(dtype=np.float32)
 
             for index, (true_positives, false_positives) in enumerate(zip(tp_sum, fp_sum)):
                 true_positives = np.array(true_positives)
@@ -388,7 +388,7 @@ class MeanAveragePrecision(Trace):
             'scores': scores_matrix,
         }
 
-    def summarize(self, iou: float = None) -> float:
+    def summarize(self, iou: Optional[float] = None) -> float:
         """Compute average precision given one intersection union threshold.
 
         Args:
