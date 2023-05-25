@@ -61,7 +61,7 @@ def get_dependency():
         'opencv-python==4.7.0.72',
         'pandas==2.0.1',
         'wget==3.2',
-        'pillow==9.5.0',
+        'pillow==9.3.0',  # See discussion below before changing this in the future
         'jsonpickle==3.0.1',
         'python-docx==0.8.11',
         'plotly==5.13.1',
@@ -95,3 +95,17 @@ setup(
     python_requires='>=3.8.0',
     # Declare extra set for installation
     extras_require={})
+
+# Pillow version warning: 9.4.0 breaks the CPU docker image on dnn.ipynb and yolov5.ipynb, causing a Kernel died
+# error and segmentation fault respectively. Version 9.5.0 fixes those problems but causes dnn_tf.py, alocc_tf.py,
+# yolov5_tf.py, and retinanet_tf.py all to crash (again on the CPU-only docker image), all with segmentation faults.
+# Strangely, the more direct cause of the crash in those cases is that if you import sklearn (or albumentations which
+# in turn imports sklearn) before importing tensorflow then you will get a segfault during tensorflow training. You can
+# solve this by importing torch before sklearn. You can also import torch after importing sklearn to fix the problem,
+# but if someone imports sklearn AND cv2 AND tensorflow, then importing torch later can't salvage the situation. If we
+# could ensure that torch was imported first then this wouldn't be an issue, but I don't see a way to do that at the
+# moment. In another bizarre twist, skl -> PIL -> tf -> torch does not result in a segfault. It's not clear at the
+# moment why changing the PIL version helps whereas changing the skl or cv2 versions does not, given that PIL importing
+# doesn't cause a direct problem. This note has been included in order to save a week of debugging time next time we do
+# version bumps. If you want a more recent version of PIL, and are on a non-linux machine or have GPUs, then feel free
+# to manually install a higher version after installing FE and just ignore the pip incompatibility warning.
