@@ -38,7 +38,7 @@ RUN pip install --no-cache-dir \
     papermill \
     traitlets==5.2.2.post1
 
-RUN pip install jupyter-client
+RUN pip install jupyter-client notebook
 
 RUN ipython kernel install --user --name nightly_build
 
