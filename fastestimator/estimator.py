@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import inspect
+import math
 import os
 import random
 from collections import ChainMap
@@ -376,8 +377,9 @@ class Estimator:
                                output_keys=trace_input_keys - network_output_keys | network_input_keys) as loader:
 
                 if self.system.mode == 'eval':
-                    log_steps_per_epoch = len(loader) // loader.get_batch_size(
-                    ) if not self.system.steps_per_epoch else self.system.steps_per_epoch
+                    log_steps_per_epoch = math.ceil(
+                        len(loader) /
+                        loader.get_batch_size()) if not self.system.steps_per_epoch else self.system.steps_per_epoch
                     self.system.eval_log_steps = ([
                         1, log_steps_per_epoch // 3, (2 * log_steps_per_epoch) // 3, log_steps_per_epoch
                     ], log_steps_per_epoch) if not self.system.eval_log_steps_request else \
