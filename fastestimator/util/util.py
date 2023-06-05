@@ -124,9 +124,6 @@ class Suppressor(object):
     # Only create one file to save on disk IO
     stash_fd, stash_name = tempfile.mkstemp()
     os.close(stash_fd)
-    tf_print_fd, tf_print_name = tempfile.mkstemp()
-    os.close(tf_print_fd)
-    tf_print_name_f = 'file://' + tf_print_name
 
     def __init__(self, allow_pyprint: bool = False, show_if_exception: bool = False):
         self.allow_pyprint = allow_pyprint
@@ -134,53 +131,41 @@ class Suppressor(object):
 
     def __enter__(self) -> None:
         # This is not necessary to block printing, but lets the system know what's happening
-        self.py_reals = [sys.stdout, sys.stderr]
-        sys.stdout = sys.stderr = self
-        # This part does the heavy lifting
-        if self.show_if_exception:
-            self.fake = os.open(self.stash_name, os.O_RDWR)
-        else:
-            self.fake = os.open(os.devnull, os.O_RDWR)
         self.reals = [os.dup(1), os.dup(2)]  # [stdout, stderr]
-        os.dup2(self.fake, 1)
-        os.dup2(self.fake, 2)
+
+        # This part does the heavy lifting
+        self.filename = self.stash_name if self.show_if_exception else os.devnull
+        self.fake = os.open(self.filename, os.O_RDWR)
+
         if self.allow_pyprint:
-            tf.print = _custom_tf_print
+            sys.stderr = sys.stdout
+        else:
+            sys.stdout = os.fdopen(self.fake, 'w')
+            sys.stderr = sys.stdout
+            os.dup2(self.fake, 1)
+            os.dup2(self.fake, 2)
 
     def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
+
         # If there was an error, display any print messages
         if exc[0] is not None and self.show_if_exception and not isinstance(exc[1],
                                                                             (StopIteration, StopAsyncIteration)):
             for line in open(self.stash_name):
                 os.write(self.reals[0], line.encode('utf-8'))
+
         # Set the print pointers back
         os.dup2(self.reals[0], 1)
         os.dup2(self.reals[1], 2)
-        # Set the python pointers back too
-        sys.stdout, sys.stderr = self.py_reals[0], self.py_reals[1]
+
         # Clean up the descriptors
         for fd in self.reals:
             os.close(fd)
-        os.close(self.fake)
-        if self.show_if_exception:
-            # Clear the file
-            open(self.stash_name, 'w').close()
-        if self.allow_pyprint:
-            tf.print = print_v2
-            for line in open(self.tf_print_name, 'r'):
-                print(line, end='')  # Endings already included from tf.print
-            open(self.tf_print_name, 'w').close()
 
-    def write(self, dummy: str) -> None:
-        """A function which is invoked during print calls.
+        if not self.allow_pyprint:
+            os.close(self.fake)
 
-        Args:
-            dummy: The string which wanted to be printed.
-        """
-        if self.allow_pyprint:
-            os.write(self.reals[0], dummy.encode('utf-8'))
-        elif self.show_if_exception:
-            os.write(self.fake, dummy.encode('utf-8'))
+        # Set the python pointers back too
+        sys.stdout, sys.stderr = sys.__stdout__, sys.__stderr__
 
     def flush(self) -> None:
         """A function to empty the current print buffer. No-op in this case.
@@ -193,14 +178,8 @@ class Suppressor(object):
         """
         try:
             os.remove(Suppressor.stash_name)
-            os.remove(Suppressor.tf_print_name)
         except FileNotFoundError:
             pass
-
-
-def _custom_tf_print(*args, **kwargs):
-    kwargs['output_stream'] = Suppressor.tf_print_name_f
-    print_v2(*args, **kwargs)
 
 
 class Timer(ContextDecorator):
