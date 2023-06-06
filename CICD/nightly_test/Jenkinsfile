@@ -36,9 +36,7 @@ pipeline {
                                             sh 'bash test/run_nightly_build.sh'
                                         }
                                     }
-                                    finally {
-                                        sh 'docker rmi "${IMAGE_TAG}"'
-                                    }
+
                                 }
                             }
                         }
@@ -64,9 +62,6 @@ pipeline {
                                             sh 'coverage run --source fastestimator -m unittest test.run_pr_test'
                                             sh 'bash test/run_nightly_build.sh'
                                         }
-                                    }
-                                    finally {
-                                        sh 'docker rmi "${IMAGE_TAG}"'
                                     }
                                 }
                             }
@@ -94,9 +89,6 @@ pipeline {
                                             sh 'bash test/run_nightly_build.sh'
                                         }
                                     }
-                                    finally {
-                                        sh 'docker rmi "${IMAGE_TAG}"'
-                                    }
                                 }
                             }
                         }
@@ -122,9 +114,6 @@ pipeline {
                             }
                         }
                     }
-                    finally {
-                        sh 'docker rmi "${IMAGE_TAG}"'
-                    }
                 }
             }
         }
@@ -137,7 +126,6 @@ pipeline {
                         docker push fastestimator/fastestimator:nightly-cpu
                         docker build -t fastestimator/fastestimator:nightly-gpu --no-cache - < docker/nightly/Dockerfile.gpu
                         docker push fastestimator/fastestimator:nightly-gpu
-                        docker image prune -f
                         rm -rf *
                     '''
                 }
@@ -145,13 +133,15 @@ pipeline {
         }
     }
     post {
-        success{
+        success {
           script{
+                docker system prune -a --force
                 slackSend(channel: "fastestimator", message: "Congrats! FastEstimator <$BUILD_URL|nightly-test> of $BUILD_DATE passed :)")
             }
         }
         failure {
             script{
+                docker system prune -a --force
                 slackSend(channel: "fastestimator", message: "Oh no! FastEstimator <$BUILD_URL|nightly-test> of $BUILD_DATE failed :(")
             }
         }
