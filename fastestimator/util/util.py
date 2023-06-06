@@ -26,7 +26,6 @@ import tensorflow as tf
 import torch
 import torch.backends.mps
 from pyfiglet import Figlet
-from tensorflow.python.ops.logging_ops import print_v2
 
 from fastestimator.util.base_util import warn
 
@@ -131,41 +130,44 @@ class Suppressor(object):
 
     def __enter__(self) -> None:
         # This is not necessary to block printing, but lets the system know what's happening
-        self.reals = [os.dup(1), os.dup(2)]  # [stdout, stderr]
-
-        # This part does the heavy lifting
-        self.filename = self.stash_name if self.show_if_exception else os.devnull
-        self.fake = os.open(self.filename, os.O_RDWR)
+        self.prev = [sys.stdout, sys.stderr]
+        self.prevfd = [os.dup(1), os.dup(2)]
 
         if self.allow_pyprint:
             sys.stderr = sys.stdout
+            os.dup2(2, 1)
         else:
-            sys.stdout = os.fdopen(self.fake, 'w')
-            sys.stderr = sys.stdout
+            if self.show_if_exception:
+                self.fake = os.open(self.stash_name, os.O_RDWR)
+            else:
+                self.fake = os.open(os.devnull, os.O_RDWR)
             os.dup2(self.fake, 1)
             os.dup2(self.fake, 2)
+            sys.stdout = self.fake
+            sys.stderr = self.fake
 
     def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
-
         # If there was an error, display any print messages
         if exc[0] is not None and self.show_if_exception and not isinstance(exc[1],
                                                                             (StopIteration, StopAsyncIteration)):
             for line in open(self.stash_name):
-                os.write(self.reals[0], line.encode('utf-8'))
+                os.write(self.prevfd[0], line.encode('utf-8'))
 
         # Set the print pointers back
-        os.dup2(self.reals[0], 1)
-        os.dup2(self.reals[1], 2)
+        os.dup2(self.prevfd[0], 1)
+        os.dup2(self.prevfd[1], 2)
 
-        # Clean up the descriptors
-        for fd in self.reals:
+        # Set the python pointers back too
+        sys.stdout, sys.stderr = self.prev[0], self.prev[1]
+
+        for fd in self.prevfd:
             os.close(fd)
 
         if not self.allow_pyprint:
             os.close(self.fake)
-
-        # Set the python pointers back too
-        sys.stdout, sys.stderr = sys.__stdout__, sys.__stderr__
+            if self.show_if_exception:
+                # Clear the file
+                open(self.stash_name, 'w').close()
 
     def flush(self) -> None:
         """A function to empty the current print buffer. No-op in this case.
