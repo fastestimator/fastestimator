@@ -74,7 +74,5 @@ $ fastestimator train mnist_tf.py --hyperparameters hp.json
 There are some default system arguments in the `fastestimator train`, `fastestimator test`, and `fastestimator run` commands. Here are a list of them:
 
 * __warmup__:   Available in `train` and `run`, it controls whether to perform warmup checking before the actual training starts. Default is True. Users can disable warmup by `--warmup False`. Disabling it can reduce the initialization time needed to start the training.
-
 * __eager__: Available in `train`, `test`, and `run`. This argument is only relevant if using tensorflow backend. Enabling eager execution will allow user to access the value of the tf tensor at run time. The default is False, user can enable it by `--eager True`. The eager mode is useful in tensorflow debugging workflows. However, there are several downsides of eager execution such as less speed and more memory usage.
-
 * __summary__: Available in `train`, `test`, and `run`. This is the same `summary` argument used in `estimator.fit(summary=...)` or `estimator.test(summary=...)`. It allows users to specify experiment name when generating reports. For example, Users can set experiment name by `--summary exp_name`.
