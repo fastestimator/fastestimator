@@ -23,7 +23,7 @@ from scipy import stats
 from tensorflow.keras import Model, layers
 
 import fastestimator as fe
-from fastestimator.dataset.data import cifar10
+from fastestimator.dataset.data import cifair10
 from fastestimator.op.numpyop.univariate import Normalize
 from fastestimator.search import GridSearch
 from fastestimator.util import to_number
@@ -178,7 +178,7 @@ def nasbench_network(input_shape, genotype, C=16, N=5, num_classes=10):
 
 
 def get_pipeline_data(batch_size=128):
-    train_data, _ = cifar10.load_data()
+    train_data, _ = cifair10.load_data()
     pipeline = fe.Pipeline(
         train_data=train_data,
         batch_size=batch_size,

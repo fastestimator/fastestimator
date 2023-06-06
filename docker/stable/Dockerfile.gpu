@@ -25,8 +25,10 @@ RUN apt-get install -y \
     texlive-latex-base \
     texlive-latex-extra
 
+# Resolve an issue encountered when doing pip install -e
+ENV SETUPTOOLS_USE_DISTUTILS stdlib
 # upgrade essential packages
-RUN pip install --upgrade pip setuptools==51.3.3
+RUN pip install --upgrade pip setuptools
 
 # nightly test related packages
 RUN pip install --no-cache-dir \
@@ -36,10 +38,7 @@ RUN pip install --no-cache-dir \
     papermill \
     traitlets==5.2.2.post1
 
-# specify jupyter_client version To address "ValueError: Duplicate Signature" (https://github.com/jupyter/jupyter_client/issues/541)
-# the latest release hasn't fixed this issues but the latest master branch seems to has fixed that.
-# Note: need to switch to new official release after it cames out (patch after 6.1.12)
-RUN pip install git+https://github.com/fastestimator-util/jupyter_client.git@master
+RUN pip install jupyter-client notebook
 
 RUN ipython kernel install --user --name nightly_build
 
@@ -47,7 +46,7 @@ RUN ipython kernel install --user --name nightly_build
 RUN apt-get install -y lsof
 
 # backend dependencies
-RUN pip install torch==2.0.0+cu118 torchvision==0.15.1+cu118 torchaudio==2.0.1+cu118 -f https://download.pytorch.org/whl/cu118/torch_stable.html
+RUN pip install torch==2.0.1+cu118 torchvision==0.15.2+cu118 torchaudio==2.0.2+cu118 -f https://download.pytorch.org/whl/cu118/torch_stable.html
 
 # install FastEstimator
 ARG InstallFE=True

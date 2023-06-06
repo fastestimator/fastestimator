@@ -87,7 +87,7 @@ def corrupt_dataset(dataset, n_classes=100, corruption_fraction=0.4):
             corrupted[i] = 1
         i += 1
     # Put the corruption labels into the dataset for visualization
-    dataset['data_labels'] = np.array(corrupted, dtype=np.int).reshape((len(dataset), 1))
+    dataset['data_labels'] = np.array(corrupted, dtype=np.int32).reshape((len(dataset), 1))
 
 
 def get_estimator(epochs=50,

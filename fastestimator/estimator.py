@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import inspect
+import math
 import os
 import random
 from collections import ChainMap
@@ -42,7 +43,7 @@ from fastestimator.trace.trace import EvalEssential, Logger, PerDSTrace, TestEss
 from fastestimator.util.base_util import NonContext, to_list, to_set, warn
 from fastestimator.util.data import Data, FilteredData
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import draw
+from fastestimator.util.util import Suppressor, draw
 
 
 def _verify_dependency_versions() -> None:
@@ -50,8 +51,8 @@ def _verify_dependency_versions() -> None:
     """
     if tf.__version__ not in {'2.11.1', '2.11.0'}:
         warn(f"Expected TensorFlow version 2.11.1 but found {tf.__version__}. The framework may not work as expected.")
-    if torch.__version__ not in ('2.0.0', '2.0.0+cpu', '2.0.0+cu118'):
-        warn(f"Expected PyTorch version 2.0.0 but found {torch.__version__}. The framework may not work as expected.")
+    if torch.__version__ not in ('2.0.1', '2.0.1+cpu', '2.0.1+cu118'):
+        warn(f"Expected PyTorch version 2.0.1 but found {torch.__version__}. The framework may not work as expected.")
 
 
 @traceable()
@@ -263,7 +264,9 @@ class Estimator:
                         if isinstance(loader, tf.data.Dataset):
                             batch = list(loader.take(1))[0]
                         else:
-                            batch = next(iter(loader))
+                            with Suppressor(allow_pyprint=True, show_if_exception=True):
+                                # TF multi-gpu print-spams here in version 2.11
+                                batch = next(iter(loader))
                         batch = self._configure_tensor(loader, batch)
                     assert isinstance(batch, dict), "please make sure data output format is dictionary"
                     pipeline_output_keys = to_set(batch.keys())
@@ -303,6 +306,10 @@ class Estimator:
             eager: Whether to run the training in eager mode. This is only related to TensorFlow training because
                 PyTorch by nature is always in eager mode.
         """
+        with Suppressor():
+            # TODO - remove this after updating to TF > 2.11
+            from tensorflow.python.autograph.pyct.static_analysis.liveness import Analyzer
+            Analyzer.lamba_check(None, None)  # type: ignore
         all_traces = sort_traces(get_current_items(self.traces_in_use, run_modes=run_modes), ds_ids=[])
         with NonContext() if fe.fe_history_path is False else HistoryRecorder(
                 self.system, self.filepath, db_path=fe.fe_history_path):
@@ -370,8 +377,9 @@ class Estimator:
                                output_keys=trace_input_keys - network_output_keys | network_input_keys) as loader:
 
                 if self.system.mode == 'eval':
-                    log_steps_per_epoch = len(loader) // loader.get_batch_size(
-                    ) if not self.system.steps_per_epoch else self.system.steps_per_epoch
+                    log_steps_per_epoch = math.ceil(
+                        len(loader) /
+                        loader.get_batch_size()) if not self.system.steps_per_epoch else self.system.steps_per_epoch
                     self.system.eval_log_steps = ([
                         1, log_steps_per_epoch // 3, (2 * log_steps_per_epoch) // 3, log_steps_per_epoch
                     ], log_steps_per_epoch) if not self.system.eval_log_steps_request else \
@@ -379,7 +387,9 @@ class Estimator:
 
                 loader = self._configure_loader(loader)
                 iterator = iter(loader)
-                batch = next(iterator)
+                with Suppressor(allow_pyprint=True, show_if_exception=True):
+                    # multi-gpu tensorflow prints a ton of complaint messages here
+                    batch = next(iterator)
                 ds_traces = sort_traces(ds_traces,
                                         available_outputs=to_set(batch.keys()) | network_output_keys,
                                         ds_ids=ds_ids)

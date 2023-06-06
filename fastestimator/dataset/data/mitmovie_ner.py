@@ -96,8 +96,8 @@ def load_data(root_dir: Optional[str] = None) -> Tuple[NumpyDataset, NumpyDatase
     y_vocab |= y_eval_vocab
     x_train = np.array(x_train)
     x_eval = np.array(x_eval)
-    y_train = np.array(y_train)
-    y_eval = np.array(y_eval)
+    y_train = np.array(y_train, dtype=object)
+    y_eval = np.array(y_eval, dtype=object)
     train_data = NumpyDataset({"x": x_train, "y": y_train})
     eval_data = NumpyDataset({"x": x_eval, "y": y_eval})
     return train_data, eval_data, x_vocab, y_vocab

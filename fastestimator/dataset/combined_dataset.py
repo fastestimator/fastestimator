@@ -14,30 +14,27 @@
 # ==============================================================================
 
 
-from typing import Any, Dict, Union
+from typing import List
 
-from torch.utils.data import Dataset
+from torch.utils.data import ConcatDataset, Dataset
 
-from fastestimator.dataset.dataset import FEDataset
 from fastestimator.util.traceability_util import traceable
 
 
 @traceable()
-class CombinedDataset(FEDataset):
-    def __init__(self, datasets: list) -> None:
+class CombinedDataset(ConcatDataset):
+    def __init__(self, datasets: List[Dataset]) -> None:
         """
-        Combines a list of PyTorch datasets
+        Combines a list of PyTorch Dataset
 
         Args:
-            datasets (list): List of PyTorch Datasets
+            datasets (List[Dataset]): List of PyTorch Dataset
 
         Raises:
             AssertionError: raise exception when the input list has less than 2 datasets.
             KeyError: raise exception when the datasets does not have same keys.
         """
-        if not isinstance(datasets, list) or len(datasets) < 2:
-            raise AssertionError("Please provide a list of atleast 2 datasets.")
-        self.datasets = datasets
+        super().__init__(datasets)
         keys = None
 
         for ds in datasets:
@@ -50,34 +47,3 @@ class CombinedDataset(FEDataset):
                 raise AssertionError(
                     "Each dataset should be a type of PyTorch Dataset and should return a dictionary."
                 )
-
-    def __len__(self) -> int:
-        """
-        Return combined length of datasets
-
-        Returns:
-            int: sum of the lengths of all datasets.
-        """
-        return sum([len(ds) for ds in self.datasets])
-
-    def __getitem__(self, idx: int) -> Union[Dict[str, Any], None]:
-        """
-        Return data based on the input id.
-
-        Args:
-            idx (int): index of the data item to be returned
-
-        Returns:
-            dict: dict at the index `idx`
-        """
-        start = 0
-        end = 0
-        if idx >= len(self):
-            raise AssertionError(
-                "Index is out of range of the length of the dataset. Please provide a valid index."
-            )
-        for ds in self.datasets:
-            end += len(ds)
-            if idx >= start and idx < end:
-                return ds[idx - start]
-            start += end
