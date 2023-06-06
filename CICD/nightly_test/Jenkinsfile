@@ -28,15 +28,12 @@ pipeline {
                                 script {
                                     def customImage = docker.build("${IMAGE_TAG}", \
                                                                   '--no-cache - < docker/nightly/Dockerfile.gpu')
-                                    try {
                                         customImage.inside('-u root -v $LOCAL_DATASET_PATH:$DOCKER_DATASET_PATH \
                                                         --gpus all --shm-size 50g') {
                                             sh 'pip install coverage'
                                             sh 'coverage run --source fastestimator -m unittest test.run_pr_test'
                                             sh 'bash test/run_nightly_build.sh'
                                         }
-                                    }
-
                                 }
                             }
                         }
@@ -55,14 +52,12 @@ pipeline {
                                 script {
                                     def customImage = docker.build("${IMAGE_TAG}", \
                                                                   '--no-cache - < docker/nightly/Dockerfile.gpu')
-                                    try {
                                         customImage.inside('-u root -v $LOCAL_DATASET_PATH:$DOCKER_DATASET_PATH \
                                                         --gpus all --shm-size 50g') {
                                             sh 'pip install coverage'
                                             sh 'coverage run --source fastestimator -m unittest test.run_pr_test'
                                             sh 'bash test/run_nightly_build.sh'
                                         }
-                                    }
                                 }
                             }
                         }
@@ -81,14 +76,12 @@ pipeline {
                                 script {
                                     def customImage = docker.build("${IMAGE_TAG}", \
                                                                 '--no-cache - < docker/nightly/Dockerfile.cpu')
-                                    try {
                                         customImage.inside('-u root -v $LOCAL_DATASET_PATH:$DOCKER_DATASET_PATH \
                                                         --shm-size 50g') {
                                             sh 'pip install coverage'
                                             sh 'coverage run --source fastestimator -m unittest test.run_pr_test'
                                             sh 'bash test/run_nightly_build.sh'
                                         }
-                                    }
                                 }
                             }
                         }
@@ -101,7 +94,6 @@ pipeline {
             steps {
                 script {
                     def customImage = docker.build("${IMAGE_TAG}", "--no-cache - < docker/nightly/Dockerfile.cpu")
-                    try {
                         customImage.inside("-u root") {
                             withCredentials([string(credentialsId: 'pypi_password', variable: 'PYPI_PWD')]) {
                                 sh '''#!/bin/bash
@@ -113,7 +105,6 @@ pipeline {
                                 '''
                             }
                         }
-                    }
                 }
             }
         }
@@ -133,15 +124,20 @@ pipeline {
         }
     }
     post {
-        success {
-          script{
+        always{
+            script{
+                sh '''
                 docker system prune -a --force
+                '''
+            }
+        }
+        success{
+          script{
                 slackSend(channel: "fastestimator", message: "Congrats! FastEstimator <$BUILD_URL|nightly-test> of $BUILD_DATE passed :)")
             }
         }
         failure {
             script{
-                docker system prune -a --force
                 slackSend(channel: "fastestimator", message: "Oh no! FastEstimator <$BUILD_URL|nightly-test> of $BUILD_DATE failed :(")
             }
         }
