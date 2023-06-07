@@ -130,44 +130,54 @@ class Suppressor(object):
 
     def __enter__(self) -> None:
         # This is not necessary to block printing, but lets the system know what's happening
-        self.prev = [sys.stdout, sys.stderr]
-        self.prevfd = [os.dup(1), os.dup(2)]
-
-        if self.allow_pyprint:
-            sys.stderr = sys.stdout
-            os.dup2(2, 1)
+        self.py_reals = [sys.stdout, sys.stderr]
+        sys.stdout = sys.stderr = self
+        # This part does the heavy lifting
+        if self.show_if_exception:
+            self.fake = os.open(self.stash_name, os.O_RDWR)
         else:
-            if self.show_if_exception:
-                self.fake = os.open(self.stash_name, os.O_RDWR)
-            else:
-                self.fake = os.open(os.devnull, os.O_RDWR)
-            os.dup2(self.fake, 1)
-            os.dup2(self.fake, 2)
-            sys.stdout = self.fake
-            sys.stderr = self.fake
+            self.fake = os.open(os.devnull, os.O_RDWR)
+        self.reals = [os.dup(1), os.dup(2)]  # [stdout, stderr]
+        os.dup2(self.fake, 1)
+        os.dup2(self.fake, 2)
+        # updating the tensorflow log handlers output stream
+        # in case of interactive tensorflow is set to stdout and else stderr
+        [handler.setStream(sys.stderr) for handler in tf.get_logger().handlers]
 
     def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
         # If there was an error, display any print messages
         if exc[0] is not None and self.show_if_exception and not isinstance(exc[1],
                                                                             (StopIteration, StopAsyncIteration)):
             for line in open(self.stash_name):
-                os.write(self.prevfd[0], line.encode('utf-8'))
-
+                os.write(self.reals[0], line.encode('utf-8'))
         # Set the print pointers back
-        os.dup2(self.prevfd[0], 1)
-        os.dup2(self.prevfd[1], 2)
-
+        os.dup2(self.reals[0], 1)
+        os.dup2(self.reals[1], 2)
         # Set the python pointers back too
-        sys.stdout, sys.stderr = self.prev[0], self.prev[1]
+        sys.stdout, sys.stderr = self.py_reals[0], self.py_reals[1]
 
-        for fd in self.prevfd:
+        # updating the tensorflow log handlers output stream
+        # in case of interactive tensorflow is set to stdout and else stderr
+        [handler.setStream(sys.stderr) for handler in tf.get_logger().handlers]
+
+        # Clean up the descriptors
+        for fd in self.reals:
             os.close(fd)
+        os.close(self.fake)
+        if self.show_if_exception:
+            # Clear the file
+            open(self.stash_name, 'w').close()
 
-        if not self.allow_pyprint:
-            os.close(self.fake)
-            if self.show_if_exception:
-                # Clear the file
-                open(self.stash_name, 'w').close()
+    def write(self, dummy: str) -> None:
+        """A function which is invoked during print calls.
+
+        Args:
+            dummy: The string which wanted to be printed.
+        """
+        if self.allow_pyprint:
+            os.write(self.reals[0], dummy.encode('utf-8'))
+        elif self.show_if_exception:
+            os.write(self.fake, dummy.encode('utf-8'))
 
     def flush(self) -> None:
         """A function to empty the current print buffer. No-op in this case.
