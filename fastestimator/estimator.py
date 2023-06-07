@@ -39,7 +39,7 @@ from fastestimator.trace.io.restore_wizard import RestoreWizard
 from fastestimator.trace.io.traceability import Traceability
 from fastestimator.trace.trace import EvalEssential, Logger, PerDSTrace, TestEssential, Trace, TrainEssential, \
     sort_traces
-from fastestimator.util.base_util import NonContext, to_list, to_set, warn
+from fastestimator.util.base_util import NonContext, filter_nones, to_list, to_set, warn
 from fastestimator.util.data import Data, FilteredData
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import Suppressor, draw
@@ -92,18 +92,18 @@ class Estimator:
                  epochs: int,
                  train_steps_per_epoch: Optional[int] = None,
                  eval_steps_per_epoch: Optional[int] = None,
-                 traces: Union[None, Trace, Scheduler[Trace], Iterable[Union[Trace, Scheduler[Trace]]]] = None,
+                 traces: Union[None, Trace, Scheduler[Trace], Sequence[Union[None, Trace, Scheduler[Trace]]]] = None,
                  log_steps: Optional[int] = 100,
                  eval_log_steps: Sequence[int] = (),
-                 monitor_names: Union[None, str, Iterable[str]] = None):
+                 monitor_names: Union[None, str, Iterable[Optional[str]]] = None):
         self.traces_in_use = []
         self.filepath = os.path.realpath(inspect.stack()[2].filename)  # Record this for history tracking
         assert log_steps is None or log_steps >= 0, \
             "log_steps must be None or positive (or 0 to disable only train logging)"
-        self.monitor_names = to_set(monitor_names) | network.get_loss_keys()
+        self.monitor_names = filter_nones(to_set(monitor_names)) | network.get_loss_keys()
         self.system = System(network=network,
                              pipeline=pipeline,
-                             traces=to_list(traces),
+                             traces=filter_nones(to_list(traces)),
                              log_steps=log_steps,
                              total_epochs=epochs,
                              train_steps_per_epoch=train_steps_per_epoch,

@@ -37,7 +37,7 @@ from fastestimator.op.op import get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.tensorop.model.update import UpdateOp
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
-from fastestimator.util.base_util import NonContext, to_list, warn
+from fastestimator.util.base_util import NonContext, filter_nones, to_list, warn
 from fastestimator.util.traceability_util import trace_model, traceable
 from fastestimator.util.util import Suppressor, detach_tensors, get_batch_size, get_device, get_num_gpus, \
     move_tensors_to_device
@@ -69,16 +69,17 @@ class BaseNetwork:
         self,
         target_type: str,
         device: Optional[torch.device],
-        ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
-        postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Sequence[Union[NumpyOp, Scheduler[NumpyOp]]]] = None
+        ops: Sequence[Union[None, TensorOp, Scheduler[TensorOp]]],
+        postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Sequence[Union[None, NumpyOp,
+                                                                                Scheduler[NumpyOp]]]] = None
     ) -> None:
-        self.ops = to_list(ops)
+        self.ops = filter_nones(to_list(ops))
         self.target_type = target_type
         self.device = device
         for op in get_current_items(self.ops):
             op.build(framework=self.target_type, device=self.device)
-        self.models = to_list(_collect_models(ops))
-        self.postprocessing = to_list(postprocessing)
+        self.models = to_list(_collect_models(self.ops))
+        self.postprocessing = filter_nones(to_list(postprocessing))
         for pop in self.postprocessing:
             if isinstance(pop, RemoveIf):
                 raise ValueError("Filtering is currently not supported in network post-processing")
@@ -309,7 +310,9 @@ class BaseNetwork:
         return {**data, **prediction}
 
 
-def _collect_models(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> Set[Model]:
+def _collect_models(
+    ops: Union[None, TensorOp, Scheduler[TensorOp], Iterable[Union[None, TensorOp,
+                                                                   Scheduler[TensorOp]]]]) -> Set[Model]:
     """Collect all model instances from amongst a list of ops.
 
     Args:
@@ -319,16 +322,17 @@ def _collect_models(ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]]) -> Set[
         All of the model instances contained within the `ops`.
     """
     models = set()
-    for op in get_current_items(ops):
+    ops_list = filter_nones(to_list(ops))
+    for op in get_current_items(ops_list):
         models |= op.get_fe_models()
     return models
 
 
 # noinspection PyPep8Naming
 def Network(
-        ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
-        pops: Union[None, NumpyOp, Scheduler[NumpyOp], Sequence[Union[NumpyOp,
-                                                                      Scheduler[NumpyOp]]]] = None) -> BaseNetwork:
+    ops: Sequence[Union[None, TensorOp, Scheduler[TensorOp]]],
+    pops: Union[None, NumpyOp, Scheduler[NumpyOp], Sequence[Union[None, NumpyOp, Scheduler[NumpyOp]]]] = None
+) -> BaseNetwork:
     """A function to automatically instantiate the correct Network derived class based on the given `ops`.
 
     Args:
@@ -346,7 +350,6 @@ def Network(
         AssertionError: If TensorFlow and PyTorch models are mixed, or if no models are provided.
         ValueError: If a model is provided whose type cannot be identified as either TensorFlow or PyTorch.
     """
-    ops = to_list(ops)
     models = _collect_models(ops)
     framework = set()
     model_names = set()
@@ -388,8 +391,9 @@ class TorchNetwork(BaseNetwork):
 
     def __init__(
         self,
-        ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
-        postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Sequence[Union[NumpyOp, Scheduler[NumpyOp]]]] = None
+        ops: Sequence[Union[None, TensorOp, Scheduler[TensorOp]]],
+        postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Sequence[Union[None, NumpyOp,
+                                                                                Scheduler[NumpyOp]]]] = None
     ) -> None:
         super().__init__(target_type='torch', device=get_device(), ops=ops, postprocessing=postprocessing)
 
@@ -530,8 +534,9 @@ class TFNetwork(BaseNetwork):
     """
     def __init__(
         self,
-        ops: Iterable[Union[TensorOp, Scheduler[TensorOp]]],
-        postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Sequence[Union[NumpyOp, Scheduler[NumpyOp]]]] = None
+        ops: Sequence[Union[None, TensorOp, Scheduler[TensorOp]]],
+        postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Sequence[Union[None, NumpyOp,
+                                                                                Scheduler[NumpyOp]]]] = None
     ) -> None:
         super().__init__(target_type='tf', device=None, ops=ops, postprocessing=postprocessing)
 
