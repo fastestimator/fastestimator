@@ -35,9 +35,7 @@ class TestCombinedDataset(unittest.TestCase):
     def test_error_dataset(self):
         with self.assertRaises(AssertionError) as err_msg:
             fe.dataset.CombinedDataset([])
-        self.assertEqual(
-            "datasets should not be an empty iterable", str(err_msg.exception)
-        )
+        self.assertEqual("datasets should not be an empty iterable", str(err_msg.exception))
 
     def test_invalid_index_dataset(self):
         ds1 = GeneratorDataset(generator=inputs(), samples_per_epoch=10)
@@ -66,9 +64,7 @@ class TestCombinedDataset(unittest.TestCase):
         ds2 = GeneratorDataset(generator=inputs2(), samples_per_epoch=5)
         with self.assertRaises(KeyError) as err_msg:
             combined_ds = fe.dataset.CombinedDataset(datasets=[ds1, ds2])
-        self.assertEqual(
-            "All datasets should have same keys.", err_msg.exception.args[0]
-        )
+        self.assertEqual("All datasets should have the same keys.", err_msg.exception.args[0])
 
     def test_invalid_return_type_dataset(self):
         ds1 = GeneratorDataset(generator=inputs(), samples_per_epoch=10)
