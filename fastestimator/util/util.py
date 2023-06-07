@@ -26,6 +26,7 @@ import tensorflow as tf
 import torch
 import torch.backends.mps
 from pyfiglet import Figlet
+from tensorflow.python.ops.logging_ops import print_v2
 
 from fastestimator.util.base_util import warn
 
@@ -123,6 +124,9 @@ class Suppressor(object):
     # Only create one file to save on disk IO
     stash_fd, stash_name = tempfile.mkstemp()
     os.close(stash_fd)
+    tf_print_fd, tf_print_name = tempfile.mkstemp()
+    os.close(tf_print_fd)
+    tf_print_name_f = 'file://' + tf_print_name
 
     def __init__(self, allow_pyprint: bool = False, show_if_exception: bool = False):
         self.allow_pyprint = allow_pyprint
@@ -140,9 +144,11 @@ class Suppressor(object):
         self.reals = [os.dup(1), os.dup(2)]  # [stdout, stderr]
         os.dup2(self.fake, 1)
         os.dup2(self.fake, 2)
-        # updating the tensorflow log handlers output stream
-        # in case of interactive tensorflow is set to stdout and else stderr
-        [handler.setStream(sys.stderr) for handler in tf.get_logger().handlers]
+        # This avoids "OSError: [WinError 6] The handle is invalid" while logging tensorflow information in windows
+        for handler in tf.get_logger().handlers:
+            handler.setStream(sys.stderr)
+        if self.allow_pyprint:
+            tf.print = _custom_tf_print
 
     def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
         # If there was an error, display any print messages
@@ -156,9 +162,8 @@ class Suppressor(object):
         # Set the python pointers back too
         sys.stdout, sys.stderr = self.py_reals[0], self.py_reals[1]
 
-        # updating the tensorflow log handlers output stream
-        # in case of interactive tensorflow is set to stdout and else stderr
-        [handler.setStream(sys.stderr) for handler in tf.get_logger().handlers]
+        for handler in tf.get_logger().handlers:
+            handler.setStream(sys.stderr)
 
         # Clean up the descriptors
         for fd in self.reals:
@@ -167,6 +172,11 @@ class Suppressor(object):
         if self.show_if_exception:
             # Clear the file
             open(self.stash_name, 'w').close()
+        if self.allow_pyprint:
+            tf.print = print_v2
+            for line in open(self.tf_print_name, 'r'):
+                print(line, end='')  # Endings already included from tf.print
+            open(self.tf_print_name, 'w').close()
 
     def write(self, dummy: str) -> None:
         """A function which is invoked during print calls.
@@ -190,8 +200,14 @@ class Suppressor(object):
         """
         try:
             os.remove(Suppressor.stash_name)
+            os.remove(Suppressor.tf_print_name)
         except FileNotFoundError:
             pass
+
+
+def _custom_tf_print(*args, **kwargs):
+    kwargs['output_stream'] = Suppressor.tf_print_name_f
+    print_v2(*args, **kwargs)
 
 
 class Timer(ContextDecorator):
