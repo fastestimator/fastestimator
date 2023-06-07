@@ -20,7 +20,7 @@ import time
 from copy import deepcopy
 from operator import mul
 from threading import Lock
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union, cast
 
 import numpy as np
 import tensorflow as tf
@@ -35,7 +35,7 @@ from fastestimator.op.numpyop.meta.repeat import Repeat
 from fastestimator.op.numpyop.meta.sometimes import Sometimes
 from fastestimator.op.numpyop.numpyop import Batch, NumpyOp, forward_numpyop
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
-from fastestimator.util.base_util import to_list, to_set, warn
+from fastestimator.util.base_util import filter_nones, to_list, to_set, warn
 from fastestimator.util.data import FilteredData
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import cpu_count, get_num_devices
@@ -70,16 +70,22 @@ class Pipeline:
                  train_data: Union[None,
                                    DataSource,
                                    Scheduler[DataSource],
-                                   Dict[str, Union[DataSource, Scheduler[DataSource]]]] = None,
-                 eval_data: Union[None, DataSource, Scheduler[DataSource], Dict[str, DataSource]] = None,
-                 test_data: Union[None, DataSource, Scheduler[DataSource], Dict[str, DataSource]] = None,
+                                   Dict[str, Union[None, DataSource, Scheduler[DataSource]]]] = None,
+                 eval_data: Union[None,
+                                  DataSource,
+                                  Scheduler[DataSource],
+                                  Dict[str, Union[None, DataSource, Scheduler[DataSource]]]] = None,
+                 test_data: Union[None,
+                                  DataSource,
+                                  Scheduler[DataSource],
+                                  Dict[str, Union[None, DataSource, Scheduler[DataSource]]]] = None,
                  batch_size: Union[None, int, Scheduler[int]] = None,
-                 ops: Union[None, NumpyOp, Scheduler[NumpyOp], List[Union[NumpyOp, Scheduler[NumpyOp]]]] = None,
+                 ops: Union[None, NumpyOp, Scheduler[NumpyOp], List[Union[None, NumpyOp, Scheduler[NumpyOp]]]] = None,
                  num_process: Optional[int] = None):
         data = {x: y for (x, y) in zip(["train", "eval", "test"], [train_data, eval_data, test_data]) if y}
         self.data = self._register_ds_ids(data)
         self.batch_size = batch_size
-        self.ops = to_list(ops)
+        self.ops = filter_nones(to_list(ops))
         if mp.get_start_method(allow_none=True) is None and os.name != 'nt':
             mp.set_start_method('fork')
         self.num_process = num_process if num_process is not None else min(cpu_count(), 32 * get_num_devices())
@@ -104,7 +110,8 @@ class Pipeline:
 
     @staticmethod
     def _register_ds_ids(
-        data: Dict[str, Union[DataSource, Scheduler[DataSource], Dict[str, Union[DataSource, Scheduler[DataSource]]]]]
+        data: Dict[str,
+                   Union[DataSource, Scheduler[DataSource], Dict[str, Union[None, DataSource, Scheduler[DataSource]]]]]
     ) -> Dict[str, Dict[str, Union[DataSource, Scheduler[DataSource]]]]:
         """Associate dataset of each mode with a `ds_id`.
 
@@ -120,10 +127,11 @@ class Pipeline:
                     assert not any(char in ds_name for char in forbidden_ds_id_chars), \
                         "dataset id should not contain forbidden characters like ':', ';', '!', '|', " + \
                         "found {} in pipeline".format(ds_name)
+                data[mode] = filter_nones(dataset)
             else:
                 # Empty string is special, matches against ops which require '!ds1' but not 'ds1'
                 data[mode] = {"": dataset}
-        return data
+        return cast(Dict[str, Dict[str, Union[DataSource, Scheduler[DataSource]]]], data)
 
     def _verify_inputs(self, **kwargs) -> None:
         """A helper method to ensure that the Pipeline inputs are valid.
@@ -168,7 +176,8 @@ class Pipeline:
         # Consider x + m*n epochs for each epoch scheduler x value
         schedule_epochs = sorted({
             epoch
-            for base_epoch in schedule_epochs for epoch in list(range(base_epoch, base_epoch + schedule_cycles))
+            for base_epoch in schedule_epochs
+            for epoch in list(range(base_epoch, base_epoch + schedule_cycles))
         })
         for mode, id_ds in self.data.items():
             for ds_id in id_ds.keys():

@@ -15,12 +15,13 @@
 
 # DO NOT IMPORT FE, TF, Torch, Numpy, Seaborn, OR Matplotlib IN THIS FILE
 import colorsys
+import itertools
 import os
 import re
 import string
 import sys
-from typing import Any, Callable, Dict, Iterable, KeysView, List, Literal, Optional, Set, TextIO, Tuple, Type, \
-    TypeVar, Union, overload
+from typing import Any, Callable, Collection, Dict, Iterable, KeysView, List, Literal, Mapping, Optional, Set, TextIO, \
+    Tuple, Type, TypeVar, Union, overload
 
 # DO NOT IMPORT FE, TF, Torch, Numpy, Seaborn, OR Matplotlib IN THIS FILE
 from plotly.graph_objs import Figure
@@ -125,6 +126,100 @@ def to_list(data: Any) -> List[Any]:
         else:
             data = [data]
     return data
+
+
+@overload
+def filter_nones(ins: Set[Union[VT, None]]) -> Set[VT]:
+    ...
+
+
+@overload
+def filter_nones(ins: Tuple[Union[VT, None], ...]) -> Tuple[VT]:
+    ...
+
+
+@overload
+def filter_nones(ins: List[Union[VT, None]]) -> List[VT]:
+    ...
+
+
+@overload
+def filter_nones(ins: Mapping[KT, Union[VT, None]]) -> Dict[KT, VT]:
+    ...
+
+
+def filter_nones(ins: Collection) -> Collection:
+    """Remove any None values from the input collection.
+
+    For dictionaries this removes keys whose values are None.
+
+    Args:
+        ins: The collection to be filtered.
+
+    Returns:
+        The filtered collection.
+    """
+    if isinstance(ins, dict):
+        filtered = {k: v for k, v in ins.items() if v is not None}
+        return filtered
+    filtered = itertools.filterfalse(lambda item: not item, ins)
+    if isinstance(ins, set):
+        return set(filtered)
+    if isinstance(ins, tuple):
+        return tuple(filtered)
+    else:
+        return list(filtered)
+
+
+@overload
+def IfElse(cond: Literal[True], y: KT, n: VT = None) -> KT:
+    ...
+
+
+@overload
+def IfElse(cond: Literal[False], y: KT, n: VT = None) -> VT:
+    ...
+
+
+def IfElse(cond: bool, y: KT, n: VT = None) -> Union[KT, VT]:
+    """This is a helper function to make code look cleaner while using config files.
+
+    One mock example where this might be useful:
+
+    ```python
+    from fastestimator.util import IfElse
+    extra_augs = True
+    ...
+
+    fe.Pipeline(...,
+                ops=[...,
+                     IfElse(extra_augs, RandomJitter(image_in="x", image_out="x"))
+                     ]
+                )
+    ```
+
+    If instantiating the objects in each branch is expensive, you may want to defer that until later by converting your
+    constructors to lambda functions and then invoking the functions after the return from the IfElse:
+
+    ```python
+    from fastestimator.util import IfElse
+    use_lots_of_data = True
+    ...
+
+    train_data = IfElse(use_lots_of_data, lambda: BigInMemoryDataset(), lambda: SmallInMemoryDataset())()
+    ```
+
+    Args:
+        cond: Which branch to return.
+        y: The return value when `cond` is True.
+        n: The return value when `cond` is False.
+
+    Returns:
+        The value according to the given cond.
+    """
+    if cond:
+        return y
+    return n
 
 
 def param_to_range(

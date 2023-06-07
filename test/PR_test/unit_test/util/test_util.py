@@ -108,6 +108,28 @@ class TestToSet(unittest.TestCase):
         self.assertEqual(x, {3, 4})
 
 
+class TestFilterNones(unittest.TestCase):
+    def test_with_list(self):
+        x = fe.util.filter_nones([1, None, "A", None, 0.9])
+        self.assertTrue(isinstance(x, list))
+        self.assertListEqual(x, [1, "A", 0.9])
+
+    def test_with_tuple(self):
+        x = fe.util.filter_nones((1, None, "A", None, 0.9))
+        self.assertTrue(isinstance(x, tuple))
+        self.assertTupleEqual(x, (1, "A", 0.9))
+
+    def test_with_set(self):
+        x = fe.util.filter_nones({1, None, "A", None, 0.9})
+        self.assertTrue(isinstance(x, set))
+        self.assertSetEqual(x, {1, "A", 0.9})
+
+    def test_with_dict(self):
+        x = fe.util.filter_nones({'a': 1, 'b': None, 'c': "A", 'd': None, 'e': 0.9})
+        self.assertTrue(isinstance(x, dict))
+        self.assertDictEqual(x, {'a': 1, 'c': "A", 'e': 0.9})
+
+
 class TestParamToRange(unittest.TestCase):
     def test_param_to_range_int(self):
         x = fe.util.param_to_range(3)
