@@ -307,8 +307,10 @@ class FEDataset(Dataset):
             distribution[key].append(idx)
 
         supply = {key: len(values) for key, values in distribution.items()}
-        split_requests = [{key: (n_split * n_tot) / original_size
-                           for key, n_tot in supply.items()} for n_split in split_counts]
+        split_requests = [{
+            key: (n_split * n_tot) / original_size
+            for key, n_tot in supply.items()
+        } for n_split in split_counts]
 
         def transfer(source: Dict[Any, int], sink: Dict[Any, int], key: Any, request: int) -> int:
             allowance = min(request, source[key])
@@ -439,6 +441,14 @@ class InMemoryDataset(FEDataset):
     def __len__(self) -> int:
         return len(self.data)
 
+    @overload
+    def __getitem__(self, index: int) -> Dict[str, Any]:
+        ...
+
+    @overload
+    def __getitem__(self, index: str) -> Union[np.ndarray, List[Any]]:
+        ...
+
     def __getitem__(self, index: Union[int, str]) -> Union[Dict[str, Any], np.ndarray, List[Any]]:
         """Look up data from the dataset.
 
@@ -465,6 +475,14 @@ class InMemoryDataset(FEDataset):
                 return np.array(result)
             return result
 
+    @overload
+    def __setitem__(self, key: int, value: Dict[str, Any]) -> None:
+        ...
+
+    @overload
+    def __setitem__(self, key: str, value: Sequence[Any]) -> None:
+        ...
+
     def __setitem__(self, key: Union[int, str], value: Union[Dict[str, Any], Sequence[Any]]) -> None:
         """Modify data in the dataset.
 
@@ -485,9 +503,12 @@ class InMemoryDataset(FEDataset):
             AssertionError: If the `value` is inappropriate given the type of the `key`.
         """
         if isinstance(key, int):
-            assert isinstance(value, Dict), "if setting a value using an integer index, must provide a dictionary"
+            assert isinstance(value, Dict), \
+                f"if setting a value using an integer index, must provide a dictionary (got {type(value)})"
             self.data[key] = value
         else:
+            assert isinstance(value, Sequence), \
+                f"if setting a value using a key index, must provide a sequence (got {type(value)})"
             assert len(value) == len(self.data), \
                 "input value must be of length {}, but had length {}".format(len(self.data), len(value))
             for i in range(len(self.data)):
