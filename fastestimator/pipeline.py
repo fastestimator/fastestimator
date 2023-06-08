@@ -146,7 +146,7 @@ class Pipeline:
         fe_dataset = False
         for dataset in get_current_items(set(d for ds in self.data.values() for d in ds.values())):
             fe_dataset = self._verify_dataset(dataset, **kwargs) or fe_dataset
-        if not fe_dataset:
+        if self.data and not fe_dataset:  # If the user provided no datasets at all, still let them use ops for infer
             assert kwargs['batch_size'] is None, "Pipeline only supports batch_size with built-in (FE) datasets"
             assert kwargs['ops'] is None, "Pipeline only supports ops with built-in (FE) datasets"
             assert kwargs['num_process'] is None, "Pipeline only support num_process with built-in (FE) datasets"
@@ -179,7 +179,7 @@ class Pipeline:
             for base_epoch in schedule_epochs
             for epoch in list(range(base_epoch, base_epoch + schedule_cycles))
         })
-        for mode, id_ds in self.data.items():
+        for mode, id_ds in list(self.data.items()) + [('infer', {'': None})]:
             for ds_id in id_ds.keys():
                 for epoch in schedule_epochs:
                     ops = get_current_items(batch_ops, run_modes=mode, epoch=epoch, ds_id=ds_id)

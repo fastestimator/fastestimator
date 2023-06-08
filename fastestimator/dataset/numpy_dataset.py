@@ -43,4 +43,4 @@ class NumpyDataset(InMemoryDataset):
                 assert size == current_size, "All data arrays must have the same number of elements"
             else:
                 size = current_size
-        super().__init__({i: {k: v[i] for k, v in data.items()} for i in range(size)})
+        super().__init__({i: {k: v[i] for k, v in data.items()} for i in range(size)} if size else {})
