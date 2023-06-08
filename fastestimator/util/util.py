@@ -144,6 +144,9 @@ class Suppressor(object):
         self.reals = [os.dup(1), os.dup(2)]  # [stdout, stderr]
         os.dup2(self.fake, 1)
         os.dup2(self.fake, 2)
+        # This avoids "OSError: [WinError 6] The handle is invalid" while logging tensorflow information in windows
+        for handler in tf.get_logger().handlers:
+            handler.setStream(sys.stderr)
         if self.allow_pyprint:
             tf.print = _custom_tf_print
 
@@ -158,6 +161,10 @@ class Suppressor(object):
         os.dup2(self.reals[1], 2)
         # Set the python pointers back too
         sys.stdout, sys.stderr = self.py_reals[0], self.py_reals[1]
+
+        for handler in tf.get_logger().handlers:
+            handler.setStream(sys.stderr)
+
         # Clean up the descriptors
         for fd in self.reals:
             os.close(fd)
