@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Union
 import numpy as np
 
 from fastestimator.op.numpyop.numpyop import Batch, NumpyOp
-from fastestimator.util.data import FilteredData
+from fastestimator.types import FilteredData
 from fastestimator.util.traceability_util import traceable
 
 
@@ -96,8 +96,7 @@ class Sometimes(NumpyOp):
             data = [data[self.inputs.index(out)] for out in self.outputs]
         return data
 
-    def forward_batch(self,
-                      data: Union[np.ndarray, List[np.ndarray]],
+    def forward_batch(self, data: Union[np.ndarray, List[np.ndarray]],
                       state: Dict[str, Any]) -> Union[FilteredData, List[np.ndarray]]:
         if self.prob > np.random.uniform():
             data = data[:self.inp_idx]  # Cut off the unnecessary inputs

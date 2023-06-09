@@ -21,7 +21,7 @@ from torch.utils.data.dataloader import default_collate
 
 from fastestimator.backend._to_tensor import to_tensor
 from fastestimator.op.op import Op, get_inputs_by_op, write_outputs_by_op
-from fastestimator.util.data import FilteredData
+from fastestimator.types import FilteredData
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import pad_batch
 
@@ -121,6 +121,8 @@ class Batch(NumpyOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+    collate_fn: Callable[[List[MutableMapping[str, Any]]], Dict[str, Any]]
+
     def __init__(self,
                  batch_size: Optional[int] = None,
                  drop_last: bool = False,

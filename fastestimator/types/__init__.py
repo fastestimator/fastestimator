@@ -12,7 +12,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import TYPE_CHECKING, Any, Sequence, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Protocol, Sequence, Sized, Union, \
+    runtime_checkable
+
+
+class FilteredData:
+    """A placeholder to indicate that this data instance should not be used.
+
+    This class is intentionally not @traceable.
+
+    Args:
+        replacement: Whether to replace the filtered element with another (thus maintaining the number of steps in an
+            epoch but potentially increasing data repetition) or else shortening the epoch by the number of filtered
+            data points (fewer steps per epoch than expected, but no extra data repetition). Either way, the number of
+            data points within an individual batch will remain the same. Even if `replacement` is true, data will not be
+            repeated until all of the given epoch's data has been traversed (except for at most 1 batch of data which
+            might not appear until after the re-shuffle has occurred).
+    """
+    def __init__(self, replacement: bool = True):
+        self.replacement = replacement
+
+    def __repr__(self):
+        return "FilteredData"
+
+
+@runtime_checkable
+class MapDataset(Sized, Protocol):
+    def __getitem__(self, index: int) -> Union[Dict[str, Any], List[Dict[str, Any]], FilteredData]:
+        ...
+
+    fe_batch: Optional[int]
+    fe_reset_ds: Optional[Callable[[bool], None]]
+    fe_batch_indices: Optional[Callable[[int], List[List[int]]]]
+
 
 if TYPE_CHECKING:
     # Hide these imports for speed
@@ -20,11 +52,10 @@ if TYPE_CHECKING:
     import tensorflow as tf
     import torch
 
-    T = TypeVar('T')
-
     Tensor = Union[torch.Tensor, tf.Tensor, tf.Variable]
     Array = Union[np.ndarray, Tensor]
     DataSequence = Union[Sequence, Array]
+
 else:
     # The following allow runtime isinstance() checks against the types defined above, without incurring import speed
     # penalties if the user doesn't run the isinstance check (by hiding the tf import). In python 3.10+ we could simply
@@ -49,11 +80,11 @@ else:
     class _MetaArray(type):
         def __instancecheck__(self, __instance: Any) -> bool:
             import numpy as np
-            return isinstance(__instance, (Tensor, np.ndarray))
+            return isinstance(__instance, (np.ndarray, Tensor))
 
         def __subclasscheck__(self, __subclass: type) -> bool:
             import numpy as np
-            return issubclass(__subclass, (Tensor, np.ndarray))
+            return issubclass(__subclass, (np.ndarray, Tensor))
 
     class Array(metaclass=_MetaArray):
         ...
