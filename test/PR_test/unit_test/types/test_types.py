@@ -27,6 +27,8 @@ class TestTypes(unittest.TestCase):
             self.assertTrue(isinstance(torch.ones((1)), Tensor))
         with self.subTest('TF Tensor'):
             self.assertTrue(isinstance(tf.ones((1)), Tensor))
+        with self.subTest('TF Variable'):
+            self.assertTrue(isinstance(tf.Variable(0.0), Tensor))
         with self.subTest('NP Array'):
             self.assertFalse(isinstance(np.ones((1)), Tensor))
         with self.subTest('List'):
@@ -43,6 +45,8 @@ class TestTypes(unittest.TestCase):
             self.assertTrue(isinstance(torch.ones((1)), Array))
         with self.subTest('TF Tensor'):
             self.assertTrue(isinstance(tf.ones((1)), Array))
+        with self.subTest('TF Variable'):
+            self.assertTrue(isinstance(tf.Variable(0.0), Array))
         with self.subTest('NP Array'):
             self.assertTrue(isinstance(np.ones((1)), Array))
         with self.subTest('List'):
@@ -59,6 +63,8 @@ class TestTypes(unittest.TestCase):
             self.assertTrue(isinstance(torch.ones((1)), DataSequence))
         with self.subTest('TF Tensor'):
             self.assertTrue(isinstance(tf.ones((1)), DataSequence))
+        with self.subTest('TF Variable'):
+            self.assertTrue(isinstance(tf.Variable(0.0), DataSequence))
         with self.subTest('NP Array'):
             self.assertTrue(isinstance(np.ones((1)), DataSequence))
         with self.subTest('List'):

@@ -22,18 +22,21 @@ if TYPE_CHECKING:
 
     T = TypeVar('T')
 
-    Tensor = Union[torch.Tensor, tf.Tensor]
+    Tensor = Union[torch.Tensor, tf.Tensor, tf.Variable]
     Array = Union[np.ndarray, Tensor]
     DataSequence = Union[Sequence, Array]
 else:
     # The following allow runtime isinstance() checks against the types defined above, without incurring import speed
-    # penalties if the user doesn't run the isinstance check (by hiding the tf import)
+    # penalties if the user doesn't run the isinstance check (by hiding the tf import). In python 3.10+ we could simply
+    # do isinstance() checks on Union[] types, but even in that case we would incur speed penalty from importing
+    # tensorflow during the Union definition, which would make the types unsuitable for fast-path code like the log
+    # visualization CLI.
 
     class _MetaTensor(type):
         def __instancecheck__(self, __instance: Any) -> bool:
             import tensorflow as tf
             import torch
-            return isinstance(__instance, (tf.Tensor, torch.Tensor))
+            return isinstance(__instance, torch.Tensor) or tf.is_tensor(__instance)
 
         def __subclasscheck__(self, __subclass: type) -> bool:
             import tensorflow as tf
@@ -46,37 +49,22 @@ else:
     class _MetaArray(type):
         def __instancecheck__(self, __instance: Any) -> bool:
             import numpy as np
-            import tensorflow as tf
-            import torch
-            return isinstance(__instance, (tf.Tensor, torch.Tensor, np.ndarray))
+            return isinstance(__instance, (Tensor, np.ndarray))
 
         def __subclasscheck__(self, __subclass: type) -> bool:
             import numpy as np
-            import tensorflow as tf
-            import torch
-            return issubclass(__subclass, (tf.Tensor, torch.Tensor, np.ndarray))
+            return issubclass(__subclass, (Tensor, np.ndarray))
 
     class Array(metaclass=_MetaArray):
         ...
 
     class _MetaDataSequence(type):
         def __instancecheck__(self, __instance: Any) -> bool:
-            import numpy as np
-            import tensorflow as tf
-            import torch
-            return isinstance(__instance, (Sequence, tf.Tensor, torch.Tensor, np.ndarray))
+            return isinstance(__instance, (Sequence, Array))
 
         def __subclasscheck__(self, __subclass: type) -> bool:
-            import numpy as np
-            import tensorflow as tf
-            import torch
-            return issubclass(__subclass, (Sequence, tf.Tensor, torch.Tensor, np.ndarray))
+
+            return issubclass(__subclass, (Sequence, Array))
 
     class DataSequence(metaclass=_MetaDataSequence):
         ...
-
-
-if __name__ == "__main__":
-    import torch
-    print(isinstance({'a': 5}, DataSequence))
-    print(isinstance(torch.ones((5)), DataSequence))
