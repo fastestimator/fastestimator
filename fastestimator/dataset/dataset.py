@@ -23,6 +23,7 @@ import numpy as np
 from torch.utils.data import Dataset
 from typing_extensions import Self
 
+from fastestimator.types import DataSequence
 from fastestimator.util.base_util import FEID, get_shape, get_type
 from fastestimator.util.traceability_util import FeSplitSummary, traceable
 
@@ -480,10 +481,10 @@ class InMemoryDataset(FEDataset):
         ...
 
     @overload
-    def __setitem__(self, key: str, value: Sequence[Any]) -> None:
+    def __setitem__(self, key: str, value: DataSequence) -> None:
         ...
 
-    def __setitem__(self, key: Union[int, str], value: Union[Dict[str, Any], Sequence[Any]]) -> None:
+    def __setitem__(self, key: Union[int, str], value: Union[Dict[str, Any], DataSequence]) -> None:
         """Modify data in the dataset.
 
         ```python
@@ -507,7 +508,7 @@ class InMemoryDataset(FEDataset):
                 f"if setting a value using an integer index, must provide a dictionary (got {type(value)})"
             self.data[key] = value
         else:
-            assert isinstance(value, Sequence), \
+            assert isinstance(value, DataSequence), \
                 f"if setting a value using a key index, must provide a sequence (got {type(value)})"
             assert len(value) == len(self.data), \
                 "input value must be of length {}, but had length {}".format(len(self.data), len(value))

@@ -22,6 +22,14 @@ echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.zshrc
 brew install zlib sqlite bzip2 libiconv libzip openssl rust
 ```
 
+The following graphviz and mactex dependencies are kind of large (~5GB), so you can skip them if you don't want to use [auto-doc generation features](https://github.com/fastestimator/fastestimator/blob/master/tutorial/advanced/t10_report_generation.ipynb) like [Traceability reports](https://github.com/fastestimator/fastestimator/blob/master/tutorial/resources/t10a_traceability.pdf). You can also choose to install them later if you change your mind.
+
+```bash
+brew install graphviz
+brew install --cask mactex  # You could alternatively get this from https://www.tug.org/mactex/mactex-download.html
+eval "$(/usr/libexec/path_helper)"  # You can skip this line if you instead restart your terminal window
+```
+
 ## Step 2: Install Miniforge
 
 ```bash
