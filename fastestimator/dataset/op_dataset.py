@@ -185,6 +185,7 @@ class OpDataset(Dataset):
             results = results.as_dict()
         if self.to_warn and self.lock.acquire(block=False):
             self.handle_warning(self.to_warn)
+            self.to_warn.clear()
             # We intentionally never release the lock so that during multi-threading only 1 message can be printed
         return results
 
@@ -205,7 +206,6 @@ class OpDataset(Dataset):
                      "Pipeline. To prevent this, you can declare the key(s) as inputs to Traces or TensorOps: "
                      f"{', '.join(humansorted(to_warn))}")
                 warned |= to_warn
-                candidates.clear()
                 warned = bytes(":".join(warned), 'utf8')
                 if len(warned) > 198:
                     # This would overflow the warning buffer, so disable the warning mechanism in the future
