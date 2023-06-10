@@ -15,6 +15,9 @@
 """Utilities for FastEstimator."""
 import atexit
 import os
+import re
+import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -25,6 +28,7 @@ import numpy as np
 import tensorflow as tf
 import torch
 import torch.backends.mps
+from cpuinfo import get_cpu_info
 from pyfiglet import Figlet
 from tensorflow.python.ops.logging_ops import print_v2
 
@@ -377,6 +381,34 @@ def get_num_gpus() -> int:
         return 0
 
 
+def get_gpu_info() -> List[str]:
+    """Get summaries of all of the GPUs accessible on this machine.
+
+    Returns:
+        A formatted summary of the GPUs available on the machine (one list entry per GPU).
+    """
+    if shutil.which('nvidia-smi') is not None:
+        nvidia_command = ['nvidia-smi', '--query-gpu=gpu_name,memory.total,driver_version', '--format=csv']
+        output = subprocess.check_output(nvidia_command)
+        output = output.decode('utf-8')
+        lines = output.strip().split(os.linesep)[1:]
+        names = []
+        for line in lines:
+            name, mem, driver = line.strip().split(',')
+            names.append(f"{name.strip()} ({mem.strip()}, Driver={driver.strip()})")
+        return names
+    elif torch.backends.mps.is_available():
+        output = subprocess.check_output(["ioreg", "-l"])
+        output = output.decode('utf-8')
+        core_count = re.search(r'"gpu-core-count"[ ]*=[ ]*(\d*)', output)
+        core_count = "???" if not core_count else core_count.group(1)
+        output = subprocess.check_output(["sysctl", "-n", "hw.memsize"])
+        output = output.decode('utf-8')
+        gpu_mem = f"{float(output)*1e-9:0.2f} GB"  # Convert from bytes to GB
+        return [f"{get_cpu_info()['brand_raw']} ({gpu_mem}, {core_count} Cores)"]  # On mac the CPU name is the GPU name
+    return []
+
+
 def get_num_devices() -> int:
     """Determine the number of available GPUs.
 
@@ -387,7 +419,7 @@ def get_num_devices() -> int:
 
 
 def cpu_count(limit: Optional[int] = None) -> int:
-    """Determine the nuber of available CPUs (correcting for docker container limits).
+    """Determine the number of available CPUs (correcting for docker container limits).
 
     Args:
         limit: If provided, the TF and Torch backends will be told to use `limit` number of threads, or the available

@@ -22,8 +22,8 @@ from natsort import humansorted
 from torch.utils.data import Dataset
 
 from fastestimator.op.numpyop.numpyop import NumpyOp, forward_numpyop
+from fastestimator.types import FilteredData
 from fastestimator.util.base_util import warn
-from fastestimator.util.data import FilteredData
 from fastestimator.util.traceability_util import traceable
 
 
@@ -184,27 +184,36 @@ class OpDataset(Dataset):
                 self.to_warn |= results.to_warn
             results = results.as_dict()
         if self.to_warn and self.lock.acquire(block=False):
-            # Keys can't contain the ":" or ";" character due to check_io_names base_util function
-            warned = set((str(OpDataset.warned.value, 'utf8') or "").split(":"))
-            if ";" not in warned:
-                # We use ; as a special character to indicate that the warned buffer was overflowed by too many keys
-                self.to_warn -= warned
-                if self.to_warn:
-                    warn("The following key(s) are being pruned since they are unused outside of the "
-                         "Pipeline. To prevent this, you can declare the key(s) as inputs to Traces or TensorOps: "
-                         f"{', '.join(humansorted(self.to_warn))}")
-                    warned |= self.to_warn
-                    self.to_warn.clear()
-                    warned = bytes(":".join(warned), 'utf8')
-                    if len(warned) > 198:
-                        # This would overflow the warning buffer, so disable the warning mechanism in the future
-                        # Note that the warning will still happen the first time the overly-long keys appear.
-                        # 198 rather than 199 to allow for a null terminator at the end of the array.
-                        warn("Any further key pruning warnings in subsequent epochs will not be printed.")
-                        warned = bytes(";", 'utf8')
-                    OpDataset.warned.value = warned
+            self.handle_warning(self.to_warn)
+            self.to_warn.clear()
             # We intentionally never release the lock so that during multi-threading only 1 message can be printed
         return results
+
+    @classmethod
+    def handle_warning(cls, candidates: Set[str]) -> None:
+        """A function which prints warning messages about unused keys if such messages haven't already been printed.
+
+        Args:
+            candidates: Unused keys which you might need to print a warning message about.
+        """
+        # Keys can't contain the ":" or ";" character due to check_io_names base_util function
+        warned = set((str(cls.warned.value, 'utf8') or "").split(":"))
+        if ";" not in warned:
+            # We use ; as a special character to indicate that the warned buffer was overflowed by too many keys
+            to_warn = candidates - warned
+            if to_warn:
+                warn("The following key(s) are being pruned since they are unused outside of the "
+                     "Pipeline. To prevent this, you can declare the key(s) as inputs to Traces or TensorOps: "
+                     f"{', '.join(humansorted(to_warn))}")
+                warned |= to_warn
+                warned = bytes(":".join(warned), 'utf8')
+                if len(warned) > 198:
+                    # This would overflow the warning buffer, so disable the warning mechanism in the future
+                    # Note that the warning will still happen the first time the overly-long keys appear.
+                    # 198 rather than 199 to allow for a null terminator at the end of the array.
+                    warn("Any further key pruning warnings in subsequent epochs will not be printed.")
+                    warned = bytes(";", 'utf8')
+                cls.warned.value = warned
 
     def __len__(self):
         return len(self.dataset)

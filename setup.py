@@ -71,7 +71,8 @@ def get_dependency():
         'lazy_loader==0.1',
         'fe_pycocotools==1.0',
         'typing_extensions==4.5.0',
-        'charset-normalizer==3.1.0'
+        'charset-normalizer==3.1.0',
+        'py-cpuinfo==9.0.0'
     ]
     return dependencies
 

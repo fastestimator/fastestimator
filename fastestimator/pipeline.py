@@ -35,8 +35,8 @@ from fastestimator.op.numpyop.meta.repeat import Repeat
 from fastestimator.op.numpyop.meta.sometimes import Sometimes
 from fastestimator.op.numpyop.numpyop import Batch, NumpyOp, forward_numpyop
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
+from fastestimator.types import FilteredData
 from fastestimator.util.base_util import filter_nones, to_list, to_set, warn
-from fastestimator.util.data import FilteredData
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import cpu_count, get_num_devices
 
@@ -687,10 +687,8 @@ def _batch_postprocess(data: Dict[str, Any], ops: List[NumpyOp], output_keys: Se
     if isinstance(op_data, FilteredData):
         return op_data
     if output_keys:
-        for key in data.keys() - output_keys:
-            if key not in OpDataset.warned:
-                OpDataset.warned.add(key)
-                warn(f"The key '{key}' is being pruned since it is unused outside of the Pipeline. To prevent this, "
-                     "you can declare the key as an input of a Trace or TensorOp.")
+        unused_keys = data.keys() - output_keys
+        OpDataset.handle_warning(unused_keys)
+        for key in unused_keys:
             data.pop(key)
     return data

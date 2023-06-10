@@ -40,8 +40,9 @@ from fastestimator.trace.io.restore_wizard import RestoreWizard
 from fastestimator.trace.io.traceability import Traceability
 from fastestimator.trace.trace import EvalEssential, Logger, PerDSTrace, TestEssential, Trace, TrainEssential, \
     sort_traces
+from fastestimator.types import FilteredData
 from fastestimator.util.base_util import NonContext, filter_nones, to_list, to_set, warn
-from fastestimator.util.data import Data, FilteredData
+from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import Suppressor, draw
 

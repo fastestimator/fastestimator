@@ -18,7 +18,7 @@ from typing import Any, Callable, Dict, List, Optional, Union
 import numpy as np
 
 from fastestimator.op.numpyop.numpyop import Batch, NumpyOp, forward_numpyop
-from fastestimator.util.data import FilteredData
+from fastestimator.types import FilteredData
 from fastestimator.util.traceability_util import traceable
 
 
@@ -107,8 +107,7 @@ class Repeat(NumpyOp):
                 i += 1
         return [data[key] for key in self.outputs]
 
-    def forward_batch(self,
-                      data: Union[np.ndarray, List[np.ndarray]],
+    def forward_batch(self, data: Union[np.ndarray, List[np.ndarray]],
                       state: Dict[str, Any]) -> Union[FilteredData, np.ndarray, List[np.ndarray]]:
         data = {key: elem for key, elem in zip(self.inputs, data)}
         if isinstance(self.repeat, int):

@@ -19,7 +19,7 @@ from typing import Any, Callable, Dict, List, Optional, Sized, Tuple, Union
 
 import numpy as np
 from torch import Tensor
-from torch.utils.data import DataLoader, Dataset, Sampler, _DatasetKind
+from torch.utils.data import DataLoader, Sampler, _DatasetKind
 from torch.utils.data._utils.collate import default_collate, default_convert
 from torch.utils.data._utils.fetch import _MapDatasetFetcher
 from torch.utils.data.dataloader import _BaseDataLoaderIter, _MultiProcessingDataLoaderIter, \
@@ -27,12 +27,9 @@ from torch.utils.data.dataloader import _BaseDataLoaderIter, _MultiProcessingDat
 
 from fastestimator.dataset.extend_dataset import ExtendDataset
 from fastestimator.dataset.op_dataset import OpDataset
-from fastestimator.util.data import FilteredData
+from fastestimator.types import MapDataset
+from fastestimator.types import FilteredData
 from fastestimator.util.util import Suppressor
-
-
-class SizedDataset(Dataset, Sized):
-    pass
 
 
 class FEDataLoader(DataLoader):
@@ -68,7 +65,7 @@ class FEDataLoader(DataLoader):
     # https://github.com/python/typing/issues/213
 
     def __init__(self,
-                 dataset: SizedDataset,
+                 dataset: MapDataset,
                  postprocess_fn: Optional[Callable[[Dict[str, Any]], Union[Dict[str, Any], FilteredData]]] = None,
                  batch_size: Optional[int] = 1,
                  steps_per_epoch: Optional[int] = None,
