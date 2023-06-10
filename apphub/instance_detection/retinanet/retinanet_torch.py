@@ -308,8 +308,9 @@ class PredictBox(TensorOp):
         self.score_threshold = score_threshold
         self.all_anchors, self.num_anchors_per_level = _get_fpn_anchor_box(width=input_shape[1], height=input_shape[0])
         self.all_anchors = torch.Tensor(self.all_anchors)
-        if torch.cuda.is_available():
-            self.all_anchors = self.all_anchors.to("cuda:0")
+
+    def build(self, framework, device):
+        self.all_anchors = self.all_anchors.to(device)
 
     def forward(self, data, state):
         cls_pred, loc_pred = data  # [Batch, #anchor, #num_classes], [Batch, #anchor, 4]

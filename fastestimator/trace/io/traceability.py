@@ -31,6 +31,7 @@ import numpy as np
 import pydot
 import tensorflow as tf
 import torch
+from cpuinfo import get_cpu_info
 from natsort import humansorted
 from pylatex import Command, Document, Figure, Hyperref, Itemize, Label, LongTable, Marker, MultiColumn, NoEscape, \
     Package, Section, Subsection, Subsubsection, Tabularx, escape_latex
@@ -65,7 +66,7 @@ from fastestimator.util.base_util import FEID, DefaultKeyDict, LogSplicer, NonCo
 from fastestimator.util.data import Data
 from fastestimator.util.latex_util import AdjustBox, Center, ContainerList, HrefFEID, Verbatim
 from fastestimator.util.traceability_util import FeSummaryTable, traceable
-from fastestimator.util.util import Suppressor, get_num_gpus
+from fastestimator.util.util import Suppressor, cpu_count, get_gpu_info, get_num_gpus
 
 
 @traceable()
@@ -489,7 +490,16 @@ class Traceability(Trace):
                 itemize.add_item(escape_latex(f"FastEstimator {fe.__version__}"))
                 itemize.add_item(escape_latex(f"Python {platform.python_version()}"))
                 itemize.add_item(escape_latex(f"OS: {sys.platform}"))
-                itemize.add_item(f"Number of GPUs: {get_num_gpus()}")
+                cpu = get_cpu_info()
+                itemize.add_item(f"CPU Used: {cpu_count()} Threads")
+                with self.doc.create(Itemize()) as subitem:
+                    subitem.add_item(f"{cpu['brand_raw']} ({cpu['count']} Threads)")
+                itemize.add_item(f"GPU(s) Used: {get_num_gpus()}")
+                gpus = get_gpu_info()
+                if gpus:
+                    with self.doc.create(Itemize()) as subitem:
+                        for gpu in gpus:
+                            subitem.add_item(gpu)
                 if fe.fe_deterministic_seed is not None:
                     itemize.add_item(escape_latex(f"Deterministic Seed: {fe.fe_deterministic_seed}"))
             with self.doc.create(LongTable('|lr|', pos=['h!'], booktabs=True)) as tabular:

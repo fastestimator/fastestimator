@@ -383,7 +383,7 @@ class ImageSaving(Trace):
     def on_epoch_end(self, state):
         if self.system.epoch_idx in self.epoch_model_map:
             model = self.epoch_model_map[self.system.epoch_idx]
-            model = model.module if torch.cuda.device_count() > 1 else model
+            model = model.module if get_num_devices() > 1 else model
             for i in range(self.num_sample):
                 random_vectors = torch.normal(mean=0.0, std=1.0,
                                               size=(1, self.latent_dim)).to(next(model.parameters()).device)
