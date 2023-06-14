@@ -14,6 +14,7 @@
 # ==============================================================================
 from torch.utils.data import Dataset
 
+from fastestimator.dataset.interleave_dataset import InterleaveDataset
 from fastestimator.util.traceability_util import traceable
 
 
@@ -47,6 +48,7 @@ class ExtendDataset(Dataset):
         assert isinstance(self.spoof_length, int), "Only accept positive integer type as spoof_length"
         assert self.spoof_length > 0, "Invalid spoof_length. Expand Length cannot be less than or equal to 0"
         assert not isinstance(self.dataset, ExtendDataset), "Input Dataset cannot be an ExtendDataset object"
+        assert not isinstance(self.dataset, InterleaveDataset), "Input Dataset cannot be an InterleaveDataset object"
 
     def __getitem__(self, index):
         return self.dataset[index]
