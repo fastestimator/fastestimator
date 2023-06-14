@@ -516,8 +516,10 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
                 # Prevent circular recursion
                 tables[inp_id] = FeSummaryTable(name=inp.__class__.__name__, target_type=type(inp), fe_id=inp_id)
                 # This object isn't @traceable but does have some stored variables that we can summarize.
-                kwargs = _trace_value({k: v
-                                       for k, v in inp.__dict__.items() if not k.startswith("_")},
+                kwargs = _trace_value({
+                    k: v
+                    for k, v in inp.__dict__.items() if not k.startswith("_")
+                },
                                       tables,
                                       ret_ref,
                                       wrap_str=False).raw_input
@@ -1026,6 +1028,7 @@ def fe_summary(self) -> List[FeSummaryTable]:
     from fastestimator.op.op import Op
     from fastestimator.pipeline import Pipeline
     from fastestimator.schedule.schedule import Scheduler
+    from fastestimator.slicer.slicer import Slicer
     from fastestimator.trace.trace import Trace
 
     # re-number the references for nicer viewing
@@ -1034,11 +1037,12 @@ def fe_summary(self) -> List[FeSummaryTable]:
         key=lambda x: 0 if issubclass(x[1].type, Estimator) else 1
         if issubclass(x[1].type, (TFNetwork, TorchNetwork)) else 2 if issubclass(x[1].type, Pipeline) else 3
         if issubclass(x[1].type, Scheduler) else 4 if issubclass(x[1].type, Trace) else 5
-        if issubclass(x[1].type, Op) else 6 if issubclass(x[1].type, (Dataset, tf.data.Dataset)) else 7
-        if issubclass(x[1].type, (tf.keras.Model, torch.nn.Module)) else 8
-        if issubclass(x[1].type, types.FunctionType) else 9
-        if issubclass(x[1].type, (np.ndarray, tf.Tensor, tf.Variable, torch.Tensor)) else 10)
-    key_mapping = {fe_id: f"@FE{idx}" for idx, (fe_id, val) in enumerate(ordered_items)}
+        if issubclass(x[1].type, Op) else 6 if issubclass(x[1].type, Slicer) else 7
+        if issubclass(x[1].type, (Dataset, tf.data.Dataset)) else 8
+        if issubclass(x[1].type, (tf.keras.Model, torch.nn.Module)) else 9
+        if issubclass(x[1].type, types.FunctionType) else 10
+        if issubclass(x[1].type, (np.ndarray, tf.Tensor, tf.Variable, torch.Tensor)) else 11)
+    key_mapping = {fe_id: f"@FE{idx}" for idx, (fe_id, _) in enumerate(ordered_items)}
     FEID.set_translation_dict(key_mapping)
     return [item[1] for item in ordered_items]
 

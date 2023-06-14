@@ -496,7 +496,8 @@ def check_ds_id(ds_ids: Set[str]) -> Set[str]:
     assert len(negation) < 2, "cannot mix !ds_id with ds_id, found {}".format(ds_ids)
     forbidden_ds_id_chars = {":", ";", "|"}
     for ds_id in ds_ids:
-        assert isinstance(ds_id, str) and len(ds_id) > 0, "dataset id must be a string, found {}".format(ds_id)
+        assert isinstance(ds_id, str) and len(ds_id) > 0, \
+            f"dataset id must be a non-empty string, found {ds_id}"
         assert not any(char in ds_id for char in forbidden_ds_id_chars), \
             "dataset id should not contain forbidden characters like ':', ';', '|', found {}".format(ds_id)
     return ds_ids

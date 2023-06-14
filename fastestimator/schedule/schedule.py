@@ -187,18 +187,18 @@ def get_signature_epochs(items: List[Any], total_epochs: int, mode: Optional[str
 
 
 @overload
-def get_current_items(items: Iterable[Union[T, Scheduler[T]]],
+def get_current_items(items: Iterable[Union[T, Scheduler[T], T2, Scheduler[T2]]],
                       run_modes: Optional[Union[str, Iterable[str]]] = None,
                       epoch: Optional[int] = None,
-                      ds_id: Optional[str] = None) -> List[T]:
+                      ds_id: Optional[str] = None) -> List[Union[T, T2]]:
     ...
 
 
 @overload
-def get_current_items(items: Iterable[Union[T, T2, Scheduler[T], Scheduler[T2]]],
+def get_current_items(items: Iterable[Union[T, Scheduler[T]]],
                       run_modes: Optional[Union[str, Iterable[str]]] = None,
                       epoch: Optional[int] = None,
-                      ds_id: Optional[str] = None) -> List[Union[T, T2]]:
+                      ds_id: Optional[str] = None) -> List[T]:
     ...
 
 

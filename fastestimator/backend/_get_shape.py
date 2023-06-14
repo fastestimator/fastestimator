@@ -12,16 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import TypeVar
+from typing import Tuple
 
 import numpy as np
 import tensorflow as tf
 import torch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+from fastestimator.types import Array
 
 
-def get_shape(tensor: Tensor) -> Tensor:
+def get_shape(tensor: Array) -> Tuple[int, ...]:
     """Find shape of a given `tensor`.
 
     This method can be used with Numpy data:

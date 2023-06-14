@@ -196,6 +196,8 @@ class OpDataset(Dataset):
         Args:
             candidates: Unused keys which you might need to print a warning message about.
         """
+        if not candidates:
+            return
         # Keys can't contain the ":" or ";" character due to check_io_names base_util function
         warned = set((str(cls.warned.value, 'utf8') or "").split(":"))
         if ";" not in warned:

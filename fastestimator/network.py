@@ -17,7 +17,8 @@ import os
 import sys
 import tempfile
 from collections import ChainMap
-from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, Sequence, Set, Tuple, TypeVar, \
+from threading import Lock
+from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, Sequence, Set, Tuple, Type, TypeVar, \
     Union, overload
 
 import gdown
@@ -28,6 +29,7 @@ import torch
 from keras.engine.sequential import Sequential
 from keras.mixed_precision.loss_scale_optimizer import LossScaleOptimizer, LossScaleOptimizerV3
 from tensorflow.python.distribute.values import DistributedValues
+from typing_extensions import Self
 
 import fastestimator as fe
 from fastestimator.backend._load_model import load_model
@@ -38,19 +40,20 @@ from fastestimator.op.tensorop.model.update import UpdateOp
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.pipeline import Pipeline
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
+from fastestimator.slicer.slicer import Slicer, forward_slicers, reverse_slicers, sanity_assert_slicers
+from fastestimator.types import Array, Model, Tensor
 from fastestimator.util.base_util import NonContext, filter_nones, to_list, warn
 from fastestimator.util.traceability_util import trace_model, traceable
 from fastestimator.util.util import Suppressor, detach_tensors, get_batch_size, get_device, get_num_gpus, \
     move_tensors_to_device
 
-Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 T = TypeVar('T')
 
 GOOGLE_DRIVE_URL = "https://drive.google.com"
 _MAC_BUILD_WARNING = False
 
 
-@traceable()
+@traceable(blacklist=('ctx_lock', ))
 class BaseNetwork:
     """A base class for Network objects.
 
@@ -62,6 +65,9 @@ class BaseNetwork:
             more model ops, as well as loss ops and update ops.
         postprocessing: A collection of NumpyOps to be run on the CPU after all of the normal `ops` have been executed.
             Unlike the NumpyOps found in the pipeline, these ops will run on batches of data rather than single points.
+        slicers: Slicers to use if you want to cut apart a single batch of data into multiple slices in order to fit
+            them onto a smaller GPU. After cutting the data apart and running through the `ops`, the samples are fused
+            back together into a single batch on the CPU before being handed over to the `pops`.
 
     Raises:
         ValueError: Mixed precision settings for all models are not the same.
@@ -72,7 +78,8 @@ class BaseNetwork:
         device: Optional[torch.device],
         ops: Sequence[Union[None, TensorOp, Scheduler[TensorOp]]],
         postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Sequence[Union[None, NumpyOp,
-                                                                                Scheduler[NumpyOp]]]] = None
+                                                                                Scheduler[NumpyOp]]]] = None,
+        slicers: Union[None, Slicer, Scheduler[Slicer], Sequence[Union[None, Slicer, Scheduler[Slicer]]]] = None,
     ) -> None:
         self.ops = filter_nones(to_list(ops))
         self.target_type = target_type
@@ -80,23 +87,27 @@ class BaseNetwork:
         for op in get_current_items(self.ops):
             op.build(framework=self.target_type, device=self.device)
         self.models = to_list(_collect_models(self.ops))
+        self.mixed_precision = any([model.mixed_precision for model in self.models])
+        if self.mixed_precision and not all([model.mixed_precision for model in self.models]):
+            raise ValueError("Cannot mix full precision and mixed-precision models")
         self.postprocessing = filter_nones(to_list(postprocessing))
         for pop in self.postprocessing:
             if isinstance(pop, RemoveIf):
                 raise ValueError("Filtering is currently not supported in network post-processing")
             if isinstance(pop, Batch):
                 raise ValueError("Post-processing data is already batched, so Batch Op is not supported here.")
+        self.slicers = filter_nones(to_list(slicers))
         self._verify_inputs()
-        self.effective_inputs = dict()
-        self.effective_outputs = dict()
-        self.epoch_ops = []
-        self.epoch_postprocessing = []
-        self.epoch_models = set()
-        self.epoch_state = dict()
-        self.mixed_precision = any([model.mixed_precision for model in self.models])
-
-        if self.mixed_precision and not all([model.mixed_precision for model in self.models]):
-            raise ValueError("Cannot mix full precision and mixed-precision models")
+        # Per-Epoch/Mode/DS-ID Variables
+        self.ctx_lock = Lock()
+        self.ctx_inputs: Set[str] = set()
+        self.ctx_gpu_inputs: Set[str] = set()  # The inputs needed by TensorOps specifically
+        self.ctx_outputs: Set[str] = set()
+        self.ctx_ops: List[TensorOp] = []
+        self.ctx_postprocessing: List[NumpyOp] = []
+        self.ctx_slicers: List[Slicer] = []
+        self.ctx_models: Set[Model] = set()
+        self.ctx_state: Dict[str, Any] = dict()
 
     def _verify_inputs(self) -> None:
         """Ensure that all ops are TensorOps.
@@ -108,6 +119,8 @@ class BaseNetwork:
             assert isinstance(op, TensorOp), "unsupported op format, Network ops must be TensorOps"
         for op in get_current_items(self.postprocessing):
             assert isinstance(op, NumpyOp), "unsupported op format, Network postprocessing must be NumpyOps"
+        for slicer in get_current_items(self.slicers):
+            assert isinstance(slicer, Slicer), f"unsupported slicer object detected of type: {type(slicer)}"
 
     def get_scheduled_items(self, mode: str) -> List[Any]:
         """Get a list of items considered for scheduling.
@@ -119,44 +132,33 @@ class BaseNetwork:
             List of schedulable items in Network.
         """
         if mode == "train":
-            all_items = self.ops + [model.optimizer for model in self.models] + self.postprocessing
+            all_items = self.ops + [model.optimizer for model in self.models] + self.postprocessing + self.slicers
         else:
-            all_items = self.ops + self.postprocessing
+            all_items = self.ops + self.postprocessing + self.slicers
         return all_items
 
-    def load_epoch(self,
-                   mode: str,
-                   epoch: int,
-                   ds_id: str,
-                   output_keys: Optional[Set[str]] = None,
-                   warmup: bool = False,
-                   eager: bool = False) -> None:
-        """Prepare the network to run a given epoch and mode.
-
-        This method is necessary since schedulers and op mode restrictions may result in different computation graphs
-        every epoch.
-
-        Args:
-            mode: The mode to prepare to execute. One of 'train', 'eval', 'test', or 'infer'.
-            epoch: The epoch to prepare to execute.
-            ds_id: The current dataset id.
-            output_keys: What keys can be moved from the GPU back to the CPU after executing a step.
-            warmup: Whether to prepare to execute it warmup mode or not (end users can likely ignore this argument).
-            eager: Whether to run the training in eager mode. This is only related to TensorFlow training because
-                PyTorch by nature is always in eager mode.
-        """
-        self.effective_inputs[mode] = self.get_effective_input_keys(mode, epoch, ds_id)
-        self.effective_outputs[mode] = self.get_all_output_keys(mode, epoch, ds_id)
-        if output_keys:
-            self.effective_outputs[mode] = self.effective_outputs[mode].intersection(
-                output_keys) | self._get_effective_postprocessing_input_keys(mode, epoch, ds_id)
-        self.epoch_ops = get_current_items(self.ops, mode, epoch, ds_id=ds_id)
-        self.epoch_postprocessing = get_current_items(self.postprocessing, mode, epoch, ds_id=ds_id)
-        self.epoch_models = set.union(*[op.get_fe_models() for op in self.epoch_ops])
-        gradient_ops = [op for op in self.epoch_ops if op.fe_retain_graph() is not None]
+    def __call__(self,
+                 mode: str,
+                 epoch: int,
+                 ds_id: str,
+                 desired_output_keys: Optional[Set[str]] = None,
+                 warmup: bool = False,
+                 eager: bool = False) -> Self:
+        # Make sure that a network isn't currently instantiated with other settings
+        acquired = self.ctx_lock.acquire(blocking=False)
+        if not acquired:
+            raise ValueError("You cannot invoke a Network's __call__ method while it is already active.")
+        self.ctx_inputs, self.ctx_gpu_inputs, self.ctx_outputs = self._get_ctx_inputs_and_outputs(
+            mode, epoch, ds_id, desired_keys=desired_output_keys)
+        self.ctx_ops = get_current_items(self.ops, mode, epoch, ds_id=ds_id)
+        self.ctx_postprocessing = get_current_items(self.postprocessing, mode, epoch, ds_id=ds_id)
+        self.ctx_slicers = get_current_items(self.slicers, mode, epoch, ds_id=ds_id)
+        sanity_assert_slicers(self.ctx_slicers)
+        self.ctx_models = set.union(*[op.get_fe_models() for op in self.ctx_ops])
+        gradient_ops = [op for op in self.ctx_ops if op.fe_retain_graph() is not None]
         for idx, gradient_op in enumerate(gradient_ops):
             gradient_op.fe_retain_graph(idx != len(gradient_ops) - 1)
-        self.epoch_state = {
+        self.ctx_state = {
             "warmup": warmup,
             "mode": mode,
             "req_grad": len(gradient_ops) > 0,
@@ -165,17 +167,34 @@ class BaseNetwork:
             "eager": eager
         }
         # warmup: bool, mode: str, req_grad: bool, epoch: int, deferred: Dict[str, List[Callable]]]
-        for model in self.epoch_models:
+        for model in self.ctx_models:
             if hasattr(model, "optimizer") and model.optimizer is not None:
                 if isinstance(model.optimizer, Scheduler):
                     model.current_optimizer = model.optimizer.get_current_value(epoch)
                 else:
                     model.current_optimizer = model.optimizer
+        self.ctx_lock.release()
+        return self
 
-    def unload_epoch(self) -> None:
+    def __enter__(self) -> Self:
+        acquired = self.ctx_lock.acquire(blocking=False)
+        if not acquired:
+            raise ValueError("This network is already in use.")
+        return self
+
+    def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
         """Clean up the network after running an epoch.
         """
-        pass
+        self.ctx_inputs = set()
+        self.ctx_outputs = set()
+        self.ctx_gpu_inputs = set()
+        self.ctx_ops = []
+        self.ctx_postprocessing = []
+        self.ctx_slicers = []
+        self.ctx_models = set()
+        self.ctx_state = dict()
+
+        self.ctx_lock.release()
 
     def get_loss_keys(self) -> Set[str]:
         """Find all of the keys associated with model losses.
@@ -188,57 +207,63 @@ class BaseNetwork:
             loss_keys |= op.get_fe_loss_keys()
         return loss_keys
 
-    def get_effective_input_keys(self, mode: str, epoch: int, ds_id: str = '') -> Set[str]:
-        """Determine which keys need to be provided as input to the network during the given `epoch`.
+    def _get_ctx_inputs_and_outputs(self,
+                                    mode: str,
+                                    epoch: int,
+                                    ds_id: str = '',
+                                    desired_keys: Optional[Set[str]] = None) -> Tuple[Set[str], Set[str], Set[str]]:
+        """Figure out the Network's input and output keys for the current mode/epoch/ds_id.
 
         Args:
             mode: The execution mode to consider. One of 'train', 'eval', 'test', or 'infer'.
             epoch: The epoch number to consider for determining inputs.
             ds_id: The current dataset id.
+            desired_keys: Which outputs do you actually want returned from the network for further processing.
 
         Returns:
-            The necessary inputs for the network to execute the given `epoch` and `mode`.
+            A tuple consisting of:
+                1) The necessary inputs for the network to execute
+                2) The inputs which need to be given to the GPU ops
+                3) The outputs the network will return
         """
-        input_keys = set()
+        network_input_keys = set()
+        gpu_input_keys = set()
         produced_keys = set()
-        for op in get_current_items(self.ops + self.postprocessing, mode, epoch, ds_id=ds_id):
-            input_keys.update(set(key for key in op.inputs if key not in produced_keys))
+        slice_inputs = set()
+        unslice_inputs = set()
+        pops_inputs = set()
+        pops_produced_keys = set()
+        for slicer in get_current_items(self.slicers, mode, epoch, ds_id=ds_id):
+            network_input_keys.update(set(slicer.slice_inputs))
+            unslice_inputs.update(set(slicer.unslice_inputs))
+        slice_inputs.update(network_input_keys)
+        for op in get_current_items(self.ops, mode, epoch, ds_id=ds_id):
+            unsatisfied_inputs = set(key for key in op.inputs if key not in produced_keys)
+            network_input_keys.update(unsatisfied_inputs)
+            gpu_input_keys.update(unsatisfied_inputs)
             produced_keys.update(op.outputs)
-        return input_keys
-
-    def _get_effective_postprocessing_input_keys(self, mode: str, epoch: int, ds_id: str = '') -> Set[str]:
-        """Determine which keys need to be provided as input to the postprocessing during the given `epoch`.
-
-        Args:
-            mode: The execution mode to consider. One of 'train', 'eval', 'test', or 'infer'.
-            epoch: The epoch number to consider for determining inputs.
-            ds_id: The current dataset id.
-
-        Returns:
-            The necessary inputs for the postprocessing to execute the given `epoch` and `mode`.
-        """
-        input_keys = set()
-        produced_keys = set()
+        network_input_keys.update(unslice_inputs - produced_keys)
         for op in get_current_items(self.postprocessing, mode, epoch, ds_id=ds_id):
-            input_keys.update(set(key for key in op.inputs if key not in produced_keys))
+            network_input_keys.update(set(key for key in op.inputs if key not in produced_keys))
             produced_keys.update(op.outputs)
-        return input_keys
+            pops_inputs.update(set(key for key in op.inputs if key not in pops_produced_keys))
+            pops_produced_keys.update(op.outputs)
+        # Figure out outputs
+        output_keys = produced_keys
+        if desired_keys:
+            # If pops require a key then we can't throw it away on the GPU, even if Traces won't use that key later
+            output_keys = (output_keys & desired_keys) | pops_inputs
+        if slice_inputs:
+            # You want the key (output_keys) AND you sliced the key (slice_inputs | produced_keys) but you didn't
+            # unslice it
+            sliced_but_not_unsliced = (output_keys & (slice_inputs | produced_keys)) - unslice_inputs
+            if sliced_but_not_unsliced:
+                state = {'epoch': epoch, 'mode': mode, 'ds_id': ds_id}
+                raise ValueError(
+                    "Since you are using Slicers, you must specify how you would like the following keys to be" +
+                    f" un-sliced during {state}: {sliced_but_not_unsliced}")
 
-    def get_all_output_keys(self, mode: str, epoch: int, ds_id: str = '') -> Set[str]:
-        """Get all of the keys that will be generated by the network during the given `epoch` and `mode`.
-
-        Args:
-            mode: The execution mode to consider. One of 'train', 'eval', 'test', or 'infer'.
-            epoch: The epoch number to consider when searching for outputs.
-            ds_id: The current dataset id.
-
-        Returns:
-            The keys that will be generated by the network's Ops during the `epoch` for the given `mode`.
-        """
-        output_keys = set()
-        for op in get_current_items(self.ops + self.postprocessing, mode, epoch, ds_id=ds_id):
-            output_keys.update(op.outputs)
-        return output_keys
+        return network_input_keys, gpu_input_keys, output_keys
 
     @staticmethod
     def _forward_batch(batch: MutableMapping[str, Any], state: Dict[str, Any], ops: List[TensorOp]) -> None:
@@ -260,23 +285,41 @@ class BaseNetwork:
                 fn()
         state['deferred'].clear()
 
-    def run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:  # Batch, Prediction
+    def run_step(self, batch: Dict[str, Array]) -> Dict[str, Array]:  # Batch, Prediction
         """Run a forward step through the Network on a batch of data, including postprocessing.
 
-        This method expects that Network.load_epoch() has already been invoked. The return data will be on the CPU.
+        Usage:
+
+        ```python
+        with network(epoch=1, mode='train', ds_id=''):
+            network.run_step()
+        ```
+
+        The return data will be on the CPU.
 
         Args:
             batch: The batch of data serving as input to the Network.
 
         Returns:
-            (batch_data, prediction_data)
+            The input data along with prediction data (input keys may be overwritten/obscured).
         """
-        batch, prediction = self._run_step(batch)
-        forward_numpyop(ops=self.epoch_postprocessing,
-                        data=ChainMap(prediction, batch),
-                        state=self.epoch_state,
-                        batched=self.target_type)
-        return batch, prediction
+        if not self.ctx_lock.locked:
+            raise ValueError("To invoke the run_step method you must first enter the network (see the doc string)")
+        if not self.ctx_state:
+            raise ValueError("To invoke the run_step method you must first configure the network (see the doc string)")
+        if self.ctx_slicers:
+            minibatches = forward_slicers(self.ctx_slicers, data=batch)
+            results: List[Tuple[Dict[str, Array], Dict[str, Array]]] = []
+            for minibatch in minibatches:
+                results.append(self._run_step(minibatch))
+            batch = reverse_slicers(self.ctx_slicers,
+                                    data=[ChainMap(result[1], result[0]) for result in results],
+                                    original_data=batch)
+        else:
+            batch, prediction = self._run_step(batch)
+            batch = ChainMap(prediction, batch)
+        forward_numpyop(ops=self.ctx_postprocessing, data=batch, state=self.ctx_state, batched=self.target_type)
+        return batch
 
     def _run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:  # Batch, Prediction
         """Run a forward step through the Network on a batch of data, excluding postprocessing.
@@ -293,23 +336,23 @@ class BaseNetwork:
         raise NotImplementedError
 
     @overload
-    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 1, ds_id: str = '') -> Dict[str, Any]:
+    def transform(self, data: Dict[str, Array], mode: str, epoch: int = 1, ds_id: str = '') -> Dict[str, Array]:
         ...
 
     @overload
-    def transform(self, data: Iterable[Dict[str, Any]], mode: str, epoch: int = 1,
-                  ds_id: str = '') -> List[Dict[str, Any]]:
+    def transform(self, data: Iterable[Dict[str, Array]], mode: str, epoch: int = 1,
+                  ds_id: str = '') -> List[Dict[str, Array]]:
         ...
 
     @overload
-    def transform(self, data: Pipeline, mode: str, epoch: int = 1, ds_id: str = '') -> List[Dict[str, Any]]:
+    def transform(self, data: Pipeline, mode: str, epoch: int = 1, ds_id: str = '') -> List[Dict[str, Array]]:
         ...
 
     def transform(self,
-                  data: Union[Dict[str, Any], Iterable[Dict[str, Any]], Pipeline],
+                  data: Union[Dict[str, Array], Iterable[Dict[str, Array]], Pipeline],
                   mode: str,
                   epoch: int = 1,
-                  ds_id: str = '') -> Union[Dict[str, Any], List[Dict[str, Any]]]:
+                  ds_id: str = '') -> Union[Dict[str, Array], List[Dict[str, Array]]]:
         """Run a forward step through the Network on one or more elements of data.
 
         Args:
@@ -321,25 +364,32 @@ class BaseNetwork:
         Returns:
             prediction_data overlaid on the input `data`.
         """
-        self.load_epoch(mode, epoch, ds_id, warmup=False, eager=isinstance(data, dict))
         results = []
-
-        if isinstance(data, Pipeline):
-            with data(mode=mode, epoch=epoch, ds_id=ds_id, shuffle=False) as loader:
-                for batch in loader:
+        with self(mode=mode, epoch=epoch, ds_id=ds_id, warmup=False, eager=isinstance(data, dict) and not self.slicers):
+            if isinstance(data, Pipeline):
+                with data(mode=mode, epoch=epoch, ds_id=ds_id, shuffle=False) as loader:
+                    for batch in loader:
+                        batch = to_tensor(batch, target_type=self.target_type)
+                        results.append(self._do_transform(batch))
+            else:
+                batches = to_list(data)
+                for batch in batches:
                     batch = to_tensor(batch, target_type=self.target_type)
-                    batch, prediction = self.run_step(batch)
-                    results.append({**batch, **prediction})
-        else:
-            batches = to_list(data)
-            for batch in batches:
-                batch = to_tensor(batch, target_type=self.target_type)
-                batch, prediction = self.run_step(batch)
-                results.append({**batch, **prediction})
-        self.unload_epoch()
+                    results.append(self._do_transform(batch))
         if isinstance(data, dict):
             return results[0]
         return results
+
+    def _do_transform(self, batch: Dict[str, Array]) -> Dict[str, Array]:
+        """A handle to allow subclasses to modify the behavior of the transform method before it calls run_step
+
+        Args:
+            batch: A single batch of data on which to run.
+
+        Returns:
+            The predictions overlaid on the input batch dictionary.
+        """
+        return self.run_step(batch)
 
 
 def _collect_models(
@@ -363,7 +413,8 @@ def _collect_models(
 # noinspection PyPep8Naming
 def Network(
     ops: Sequence[Union[None, TensorOp, Scheduler[TensorOp]]],
-    pops: Union[None, NumpyOp, Scheduler[NumpyOp], Sequence[Union[None, NumpyOp, Scheduler[NumpyOp]]]] = None
+    pops: Union[None, NumpyOp, Scheduler[NumpyOp], Sequence[Union[None, NumpyOp, Scheduler[NumpyOp]]]] = None,
+    slicers: Union[None, Slicer, Scheduler[Slicer], Sequence[Union[None, Slicer, Scheduler[Slicer]]]] = None
 ) -> BaseNetwork:
     """A function to automatically instantiate the correct Network derived class based on the given `ops`.
 
@@ -374,6 +425,9 @@ def Network(
         pops: Postprocessing Ops. A collection of NumpyOps to be run on the CPU after all of the normal `ops` have been
             executed. Unlike the NumpyOps found in the pipeline, these ops will run on batches of data rather than
             single points.
+        slicers: Slicers to use if you want to cut apart a single batch of data into multiple slices in order to fit
+            them onto a smaller GPU. After cutting the data apart and running through the `ops`, the samples are fused
+            back together into a single batch on the CPU before being handed over to the `pops`.
 
     Returns:
         A network instance containing the given `ops`.
@@ -401,15 +455,15 @@ def Network(
 
     framework = framework.pop()
     if framework == "tf":
-        network = TFNetwork(ops, pops)
+        network = TFNetwork(ops, pops, slicers)
     elif framework == "torch":
-        network = TorchNetwork(ops, pops)
+        network = TorchNetwork(ops, pops, slicers)
     else:
         raise ValueError("Unknown model type")
     return network
 
 
-@traceable()
+@traceable(blacklist=('ctx_lock', ))
 class TorchNetwork(BaseNetwork):
     """An extension of BaseNetwork for PyTorch models.
 
@@ -417,6 +471,9 @@ class TorchNetwork(BaseNetwork):
         ops: The ops defining the execution graph for this Network.
         postprocessing: A collection of NumpyOps to be run on the CPU after all of the normal `ops` have been executed.
             Unlike the NumpyOps found in the pipeline, these ops will run on batches of data rather than single points.
+        slicers: Slicers to use if you want to cut apart a single batch of data into multiple slices in order to fit
+            them onto a smaller GPU. After cutting the data apart and running through the `ops`, the samples are fused
+            back together into a single batch on the CPU before being handed over to the `pops`.
 
     """
     device: torch.device
@@ -425,34 +482,30 @@ class TorchNetwork(BaseNetwork):
         self,
         ops: Sequence[Union[None, TensorOp, Scheduler[TensorOp]]],
         postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Sequence[Union[None, NumpyOp,
-                                                                                Scheduler[NumpyOp]]]] = None
+                                                                                Scheduler[NumpyOp]]]] = None,
+        slicers: Union[None, Slicer, Scheduler[Slicer], Sequence[Union[None, Slicer, Scheduler[Slicer]]]] = None,
     ) -> None:
-        super().__init__(target_type='torch', device=get_device(), ops=ops, postprocessing=postprocessing)
+        super().__init__(target_type='torch',
+                         device=get_device(),
+                         ops=ops,
+                         postprocessing=postprocessing,
+                         slicers=slicers)
 
-    def load_epoch(self,
-                   mode: str,
-                   epoch: int,
-                   ds_id: str,
-                   output_keys: Optional[Set[str]] = None,
-                   warmup: bool = False,
-                   eager: bool = False) -> None:
-        """Prepare the network to run a given epoch and mode.
-
-        This method is necessary since schedulers and op mode restrictions may result in different computation graphs
-        every epoch. This also moves all of the necessary models from the CPU onto the GPU(s).
-
-        Args:
-            mode: The mode to prepare to execute. One of 'train', 'eval', 'test', or 'infer'.
-            epoch: The epoch to prepare to execute.
-            ds_id: The current dataset id.
-            output_keys: What keys must be moved from the GPU back to the CPU after executing a step.
-            warmup: Whether to prepare to execute it warmup mode or not (end users can likely ignore this argument).
-            eager: Whether to run the training in eager mode. This is only related to TensorFlow training because
-                PyTorch by nature is always in eager mode.
-        """
-        super().load_epoch(mode=mode, epoch=epoch, ds_id=ds_id, output_keys=output_keys, warmup=warmup, eager=eager)
+    def __call__(self,
+                 mode: str,
+                 epoch: int,
+                 ds_id: str,
+                 desired_output_keys: Optional[Set[str]] = None,
+                 warmup: bool = False,
+                 eager: bool = False) -> Self:
+        super().__call__(mode=mode,
+                         epoch=epoch,
+                         ds_id=ds_id,
+                         desired_output_keys=desired_output_keys,
+                         warmup=warmup,
+                         eager=eager)
         if self.device.type != "cpu":
-            for model in self.epoch_models:
+            for model in self.ctx_models:
                 # move model variables to gpu
                 model.to(self.device)
                 if model.current_optimizer and mode == "train":
@@ -460,12 +513,13 @@ class TorchNetwork(BaseNetwork):
                     self._move_optimizer_between_device(model.current_optimizer.state, self.device)
         # Set all of the contiguous final updates to defer their updates by default to enable things like CycleGan
         # This is not necessary for TF because overriding tf weights does not confuse the gradient tape computation
-        for op in reversed(self.epoch_ops):
+        for op in reversed(self.ctx_ops):
             if isinstance(op, UpdateOp):
                 op._old_defer = op.defer
                 op.defer = True
             else:
                 break
+        return self
 
     def _move_optimizer_between_device(self, data: Dict[str, Any], device: Union[str, torch.device]) -> None:
         """Move optimizer state between gpu and cpu recursively.
@@ -483,26 +537,27 @@ class TorchNetwork(BaseNetwork):
                 except (RuntimeError, AssertionError, AttributeError):
                     pass
 
-    def unload_epoch(self) -> None:
+    def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
         """Clean up the network after running an epoch.
 
         In this case we move all of the models from the GPU(s) back to the CPU.
         """
         if self.device.type != "cpu":
-            for model in self.epoch_models:
+            for model in self.ctx_models:
                 # move model variables to cpu
                 model.to("cpu")
-                if model.current_optimizer and self.epoch_state["mode"] == "train":
+                if model.current_optimizer and self.ctx_state["mode"] == "train":
                     # move optimizer variables to cpu
                     self._move_optimizer_between_device(model.current_optimizer.state, "cpu")
         # Set the final update ops back to their original defer status
-        for op in reversed(self.epoch_ops):
+        for op in reversed(self.ctx_ops):
             if isinstance(op, UpdateOp):
                 op.defer = op.__dict__.get('_old_defer', op.defer)
             else:
                 break
+        super().__exit__(*exc)
 
-    def _get_effective_batch_input(self, batch: MutableMapping[str, Any], mode: str) -> Dict[str, Any]:
+    def _get_effective_batch_input(self, batch: MutableMapping[str, Any]) -> Dict[str, Any]:
         """Copy input data from the the CPU onto the GPU(s).
 
         This method will filter inputs from the batch so that only data required by the network during execution will be
@@ -510,7 +565,6 @@ class TorchNetwork(BaseNetwork):
 
         Args:
             batch: The input data to be moved.
-            mode: The current execution mode. One of 'train', 'eval', 'test', or 'infer'.
 
         Returns:
             The input data ready for use on GPU(s).
@@ -518,10 +572,10 @@ class TorchNetwork(BaseNetwork):
         if self.device.type != "cpu":
             new_batch = {
                 key: move_tensors_to_device(batch[key], self.device)
-                for key in self.effective_inputs[mode] if key in batch
+                for key in self.ctx_gpu_inputs if key in batch
             }
         else:
-            new_batch = {key: batch[key] for key in self.effective_inputs[mode] if key in batch}
+            new_batch = {key: batch[key] for key in self.ctx_gpu_inputs if key in batch}
         return new_batch
 
     def _run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
@@ -536,26 +590,25 @@ class TorchNetwork(BaseNetwork):
         Returns:
             (batch_data, prediction_data)
         """
-        mode = self.epoch_state["mode"]
-        batch_in = self._get_effective_batch_input(batch, mode)
-        self.epoch_state["tape"] = NonContext()
+        batch_in = self._get_effective_batch_input(batch)
+        self.ctx_state["tape"] = NonContext()
         # gpu operation
-        with torch.no_grad() if not self.epoch_state["req_grad"] else NonContext():
+        with torch.no_grad() if not self.ctx_state["req_grad"] else NonContext():
             with torch.autocast(device_type=self.device.type) if self.mixed_precision else NonContext():
-                self._forward_batch(batch_in, self.epoch_state, self.epoch_ops)
+                self._forward_batch(batch_in, self.ctx_state, self.ctx_ops)
 
         # copy data to cpu
         if self.device.type != "cpu":
             prediction = {
                 key: move_tensors_to_device(detach_tensors(batch_in[key]), "cpu")
-                for key in self.effective_outputs[mode] if key in batch_in
+                for key in self.ctx_outputs if key in batch_in
             }
         else:
-            prediction = {key: detach_tensors(batch_in[key]) for key in self.effective_outputs[mode] if key in batch_in}
+            prediction = {key: detach_tensors(batch_in[key]) for key in self.ctx_outputs if key in batch_in}
         return batch, prediction
 
 
-@traceable()
+@traceable(blacklist=('ctx_lock', ))
 class TFNetwork(BaseNetwork):
     """An extension of BaseNetwork for TensorFlow models.
 
@@ -563,46 +616,42 @@ class TFNetwork(BaseNetwork):
         ops: The ops defining the execution graph for this Network.
         postprocessing: A collection of NumpyOps to be run on the CPU after all of the normal `ops` have been executed.
             Unlike the NumpyOps found in the pipeline, these ops will run on batches of data rather than single points.
+        slicers: Slicers to use if you want to cut apart a single batch of data into multiple slices in order to fit
+            them onto a smaller GPU. After cutting the data apart and running through the `ops`, the samples are fused
+            back together into a single batch on the CPU before being handed over to the `pops`.
     """
     def __init__(
         self,
         ops: Sequence[Union[None, TensorOp, Scheduler[TensorOp]]],
         postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Sequence[Union[None, NumpyOp,
-                                                                                Scheduler[NumpyOp]]]] = None
+                                                                                Scheduler[NumpyOp]]]] = None,
+        slicers: Union[None, Slicer, Scheduler[Slicer], Sequence[Union[None, Slicer, Scheduler[Slicer]]]] = None,
     ) -> None:
-        super().__init__(target_type='tf', device=None, ops=ops, postprocessing=postprocessing)
+        super().__init__(target_type='tf', device=None, ops=ops, postprocessing=postprocessing, slicers=slicers)
 
-    def load_epoch(self,
-                   mode: str,
-                   epoch: int,
-                   ds_id: str,
-                   output_keys: Optional[Set[str]] = None,
-                   warmup: bool = False,
-                   eager: bool = False) -> None:
-        """Prepare the network to run a given epoch and mode.
-
-        This method is necessary since schedulers and op mode restrictions may result in different computation graphs
-        every epoch. This also converts the epoch index a tensor to avoid tensorflow graph rebuilding.
-
-        Args:
-            mode: The mode to prepare to execute. One of 'train', 'eval', 'test', or 'infer'.
-            epoch: The epoch to prepare to execute.
-            ds_id: The current dataset id.
-            output_keys: What keys must be moved from the GPU back to the CPU after executing a step.
-            warmup: Whether to prepare to execute it warmup mode or not (end users can likely ignore this argument).
-            eager: Whether to run the training in eager mode. This is only related to TensorFlow training because
-                PyTorch by nature is always in eager mode.
-        """
-        super().load_epoch(mode=mode, epoch=epoch, ds_id=ds_id, output_keys=output_keys, warmup=warmup, eager=eager)
+    def __call__(self,
+                 mode: str,
+                 epoch: int,
+                 ds_id: str,
+                 desired_output_keys: Optional[Set[str]] = None,
+                 warmup: bool = False,
+                 eager: bool = False) -> Self:
+        super().__call__(mode=mode,
+                         epoch=epoch,
+                         ds_id=ds_id,
+                         desired_output_keys=desired_output_keys,
+                         warmup=warmup,
+                         eager=eager)
         # Don't cause a re-trace just because epoch changed
-        self.epoch_state["epoch"] = tf.convert_to_tensor(self.epoch_state["epoch"])
+        self.ctx_state["epoch"] = tf.convert_to_tensor(self.ctx_state["epoch"])
         # Need to re-trace the TF graph if optimizer or layer trainable setting is changing:
-        trainable_str = "".join([str(layer.trainable) for model in self.epoch_models for layer in model.layers])
+        trainable_str = "".join([str(layer.trainable) for model in self.ctx_models for layer in model.layers])
         opt_str = "x".join(
-            [str(id(model.current_optimizer)) for model in self.epoch_models if hasattr(model, 'current_optimizer')])
-        self.epoch_state["_force_tf_retrace"] = hash(trainable_str + opt_str)  # Hash to keep at fixed memory overhead
+            [str(id(model.current_optimizer)) for model in self.ctx_models if hasattr(model, 'current_optimizer')])
+        self.ctx_state["_force_tf_retrace"] = hash(trainable_str + opt_str)  # Hash to keep at fixed memory overhead
+        return self
 
-    def unload_epoch(self) -> None:
+    def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
         # This prevents a tf graph memory leak that would slow down long trainings. Since we
         # re-build graphs every epoch there is no reason to keep old ones around.
         strategy = tf.distribute.get_strategy()
@@ -610,6 +659,7 @@ class TFNetwork(BaseNetwork):
             return  # TODO - Find a way to clear graph for multi-gpu
         else:
             tf.keras.backend.clear_session()
+        super().__exit__(*exc)
 
     def _run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """Run a forward step through the Network on a batch of data.
@@ -623,32 +673,26 @@ class TFNetwork(BaseNetwork):
         Returns:
             (batch_data, prediction_data)
         """
-        mode = self.epoch_state["mode"]
-        batch_in = self._get_effective_batch_input(batch, mode)
+        batch_in = self._get_effective_batch_input(batch)
         strategy = tf.distribute.get_strategy()
         if isinstance(strategy, tf.distribute.MirroredStrategy):
-            if self.epoch_state["eager"]:
-                prediction = strategy.run(
-                    self._forward_step_eager,
-                    args=(batch_in, self.epoch_state, self.epoch_ops, to_list(self.effective_outputs[mode])))
+            if self.ctx_state["eager"]:
+                prediction = strategy.run(self._forward_step_eager,
+                                          args=(batch_in, self.ctx_state, self.ctx_ops, to_list(self.ctx_outputs)))
             else:
-                prediction = strategy.run(
-                    self._forward_step_static,
-                    args=(batch_in, self.epoch_state, self.epoch_ops, to_list(self.effective_outputs[mode])))
+                prediction = strategy.run(self._forward_step_static,
+                                          args=(batch_in, self.ctx_state, self.ctx_ops, to_list(self.ctx_outputs)))
             batch = self._per_replica_to_global(batch)
             prediction = self._per_replica_to_global(prediction)
         else:
-            if self.epoch_state["eager"]:
-                prediction = self._forward_step_eager(batch_in,
-                                                      self.epoch_state,
-                                                      self.epoch_ops,
-                                                      to_list(self.effective_outputs[mode]))
+            if self.ctx_state["eager"]:
+                prediction = self._forward_step_eager(batch_in, self.ctx_state, self.ctx_ops, to_list(self.ctx_outputs))
             else:
                 with Suppressor(allow_pyprint=True, show_if_exception=True):
                     prediction = self._forward_step_static(batch_in,
-                                                           self.epoch_state,
-                                                           self.epoch_ops,
-                                                           to_list(self.effective_outputs[mode]))
+                                                           self.ctx_state,
+                                                           self.ctx_ops,
+                                                           to_list(self.ctx_outputs))
         return batch, prediction
 
     def _per_replica_to_global(self, data: T) -> T:
@@ -682,18 +726,17 @@ class TFNetwork(BaseNetwork):
         else:
             return data
 
-    def _get_effective_batch_input(self, batch: MutableMapping[str, Any], mode: str) -> Dict[str, Any]:
+    def _get_effective_batch_input(self, batch: MutableMapping[str, Any]) -> Dict[str, Any]:
         """Filter input data so that only the data required by the Network is moved onto the GPU.
 
         Args:
             batch: An unfiltered batch of input data.
-            mode: The current execution mode. One of 'train', 'eval', 'test', or 'infer'.
 
         Returns:
             The filtered input data ready for use on GPU(s).
         """
         new_batch = {}
-        for key in self.effective_inputs[mode]:
+        for key in self.ctx_gpu_inputs:
             if key in batch:
                 new_batch[key] = batch[key]
         return new_batch
@@ -757,31 +800,20 @@ class TFNetwork(BaseNetwork):
                 prediction[key] = batch[key]
         return prediction
 
-    def transform(self, data: Dict[str, Any], mode: str, epoch: int = 1, ds_id: str = '') -> Dict[str, Any]:
-        """Run a forward step through the Network on an element of data.
-
-        Args:
-            data: The element to data to use as input.
-            mode: The mode in which to run the transform. One of 'train', 'eval', 'test', or 'infer'.
-            epoch: The epoch in which to run the transform.
-            ds_id: The current dataset id.
-
-        Returns:
-            (batch_data, prediction_data)
-        """
+    def _do_transform(self, batch: Dict[str, Array]) -> Dict[str, Array]:
         # Distribute multi-gpu data for processing
         sub_sample = False
         strategy = tf.distribute.get_strategy()
         if isinstance(strategy, tf.distribute.MirroredStrategy):
-            batch_size, num_devices = get_batch_size(data), strategy.num_replicas_in_sync
+            batch_size, num_devices = get_batch_size(batch), strategy.num_replicas_in_sync
             if batch_size < num_devices:
-                data = self._fill_batch(data, num_devices - batch_size)
+                batch = self._fill_batch(batch, num_devices - batch_size)
                 sub_sample = True
-            data = next(iter(strategy.experimental_distribute_dataset(tf.data.Dataset.from_tensors(data))))
-        results = super().transform(data, mode, epoch, ds_id=ds_id)
+            batch = next(iter(strategy.experimental_distribute_dataset(tf.data.Dataset.from_tensors(batch))))
+        batch = super()._do_transform(batch)
         if sub_sample:
-            results = self._subsample_data(results, batch_size)
-        return results
+            batch = self._subsample_data(batch, batch_size)
+        return batch
 
     def _fill_batch(self, data: T, n: int) -> T:
         """Fill data on batch dimension repeating the first n indices at the end.

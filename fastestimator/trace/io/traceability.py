@@ -58,6 +58,7 @@ from fastestimator.op.tensorop.meta.sometimes import Sometimes as SometimesT
 from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.pipeline import Pipeline
 from fastestimator.schedule.schedule import Scheduler, get_current_items, get_signature_epochs
+from fastestimator.slicer.slicer import Slicer
 from fastestimator.summary.logs.log_plot import visualize_logs
 from fastestimator.trace.io.restore_wizard import RestoreWizard
 from fastestimator.trace.trace import Trace, sort_traces
@@ -67,6 +68,11 @@ from fastestimator.util.data import Data
 from fastestimator.util.latex_util import AdjustBox, Center, ContainerList, HrefFEID, Verbatim
 from fastestimator.util.traceability_util import FeSummaryTable, traceable
 from fastestimator.util.util import Suppressor, cpu_count, get_gpu_info, get_num_gpus
+
+
+class _UnslicerWrapper():
+    def __init__(self, slicer: Slicer) -> None:
+        self.slicer = slicer
 
 
 @traceable()
@@ -301,6 +307,7 @@ class Traceability(Trace):
                                       datasets=datasets)
             start = self._loop_tables(start, classes=Trace, name="Traces", model_ids=model_ids, datasets=datasets)
             start = self._loop_tables(start, classes=Op, name="Operators", model_ids=model_ids, datasets=datasets)
+            start = self._loop_tables(start, classes=Slicer, name="Slicers", model_ids=model_ids, datasets=datasets)
             start = self._loop_tables(start,
                                       classes=(Dataset, tf.data.Dataset),
                                       name="Datasets",
@@ -545,6 +552,7 @@ class Traceability(Trace):
         pipe_ops = get_current_items(self.system.pipeline.ops, run_modes=mode, epoch=epoch, ds_id=ds_id) if isinstance(
             ds, Dataset) else []
         net_ops = get_current_items(self.system.network.ops, run_modes=mode, epoch=epoch, ds_id=ds_id)
+        net_slicers = get_current_items(self.system.network.slicers, run_modes=mode, epoch=epoch, ds_id=ds_id)
         net_post = get_current_items(self.system.network.postprocessing, run_modes=mode, epoch=epoch, ds_id=ds_id)
         traces = sort_traces(get_current_items(self.system.traces, run_modes=mode, epoch=epoch, ds_id=ds_id),
                              ds_ids=self.system.pipeline.get_ds_ids(epoch=epoch, mode=mode))
@@ -570,7 +578,12 @@ class Traceability(Trace):
         if batch_size is not None:
             batch_size = f" (Batch Size: {batch_size})"
         self._draw_subgraph(diagram, diagram, label_last_seen, f'Pipeline{batch_size}', pipe_ops, ds_id)
-        self._draw_subgraph(diagram, diagram, label_last_seen, 'Network', net_ops + net_post, ds_id)
+        self._draw_subgraph(diagram,
+                            diagram,
+                            label_last_seen,
+                            'Network',
+                            net_slicers + net_ops + [_UnslicerWrapper(slicer) for slicer in net_slicers] + net_post,
+                            ds_id)
         self._draw_subgraph(diagram, diagram, label_last_seen, 'Traces', traces, ds_id)
         return diagram
 
@@ -684,11 +697,21 @@ class Traceability(Trace):
                                                             progenitor=progenitor,
                                                             old_source=label_last_seen.factory(''),
                                                             new_source=str(id(op)))
+            elif isinstance(op, Slicer):
+                label = f"{op.__class__.__name__} ({FEID(id(op))})"
+                texlbl = HrefFEID(FEID(id(op)), name=op.__class__.__name__, color='purple').dumps()
+                if op.minibatch_size:
+                    diagram.set_label(f"Network (Slices Per Step: {op.minibatch_size})")
+            elif isinstance(op, _UnslicerWrapper):
+                # The corresponding Slicer is already in the graph earlier
+                label = None
+                texlbl = None
             else:
                 label = f"{op.__class__.__name__} ({FEID(id(op))})"
                 texlbl = HrefFEID(FEID(id(op)), name=op.__class__.__name__).dumps()
-            diagram.add_node(pydot.Node(node_id, label=label, texlbl=texlbl))
-            if isinstance(op, (Op, Trace)) and edges:
+            if label is not None:
+                diagram.add_node(pydot.Node(node_id, label=label, texlbl=texlbl))
+            if isinstance(op, (Op, Trace, Slicer, _UnslicerWrapper)) and edges:
                 # Need the instance check since subgraph_ops might contain a tf dataset or torch data loader
                 self._add_edge(progenitor, op, label_last_seen, ds_id)
 
@@ -716,7 +739,7 @@ class Traceability(Trace):
 
     def _add_edge(self,
                   progenitor: pydot.Dot,
-                  op: Union[Trace, Op],
+                  op: Union[Trace, Op, Slicer, _UnslicerWrapper],
                   label_last_seen: Dict[str, str],
                   ds_id: Optional[str]):
         """Draw edges into a given Node.
@@ -727,10 +750,11 @@ class Traceability(Trace):
             label_last_seen: A mapping of {data_dict_key: node_id} indicating the last node which generated the key.
             ds_id: The ds_id under which the node is currently running.
         """
-        node_id = str(id(op))
+        node_id = str(id(op.slicer)) if isinstance(op, _UnslicerWrapper) else str(id(op))
         edge_srcs = defaultdict(lambda: [])
         global_ds_ids = {key for vals in self.system.pipeline.data.values() for key in vals.keys() if key is not None}
-        for inp in label_last_seen.keys() if isinstance(op, Batch) else op.inputs:
+        for inp in label_last_seen.keys() if isinstance(op, Batch) else op.slice_inputs if isinstance(
+                op, Slicer) else op.slicer.unslice_inputs if isinstance(op, _UnslicerWrapper) else op.inputs:
             if inp == '*':
                 continue
             _, candidate_id, *_ = f"{inp}|".split('|')
@@ -739,7 +763,8 @@ class Traceability(Trace):
             edge_srcs[label_last_seen[inp]].append(inp)
         for src, labels in edge_srcs.items():
             progenitor.add_edge(pydot.Edge(src=src, dst=node_id, label=f" {', '.join(labels)} "))
-        outputs = op.get_outputs(ds_ids=ds_id) if isinstance(op, Trace) else op.outputs
+        outputs = op.get_outputs(ds_ids=ds_id) if isinstance(op, Trace) else op.slice_inputs if isinstance(
+            op, Slicer) else op.slicer.unslice_inputs if isinstance(op, _UnslicerWrapper) else op.outputs
         for out in label_last_seen.keys() if isinstance(op, Batch) else outputs:
             label_last_seen[out] = node_id
 

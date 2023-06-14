@@ -14,19 +14,17 @@
 # ==============================================================================
 import inspect
 from functools import partial
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 import tensorflow as tf
 import torch
 
 from fastestimator.backend._feed_forward import feed_forward
 from fastestimator.op.tensorop.tensorop import TensorOp
+from fastestimator.types import Model, Tensor
 from fastestimator.util.base_util import to_list, warn
 from fastestimator.util.traceability_util import FeInputSpec, traceable
 from fastestimator.util.util import get_num_devices
-
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
-Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
 
 @traceable()
@@ -55,7 +53,7 @@ class ModelOp(TensorOp):
             different between single-gpu and multi-gpu environments, though we attempt to prevent this.
     """
     def __init__(self,
-                 model: Union[tf.keras.Model, torch.nn.Module],
+                 model: Model,
                  inputs: Union[None, str, Iterable[str]] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
                  mode: Union[None, str, Iterable[str]] = None,

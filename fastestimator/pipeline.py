@@ -20,11 +20,12 @@ import time
 from copy import deepcopy
 from operator import mul
 from threading import Lock
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union, cast
+from typing import Any, Dict, List, Literal, Optional, Set, Tuple, Type, TypeVar, Union, cast, overload
 
 import numpy as np
 import tensorflow as tf
 from torch.utils.data import DataLoader, Dataset
+from typing_extensions import Self
 
 from fastestimator.backend._to_tensor import to_tensor
 from fastestimator.dataset.dataloader import FEDataLoader
@@ -516,6 +517,24 @@ class Pipeline:
             return op_data
         return to_tensor(data, target_type=target_type)
 
+    @overload
+    def get_results(self,
+                    mode: str = "train",
+                    epoch: int = 1,
+                    ds_id: str = '',
+                    num_steps: Literal[1] = 1,
+                    shuffle: bool = False) -> Dict[str, Any]:
+        ...
+
+    @overload
+    def get_results(self,
+                    mode: str = "train",
+                    epoch: int = 1,
+                    ds_id: str = '',
+                    num_steps: int = 1,
+                    shuffle: bool = False) -> List[Dict[str, Any]]:
+        ...
+
     def get_results(self,
                     mode: str = "train",
                     epoch: int = 1,
@@ -553,7 +572,7 @@ class Pipeline:
                  ds_id: str = '',
                  shuffle: Optional[bool] = None,
                  steps_per_epoch: Optional[int] = None,
-                 output_keys: Optional[Set[str]] = None) -> 'Pipeline':
+                 output_keys: Optional[Set[str]] = None) -> Self:
         """Prepare this Pipeline for a given `mode` and `epoch`.
 
         A given pipeline can only provide one loader at a time. This helps to prevent issues with multi-threading.
@@ -681,9 +700,9 @@ class Pipeline:
         self.ctx_lock.release()
 
 
-def _batch_postprocess(data: Dict[str, Any], ops: List[NumpyOp], output_keys: Set[str], mode: str) -> \
+def _batch_postprocess(data: Dict[str, Any], ops: List[NumpyOp], output_keys: Set[str], mode: str, shared: bool = True) -> \
         Union[Dict[str, Any], FilteredData]:
-    op_data = forward_numpyop(ops=ops, data=data, state={'mode': mode}, batched='torch')
+    op_data = forward_numpyop(ops=ops, data=data, state={'mode': mode}, batched='torch', shared=shared)
     if isinstance(op_data, FilteredData):
         return op_data
     if output_keys:

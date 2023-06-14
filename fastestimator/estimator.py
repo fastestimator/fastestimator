@@ -245,44 +245,58 @@ class Estimator:
                     continue
                 ds_ids = self.pipeline.get_ds_ids(epoch, mode)
                 for ds_id in ds_ids:
-                    network_output_keys = self.network.get_all_output_keys(mode, epoch, ds_id=ds_id)
-                    network_input_keys = self.network.get_effective_input_keys(mode, epoch, ds_id=ds_id)
                     trace_input_keys = set()
                     trace_output_keys = {"*"}
                     traces = get_current_items(self.traces_in_use, run_modes=mode, epoch=epoch, ds_id=ds_id)
                     for idx, trace in enumerate(traces):
-                        if idx > 0:  # ignore TrainEssential and EvalEssential's inputs for unmet requirement checking
+                        if idx == 0:
+                            # Trace 0 is either TrainEssential or EvalEssential. Their inputs are the keys which should
+                            # be monitored, which is a union of self.monitor_names and potentially other keys which were
+                            # found when looping through traces to look for fe_monitor_names.
+                            monitor_names.update(trace.inputs)
+                        else:
+                            # We want to ignore monitor_names for for unmet requirement checking
                             trace_input_keys.update(trace.inputs)
                         trace_output_keys.update(trace.get_outputs(ds_ids=ds_ids))
-                    # key checking
-                    with self.pipeline(mode=mode,
-                                       epoch=epoch,
-                                       ds_id=ds_id,
-                                       steps_per_epoch=None,
-                                       output_keys=trace_input_keys - network_output_keys
-                                       | network_input_keys) as loader:
-                        loader = self._configure_loader(loader)
-                        if isinstance(loader, tf.data.Dataset):
-                            batch = list(loader.take(1))[0]
-                        else:
-                            with Suppressor(allow_pyprint=True, show_if_exception=True):
-                                # TF multi-gpu print-spams here in version 2.11
-                                batch = next(iter(loader))
-                        batch = self._configure_tensor(loader, batch)
-                    assert isinstance(batch, dict), "please make sure data output format is dictionary"
-                    pipeline_output_keys = to_set(batch.keys())
 
-                    monitor_names = monitor_names - (pipeline_output_keys | network_output_keys)
-                    unmet_requirements = trace_input_keys - (pipeline_output_keys | network_output_keys
-                                                             | trace_output_keys)
-                    assert not unmet_requirements, \
-                        "found missing key(s) during epoch {} mode {} ds_id {}: {}".format(epoch, mode, ds_id,
-                                                                                           unmet_requirements)
-                    sort_traces(traces, ds_ids=ds_ids, available_outputs=pipeline_output_keys | network_output_keys)
-                    trace_input_keys.update(traces[0].inputs)
-                    self.network.load_epoch(mode, epoch, ds_id, output_keys=trace_input_keys, warmup=True, eager=eager)
-                    self.network.run_step(batch)
-                    self.network.unload_epoch()
+                    with self.network(mode=mode,
+                                      epoch=epoch,
+                                      ds_id=ds_id,
+                                      desired_output_keys=trace_input_keys | monitor_names,
+                                      warmup=True,
+                                      eager=eager):
+
+                        network_input_keys = self.network.ctx_inputs
+                        network_output_keys = self.network.ctx_outputs
+
+                        # key checking
+                        with self.pipeline(
+                                mode=mode,
+                                epoch=epoch,
+                                ds_id=ds_id,
+                                steps_per_epoch=None,
+                                output_keys=(trace_input_keys - network_output_keys)
+                                | network_input_keys | monitor_names) as loader:
+                            loader = self._configure_loader(loader)
+                            if isinstance(loader, tf.data.Dataset):
+                                batch = list(loader.take(1))[0]
+                            else:
+                                with Suppressor(allow_pyprint=True, show_if_exception=True):
+                                    # TF multi-gpu print-spams here in version 2.11
+                                    batch = next(iter(loader))
+                            batch = self._configure_tensor(loader, batch)
+                        assert isinstance(batch, dict), "please make sure data output format is dictionary"
+                        pipeline_output_keys = to_set(batch.keys())
+
+                        monitor_names = monitor_names - (pipeline_output_keys | network_output_keys)
+                        unmet_requirements = trace_input_keys - (pipeline_output_keys | network_output_keys
+                                                                 | trace_output_keys)
+                        assert not unmet_requirements, \
+                            "found missing key(s) during epoch {} mode {} ds_id {}: {}".format(epoch, mode, ds_id,
+                                                                                            unmet_requirements)
+                        sort_traces(traces, ds_ids=ds_ids, available_outputs=pipeline_output_keys | network_output_keys)
+                        trace_input_keys.update(traces[0].inputs)
+                        self.network.run_step(batch)
         assert not monitor_names, "found missing key(s): {}".format(monitor_names)
 
     def get_scheduled_items(self, mode: str) -> List[Any]:
@@ -359,63 +373,63 @@ class Estimator:
             trace_input_keys = set()
             for ds_trace in ds_traces:
                 trace_input_keys.update(ds_trace.inputs)
-            network_input_keys = self.network.get_effective_input_keys(mode=self.system.mode,
-                                                                       epoch=self.system.epoch_idx,
-                                                                       ds_id=self.system.ds_id)
-            network_output_keys = self.network.get_all_output_keys(mode=self.system.mode,
-                                                                   epoch=self.system.epoch_idx,
-                                                                   ds_id=self.system.ds_id)
-            self.network.load_epoch(mode=self.system.mode,
-                                    epoch=self.system.epoch_idx,
-                                    ds_id=self.system.ds_id,
-                                    output_keys=trace_input_keys,
-                                    eager=eager)
+            # Note that monitor_names are included in the trace_inputs here, rather than being excluded and then
+            # manually union-ed again later as was done in in _warmup.
 
-            with self.pipeline(mode=self.system.mode,
-                               epoch=self.system.epoch_idx,
-                               ds_id=self.system.ds_id,
-                               steps_per_epoch=self.system.steps_per_epoch,
-                               output_keys=trace_input_keys - network_output_keys | network_input_keys) as loader:
+            with self.network(mode=self.system.mode,
+                              epoch=self.system.epoch_idx,
+                              ds_id=self.system.ds_id,
+                              desired_output_keys=trace_input_keys,
+                              eager=eager):
 
-                if self.system.mode == 'eval':
-                    log_steps_per_epoch = math.ceil(
-                        len(loader) /
-                        loader.get_batch_size()) if not self.system.steps_per_epoch else self.system.steps_per_epoch
-                    self.system.eval_log_steps = ([
-                        1, log_steps_per_epoch // 3, (2 * log_steps_per_epoch) // 3, log_steps_per_epoch
-                    ], log_steps_per_epoch) if not self.system.eval_log_steps_request else \
-                        (self.system.eval_log_steps_request, log_steps_per_epoch)
+                network_input_keys = self.network.ctx_inputs
+                network_output_keys = self.network.ctx_outputs
 
-                loader = self._configure_loader(loader)
-                iterator = iter(loader)
-                with Suppressor(allow_pyprint=True, show_if_exception=True):
-                    # multi-gpu tensorflow prints a ton of complaint messages here
-                    batch = next(iterator)
-                ds_traces = sort_traces(ds_traces,
-                                        available_outputs=to_set(batch.keys()) | network_output_keys,
-                                        ds_ids=ds_ids)
-                per_ds_traces = [trace for trace in ds_traces if isinstance(trace, PerDSTrace)]
-                self._run_traces_on_ds_begin(traces=per_ds_traces)
-                while True:
-                    try:
-                        if self.system.mode == "train":
-                            self.system.update_global_step()
-                        self.system.update_batch_idx()
-                        batch = self._configure_tensor(loader, batch)
-                        self._run_traces_on_batch_begin(batch, traces=ds_traces)
+                with self.pipeline(mode=self.system.mode,
+                                   epoch=self.system.epoch_idx,
+                                   ds_id=self.system.ds_id,
+                                   steps_per_epoch=self.system.steps_per_epoch,
+                                   output_keys=(trace_input_keys - network_output_keys)
+                                   | network_input_keys) as loader:
 
-                        batch, prediction = self.network.run_step(batch)
-                        self._run_traces_on_batch_end(batch, prediction, traces=ds_traces)
-                        if isinstance(loader, DataLoader) and (
-                            (self.system.batch_idx == self.system.train_steps_per_epoch and self.system.mode == "train")
-                                or
-                            (self.system.batch_idx == self.system.eval_steps_per_epoch and self.system.mode == "eval")):
-                            raise StopIteration
+                    if self.system.mode == 'eval':
+                        log_steps_per_epoch = math.ceil(
+                            len(loader) /
+                            loader.get_batch_size()) if not self.system.steps_per_epoch else self.system.steps_per_epoch
+                        self.system.eval_log_steps = ([
+                            1, log_steps_per_epoch // 3, (2 * log_steps_per_epoch) // 3, log_steps_per_epoch
+                        ], log_steps_per_epoch) if not self.system.eval_log_steps_request else \
+                            (self.system.eval_log_steps_request, log_steps_per_epoch)
+
+                    loader = self._configure_loader(loader)
+                    iterator = iter(loader)
+                    with Suppressor(allow_pyprint=True, show_if_exception=True):
+                        # multi-gpu tensorflow prints a ton of complaint messages here
                         batch = next(iterator)
-                    except StopIteration:
-                        break
-                self._run_traces_on_ds_end(traces=per_ds_traces, data=end_epoch_data)
-            self.network.unload_epoch()
+                    ds_traces = sort_traces(ds_traces,
+                                            available_outputs=to_set(batch.keys()) | network_output_keys,
+                                            ds_ids=ds_ids)
+                    per_ds_traces = [trace for trace in ds_traces if isinstance(trace, PerDSTrace)]
+                    self._run_traces_on_ds_begin(traces=per_ds_traces)
+                    while True:
+                        try:
+                            if self.system.mode == "train":
+                                self.system.update_global_step()
+                            self.system.update_batch_idx()
+                            batch = self._configure_tensor(loader, batch)
+                            self._run_traces_on_batch_begin(batch, traces=ds_traces)
+                            batch = self.network.run_step(batch)
+                            self._run_traces_on_batch_end(batch, traces=ds_traces)
+                            if isinstance(loader,
+                                          DataLoader) and ((self.system.batch_idx == self.system.train_steps_per_epoch
+                                                            and self.system.mode == "train") or
+                                                           (self.system.batch_idx == self.system.eval_steps_per_epoch
+                                                            and self.system.mode == "eval")):
+                                raise StopIteration
+                            batch = next(iterator)
+                        except StopIteration:
+                            break
+                    self._run_traces_on_ds_end(traces=per_ds_traces, data=end_epoch_data)
         self._run_traces_on_epoch_end(traces=epoch_traces, data=end_epoch_data)
 
     def _configure_loader(self, loader: Union[DataLoader, tf.data.Dataset]) -> Union[DataLoader, tf.data.Dataset]:
@@ -537,16 +551,14 @@ class Estimator:
             trace.on_batch_begin(data)
         self._check_early_exit()
 
-    def _run_traces_on_batch_end(self, batch: Dict[str, Any], prediction: Dict[str, Any],
-                                 traces: Iterable[Trace]) -> None:
+    def _run_traces_on_batch_end(self, batch: Dict[str, Any], traces: Iterable[Trace]) -> None:
         """Invoke the on_batch_end methods of given traces.
 
         Args:
             batch: The batch data which was provided by the pipeline.
-            prediction: The prediction data which was generated by the network.
             traces: List of traces.
         """
-        data = Data(ChainMap(prediction, batch))
+        data = Data(batch)
         for trace in traces:
             trace.on_batch_end(data)
         self._check_early_exit()
