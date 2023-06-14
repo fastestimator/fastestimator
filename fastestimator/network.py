@@ -36,6 +36,7 @@ from fastestimator.op.numpyop import Batch, NumpyOp, RemoveIf, forward_numpyop
 from fastestimator.op.op import get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.tensorop.model.update import UpdateOp
 from fastestimator.op.tensorop.tensorop import TensorOp
+from fastestimator.pipeline import Pipeline
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
 from fastestimator.util.base_util import NonContext, filter_nones, to_list, warn
 from fastestimator.util.traceability_util import trace_model, traceable
@@ -291,11 +292,28 @@ class BaseNetwork:
         """
         raise NotImplementedError
 
+    @overload
     def transform(self, data: Dict[str, Any], mode: str, epoch: int = 1, ds_id: str = '') -> Dict[str, Any]:
-        """Run a forward step through the Network on an element of data.
+        ...
+
+    @overload
+    def transform(self, data: Iterable[Dict[str, Any]], mode: str, epoch: int = 1,
+                  ds_id: str = '') -> List[Dict[str, Any]]:
+        ...
+
+    @overload
+    def transform(self, data: Pipeline, mode: str, epoch: int = 1, ds_id: str = '') -> List[Dict[str, Any]]:
+        ...
+
+    def transform(self,
+                  data: Union[Dict[str, Any], Iterable[Dict[str, Any]], Pipeline],
+                  mode: str,
+                  epoch: int = 1,
+                  ds_id: str = '') -> Union[Dict[str, Any], List[Dict[str, Any]]]:
+        """Run a forward step through the Network on one or more elements of data.
 
         Args:
-            data: The element to data to use as input.
+            data: The data to use as input (or a pipeline to process an entire dataset at once).
             mode: The mode in which to run the transform. One of 'train', 'eval', 'test', or 'infer'.
             epoch: The epoch in which to run the transform.
             ds_id: The current dataset id.
@@ -303,11 +321,25 @@ class BaseNetwork:
         Returns:
             prediction_data overlaid on the input `data`.
         """
-        self.load_epoch(mode, epoch, ds_id, warmup=False, eager=True)
-        data = to_tensor(data, target_type=self.target_type)
-        data, prediction = self.run_step(data)
+        self.load_epoch(mode, epoch, ds_id, warmup=False, eager=isinstance(data, dict))
+        results = []
+
+        if isinstance(data, Pipeline):
+            with data(mode=mode, epoch=epoch, ds_id=ds_id, shuffle=False) as loader:
+                for batch in loader:
+                    batch = to_tensor(batch, target_type=self.target_type)
+                    batch, prediction = self.run_step(batch)
+                    results.append({**batch, **prediction})
+        else:
+            batches = to_list(data)
+            for batch in batches:
+                batch = to_tensor(batch, target_type=self.target_type)
+                batch, prediction = self.run_step(batch)
+                results.append({**batch, **prediction})
         self.unload_epoch()
-        return {**data, **prediction}
+        if isinstance(data, dict):
+            return results[0]
+        return results
 
 
 def _collect_models(
