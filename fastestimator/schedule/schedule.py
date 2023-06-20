@@ -190,7 +190,7 @@ def get_signature_epochs(items: List[Any], total_epochs: int, mode: Optional[str
 def get_current_items(items: Iterable[Union[T, Scheduler[T]]],
                       run_modes: Optional[Union[str, Iterable[str]]] = None,
                       epoch: Optional[int] = None,
-                      ds_id: Optional[str] = None) -> List[T]:
+                      ds_id: Optional[Union[str, Iterable[str]]] = None) -> List[T]:
     ...
 
 
@@ -198,30 +198,31 @@ def get_current_items(items: Iterable[Union[T, Scheduler[T]]],
 def get_current_items(items: Iterable[Union[T, T2, Scheduler[T], Scheduler[T2]]],
                       run_modes: Optional[Union[str, Iterable[str]]] = None,
                       epoch: Optional[int] = None,
-                      ds_id: Optional[str] = None) -> List[Union[T, T2]]:
+                      ds_id: Optional[Union[str, Iterable[str]]] = None) -> List[Union[T, T2]]:
     ...
 
 
 def get_current_items(items: Iterable[Union[Any, Scheduler[Any]]],
                       run_modes: Optional[Union[str, Iterable[str]]] = None,
                       epoch: Optional[int] = None,
-                      ds_id: Optional[str] = None) -> List[Any]:
-    """Select items which should be executed for given mode and epoch.
+                      ds_id: Optional[Union[str, Iterable[str]]] = None) -> List[Any]:
+    """Select items which should be executed for given mode, epoch, and ds_id.
 
     Args:
         items: A list of possible items or Schedulers of items to choose from.
         run_modes: The desired execution mode. One or more of "train", "eval", "test", or "infer". If None, items of
             all modes will be returned.
         epoch: The desired execution epoch. If None, items across all epochs will be returned.
-        ds_id: The desired execution dataset id. If None, items across all ds_ids will be returned. An empty string
-            indicates that positive matches should be excluded ('' != 'ds1'), but that negative matches are satisfied
-            ('' == '!ds1').
+        ds_id: The desired one or more execution dataset id(s). If None, items across all ds_ids will be returned. An
+            empty string indicates that positive matches should be excluded ('' != 'ds1'), but that negative matches are
+            satisfied ('' == '!ds1').
 
     Returns:
         The items which should be executed.
     """
     selected_items = []
     run_modes = to_set(run_modes)
+    ds_id = to_set(ds_id)
     for item in items:
         if isinstance(item, Scheduler):
             if epoch is None:
@@ -245,7 +246,7 @@ def get_current_items(items: Iterable[Union[Any, Scheduler[Any]]],
 
             # ds_id matching
             ds_id_match = False
-            if ds_id is None:
+            if not ds_id:
                 ds_id_match = True
             if not hasattr(item_, "ds_id"):
                 ds_id_match = True
@@ -255,10 +256,10 @@ def get_current_items(items: Iterable[Union[Any, Scheduler[Any]]],
                     ds_id_match = True
                 # blacklist check (before whitelist due to desired empty string behavior)
                 # if any of ds_id starts with "!", then they will all start with "!"
-                elif any([x.startswith("!") for x in item_.ds_id]) and all([ds_id != x[1:] for x in item_.ds_id]):
+                elif any([x.startswith("!") for x in item_.ds_id]) and all([x[1:] not in ds_id for x in item_.ds_id]):
                     ds_id_match = True  # Note that empty string will pass this check (unless target is literally "!")
                 # whitelist check
-                elif ds_id in item_.ds_id:
+                elif item_.ds_id.intersection(ds_id):
                     ds_id_match = True  # Note that empty string will fail this check
             if item_ and mode_match and ds_id_match:
                 selected_items.append(item_)

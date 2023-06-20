@@ -307,11 +307,13 @@ class BatchDataset(FEDataset):
         if self.probability:
             num_samples = num_samples * len(self.datasets)
         self.index_maps = []
-        for dataset, num_sample in zip(self.datasets, num_samples):
+        for idx, (dataset, num_sample) in enumerate(zip(self.datasets, num_samples)):
             index_map = [list(range(len(dataset))) for _ in range(math.ceil(len(self) * num_sample / len(dataset)))]
             for mapping in index_map:
                 if seed is not None:
-                    random.Random(seed).shuffle(mapping)
+                    # adding idx to the seed because we need to make sure different datasets have different index
+                    # orders, in the meantime, their random behavior should still be conditioned on seed.
+                    random.Random(seed + idx).shuffle(mapping)
                 else:
                     random.shuffle(mapping)
             if hasattr(dataset, "fe_batch_indices"):

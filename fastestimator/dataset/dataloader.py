@@ -26,9 +26,9 @@ from torch.utils.data.dataloader import _BaseDataLoaderIter, _MultiProcessingDat
     _SingleProcessDataLoaderIter
 
 from fastestimator.dataset.extend_dataset import ExtendDataset
+from fastestimator.dataset.interleave_dataset import InterleaveDataset
 from fastestimator.dataset.op_dataset import OpDataset
-from fastestimator.types import MapDataset
-from fastestimator.types import FilteredData
+from fastestimator.types import FilteredData, MapDataset
 from fastestimator.util.util import Suppressor
 
 
@@ -105,7 +105,7 @@ class FEDataLoader(DataLoader):
         self.fe_drop_last = drop_last
         self.fe_collate_fn = collate_fn or default_collate
         if self.fe_batch_size in (0, None) and batch_size is None and self.fe_collate_fn == default_collate:
-            # The user did not provide a batch dataset nor a batch size, so default collate won't work. Have to try
+            # The user did not provide a batched dataset nor a batch size, so default collate won't work. Have to try
             # convert instead.
             self.fe_collate_fn = default_convert
         self.fe_postprocess_fn = postprocess_fn
@@ -357,6 +357,7 @@ class InfiniteSampler(Sampler):
                  reset_fn: Optional[Callable[[bool], None]] = None,
                  convert_fn: Optional[Callable[[int], Any]] = None):
         super().__init__(data_source=None)  # Arg is unused and triggers a warning in torch 2.1
+        self.interleave_ds = isinstance(data_source, InterleaveDataset)
         self.ds_len = len(data_source)
         if self.ds_len < 1:
             raise ValueError("dataset length must be at least 1")
@@ -373,7 +374,8 @@ class InfiniteSampler(Sampler):
         self.idx = 0
         if self.reset_fn:
             self.reset_fn(self.shuffle)
-        if self.shuffle:
+        if self.shuffle and not self.interleave_ds:
+            # interleave_ds requires unshuffled indices to work correctly with its repeating pattern
             random.shuffle(self.indices)
         return self
 
@@ -382,7 +384,8 @@ class InfiniteSampler(Sampler):
             self.idx = 0
             if self.reset_fn:
                 self.reset_fn(self.shuffle)
-            if self.shuffle:
+            if self.shuffle and not self.interleave_ds:
+                # interleave_ds requires unshuffled indices to work correctly with its repeating pattern
                 random.shuffle(self.indices)
         elem = self.indices[self.idx]
         self.idx += 1
