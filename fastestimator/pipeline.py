@@ -679,7 +679,8 @@ class Pipeline:
                 ctx_ops in zip(data.datasets, self.ctx_ops)
             ]
             data.op_datasets = op_datasets
-            data.set_batch_sizes(self.ctx_batch_size)
+            # when batch_size is None, then it indicates each sample is a batch
+            data.set_batch_sizes([batch_size or 1 for batch_size in self.ctx_batch_size])
             postprocess_fn = None
             if self.ctx_batch_ops:
                 postprocess_fn = functools.partial(_batch_postprocess,

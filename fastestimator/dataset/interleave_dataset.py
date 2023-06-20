@@ -64,7 +64,7 @@ class InterleaveDataset(FEDataset):
         self.pattern = pattern
         self.tags = None
         self.batch_sizes = None
-        self.fe_batch = None # fe_batch member variable is used by FEDataLoader
+        self.fe_batch = None  # fe_batch member variable is used by FEDataLoader
         self.batch_sizes_overwritten = False
         self.warned = False
         self.op_datasets = None
@@ -142,7 +142,7 @@ class InterleaveDataset(FEDataset):
             else:
                 random.shuffle(index_map)
             if hasattr(ds, "fe_batch_indices"):
-                self.index_maps.append(ds.fe_batch_indices(index_map))
+                self.index_maps.append([ds.fe_batch_indices(index) for index in index_map])
             else:
                 self.index_maps.append(index_map)
 
@@ -185,5 +185,11 @@ class InterleaveDataset(FEDataset):
             # if in middle of cycle, need to account for the previously used samples
             sample_start_idx = sample_start_idx + sum(
                 [self.batch_sizes[ds_idx_now] for ds_idx in self.pattern[:cycle_pos] if ds_idx == ds_idx_now])
-        batch = [dataset_now[index_map_now[idx]] for idx in range(sample_start_idx, sample_start_idx + batch_size_now)]
+        batch = []
+        for idx in range(sample_start_idx, sample_start_idx + batch_size_now):
+            item = dataset_now[index_map_now[idx]]
+            if isinstance(item, list):
+                batch.extend(item)
+            else:
+                batch.append(item)
         return batch
