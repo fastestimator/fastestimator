@@ -459,8 +459,6 @@ def model_factory(embed_dim, key_dim, depth, num_heads, drop_path, weights, num_
         for i in range(len(model_keys)):
             if not (model_keys[i].startswith('head.linear') or model_keys[i].startswith('head_dist.linear')):
                 model_dict[model_keys[i]] = checkpoint_dict[checkpoint_keys[i]]
-            else:
-                model_dict[model_keys[i]] = model.state_dict()[model_keys[i]]
         model.load_state_dict(model_dict)
 
     return model
@@ -498,13 +496,12 @@ def lr_schedule_warmup(step, train_steps_epoch, init_lr):
 
 def get_estimator(batch_size=64,
                   epochs=40,
-                  data_dir='.',
                   model_dir=tempfile.mkdtemp(),
                   train_steps_per_epoch=None,
                   eval_steps_per_epoch=None,
                   log_steps=100):
 
-    train_data, eval_data = cifair10.load_data(data_dir)
+    train_data, eval_data = cifair10.load_data()
 
     pipeline = fe.Pipeline(
         train_data=train_data,

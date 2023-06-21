@@ -1,4 +1,4 @@
-# Copyright 2021 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2023 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 """
-Vision Transformer TensorFlow Implementation
+LeVIT TensorFlow Implementation
 """
 import tempfile
 
@@ -46,7 +46,6 @@ specification = {
 }
 
 
-@tf.function
 def hard_swish(features):
     """Computes a hard version of the swish function.
 
@@ -63,36 +62,32 @@ def hard_swish(features):
 
 
 class Backbone(layers.Layer):
-    def __init__(self, out_channels, name='back_bone'):
-        super(Backbone, self).__init__(name=name)
+    def __init__(self, out_channels):
+        super(Backbone, self).__init__()
         self.convolution_layer1 = layers.Conv2D(filters=out_channels // 8,
                                                 kernel_size=3,
                                                 strides=2,
                                                 padding="same",
-                                                use_bias=False,
-                                                name='embedding_layer_1/convolution')
-        self.batch_norm1 = layers.BatchNormalization(gamma_initializer='ones', name='embedding_layer_1/batch_norm')
+                                                use_bias=False)
+        self.batch_norm1 = layers.BatchNormalization(gamma_initializer='ones')
         self.convolution_layer2 = layers.Conv2D(filters=out_channels // 4,
                                                 kernel_size=3,
                                                 strides=2,
                                                 padding="same",
-                                                use_bias=False,
-                                                name='embedding_layer_2/convolution')
-        self.batch_norm2 = layers.BatchNormalization(gamma_initializer='ones', name='embedding_layer_2/batch_norm')
+                                                use_bias=False)
+        self.batch_norm2 = layers.BatchNormalization(gamma_initializer='ones')
         self.convolution_layer3 = layers.Conv2D(filters=out_channels // 2,
                                                 kernel_size=3,
                                                 strides=2,
                                                 padding="same",
-                                                use_bias=False,
-                                                name='embedding_layer_3/convolution')
-        self.batch_norm3 = layers.BatchNormalization(gamma_initializer='ones', name='embedding_layer_3/batch_norm')
+                                                use_bias=False)
+        self.batch_norm3 = layers.BatchNormalization(gamma_initializer='ones')
         self.convolution_layer4 = layers.Conv2D(filters=out_channels,
                                                 kernel_size=3,
                                                 strides=2,
                                                 padding="same",
-                                                use_bias=False,
-                                                name='embedding_layer_4/convolution')
-        self.batch_norm4 = layers.BatchNormalization(gamma_initializer='ones', name='embedding_layer_4/batch_norm')
+                                                use_bias=False)
+        self.batch_norm4 = layers.BatchNormalization(gamma_initializer='ones')
 
     def call(self, x):
         x = hard_swish(self.batch_norm1(self.convolution_layer1(x)))
@@ -103,8 +98,8 @@ class Backbone(layers.Layer):
 
 
 class Residual(layers.Layer):
-    def __init__(self, module, drop_rate=0., name='residual'):
-        super(Residual, self).__init__(name=name)
+    def __init__(self, module, drop_rate=0.):
+        super(Residual, self).__init__()
         self.module = module
         self.dropout = layers.Dropout(drop_rate)
 
@@ -113,8 +108,8 @@ class Residual(layers.Layer):
 
 
 class LinearNorm(layers.Layer):
-    def __init__(self, out_channels, bn_weight_init=1, name='linearnorm'):
-        super(LinearNorm, self).__init__(name=name)
+    def __init__(self, out_channels, bn_weight_init=1):
+        super(LinearNorm, self).__init__()
         self.batch_norm = layers.BatchNormalization(gamma_initializer=tf.constant_initializer(bn_weight_init))
         self.linear = layers.Dense(out_channels, activation=None)
 
@@ -126,8 +121,8 @@ class LinearNorm(layers.Layer):
 
 
 class Downsample(layers.Layer):
-    def __init__(self, stride, resolution, name='downsample'):
-        super(Downsample, self).__init__(name=name)
+    def __init__(self, stride, resolution):
+        super(Downsample, self).__init__()
         self.stride = stride
         self.resolution = resolution
 
@@ -140,7 +135,7 @@ class Downsample(layers.Layer):
 
 class NormLinear(layers.Layer):
     def __init__(self, out_channels, bias=True, std=0.02, drop=0.0):
-        super(NormLinear, self).__init__(name='stem')
+        super(NormLinear, self).__init__()
         self.batch_norm = layers.BatchNormalization()
         self.dropout = layers.Dropout(drop)
         self.linear = layers.Dense(out_channels,
@@ -159,8 +154,8 @@ class MLP(layers.Layer):
     """
     MLP Layer with `2X` expansion in contrast to ViT with `4X`.
     """
-    def __init__(self, input_dim, hidden_dim, name='mlp'):
-        super(MLP, self).__init__(name=name)
+    def __init__(self, input_dim, hidden_dim):
+        super(MLP, self).__init__()
         self.linear_up = LinearNorm(hidden_dim)
         self.linear_down = LinearNorm(input_dim)
 
@@ -169,8 +164,8 @@ class MLP(layers.Layer):
 
 
 class Attention(layers.Layer):
-    def __init__(self, input_dim, key_dim, num_attention_heads=8, attention_ratio=4, resolution=14, name='attention'):
-        super(Attention, self).__init__(name=name)
+    def __init__(self, input_dim, key_dim, num_attention_heads=8, attention_ratio=4, resolution=14):
+        super(Attention, self).__init__()
         self.num_attention_heads = num_attention_heads
         self.scale = key_dim**-0.5
         self.key_dim = key_dim
@@ -210,9 +205,8 @@ class AttentionDownsample(layers.Layer):
                  attention_ratio,
                  stride,
                  resolution_in,
-                 resolution_out,
-                 name='attention_downsample'):
-        super(AttentionDownsample, self).__init__(name=name)
+                 resolution_out):
+        super(AttentionDownsample, self).__init__()
 
         self.num_attention_heads = num_attention_heads
         self.scale = key_dim**-0.5
@@ -259,8 +253,7 @@ def levit_stage(embed_dim,
                 depth,
                 attention_ratio,
                 mlp_ratio,
-                drop_path,
-                name='stage'):
+                drop_path):
     stages = []
     for i in range(depth):
         stages.append(
@@ -269,21 +262,18 @@ def levit_stage(embed_dim,
                           key_dim=key_dim,
                           num_attention_heads=num_attention_heads,
                           attention_ratio=attention_ratio,
-                          resolution=resolution,
-                          name=name + '/attention' + str(i)),
-                drop_path,
-                name=name + '/attention' + str(i) + '/residual'))
+                          resolution=resolution),
+                drop_path))
 
         if mlp_ratio > 0:
             h = int(embed_dim * mlp_ratio)
             stages.append(
-                Residual(MLP(input_dim=embed_dim, hidden_dim=h, name=name + '/mlp' + str(i)),
-                         drop_path,
-                         name=name + '/mlp' + str(i) + '/residual'))
-    return tf.keras.Sequential(stages, name=name)
+                Residual(MLP(input_dim=embed_dim, hidden_dim=h),
+                         drop_path))
+    return tf.keras.Sequential(stages)
 
 
-def levit_downsample(input_dim, output_dim, resolution, resolution_out, down_ops, drop_path, name='stage_downsample'):
+def levit_downsample(input_dim, output_dim, resolution, resolution_out, down_ops, drop_path):
     stages = []
     stages.append(
         AttentionDownsample(input_dim=input_dim,
@@ -293,13 +283,12 @@ def levit_downsample(input_dim, output_dim, resolution, resolution_out, down_ops
                             attention_ratio=down_ops['attn_ratio'],
                             stride=down_ops['stride'],
                             resolution_in=resolution,
-                            resolution_out=resolution_out,
-                            name=name + '/attention'))
+                            resolution_out=resolution_out))
     if down_ops['mlp_ratio'] > 0:  # mlp_ratio
         h = int(output_dim * down_ops['mlp_ratio'])
         stages.append(
-            Residual(MLP(input_dim=output_dim, hidden_dim=h, name=name + '/mlp'), drop_path, name=name + '/residual'))
-    return tf.keras.Sequential(stages, name=name)
+            Residual(MLP(input_dim=output_dim, hidden_dim=h), drop_path))
+    return tf.keras.Sequential(stages)
 
 
 class LeVIT(tf.keras.Model):
@@ -314,15 +303,15 @@ class LeVIT(tf.keras.Model):
                  attention_ratio=[2],
                  mlp_ratio=[2],
                  down_ops={},
-                 distillation=True,
-                 drop_path=0.,
-                 name='levit'):
-        super(LeVIT, self).__init__(name=name)
+                 distillation=False,
+                 drop_path=0.):
+        super(LeVIT, self).__init__()
+        self.distillation = distillation
         input_resolution_stage1 = image_dim // patch_size
         input_resolution_stage2 = (input_resolution_stage1 - 1) // down_ops[1]['stride'] + 1
         input_resolution_stage3 = (input_resolution_stage2 - 1) // down_ops[2]['stride'] + 1
 
-        self.backbone = Backbone(embed_dim[0], name=name + '/patch_embeddings')
+        self.backbone = Backbone(embed_dim[0])
 
         self.stage1 = levit_stage(embed_dim=embed_dim[0],
                                   key_dim=key_dim[0],
@@ -331,16 +320,14 @@ class LeVIT(tf.keras.Model):
                                   depth=depth[0],
                                   attention_ratio=attention_ratio[0],
                                   mlp_ratio=mlp_ratio[0],
-                                  drop_path=drop_path,
-                                  name='stage1')
+                                  drop_path=drop_path)
 
         self.stage1_downsample = levit_downsample(input_dim=embed_dim[0],
                                                   output_dim=embed_dim[1],
                                                   resolution=input_resolution_stage1,
                                                   resolution_out=input_resolution_stage2,
                                                   down_ops=down_ops[1],
-                                                  drop_path=drop_path,
-                                                  name='stage1_downsample')
+                                                  drop_path=drop_path)
 
         self.stage2 = levit_stage(embed_dim=embed_dim[1],
                                   key_dim=key_dim[1],
@@ -349,16 +336,14 @@ class LeVIT(tf.keras.Model):
                                   depth=depth[1],
                                   attention_ratio=attention_ratio[1],
                                   mlp_ratio=mlp_ratio[1],
-                                  drop_path=drop_path,
-                                  name='stage2')
+                                  drop_path=drop_path)
 
         self.stage2_downsample = levit_downsample(input_dim=embed_dim[1],
                                                   output_dim=embed_dim[2],
                                                   resolution=input_resolution_stage2,
                                                   resolution_out=input_resolution_stage3,
                                                   down_ops=down_ops[2],
-                                                  drop_path=drop_path,
-                                                  name='stage2_downsample')
+                                                  drop_path=drop_path)
 
         self.stage3 = levit_stage(embed_dim=embed_dim[2],
                                   key_dim=key_dim[2],
@@ -367,12 +352,14 @@ class LeVIT(tf.keras.Model):
                                   depth=depth[2],
                                   attention_ratio=attention_ratio[2],
                                   mlp_ratio=mlp_ratio[2],
-                                  drop_path=drop_path,
-                                  name='stage3')
+                                  drop_path=drop_path)
 
-        self.class_head = NormLinear(num_classes)
+        self.class_head = NormLinear(num_classes) if num_classes > 0 else layers.Identity()
 
-    def call(self, x):
+        if self.distillation:
+            self.distll_class_head = NormLinear(num_classes) if num_classes > 0 else layers.Identity()
+
+    def call(self, x, training):
         x = self.backbone(x)
         batch_size, _, _, channels = x.get_shape().as_list()
         x = tf.reshape(x, (batch_size, -1, channels))
@@ -382,7 +369,14 @@ class LeVIT(tf.keras.Model):
         x = self.stage2_downsample(x)
         x = self.stage3(x)
         x = tf.math.reduce_mean(x, -1)
-        x = self.class_head(x)
+
+        if self.distillation:
+            x = self.class_head(x), self.distll_class_head(x)
+            if not training:
+                x = (x[0] + x[1]) / 2
+        else:
+            x = self.class_head(x)
+
         return x
 
 
@@ -390,24 +384,21 @@ def LeViT_128S(image_dim, num_classes=1000, distillation=False, pretrained=False
     return model_factory(image_dim=image_dim,
                          **specification['LeViT_128S'],
                          num_classes=num_classes,
-                         distillation=distillation,
-                         pretrained=pretrained)
+                         distillation=distillation)
 
 
 def LeViT_256(image_dim, num_classes=1000, distillation=False, pretrained=False):
     return model_factory(image_dim=image_dim,
                          **specification['LeViT_256'],
                          num_classes=num_classes,
-                         distillation=distillation,
-                         pretrained=pretrained)
+                         distillation=distillation)
 
 
 def LeViT_384(image_dim, num_classes=1000, distillation=False, pretrained=False):
     return model_factory(image_dim=image_dim,
                          **specification['LeViT_384'],
                          num_classes=num_classes,
-                         distillation=distillation,
-                         pretrained=pretrained)
+                         distillation=distillation)
 
 
 def model_factory(image_dim,
@@ -416,10 +407,8 @@ def model_factory(image_dim,
                   depth,
                   num_heads,
                   drop_path,
-                  weights,
                   num_classes,
-                  distillation,
-                  pretrained):
+                  distillation):
     model = LeVIT(
         image_dim,
         patch_size=16,
@@ -449,7 +438,7 @@ def pretrain(batch_size,
              model_dir=tempfile.mkdtemp(),
              train_steps_per_epoch=None,
              eval_steps_per_epoch=None,
-             log_steps=10):
+             log_steps=100):
 
     train_data, eval_data = cifair100.load_data()
 
@@ -465,6 +454,7 @@ def pretrain(batch_size,
             Onehot(inputs="y", outputs="y", mode="train", num_classes=100, label_smoothing=0.05)
         ])
 
+    # training it from scratch to demonstrate custom pretraining and fine tuning.
     levit_model = LeViT_256(image_dim=224, num_classes=100, pretrained=False)
     levit_model.build(input_shape=(batch_size, 224, 224, 3))
 
@@ -480,7 +470,7 @@ def pretrain(batch_size,
 
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="x", outputs="y_pred"),
-        CrossEntropy(inputs=("y_pred", "y"), outputs="ce", from_logits='True'),
+        CrossEntropy(inputs=("y_pred", "y"), outputs="ce", from_logits=True),
         UpdateOp(model=model, loss_name="ce", mode="train")
     ])
 
@@ -523,7 +513,8 @@ def finetune(pretrained_model,
              epochs,
              model_dir=tempfile.mkdtemp(),
              train_steps_per_epoch=None,
-             eval_steps_per_epoch=None):
+             eval_steps_per_epoch=None,
+             log_steps=100):
 
     train_data, eval_data = cifair10.load_data()
     pipeline = fe.Pipeline(
@@ -537,7 +528,7 @@ def finetune(pretrained_model,
             CoarseDropout(inputs="x", outputs="x", mode="train", max_holes=1),
             Onehot(inputs="y", outputs="y", mode="train", num_classes=10, label_smoothing=0.05)
         ])
-    levit_model = LeViT_256(image_dim=224, num_classes=10, pretrained=False)
+    levit_model = LeViT_256(image_dim=224, num_classes=10)
     levit_model.build(input_shape=(batch_size, 224, 224, 3))
 
     model = fe.build(model_fn=lambda: levit_model, optimizer_fn="adam")
@@ -548,7 +539,7 @@ def finetune(pretrained_model,
 
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="x", outputs="y_pred"),
-        CrossEntropy(inputs=("y_pred", "y"), outputs="ce", from_logits='True'),
+        CrossEntropy(inputs=("y_pred", "y"), outputs="ce", from_logits=True),
         UpdateOp(model=model, loss_name="ce")
     ])
     traces = [
@@ -560,22 +551,27 @@ def finetune(pretrained_model,
                              epochs=epochs,
                              traces=traces,
                              train_steps_per_epoch=train_steps_per_epoch,
-                             eval_steps_per_epoch=eval_steps_per_epoch)
+                             eval_steps_per_epoch=eval_steps_per_epoch,
+                             log_steps=log_steps)
     estimator.fit(warmup=False)
 
 
 def fastestimator_run(batch_size=64,
                       pretrain_epochs=100,
                       finetune_epochs=1,
+                      model_dir=tempfile.mkdtemp(),
                       train_steps_per_epoch=None,
                       eval_steps_per_epoch=None):
+
     pretrained_model = pretrain(batch_size=batch_size,
                                 epochs=pretrain_epochs,
+                                model_dir=model_dir,
                                 train_steps_per_epoch=train_steps_per_epoch,
                                 eval_steps_per_epoch=eval_steps_per_epoch)
     finetune(pretrained_model,
              batch_size=batch_size,
              epochs=finetune_epochs,
+             model_dir=model_dir,
              train_steps_per_epoch=train_steps_per_epoch,
              eval_steps_per_epoch=eval_steps_per_epoch)
 
