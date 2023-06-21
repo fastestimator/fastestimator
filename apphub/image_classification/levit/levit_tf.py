@@ -15,7 +15,6 @@
 """
 Vision Transformer TensorFlow Implementation
 """
-import itertools
 import tempfile
 
 import numpy as np
@@ -25,8 +24,8 @@ from tensorflow.keras import layers
 import fastestimator as fe
 from fastestimator.dataset.data import cifair10, cifair100
 from fastestimator.op.numpyop.meta import Sometimes
-from fastestimator.op.numpyop.multivariate import HorizontalFlip, PadIfNeeded, RandomCrop, Resize
-from fastestimator.op.numpyop.univariate import ChannelTranspose, CoarseDropout, Normalize, Onehot, ReadImage
+from fastestimator.op.numpyop.multivariate import HorizontalFlip, Resize
+from fastestimator.op.numpyop.univariate import CoarseDropout, Normalize, Onehot
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.schedule import EpochScheduler, cosine_decay
@@ -36,28 +35,13 @@ from fastestimator.trace.metric import Accuracy
 
 specification = {
     'LeViT_128S': {
-        'embed_dim': [128, 256, 384],
-        'key_dim': 16,
-        'num_heads': [4, 6, 8],
-        'depth': [2, 3, 4],
-        'drop_path': 0,
-        'weights': 'https://huggingface.co/facebook/levit-128S/resolve/main/pytorch_model.bin'
+        'embed_dim': [128, 256, 384], 'key_dim': 16, 'num_heads': [4, 6, 8], 'depth': [2, 3, 4], 'drop_path': 0
     },
     'LeViT_256': {
-        'embed_dim': [256, 384, 512],
-        'key_dim': 32,
-        'num_heads': [4, 6, 8],
-        'depth': [4, 4, 4],
-        'drop_path': 0,
-        'weights': 'https://huggingface.co/facebook/levit-256/resolve/main/pytorch_model.bin'
+        'embed_dim': [256, 384, 512], 'key_dim': 32, 'num_heads': [4, 6, 8], 'depth': [4, 4, 4], 'drop_path': 0
     },
     'LeViT_384': {
-        'embed_dim': [384, 512, 768],
-        'key_dim': 32,
-        'num_heads': [6, 9, 12],
-        'depth': [4, 4, 4],
-        'drop_path': 0.1,
-        'weights': 'https://huggingface.co/facebook/levit-384/resolve/main/pytorch_model.bin'
+        'embed_dim': [384, 512, 768], 'key_dim': 32, 'num_heads': [6, 9, 12], 'depth': [4, 4, 4], 'drop_path': 0.1
     },
 }
 
@@ -467,7 +451,7 @@ def pretrain(batch_size,
              eval_steps_per_epoch=None,
              log_steps=10):
 
-    train_data, eval_data = cifair100.load_data('/raid/shared_data')
+    train_data, eval_data = cifair100.load_data()
 
     pipeline = fe.Pipeline(
         train_data=train_data,
@@ -496,7 +480,7 @@ def pretrain(batch_size,
 
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="x", outputs="y_pred"),
-        CrossEntropy(inputs=("y_pred", "y"), outputs="ce", from_logits=True),
+        CrossEntropy(inputs=("y_pred", "y"), outputs="ce", from_logits='True'),
         UpdateOp(model=model, loss_name="ce", mode="train")
     ])
 
@@ -564,10 +548,13 @@ def finetune(pretrained_model,
 
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="x", outputs="y_pred"),
-        CrossEntropy(inputs=("y_pred", "y"), outputs="ce", from_logits=True),
+        CrossEntropy(inputs=("y_pred", "y"), outputs="ce", from_logits='True'),
         UpdateOp(model=model, loss_name="ce")
     ])
-    traces = [Accuracy(true_key="y", pred_key="y_pred")]
+    traces = [
+        Accuracy(true_key="y", pred_key="y_pred"),
+        BestModelSaver(model=model, save_dir=model_dir, metric="accuracy", save_best_mode="max")
+    ]
     estimator = fe.Estimator(pipeline=pipeline,
                              network=network,
                              epochs=epochs,
