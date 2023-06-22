@@ -15,6 +15,7 @@
 """
 LeVIT TensorFlow Implementation
 """
+import itertools
 import tempfile
 
 import numpy as np
@@ -111,12 +112,11 @@ class LinearNorm(layers.Layer):
     def __init__(self, out_channels, bn_weight_init=1):
         super(LinearNorm, self).__init__()
         self.batch_norm = layers.BatchNormalization(gamma_initializer=tf.constant_initializer(bn_weight_init))
-        self.linear = layers.Dense(out_channels, activation=None)
+        self.linear = layers.Dense(out_channels, activation=None, use_bias=False)
 
     def call(self, x):
         x = self.linear(x)
-        shape = x.get_shape().as_list()
-        x = tf.reshape(self.batch_norm(tf.reshape(x, (-1, shape[2]))), shape)
+        x = self.batch_norm(x)
         return x
 
 
@@ -127,10 +127,11 @@ class Downsample(layers.Layer):
         self.resolution = resolution
 
     def call(self, x):
-        batch_size, _, channels = x.get_shape().as_list()
-        x = tf.reshape(x, (batch_size, self.resolution, self.resolution, channels))
+        _, _, channels = x.get_shape().as_list()
+        x = tf.keras.layers.Reshape((self.resolution, self.resolution, channels))(x)
         x = x[:, ::self.stride, ::self.stride]
-        return tf.reshape(x, (batch_size, -1, channels))
+        _, height, width, channels = x.get_shape().as_list()
+        return tf.keras.layers.Reshape((height * width, channels))(x)
 
 
 class NormLinear(layers.Layer):
@@ -177,21 +178,40 @@ class Attention(layers.Layer):
         self.queries_keys_values = LinearNorm(self.out_dim_keys_values)
         self.projection = LinearNorm(input_dim)
 
+        points = list(itertools.product(range(resolution), range(resolution)))
+
+        len_points = len(points)
+        attention_offsets, indices = {}, []
+        for p1 in points:
+            for p2 in points:
+                offset = (abs(p1[0] - p2[0]), abs(p1[1] - p2[1]))
+                if offset not in attention_offsets:
+                    attention_offsets[offset] = len(attention_offsets)
+                indices.append(attention_offsets[offset])
+
+        self.attention_biases = tf.Variable(tf.zeros((num_attention_heads, len(attention_offsets))),
+                                            name=self.name + '/attention_biases')
+        self.attention_bias_idxs = tf.constant(tf.reshape(indices, (len_points, len_points)))
+
     def call(self, x):
         batch_size, seq_length, _ = x.get_shape().as_list()
 
         queries_keys_values = self.queries_keys_values(x)
 
-        query, key, value = tf.split(tf.reshape(queries_keys_values, (batch_size, seq_length, self.num_attention_heads, -1)), [
-                self.key_dim, self.key_dim, self.attention_ratio * self.key_dim],axis=3)
+        batch_size, new_seq_len, channels = queries_keys_values.get_shape().as_list()
+        reshaped_queries_keys_values = tf.keras.layers.Reshape(
+            (seq_length, self.num_attention_heads,
+             (new_seq_len * channels) // (seq_length * self.num_attention_heads)))(queries_keys_values)
+        query, key, value = tf.split(reshaped_queries_keys_values, [self.key_dim, self.key_dim, self.attention_ratio * self.key_dim],axis=3)
 
         query = tf.transpose(query, (0, 2, 1, 3))
         key = tf.transpose(key, (0, 2, 1, 3))
         value = tf.transpose(value, (0, 2, 1, 3))
         attention = tf.matmul(query, key, transpose_b=True) * self.scale
+        attention = attention + tf.gather(self.attention_biases, self.attention_bias_idxs, axis=-1)
         attention = tf.nn.softmax(attention, axis=-1)
-        hidden_state = tf.reshape(tf.transpose(tf.matmul(attention, value), (0, 1, 3, 2)),
-                                  (batch_size, seq_length, self.out_dim_projection))
+        hidden_state = tf.keras.layers.Reshape(
+            (seq_length, self.out_dim_projection))(tf.transpose(tf.matmul(attention, value), (0, 1, 3, 2)))
         hidden_state = self.projection(hard_swish(hidden_state))
         return hidden_state
 
@@ -222,38 +242,54 @@ class AttentionDownsample(layers.Layer):
         self.queries = LinearNorm(key_dim * num_attention_heads)
         self.projection = LinearNorm(output_dim)
 
-    def call(self, x):
-        batch_size, seq_length, _ = x.get_shape().as_list()
+        points = list(itertools.product(range(resolution_in), range(resolution_in)))
+        points_ = list(itertools.product(range(resolution_out), range(resolution_out)))
+        len_points, len_points_ = len(points), len(points_)
+        attention_offsets, indices = {}, []
+        for p1 in points_:
+            for p2 in points:
+                size = 1
+                offset = (abs(p1[0] * stride - p2[0] + (size - 1) / 2), abs(p1[1] * stride - p2[1] + (size - 1) / 2))
+                if offset not in attention_offsets:
+                    attention_offsets[offset] = len(attention_offsets)
+                indices.append(attention_offsets[offset])
 
-        key, value = tf.split(tf.reshape(self.keys_values(x), (
-            batch_size, seq_length, self.num_attention_heads,
-            -1)), [self.key_dim, self.attention_ratio * self.key_dim],
-                      axis=3)
+        self.attention_biases = tf.Variable(tf.zeros((num_attention_heads, len(attention_offsets))),
+                                            name=self.name + '/attention_biases')
+
+        self.attention_bias_idxs = tf.constant(tf.reshape(indices, (len_points_, len_points)))
+
+    def call(self, x):
+        _, seq_length, _ = x.get_shape().as_list()
+
+        keys_values = self.keys_values(x)
+
+        _, new_seq_len, channels = keys_values.get_shape().as_list()
+        reshaped_keys_values = tf.keras.layers.Reshape(
+            (seq_length, self.num_attention_heads,
+             (new_seq_len * channels) // (seq_length * self.num_attention_heads)))(keys_values)
+
+        key, value = tf.split(reshaped_keys_values, [self.key_dim, self.attention_ratio * self.key_dim], axis=3)
 
         key = tf.transpose(key, (0, 2, 1, 3))
         value = tf.transpose(value, (0, 2, 1, 3))
 
         query = self.queries(self.queries_subsample(x))
         query = tf.transpose(
-            tf.reshape(query, (batch_size, self.resolution_out**2, self.num_attention_heads, self.key_dim)),
+            tf.keras.layers.Reshape((self.resolution_out**2, self.num_attention_heads, self.key_dim))(query),
             (0, 2, 1, 3))
 
         attention = tf.matmul(query, key, transpose_b=True) * self.scale
+        attention = attention + tf.gather(self.attention_biases, self.attention_bias_idxs, axis=-1)
         attention = tf.nn.softmax(attention, axis=-1)
-        x = tf.reshape(tf.transpose(tf.matmul(attention, value), (0, 1, 3, 2)),
-                       (batch_size, -1, self.out_dim_projection))
+        x = tf.transpose(tf.matmul(attention, value), (0, 1, 3, 2))
+        _, height, width, channel = x.get_shape().as_list()
+        x = tf.keras.layers.Reshape(((height * width * channel) // self.out_dim_projection, self.out_dim_projection))(x)
         x = self.projection(hard_swish(x))
         return x
 
 
-def levit_stage(embed_dim,
-                key_dim,
-                num_attention_heads,
-                resolution,
-                depth,
-                attention_ratio,
-                mlp_ratio,
-                drop_path):
+def levit_stage(embed_dim, key_dim, num_attention_heads, resolution, depth, attention_ratio, mlp_ratio, drop_path):
     stages = []
     for i in range(depth):
         stages.append(
@@ -267,9 +303,7 @@ def levit_stage(embed_dim,
 
         if mlp_ratio > 0:
             h = int(embed_dim * mlp_ratio)
-            stages.append(
-                Residual(MLP(input_dim=embed_dim, hidden_dim=h),
-                         drop_path))
+            stages.append(Residual(MLP(input_dim=embed_dim, hidden_dim=h), drop_path))
     return tf.keras.Sequential(stages)
 
 
@@ -286,8 +320,7 @@ def levit_downsample(input_dim, output_dim, resolution, resolution_out, down_ops
                             resolution_out=resolution_out))
     if down_ops['mlp_ratio'] > 0:  # mlp_ratio
         h = int(output_dim * down_ops['mlp_ratio'])
-        stages.append(
-            Residual(MLP(input_dim=output_dim, hidden_dim=h), drop_path))
+        stages.append(Residual(MLP(input_dim=output_dim, hidden_dim=h), drop_path))
     return tf.keras.Sequential(stages)
 
 
@@ -356,27 +389,17 @@ class LeVIT(tf.keras.Model):
 
         self.class_head = NormLinear(num_classes) if num_classes > 0 else layers.Identity()
 
-        if self.distillation:
-            self.distll_class_head = NormLinear(num_classes) if num_classes > 0 else layers.Identity()
-
-    def call(self, x, training):
+    def call(self, x):
         x = self.backbone(x)
-        batch_size, _, _, channels = x.get_shape().as_list()
-        x = tf.reshape(x, (batch_size, -1, channels))
+        _, height, width, channels = x.get_shape().as_list()
+        x = tf.keras.layers.Reshape((height * width, channels))(x)
         x = self.stage1(x)
         x = self.stage1_downsample(x)
         x = self.stage2(x)
         x = self.stage2_downsample(x)
         x = self.stage3(x)
-        x = tf.math.reduce_mean(x, -1)
-
-        if self.distillation:
-            x = self.class_head(x), self.distll_class_head(x)
-            if not training:
-                x = (x[0] + x[1]) / 2
-        else:
-            x = self.class_head(x)
-
+        x = tf.math.reduce_mean(x, 1)
+        x = self.class_head(x)
         return x
 
 
@@ -401,14 +424,7 @@ def LeViT_384(image_dim, num_classes=1000, distillation=False, pretrained=False)
                          distillation=distillation)
 
 
-def model_factory(image_dim,
-                  embed_dim,
-                  key_dim,
-                  depth,
-                  num_heads,
-                  drop_path,
-                  num_classes,
-                  distillation):
+def model_factory(image_dim, embed_dim, key_dim, depth, num_heads, drop_path, num_classes, distillation):
     model = LeVIT(
         image_dim,
         patch_size=16,
@@ -455,8 +471,8 @@ def pretrain(batch_size,
         ])
 
     # training it from scratch to demonstrate custom pretraining and fine tuning.
-    levit_model = LeViT_256(image_dim=224, num_classes=100, pretrained=False)
-    levit_model.build(input_shape=(batch_size, 224, 224, 3))
+    levit_model = LeViT_384(image_dim=224, num_classes=100, pretrained=False)
+    levit_model.build((batch_size, 224, 224, 3))
 
     model = fe.build(model_fn=lambda: levit_model, optimizer_fn="adam")
 
@@ -528,8 +544,12 @@ def finetune(pretrained_model,
             CoarseDropout(inputs="x", outputs="x", mode="train", max_holes=1),
             Onehot(inputs="y", outputs="y", mode="train", num_classes=10, label_smoothing=0.05)
         ])
-    levit_model = LeViT_256(image_dim=224, num_classes=10)
+    levit_model = LeViT_384(image_dim=224, num_classes=10)
     levit_model.build(input_shape=(batch_size, 224, 224, 3))
+
+    # loading pretrained weights
+    for i in range(5):
+        levit_model.layers[i].set_weights(pretrained_model.layers[i].weights)
 
     model = fe.build(model_fn=lambda: levit_model, optimizer_fn="adam")
 
