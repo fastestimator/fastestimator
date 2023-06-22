@@ -45,3 +45,5 @@ fastestimator run benchmark --apphub_name solov2 --framework tf --batch_size_per
 sleep 5s
 fastestimator run benchmark --apphub_name solov2 --framework torch --batch_size_per_gpu 4 --train_steps_per_epoch $train_steps_per_epoch --eval_steps_per_epoch $eval_steps_per_epoch --epochs $epochs  --output_file $output_file  --data_dir $data_dir
 sleep 5s
+fastestimator run benchmark --apphub_name levit --framework torch --batch_size_per_gpu 256 --train_steps_per_epoch $train_steps_per_epoch --eval_steps_per_epoch $eval_steps_per_epoch --epochs $epochs  --output_file $output_file  --data_dir $data_dir
+sleep 5s
