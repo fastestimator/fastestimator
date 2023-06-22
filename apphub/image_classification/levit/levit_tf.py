@@ -194,11 +194,11 @@ class Attention(layers.Layer):
         self.attention_bias_idxs = tf.constant(tf.reshape(indices, (len_points, len_points)))
 
     def call(self, x):
-        batch_size, seq_length, _ = x.get_shape().as_list()
+        _, seq_length, _ = x.get_shape().as_list()
 
         queries_keys_values = self.queries_keys_values(x)
 
-        batch_size, new_seq_len, channels = queries_keys_values.get_shape().as_list()
+        _, new_seq_len, channels = queries_keys_values.get_shape().as_list()
         reshaped_queries_keys_values = tf.keras.layers.Reshape(
             (seq_length, self.num_attention_heads,
              (new_seq_len * channels) // (seq_length * self.num_attention_heads)))(queries_keys_values)
@@ -236,7 +236,7 @@ class AttentionDownsample(layers.Layer):
         self.out_dim_projection = attention_ratio * key_dim * num_attention_heads
         self.resolution_out = resolution_out
         self.resolution_in = resolution_in
-        # resolution_in is the intial resolution, resoloution_out is final resolution after downsampling
+        # resolution_in is the initial resolution, resolution_out is final resolution after downsampling
         self.keys_values = LinearNorm(self.out_dim_keys_values)
         self.queries_subsample = Downsample(stride, resolution_in)
         self.queries = LinearNorm(key_dim * num_attention_heads)
@@ -291,7 +291,7 @@ class AttentionDownsample(layers.Layer):
 
 def levit_stage(embed_dim, key_dim, num_attention_heads, resolution, depth, attention_ratio, mlp_ratio, drop_path):
     stages = []
-    for i in range(depth):
+    for _ in range(depth):
         stages.append(
             Residual(
                 Attention(input_dim=embed_dim,
@@ -451,12 +451,13 @@ def model_factory(image_dim, embed_dim, key_dim, depth, num_heads, drop_path, nu
 
 def pretrain(batch_size,
              epochs,
+             data_dir=None,
              model_dir=tempfile.mkdtemp(),
              train_steps_per_epoch=None,
              eval_steps_per_epoch=None,
              log_steps=100):
 
-    train_data, eval_data = cifair100.load_data()
+    train_data, eval_data = cifair100.load_data(data_dir)
 
     pipeline = fe.Pipeline(
         train_data=train_data,
@@ -527,12 +528,13 @@ def pretrain(batch_size,
 def finetune(pretrained_model,
              batch_size,
              epochs,
+             data_dir=None,
              model_dir=tempfile.mkdtemp(),
              train_steps_per_epoch=None,
              eval_steps_per_epoch=None,
              log_steps=100):
 
-    train_data, eval_data = cifair10.load_data()
+    train_data, eval_data = cifair10.load_data(data_dir)
     pipeline = fe.Pipeline(
         train_data=train_data,
         eval_data=eval_data,
@@ -579,18 +581,21 @@ def finetune(pretrained_model,
 def fastestimator_run(batch_size=64,
                       pretrain_epochs=100,
                       finetune_epochs=1,
+                      data_dir=None,
                       model_dir=tempfile.mkdtemp(),
                       train_steps_per_epoch=None,
                       eval_steps_per_epoch=None):
 
     pretrained_model = pretrain(batch_size=batch_size,
                                 epochs=pretrain_epochs,
+                                data_dir=data_dir,
                                 model_dir=model_dir,
                                 train_steps_per_epoch=train_steps_per_epoch,
                                 eval_steps_per_epoch=eval_steps_per_epoch)
     finetune(pretrained_model,
              batch_size=batch_size,
              epochs=finetune_epochs,
+             data_dir=data_dir,
              model_dir=model_dir,
              train_steps_per_epoch=train_steps_per_epoch,
              eval_steps_per_epoch=eval_steps_per_epoch)

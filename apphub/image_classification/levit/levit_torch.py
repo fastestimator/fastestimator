@@ -453,10 +453,10 @@ def model_factory(embed_dim, key_dim, depth, num_heads, drop_path, weights, num_
 
     if pretrained:
         checkpoint_dict = torch.hub.load_state_dict_from_url(weights, map_location='cpu')
-        model_dict = {}
-        model_keys = list(model.state_dict().keys())
+        model_dict = model.state_dict()
+        model_keys = list(model_dict.keys())
         checkpoint_keys = list(checkpoint_dict.keys())
-        for i in range(len(model_keys)):
+        for i, _ in enumerate(model_keys):
             if not (model_keys[i].startswith('head.linear') or model_keys[i].startswith('head_dist.linear')):
                 model_dict[model_keys[i]] = checkpoint_dict[checkpoint_keys[i]]
         model.load_state_dict(model_dict)
@@ -496,12 +496,13 @@ def lr_schedule_warmup(step, train_steps_epoch, init_lr):
 
 def get_estimator(batch_size=64,
                   epochs=40,
+                  data_dir=None,
                   model_dir=tempfile.mkdtemp(),
                   train_steps_per_epoch=None,
                   eval_steps_per_epoch=None,
                   log_steps=100):
 
-    train_data, eval_data = cifair10.load_data()
+    train_data, eval_data = cifair10.load_data(data_dir)
 
     pipeline = fe.Pipeline(
         train_data=train_data,
