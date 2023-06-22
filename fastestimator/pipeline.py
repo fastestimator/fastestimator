@@ -699,6 +699,7 @@ class Pipeline:
             except ValueError as err:
                 self.ctx_lock.release()
                 raise err
+            self.ctx_loader = data
         elif isinstance(data, Dataset):
             # Results will be immediately converted to tensors, so don't need deep_remainder
             op_dataset = OpDataset(data,
@@ -727,7 +728,7 @@ class Pipeline:
             except ValueError as err:
                 self.ctx_lock.release()
                 raise err
-        self.ctx_loader = data
+            self.ctx_loader = data
         return data
 
     def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:

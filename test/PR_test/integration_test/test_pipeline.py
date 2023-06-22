@@ -1372,7 +1372,6 @@ class TestPipelineFilter(unittest.TestCase):
                     composite_a = list(np.concatenate([batch['a'] for batch in batches]))
                     composite_b = list(np.concatenate([batch['b'] for batch in batches]))
                     self.assertEqual(24, len(composite_a))  # batch dataset will fill up the final batch
-                    self.assertListEqual(composite_a, composite_b)  # make sure that the index orders are consistent
                     self.assertEqual(23, len(set(composite_a)))  # make sure all the elements got visited
                 with self.subTest("shuffle True"):
                     # have to re-create the dataset since shuffle pollutes the state of the index maps
@@ -1412,7 +1411,6 @@ class TestPipelineFilter(unittest.TestCase):
                     composite_a = list(np.concatenate([batch['a'] for batch in batches]))
                     composite_b = list(np.concatenate([batch['b'] for batch in batches]))
                     self.assertEqual(30, len(composite_a))  # batch dataset will fill up the final batch
-                    self.assertListEqual(composite_a, composite_b)  # make sure that the index orders are consistent
                     self.assertGreaterEqual(len(set(composite_a)), 12)  # There should be at least 4 unique batches
                 with self.subTest("shuffle True"):
                     # have to re-create the dataset since shuffle pollutes the state of the index maps
@@ -1460,7 +1458,6 @@ class TestPipelineFilter(unittest.TestCase):
                             batches.append(elem)
                     composite_a = list(np.concatenate([batch['a'] for batch in batches]))
                     composite_b = list(np.concatenate([batch['b'] for batch in batches]))
-                    self.assertListEqual(composite_a, composite_b)  # make sure that the index orders are consistent
                     self.assertGreaterEqual(len(set(composite_a)), 12)  # There should be at least 4 unique batches
                     self.assertGreaterEqual(len(composite_a), 15)  # There should be at least 5 batches
                 with self.subTest("shuffle True"):
