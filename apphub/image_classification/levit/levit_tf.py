@@ -36,13 +36,25 @@ from fastestimator.trace.metric import Accuracy
 
 specification = {
     'LeViT_128S': {
-        'embed_dim': [128, 256, 384], 'key_dim': 16, 'num_heads': [4, 6, 8], 'depth': [2, 3, 4], 'drop_path': 0
+        'embed_dim': (128, 256, 384),
+        'key_dim': (16, 16, 16),
+        'num_heads': (4, 6, 8),
+        'depth': (2, 3, 4),
+        'drop_path': 0
     },
     'LeViT_256': {
-        'embed_dim': [256, 384, 512], 'key_dim': 32, 'num_heads': [4, 6, 8], 'depth': [4, 4, 4], 'drop_path': 0
+        'embed_dim': (256, 384, 512),
+        'key_dim': (32, 32, 32),
+        'num_heads': (4, 6, 8),
+        'depth': (4, 4, 4),
+        'drop_path': 0
     },
     'LeViT_384': {
-        'embed_dim': [384, 512, 768], 'key_dim': 32, 'num_heads': [6, 9, 12], 'depth': [4, 4, 4], 'drop_path': 0.1
+        'embed_dim': (384, 512, 768),
+        'key_dim': (32, 32, 32),
+        'num_heads': (6, 9, 12),
+        'depth': [4, 4, 4],
+        'drop_path': 0.1
     },
 }
 
@@ -329,12 +341,12 @@ class LeVIT(tf.keras.Model):
                  image_dim,
                  patch_size,
                  num_classes,
-                 embed_dim=[192],
-                 key_dim=[64],
-                 depth=[12],
-                 num_heads=[3],
-                 attention_ratio=[2],
-                 mlp_ratio=[2],
+                 embed_dim,
+                 key_dim,
+                 depth,
+                 num_heads,
+                 attention_ratio,
+                 mlp_ratio,
                  down_ops={},
                  distillation=False,
                  drop_path=0.):
@@ -430,16 +442,16 @@ def model_factory(image_dim, embed_dim, key_dim, depth, num_heads, drop_path, nu
         patch_size=16,
         embed_dim=embed_dim,
         num_heads=num_heads,
-        key_dim=[key_dim] * 3,
+        key_dim=key_dim,
         depth=depth,
-        attention_ratio=[2, 2, 2],
-        mlp_ratio=[2, 2, 2],
+        attention_ratio=(2, 2, 2),
+        mlp_ratio=(2, 2, 2),
         down_ops={
             1: {
-                'key_dim': key_dim, 'num_heads': embed_dim[0] // key_dim, 'attn_ratio': 4, 'mlp_ratio': 2, 'stride': 2
+                'key_dim': key_dim[0], 'num_heads': embed_dim[0] // key_dim[0], 'attn_ratio': 4, 'mlp_ratio': 2, 'stride': 2
             },
             2: {
-                'key_dim': key_dim, 'num_heads': embed_dim[1] // key_dim, 'attn_ratio': 4, 'mlp_ratio': 2, 'stride': 2
+                'key_dim': key_dim[0], 'num_heads': embed_dim[1] // key_dim[0], 'attn_ratio': 4, 'mlp_ratio': 2, 'stride': 2
             },
         },
         num_classes=num_classes,
@@ -549,7 +561,7 @@ def finetune(pretrained_model,
     levit_model = LeViT_384(image_dim=224, num_classes=10)
     levit_model.build(input_shape=(batch_size, 224, 224, 3))
 
-    # loading pretrained weights
+    # loading pretrained weights without classification head
     for i in range(5):
         levit_model.layers[i].set_weights(pretrained_model.layers[i].weights)
 

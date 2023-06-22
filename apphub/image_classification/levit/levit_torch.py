@@ -42,26 +42,26 @@ from fastestimator.trace.metric import Accuracy
 
 specification = {
     'LeViT_128S': {
-        'embed_dim': [128, 256, 384],
-        'key_dim': 16,
-        'num_heads': [4, 6, 8],
-        'depth': [2, 3, 4],
+        'embed_dim': (128, 256, 384),
+        'key_dim': (16, 16, 16),
+        'num_heads': (4, 6, 8),
+        'depth': (2, 3, 4),
         'drop_path': 0,
         'weights': 'https://huggingface.co/facebook/levit-128S/resolve/main/pytorch_model.bin'
     },
     'LeViT_256': {
-        'embed_dim': [256, 384, 512],
-        'key_dim': 32,
-        'num_heads': [4, 6, 8],
-        'depth': [4, 4, 4],
+        'embed_dim': (256, 384, 512),
+        'key_dim': (32, 32, 32),
+        'num_heads': (4, 6, 8),
+        'depth': (4, 4, 4),
         'drop_path': 0,
         'weights': 'https://huggingface.co/facebook/levit-256/resolve/main/pytorch_model.bin'
     },
     'LeViT_384': {
-        'embed_dim': [384, 512, 768],
-        'key_dim': 32,
-        'num_heads': [6, 9, 12],
-        'depth': [4, 4, 4],
+        'embed_dim': (384, 512, 768),
+        'key_dim': (32, 32, 32),
+        'num_heads': (6, 9, 12),
+        'depth': (4, 4, 4),
         'drop_path': 0.1,
         'weights': 'https://huggingface.co/facebook/levit-384/resolve/main/pytorch_model.bin'
     },
@@ -349,16 +349,16 @@ class LeViT(torch.nn.Module):
     """ Vision Transformer with support for patch or hybrid CNN input stage
     """
     def __init__(self,
+                 embed_dim,
+                 key_dim,
+                 depth,
+                 num_heads,
+                 attention_ratio,
+                 mlp_ratio,
                  img_size=224,
                  patch_size=16,
                  in_chans=3,
                  num_classes=1000,
-                 embed_dim=[192],
-                 key_dim=[64],
-                 depth=[12],
-                 num_heads=[3],
-                 attention_ratio=[2],
-                 mlp_ratio=[2],
                  down_ops=[],
                  distillation=True,
                  drop_path=0):
@@ -438,20 +438,22 @@ def model_factory(embed_dim, key_dim, depth, num_heads, drop_path, weights, num_
         patch_size=16,
         embed_dim=embed_dim,
         num_heads=num_heads,
-        key_dim=[key_dim] * 3,
+        key_dim=key_dim,
         depth=depth,
-        attention_ratio=[2, 2, 2],
-        mlp_ratio=[2, 2, 2],
+        attention_ratio=(2, 2, 2),
+        mlp_ratio=(2, 2, 2),
         down_ops=[
             #('Subsample',key_dim, num_heads, attn_ratio, mlp_ratio, stride)
-            ['Subsample', key_dim, embed_dim[0] // key_dim, 4, 2, 2],
-            ['Subsample', key_dim, embed_dim[1] // key_dim, 4, 2, 2],
+            ['Subsample', key_dim[0], embed_dim[0] // key_dim[0], 4, 2, 2],
+            ['Subsample', key_dim[0], embed_dim[1] // key_dim[0], 4, 2, 2],
         ],
         num_classes=num_classes,
         drop_path=drop_path,
         distillation=distillation)
 
     if pretrained:
+        # since the file names are the same, running the training script with different model(e.g. LeViT_256, LeViT_384) would throw error
+        # Either clear the cache or provide "model_dir" to load_state_dict_from_url.
         checkpoint_dict = torch.hub.load_state_dict_from_url(weights, map_location='cpu')
         model_dict = model.state_dict()
         model_keys = list(model_dict.keys())
