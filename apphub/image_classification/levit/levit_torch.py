@@ -355,11 +355,11 @@ class LeViT(torch.nn.Module):
                  num_heads,
                  attention_ratio,
                  mlp_ratio,
+                 down_ops,
                  img_size=224,
                  patch_size=16,
                  in_chans=3,
                  num_classes=1000,
-                 down_ops=[],
                  distillation=True,
                  drop_path=0):
         super().__init__()

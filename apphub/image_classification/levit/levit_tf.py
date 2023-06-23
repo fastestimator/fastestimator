@@ -347,7 +347,7 @@ class LeVIT(tf.keras.Model):
                  num_heads,
                  attention_ratio,
                  mlp_ratio,
-                 down_ops={},
+                 down_ops,
                  distillation=False,
                  drop_path=0.):
         super(LeVIT, self).__init__()
@@ -448,10 +448,18 @@ def model_factory(image_dim, embed_dim, key_dim, depth, num_heads, drop_path, nu
         mlp_ratio=(2, 2, 2),
         down_ops={
             1: {
-                'key_dim': key_dim[0], 'num_heads': embed_dim[0] // key_dim[0], 'attn_ratio': 4, 'mlp_ratio': 2, 'stride': 2
+                'key_dim': key_dim[0],
+                'num_heads': embed_dim[0] // key_dim[0],
+                'attn_ratio': 4,
+                'mlp_ratio': 2,
+                'stride': 2
             },
             2: {
-                'key_dim': key_dim[0], 'num_heads': embed_dim[1] // key_dim[0], 'attn_ratio': 4, 'mlp_ratio': 2, 'stride': 2
+                'key_dim': key_dim[0],
+                'num_heads': embed_dim[1] // key_dim[0],
+                'attn_ratio': 4,
+                'mlp_ratio': 2,
+                'stride': 2
             },
         },
         num_classes=num_classes,
