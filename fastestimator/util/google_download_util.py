@@ -86,9 +86,10 @@ def download_file_from_google_drive(file_id: str, destination: str, max_retries:
         _download_file_from_google_drive(file_id, destination)
         if os.path.exists(destination):
             found = True
+            print(f"Downloaded {file_id} file to {destination}.")
             break
         else:
             time.sleep(random.randint(5, 10))
 
     if not found:
-        raise FileNotFoundError(f"Couldn't download {file_id} after {max_retries} retries.")
+        raise ValueError(f"Couldn't download {file_id} after {max_retries} retries.")
