@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import os
+import random
+import time
 from typing import TypeVar
 
 import requests
@@ -66,3 +69,26 @@ def _download_file_from_google_drive(file_id: str, destination: str) -> None:
                 progress.update(len(chunk))
                 f.write(chunk)
     progress.close()
+
+
+def download_file_from_google_drive(file_id: str, destination: str, max_retries: int = 3) -> None:
+    """Download the data from the Google drive public URL.
+
+    This method will try to download the file for given number of retries till successful.
+
+    Args:
+        file_id: File ID of Google drive URL.
+        destination: Destination path where the data needs to be stored.
+        max_retries: max number of retries.
+    """
+    found = False
+    for _ in range(max_retries):
+        _download_file_from_google_drive(file_id, destination)
+        if os.path.exists(destination):
+            found = True
+            break
+        else:
+            time.sleep(random.randint(5, 10))
+
+    if not found:
+        raise FileNotFoundError(f"Couldn't download {file_id} after {max_retries} retries.")

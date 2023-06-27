@@ -19,7 +19,7 @@ from typing import Tuple
 import numpy as np
 
 from fastestimator.dataset.numpy_dataset import NumpyDataset
-from fastestimator.util.google_download_util import _download_file_from_google_drive
+from fastestimator.util.google_download_util import download_file_from_google_drive
 
 dataset_ids = {
     "chestmnist": "1lGZtFjlviRf_vwmxB4NgApjCdfDuh8pk",
@@ -101,7 +101,7 @@ def load_data(
 
     if not os.path.exists(download_path):
         print("Downloading data to {}".format(root_dir))
-        _download_file_from_google_drive(dataset_ids[dataset_name], download_path)
+        download_file_from_google_drive(dataset_ids[dataset_name], download_path)
 
     npz_file = np.load(download_path)
 
