@@ -53,10 +53,9 @@ def load_data(root_dir: Optional[str] = None) -> CSVDataset:
 
     if not (os.path.exists(image_extracted_path) and os.path.exists(annotation_extracted_path)):
         # download
-        if not (os.path.exists(image_compressed_path) and os.path.exists(annotation_compressed_path)):
-            print("Downloading data to {}".format(root_dir))
-            download_file_from_google_drive('1GDr1OkoXdhaXWGA8S3MAq3a522Tak-nx', image_compressed_path)
-            download_file_from_google_drive('16NsbTpMs5L6hT4hUJAmpW2u7wH326WTR', annotation_compressed_path)
+        print("Downloading data to {}".format(root_dir))
+        download_file_from_google_drive('1GDr1OkoXdhaXWGA8S3MAq3a522Tak-nx', image_compressed_path)
+        download_file_from_google_drive('16NsbTpMs5L6hT4hUJAmpW2u7wH326WTR', annotation_compressed_path)
 
         # extract
         print("\nExtracting files ...")

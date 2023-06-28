@@ -82,20 +82,23 @@ def download_file_from_google_drive(file_id: str, destination: str, max_retries:
         destination: Destination path where the data needs to be stored.
         max_retries: max number of retries.
     """
-    found = False
-    for _ in range(max_retries):
-        try:
-            _download_file_from_google_drive(file_id, destination)
-            if validate_file(destination):
-                print(f"Successfully download the file to {destination}.")
-                found = True
-                break
-            else:
-                print(f"The {file_id} was not downloaded completely, will be trying in around 5 seconds.")
+    if not os.path.exists(destination):
+        found = False
+        for _ in range(max_retries):
+            try:
+                _download_file_from_google_drive(file_id, destination)
+                if validate_file(destination):
+                    print(f"Successfully downloaded the file to {destination}.")
+                    found = True
+                    break
+                else:
+                    print(f"The {file_id} was not downloaded completely, will be trying in around 5 seconds.")
+                    time.sleep(random.randint(5, 10))
+            except Exception as e:
+                print(f"Exception occurred while downloading the {file_id}, will be trying in around 5 seconds.", e)
                 time.sleep(random.randint(5, 10))
-        except Exception as e:
-            print(f"Exception occurred while downloading the {file_id}, will be trying in around 5 seconds.", e)
-            time.sleep(random.randint(5, 10))
 
-    if not found:
-        raise ValueError(f"Couldn't download {file_id} after {max_retries} retries.")
+        if not found:
+            raise ValueError(f"Couldn't download {file_id} after {max_retries} retries.")
+    else:
+        print(f"File {destination} already exists, skipping download.")

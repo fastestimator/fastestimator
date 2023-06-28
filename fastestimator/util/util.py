@@ -22,6 +22,7 @@ import sys
 import tempfile
 import time
 from contextlib import ContextDecorator
+from pathlib import Path
 from typing import Any, Dict, List, MutableMapping, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np
@@ -31,7 +32,7 @@ import torch.backends.mps
 from cpuinfo import get_cpu_info
 from pyfiglet import Figlet
 from tensorflow.python.ops.logging_ops import print_v2
-from pathlib import Path
+
 from fastestimator.util.base_util import warn
 
 STRING_TO_TORCH_DTYPE = {
@@ -213,12 +214,21 @@ def _custom_tf_print(*args, **kwargs):
     kwargs['output_stream'] = Suppressor.tf_print_name_f
     print_v2(*args, **kwargs)
 
-def validate_file(file_path:str):
+
+def validate_file(file_path: str) -> bool:
+    """Validate whether file valid or not.
+
+    Args:
+        file_path (str): location of the input file.
+
+    Returns:
+        bool: Whether the is valid.
+    """
     try:
         if Path(file_path).suffix == '.zip':
             import zipfile
-            zip = zipfile.ZipFile(file_path)
-            _ = zip.namelist()
+            zip_file = zipfile.ZipFile(file_path)
+            _ = zip_file.namelist()
         elif Path(file_path).suffix == '.gz':
             if file_path.endswith('.tar.gz'):
                 import tarfile
@@ -228,13 +238,11 @@ def validate_file(file_path:str):
                 import gzip
                 f = gzip.open(file_path, 'rb')
                 _ = f.read()
-        elif not (os.path.exists(file_path) and os.path.getsize(file_path)>0):
+        elif not (os.path.exists(file_path) and os.path.getsize(file_path) > 0):
             return False
         return True
     except:
         return False
-
-
 
 
 class Timer(ContextDecorator):

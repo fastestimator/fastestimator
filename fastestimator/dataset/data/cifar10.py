@@ -54,9 +54,8 @@ def load_data(root_dir: str = None, image_key: str = "x", label_key: str = "y",
     image_extracted_path = os.path.join(root_dir, 'cifar-10-batches-py')
 
     if not os.path.exists(image_extracted_path):
-        if not os.path.exists(image_compressed_path):
-            print("Downloading data to {}".format(root_dir))
-            download_file_from_google_drive('1mYURe_Oq90Sg47uSK26v-fs3zzxqupCM', image_compressed_path)
+        print("Downloading data to {}".format(root_dir))
+        download_file_from_google_drive('1mYURe_Oq90Sg47uSK26v-fs3zzxqupCM', image_compressed_path)
 
         print("Extracting data to {}".format(root_dir))
         with tarfile.open(image_compressed_path) as img_tar:
