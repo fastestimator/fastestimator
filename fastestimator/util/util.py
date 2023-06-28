@@ -216,13 +216,13 @@ def _custom_tf_print(*args, **kwargs):
 
 
 def validate_file(file_path: str) -> bool:
-    """Validate whether file valid or not.
+    """Validate whether file is valid or not.
 
     Args:
-        file_path (str): location of the input file.
+        file_path: location of the input file.
 
     Returns:
-        bool: Whether the is valid.
+        Whether the file is valid.
     """
     try:
         if Path(file_path).suffix == '.zip':
@@ -242,6 +242,7 @@ def validate_file(file_path: str) -> bool:
             return False
         return True
     except Exception as e:
+        print(e)
         return False
 
 
