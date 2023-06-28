@@ -12,12 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import glob
 import os
 import pickle
-import random
 import shutil
-import time
 from pathlib import Path
 from typing import List, Tuple
 
@@ -59,14 +56,8 @@ def load_data(root_dir: str = None, image_key: str = "x", label_key: str = "y") 
             print("Downloading data to {}".format(root_dir))
             download_file_from_google_drive('1dqTgqMVvgx_FZNAC7TqzoA0hYX1ttOUq', image_compressed_path)
 
-        print("Available files:", glob.glob(f'{root_dir}/*'))
         print("Extracting data to {}".format(root_dir))
-        for _ in range(3):
-            try:
-                shutil.unpack_archive(image_compressed_path, root_dir)
-            except:
-                print('Failed once waiting for second time.')
-                time.sleep(random.randint(5, 10))
+        shutil.unpack_archive(image_compressed_path, root_dir)
 
     num_train_samples = 50000
 

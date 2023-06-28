@@ -21,6 +21,7 @@ import requests
 import wget
 from tqdm import tqdm
 
+from fastestimator.util.util import validate_file
 from fastestimator.util.wget_util import callback_progress
 
 wget.callback_progress = callback_progress
@@ -83,12 +84,17 @@ def download_file_from_google_drive(file_id: str, destination: str, max_retries:
     """
     found = False
     for _ in range(max_retries):
-        _download_file_from_google_drive(file_id, destination)
-        if os.path.exists(destination):
-            found = True
-            print(f"Downloaded {file_id} file to {destination}.")
-            break
-        else:
+        try:
+            _download_file_from_google_drive(file_id, destination)
+            if validate_file(destination):
+                print(f"Successfully download the file to {destination}.")
+                found = True
+                break
+            else:
+                print(f"The {file_id} was not downloaded completely, will be trying in around 5 seconds.")
+                time.sleep(random.randint(5, 10))
+        except Exception as e:
+            print(f"Exception occurred while downloading the {file_id}, will be trying in around 5 seconds.", e)
             time.sleep(random.randint(5, 10))
 
     if not found:

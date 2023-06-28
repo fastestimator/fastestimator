@@ -31,7 +31,7 @@ import torch.backends.mps
 from cpuinfo import get_cpu_info
 from pyfiglet import Figlet
 from tensorflow.python.ops.logging_ops import print_v2
-
+from pathlib import Path
 from fastestimator.util.base_util import warn
 
 STRING_TO_TORCH_DTYPE = {
@@ -212,6 +212,29 @@ class Suppressor(object):
 def _custom_tf_print(*args, **kwargs):
     kwargs['output_stream'] = Suppressor.tf_print_name_f
     print_v2(*args, **kwargs)
+
+def validate_file(file_path:str):
+    try:
+        if Path(file_path).suffix == '.zip':
+            import zipfile
+            zip = zipfile.ZipFile(file_path)
+            _ = zip.namelist()
+        elif Path(file_path).suffix == '.gz':
+            if file_path.endswith('.tar.gz'):
+                import tarfile
+                with tarfile.open(file_path) as img_tar:
+                    _ = img_tar.getmembers()
+            else:
+                import gzip
+                f = gzip.open(file_path, 'rb')
+                _ = f.read()
+        elif not (os.path.exists(file_path) and os.path.getsize(file_path)>0):
+            return False
+        return True
+    except:
+        return False
+
+
 
 
 class Timer(ContextDecorator):
