@@ -241,7 +241,7 @@ def validate_file(file_path: str) -> bool:
         elif not (os.path.exists(file_path) and os.path.getsize(file_path) > 0):
             return False
         return True
-    except:
+    except Exception as e:
         return False
 
 
