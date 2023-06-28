@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, Iterable
+from typing import Any, Dict, Union, Iterable
 
 import numpy as np
 from sklearn.metrics import matthews_corrcoef
 
 from fastestimator.trace.meta._per_ds import per_ds
 from fastestimator.trace.trace import Trace
-from fastestimator.util.data import Any, Data, Dict
+from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
 
