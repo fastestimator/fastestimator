@@ -15,10 +15,11 @@
 from typing import TYPE_CHECKING, Tuple
 
 import tensorflow as tf
-from tensorflow.keras import Sequential, layers
 
 if TYPE_CHECKING:
     from tensorflow.python.keras import Sequential, layers
+else:
+    from tensorflow.keras import Sequential, layers
 
 
 # noinspection PyPep8Naming

@@ -19,7 +19,7 @@ from typing import List, Tuple
 import fastestimator as fe
 from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.slicer import Slicer
-from fastestimator.test.unittest_util import sample_system_object, sample_system_object_torch
+from fastestimator.test.unittest_util import sample_system_object
 from fastestimator.types import Array
 
 
@@ -31,7 +31,7 @@ class FakeSlicer(Slicer):
     def _slice_batch(self, batch: Array) -> List[Array]:
         return [batch]
 
-    def _unslice_batch(self, slices: Tuple[Array, ...]) -> Array:
+    def _unslice_batch(self, slices: Tuple[Array, ...], key: str) -> Array:
         return slices[0]
 
 
