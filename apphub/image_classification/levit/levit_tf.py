@@ -268,7 +268,6 @@ class AttentionDownsample(layers.Layer):
 
         self.attention_biases = tf.Variable(tf.zeros((num_attention_heads, len(attention_offsets))),
                                             name=self.name + '/attention_biases')
-
         self.attention_bias_idxs = tf.constant(tf.reshape(indices, (len_points_, len_points)))
 
     def call(self, x):
@@ -415,28 +414,39 @@ class LeVIT(tf.keras.Model):
         return x
 
 
-def LeViT_128S(image_dim, num_classes=1000, distillation=False, pretrained=False):
+def LeViT_128S(image_dim, num_classes=1000, distillation=False, pretrained_model=None):
     return model_factory(image_dim=image_dim,
                          **specification['LeViT_128S'],
                          num_classes=num_classes,
-                         distillation=distillation)
+                         distillation=distillation,
+                         pretrained_model=pretrained_model)
 
 
-def LeViT_256(image_dim, num_classes=1000, distillation=False, pretrained=False):
+def LeViT_256(image_dim, num_classes=1000, distillation=False, pretrained_model=None):
     return model_factory(image_dim=image_dim,
                          **specification['LeViT_256'],
                          num_classes=num_classes,
-                         distillation=distillation)
+                         distillation=distillation,
+                         pretrained_model=pretrained_model)
 
 
-def LeViT_384(image_dim, num_classes=1000, distillation=False, pretrained=False):
+def LeViT_384(image_dim, num_classes=1000, distillation=False, pretrained_model=None):
     return model_factory(image_dim=image_dim,
                          **specification['LeViT_384'],
                          num_classes=num_classes,
-                         distillation=distillation)
+                         distillation=distillation,
+                         pretrained_model=pretrained_model)
 
 
-def model_factory(image_dim, embed_dim, key_dim, depth, num_heads, drop_path, num_classes, distillation):
+def model_factory(image_dim,
+                  embed_dim,
+                  key_dim,
+                  depth,
+                  num_heads,
+                  drop_path,
+                  num_classes,
+                  distillation,
+                  pretrained_model=None):
     model = LeVIT(
         image_dim,
         patch_size=16,
@@ -465,7 +475,15 @@ def model_factory(image_dim, embed_dim, key_dim, depth, num_heads, drop_path, nu
         num_classes=num_classes,
         drop_path=drop_path,
         distillation=distillation)
+    model.build((1, image_dim, image_dim, 3))
 
+    if pretrained_model:
+        # load model weights except for the class head.
+        last_layer_ind = len(pretrained_model.layers) - 1
+        for i, layer in enumerate(pretrained_model.layers):
+            if i == last_layer_ind:
+                break
+            model.layers[i].set_weights(layer.weights)
     return model
 
 
@@ -492,10 +510,7 @@ def pretrain(batch_size,
         ])
 
     # training it from scratch to demonstrate custom pretraining and fine tuning.
-    levit_model = LeViT_384(image_dim=224, num_classes=100, pretrained=False)
-    levit_model.build((batch_size, 224, 224, 3))
-
-    model = fe.build(model_fn=lambda: levit_model, optimizer_fn="adam")
+    model = fe.build(model_fn=lambda: LeViT_384(image_dim=224, num_classes=100), optimizer_fn="adam")
 
     def lr_schedule_warmup(step, train_steps_epoch, init_lr):
         warmup_steps = train_steps_epoch * 3
@@ -566,18 +581,9 @@ def finetune(pretrained_model,
             CoarseDropout(inputs="x", outputs="x", mode="train", max_holes=1),
             Onehot(inputs="y", outputs="y", mode="train", num_classes=10, label_smoothing=0.05)
         ])
-    levit_model = LeViT_384(image_dim=224, num_classes=10)
-    levit_model.build(input_shape=(batch_size, 224, 224, 3))
 
-    # loading pretrained weights without classification head
-    for i in range(5):
-        levit_model.layers[i].set_weights(pretrained_model.layers[i].weights)
-
-    model = fe.build(model_fn=lambda: levit_model, optimizer_fn="adam")
-
-    # load the encoder's weigh
-    for i in range(len(pretrained_model.layers) - 1):
-        model.layers[i].set_weights(model.layers[i].weights)
+    model = fe.build(model_fn=lambda: LeViT_384(image_dim=224, num_classes=10, pretrained_model=pretrained_model),
+                     optimizer_fn="adam")
 
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="x", outputs="y_pred"),
