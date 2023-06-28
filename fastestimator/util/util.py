@@ -215,7 +215,7 @@ def _custom_tf_print(*args, **kwargs):
     print_v2(*args, **kwargs)
 
 
-def validate_file(file_path: str) -> bool:
+def is_valid_file(file_path: str) -> bool:
     """Validate whether file is valid or not.
 
     Args:
@@ -224,12 +224,15 @@ def validate_file(file_path: str) -> bool:
     Returns:
         Whether the file is valid.
     """
+    if not os.path.exists(file_path):
+        return False
+    suffix = Path(file_path).suffix
     try:
-        if Path(file_path).suffix == '.zip':
+        if suffix == '.zip':
             import zipfile
             zip_file = zipfile.ZipFile(file_path)
             _ = zip_file.namelist()
-        elif Path(file_path).suffix == '.gz':
+        elif suffix == '.gz':
             if file_path.endswith('.tar.gz'):
                 import tarfile
                 with tarfile.open(file_path) as img_tar:
@@ -238,11 +241,8 @@ def validate_file(file_path: str) -> bool:
                 import gzip
                 f = gzip.open(file_path, 'rb')
                 _ = f.read()
-        elif not (os.path.exists(file_path) and os.path.getsize(file_path) > 0):
-            return False
         return True
-    except Exception as e:
-        print(e)
+    except Exception as _:
         return False
 
 
