@@ -478,7 +478,7 @@ def model_factory(image_dim,
     model.build((1, image_dim, image_dim, 3))
 
     if pretrained_model:
-        # load the encoder's weigh
+        # load model weights except for the class head.
         last_layer_ind = len(pretrained_model.layers) - 1
         for i, layer in enumerate(pretrained_model.layers):
             if i == last_layer_ind:
