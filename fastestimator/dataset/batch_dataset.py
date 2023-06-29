@@ -20,6 +20,7 @@ import numpy as np
 
 from fastestimator.dataset.dataset import DatasetSummary, FEDataset
 from fastestimator.dataset.extend_dataset import ExtendDataset
+from fastestimator.dataset.interleave_dataset import InterleaveDataset
 from fastestimator.util.base_util import to_list, warn
 from fastestimator.util.traceability_util import traceable
 
@@ -124,6 +125,7 @@ class BatchDataset(FEDataset):
         # Check ExtendDataset
         for idx, dataset in enumerate(self.datasets):
             assert not isinstance(dataset, ExtendDataset), "Input Dataset cannot be an ExtendDataset object"
+            assert not isinstance(dataset, InterleaveDataset), "Input Dataset cannot be an InterleaveDataset object"
 
     def _do_split(self, splits: Sequence[Iterable[int]]) -> List['BatchDataset']:
         """This class overwrites the .split() method instead of _do_split().

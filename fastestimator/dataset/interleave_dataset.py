@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import random
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Union
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Union, overload
 
 from torch.utils.data import Dataset
 
@@ -25,7 +25,7 @@ from fastestimator.util.traceability_util import traceable
 @traceable()
 class InterleaveDataset(FEDataset):
     """A Dataset class that can allow for a step-wise interleaving of multiple datasets.
-    
+
     This will be useful for training multi-task models when we vary dataset used on a per-step basis.
 
     For example, given dataset `ds1`, and `ds2`, if we want to vary dataset between each step, the following 3 will
@@ -59,6 +59,14 @@ class InterleaveDataset(FEDataset):
         pattern: The step-wise interleaving patterns. When datasets provided is a list, it requires list of integer
             when `datasets` is list, requires a list of names when `datasets` is dictionary.
     """
+    @overload
+    def __init__(self, dataset: List[Dataset], pattern: Optional[List[int]]) -> None:
+        ...
+
+    @overload
+    def __init__(self, dataset: Mapping[str, Dataset], pattern: Optional[List[str]]) -> None:
+        ...
+
     def __init__(self,
                  datasets: Union[Mapping[str, Dataset], List[Dataset]],
                  pattern: Optional[Union[List[str], List[int]]] = None) -> None:
@@ -91,13 +99,15 @@ class InterleaveDataset(FEDataset):
             self.tags = tags
             # standardize its pattern too if it exists
             if self.pattern:
-                assert all([p in tags for p in self.pattern]), "pattern name(s) missing in dataset dictionary, patterns are: {}, available names are: {}".format(self.pattern, tags)
+                assert all([p in tags for p in self.pattern]), "pattern name(s) missing in dataset dictionary, \
+                    patterns are: {}, available names are: {}".format(self.pattern, tags)
                 self.pattern = [self.tags.index(p) for p in self.pattern]
         elif isinstance(self.datasets, list):
             self.tags = [None for _ in self.datasets]
             if self.pattern:
                 available_idx = [x for x in range(len(self.datasets))]
-                assert all([p in available_idx for p in self.pattern]), "pattern index not matching with dataset, patterns are: {}, available indexes are: {}".format(self.pattern, available_idx)
+                assert all([p in available_idx for p in self.pattern]), "pattern index not matching with dataset, \
+                    patterns are: {}, available indexes are: {}".format(self.pattern, available_idx)
         else:
             raise ValueError("datasets must be either a list or dictionary")
         # fill in default interleaving pattern
@@ -155,7 +165,8 @@ class InterleaveDataset(FEDataset):
         """
         # first calculate the minimum number of cycles each dataset can afford according to the repeat pattern
         num_cycles = min(len(ds) // (f * bs) for ds, f, bs in zip(self.datasets, self.frequency, self.batch_sizes))
-        assert num_cycles > 0, "some dataset does not have enough samples for a single repeat pattern, please consider using `ExtendDataset` to increase its length"
+        assert num_cycles > 0, "some dataset does not have enough samples for a single repeat pattern, please consider \
+            using `ExtendDataset` to increase its length"
         # returning the sum of number of batches of each dataset
         return sum(num_cycles * f for f in self.frequency)
 
@@ -195,7 +206,7 @@ class InterleaveDataset(FEDataset):
     def split(self,
               *fractions: Union[float, int, Iterable[int]],
               seed: Optional[int] = None,
-              stratify: Optional[str] = None) -> Union[Self, List[Self]]:
+              stratify: Optional[str] = None) -> Union['InterleaveDataset', List['InterleaveDataset']]:
         """Split this dataset into multiple smaller datasets.
 
         This function enables several types of splitting:
@@ -247,7 +258,8 @@ class InterleaveDataset(FEDataset):
         new_datasets = [[ds[i] for ds in new_datasets] for i in range(num_splits)]
         results = [InterleaveDataset(ds, pattern=self.pattern) for ds in new_datasets]
         if seed is not None:
-            [ds.fe_reset_ds(seed=seed) for ds in results]
+            for ds in results:
+                ds.fe_reset_ds(seed=seed)
         # Re-compute personal variables
         self.fe_reset_ds(seed=seed)
         FEDataset.fix_split_traceabilty(self, results, fractions, seed, stratify)
