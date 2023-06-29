@@ -242,7 +242,8 @@ def is_valid_file(file_path: str) -> bool:
                 f = gzip.open(file_path, 'rb')
                 _ = f.read()
         return True
-    except Exception as _:
+    except Exception as e:
+        print(e)
         return False
 
 
