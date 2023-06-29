@@ -22,6 +22,7 @@ import sys
 import tempfile
 import time
 from contextlib import ContextDecorator
+from pathlib import Path
 from typing import Any, Dict, List, MutableMapping, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np
@@ -212,6 +213,38 @@ class Suppressor(object):
 def _custom_tf_print(*args, **kwargs):
     kwargs['output_stream'] = Suppressor.tf_print_name_f
     print_v2(*args, **kwargs)
+
+
+def is_valid_file(file_path: str) -> bool:
+    """Validate whether file is valid or not.
+
+    Args:
+        file_path: location of the input file.
+
+    Returns:
+        Whether the file is valid.
+    """
+    if not os.path.exists(file_path):
+        return False
+    suffix = Path(file_path).suffix
+    try:
+        if suffix == '.zip':
+            import zipfile
+            zip_file = zipfile.ZipFile(file_path)
+            _ = zip_file.namelist()
+        elif suffix == '.gz':
+            if file_path.endswith('.tar.gz'):
+                import tarfile
+                with tarfile.open(file_path) as img_tar:
+                    _ = img_tar.getmembers()
+            else:
+                import gzip
+                f = gzip.open(file_path, 'rb')
+                _ = f.read()
+        return True
+    except Exception as e:
+        print(e)
+        return False
 
 
 class Timer(ContextDecorator):

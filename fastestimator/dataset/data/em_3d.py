@@ -21,7 +21,7 @@ import numpy as np
 import tifffile
 
 from fastestimator.dataset.numpy_dataset import NumpyDataset
-from fastestimator.util.google_download_util import _download_file_from_google_drive
+from fastestimator.util.google_download_util import download_file_from_google_drive
 
 color_mapping = {
     0: [0, 0, 0, 0],
@@ -114,9 +114,8 @@ def load_data(root_dir: Optional[str] = None, image_key: str = "image",
     data_compressed_path = os.path.join(root_dir, 'images_and_labels_rgba.zip')
     data_folder_path = os.path.join(root_dir, 'platelet-em/images')
 
-    if not os.path.exists(data_folder_path):
-        _download_file_from_google_drive('1OMVY1bkfssYdH11xuFdxv7nhqEjzCY7L', data_compressed_path)
-        shutil.unpack_archive(data_compressed_path, root_dir)
+    download_file_from_google_drive('1OMVY1bkfssYdH11xuFdxv7nhqEjzCY7L', data_compressed_path)
+    shutil.unpack_archive(data_compressed_path, root_dir)
 
     train_data = tifffile.imread(os.path.join(root_dir, 'platelet-em/images/50-images.tif'))
     val_data = tifffile.imread(os.path.join(root_dir, 'platelet-em/images/24-images.tif'))

@@ -22,7 +22,7 @@ from keras.datasets.cifar import load_batch
 
 from fastestimator.dataset.numpy_dataset import NumpyDataset
 from fastestimator.util.base_util import warn
-from fastestimator.util.google_download_util import _download_file_from_google_drive
+from fastestimator.util.google_download_util import download_file_from_google_drive
 
 
 def load_data(root_dir: str = None,
@@ -63,9 +63,8 @@ def load_data(root_dir: str = None,
     image_extracted_path = os.path.join(root_dir, 'cifar-100-python')
 
     if not os.path.exists(image_extracted_path):
-        if not os.path.exists(image_compressed_path):
-            print("Downloading data to {}".format(root_dir))
-            _download_file_from_google_drive('1ntXqOaXMaq4TcvpCaOCpqqNCjYy2oVsb', image_compressed_path)
+        print("Downloading data to {}".format(root_dir))
+        download_file_from_google_drive('1ntXqOaXMaq4TcvpCaOCpqqNCjYy2oVsb', image_compressed_path)
 
         print("Extracting data to {}".format(root_dir))
         with tarfile.open(image_compressed_path) as img_tar:

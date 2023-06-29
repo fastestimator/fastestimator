@@ -19,7 +19,7 @@ from typing import Tuple
 import numpy as np
 
 from fastestimator.dataset.numpy_dataset import NumpyDataset
-from fastestimator.util.google_download_util import _download_file_from_google_drive
+from fastestimator.util.google_download_util import download_file_from_google_drive
 
 dataset_ids = {
     "chestmnist": "1lGZtFjlviRf_vwmxB4NgApjCdfDuh8pk",
@@ -72,7 +72,7 @@ def load_data(
         'vesselmnist3d'
     ]
     For more details on the dataset, please check https://medmnist.com, https://zenodo.org/record/6496656
-    
+
     Args:
         dataset_name (str): Name of the dataset to download and load.
         root_dir (str, optional): The path to store the downloaded data. When `path` is not provided, the data will be saved into
@@ -99,9 +99,8 @@ def load_data(
 
     download_path = os.path.join(root_dir, f"{dataset_name}.npz")
 
-    if not os.path.exists(download_path):
-        print("Downloading data to {}".format(root_dir))
-        _download_file_from_google_drive(dataset_ids[dataset_name], download_path)
+    print("Downloading data to {}".format(root_dir))
+    download_file_from_google_drive(dataset_ids[dataset_name], download_path)
 
     npz_file = np.load(download_path)
 

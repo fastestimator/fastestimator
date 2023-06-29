@@ -24,7 +24,7 @@ import wget
 from defusedxml.ElementTree import parse as ET_parse
 
 from fastestimator.dataset.dataset import FEDataset
-from fastestimator.util.google_download_util import _download_file_from_google_drive
+from fastestimator.util.google_download_util import download_file_from_google_drive
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.wget_util import callback_progress
 
@@ -266,9 +266,8 @@ def load_data(root_dir: Optional[str] = None, load_bboxes: bool = False,
     compressed_image_location = os.path.join(root_dir, 'VOCtrainval_11-May-2012.tar')
 
     if not os.path.exists(data_folder):
-        if not os.path.exists(compressed_image_location):
-            print("Downloading data to {}".format(root_dir))
-            _download_file_from_google_drive('1jeGqQUNxClNoQgp7HxbRvOvkVWvkQCKl', compressed_image_location)
+        print("Downloading data to {}".format(root_dir))
+        download_file_from_google_drive('1jeGqQUNxClNoQgp7HxbRvOvkVWvkQCKl', compressed_image_location)
 
         print("Extracting data to {}".format(root_dir))
         shutil.unpack_archive(compressed_image_location, root_dir)
