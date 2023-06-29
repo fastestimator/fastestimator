@@ -18,8 +18,8 @@ import unittest
 
 import fastestimator as fe
 from fastestimator.architecture.tensorflow import LeNet
-from fastestimator.dataset.data import cifair10
-from fastestimator.op.numpyop.univariate import Normalize
+from fastestimator.dataset.data import mnist
+from fastestimator.op.numpyop.univariate import ExpandDims, Minmax
 from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.test.unittest_util import check_img_similar, img_to_rgb_array
 from fastestimator.trace.io import ImageSaver
@@ -32,27 +32,29 @@ class TestSaliency(unittest.TestCase):
     """
     def test_saliency(self):
         label_mapping = {
-            'airplane': 0,
-            'automobile': 1,
-            'bird': 2,
-            'cat': 3,
-            'deer': 4,
-            'dog': 5,
-            'frog': 6,
-            'horse': 7,
-            'ship': 8,
-            'truck': 9
+            'zero': 0,
+            'one': 1,
+            'two': 2,
+            'three': 3,
+            'four': 4,
+            'five': 5,
+            'six': 6,
+            'seven': 7,
+            'eight': 8,
+            'nine': 9
         }
 
         batch_size = 32
 
-        train_data, _ = cifair10.load_data()
+        train_data, _ = mnist.load_data()
         test_data = train_data.split([i for i in range(10)])
-        pipeline = fe.Pipeline(test_data=test_data, batch_size=batch_size, ops=[Normalize(inputs="x", outputs="x")])
+        pipeline = fe.Pipeline(test_data=test_data,
+                               batch_size=batch_size,
+                               ops=[ExpandDims(inputs="x", outputs="x", axis=-1), Minmax(inputs="x", outputs="x")])
 
-        weight_path = os.path.abspath(os.path.join(__file__, "..", "resources", "lenet_cifar10_tf.h5"))
+        weight_path = os.path.abspath(os.path.join(__file__, "..", "resources", "lenet_mnist_tf.h5"))
 
-        model = fe.build(model_fn=lambda: LeNet(input_shape=(32, 32, 3)), optimizer_fn="adam", weights_path=weight_path)
+        model = fe.build(model_fn=lambda: LeNet(input_shape=(28, 28, 1)), optimizer_fn="adam", weights_path=weight_path)
         network = fe.Network(ops=[ModelOp(model=model, inputs="x", outputs="y_pred")])
 
         save_dir = tempfile.mkdtemp()
