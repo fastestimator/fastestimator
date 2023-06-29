@@ -224,7 +224,7 @@ class Pipeline:
         else:
             raise ValueError("Unsupported dataset type: {}".format(type(dataset)))
 
-    def _get_op_split(self, mode: str, epoch: int, ds_id: Iterable[str]) -> Tuple[List[NumpyOp], Batch, List[NumpyOp]]:
+    def _get_op_split(self, mode: str, epoch: int, ds_id: Union[str, Iterable[str]]) -> Tuple[List[NumpyOp], Batch, List[NumpyOp]]:
         """Figure out which ops are pre-batch vs post-batch.
 
         Args:
@@ -606,9 +606,9 @@ class Pipeline:
             # drop_last and collate_fn for different dataset must be the same, since it is the same dataloader.
             same_drop_last = len(set(ctx_batch_info.drop_last for ctx_batch_info in self.ctx_batch_info)) == 1
             same_collate = len(set(ctx_batch_info.collate_fn for ctx_batch_info in self.ctx_batch_info)) == 1
-            assert same_drop_last and same_collate, "when using InterleaveDataset, the drop_last and collate behavior must be the same"
-            # Interleave dataset at current scope do not support batch level, need to make sure batchops are the same
-            assert all(self.ctx_batch_ops[0] == batch_ops for batch_ops in self.ctx_batch_ops), "Current InterleaveDataset do not support different dataset behaviors after the BatchOp."
+            assert same_drop_last and same_collate, "when using InterleaveDataset, the drop_last and collate behavior for all datasets must be the same"
+            # Interleave dataset at current scope does not support batch level, need to make sure batchops are the same
+            assert all(self.ctx_batch_ops[0] == batch_ops for batch_ops in self.ctx_batch_ops), "Current InterleaveDataset does not support different dataset behaviors after the BatchOp."
             self.ctx_batch_ops = self.ctx_batch_ops[0]
             self.ctx_batch_info = self.ctx_batch_info[0]
             # fill in the correct batch sizes

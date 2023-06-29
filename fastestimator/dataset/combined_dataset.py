@@ -22,7 +22,7 @@ from fastestimator.util.traceability_util import traceable
 
 @traceable()
 class CombinedDataset(ConcatDataset):
-    """Combines a list of PyTorch Datasets,
+    """Combines a list of PyTorch Datasets.
 
     Args:
         datasets: Pytorch (or FE) Datasets to be combined.

@@ -24,8 +24,9 @@ from fastestimator.util.traceability_util import traceable
 
 @traceable()
 class InterleaveDataset(FEDataset):
-    """A Dataset class that can allow for a step-wise interleaving of multiple datasets. This will be useful for
-    training multi-task models when we vary dataset used on a per-step basis.
+    """A Dataset class that can allow for a step-wise interleaving of multiple datasets.
+    
+    This will be useful for training multi-task models when we vary dataset used on a per-step basis.
 
     For example, given dataset `ds1`, and `ds2`, if we want to vary dataset between each step, the following 3 will
     produce the same behavior: step0 getting samples from ds1, step1 getting samples from ds2, and repeat.
@@ -41,8 +42,8 @@ class InterleaveDataset(FEDataset):
     dataset = InterleaveDataset(datasets={"a": ds1, "b": ds2}, pattern=["a", "a", "b", "b", "b"])
     ```
 
-    When datasets are provided as dictionary, users can use its key as `ds_id` in other Pipeline Operators to apply
-    dataset-spefic operations (such as batching or preprocessing). For example, if we need `ds1` to go through
+    When datasets are provided as a dictionary, users can use its key as `ds_id` in other Pipeline Operators to apply
+    dataset-specific operations (such as batching or preprocessing). For example, if we need `ds1` to go through
     `Minmax` then form a batch of 32, and `ds2` to use `Zscore` then form a batch of 64:
     ```python
     dataset = InterleaveDataset(datasets={"a": ds1, "b": ds2}, pattern=["a", "b"])
@@ -105,7 +106,7 @@ class InterleaveDataset(FEDataset):
         # batch size information will be altered by pipeline before training.
         self.batch_sizes = [1 for _ in self.datasets]
         assert len(self.datasets) > 1, "require more than one dataset as input of InterleaveDataset"
-        assert len(set(self.pattern)) == len(self.datasets), "not all dataset is available in the pattern"
+        assert len(set(self.pattern)) == len(self.datasets), "not all datasets are mentioned in the pattern"
         self.frequency = [self.pattern.count(idx) for idx in range(len(self.datasets))]
         self.all_fe_datasets = all([isinstance(dataset, FEDataset) for dataset in self.datasets])
 
@@ -152,13 +153,13 @@ class InterleaveDataset(FEDataset):
         Returns:
             How many batches of data can this dataset serve per epoch. It is sum of all dataset's number of batch.
         """
-        # first calcualte the minimum number of cycles each dataset can afford according to the repeat pattern
+        # first calculate the minimum number of cycles each dataset can afford according to the repeat pattern
         num_cycles = min(len(ds) // (f * bs) for ds, f, bs in zip(self.datasets, self.frequency, self.batch_sizes))
         assert num_cycles > 0, "some dataset does not have enough samples for a single repeat pattern, please consider using `ExtendDataset` to increase its length"
         # returning the sum of number of batches of each dataset
         return sum(num_cycles * f for f in self.frequency)
 
-    def __getitem__(self, batch_idx: int) -> Dict[str, Any]:
+    def __getitem__(self, batch_idx: int) -> List[Dict[str, Any]]:
         """Extract items from the underlying datasets based on the given `batch_idx`.
 
         Args:
@@ -194,7 +195,7 @@ class InterleaveDataset(FEDataset):
     def split(self,
               *fractions: Union[float, int, Iterable[int]],
               seed: Optional[int] = None,
-              stratify: Optional[str] = None) -> Union['InterleaveDataset', List['InterleaveDataset']]:
+              stratify: Optional[str] = None) -> Union[Self, List[Self]]:
         """Split this dataset into multiple smaller datasets.
 
         This function enables several types of splitting:
