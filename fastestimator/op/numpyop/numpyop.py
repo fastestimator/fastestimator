@@ -271,7 +271,8 @@ class RemoveIf(NumpyOp):
 def forward_numpyop(ops: List[NumpyOp],
                     data: MutableMapping[str, Any],
                     state: Dict[str, Any],
-                    batched: Optional[str] = None) -> Optional[FilteredData]:
+                    batched: Optional[str] = None,
+                    shared: bool = True) -> Optional[FilteredData]:
     """Call the forward function for list of NumpyOps, and modify the data dictionary in place.
 
     Args:
@@ -280,6 +281,8 @@ def forward_numpyop(ops: List[NumpyOp],
         state: Information about the current execution context, ex. {"mode": "train"}. Must contain at least the mode.
         batched: Whether the `data` is batched or not. If it is batched, provide the string ('tf', 'torch', or 'np')
             indicating which type of tensors the batch contains.
+        shared: Whether you want to place the resulting data into multi-processing shared memory. Only applicable when
+            `batched` is 'torch'.
     """
     if not ops:
         # Shortcut to prevent wasting time in to_tensor calls if there aren't any ops
@@ -310,5 +313,5 @@ def forward_numpyop(ops: List[NumpyOp],
     if batched:
         # Cast data back to original tensor type after performing batch forward
         for key, val in data.items():
-            data[key] = to_tensor(val, target_type=batched, shared_memory=True)
+            data[key] = to_tensor(val, target_type=batched, shared_memory=shared)
     return None

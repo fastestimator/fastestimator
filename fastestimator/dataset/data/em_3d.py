@@ -72,16 +72,16 @@ def get_encode_label(label_data):
     return encoded_label
 
 
-def load_data(root_dir: Optional[str] = None, image_key: str = "image",
-              label_key: str = "label") -> Tuple[NumpyDataset, NumpyDataset]:
+def load_data(root_dir: Optional[str] = None, image_key: str = "image", label_key: str = "label",
+              tile: bool = True) -> Tuple[NumpyDataset, NumpyDataset]:
     """Load and return the 3d electron microscope platelet dataset.
 
 
     Sourced from https://bio3d-vision.github.io/platelet-description.
     Electronic Microscopy 3D cell dataset, consists of 2 3D images, one 800x800x50 and the other 800x800x24.
-    The 800x800x50 is used as training dataset and 800x800x24 is used for validation. Instead of using the entire
-    800x800 images, the 800x800x50 is tiled into 256x256x24 tiles with an overlap of 128 producing around 75 training
-    images and similarly the 800x800x24 image is tiled to produce 25 validation images.
+    The 800x800x50 is used as training dataset and 800x800x24 is used for validation. If `tile` is True, then instead
+    of using the entire 800x800 images, the 800x800x50 is tiled into 256x256x24 tiles with an overlap of 128 producing
+    around 75 training images and similarly the 800x800x24 image is tiled to produce 25 validation images.
 
     The method downloads the dataset from google drive and provides train and validation NumpyDataset.
     While the dataset contains encoded value 0 as background, its omitted in the one hot encoded class label provided
@@ -99,6 +99,7 @@ def load_data(root_dir: Optional[str] = None, image_key: str = "image",
             the data will be saved into `fastestimator_data` under the user's home directory.
         image_key: The key for image.
         label_key: The key for label.
+        tile: Whether to tile the image into multiple smaller images, or to return the individual volumes directly.
 
     Returns:
         (train_data, eval_data)
@@ -125,6 +126,19 @@ def load_data(root_dir: Optional[str] = None, image_key: str = "image",
     encoded_train_label = get_encode_label(train_label_data)
     encoded_val_label = get_encode_label(val_label_data)
 
+    if not tile:
+        train_data = np.expand_dims(np.moveaxis(train_data, 0, -1), 0)
+        train_labels = np.expand_dims(np.moveaxis(encoded_train_label, 0, -1), 0)
+        train_labels = np.eye(7, dtype=np.float32)[train_labels].take(indices=range(1, 7), axis=-1)
+
+        val_data = np.expand_dims(np.moveaxis(val_data, 0, -1), 0)
+        val_labels = np.expand_dims(np.moveaxis(encoded_val_label, 0, -1), 0)
+        val_labels = np.eye(7, dtype=np.float32)[val_labels].take(indices=range(1, 7), axis=-1)
+
+        train_data = NumpyDataset({image_key: train_data, label_key: train_labels})
+        eval_data = NumpyDataset({image_key: val_data, label_key: val_labels})
+        return train_data, eval_data
+
     train_data_slices = [train_data[0:24], train_data[13:37], train_data[26:50]]
     train_label_slices = [encoded_train_label[0:24], encoded_train_label[13:37], encoded_train_label[26:50]]
 
@@ -136,8 +150,8 @@ def load_data(root_dir: Optional[str] = None, image_key: str = "image",
     val_data_tiles = np.moveaxis(generate_tiles(val_data), 1, -1)
     val_label_tiles = np.moveaxis(generate_tiles(encoded_val_label), 1, -1)
 
-    val_label_tiles = np.eye(7)[val_label_tiles].take(indices=range(1, 7), axis=-1)
-    training_label_tiles = np.eye(7)[training_label_tiles].take(indices=range(1, 7), axis=-1)
+    val_label_tiles = np.eye(7, dtype=np.float32)[val_label_tiles].take(indices=range(1, 7), axis=-1)
+    training_label_tiles = np.eye(7, dtype=np.float32)[training_label_tiles].take(indices=range(1, 7), axis=-1)
 
     train_data = NumpyDataset({image_key: training_data_tiles, label_key: training_label_tiles})
     eval_data = NumpyDataset({image_key: val_data_tiles, label_key: val_label_tiles})

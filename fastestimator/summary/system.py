@@ -264,11 +264,14 @@ class System:
             'custom_graphs': self.custom_graphs,
             'traces': [trace.__getstate__() if hasattr(trace, '__getstate__') else {} for trace in self.traces],
             'tops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.network.ops],
+            'slops': [sl.__getstate__() if hasattr(sl, '__getstate__') else {} for sl in self.network.slicers],
             'pops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.network.postprocessing],
             'nops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.pipeline.ops],
             'ds': {
-                mode: {key: value.__getstate__()
-                       for key, value in ds.items() if hasattr(value, '__getstate__')}
+                mode: {
+                    key: value.__getstate__()
+                    for key, value in ds.items() if hasattr(value, '__getstate__')
+                }
                 for mode,
                 ds in self.pipeline.data.items()
             }
@@ -310,6 +313,7 @@ class System:
         self.custom_graphs = objects['custom_graphs']
         self._load_list(objects, 'traces', self.traces)
         self._load_list(objects, 'tops', self.network.ops)
+        self._load_list(objects, 'slops', self.network.slicers)
         self._load_list(objects, 'pops', self.network.postprocessing)
         self._load_list(objects, 'nops', self.pipeline.ops)
         self._load_dict(objects, 'ds', self.pipeline.data)

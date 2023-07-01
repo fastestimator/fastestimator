@@ -47,7 +47,6 @@ class CSVDataset(InMemoryDataset):
         kwargs: Other arguments to be passed through to pandas csv reader function. See the pandas docs for details:
             https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html.
     """
-
     def __init__(self,
                  file_path: str,
                  delimiter: str = ",",
@@ -76,4 +75,7 @@ class CSVDataset(InMemoryDataset):
             else:
                 raise ValueError(f"Received an unexpected datatype for include_if: {type(include_if)}")
         self.parent_path = os.path.dirname(file_path)
+        # Remove banned characters from column names since users won't be able to access them later. This can happen,
+        # for example, when a csv file is missing one or more headers (which would normally then render as "Unnamed: 1")
+        df.rename(lambda x: x.replace(":", "").replace("|", "").replace(";", ""), axis='columns', inplace=True)
         super().__init__(df.to_dict(orient='index'))

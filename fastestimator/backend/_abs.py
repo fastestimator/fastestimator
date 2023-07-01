@@ -12,16 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import TypeVar
-
 import numpy as np
 import tensorflow as tf
 import torch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+from fastestimator.types import ArrayT
 
 
-def abs(tensor: Tensor) -> Tensor:
+def abs(tensor: ArrayT) -> ArrayT:
     """Compute the absolute value of a tensor.
 
     This method can be used with Numpy data:

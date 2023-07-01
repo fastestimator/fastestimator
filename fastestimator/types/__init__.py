@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Protocol, Sequence, Sized, Union, \
-    runtime_checkable
+from typing import TYPE_CHECKING, Any, Callable, Collection, Dict, List, Optional, Protocol, Sequence, Sized, TypeVar, \
+    Union, runtime_checkable
 
 
 class FilteredData:
@@ -46,6 +46,8 @@ class MapDataset(Sized, Protocol):
     fe_batch_indices: Optional[Callable[[int], List[List[int]]]]
 
 
+CollectionT = TypeVar('CollectionT', bound=Collection)
+
 if TYPE_CHECKING:
     # Hide these imports for speed
     import numpy as np
@@ -55,13 +57,24 @@ if TYPE_CHECKING:
     Tensor = Union[torch.Tensor, tf.Tensor, tf.Variable]
     Array = Union[np.ndarray, Tensor]
     DataSequence = Union[Sequence, Array]
+    Model = Union[tf.keras.Model, torch.nn.Module]
+
+    # Use these when you want to indicate that you will return the same class that was input
+    TensorT = TypeVar('TensorT', torch.Tensor, tf.Tensor, tf.Variable)
+    ArrayT = TypeVar('ArrayT', torch.Tensor, tf.Tensor, tf.Variable, np.ndarray)
+    ModelT = TypeVar('ModelT', tf.keras.Model, torch.nn.Module)
 
 else:
+    TensorT = TypeVar('TensorT')
+    ArrayT = TypeVar('ArrayT')
+    ModelT = TypeVar('ModelT')
+
     # The following allow runtime isinstance() checks against the types defined above, without incurring import speed
     # penalties if the user doesn't run the isinstance check (by hiding the tf import). In python 3.10+ we could simply
     # do isinstance() checks on Union[] types, but even in that case we would incur speed penalty from importing
     # tensorflow during the Union definition, which would make the types unsuitable for fast-path code like the log
     # visualization CLI.
+
 
     class _MetaTensor(type):
         def __instancecheck__(self, __instance: Any) -> bool:
@@ -98,4 +111,18 @@ else:
             return issubclass(__subclass, (Sequence, Array))
 
     class DataSequence(metaclass=_MetaDataSequence):
+        ...
+
+    class _MetaModel(type):
+        def __instancecheck__(self, __instance: Any) -> bool:
+            import tensorflow as tf
+            import torch
+            return isinstance(__instance, (tf.keras.Model, torch.nn.Module))
+
+        def __subclasscheck__(self, __subclass: type) -> bool:
+            import tensorflow as tf
+            import torch
+            return issubclass(__subclass, (tf.keras.Model, torch.nn.Module))
+
+    class Model(metaclass=_MetaModel):
         ...

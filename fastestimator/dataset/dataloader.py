@@ -15,7 +15,7 @@
 import functools
 import random
 from abc import ABC
-from typing import Any, Callable, Dict, List, Optional, Sized, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Protocol, Sized, Tuple, Union
 
 import numpy as np
 from torch import Tensor
@@ -27,9 +27,13 @@ from torch.utils.data.dataloader import _BaseDataLoaderIter, _MultiProcessingDat
 
 from fastestimator.dataset.extend_dataset import ExtendDataset
 from fastestimator.dataset.op_dataset import OpDataset
-from fastestimator.types import MapDataset
-from fastestimator.types import FilteredData
+from fastestimator.types import FilteredData, MapDataset
 from fastestimator.util.util import Suppressor
+
+
+class PostProcessFunction(Protocol):
+    def __call__(self, data: Dict[str, Any], shared: bool = True) -> Union[Dict[str, Any], FilteredData]:
+        ...
 
 
 class FEDataLoader(DataLoader):
@@ -66,7 +70,7 @@ class FEDataLoader(DataLoader):
 
     def __init__(self,
                  dataset: MapDataset,
-                 postprocess_fn: Optional[Callable[[Dict[str, Any]], Union[Dict[str, Any], FilteredData]]] = None,
+                 postprocess_fn: Optional[PostProcessFunction] = None,
                  batch_size: Optional[int] = 1,
                  steps_per_epoch: Optional[int] = None,
                  shuffle: bool = False,
@@ -275,7 +279,8 @@ def _next_pre_batch(self: _BaseFELoaderIter) -> Dict[str, Tensor]:
     collated = self.fe_collate_fn(real_batch)
     # Apply any batch-level operations
     if self.fe_postprocess_fn is not None:
-        collated = self.fe_postprocess_fn(collated)
+        # Don't place tensor into shared memory if it's already on the host device as this can lead to infinite lockup
+        collated = self.fe_postprocess_fn(collated, shared=False)
         if isinstance(collated, FilteredData):
             if collated.replacement:
                 self.fe_samples_yielded -= len(real_batch)
@@ -314,7 +319,7 @@ def _next_post_batch(self: _BaseFELoaderIter) -> Dict[str, Tensor]:
                 # The else block is reached iff the for loop never breaks (probably should never get here)
                 collated = self.fe_collate_fn(candidate_batch)
                 if self.fe_postprocess_fn is not None:
-                    collated = self.fe_postprocess_fn(collated)
+                    collated = self.fe_postprocess_fn(collated, shared=False)
                     if isinstance(collated, FilteredData):
                         if not collated.replacement:
                             self.fe_samples_yielded += 1
