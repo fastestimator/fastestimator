@@ -70,6 +70,11 @@ def to_set(data: Any) -> Set[Any]:
 
 
 @overload
+def to_list(data: Set[KT]) -> List[KT]:
+    ...
+
+
+@overload
 def to_list(data: Union[None, Dict[KT, VT], Iterable[Dict[KT, VT]]]) -> List[Dict[KT, VT]]:
     ...
 

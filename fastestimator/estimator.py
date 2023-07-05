@@ -235,6 +235,7 @@ class Estimator:
         all_traces = get_current_items(self.traces_in_use, run_modes={"train", "eval"})
         sort_traces(all_traces, ds_ids=[])  # This ensures that the traces can sort properly for on_begin and on_end
         monitor_names = self.monitor_names
+        unmet_monitor_names = set(monitor_names)
         for mode in self.pipeline.get_modes() - {"test"}:
             scheduled_items = self.pipeline.get_scheduled_items(mode) + self.network.get_scheduled_items(
                 mode) + self.get_scheduled_items(mode)
@@ -288,7 +289,7 @@ class Estimator:
                         assert isinstance(batch, dict), "please make sure data output format is dictionary"
                         pipeline_output_keys = to_set(batch.keys())
 
-                        monitor_names = monitor_names - (pipeline_output_keys | network_output_keys)
+                        unmet_monitor_names = unmet_monitor_names - (pipeline_output_keys | network_output_keys)
                         unmet_requirements = trace_input_keys - (pipeline_output_keys | network_output_keys
                                                                  | trace_output_keys)
                         assert not unmet_requirements, \
@@ -297,7 +298,7 @@ class Estimator:
                         sort_traces(traces, ds_ids=ds_ids, available_outputs=pipeline_output_keys | network_output_keys)
                         trace_input_keys.update(traces[0].inputs)
                         self.network.run_step(batch)
-        assert not monitor_names, "found missing key(s): {}".format(monitor_names)
+        assert not unmet_monitor_names, "found missing key(s): {}".format(unmet_monitor_names)
 
     def get_scheduled_items(self, mode: str) -> List[Any]:
         """Get a list of items considered for scheduling.
