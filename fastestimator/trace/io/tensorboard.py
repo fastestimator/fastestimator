@@ -218,7 +218,7 @@ class _TfWriter(_BaseWriter):
                 # noinspection PyProtectedMember
                 summary_ops_v2.graph(self.network._forward_step_static._concrete_stateful_fn.graph)
             # Record the individual model summaries
-            for model in self.network.epoch_models:
+            for model in self.network.ctx_models:
                 summary_writable = (model.__class__.__name__ == 'Sequential'
                                     or (hasattr(model, '_is_graph_network') and model._is_graph_network))
                 if summary_writable:
@@ -254,7 +254,7 @@ class _TorchWriter(_BaseWriter):
     This class is intentionally not @traceable.
     """
     def write_epoch_models(self, mode: str, epoch: int) -> None:
-        for model in self.network.epoch_models:
+        for model in self.network.ctx_models:
             inputs = model.fe_input_spec.get_dummy_input()
             self.summary_writers[mode].add_graph(model.module if get_num_gpus() > 1 else model, input_to_model=inputs)
 
@@ -365,9 +365,9 @@ class TensorBoard(Trace):
             self.painted_graphs = set()
 
     def on_batch_end(self, data: Data) -> None:
-        if self.write_graph and self.system.network.epoch_models.symmetric_difference(self.painted_graphs):
+        if self.write_graph and self.system.network.ctx_models.symmetric_difference(self.painted_graphs):
             self.writer.write_epoch_models(mode=self.system.mode, epoch=self.system.epoch_idx)
-            self.painted_graphs = self.system.network.epoch_models
+            self.painted_graphs = self.system.network.ctx_models
         # Collect embeddings if present in batch but viewing per epoch. Don't aggregate during training though
         if self.system.mode != 'train' and self.embedding_freq.freq and not self.embedding_freq.is_step and \
                 self.system.epoch_idx % self.embedding_freq.freq == 0:

@@ -23,7 +23,7 @@ import torch.nn as nn
 import torchvision
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
-from scipy.ndimage.measurements import center_of_mass
+from scipy.ndimage import center_of_mass
 
 import fastestimator as fe
 from fastestimator.dataset.data import mscoco
@@ -631,3 +631,9 @@ def get_estimator(data_dir=None,
                              train_steps_per_epoch=train_steps_per_epoch,
                              eval_steps_per_epoch=eval_steps_per_epoch)
     return estimator
+
+
+if __name__ == "__main__":
+    est = get_estimator()
+    est.fit()
+    est.test()
