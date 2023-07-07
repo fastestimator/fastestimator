@@ -286,7 +286,8 @@ class Estimator:
                                     # TF multi-gpu print-spams here in version 2.11
                                     batch = next(iter(loader))
                             batch = self._configure_tensor(loader, batch)
-                        assert isinstance(batch, dict), "please make sure data output format is dictionary"
+                        assert isinstance(batch, dict), \
+                            f"please make sure data output format is dictionary (got {type(batch)})"
                         pipeline_output_keys = to_set(batch.keys())
 
                         unmet_monitor_names = unmet_monitor_names - (pipeline_output_keys | network_output_keys)
