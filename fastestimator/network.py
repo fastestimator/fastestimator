@@ -656,7 +656,7 @@ class TFNetwork(BaseNetwork):
         # re-build graphs every epoch there is no reason to keep old ones around.
         strategy = tf.distribute.get_strategy()
         if isinstance(strategy, tf.distribute.MirroredStrategy):
-            return  # TODO - Find a way to clear graph for multi-gpu
+            pass  # TODO - Find a way to clear graph for multi-gpu
         else:
             tf.keras.backend.clear_session()
         super().__exit__(*exc)
@@ -809,7 +809,8 @@ class TFNetwork(BaseNetwork):
             if batch_size < num_devices:
                 batch = self._fill_batch(batch, num_devices - batch_size)
                 sub_sample = True
-            batch = next(iter(strategy.experimental_distribute_dataset(tf.data.Dataset.from_tensors(batch))))
+            with Suppressor(show_if_exception=True):
+                batch = next(iter(strategy.experimental_distribute_dataset(tf.data.Dataset.from_tensors(batch))))
         batch = super()._do_transform(batch)
         if sub_sample:
             batch = self._subsample_data(batch, batch_size)
@@ -849,7 +850,7 @@ class TFNetwork(BaseNetwork):
         Returns:
             Subsampled data.
         """
-        if isinstance(data, dict):
+        if isinstance(data, (dict, ChainMap)):
             return {key: self._subsample_data(val, n) for (key, val) in data.items()}
         elif isinstance(data, list):
             return [self._subsample_data(val, n) for val in data]
