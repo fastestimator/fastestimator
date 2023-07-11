@@ -22,6 +22,7 @@ import sys
 import tempfile
 import time
 from contextlib import ContextDecorator
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, MutableMapping, Optional, Tuple, Type, TypeVar, Union
 
@@ -385,6 +386,7 @@ def detach_tensors(data: T) -> T:
     return data
 
 
+@lru_cache()
 def get_device() -> torch.device:
     """Get the torch device for the current hardware.
 
@@ -400,6 +402,7 @@ def get_device() -> torch.device:
     return device
 
 
+@lru_cache()
 def get_num_gpus() -> int:
     """Get the number of GPUs available.
 
@@ -414,6 +417,7 @@ def get_num_gpus() -> int:
         return 0
 
 
+@lru_cache()
 def get_gpu_info() -> List[str]:
     """Get summaries of all of the GPUs accessible on this machine.
 
@@ -442,6 +446,7 @@ def get_gpu_info() -> List[str]:
     return []
 
 
+@lru_cache()
 def get_num_devices() -> int:
     """Determine the number of available GPUs.
 
@@ -451,6 +456,7 @@ def get_num_devices() -> int:
     return max(torch.cuda.device_count(), 1)
 
 
+@lru_cache()
 def cpu_count(limit: Optional[int] = None) -> int:
     """Determine the number of available CPUs (correcting for docker container limits).
 

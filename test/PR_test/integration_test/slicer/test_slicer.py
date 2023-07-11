@@ -16,10 +16,19 @@ import tempfile
 import unittest
 from typing import List, Tuple
 
+import numpy as np
+import tensorflow as tf
+import torch
+
 import fastestimator as fe
-from fastestimator.op.tensorop.model import ModelOp
-from fastestimator.slicer import Slicer
+from fastestimator.architecture.pytorch import UNet as UNet_Torch
+from fastestimator.architecture.tensorflow import UNet as UNet_TF
+from fastestimator.dataset.numpy_dataset import NumpyDataset
+from fastestimator.op.tensorop.loss import CrossEntropy
+from fastestimator.op.tensorop.model import ModelOp, UpdateOp
+from fastestimator.slicer import AxisSlicer, MeanUnslicer, Slicer
 from fastestimator.test.unittest_util import sample_system_object
+from fastestimator.trace.metric import Dice
 from fastestimator.types import Array
 
 
@@ -36,6 +45,120 @@ class FakeSlicer(Slicer):
 
 
 class TestSlicer(unittest.TestCase):
+    def test_network_transform_tf(self):
+
+        sample_batch = {
+            "image": torch.ones((1, 32, 32, 24, 1), dtype=torch.float32),
+            "label": torch.zeros((1, 32, 32, 24, 6), dtype=torch.uint8)
+        }
+
+        model = fe.build(
+            model_fn=lambda: UNet_TF(input_size=(32, 32, 1), output_channel=6),
+            optimizer_fn=lambda: tf.optimizers.legacy.Adam(learning_rate=0.0001),
+        )
+        network = fe.Network(
+            ops=[
+                ModelOp(inputs="image", model=model, outputs="pred"),
+                CrossEntropy(inputs=("pred", "label"), outputs="loss", form="binary"),
+                UpdateOp(model=model, loss_name="loss")
+            ],
+            slicers=[AxisSlicer(slice=["image", "label"], unslice=["pred"], axis=3), MeanUnslicer(unslice="loss")])
+        sample_prediction = network.transform(data=sample_batch, mode='train')
+        self.assertEqual(sample_prediction['loss'].shape, [])
+        np.testing.assert_array_almost_equal(sample_prediction["image"], sample_batch["image"])
+        np.testing.assert_array_almost_equal(sample_prediction["label"], sample_batch["label"])
+        self.assertEqual(sample_prediction["pred"].shape, sample_batch["label"].shape)
+
+    def test_network_transform_torch(self):
+
+        sample_batch = {
+            "image": torch.ones((1, 1, 32, 32, 24), dtype=torch.float32),
+            "label": torch.zeros((1, 6, 32, 32, 24), dtype=torch.uint8)
+        }
+
+        model = fe.build(
+            model_fn=lambda: UNet_Torch(input_size=(1, 32, 32), output_channel=6),
+            optimizer_fn="adam",
+        )
+        network = fe.Network(
+            ops=[
+                ModelOp(inputs="image", model=model, outputs="pred"),
+                CrossEntropy(inputs=("pred", "label"), outputs="loss", form="binary"),
+                UpdateOp(model=model, loss_name="loss")
+            ],
+            slicers=[AxisSlicer(slice=["image", "label"], unslice=["pred"], axis=-1), MeanUnslicer(unslice="loss")])
+        sample_prediction = network.transform(data=sample_batch, mode='train')
+        self.assertEqual(len(sample_prediction['loss'].shape), 0)
+        np.testing.assert_array_almost_equal(sample_prediction["image"], sample_batch["image"])
+        np.testing.assert_array_almost_equal(sample_prediction["label"], sample_batch["label"])
+        self.assertEqual(sample_prediction["pred"].shape, sample_batch["label"].shape)
+
+    def test_network_forward_torch(self):
+
+        ds_size = 3
+
+        sample_data = {
+            "image": np.ones((ds_size, 1, 32, 32, 24), dtype=np.float32),
+            "label": np.zeros((ds_size, 6, 32, 32, 24), dtype=np.uint8)
+        }
+
+        dataset = NumpyDataset(data=sample_data)
+
+        pipeline = fe.Pipeline(train_data=dataset, eval_data=dataset, batch_size=1)
+
+        model = fe.build(
+            model_fn=lambda: UNet_Torch(input_size=(1, 32, 32), output_channel=6),
+            optimizer_fn="adam",
+        )
+        network = fe.Network(
+            ops=[
+                ModelOp(inputs="image", model=model, outputs="pred"),
+                CrossEntropy(inputs=("pred", "label"), outputs="loss", form="binary"),
+                UpdateOp(model=model, loss_name="loss")
+            ],
+            slicers=[AxisSlicer(slice=["image", "label"], unslice=["pred"], axis=-1), MeanUnslicer(unslice="loss")])
+
+        estimator = fe.Estimator(pipeline=pipeline,
+                                 network=network,
+                                 traces=[Dice(true_key="label", pred_key="pred")],
+                                 epochs=1)
+        estimator.fit()
+
+        self.assertEqual(estimator.system.global_step, ds_size)
+
+    def test_network_forward_tf(self):
+
+        ds_size = 3
+
+        sample_data = {
+            "image": np.ones((ds_size, 32, 32, 24, 1), dtype=np.float32),
+            "label": np.zeros((ds_size, 32, 32, 24, 6), dtype=np.uint8)
+        }
+
+        dataset = NumpyDataset(data=sample_data)
+
+        pipeline = fe.Pipeline(train_data=dataset, eval_data=dataset, batch_size=1)
+
+        model = fe.build(
+            model_fn=lambda: UNet_TF(input_size=(32, 32, 1), output_channel=6),
+            optimizer_fn=lambda: tf.optimizers.legacy.Adam(learning_rate=0.0001),
+        )
+        network = fe.Network(
+            ops=[
+                ModelOp(inputs="image", model=model, outputs="pred"),
+                CrossEntropy(inputs=("pred", "label"), outputs="loss", form="binary"),
+                UpdateOp(model=model, loss_name="loss")
+            ],
+            slicers=[AxisSlicer(slice=["image", "label"], unslice=["pred"], axis=3), MeanUnslicer(unslice="loss")])
+
+        estimator = fe.Estimator(pipeline=pipeline,
+                                 network=network,
+                                 traces=[Dice(true_key="label", pred_key="pred")],
+                                 epochs=1)
+        estimator.fit()
+
+        self.assertEqual(estimator.system.global_step, ds_size)
+
     def test_save_and_load_state_tf(self):
         def instantiate_system():
             system = sample_system_object()
