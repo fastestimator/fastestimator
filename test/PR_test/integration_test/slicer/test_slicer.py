@@ -26,7 +26,7 @@ from fastestimator.architecture.tensorflow import UNet as UNet_TF
 from fastestimator.dataset.numpy_dataset import NumpyDataset
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
-from fastestimator.slicer import AxisSlicer, MeanUnslicer, Slicer
+from fastestimator.slicer import AxisSlicer, MeanUnslicer, Slicer, SlidingSlicer
 from fastestimator.test.unittest_util import sample_system_object
 from fastestimator.trace.metric import Dice
 from fastestimator.types import Array
@@ -151,6 +151,49 @@ class TestSlicer(unittest.TestCase):
                 UpdateOp(model=model, loss_name="loss")
             ],
             slicers=[AxisSlicer(slice=["image", "label"], unslice=["pred"], axis=3), MeanUnslicer(unslice="loss")])
+
+        estimator = fe.Estimator(pipeline=pipeline,
+                                 network=network,
+                                 traces=[Dice(true_key="label", pred_key="pred")],
+                                 epochs=1)
+        result = estimator.fit("test")
+
+        self.assertEqual(estimator.system.global_step, ds_size)
+        self.assertGreaterEqual(float(result.history['eval']['Dice'][ds_size]), 0)
+
+    def test_network_forward_slider_tf(self):
+
+        ds_size = 3
+
+        sample_data = {
+            "image": np.ones((ds_size, 64, 64, 2, 1), dtype=np.float32),
+            "label": np.ones((ds_size, 64, 64, 2, 6), dtype=np.uint8)
+        }
+
+        dataset = NumpyDataset(data=sample_data)
+
+        pipeline = fe.Pipeline(train_data=dataset, eval_data=dataset, batch_size=1, num_process=0)
+
+        model = fe.build(
+            model_fn=lambda: UNet_TF(input_size=(32, 32, 1), output_channel=6),
+            optimizer_fn="adam",
+        )
+        network = fe.Network(
+            ops=[
+                ModelOp(inputs="image", model=model, outputs="pred"),
+                CrossEntropy(inputs=("pred", "label"), outputs="loss", form="binary"),
+                UpdateOp(model=model, loss_name="loss")
+            ],
+            slicers=[
+                SlidingSlicer(
+                    slice=["image", "label"],
+                    unslice=["pred"],
+                    window_size=(-1, 32, 32, 1, -1),
+                    strides=(0, 16, 16, 1, 0),
+                    squeeze_window=True,
+                ),
+                MeanUnslicer(unslice="loss")
+            ])
 
         estimator = fe.Estimator(pipeline=pipeline,
                                  network=network,
