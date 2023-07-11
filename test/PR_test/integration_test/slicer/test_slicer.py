@@ -48,12 +48,12 @@ class TestSlicer(unittest.TestCase):
     def test_network_transform_tf(self):
 
         sample_batch = {
-            "image": torch.ones((1, 32, 32, 24, 1), dtype=torch.float32),
-            "label": torch.zeros((1, 32, 32, 24, 6), dtype=torch.uint8)
+            "image": torch.ones((1, 16, 16, 10, 1), dtype=torch.float32),
+            "label": torch.zeros((1, 16, 16, 10, 6), dtype=torch.uint8)
         }
 
         model = fe.build(
-            model_fn=lambda: UNet_TF(input_size=(32, 32, 1), output_channel=6),
+            model_fn=lambda: UNet_TF(input_size=(16, 16, 1), output_channel=6),
             optimizer_fn=lambda: tf.optimizers.legacy.Adam(learning_rate=0.0001),
         )
         network = fe.Network(
@@ -72,12 +72,12 @@ class TestSlicer(unittest.TestCase):
     def test_network_transform_torch(self):
 
         sample_batch = {
-            "image": torch.ones((1, 1, 32, 32, 24), dtype=torch.float32),
-            "label": torch.zeros((1, 6, 32, 32, 24), dtype=torch.uint8)
+            "image": torch.ones((1, 1, 16, 16, 10), dtype=torch.float32),
+            "label": torch.zeros((1, 6, 16, 16, 10), dtype=torch.uint8)
         }
 
         model = fe.build(
-            model_fn=lambda: UNet_Torch(input_size=(1, 32, 32), output_channel=6),
+            model_fn=lambda: UNet_Torch(input_size=(1, 16, 16), output_channel=6),
             optimizer_fn="adam",
         )
         network = fe.Network(
@@ -98,8 +98,8 @@ class TestSlicer(unittest.TestCase):
         ds_size = 3
 
         sample_data = {
-            "image": np.ones((ds_size, 1, 32, 32, 24), dtype=np.float32),
-            "label": np.zeros((ds_size, 6, 32, 32, 24), dtype=np.uint8)
+            "image": np.ones((ds_size, 1, 16, 16, 10), dtype=np.float32),
+            "label": np.ones((ds_size, 6, 16, 16, 10), dtype=np.uint8)
         }
 
         dataset = NumpyDataset(data=sample_data)
@@ -107,7 +107,7 @@ class TestSlicer(unittest.TestCase):
         pipeline = fe.Pipeline(train_data=dataset, eval_data=dataset, batch_size=1)
 
         model = fe.build(
-            model_fn=lambda: UNet_Torch(input_size=(1, 32, 32), output_channel=6),
+            model_fn=lambda: UNet_Torch(input_size=(1, 16, 16), output_channel=6),
             optimizer_fn="adam",
         )
         network = fe.Network(
@@ -122,17 +122,18 @@ class TestSlicer(unittest.TestCase):
                                  network=network,
                                  traces=[Dice(true_key="label", pred_key="pred")],
                                  epochs=1)
-        estimator.fit()
+        result = estimator.fit("test")
 
         self.assertEqual(estimator.system.global_step, ds_size)
+        self.assertGreaterEqual(float(result.history['eval']['Dice'][ds_size]), 0)
 
     def test_network_forward_tf(self):
 
         ds_size = 3
 
         sample_data = {
-            "image": np.ones((ds_size, 32, 32, 24, 1), dtype=np.float32),
-            "label": np.zeros((ds_size, 32, 32, 24, 6), dtype=np.uint8)
+            "image": np.ones((ds_size, 16, 16, 10, 1), dtype=np.float32),
+            "label": np.ones((ds_size, 16, 16, 10, 6), dtype=np.uint8)
         }
 
         dataset = NumpyDataset(data=sample_data)
@@ -140,7 +141,7 @@ class TestSlicer(unittest.TestCase):
         pipeline = fe.Pipeline(train_data=dataset, eval_data=dataset, batch_size=1)
 
         model = fe.build(
-            model_fn=lambda: UNet_TF(input_size=(32, 32, 1), output_channel=6),
+            model_fn=lambda: UNet_TF(input_size=(16, 16, 1), output_channel=6),
             optimizer_fn=lambda: tf.optimizers.legacy.Adam(learning_rate=0.0001),
         )
         network = fe.Network(
@@ -155,9 +156,10 @@ class TestSlicer(unittest.TestCase):
                                  network=network,
                                  traces=[Dice(true_key="label", pred_key="pred")],
                                  epochs=1)
-        estimator.fit()
+        result = estimator.fit("test")
 
         self.assertEqual(estimator.system.global_step, ds_size)
+        self.assertGreaterEqual(float(result.history['eval']['Dice'][ds_size]), 0)
 
     def test_save_and_load_state_tf(self):
         def instantiate_system():
