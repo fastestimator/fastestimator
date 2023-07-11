@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Iterable, List, Optional, Sequence, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 import tensorflow as tf
 import torch
@@ -25,6 +25,7 @@ from fastestimator.slicer.slicer import Slicer
 from fastestimator.types import Tensor, TensorT
 from fastestimator.util.base_util import to_list
 from fastestimator.util.traceability_util import traceable
+from fastestimator.util.util import get_num_gpus
 
 
 @traceable()
@@ -108,7 +109,7 @@ class SlidingSlicer(Slicer):
         assert unslice_mode in options, f"unslice_mode must be one of: {options}, but got {unslice_mode}"
         self.unslice_mode = unslice_mode
         self.static_unslice_shape = True if unslice_shape is not None else False
-        self.unslice_shape = unslice_shape
+        self.unslice_shape: Optional[List[int]] = to_list(unslice_shape)
         if self.unslice_inputs and not self.slice_inputs:
             assert self.static_unslice_shape, "If you want to use SlidingSlicer to unslice data you must either " + \
                 "use it to perform the initial slicing, or else provide the unslice_shape that you want your data " + \
@@ -118,15 +119,22 @@ class SlidingSlicer(Slicer):
             for idx, size in enumerate(self.window_size):
                 if size == 1:
                     self.auto_squeeze.append(idx)
+        self.replica_batch_sizes: Dict[int, int] = {}
 
     def _slice_batch(self, batch: Tensor) -> List[Tensor]:
-        shape = get_shape(batch)
+        shape = list(get_shape(batch))
         if len(self.window_size) != len(shape):
             raise ValueError(f"Sliding window size: {self.window_size} is incompatible with data shape: {shape}. " + \
                                "They must have the same rank.")
         if self.unslice_inputs and not self.static_unslice_shape:
             # If we have to unslice things later, then need to remember the desired shape if the user didn't give us one
-            self.unslice_shape = tuple([int(x) for x in tuple(shape)])
+            self.unslice_shape = [int(x) for x in tuple(shape)]
+            if get_num_gpus() > 1:
+                # Unfortunately in tf multi-gpu the batches are split over multiple replicas, in which case we need to
+                # manually correct the desired batch dimension later
+                replica_context = tf.distribute.get_replica_context()
+                replica_id = int(replica_context.replica_id_in_sync_group)
+                self.replica_batch_sizes[replica_id] = int(shape[0])
         stride_template = [
             slice(None) if stride == 0 or stride >= dim else None for stride, dim in zip(self.strides, shape)
         ]
@@ -137,7 +145,7 @@ class SlidingSlicer(Slicer):
             minibatches = [squeeze(minibatch, axis=ax) for minibatch in minibatches]
         return minibatches
 
-    def _get_cuts(self, data_shape: Tuple[int, ...], stride_template: List[Optional[slice]]) -> List[List[slice]]:
+    def _get_cuts(self, data_shape: List[int], stride_template: List[Optional[slice]]) -> List[List[slice]]:
         results = []
         for axis, cut_template in enumerate(stride_template):
             if cut_template is None:
@@ -163,7 +171,7 @@ class SlidingSlicer(Slicer):
             return [stride_template]
         return results
 
-    def _solve_padding(self, batch: TensorT, batch_shape: Tuple[int, ...]) -> TensorT:
+    def _solve_padding(self, batch: TensorT, batch_shape: List[int]) -> TensorT:
         if self.pad_mode == 'constant':
             paddings = [[0, int(win - ((tru % (stride or tru)) or win))] for tru,
                         win,
@@ -182,6 +190,8 @@ class SlidingSlicer(Slicer):
     def _unslice_batch(self, slices: Tuple[Tensor, ...], key: str) -> Tensor:
         target_shape = self.unslice_shape
         assert target_shape is not None, "Unit tests should run forward_slicers before running reverse_slicers"
+        if self.replica_batch_sizes:
+            target_shape[0] = sum(self.replica_batch_sizes.values())
 
         stride_template = [
             slice(None) if stride == 0 or stride >= dim else None for stride, dim in zip(self.strides, target_shape)
