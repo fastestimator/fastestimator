@@ -649,6 +649,7 @@ class TFNetwork(BaseNetwork):
         opt_str = "x".join(
             [str(id(model.current_optimizer)) for model in self.ctx_models if hasattr(model, 'current_optimizer')])
         self.ctx_state["_force_tf_retrace"] = hash(trainable_str + opt_str)  # Hash to keep at fixed memory overhead
+        self.ctx_manual_gpu_data_handling = False
         return self
 
     def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
@@ -676,19 +677,26 @@ class TFNetwork(BaseNetwork):
         batch_in = self._get_effective_batch_input(batch)
         strategy = tf.distribute.get_strategy()
         if isinstance(strategy, tf.distribute.MirroredStrategy):
-            if self.ctx_state["eager"]:
-                prediction = strategy.run(self._forward_step_eager,
-                                          args=(batch_in, self.ctx_state, self.ctx_ops, to_list(self.ctx_outputs)))
-            else:
-                prediction = strategy.run(self._forward_step_static,
-                                          args=(batch_in, self.ctx_state, self.ctx_ops, to_list(self.ctx_outputs)))
+            with Suppressor(allow_pyprint=True, show_if_exception=True):
+                if self.ctx_manual_gpu_data_handling:
+                    batch_in = next(
+                        iter(strategy.experimental_distribute_dataset(tf.data.Dataset.from_tensors(batch_in))))
+                if self.ctx_state["eager"]:
+                    prediction = strategy.run(self._forward_step_eager,
+                                              args=(batch_in, self.ctx_state, self.ctx_ops, to_list(self.ctx_outputs)))
+                else:
+                    prediction = strategy.run(self._forward_step_static,
+                                              args=(batch_in, self.ctx_state, self.ctx_ops, to_list(self.ctx_outputs)))
             batch = self._per_replica_to_global(batch)
             prediction = self._per_replica_to_global(prediction)
         else:
-            if self.ctx_state["eager"]:
-                prediction = self._forward_step_eager(batch_in, self.ctx_state, self.ctx_ops, to_list(self.ctx_outputs))
-            else:
-                with Suppressor(allow_pyprint=True, show_if_exception=True):
+            with Suppressor(allow_pyprint=True, show_if_exception=True):
+                if self.ctx_state["eager"]:
+                    prediction = self._forward_step_eager(batch_in,
+                                                          self.ctx_state,
+                                                          self.ctx_ops,
+                                                          to_list(self.ctx_outputs))
+                else:
                     prediction = self._forward_step_static(batch_in,
                                                            self.ctx_state,
                                                            self.ctx_ops,
@@ -809,11 +817,11 @@ class TFNetwork(BaseNetwork):
             if batch_size < num_devices:
                 batch = self._fill_batch(batch, num_devices - batch_size)
                 sub_sample = True
-            with Suppressor(show_if_exception=True):
-                batch = next(iter(strategy.experimental_distribute_dataset(tf.data.Dataset.from_tensors(batch))))
+            self.ctx_manual_gpu_data_handling = True
         batch = super()._do_transform(batch)
         if sub_sample:
             batch = self._subsample_data(batch, batch_size)
+            self.ctx_manual_gpu_data_handling = False
         return batch
 
     def _fill_batch(self, data: T, n: int) -> T:
@@ -836,7 +844,7 @@ class TFNetwork(BaseNetwork):
             return set([self._fill_batch(val, n) for val in data])
         elif hasattr(data, "shape"):
             paddings = [[0, n]] + [[0, 0] for _ in range(len(data.shape) - 1)]
-            return np.pad(data, pad_width=paddings, mode="symmetric")
+            return tf.pad(data, paddings=paddings, mode="symmetric")
         else:
             return data
 
