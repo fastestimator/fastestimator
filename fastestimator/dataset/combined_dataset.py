@@ -17,6 +17,7 @@ from typing import List
 
 from torch.utils.data import ConcatDataset, Dataset
 
+from fastestimator.dataset.interleave_dataset import InterleaveDataset
 from fastestimator.util.traceability_util import traceable
 
 
@@ -36,6 +37,8 @@ class CombinedDataset(ConcatDataset):
         keys = None
 
         for ds in datasets:
+            if isinstance(ds, InterleaveDataset):
+                raise AssertionError("CombinedDataset does not support InterleaveDataset")
             if isinstance(ds, Dataset) and isinstance(ds[0], dict):
                 if keys is None:
                     keys = ds[0].keys()

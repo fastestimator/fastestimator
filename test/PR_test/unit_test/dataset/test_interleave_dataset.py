@@ -15,6 +15,7 @@
 import unittest
 
 from fastestimator.dataset.batch_dataset import BatchDataset
+from fastestimator.dataset.extend_dataset import ExtendDataset
 from fastestimator.dataset.interleave_dataset import InterleaveDataset
 from fastestimator.dataset.numpy_dataset import NumpyDataset
 
@@ -97,6 +98,24 @@ class TestInterleaveDataset(unittest.TestCase):
         ds1, ds2 = NumpyDataset(self.data1), NumpyDataset(self.data2)
         dataset = InterleaveDataset(datasets={"ds1": ds1, "ds2": ds2})
         self.assertEqual(len(dataset), 20)
+
+    def test_length_extend(self):
+        ds1, ds2 = ExtendDataset(NumpyDataset(self.data1), spoof_length=100), NumpyDataset(self.data2)
+        dataset = InterleaveDataset(datasets={"ds1": ds1, "ds2": ds2})
+        self.assertEqual(len(dataset), 40)
+        dataset.set_batch_sizes([5, 1])
+        self.assertEqual(len(dataset), 40)
+        self.assertEqual(len(dataset[38]), 5)
+        self.assertEqual(len(dataset[39]), 1)
+
+    def test_length_contract(self):
+        ds1, ds2 = NumpyDataset(self.data1), ExtendDataset(NumpyDataset(self.data2), spoof_length=5)
+        dataset = InterleaveDataset(datasets={"ds1": ds1, "ds2": ds2})
+        self.assertEqual(len(dataset), 10)
+        dataset.set_batch_sizes([2, 2])
+        self.assertEqual(len(dataset), 4)
+        self.assertEqual(len(dataset[2]), 2)
+        self.assertEqual(len(dataset[3]), 2)
 
     def test_split_with_batch_ds(self):
         ds1, ds2 = NumpyDataset(self.data1), NumpyDataset(self.data2)

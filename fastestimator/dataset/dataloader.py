@@ -307,14 +307,29 @@ def _next_post_batch(self: _BaseFELoaderIter) -> Dict[str, Tensor]:
             return candidate_batch
         if isinstance(collated, FilteredData):
             # The batch was filtered during the forward_batch pass
-            if not collated.replacement:
-                self.fe_samples_yielded += 1
+            if isinstance(self._dataset, InterleaveDataset):
+                # We have to burn an entire cycle of data in order to ensure that the next sample comes from the desired
+                # dataset again without messing up any interactions between a fancy pattern and merge_grad
+                for _ in range(len(self._dataset.pattern) - 1):
+                    self._next_data()
+                if not collated.replacement:
+                    self.fe_samples_yielded += len(self._dataset.pattern)  # You burned this one + the rest of the cycle
+            else:
+                if not collated.replacement:
+                    self.fe_samples_yielded += 1
         else:
             # The filtered data appeared before batching, need to find it
             for instance in candidate_batch:
                 if isinstance(instance, FilteredData):
-                    if not instance.replacement:
-                        self.fe_samples_yielded += 1
+                    if isinstance(self._dataset, InterleaveDataset):
+                        # Burn data
+                        for _ in range(len(self._dataset.pattern) - 1):
+                            self._next_data()
+                        if not instance.replacement:
+                            self.fe_samples_yielded += len(self._dataset.pattern)
+                    else:
+                        if not instance.replacement:
+                            self.fe_samples_yielded += 1
                     break
             else:
                 # The else block is reached iff the for loop never breaks (probably should never get here)
@@ -322,8 +337,15 @@ def _next_post_batch(self: _BaseFELoaderIter) -> Dict[str, Tensor]:
                 if self.fe_postprocess_fn is not None:
                     collated = self.fe_postprocess_fn(collated, shared=False)
                     if isinstance(collated, FilteredData):
-                        if not collated.replacement:
-                            self.fe_samples_yielded += 1
+                        if isinstance(self._dataset, InterleaveDataset):
+                            # Burn data
+                            for _ in range(len(self._dataset.pattern) - 1):
+                                self._next_data()
+                            if not collated.replacement:
+                                self.fe_samples_yielded += len(self._dataset.pattern)
+                        else:
+                            if not collated.replacement:
+                                self.fe_samples_yielded += 1
                         return _next_post_batch(self)
                 self.fe_samples_yielded += 1
                 return collated

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import math
 import random
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Union, cast, overload
 
@@ -54,6 +55,18 @@ class InterleaveDataset(FEDataset):
                                 Batch(batch_size=32, ds_id="a"),
                                 Batch(batch_size=64, ds_id="b")])
     ```
+
+    Important Limitations:
+        1. If any keys are not common between all of your 'datasets' you should not try to use those keys later in
+            Network or Traces.
+        2. If you are using RemoveIf to filter data, an entire pattern-worth of data will be dropped every time that an
+            undesired element is encountered. This means your pipeline processing will be very inefficient and you will
+            almost certainly want to use replacement=True to ensure you don't just wipe out your entire epoch.
+        3. If you use a BatchOp in your pipeline, all subsequent batch-based pipeline ops must be common across
+            all of your interleaved datasets. Any batch padding values must also be the same across all datasets.
+        4. InterleaveDataset always behaves as if drop_last is True for each of its constituent datasets.
+
+    Limitations 2, 3, and 4 are expected to be removed once https://github.com/pytorch/pytorch/issues/104761 is fixed.
 
     Args:
         datasets: List of datasets or a dictionary with key being the dataset name, value being the dataset.
@@ -114,7 +127,8 @@ class InterleaveDataset(FEDataset):
         self.fe_batch = None  # fe_batch member variable is used by FEDataLoader
         self.index_maps = []
         self.child_reset_fns = [ds.fe_reset_ds for ds in self.datasets if hasattr(ds, 'fe_reset_ds')]
-        self.fe_reset_ds(seed=0)  # using a seed here to ensure the same initial condition for possible seeded split.
+        # using a seed here to ensure the same initial condition for possible seeded split.
+        self.fe_reset_ds(seed=0, shuffle=False)
 
     def set_batch_sizes(self, batch_sizes: List[int]) -> None:
         self.batch_sizes = batch_sizes
@@ -133,21 +147,28 @@ class InterleaveDataset(FEDataset):
         This method is invoked by the FEDataLoader which allows each epoch to have different random pairings of the
         basis datasets.
         """
+        from fastestimator.dataset.extend_dataset import ExtendDataset  # Hide this to prevent circular import
+
         # Reset any children who need resetting
         for fn in self.child_reset_fns:
             fn(shuffle=shuffle, seed=seed)
-        # Don't bother re-initializing if shuffle is False
-        if shuffle is False and self.index_maps:
-            return
+        # We re-initialize the index maps even if shuffle is false since it might previously have been set to True,
+        # resulting in scrambled maps
         self.index_maps = []
         for idx, ds in enumerate(self.datasets):
-            index_map = list(range(len(ds)))
-            if seed is not None:
-                # adding idx to the seed because we need to make sure different datasets have different index orders,
-                # in the meantime, their random behavior should still be conditioned on seed.
-                random.Random(seed + idx).shuffle(index_map)
+            if isinstance(ds, ExtendDataset):
+                index_maps = [list(range(len(ds))) for _ in range(math.ceil(ds.spoof_length / len(ds)))]
             else:
-                random.shuffle(index_map)
+                index_maps = [list(range(len(ds)))]
+            for index_map in index_maps:
+                if shuffle:
+                    if seed is not None:
+                        # adding idx to the seed because we need to make sure different datasets have different index
+                        # orders, in the meantime, their random behavior should still be conditioned on seed.
+                        random.Random(seed + idx).shuffle(index_map)
+                    else:
+                        random.shuffle(index_map)
+            index_map = [index for maps in index_maps for index in maps]
             if hasattr(ds, "fe_batch_indices"):
                 self.index_maps.append([ds.fe_batch_indices(index) for index in index_map])
             else:
@@ -159,8 +180,12 @@ class InterleaveDataset(FEDataset):
         Returns:
             How many batches of data can this dataset serve per epoch. It is sum of all dataset's number of batch.
         """
+        from fastestimator.dataset.extend_dataset import ExtendDataset  # Hide this to prevent circular import
+
         # first calculate the minimum number of cycles each dataset can afford according to the repeat pattern
-        num_cycles = min(len(ds) // (f * bs) for ds, f, bs in zip(self.datasets, self.frequency, self.batch_sizes))
+        num_cycles = min((ds.spoof_length if isinstance(ds, ExtendDataset) else len(ds)) // (f * bs) for ds,
+                         f,
+                         bs in zip(self.datasets, self.frequency, self.batch_sizes))
         assert num_cycles > 0, "some dataset does not have enough samples for a single repeat pattern, please consider \
             using `ExtendDataset` to increase its length"
 

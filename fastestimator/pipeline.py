@@ -613,6 +613,9 @@ class Pipeline:
         self.ctx_steps_per_epoch = steps_per_epoch
         self.ctx_output_keys = output_keys or set()
         dataset = self.data[self.ctx_mode][self.ctx_ds_id]
+        if isinstance(dataset, Scheduler):
+            dataset = dataset.get_current_value(self.ctx_epoch)
+        self.ctx_dataset = dataset
         if isinstance(dataset, InterleaveDataset):
             # if this is InterleaveDataset, then build multiple ops, batch_info, and batch_ops.
             self.ctx_ops = []
@@ -698,10 +701,7 @@ class Pipeline:
         if self.ctx_ds_id not in self.data[self.ctx_mode]:
             self.ctx_lock.release()
             raise KeyError(f"The dataset id '{self.ctx_ds_id}' is not present in {self.ctx_mode} mode")
-        data = self.data[self.ctx_mode][self.ctx_ds_id]
-        if isinstance(data, Scheduler):
-            data = data.get_current_value(self.ctx_epoch)
-        if isinstance(data, InterleaveDataset):
+        if isinstance(self.ctx_dataset, InterleaveDataset):
             # Results will be immediately converted to tensors, so don't need deep_remainder
             op_datasets = [
                 OpDataset(ds,
@@ -709,11 +709,11 @@ class Pipeline:
                           self.ctx_mode,
                           self.ctx_output_keys | self.ctx_batch_input_keys if self.ctx_output_keys else None,
                           deep_remainder=False) for ds,
-                ctx_ops in zip(data.datasets, self.ctx_ops)
+                ctx_ops in zip(self.ctx_dataset.datasets, self.ctx_ops)
             ]
-            data.op_datasets = op_datasets
+            self.ctx_dataset.op_datasets = op_datasets
             # when batch_size is None, then it indicates each sample is a batch
-            data.set_batch_sizes([batch_size or 1 for batch_size in self.ctx_batch_size])
+            self.ctx_dataset.set_batch_sizes([batch_size or 1 for batch_size in self.ctx_batch_size])
             postprocess_fn = None
             if self.ctx_batch_ops:
                 postprocess_fn = functools.partial(_batch_postprocess,
@@ -721,7 +721,7 @@ class Pipeline:
                                                    output_keys=self.ctx_output_keys,
                                                    mode=self.ctx_mode)
             try:
-                data = FEDataLoader(data,
+                data = FEDataLoader(self.ctx_dataset,
                                     postprocess_fn=postprocess_fn,
                                     batch_size=None,
                                     shuffle=self.ctx_shuffle,
@@ -733,9 +733,9 @@ class Pipeline:
                 self.ctx_lock.release()
                 raise err
             self.ctx_loader = data
-        elif isinstance(data, Dataset):
+        elif isinstance(self.ctx_dataset, Dataset):
             # Results will be immediately converted to tensors, so don't need deep_remainder
-            op_dataset = OpDataset(data,
+            op_dataset = OpDataset(self.ctx_dataset,
                                    self.ctx_ops,
                                    self.ctx_mode,
                                    self.ctx_output_keys | self.ctx_batch_input_keys if self.ctx_output_keys else None,
@@ -762,10 +762,12 @@ class Pipeline:
                 self.ctx_lock.release()
                 raise err
             self.ctx_loader = data
-        return data
+        else:
+            self.ctx_loader = self.ctx_dataset
+        return self.ctx_loader
 
     def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
-        if self.ctx_loader is not None:
+        if self.ctx_loader is not None and hasattr(self.ctx_loader, 'shutdown'):
             self.ctx_loader.shutdown()
             self.ctx_loader = None
         # Manually triggering gc here seems to be necessary in order to avoid problems with repeated invocations of FE
