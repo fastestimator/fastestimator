@@ -133,8 +133,9 @@ class SlidingSlicer(Slicer):
                 # Unfortunately in tf multi-gpu the batches are split over multiple replicas, in which case we need to
                 # manually correct the desired batch dimension later
                 replica_context = tf.distribute.get_replica_context()
-                replica_id = int(replica_context.replica_id_in_sync_group)
-                self.replica_batch_sizes[replica_id] = int(shape[0])
+                if replica_context is not None:
+                    replica_id = int(replica_context.replica_id_in_sync_group)
+                    self.replica_batch_sizes[replica_id] = int(shape[0])
         stride_template = [
             slice(None) if stride == 0 or stride >= dim else None for stride, dim in zip(self.strides, shape)
         ]
