@@ -63,7 +63,7 @@ class SearchData:
             self.results.discard(key)
 
         # Check if any results left to use
-        assert len(self.results) != 0, "No data found!!!!!"
+        assert len(self.results) != 0, f"No results found after ignoring keys: {ignore_keys}"
 
         # Keep a sample parameter value to catch boring parameters
         param_samples = {}
