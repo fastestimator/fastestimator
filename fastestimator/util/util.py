@@ -180,8 +180,9 @@ class Suppressor(object):
             open(self.stash_name, 'w').close()
         if self.allow_pyprint:
             tf.print = print_v2
-            for line in open(self.tf_print_name, 'r'):
-                print(line, end='')  # Endings already included from tf.print
+            with open(self.tf_print_name, 'r') as f:
+                for line in f:
+                    print(line, end='')  # Endings already included from tf.print
             open(self.tf_print_name, 'w').close()
 
     def write(self, dummy: str) -> None:

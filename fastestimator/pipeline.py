@@ -20,7 +20,7 @@ import time
 from copy import deepcopy
 from operator import mul
 from threading import Lock
-from typing import Any, Dict, List, Literal, Optional, Set, Tuple, Type, TypeVar, Union, cast, overload
+from typing import Any, Dict, Iterable, List, Literal, Optional, Set, Tuple, Type, TypeVar, Union, cast, overload
 
 import numpy as np
 import tensorflow as tf
@@ -29,6 +29,7 @@ from typing_extensions import Self
 
 from fastestimator.backend._to_tensor import to_tensor
 from fastestimator.dataset.dataloader import FEDataLoader
+from fastestimator.dataset.interleave_dataset import InterleaveDataset
 from fastestimator.dataset.op_dataset import OpDataset
 from fastestimator.op.numpyop.meta.fuse import Fuse
 from fastestimator.op.numpyop.meta.one_of import OneOf
@@ -224,13 +225,14 @@ class Pipeline:
         else:
             raise ValueError("Unsupported dataset type: {}".format(type(dataset)))
 
-    def _get_op_split(self, mode: str, epoch: int, ds_id: str) -> Tuple[List[NumpyOp], Batch, List[NumpyOp]]:
+    def _get_op_split(self, mode: str, epoch: int,
+                      ds_id: Union[str, Iterable[str]]) -> Tuple[List[NumpyOp], Batch, List[NumpyOp]]:
         """Figure out which ops are pre-batch vs post-batch.
 
         Args:
             mode: The current mode.
             epoch: The current epoch.
-            ds_id: The current dataset.
+            ds_id: The current dataset id(s).
 
         Returns:
             (instance ops, batch info, batch ops).
@@ -610,21 +612,64 @@ class Pipeline:
         self.ctx_shuffle = mode == 'train' if shuffle is None else shuffle
         self.ctx_steps_per_epoch = steps_per_epoch
         self.ctx_output_keys = output_keys or set()
-        self.ctx_ops, self.ctx_batch_info, self.ctx_batch_ops = self._get_op_split(mode=mode, epoch=epoch, ds_id=ds_id)
+        dataset = self.data[self.ctx_mode][self.ctx_ds_id]
+        if isinstance(dataset, Scheduler):
+            dataset = dataset.get_current_value(self.ctx_epoch)
+        self.ctx_dataset = dataset
+        if isinstance(dataset, InterleaveDataset):
+            # if this is InterleaveDataset, then build multiple ops, batch_info, and batch_ops.
+            self.ctx_ops = []
+            ctx_batch_infos: List[Batch] = []
+            ctx_batch_ops_lists: List[List[NumpyOp]] = []
+            for tag in dataset.tags:
+                id_tags = {ds_id, tag} if isinstance(tag, str) else ds_id
+                ctx_ops, ctx_batch_info, ctx_batch_ops = self._get_op_split(mode=mode, epoch=epoch, ds_id=id_tags)
+                self.ctx_ops.append(ctx_ops)
+                ctx_batch_infos.append(ctx_batch_info)
+                ctx_batch_ops_lists.append(ctx_batch_ops)
+            # Decide on the batch size (this might still be ignored later if the user is using a BatchDataset)
+            self.ctx_batch_size = [ctx_batch_info.batch_size for ctx_batch_info in ctx_batch_infos]
+            # drop_last and collate_fn for different dataset must be the same, since it is the same dataloader.
+            same_drop_last = len(set(ctx_batch_info.drop_last for ctx_batch_info in ctx_batch_infos)) == 1
+            same_collate = len(set(ctx_batch_info.collate_fn for ctx_batch_info in ctx_batch_infos)) == 1
+            if not same_collate:
+                pad_val_0 = ctx_batch_infos[0]._pad_value
+                if pad_val_0 is not None and all([pad_val_0 == pv._pad_value for pv in ctx_batch_infos[1:]]):
+                    # If the user is using pad values and all the pad values are the same, then even though the
+                    # collate functions are bound to different instances, they are all effectively the same function
+                    same_collate = True
+            assert same_drop_last and same_collate, \
+                "when using InterleaveDataset, the drop_last and collate behavior for all datasets must be the same"
+            # Interleave dataset at current scope does not support batch level, need to make sure batchops are the same
+            assert all(ctx_batch_ops_lists[0] == batch_ops for batch_ops in ctx_batch_ops_lists[1:]), \
+                "Current InterleaveDataset does not support different dataset behaviors after the BatchOp."
+            self.ctx_batch_ops = ctx_batch_ops_lists[0]
+            self.ctx_batch_info = ctx_batch_infos[0]
+            # fill in the correct batch sizes
+            for idx, batch_size in enumerate(self.ctx_batch_size):
+                if batch_size is None:
+                    batch_size = self.batch_size
+                    if isinstance(batch_size, Scheduler):
+                        batch_size = batch_size.get_current_value(self.ctx_epoch)
+                    self.ctx_batch_size[idx] = batch_size
+        else:
+            self.ctx_ops, self.ctx_batch_info, self.ctx_batch_ops = self._get_op_split(mode=mode,
+                                                                                       epoch=epoch,
+                                                                                       ds_id=ds_id)
+            # Decide on the batch size (this might still be ignored later if the user is using a BatchDataset)
+            self.ctx_batch_size = self.ctx_batch_info.batch_size
+            if self.ctx_batch_size is None:
+                # batch size
+                batch_size = self.batch_size
+                if isinstance(batch_size, Scheduler):
+                    batch_size = batch_size.get_current_value(self.ctx_epoch)
+                self.ctx_batch_size = batch_size
         # Figure out which input keys are required by the batch ops (so they don't get pruned too early)
         self.ctx_batch_input_keys = set()
         batch_produced_keys = set()
         for op in get_current_items(self.ctx_batch_ops, mode, epoch, ds_id=ds_id):
             self.ctx_batch_input_keys.update(set(key for key in op.inputs if key not in batch_produced_keys))
             batch_produced_keys.update(op.outputs)
-        # Decide on the batch size (this might still be ignored later if the user is using a BatchDataset)
-        self.ctx_batch_size = self.ctx_batch_info.batch_size
-        if self.ctx_batch_size is None:
-            # batch size
-            batch_size = self.batch_size
-            if isinstance(batch_size, Scheduler):
-                batch_size = batch_size.get_current_value(self.ctx_epoch)
-            self.ctx_batch_size = batch_size
         self.ctx_lock.release()
         return self
 
@@ -656,12 +701,41 @@ class Pipeline:
         if self.ctx_ds_id not in self.data[self.ctx_mode]:
             self.ctx_lock.release()
             raise KeyError(f"The dataset id '{self.ctx_ds_id}' is not present in {self.ctx_mode} mode")
-        data = self.data[self.ctx_mode][self.ctx_ds_id]
-        if isinstance(data, Scheduler):
-            data = data.get_current_value(self.ctx_epoch)
-        if isinstance(data, Dataset):
+        if isinstance(self.ctx_dataset, InterleaveDataset):
             # Results will be immediately converted to tensors, so don't need deep_remainder
-            op_dataset = OpDataset(data,
+            op_datasets = [
+                OpDataset(ds,
+                          ctx_ops,
+                          self.ctx_mode,
+                          self.ctx_output_keys | self.ctx_batch_input_keys if self.ctx_output_keys else None,
+                          deep_remainder=False) for ds,
+                ctx_ops in zip(self.ctx_dataset.datasets, self.ctx_ops)
+            ]
+            self.ctx_dataset.op_datasets = op_datasets
+            # when batch_size is None, then it indicates each sample is a batch
+            self.ctx_dataset.set_batch_sizes([batch_size or 1 for batch_size in self.ctx_batch_size])
+            postprocess_fn = None
+            if self.ctx_batch_ops:
+                postprocess_fn = functools.partial(_batch_postprocess,
+                                                   ops=self.ctx_batch_ops,
+                                                   output_keys=self.ctx_output_keys,
+                                                   mode=self.ctx_mode)
+            try:
+                data = FEDataLoader(self.ctx_dataset,
+                                    postprocess_fn=postprocess_fn,
+                                    batch_size=None,
+                                    shuffle=self.ctx_shuffle,
+                                    steps_per_epoch=self.ctx_steps_per_epoch,
+                                    num_workers=self.num_process,
+                                    drop_last=self.ctx_batch_info.drop_last,
+                                    collate_fn=self.ctx_batch_info.collate_fn)
+            except ValueError as err:
+                self.ctx_lock.release()
+                raise err
+            self.ctx_loader = data
+        elif isinstance(self.ctx_dataset, Dataset):
+            # Results will be immediately converted to tensors, so don't need deep_remainder
+            op_dataset = OpDataset(self.ctx_dataset,
                                    self.ctx_ops,
                                    self.ctx_mode,
                                    self.ctx_output_keys | self.ctx_batch_input_keys if self.ctx_output_keys else None,
@@ -688,10 +762,12 @@ class Pipeline:
                 self.ctx_lock.release()
                 raise err
             self.ctx_loader = data
-        return data
+        else:
+            self.ctx_loader = self.ctx_dataset
+        return self.ctx_loader
 
     def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
-        if self.ctx_loader is not None:
+        if self.ctx_loader is not None and hasattr(self.ctx_loader, 'shutdown'):
             self.ctx_loader.shutdown()
             self.ctx_loader = None
         # Manually triggering gc here seems to be necessary in order to avoid problems with repeated invocations of FE

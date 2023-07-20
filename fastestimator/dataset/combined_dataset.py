@@ -17,25 +17,28 @@ from typing import List
 
 from torch.utils.data import ConcatDataset, Dataset
 
+from fastestimator.dataset.interleave_dataset import InterleaveDataset
 from fastestimator.util.traceability_util import traceable
 
 
 @traceable()
 class CombinedDataset(ConcatDataset):
+    """Combines a list of PyTorch Datasets.
+
+    Args:
+        datasets: Pytorch (or FE) Datasets to be combined.
+
+    Raises:
+        AssertionError: raise exception when the input list has less than 2 datasets.
+        KeyError: raise exception when the datasets does not have same keys.
+    """
     def __init__(self, datasets: List[Dataset]) -> None:
-        """Combines a list of PyTorch Datasets,
-
-        Args:
-            datasets: Pytorch (or FE) Datasets to be combined.
-
-        Raises:
-            AssertionError: raise exception when the input list has less than 2 datasets.
-            KeyError: raise exception when the datasets does not have same keys.
-        """
         super().__init__(datasets)
         keys = None
 
         for ds in datasets:
+            if isinstance(ds, InterleaveDataset):
+                raise AssertionError("CombinedDataset does not support InterleaveDataset")
             if isinstance(ds, Dataset) and isinstance(ds[0], dict):
                 if keys is None:
                     keys = ds[0].keys()

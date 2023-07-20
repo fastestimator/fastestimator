@@ -26,6 +26,7 @@ from torch.utils.data.dataloader import _BaseDataLoaderIter, _MultiProcessingDat
     _SingleProcessDataLoaderIter
 
 from fastestimator.dataset.extend_dataset import ExtendDataset
+from fastestimator.dataset.interleave_dataset import InterleaveDataset
 from fastestimator.dataset.op_dataset import OpDataset
 from fastestimator.types import FilteredData, MapDataset
 from fastestimator.util.util import Suppressor
@@ -109,7 +110,7 @@ class FEDataLoader(DataLoader):
         self.fe_drop_last = drop_last
         self.fe_collate_fn = collate_fn or default_collate
         if self.fe_batch_size in (0, None) and batch_size is None and self.fe_collate_fn == default_collate:
-            # The user did not provide a batch dataset nor a batch size, so default collate won't work. Have to try
+            # The user did not provide a batched dataset nor a batch size, so default collate won't work. Have to try
             # convert instead.
             self.fe_collate_fn = default_convert
         self.fe_postprocess_fn = postprocess_fn
@@ -306,14 +307,29 @@ def _next_post_batch(self: _BaseFELoaderIter) -> Dict[str, Tensor]:
             return candidate_batch
         if isinstance(collated, FilteredData):
             # The batch was filtered during the forward_batch pass
-            if not collated.replacement:
-                self.fe_samples_yielded += 1
+            if isinstance(self._dataset, InterleaveDataset):
+                # We have to burn an entire cycle of data in order to ensure that the next sample comes from the desired
+                # dataset again without messing up any interactions between a fancy pattern and merge_grad
+                for _ in range(len(self._dataset.pattern) - 1):
+                    self._next_data()
+                if not collated.replacement:
+                    self.fe_samples_yielded += len(self._dataset.pattern)  # You burned this one + the rest of the cycle
+            else:
+                if not collated.replacement:
+                    self.fe_samples_yielded += 1
         else:
             # The filtered data appeared before batching, need to find it
             for instance in candidate_batch:
                 if isinstance(instance, FilteredData):
-                    if not instance.replacement:
-                        self.fe_samples_yielded += 1
+                    if isinstance(self._dataset, InterleaveDataset):
+                        # Burn data
+                        for _ in range(len(self._dataset.pattern) - 1):
+                            self._next_data()
+                        if not instance.replacement:
+                            self.fe_samples_yielded += len(self._dataset.pattern)
+                    else:
+                        if not instance.replacement:
+                            self.fe_samples_yielded += 1
                     break
             else:
                 # The else block is reached iff the for loop never breaks (probably should never get here)
@@ -321,8 +337,15 @@ def _next_post_batch(self: _BaseFELoaderIter) -> Dict[str, Tensor]:
                 if self.fe_postprocess_fn is not None:
                     collated = self.fe_postprocess_fn(collated, shared=False)
                     if isinstance(collated, FilteredData):
-                        if not collated.replacement:
-                            self.fe_samples_yielded += 1
+                        if isinstance(self._dataset, InterleaveDataset):
+                            # Burn data
+                            for _ in range(len(self._dataset.pattern) - 1):
+                                self._next_data()
+                            if not collated.replacement:
+                                self.fe_samples_yielded += len(self._dataset.pattern)
+                        else:
+                            if not collated.replacement:
+                                self.fe_samples_yielded += 1
                         return _next_post_batch(self)
                 self.fe_samples_yielded += 1
                 return collated
@@ -362,6 +385,7 @@ class InfiniteSampler(Sampler):
                  reset_fn: Optional[Callable[[bool], None]] = None,
                  convert_fn: Optional[Callable[[int], Any]] = None):
         super().__init__(data_source=None)  # Arg is unused and triggers a warning in torch 2.1
+        self.interleave_ds = isinstance(data_source, InterleaveDataset)
         self.ds_len = len(data_source)
         if self.ds_len < 1:
             raise ValueError("dataset length must be at least 1")
@@ -378,7 +402,8 @@ class InfiniteSampler(Sampler):
         self.idx = 0
         if self.reset_fn:
             self.reset_fn(self.shuffle)
-        if self.shuffle:
+        if self.shuffle and not self.interleave_ds:
+            # interleave_ds requires unshuffled indices to work correctly with its repeating pattern
             random.shuffle(self.indices)
         return self
 
@@ -387,7 +412,8 @@ class InfiniteSampler(Sampler):
             self.idx = 0
             if self.reset_fn:
                 self.reset_fn(self.shuffle)
-            if self.shuffle:
+            if self.shuffle and not self.interleave_ds:
+                # interleave_ds requires unshuffled indices to work correctly with its repeating pattern
                 random.shuffle(self.indices)
         elem = self.indices[self.idx]
         self.idx += 1

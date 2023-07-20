@@ -31,6 +31,7 @@ __getattr__, __dir__, __all__ = lazy.attach(
         "siamese_dir_dataset": ["SiameseDirDataset"],
         "extend_dataset": ["ExtendDataset"],
         "combined_dataset": ["CombinedDataset"],
+        "interleave_dataset": ["InterleaveDataset"]
     },
 )
 
@@ -46,3 +47,4 @@ if TYPE_CHECKING:
     from fastestimator.dataset.numpy_dataset import NumpyDataset
     from fastestimator.dataset.pickle_dataset import PickleDataset
     from fastestimator.dataset.siamese_dir_dataset import SiameseDirDataset
+    from fastestimator.dataset.interleave_dataset import InterleaveDataset
