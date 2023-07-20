@@ -119,7 +119,7 @@ class SearchData:
 
     @staticmethod
     def _parse_value(value: Any) -> Union[int, float, str, None]:
-        if isinstance(value, (list, tuple, np.ndarray)) and len(value) == 1:
+        if isinstance(value, (list, tuple)) and len(value) == 1:
             value = value[0]
         if hasattr(value, 'item') and hasattr(value, 'size') and value.size == 1:
             value = value.item()
