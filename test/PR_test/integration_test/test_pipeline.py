@@ -1881,7 +1881,9 @@ class TestPipelineFilter(unittest.TestCase):
                     batch_size=5,
                     num_process=n_process,
                     ops=[
-                        RemoveIf(inputs="idx", fn=lambda x: x in ['ds2_5', 'ds1_10', 'ds2_20'], replacement=False),
+                        RemoveIf(inputs="idx",
+                                 fn=lambda x: x in ['ds2_5', 'ds1_10', 'ds2_20', 'ds3_49'],
+                                 replacement=False),
                         Batch(drop_last=True)
                     ])
                 target = [
