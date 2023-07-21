@@ -23,8 +23,6 @@ from fastestimator.search.search import Search
 from fastestimator.summary.summary import ValWithError
 from fastestimator.util.base_util import to_set
 
-import numpy as np
-
 
 def _load_search_file(path: str) -> Search:
     path = os.path.abspath(os.path.normpath(path))
