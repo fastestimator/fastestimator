@@ -23,8 +23,6 @@ from fastestimator.search.search import Search
 from fastestimator.summary.summary import ValWithError
 from fastestimator.util.base_util import to_set
 
-import numpy as np
-
 
 def _load_search_file(path: str) -> Search:
     path = os.path.abspath(os.path.normpath(path))
@@ -119,7 +117,7 @@ class SearchData:
 
     @staticmethod
     def _parse_value(value: Any) -> Union[int, float, str, None]:
-        if isinstance(value, (list, tuple, np.ndarray)) and len(value) == 1:
+        if isinstance(value, (list, tuple)) and len(value) == 1:
             value = value[0]
         if hasattr(value, 'item') and hasattr(value, 'size') and value.size == 1:
             value = value.item()
