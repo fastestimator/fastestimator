@@ -34,6 +34,7 @@ from fastestimator.op.tensorop.model.model import ModelOp
 from fastestimator.op.tensorop.tensorop import LambdaOp
 from fastestimator.test.unittest_util import sample_system_object, sample_system_object_torch
 from fastestimator.trace.trace import Trace
+from fastestimator.util import get_num_gpus
 
 
 class Plus(NumpyOp):
@@ -205,10 +206,17 @@ class TestInterleaveDataset(unittest.TestCase):
         estimator = fe.Estimator(pipeline=pipeline, network=network, epochs=1, traces=Collector())
         summary = estimator.fit("test")
         self.assertEqual(summary.history['train']['epoch'][20], 1)
-        self.assertEqual(list(summary.history['train']['batch_shapes'][20][0]), [2, 32, 32, 1])
-        self.assertEqual(list(summary.history['train']['batch_shapes'][20][1]), [2, 28, 28, 1])
-        self.assertEqual(list(summary.history['train']['batch_shapes'][20][2]), [2, 32, 32, 1])
-        self.assertEqual(list(summary.history['train']['batch_shapes'][20][3]), [2, 28, 28, 1])
+        if get_num_gpus() > 1:
+            # On multi-gpu machines the batch gets split apart, leading to an elongated tf.shape response
+            target_32 = [1, 32, 32, 1, 1, 32, 32, 1]
+            target_28 = [1, 28, 28, 1, 1, 28, 28, 1]
+        else:
+            target_32 = [2, 32, 32, 1]
+            target_28 = [2, 28, 28, 1]
+        self.assertEqual(list(summary.history['train']['batch_shapes'][20][0]), target_32)
+        self.assertEqual(list(summary.history['train']['batch_shapes'][20][1]), target_28)
+        self.assertEqual(list(summary.history['train']['batch_shapes'][20][2]), target_32)
+        self.assertEqual(list(summary.history['train']['batch_shapes'][20][3]), target_28)
 
     def test_interleave_dataset_with_different_dtypes(self):
         def mymodel(input_shape):
