@@ -22,7 +22,7 @@ import torch
 from fastestimator.backend._feed_forward import feed_forward
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.types import Model, Tensor
-from fastestimator.util.base_util import to_list, warn
+from fastestimator.util.base_util import NonContext, to_list, warn
 from fastestimator.util.traceability_util import FeInputSpec, traceable
 from fastestimator.util.util import get_num_devices
 
@@ -41,6 +41,7 @@ class ModelOp(TensorOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
         trainable: Indicates whether the model should have its weights tracked for update.
+        gradients: Indicates whether the gradient flow is maintained during forward pass of the model.
         intermediate_layers: One or more layers inside of the model from which you would also like to extract output.
             This can be useful, for example, for visualizing feature extractor embeddings in conjunction with the
             TensorBoard trace. Layers can be selected by name (str) or index (int). If you are using pytorch, you can
@@ -59,6 +60,7 @@ class ModelOp(TensorOp):
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
                  trainable: bool = True,
+                 gradients: bool = True,
                  intermediate_layers: Union[None, str, int, List[Union[str, int]]] = None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         assert hasattr(model, "fe_compiled"), "must use fe.build to compile the model before use"
@@ -97,9 +99,12 @@ class ModelOp(TensorOp):
             self.intermediate_outputs.append(storage)
         self.model = model
         self.trainable = trainable
+        self.gradients = gradients
         self.epoch_spec = None
         self.multi_inputs = False
         self.device = ''
+        if self.trainable:
+            assert self.gradients, "When model is trainable, the `gradients` must be True."
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
         self.device = device or ''  # TF will just use empty string for device
@@ -123,16 +128,26 @@ class ModelOp(TensorOp):
             # Gather model input specs for the sake of TensorBoard and Traceability
             self.model.fe_input_spec = FeInputSpec(data, self.model)
             self.epoch_spec = state['epoch']
-        if self.multi_inputs:
-            data = feed_forward(self.model, *data, training=training)
+        if isinstance(self.model, torch.nn.Module):
+            with torch.no_grad() if not self.gradients else NonContext():
+                data = self._forward_pass(data, training=training)
         else:
-            data = feed_forward(self.model, data, training=training)
+            tape = state['tape']
+            with tape.stop_recording() if tape and not self.gradients else NonContext():
+                data = self._forward_pass(data, training=training)
         intermediate_outputs = []
         for output in self.intermediate_outputs:
             intermediate_outputs.append(_unpack_output(output, self.device))
             output.clear()  # This will only help with pytorch memory, tf tensors will remain until next forward
         if intermediate_outputs:
             data = to_list(data) + intermediate_outputs
+        return data
+
+    def _forward_pass(self, data: Union[Tensor, List[Tensor]], training: bool) -> Union[Tensor, List[Tensor]]:
+        if self.multi_inputs:
+            data = feed_forward(self.model, *data, training=training)
+        else:
+            data = feed_forward(self.model, data, training=training)
         return data
 
 
