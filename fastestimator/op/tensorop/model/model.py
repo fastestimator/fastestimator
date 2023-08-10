@@ -128,13 +128,16 @@ class ModelOp(TensorOp):
             # Gather model input specs for the sake of TensorBoard and Traceability
             self.model.fe_input_spec = FeInputSpec(data, self.model)
             self.epoch_spec = state['epoch']
-        if isinstance(self.model, torch.nn.Module):
-            with torch.no_grad() if not self.gradients else NonContext():
-                data = self._forward_pass(data, training=training)
+        if self.gradients:
+            data = self._forward_pass(data, training=training)
         else:
-            tape = state['tape']
-            with tape.stop_recording() if tape and not self.gradients else NonContext():
-                data = self._forward_pass(data, training=training)
+            if isinstance(self.model, torch.nn.Module):
+                with torch.no_grad():
+                    data = self._forward_pass(data, training=training)
+            else:
+                tape = state['tape']
+                with tape.stop_recording() if tape else NonContext():
+                    data = self._forward_pass(data, training=training)
         intermediate_outputs = []
         for output in self.intermediate_outputs:
             intermediate_outputs.append(_unpack_output(output, self.device))
