@@ -19,15 +19,16 @@ import tensorflow as tf
 import torch
 
 import fastestimator as fe
+from fastestimator.backend._get_gradient import get_gradient
 from fastestimator.op.tensorop.model import ModelOp
-from fastestimator.test.unittest_util import OneLayerTorchModel, is_equal, one_layer_tf_model, multi_layer_tf_model, \
-    MultiLayerTorchModel
+from fastestimator.test.unittest_util import MultiLayerTorchModel, OneLayerTorchModel, is_equal, multi_layer_tf_model, \
+    one_layer_tf_model
 
 
 class TestModelOp(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.state = {'mode': 'train', 'epoch': 1}
+        cls.state = {'mode': 'train', 'epoch': 1, 'tape': None}
         cls.tf_input_data = tf.constant([[1.0, 1.0, 1.0], [1.0, -1.0, -0.5]])
         cls.torch_input_data = torch.Tensor([[1.0, 1.0, 1.0], [1.0, -1.0, -0.5]])
         cls.output = np.array([[6.0], [-2.5]])
@@ -121,3 +122,39 @@ class TestModelOp(unittest.TestCase):
         embedding = embedding.to('cpu')
         self.assertTrue(np.allclose(y.detach().numpy(), self.output_big, atol=1e-4))
         self.assertTrue(np.allclose(embedding.detach().numpy(), self.embedding_output, atol=1e-4))
+
+    def test_tf_with_gradients(self):
+        model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=None)
+        op = ModelOp(inputs='x', outputs='x', model=model, gradients=True)
+        op.build(framework='tf', device=None)
+        with tf.GradientTape(persistent=True) as tape:
+            output = op.forward(data=self.tf_input_data, state={"tape": tape, 'mode': 'train', 'epoch': 1})
+            grad = get_gradient(tf.reduce_sum(output), model.trainable_variables, tape=tape)
+            self.assertTrue(np.allclose(grad[0].numpy(), np.array([[2.0], [0.0], [0.5]])))
+
+    def test_tf_disable_gradients(self):
+        model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=None)
+        op = ModelOp(inputs='x', outputs='x', model=model, gradients=False, trainable=False)
+        op.build(framework='tf', device=None)
+        with tf.GradientTape(persistent=True) as tape:
+            output = op.forward(data=self.tf_input_data, state={"tape": tape, 'mode': 'train', 'epoch': 1})
+            grad = get_gradient(tf.reduce_sum(output), model.trainable_variables, tape=tape)
+            self.assertIsNone(grad[0])
+
+    def test_torch_with_gradients(self):
+        model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=None)
+        op = ModelOp(inputs='x', outputs='x', model=model, gradients=True)
+        self.torch_input_data = self.torch_input_data.to("cuda:0" if torch.cuda.is_available() else "cpu")
+        model.to("cuda:0" if torch.cuda.is_available() else "cpu")
+        op.build(framework='torch', device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu"))
+        output = op.forward(data=self.torch_input_data, state=self.state)
+        self.assertIsNotNone(output.grad_fn)
+
+    def test_torch_disable_gradients(self):
+        model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=None)
+        op = ModelOp(inputs='x', outputs='x', model=model, gradients=False, trainable=False)
+        self.torch_input_data = self.torch_input_data.to("cuda:0" if torch.cuda.is_available() else "cpu")
+        model.to("cuda:0" if torch.cuda.is_available() else "cpu")
+        op.build(framework='torch', device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu"))
+        output = op.forward(data=self.torch_input_data, state=self.state)
+        self.assertIsNone(output.grad_fn)
