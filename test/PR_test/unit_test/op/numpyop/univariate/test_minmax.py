@@ -25,6 +25,7 @@ class TestMinmax(unittest.TestCase):
     def setUpClass(cls):
         cls.single_input = [np.array([1, 2, 3, 5])]
         cls.single_output = [np.array([0, 0.25, 0.5, 1])]
+        cls.single_output_new_min_new_max = [np.array([-10, -5, 0, 10])]
         cls.multi_input = [np.array([2, 2]), np.array([0, 1, 2])]
         cls.multi_output = [np.array([0, 0]), np.array([0, 0.5, 1])]
 
@@ -37,3 +38,8 @@ class TestMinmax(unittest.TestCase):
         op = Minmax(inputs='x', outputs='x')
         data = op.forward(data=self.multi_input, state={})
         self.assertTrue(is_equal(data, self.multi_output))
+
+    def test_new_min_new_max(self):
+        op = Minmax(inputs='x', outputs='x', new_min=-10, new_max=10)
+        data = op.forward(data=self.single_input, state={})
+        self.assertTrue(is_equal(data, self.single_output_new_min_new_max))
