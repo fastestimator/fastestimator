@@ -123,23 +123,50 @@ class TestModelOp(unittest.TestCase):
         self.assertTrue(np.allclose(y.detach().numpy(), self.output_big, atol=1e-4))
         self.assertTrue(np.allclose(embedding.detach().numpy(), self.embedding_output, atol=1e-4))
 
+    @unittest.skipIf(torch.cuda.device_count() > 1, "single gpu or cpu only")
     def test_tf_with_gradients(self):
         model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=None)
         op = ModelOp(inputs='x', outputs='x', model=model, gradients=True)
         op.build(framework='tf', device=None)
-        with tf.GradientTape(persistent=True) as tape:
-            output = op.forward(data=self.tf_input_data, state={"tape": tape, 'mode': 'train', 'epoch': 1})
-            grad = get_gradient(tf.reduce_sum(output), model.trainable_variables, tape=tape)
-            self.assertTrue(np.allclose(grad[0].numpy(), np.array([[2.0], [0.0], [0.5]])))
+        grad = self.single_forward_backward_tf(op, model, self.tf_input_data)
+        self.assertTrue(np.allclose(grad[0].numpy(), np.array([[2.0], [0.0], [0.5]])))
 
+    @unittest.skipIf(torch.cuda.device_count() < 2, "multigpu only")
+    def test_tf_with_gradients_multigpu(self):
+        model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=None)
+        op = ModelOp(inputs='x', outputs='x', model=model, gradients=True)
+        op.build(framework='tf', device=None)
+        strategy = tf.distribute.get_strategy()
+        tf_input_data = next(
+            iter(strategy.experimental_distribute_dataset(tf.data.Dataset.from_tensors(self.tf_input_data))))
+        grad = strategy.run(self.single_forward_backward_tf, args=(op, model, tf_input_data))
+        grad = tf.reduce_sum(tuple(d for d in grad[0].values), axis=0)
+        self.assertTrue(np.allclose(grad.numpy(), np.array([[2.0], [0.0], [0.5]])))
+
+    @unittest.skipIf(torch.cuda.device_count() > 1, "single gpu or cpu only")
     def test_tf_disable_gradients(self):
         model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=None)
         op = ModelOp(inputs='x', outputs='x', model=model, gradients=False, trainable=False)
         op.build(framework='tf', device=None)
+        grad = self.single_forward_backward_tf(op, model, self.tf_input_data)
+        self.assertIsNone(grad[0])
+
+    @unittest.skipIf(torch.cuda.device_count() < 2, "multigpu only")
+    def test_tf_disable_gradients_multigpu(self):
+        model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=None)
+        op = ModelOp(inputs='x', outputs='x', model=model, gradients=False, trainable=False)
+        op.build(framework='tf', device=None)
+        strategy = tf.distribute.get_strategy()
+        tf_input_data = next(
+            iter(strategy.experimental_distribute_dataset(tf.data.Dataset.from_tensors(self.tf_input_data))))
+        grad = strategy.run(self.single_forward_backward_tf, args=(op, model, tf_input_data))
+        self.assertIsNone(grad[0])
+
+    def single_forward_backward_tf(self, op, model, inputs):
         with tf.GradientTape(persistent=True) as tape:
-            output = op.forward(data=self.tf_input_data, state={"tape": tape, 'mode': 'train', 'epoch': 1})
+            output = op.forward(data=inputs, state={"tape": tape, 'mode': 'train', 'epoch': 1})
             grad = get_gradient(tf.reduce_sum(output), model.trainable_variables, tape=tape)
-            self.assertIsNone(grad[0])
+        return grad
 
     def test_torch_with_gradients(self):
         model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=None)
