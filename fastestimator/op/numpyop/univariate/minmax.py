@@ -49,6 +49,7 @@ class Minmax(NumpyOp):
         self.new_min = new_min
         self.new_max = new_max
         self.in_list, self.out_list = True, True
+        assert new_max > new_min, "the new_max should be greater than new_min."
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
         return [self._apply_minmax(elem) for elem in data]
