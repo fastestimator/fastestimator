@@ -32,7 +32,7 @@ class FocalLoss(LossOp):
     Loss used in RetinaNet for dense detection: https://arxiv.org/abs/1708.02002.
 
     Args:
-        inputs: A tuple or list like: [<y_pred>, <y_true>].
+        inputs: A tuple or list like: [y_pred, y_true].
         outputs: String key under which to store the computed loss value.
         alpha: Weighting factor in range (0,1) to balance
                 positive vs negative examples or -1 to ignore. Default = 0.25
