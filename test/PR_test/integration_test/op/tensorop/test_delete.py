@@ -25,12 +25,12 @@ from fastestimator.op.tensorop import Delete, LambdaOp
 from fastestimator.op.tensorop.model import ModelOp
 
 
-def TFModel():
+def _TFModel():
     inputs = Input((1, 1))
     return Model(inputs=inputs, outputs=inputs)
 
 
-class TorchModel(nn.Module):
+class _TorchModel(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.dense = nn.Linear(in_features=1, out_features=1)
@@ -57,14 +57,14 @@ def _old_key_network(model):
 
 def _torch_model():
     return fe.build(
-        model_fn=lambda: TorchModel(),
+        model_fn=_TorchModel,
         optimizer_fn="adam",
     )
 
 
 def _tf_model():
     return fe.build(
-        model_fn=lambda: TFModel(),
+        model_fn=_TFModel,
         optimizer_fn="adam",
     )
 
