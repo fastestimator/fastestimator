@@ -25,7 +25,7 @@ __getattr__, __dir__, __all__ = lazy.attach(__name__,
                                                           'permute': ['Permute'],
                                                           'reshape': ['Reshape'],
                                                           'resize3d': ['Resize3D'],
-                                                          'tensorop': ['LambdaOp', 'TensorOp'],
+                                                          'tensorop': ['Delete', 'LambdaOp', 'TensorOp'],
                                                           'un_hadamard': ['UnHadamard']})
 
 if TYPE_CHECKING:
@@ -37,5 +37,5 @@ if TYPE_CHECKING:
     from fastestimator.op.tensorop.permute import Permute
     from fastestimator.op.tensorop.reshape import Reshape
     from fastestimator.op.tensorop.resize3d import Resize3D
-    from fastestimator.op.tensorop.tensorop import LambdaOp, TensorOp
+    from fastestimator.op.tensorop.tensorop import Delete, LambdaOp, TensorOp
     from fastestimator.op.tensorop.un_hadamard import UnHadamard

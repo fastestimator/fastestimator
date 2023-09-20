@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Callable, Dict, Iterable, List, Optional, Set, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Set, TypeVar, Union
 
 import tensorflow as tf
 import torch
@@ -131,3 +131,27 @@ class LambdaOp(TensorOp):
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
         return self.fn(*data)
+
+
+@traceable()
+class Delete(TensorOp):
+    """Delete key(s) and their associated values from the data dictionary.
+
+    The system has special logic to detect instances of this Op and delete its `inputs` from the data dictionary.
+
+    Args:
+        keys: Existing key(s) to be deleted from the data dictionary.
+        mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
+            regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
+            like "!infer" or "!train".
+        ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
+            ds_ids except for a particular one, you can pass an argument like "!ds1".
+    """
+    def __init__(self,
+                 keys: Union[str, Sequence[str]],
+                 mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None) -> None:
+        super().__init__(inputs=keys, mode=mode, ds_id=ds_id)
+
+    def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> None:
+        pass

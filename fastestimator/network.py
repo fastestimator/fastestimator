@@ -34,10 +34,12 @@ from typing_extensions import Self
 import fastestimator as fe
 from fastestimator.backend._load_model import load_model
 from fastestimator.backend._to_tensor import to_tensor
-from fastestimator.op.numpyop import Batch, NumpyOp, RemoveIf, forward_numpyop
+from fastestimator.op.numpyop import Batch
+from fastestimator.op.numpyop import Delete as DeleteNP
+from fastestimator.op.numpyop import NumpyOp, RemoveIf, forward_numpyop
 from fastestimator.op.op import get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.tensorop.model.update import UpdateOp
-from fastestimator.op.tensorop.tensorop import TensorOp
+from fastestimator.op.tensorop.tensorop import Delete, TensorOp
 from fastestimator.pipeline import Pipeline
 from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
 from fastestimator.slicer.slicer import Slicer, forward_slicers, reverse_slicers, sanity_assert_slicers
@@ -242,12 +244,19 @@ class BaseNetwork:
             network_input_keys.update(unsatisfied_inputs)
             gpu_input_keys.update(unsatisfied_inputs)
             produced_keys.update(op.outputs)
+            if isinstance(op, Delete):
+                for inp in op.inputs:
+                    produced_keys.discard(inp)
         network_input_keys.update(unslice_inputs - produced_keys)
         for op in get_current_items(self.postprocessing, mode, epoch, ds_id=ds_id):
             network_input_keys.update(set(key for key in op.inputs if key not in produced_keys))
             produced_keys.update(op.outputs)
             pops_inputs.update(set(key for key in op.inputs if key not in pops_produced_keys))
             pops_produced_keys.update(op.outputs)
+            if isinstance(op, DeleteNP):
+                for inp in op.inputs:
+                    produced_keys.discard(inp)
+                    pops_produced_keys.discard(inp)
         # Figure out outputs
         output_keys = produced_keys
         if desired_keys:
@@ -278,6 +287,9 @@ class BaseNetwork:
         for op in ops:
             data = get_inputs_by_op(op, batch)
             data = op.forward(data, state)
+            if isinstance(op, Delete):
+                for key in op.inputs:
+                    del batch[key]
             if op.outputs:
                 write_outputs_by_op(op, batch, data)
         for fn_list in state['deferred'].values():
