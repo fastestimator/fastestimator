@@ -16,7 +16,10 @@ import tempfile
 import unittest
 from typing import List, Tuple
 
+import numpy as np
+
 import fastestimator as fe
+from fastestimator.op.tensorop import Delete
 from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.slicer import Slicer
 from fastestimator.test.unittest_util import sample_system_object
@@ -61,6 +64,52 @@ class TestSlicer(unittest.TestCase):
         loaded_var = system.network.slicers[0].var
 
         self.assertEqual(loaded_var, new_var)
+
+    def test_unslice_key_check(self):
+        def instantiate_system():
+            system = sample_system_object()
+            model = fe.build(model_fn=fe.architecture.pytorch.LeNet, optimizer_fn='adam', model_name='tf')
+            system.network = fe.Network(
+                ops=[ModelOp(model=model, inputs="x", outputs="y_pred")],
+                slicers=FakeSlicer(slice="x", unslice=("x", "y_pred"), mode=None, ds_id=None, var=2.0))
+            return system
+
+        system = instantiate_system()
+
+        result = system.network.transform(data={'x': np.ones((1, 1, 28, 28), dtype=np.float32)}, mode="test")
+        self.assertTupleEqual(tuple(result['x'].shape), (1,1,28,28))
+        self.assertTupleEqual(tuple(result['y_pred'].shape), (1, 10))
+
+    def test_unslice_key_check_missing_unslice(self):
+        def instantiate_system():
+            system = sample_system_object()
+            model = fe.build(model_fn=fe.architecture.pytorch.LeNet, optimizer_fn='adam', model_name='tf')
+            system.network = fe.Network(
+                ops=[ModelOp(model=model, inputs="x", outputs="y_pred")],
+                slicers=FakeSlicer(slice="x", unslice="x", mode=None, ds_id=None, var=2.0))
+            return system
+
+        system = instantiate_system()
+
+        self.assertRaises(ValueError,
+                          lambda: system.network.transform(data={'x': np.ones((1, 1, 28, 28), dtype=np.float32)},
+                                                           mode="test"))
+
+    def test_unslice_key_check_missing_deleted(self):
+        def instantiate_system():
+            system = sample_system_object()
+            model = fe.build(model_fn=fe.architecture.pytorch.LeNet, optimizer_fn='adam', model_name='tf')
+            system.network = fe.Network(
+                ops=[ModelOp(model=model, inputs="x", outputs="y_pred"),
+                     Delete("y_pred")],
+                slicers=FakeSlicer(slice="x", unslice="x", mode=None, ds_id=None, var=2.0))
+            return system
+
+        system = instantiate_system()
+
+        result = system.network.transform(data={'x': np.ones((1, 1, 28, 28), dtype=np.float32)}, mode="test")
+        self.assertTupleEqual(tuple(result['x'].shape), (1, 1, 28, 28))
+        self.assertNotIn("y_pred", result)
 
     def test_save_and_load_state_torch(self):
         def instantiate_system():
