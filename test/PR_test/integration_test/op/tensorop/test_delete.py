@@ -76,13 +76,15 @@ def _batch():
 class TestSlicer(unittest.TestCase):
     def test_delete_new_key_transform_tf(self):
         result = _new_key_network(model=_tf_model()).transform(data=_batch(), mode="test")
-        self.assertIn("x", result.maps[0])
-        self.assertNotIn("y_pred", result.maps[0])
+        self.assertIn("x", result)
+        np.testing.assert_array_almost_equal(result['x'], [[2]])
+        self.assertNotIn("y_pred", result)
 
     def test_delete_old_key_transform_tf(self):
         result = _old_key_network(model=_tf_model()).transform(data=_batch(), mode="test")
-        self.assertNotIn("x", result.maps[0])
-        self.assertIn("y_pred", result.maps[0])
+        # X will still be in the response, but it's value should be the old input value rather than the updated value
+        np.testing.assert_array_almost_equal(result["x"], [[1]])
+        self.assertIn("y_pred", result)
 
     def test_delete_new_key_transform_torch(self):
         result = _new_key_network(model=_torch_model()).transform(data=_batch(), mode="test")
