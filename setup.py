@@ -38,7 +38,7 @@ def get_dependency():
         'pyfiglet',
         'opencv-python',
         'pandas',
-        'sklearn',
+        'scikit-learn==0.24.2',
         'wget',
         'pillow',
         'seaborn',
@@ -64,13 +64,9 @@ def get_dependency():
         'uncertainty-calibration==0.0.8',
         'dill==0.3.3',
         'scikit-image==0.17.2',
-        'prettytable==2.2.1'
+        'prettytable==2.2.1',
+        'fe_pycocotools==1.0'
     ]
-    if os.name == "nt":
-        dependencies.append(
-            "pycocotools @ git+https://github.com/philferriere/cocoapi.git#egg=pycocotools&subdirectory=PythonAPI")
-    else:
-        dependencies.append('pycocotools-fix')
     return dependencies
 
 
@@ -82,7 +78,7 @@ setup(
     packages=find_packages(),
     package_dir={'': '.'},
     long_description="FastEstimator is a high-level deep learning API. With the help of FastEstimator, you can easily \
-                    build a high-performance deep learning model and run it anywhere.",
+                    build a high-performance deep learning model and run it anywhere."                                                                                                                                                                            ,
     author="FastEstimator Dev",
     url='https://github.com/fastestimator/fastestimator',
     license="Apache License 2.0",
