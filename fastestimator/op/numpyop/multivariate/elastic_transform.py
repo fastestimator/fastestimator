@@ -48,6 +48,8 @@ class ElasticTransform(MultiVariateAlbumentation):
         mask_value: Padding value if border_mode is cv2.BORDER_CONSTANT applied for masks.
         approximate: Whether to smooth displacement map with fixed kernel size. Enabling this option gives ~2X
             speedup on large (512x512) images.
+        same_dxdy: Whether to use same random generated shift for x and y. Enabling this option gives ~2X speedup
+            on large (512x512) images.
 
     Image types:
         uint8, float32
@@ -61,6 +63,7 @@ class ElasticTransform(MultiVariateAlbumentation):
                  value: Union[None, int, float, List[int], List[float]] = None,
                  mask_value: Union[None, int, float, List[int], List[float]] = None,
                  approximate: bool = False,
+                 same_dxdy: bool = False,
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
                  image_in: Optional[str] = None,
@@ -78,6 +81,7 @@ class ElasticTransform(MultiVariateAlbumentation):
                                 value=value,
                                 mask_value=mask_value,
                                 approximate=approximate,
+                                same_dxdy=same_dxdy,
                                 always_apply=True),
             image_in=image_in,
             mask_in=mask_in,

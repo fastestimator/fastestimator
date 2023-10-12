@@ -31,15 +31,17 @@ __getattr__, __dir__, __all__ = lazy.attach(__name__,
                                                           'color': ['Color'],
                                                           'color_jitter': ['ColorJitter'],
                                                           'contrast': ['Contrast'],
+                                                          'defocus':['Defocus'],
                                                           'downscale': ['Downscale'],
                                                           'equalize': ['Equalize'],
                                                           'expand_dims': ['ExpandDims'],
+                                                          'fda': ['FDA'],
                                                           'from_float': ['FromFloat'],
                                                           'gaussian_blur': ['GaussianBlur'],
                                                           'gaussian_noise': ['GaussianNoise'],
                                                           'hadamard': ['Hadamard'],
+                                                          'histogram_matching': ['HistogramMatching'],
                                                           'hue_saturation_value': ['HueSaturationValue'],
-                                                          'iaa_additive_gaussian_noise': ['IAAAdditiveGaussianNoise'],
                                                           'image_compression': ['ImageCompression'],
                                                           'invert_img': ['InvertImg'],
                                                           'iso_noise': ['ISONoise'],
@@ -50,6 +52,7 @@ __getattr__, __dir__, __all__ = lazy.attach(__name__,
                                                           'normalize': ['Normalize'],
                                                           'onehot': ['Onehot'],
                                                           'pad_sequence': ['PadSequence'],
+                                                          'pixel_distribution_adaptation': ['PixelDistributionAdaptation'],
                                                           'posterize': ['Posterize'],
                                                           'random_brightness_contrast': ['RandomBrightnessContrast'],
                                                           'random_fog': ['RandomFog'],
@@ -75,6 +78,7 @@ __getattr__, __dir__, __all__ = lazy.attach(__name__,
                                                           'translate_x': ['TranslateX'],
                                                           'translate_y': ['TranslateY'],
                                                           'word_to_id': ['WordtoId'],
+                                                          'zoom_blur': ['ZoomBlur']
                                                           })
 
 if TYPE_CHECKING:
@@ -91,15 +95,17 @@ if TYPE_CHECKING:
     from fastestimator.op.numpyop.univariate.color import Color
     from fastestimator.op.numpyop.univariate.color_jitter import ColorJitter
     from fastestimator.op.numpyop.univariate.contrast import Contrast
+    from fastestimator.op.numpyop.univariate.defocus import Defocus
     from fastestimator.op.numpyop.univariate.downscale import Downscale
     from fastestimator.op.numpyop.univariate.equalize import Equalize
     from fastestimator.op.numpyop.univariate.expand_dims import ExpandDims
+    from fastestimator.op.numpyop.univariate.fda import FDA
     from fastestimator.op.numpyop.univariate.from_float import FromFloat
     from fastestimator.op.numpyop.univariate.gaussian_blur import GaussianBlur
     from fastestimator.op.numpyop.univariate.gaussian_noise import GaussianNoise
     from fastestimator.op.numpyop.univariate.hadamard import Hadamard
+    from fastestimator.op.numpyop.univariate.histogram_matching import HistogramMatching
     from fastestimator.op.numpyop.univariate.hue_saturation_value import HueSaturationValue
-    from fastestimator.op.numpyop.univariate.iaa_additive_gaussian_noise import IAAAdditiveGaussianNoise
     from fastestimator.op.numpyop.univariate.image_compression import ImageCompression
     from fastestimator.op.numpyop.univariate.invert_img import InvertImg
     from fastestimator.op.numpyop.univariate.iso_noise import ISONoise
@@ -110,6 +116,7 @@ if TYPE_CHECKING:
     from fastestimator.op.numpyop.univariate.normalize import Normalize
     from fastestimator.op.numpyop.univariate.onehot import Onehot
     from fastestimator.op.numpyop.univariate.pad_sequence import PadSequence
+    from fastestimator.op.numpyop.univariate.pixel_distribution_adaptation import PixelDistributionAdaptation
     from fastestimator.op.numpyop.univariate.posterize import Posterize
     from fastestimator.op.numpyop.univariate.random_brightness_contrast import RandomBrightnessContrast
     from fastestimator.op.numpyop.univariate.random_fog import RandomFog
@@ -135,3 +142,4 @@ if TYPE_CHECKING:
     from fastestimator.op.numpyop.univariate.translate_x import TranslateX
     from fastestimator.op.numpyop.univariate.translate_y import TranslateY
     from fastestimator.op.numpyop.univariate.word_to_id import WordtoId
+    from fastestimator.op.numpyop.univariate.zoom_blur import ZoomBlur

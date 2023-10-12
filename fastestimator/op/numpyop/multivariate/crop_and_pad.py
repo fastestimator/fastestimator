@@ -1,4 +1,4 @@
-# Copyright 2021 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2023 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,14 +14,15 @@
 # ==============================================================================
 from typing import Iterable, List, Optional, Tuple, Union
 
-from albumentations.imgaug.transforms import IAACropAndPad as IAACropAndPadAlb
+# from albumentations.imgaug.transforms import IAACropAndPad as IAACropAndPadAlb
+from albumentations.augmentations.crops import CropAndPad as CropAndPadAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 from fastestimator.util.traceability_util import traceable
 
 
 @traceable()
-class IAACropAndPad(MultiVariateAlbumentation):
+class CropAndPad(MultiVariateAlbumentation):
     """Crop and pad images by pixel amounts or fractions of image sizes.
 
     Args:
@@ -36,7 +37,7 @@ class IAACropAndPad(MultiVariateAlbumentation):
         image_out: The key to write the modified image (defaults to `image_in` if None).
         mask_out: The key to write the modified mask (defaults to `mask_in` if None).
         masks_out: The key to write the modified masks (defaults to `masks_in` if None).
-        px: he number of pixels to crop (negative values) or pad (positive values) on each side of the image.
+        px: The number of pixels to crop (negative values) or pad (positive values) on each side of the image.
             Either this or the parameter percent may be set, not both at the same time.
         percent: The number of pixels to crop (negative values) or pad (positive values) on each side of the image given
              as a fraction of the image height/width.
@@ -45,6 +46,8 @@ class IAACropAndPad(MultiVariateAlbumentation):
              one of them is a float, then a random number will be uniformly sampled per image from the continuous
              interval [a, b] and used as the value. If both number s are int s, the interval is discrete. If a list of
              number, then a random value will be chosen from the elements of the list and used as the value.
+        pad_cval_mask: Same as pad_cval but only for masks.
+        interpolation: flag that is used to specify the interpolation algorithm
         keep_size: Whether to keep the same size as original image.
 
     Image types:
@@ -55,7 +58,9 @@ class IAACropAndPad(MultiVariateAlbumentation):
                  percent: Union[None, float, Tuple[float, float]] = None,
                  pad_mode: Union[int, str] = 'constant',
                  pad_cval: Union[int, Tuple[float], List[int]] = 0,
+                 pad_cval_mask: Union[None, int, Tuple[float], List[int]] = None,
                  keep_size: bool = True,
+                 interpolation: str = 'bilinear',
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
                  image_in: Optional[str] = None,
@@ -64,12 +69,18 @@ class IAACropAndPad(MultiVariateAlbumentation):
                  image_out: Optional[str] = None,
                  mask_out: Optional[str] = None,
                  masks_out: Optional[str] = None):
+        order = {'nearest_neighbor': 0, 'bilinear': 1, 'bicubic': 3, 'biquartic': 4, 'biquintic': 5}[interpolation]
+        border = {'constant':0, 'reflect':1}[pad_mode]
+        if not pad_cval_mask:
+            pad_cval_mask = pad_cval
         super().__init__(
-            IAACropAndPadAlb(px=px,
+            CropAndPadAlb(px=px,
                              percent=percent,
-                             pad_mode=pad_mode,
+                             pad_mode=border,
                              pad_cval=pad_cval,
+                             pad_cval_mask=pad_cval_mask,
                              keep_size=keep_size,
+                             interpolation=order,
                              always_apply=True),
             image_in=image_in,
             mask_in=mask_in,
