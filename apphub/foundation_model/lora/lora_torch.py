@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import math
+import os
 import tempfile
 from functools import partial
 from typing import Any, Dict, List, Optional, Tuple, Type
@@ -33,6 +34,7 @@ from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Dice
+from fastestimator.util.google_download_util import download_file_from_google_drive
 
 
 class ImageEncoderViT(nn.Module):
@@ -334,7 +336,7 @@ def sam_encoder_b(weights_path=None) -> nn.Module:
 
 
 class LoRA_SamEncoder(nn.Module):
-    def __init__(self, r=4, base_encoder_weights=None):
+    def __init__(self, r=4, base_encoder_weights=None, lora_weights=None):
         super().__init__()
         self.base_encoder = sam_encoder_b(weights_path=base_encoder_weights)
         # create for storage, then we can init them or load weights
@@ -367,11 +369,13 @@ class LoRA_SamEncoder(nn.Module):
             )
             lora_param_num += sum(p.numel() for p in blk.attn.qkv.parameters() if p.requires_grad)
         print('parameter number of LoRA: ' + str(lora_param_num))
-        self.w_As = nn.ModuleList(self.w_As)
-        self.w_Bs = nn.ModuleList(self.w_Bs)
-        self.reset_parameters()
+        self.lora_modules = nn.ModuleList(self.w_As + self.w_Bs)
+        if lora_weights:
+            self.load_lora_weights(lora_weights)
+        else:
+            self.init_lora_weights()
 
-    def reset_parameters(self):
+    def init_lora_weights(self):
         for w_A in self.w_As:
             nn.init.kaiming_uniform_(w_A.weight, a=math.sqrt(5))
         for w_B in self.w_Bs:
@@ -380,6 +384,16 @@ class LoRA_SamEncoder(nn.Module):
     def forward(self, x):
         out = self.base_encoder(x)
         return out
+
+    def load_lora_weights(self, save_path):
+        print("Loading LoRA weights from {}...".format(save_path))
+        self.lora_modules.load_state_dict(
+            torch.load(save_path, map_location='cpu' if torch.cuda.device_count() == 0 else None))
+
+    def save_lora_weights(self, save_dir, name="lora"):
+        save_path = os.path.join(save_dir, "{}.pt".format(name))
+        print("Saving LoRA weights to {}...".format(save_path))
+        torch.save(self.lora_modules.state_dict(), save_path)
 
 
 class _LoRA_qkv(nn.Module):
@@ -473,11 +487,25 @@ class CombineLeftRightMask(NumpyOp):
         return data
 
 
+class BestLoRASaver(BestModelSaver):
+    def on_epoch_end(self, data) -> None:
+        if self.monitor_op(data[self.metric], self.best):
+            self.best = data[self.metric]
+            self.since_best = 0
+            if self.save_dir:
+                self.model_path = self.model.save_lora_weights(self.save_dir, self.model_name + "_lora")
+        else:
+            self.since_best += 1
+        data.write_with_log(self.outputs[0], self.since_best)
+        data.write_with_log(self.outputs[1], self.best)
+
+
 def get_estimator(epochs=20,
                   batch_size=1,
                   train_steps_per_epoch=None,
                   eval_steps_per_epoch=None,
-                  base_encoder_weights=None,
+                  base_encoder_weights="sam_b",
+                  lora_weights=None,
                   save_dir=tempfile.mkdtemp(),
                   data_dir=None):
     # step 1
@@ -498,9 +526,10 @@ def get_estimator(epochs=20,
             Minmax(inputs="mask", outputs="mask"),
             ChannelTranspose(inputs=("image", "mask"), outputs=("image", "mask"))
         ])
-    encoder = fe.build(model_fn=lambda: LoRA_SamEncoder(base_encoder_weights=base_encoder_weights),
-                       optimizer_fn=lambda x: torch.optim.Adam(x, lr=1e-4),
-                       model_name="encoder")
+    encoder = fe.build(
+        model_fn=lambda: LoRA_SamEncoder(base_encoder_weights=base_encoder_weights, lora_weights=lora_weights),
+        optimizer_fn=lambda x: torch.optim.Adam(x, lr=1e-4),
+        model_name="encoder")
     decoder = fe.build(model_fn=UNet_Decoder, optimizer_fn=lambda x: torch.optim.Adam(x, lr=1e-4), model_name="decoder")
     network = fe.Network(ops=[
         ModelOp(model=encoder, inputs="image", outputs="feature_embedding"),
@@ -511,7 +540,8 @@ def get_estimator(epochs=20,
     ])
     traces = [
         Dice(true_key="mask", pred_key="mask_pred"),
-        BestModelSaver(model=encoder, save_dir=save_dir, metric='Dice', save_best_mode='max')
+        BestModelSaver(model=encoder, save_dir=save_dir, metric='Dice', save_best_mode='max'),
+        BestLoRASaver(model=encoder, save_dir=save_dir, metric="Dice", save_best_mode="max")
     ]
     estimator = fe.Estimator(network=network,
                              pipeline=pipeline,
@@ -521,3 +551,6 @@ def get_estimator(epochs=20,
                              train_steps_per_epoch=train_steps_per_epoch,
                              eval_steps_per_epoch=eval_steps_per_epoch)
     return estimator
+
+if __name__ == "__main__":
+    download_file_from_google_drive("1ARvozNidxVKHb9bqkwnlWzBl5VwsZLcb", destination="sam_encoder_b.pth")

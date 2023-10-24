@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+"""
+This code implements LoRA training for ViT architecture in TensorFlow. All ViT encoder parameters except LoRA's weights
+ are frozen. During training, the LoRA weights and the dense layer classification head are trained together.
+"""
+import os
 import pdb
 import tempfile
 
@@ -127,6 +132,20 @@ class Encoder(layers.Layer):
             x = self.enc_layers[i](x, training)
         return x
 
+    def load_lora_weights(self, save_path):
+        lora_vars = {var.name: var for var in self.trainable_variables if "lora_w" in var.name}
+        print("Loading LoRA weights from {}...".format(save_path))
+        loaded_vars = np.load(save_path)
+        for var_name, var in lora_vars.items():
+            var.assign(loaded_vars[var_name])
+
+    def save_lora_weights(self, save_dir, name="lora_weight"):
+        lora_vars = {var.name: var.numpy() for var in self.trainable_variables if "lora_w" in var.name}
+        save_path = os.path.join(save_dir, "{}.npz".format(name))
+        print("Saving LoRA weights to {}...".format(save_path))
+        np.savez(save_path, **lora_vars)
+        return save_path
+
 
 class PositionEmbedding(layers.Layer):
     def __init__(self, image_size, patch_size, em_dim):
@@ -174,7 +193,8 @@ def transformer_encoder_lora(image_size,
 def vision_transformer_lora(num_class,
                             image_size,
                             lora_r=4,
-                            base_encoder_weights=None,
+                            encoder_weights=None,
+                            lora_weights=None,
                             patch_size=16,
                             num_layers=12,
                             em_dim=768,
@@ -183,12 +203,16 @@ def vision_transformer_lora(num_class,
                             rate=0.1):
     inputs = layers.Input(shape=image_size)
     backbone = transformer_encoder_lora(image_size, lora_r, patch_size, num_layers, em_dim, num_heads, dff, rate)
-    if base_encoder_weights:
-        backbone.load_weights(base_encoder_weights)
+    if encoder_weights:
+        backbone.load_weights(encoder_weights)
+    if lora_weights:
+        backbone.layers[5].load_lora_weights(lora_weights)
+    # freeze original encoder weights
     set_trainable_weights(backbone)
     x = backbone(inputs)
     x = layers.Dense(num_class)(x)
     model = tf.keras.Model(inputs=inputs, outputs=x)
+    # print the number of trainable/non-trainable parameters
     num_trainable_params = np.sum([np.prod(v.get_shape().as_list()) for v in model.trainable_variables])
     num_non_trainable_params = np.sum([np.prod(v.get_shape().as_list()) for v in model.non_trainable_variables])
     print("Number of Trainable Parameters: {}".format(num_trainable_params))
@@ -199,6 +223,7 @@ def vision_transformer_lora(num_class,
 def set_trainable_weights(model):
     # only make wa, wb weights associated with lora layer trainable
     layers = list(model._flatten_layers(include_self=False, recursive=True))
+    # skip freezing any modules that are associated with lora or are parents of lora
     skipped_name_includes = [
         "model", "encoder", "encoder_layer", "multi_head_attention", "lo_ra_dense", "lora_w_a", "lora_w_b"
     ]
@@ -206,12 +231,28 @@ def set_trainable_weights(model):
         if not any(name in layer.name for name in skipped_name_includes):
             layer.trainable = False
 
+
+class BestLoRASaver(BestModelSaver):
+    def on_epoch_end(self, data) -> None:
+        if self.monitor_op(data[self.metric], self.best):
+            self.best = data[self.metric]
+            self.since_best = 0
+            if self.save_dir:
+                self.model_path = self.model.layers[1].layers[5].save_lora_weights(self.save_dir,
+                                                                                   self.model_name + "_lora")
+        else:
+            self.since_best += 1
+        data.write_with_log(self.outputs[0], self.since_best)
+        data.write_with_log(self.outputs[1], self.best)
+
+
 def get_estimator(batch_size,
                   epochs,
                   save_dir=tempfile.mkdtemp(),
                   train_steps_per_epoch=None,
                   eval_steps_per_epoch=None,
-                  base_encoder_weights=None):
+                  encoder_weights=None,
+                  lora_weights=None):
     train_data, eval_data = cifair10.load_data()
     pipeline = fe.Pipeline(
         train_data=train_data,
@@ -228,7 +269,8 @@ def get_estimator(batch_size,
         model_fn=lambda: vision_transformer_lora(num_class=100,
                                                  image_size=(32, 32, 3),
                                                  lora_r=4,
-                                                 base_encoder_weights=base_encoder_weights,
+                                                 encoder_weights=encoder_weights,
+                                                 lora_weights=lora_weights,
                                                  patch_size=4,
                                                  num_layers=6,
                                                  em_dim=256,
@@ -242,7 +284,8 @@ def get_estimator(batch_size,
     ])
     traces = [
         Accuracy(true_key="y", pred_key="y_pred"),
-        BestModelSaver(model=vit_lora, save_dir=save_dir, metric="accuracy", save_best_mode="max")
+        BestModelSaver(model=vit_lora, save_dir=save_dir, metric="accuracy", save_best_mode="max"),
+        BestLoRASaver(model=vit_lora, save_dir=save_dir, metric="accuracy", save_best_mode="max")
     ]
     estimator = fe.Estimator(pipeline=pipeline,
                              network=network,
