@@ -27,7 +27,7 @@ from torch.nn.init import kaiming_normal_ as he_normal
 import fastestimator as fe
 from fastestimator.backend import load_model
 from fastestimator.dataset.data import montgomery
-from fastestimator.op.numpyop import NumpyOp
+from fastestimator.op.numpyop import Delete, NumpyOp
 from fastestimator.op.numpyop.multivariate import Resize
 from fastestimator.op.numpyop.univariate import ChannelTranspose, Minmax, ReadImage
 from fastestimator.op.tensorop.loss import CrossEntropy
@@ -331,6 +331,7 @@ def sam_encoder_b(weights_path=None) -> nn.Module:
                               window_size=14,
                               out_chans=256)
     if weights_path:
+        print("Loading SAM Encoder weights from {}...".format(weights_path))
         load_model(encoder, weights_path=weights_path)
     return encoder
 
@@ -500,8 +501,16 @@ class BestLoRASaver(BestModelSaver):
         data.write_with_log(self.outputs[1], self.best)
 
 
-def get_estimator(epochs=20,
-                  batch_size=1,
+def download_sam_encoder_b(save_dir):
+    weights_path = os.path.join(save_dir, "sam_encoder_b.pth")
+    if not os.path.exists(weights_path):
+        print("Downloading Sam Encoder-b's weight to {}...".format(weights_path))
+        download_file_from_google_drive("1l88I5jImXHp7TgMFaopY-w4bGkLnLDce", destination=weights_path)
+    return weights_path
+
+
+def get_estimator(epochs=1,
+                  batch_size=2,
                   train_steps_per_epoch=None,
                   eval_steps_per_epoch=None,
                   base_encoder_weights="sam_b",
@@ -524,8 +533,11 @@ def get_estimator(epochs=20,
             Resize(image_in="mask", width=1024, height=1024),
             Minmax(inputs="image", outputs="image"),
             Minmax(inputs="mask", outputs="mask"),
-            ChannelTranspose(inputs=("image", "mask"), outputs=("image", "mask"))
+            ChannelTranspose(inputs=("image", "mask"), outputs=("image", "mask")),
+            Delete(keys=("mask_left", "mask_right"))
         ])
+    if base_encoder_weights == "sam_b":
+        base_encoder_weights = download_sam_encoder_b(save_dir)
     encoder = fe.build(
         model_fn=lambda: LoRA_SamEncoder(base_encoder_weights=base_encoder_weights, lora_weights=lora_weights),
         optimizer_fn=lambda x: torch.optim.Adam(x, lr=1e-4),
@@ -540,7 +552,7 @@ def get_estimator(epochs=20,
     ])
     traces = [
         Dice(true_key="mask", pred_key="mask_pred"),
-        BestModelSaver(model=encoder, save_dir=save_dir, metric='Dice', save_best_mode='max'),
+        BestModelSaver(model=decoder, save_dir=save_dir, metric='Dice', save_best_mode='max'),
         BestLoRASaver(model=encoder, save_dir=save_dir, metric="Dice", save_best_mode="max")
     ]
     estimator = fe.Estimator(network=network,
@@ -552,5 +564,7 @@ def get_estimator(epochs=20,
                              eval_steps_per_epoch=eval_steps_per_epoch)
     return estimator
 
+
 if __name__ == "__main__":
-    download_file_from_google_drive("1ARvozNidxVKHb9bqkwnlWzBl5VwsZLcb", destination="sam_encoder_b.pth")
+    est = get_estimator()
+    est.fit()

@@ -17,7 +17,6 @@ This code implements LoRA training for ViT architecture in TensorFlow. All ViT e
  are frozen. During training, the LoRA weights and the dense layer classification head are trained together.
 """
 import os
-import pdb
 import tempfile
 
 import numpy as np
@@ -25,7 +24,7 @@ import tensorflow as tf
 from tensorflow.keras import layers
 
 import fastestimator as fe
-from fastestimator.dataset.data import cifair10
+from fastestimator.dataset.data import cifar10
 from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import HorizontalFlip, PadIfNeeded, RandomCrop
 from fastestimator.op.numpyop.univariate import CoarseDropout, Normalize
@@ -246,14 +245,14 @@ class BestLoRASaver(BestModelSaver):
         data.write_with_log(self.outputs[1], self.best)
 
 
-def get_estimator(batch_size,
-                  epochs,
+def get_estimator(batch_size=128,
+                  epochs=20,
                   save_dir=tempfile.mkdtemp(),
                   train_steps_per_epoch=None,
                   eval_steps_per_epoch=None,
                   encoder_weights=None,
                   lora_weights=None):
-    train_data, eval_data = cifair10.load_data()
+    train_data, eval_data = cifar10.load_data()
     pipeline = fe.Pipeline(
         train_data=train_data,
         eval_data=eval_data,
@@ -294,3 +293,7 @@ def get_estimator(batch_size,
                              train_steps_per_epoch=train_steps_per_epoch,
                              eval_steps_per_epoch=eval_steps_per_epoch)
     return estimator
+
+if __name__ == "__main__":
+    est = get_estimator()
+    est.fit()
