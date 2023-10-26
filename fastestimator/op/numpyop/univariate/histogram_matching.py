@@ -54,7 +54,7 @@ class HistogramMatching(ImageOnlyAlbumentation):
                  reference_images: Union[Any, Iterable[Any]],
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
-                 blend_ratio: Tuple[float, float] = (0.5,0.1),
+                 blend_ratio: Tuple[float, float] = (0.5,1.0),
                  read_fn: Callable = lambda x: x, # for reading tensor to numpy array
                  ):
         super().__init__(HistogramMatchingAlb(reference_images=reference_images,

@@ -12,23 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Iterable, Tuple, Union, Any, Callable
+from typing import Any, Callable, Iterable, Tuple, Union
 
 from albumentations.augmentations import PixelDistributionAdaptation as PixelDistributionAdaptationAlb
 
-from fastestimator.util.traceability_util import traceable
-
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
-
+from fastestimator.util.traceability_util import traceable
 
 
 @traceable()
 class PixelDistributionAdaptation(ImageOnlyAlbumentation):
     """Naive and quick pixel-level domain adaptation.
 
-    It fits a simple transform (such as PCA, StandardScaler or MinMaxScaler) on both original and reference image,
-    transforms original image with transform trained on this image and then performs inverse transformation using
-    transform fitted on reference image.
+    It provides pixel-level domain adaptation by fitting a simple transform (such as PCA, StandardScaler or
+    MinMaxScaler) on both the original and reference image, transforming the original image with the transform
+    trained on this image, and then performing an inverse transformation using the transform fitted on
+    the reference image.
 
     Args:
         reference_images: Sequence of objects that will be converted to images by read_fn. Can either be path

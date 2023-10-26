@@ -12,16 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Iterable, Union
 from typing import Iterable, Tuple, Union
-
 
 from albumentations.augmentations.blur.transforms import ZoomBlur as ZoomBlurAlb
 
-from fastestimator.util.traceability_util import traceable
-
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
-
+from fastestimator.util.traceability_util import traceable
 
 
 @traceable()
@@ -30,8 +26,11 @@ class ZoomBlur(ImageOnlyAlbumentation):
 
     Args:
         max_factor: range for max factor for blurring. If max_factor is a single float, the range will be (1, limit).
-            All max_factor values should be larger than 1.
-        step_factor: Step size for zoom. All step_factor values should be positive.
+            All max_factor values should be larger than 1. If max_factor is a tuple, it represents the
+            (min, max) range for the factor.
+        step_factor: Step size for zoom. All step_factor values should be positive. If single float will be used as
+            step parameter for np.arange. If tuple of float step_factor will be in range
+            [step_factor[0], step_factor[1])
         inputs: Key(s) of images to be modified.
         outputs: Key(s) into which to write the modified images.
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute

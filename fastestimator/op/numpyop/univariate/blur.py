@@ -56,11 +56,11 @@ class Blur(ImageOnlyAlbumentation):
                  ds_id: Union[None, str, Iterable[str]] = None,
                  blur_limit: Union[int, Tuple[int, int]] = 7,
                  advanced: bool= False,
-                 sigmaX_limit: Union[None, float, Tuple[float, float]] = 0,
-                 sigmaY_limit: Union[None, float, Tuple[float, float]] = 0,
+                 sigmaX_limit: Union[None, float, Tuple[float, float]] = (0.2, 1.0),
+                 sigmaY_limit: Union[None, float, Tuple[float, float]] = (0.2, 1.0),
                  rotate_limit: Union[None, int, Tuple[int, int]] = 90,
                  beta_limit: Union[None, float, Tuple[float, float]] = (0.5, 8.0),
-                 noise_limit: Union[None, float, Tuple[float, float]] = (0.75, 1.25)):
+                 noise_limit: Union[None, float, Tuple[float, float]] = (0.9, 1.1)):
 
         if advanced:
             func = AdvBlurAlb(blur_limit=blur_limit,

@@ -64,6 +64,8 @@ class BBoxSafeRandomCrop(MultiVariateAlbumentation):
                  keypoints_out: Optional[str] = None,
                  bbox_params: Union[BboxParams, str, None] = None,
                  keypoint_params: Union[KeypointParams, str, None] = None):
+        if not 0.0 <= erosion_rate <= 1.0:
+            raise ValueError("The erosion_rate must be a float in the range [0.0, 1.0].")
         super().__init__(BBoxSafeRandomCropAlb(erosion_rate=erosion_rate, always_apply=True),
                          image_in=image_in,
                          mask_in=mask_in,
