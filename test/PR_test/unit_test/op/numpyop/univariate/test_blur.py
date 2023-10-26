@@ -35,8 +35,39 @@ class TestBlur(unittest.TestCase):
         with self.subTest('Check output image shape'):
             self.assertEqual(output[0].shape, self.single_output_shape)
 
+    def test_single_input_advanced(self):
+        blur = Blur(inputs='x', outputs='x',
+                    advanced = True,
+                    sigmaX_limit = (0.5,1),
+                    sigmaY_limit = 1,
+                    rotate_limit = 45,
+                    beta_limit = (0.5, 8.0),
+                    noise_limit = (0.5, 1.0))
+        output = blur.forward(data=self.single_input, state={})
+        with self.subTest('Check output type'):
+            self.assertEqual(type(output), list)
+        with self.subTest('Check output image shape'):
+            self.assertEqual(output[0].shape, self.single_output_shape)
+
     def test_input_image_and_mask(self):
         blur = Blur(inputs='x', outputs='x')
+        output = blur.forward(data=self.multi_input, state={})
+        with self.subTest('Check output type'):
+            self.assertEqual(type(output), list)
+        with self.subTest('Check output list length'):
+            self.assertEqual(len(output), 2)
+        for img_output in output:
+            with self.subTest('Check output mask shape'):
+                self.assertEqual(img_output.shape, self.multi_output_shape)
+
+    def test_input_image_and_mask_advanced(self):
+        blur = Blur(inputs='x', outputs='x',
+                    advanced = True,
+                    sigmaX_limit = (0.5,1),
+                    sigmaY_limit = 1,
+                    rotate_limit = 45,
+                    beta_limit = (0.5, 8.0),
+                    noise_limit = (0.5, 1.0))
         output = blur.forward(data=self.multi_input, state={})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)

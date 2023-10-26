@@ -19,18 +19,20 @@ import lazy_loader as lazy
 
 __getattr__, __dir__, __all__ = lazy.attach(__name__,
                                             submod_attrs={'affine': ['Affine'],
+                                                          'bbox_safe_random_crop': ['BBoxSafeRandomCrop'],
                                                           'center_crop': ['CenterCrop'],
+                                                          'crop_and_pad': ['CropAndPad'],
                                                           'crop': ['Crop'],
                                                           'crop_non_empty_mask_if_exists': ['CropNonEmptyMaskIfExists'],
                                                           'elastic_transform': ['ElasticTransform'],
                                                           'flip': ['Flip'],
                                                           'grid_distortion': ['GridDistortion'],
                                                           'horizontal_flip': ['HorizontalFlip'],
-                                                          'iaa_crop_and_pad': ['IAACropAndPad'],
                                                           'longest_max_size': ['LongestMaxSize'],
                                                           'mask_dropout': ['MaskDropout'],
                                                           'optical_distortion': ['OpticalDistortion'],
                                                           'pad_if_needed': ['PadIfNeeded'],
+                                                          'random_crop_from_borders': ['RandomCropFromBorders'],
                                                           'random_crop': ['RandomCrop'],
                                                           'random_crop_near_bbox': ['RandomCropNearBBox'],
                                                           'random_grid_shuffle': ['RandomGridShuffle'],
@@ -50,6 +52,7 @@ __getattr__, __dir__, __all__ = lazy.attach(__name__,
 
 if TYPE_CHECKING:
     from fastestimator.op.numpyop.multivariate.affine import Affine
+    from fastestimator.op.numpyop.multivariate.bbox_safe_random_crop import BBoxSafeRandomCrop
     from fastestimator.op.numpyop.multivariate.center_crop import CenterCrop
     from fastestimator.op.numpyop.multivariate.crop import Crop
     from fastestimator.op.numpyop.multivariate.crop_non_empty_mask_if_exists import CropNonEmptyMaskIfExists
@@ -57,11 +60,12 @@ if TYPE_CHECKING:
     from fastestimator.op.numpyop.multivariate.flip import Flip
     from fastestimator.op.numpyop.multivariate.grid_distortion import GridDistortion
     from fastestimator.op.numpyop.multivariate.horizontal_flip import HorizontalFlip
-    from fastestimator.op.numpyop.multivariate.iaa_crop_and_pad import IAACropAndPad
+    from fastestimator.op.numpyop.multivariate.crop_and_pad import CropAndPad
     from fastestimator.op.numpyop.multivariate.longest_max_size import LongestMaxSize
     from fastestimator.op.numpyop.multivariate.mask_dropout import MaskDropout
     from fastestimator.op.numpyop.multivariate.optical_distortion import OpticalDistortion
     from fastestimator.op.numpyop.multivariate.pad_if_needed import PadIfNeeded
+    from fastestimator.op.numpyop.multivariate.random_crop_from_borders import RandomCropFromBorders
     from fastestimator.op.numpyop.multivariate.random_crop import RandomCrop
     from fastestimator.op.numpyop.multivariate.random_crop_near_bbox import RandomCropNearBBox
     from fastestimator.op.numpyop.multivariate.random_grid_shuffle import RandomGridShuffle

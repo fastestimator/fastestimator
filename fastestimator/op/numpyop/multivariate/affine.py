@@ -15,7 +15,8 @@
 from typing import Iterable, List, Optional, Tuple, TypeVar, Union
 
 from albumentations import BboxParams, KeypointParams
-from albumentations.imgaug.transforms import IAAAffine
+
+from albumentations.augmentations import Affine as AffineAlb
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 from fastestimator.util.traceability_util import traceable
@@ -44,9 +45,17 @@ class Affine(MultiVariateAlbumentation):
         border_handling: What to do in order to fill newly created pixels. Options are 'constant', 'edge',
                 'symmetric', 'reflect', and 'wrap'. If a list is given, then the method will be randomly
                 selected from the options in the list.
-        fill_value: What pixel value to insert when border_handling is 'constant'.
-        interpolation: What interpolation method to use. Options (from fast to slow) are 'nearest_neighbor',
+        fill_value: What pixel value to insert for image when border_handling is 'constant'.
+        fill_value_mask: Same as fill_value but only for masks.
+        interpolation: What interpolation method to use for image. Options (from fast to slow) are 'nearest_neighbor',
                 'bilinear', 'bicubic', 'biquartic', and 'biquintic'.
+        mask_interpolation: Same as interpolation for mask. 'nearest_neighbor' is recommended by Albumentation.
+        fit_output: If True, the image plane size and position will be adjusted to tightly capture the whole image
+                after affine transformation (translate_percent and translate_px are ignored). Otherwise (False),
+                parts of the transformed image may end up outside the image plane. Fitting the output shape can be
+                useful to avoid corners of the image being outside the image plane after applying rotations.
+        keep_ratio: When True, the original aspect ratio will be kept when the random scale is applied.
+        rotate_method: rotation method used for the bounding boxes. Should be one of "largest_box" or "ellipse".
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
@@ -69,13 +78,18 @@ class Affine(MultiVariateAlbumentation):
         uint8, float32
     """
     def __init__(self,
-                 rotate: Union[Number, Tuple[Number, Number]] = 0,
-                 scale: Union[float, Tuple[float, float]] = 1.0,
-                 shear: Union[Number, Tuple[Number, Number]] = 0,
-                 translate: Union[Number, Tuple[Number, Number]] = 0,
+                 rotate: Union[None, Number, Tuple[Number, Number]] = None,
+                 scale: Union[None, float, Tuple[float, float]] = None,
+                 shear: Union[None, Number, Tuple[Number, Number]] = None,
+                 translate: Union[None, Number, Tuple[Number, Number]] = None,
                  border_handling: Union[str, List[str]] = "constant",
                  fill_value: Number = 0,
+                 fill_value_mask: Union[None, Number] = None,
                  interpolation: str = "bilinear",
+                 mask_interpolation: str = "nearest_neighbor",
+                 fit_output: bool = False,
+                 keep_ratio: bool = False,
+                 rotate_method: str = 'largest_box',
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
                  image_in: Optional[str] = None,
@@ -90,24 +104,37 @@ class Affine(MultiVariateAlbumentation):
                  keypoints_out: Optional[str] = None,
                  bbox_params: Union[BboxParams, str, None] = None,
                  keypoint_params: Union[KeypointParams, str, None] = None):
-        order = {'nearest_neighbor': 0, 'bilinear': 1, 'bicubic': 3, 'biquartic': 4, 'biquintic': 5}[interpolation]
+        order = {'nearest_neighbor': 0, 'bilinear': 1, 'bicubic': 3, 'biquartic': 4, 'biquintic': 5}
+        border = {'constant':0, 'reflect':1}[border_handling]
+        if not fill_value_mask:
+            fill_value_mask = fill_value
         if isinstance(translate, int) or (isinstance(translate, Tuple) and isinstance(translate[0], int)):
-            func = IAAAffine(rotate=rotate,
+            func = AffineAlb(rotate=rotate,
                              scale=scale,
                              shear=shear,
                              translate_px=translate,
-                             order=order,
+                             interpolation=order[interpolation],
+                             mask_interpolation=order[mask_interpolation],
                              cval=fill_value,
-                             mode=border_handling,
+                             cval_mask=fill_value_mask,
+                             mode=border,
+                             fit_output=fit_output,
+                             keep_ratio=keep_ratio,
+                             rotate_method=rotate_method,
                              always_apply=True)
         else:
-            func = IAAAffine(rotate=rotate,
+            func = AffineAlb(rotate=rotate,
                              scale=scale,
                              shear=shear,
                              translate_percent=translate,
-                             order=order,
+                             interpolation=order[interpolation],
+                             mask_interpolation=order[mask_interpolation],
                              cval=fill_value,
-                             mode=border_handling,
+                             cval_mask=fill_value_mask,
+                             mode=border,
+                             fit_output=fit_output,
+                             keep_ratio=keep_ratio,
+                             rotate_method=rotate_method,
                              always_apply=True)
         super().__init__(func,
                          image_in=image_in,
