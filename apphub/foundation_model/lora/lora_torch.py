@@ -35,6 +35,7 @@ from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Dice
 from fastestimator.util.google_download_util import download_file_from_google_drive
+from fastestimator.util.util import get_num_gpus
 
 
 class ImageEncoderViT(nn.Module):
@@ -388,8 +389,7 @@ class LoRA_SamEncoder(nn.Module):
 
     def load_lora_weights(self, save_path):
         print("Loading LoRA weights from {}...".format(save_path))
-        self.lora_modules.load_state_dict(
-            torch.load(save_path, map_location='cpu' if torch.cuda.device_count() == 0 else None))
+        self.lora_modules.load_state_dict(torch.load(save_path, map_location='cpu' if get_num_gpus() == 0 else None))
 
     def save_lora_weights(self, save_dir, name="lora"):
         save_path = os.path.join(save_dir, "{}.pt".format(name))
