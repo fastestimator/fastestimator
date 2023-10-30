@@ -49,7 +49,8 @@ def load_model(model: Union[tf.keras.Model, torch.nn.Module], weights_path: str,
     Raises:
         ValueError: If `model` is an unacceptable data type.
     """
-    assert hasattr(model, "fe_compiled") and model.fe_compiled, "model must be built by fe.build"
+    if load_optimizer:
+        assert hasattr(model, "fe_compiled") and model.fe_compiled, "model must be built by fe.build if loading optimizers"
 
     if os.path.exists(weights_path):
         ValueError("Weights path doesn't exist: ", weights_path)
