@@ -510,7 +510,7 @@ def download_sam_encoder_b(save_dir):
 
 
 def get_estimator(epochs=1,
-                  batch_size=2,
+                  batch_size_per_gpu=2,
                   train_steps_per_epoch=None,
                   eval_steps_per_epoch=None,
                   base_encoder_weights="sam_b",
@@ -523,7 +523,7 @@ def get_estimator(epochs=1,
     pipeline = fe.Pipeline(
         train_data=ds_train,
         eval_data=ds_eval,
-        batch_size=batch_size,
+        batch_size=get_num_gpus() * batch_size_per_gpu,
         ops=[
             ReadImage(inputs="image", parent_path=ds_train.parent_path, outputs="image"),
             ReadImage(inputs="mask_left", parent_path=ds_train.parent_path, outputs="mask_left", color_flag='gray'),

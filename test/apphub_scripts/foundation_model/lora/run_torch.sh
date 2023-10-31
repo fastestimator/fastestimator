@@ -21,7 +21,7 @@ example_name="lora"
 # 1. Usually we set the epochs:2, batch_size:2, train_steps_per_epoch:2
 # 2. The expression for the following setup is "--epochs 2 --batch_size 8 --train_steps_per_epoch 2"
 # 3. The syntax of this expression is different from run_notebook.py
-train_info=(--epochs 1 --train_steps_per_epoch 2 --eval_steps_per_epoch 2 --batch_size 2 --base_encoder_weights None)
+train_info=(--epochs 1 --train_steps_per_epoch 2 --eval_steps_per_epoch 2 --batch_size_per_gpu 1 --base_encoder_weights None)
 
 # Do you want to run "fastestimator test"? (bool)
 need_test=0
