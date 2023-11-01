@@ -184,11 +184,11 @@ class TestInterleaveDataset(unittest.TestCase):
 
         class Collector(Trace):
             def __init__(self) -> None:
-                super().__init__(inputs="x_shape")
+                super().__init__(inputs="x")
                 self.shapes = []
 
             def on_batch_end(self, data: Data) -> None:
-                self.shapes.append(data['x_shape'])
+                self.shapes.append(tf.shape(data['x']))
 
             def on_epoch_end(self, data: Data) -> None:
                 data.write_with_log(key="batch_shapes", value=self.shapes)
@@ -200,19 +200,13 @@ class TestInterleaveDataset(unittest.TestCase):
         pipeline = fe.Pipeline(train_data=dataset, batch_size=2)
         model = fe.build(model_fn=lambda: mymodel(input_shape=(None, None, 1)), optimizer_fn="adam")
         network = fe.Network(ops=[
-            ModelOp(inputs="x", outputs="y_pred", model=model),
-            LambdaOp(inputs="x", outputs="x_shape", fn=lambda x: tf.shape(x))
+            ModelOp(inputs="x", outputs="y_pred", model=model)
         ])
         estimator = fe.Estimator(pipeline=pipeline, network=network, epochs=1, traces=Collector())
         summary = estimator.fit("test")
         self.assertEqual(summary.history['train']['epoch'][20], 1)
-        if get_num_gpus() > 1:
-            # On multi-gpu machines the batch gets split apart, leading to an elongated tf.shape response
-            target_32 = [1, 32, 32, 1, 1, 32, 32, 1]
-            target_28 = [1, 28, 28, 1, 1, 28, 28, 1]
-        else:
-            target_32 = [2, 32, 32, 1]
-            target_28 = [2, 28, 28, 1]
+        target_32 = [2, 32, 32, 1]
+        target_28 = [2, 28, 28, 1]
         self.assertEqual(list(summary.history['train']['batch_shapes'][20][0]), target_32)
         self.assertEqual(list(summary.history['train']['batch_shapes'][20][1]), target_28)
         self.assertEqual(list(summary.history['train']['batch_shapes'][20][2]), target_32)

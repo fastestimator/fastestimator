@@ -428,15 +428,15 @@ class TestNetworkTransform(unittest.TestCase):
                 UpdateOp(model=model, loss_name="ce")
             ],
             pops=PlusOneNumpyOp(inputs="y_pred", outputs="y_pred_processed"))
-        batch = {"x": np.array([[1, 1, 1]]), "y": np.array([1])}
+        batch = {"x": np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]]), "y": np.array([1,1,1,1])}
         batch = network.transform(data=batch, mode="train")
 
         with self.subTest("output y_pred check"):
-            ans = np.array([[6]], dtype=np.float32)  # 1*1 + 1*2 + 1*3
+            ans = np.array([[6], [6], [6], [6]], dtype=np.float32)  # 1*1 + 1*2 + 1*3
             self.assertTrue(np.array_equal(batch["y_pred"].numpy(), ans))
 
         with self.subTest("postprocessing y_pred check"):
-            ans = np.array([[7]], dtype=np.float32)  # 1*1 + 1*2 + 1*3 + 1
+            ans = np.array([[7], [7], [7], [7]], dtype=np.float32)  # 1*1 + 1*2 + 1*3 + 1
             self.assertTrue(np.array_equal(batch["y_pred_processed"], ans))
 
         with self.subTest("output ce check"):
@@ -489,7 +489,7 @@ class TestNetworkTransform(unittest.TestCase):
             UpdateOp(model=model, loss_name="ce")
         ])
 
-        batch = {"x": np.ones((1, 28, 28, 1)), "y": np.array([1])}
+        batch = {"x": np.ones((4, 28, 28, 1)), "y": np.array([1,1,1,1])}
         batch = network.transform(data=batch, mode="train")
         with self.subTest("output y_pred check"):
             self.assertTrue("y_pred" in batch.keys())
@@ -539,7 +539,7 @@ class TestNetworkTransform(unittest.TestCase):
             ModelOp(model=model, inputs="x", outputs="y_pred"),
             CrossEntropy(inputs=("y_pred", "y"), outputs="ce", ds_id=("ds_1", "ds_2"))
         ])
-        pipeline_data = pipeline.transform(data=train_data[0], mode="train")
+        pipeline_data = pipeline.get_results()
         data1 = network.transform(data=pipeline_data, mode="train", ds_id="ds_1")
         assert "ce" in data1
         data2 = network.transform(data=pipeline_data, mode="train", ds_id="ds_2")
@@ -560,7 +560,7 @@ class TestNetworkTransform(unittest.TestCase):
             ModelOp(model=model, inputs="x", outputs="y_pred"),
             CrossEntropy(inputs=("y_pred", "y"), outputs="ce", ds_id=("!ds_1", "!ds_2"))
         ])
-        pipeline_data = pipeline.transform(data=train_data[0], mode="train")
+        pipeline_data = pipeline.get_results()
         data1 = network.transform(data=pipeline_data, mode="eval", ds_id="ds_1")
         assert "ce" not in data1
         data2 = network.transform(data=pipeline_data, mode="eval", ds_id="ds_2")
@@ -581,7 +581,7 @@ class TestNetworkTransform(unittest.TestCase):
             ModelOp(model=model, inputs="x", outputs="y_pred"),
             CrossEntropy(inputs=("y_pred", "y"), outputs="ce", ds_id="!ds_1")
         ])
-        pipeline_data = pipeline.transform(data=train_data[0], mode="train")
+        pipeline_data = pipeline.get_results()
         data1 = network.transform(data=pipeline_data, mode="test", ds_id="ds_1")
         assert "ce" not in data1
         data2 = network.transform(data=pipeline_data, mode="test", ds_id="ds_2")
@@ -600,7 +600,7 @@ class TestNetworkTransform(unittest.TestCase):
             ModelOp(model=model, inputs="x", outputs="y_pred"),
             CrossEntropy(inputs=("y_pred", "y"), outputs="ce", ds_id="ds_1")
         ])
-        pipeline_data = pipeline.transform(data=train_data[0], mode="train")
+        pipeline_data = pipeline.get_results()
         data1 = network.transform(data=pipeline_data, mode="test", ds_id="ds_1")
         assert "ce" in data1
         data2 = network.transform(data=pipeline_data, mode="test", ds_id="ds_2")
@@ -619,7 +619,7 @@ class TestNetworkTransform(unittest.TestCase):
             ModelOp(model=model, inputs="x", outputs="y_pred"),
             CrossEntropy(inputs=("y_pred", "y"), outputs="ce", ds_id="ds_1")
         ])
-        pipeline_data = pipeline.transform(data=train_data[0], mode="train")
+        pipeline_data = pipeline.get_results()
         data1 = network.transform(data=pipeline_data, mode="infer", ds_id="ds_1")
         assert "ce" not in data1
         data2 = network.transform(data=pipeline_data, mode="infer", ds_id="ds_2")
