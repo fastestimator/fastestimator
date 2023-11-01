@@ -32,8 +32,8 @@ from fastestimator.trace.metric import Dice
 def _run_network_transform_tf(q):
 
     sample_batch = {
-        "image": torch.ones((1, 16, 16, 10, 1), dtype=torch.float32),
-        "label": torch.zeros((1, 16, 16, 10, 6), dtype=torch.uint8)
+        "image": torch.ones((4, 16, 16, 10, 1), dtype=torch.float32),
+        "label": torch.zeros((4, 16, 16, 10, 6), dtype=torch.uint8)
     }
 
     model = fe.build(
@@ -100,9 +100,9 @@ class TestAxisSlicer(unittest.TestCase):
         q.close()
 
         self.assertEqual(loss_shape, [])
-        self.assertEqual(image_shape, [1, 16, 16, 10, 1])
-        self.assertEqual(pred_shape, [1, 16, 16, 10, 6])
-        self.assertEqual(label_shape, [1, 16, 16, 10, 6])
+        self.assertEqual(image_shape, [4, 16, 16, 10, 1])
+        self.assertEqual(pred_shape, [4, 16, 16, 10, 6])
+        self.assertEqual(label_shape, [4, 16, 16, 10, 6])
 
     def test_network_transform_torch(self):
 

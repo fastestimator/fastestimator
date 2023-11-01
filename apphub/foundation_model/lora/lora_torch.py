@@ -35,7 +35,7 @@ from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.trace.metric import Dice
 from fastestimator.util.google_download_util import download_file_from_google_drive
-from fastestimator.util.util import get_num_gpus
+from fastestimator.util.util import get_num_gpus, get_num_devices
 
 
 class ImageEncoderViT(nn.Module):
@@ -523,7 +523,7 @@ def get_estimator(epochs=1,
     pipeline = fe.Pipeline(
         train_data=ds_train,
         eval_data=ds_eval,
-        batch_size=get_num_gpus() * batch_size_per_gpu,
+        batch_size=get_num_devices() * batch_size_per_gpu,
         ops=[
             ReadImage(inputs="image", parent_path=ds_train.parent_path, outputs="image"),
             ReadImage(inputs="mask_left", parent_path=ds_train.parent_path, outputs="mask_left", color_flag='gray'),
