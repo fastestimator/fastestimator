@@ -161,10 +161,13 @@ class SlidingSlicer(Slicer):
                         else:
                             # Padding the input
                             pass
+
                     new_cut = slice(start, stop)
                     new_template = list(stride_template)
                     new_template[axis] = new_cut
                     results.extend(self._get_cuts(data_shape, new_template))
+                    if stop >= target_shape:
+                        break
                 # Each level of recursion should only solve one axis, so break here
                 break
         if not results:
@@ -174,9 +177,16 @@ class SlidingSlicer(Slicer):
 
     def _solve_padding(self, batch: TensorT, batch_shape: List[int]) -> TensorT:
         if self.pad_mode == 'constant':
-            paddings = [[0, int(win - ((tru % (stride or tru)) or win))] for tru,
-                        win,
-                        stride in zip(batch_shape, self.window_size, self.strides)]
+            paddings = []
+            for tru, win, stride in zip(batch_shape, self.window_size, self.strides):
+                axis_pad = 0
+                if stride != 0 and win != -1:
+                    for start in list(range(0, tru, stride)):
+                        stop = start + win
+                        if stop >= tru:
+                            axis_pad = int(stop - tru)
+                            break
+                paddings.append([0, axis_pad])
             if isinstance(batch, torch.Tensor):
                 paddings.reverse()  # Torch padding reads from right-most dim to left-most dim
                 paddings = [elem for x in paddings for elem in x]
