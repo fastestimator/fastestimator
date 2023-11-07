@@ -101,7 +101,7 @@ class SlidingSlicer(Slicer):
         for dim in self.strides:
             assert isinstance(dim, int), f"All stride dimensions must be integers, but found {dim} of type {type(dim)}"
             assert dim >= 0, f"All stride dimensions must be non-negative, but found {dim}."
-        options = ('drop', 'partial', 'constant')
+        options = ('drop', 'partial', 'constant', 'nopad')
         assert pad_mode in options, f"pad_mode must be one of {options}, but got {pad_mode}"
         self.pad_mode = pad_mode
         self.pad_val = pad_val
@@ -151,6 +151,8 @@ class SlidingSlicer(Slicer):
         for axis, cut_template in enumerate(stride_template):
             if cut_template is None:
                 target_shape = data_shape[axis]
+                if self.pad_mode == 'nopad':
+                    assert target_shape >= self.window_size[axis], "In no pad mode, the target shape should be more than window size of axis."
                 for start in range(0, target_shape, self.strides[axis]):
                     stop = start + self.window_size[axis]
                     if stop > target_shape:
@@ -158,6 +160,9 @@ class SlidingSlicer(Slicer):
                             continue
                         elif self.pad_mode == 'partial':
                             stop = target_shape
+                        elif self.pad_mode == 'nopad':
+                            stop = target_shape
+                            start = max(target_shape-self.window_size[axis], 0)
                         else:
                             # Padding the input
                             pass
@@ -184,7 +189,8 @@ class SlidingSlicer(Slicer):
                     for start in list(range(0, tru, stride)):
                         stop = start + win
                         if stop >= tru:
-                            axis_pad = int(stop - tru)
+                            if self.pad_mode != 'nopad':
+                                axis_pad = int(stop - tru)
                             break
                 paddings.append([0, axis_pad])
             if isinstance(batch, torch.Tensor):
