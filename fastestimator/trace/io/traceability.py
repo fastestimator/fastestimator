@@ -238,11 +238,14 @@ class Traceability(Trace):
         """Add FE execution graphs into the traceability document.
         """
         with self.doc.create(Section("FastEstimator Architecture")):
-            for mode in self.system.pipeline.data.keys():
-                scheduled_items = self.system.pipeline.get_scheduled_items(
-                    mode) + self.system.network.get_scheduled_items(mode) + self.system.traces
+            for mode in list(self.system.pipeline.data.keys()) + ['infer']:
+                scheduled_items = self.system.pipeline.get_scheduled_items(mode) + self.system.network.get_scheduled_items(mode) + self.system.traces
                 signature_epochs = get_signature_epochs(scheduled_items, total_epochs=self.system.epoch_idx, mode=mode)
-                epochs_with_data = self.system.pipeline.get_epochs_with_data(total_epochs=self.system.epoch_idx,
+                if mode == 'infer' or mode=='test':
+                    epochs_with_data = self.system.pipeline.get_epochs_with_data(total_epochs=self.system.epoch_idx,
+                                                                             mode='test')
+                else:
+                    epochs_with_data = self.system.pipeline.get_epochs_with_data(total_epochs=self.system.epoch_idx,
                                                                              mode=mode)
                 if set(signature_epochs) & epochs_with_data:
                     self.doc.append(NoEscape(r'\FloatBarrier'))
@@ -254,7 +257,10 @@ class Traceability(Trace):
                             with self.doc.create(
                                     Subsubsection(f"Epoch {epoch}",
                                                   label=Label(Marker(name=f"{mode}{epoch}", prefix="ssubsec")))):
-                                ds_ids = self.system.pipeline.get_ds_ids(epoch=epoch, mode=mode)
+                                if mode == 'infer' or mode == 'test':
+                                    ds_ids = self.system.pipeline.get_ds_ids(epoch=epoch, mode='test')
+                                else:
+                                    ds_ids = self.system.pipeline.get_ds_ids(epoch=epoch, mode=mode)
                                 for ds_id in ds_ids:
                                     with NonContext() if ds_id == '' else self.doc.create(
                                             Paragraph(f"Dataset {ds_id}",
@@ -546,7 +552,10 @@ class Traceability(Trace):
         Returns:
             A pydot digraph representing the execution flow.
         """
-        ds = self.system.pipeline.data[mode][ds_id]
+        if mode == 'infer' or mode=='test':
+            ds = self.system.pipeline.data['test'][ds_id]
+        else:
+            ds = self.system.pipeline.data[mode][ds_id]
         if isinstance(ds, Scheduler):
             ds = ds.get_current_value(epoch)
         pipe_ops = get_current_items(self.system.pipeline.ops, run_modes=mode, epoch=epoch, ds_id=ds_id) if isinstance(
