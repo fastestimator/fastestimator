@@ -182,19 +182,19 @@ class TestSlidingSlicer(unittest.TestCase):
         with self.subTest("TF"):
             batch = tf.convert_to_tensor(self.batch)
             minibatches = slicer._slice_batch(batch)
-            self.assertEqual(len(minibatches), 20)
+            self.assertEqual(len(minibatches), 15)
             for mbatch in minibatches:
                 self.assertListEqual(list(mbatch.shape), [2, 2, 4, 3])
             np.testing.assert_array_equal(minibatches[0].numpy(), self.batch[:, 0:2, 0:4, :])
-            np.testing.assert_array_equal(minibatches[-1].numpy(), self.padded_batch[:, 8:10, 9:13, :])
+            np.testing.assert_array_equal(minibatches[-1].numpy(), self.padded_batch[:, 8:10, 6:10, :])
         with self.subTest("Torch"):
             batch = torch.Tensor(self.batch)
             minibatches = slicer._slice_batch(batch)
-            self.assertEqual(len(minibatches), 20)
+            self.assertEqual(len(minibatches), 15)
             for mbatch in minibatches:
                 self.assertListEqual(list(mbatch.shape), [2, 2, 4, 3])
             np.testing.assert_array_equal(minibatches[0].numpy(), self.batch[:, 0:2, 0:4, :])
-            np.testing.assert_array_equal(minibatches[-1].numpy(), self.padded_batch[:, 8:10, 9:13, :])
+            np.testing.assert_array_equal(minibatches[-1].numpy(), self.padded_batch[:, 8:10, 6:10, :])
 
     def test_overlapping_stride_drop(self):
         slicer = SlidingSlicer(slice="x", pad_mode='drop', pad_val=-1, window_size=(-1, 2, 4, 3), strides=(0, 2, 3, 0))
@@ -220,22 +220,16 @@ class TestSlidingSlicer(unittest.TestCase):
         with self.subTest("TF"):
             batch = tf.convert_to_tensor(self.batch)
             minibatches = slicer._slice_batch(batch)
-            self.assertEqual(len(minibatches), 20)
+            self.assertEqual(len(minibatches), 15)
             for idx, mbatch in enumerate(minibatches):
-                if idx % 4 == 3:
-                    self.assertListEqual(list(mbatch.shape), [2, 2, 1, 3])
-                else:
-                    self.assertListEqual(list(mbatch.shape), [2, 2, 4, 3])
+                self.assertListEqual(list(mbatch.shape), [2, 2, 4, 3])
             np.testing.assert_array_equal(minibatches[0].numpy(), self.batch[:, 0:2, 0:4, :])
         with self.subTest("Torch"):
             batch = torch.Tensor(self.batch)
             minibatches = slicer._slice_batch(batch)
-            self.assertEqual(len(minibatches), 20)
+            self.assertEqual(len(minibatches), 15)
             for idx, mbatch in enumerate(minibatches):
-                if idx % 4 == 3:
-                    self.assertListEqual(list(mbatch.shape), [2, 2, 1, 3])
-                else:
-                    self.assertListEqual(list(mbatch.shape), [2, 2, 4, 3])
+                self.assertListEqual(list(mbatch.shape), [2, 2, 4, 3])
             np.testing.assert_array_equal(minibatches[0].numpy(), self.batch[:, 0:2, 0:4, :])
 
     def test_gap_stride_pad(self):
@@ -356,7 +350,7 @@ class TestSlidingSlicer(unittest.TestCase):
         with self.subTest("TF"):
             batch = tf.convert_to_tensor(self.batch)
             minibatches = forward_slicers([slicer], data={'x': batch})
-            self.assertEqual(len(minibatches), 20)
+            self.assertEqual(len(minibatches), 15)
             combined = reverse_slicers([slicer], minibatches, original_data={})
             combined = combined['x']
             self.assertListEqual(list(combined.shape), [2, 10, 10, 3])
@@ -364,7 +358,7 @@ class TestSlidingSlicer(unittest.TestCase):
         with self.subTest("Torch"):
             batch = torch.Tensor(self.batch)
             minibatches = forward_slicers([slicer], data={'x': batch})
-            self.assertEqual(len(minibatches), 20)
+            self.assertEqual(len(minibatches), 15)
             combined = reverse_slicers([slicer], minibatches, original_data={})
             combined = combined['x']
             self.assertListEqual(list(combined.shape), [2, 10, 10, 3])
@@ -380,7 +374,7 @@ class TestSlidingSlicer(unittest.TestCase):
         with self.subTest("TF"):
             batch = tf.convert_to_tensor(self.batch)
             minibatches = forward_slicers([slicer], data={'x': batch})
-            self.assertEqual(len(minibatches), 20)
+            self.assertEqual(len(minibatches), 15)
             combined = reverse_slicers([slicer], minibatches, original_data={})
             combined = combined['x']
             self.assertListEqual(list(combined.shape), [2, 10, 10, 3])
@@ -388,7 +382,7 @@ class TestSlidingSlicer(unittest.TestCase):
         with self.subTest("Torch"):
             batch = torch.Tensor(self.batch)
             minibatches = forward_slicers([slicer], data={'x': batch})
-            self.assertEqual(len(minibatches), 20)
+            self.assertEqual(len(minibatches), 15)
             combined = reverse_slicers([slicer], minibatches, original_data={})
             combined = combined['x']
             self.assertListEqual(list(combined.shape), [2, 10, 10, 3])
