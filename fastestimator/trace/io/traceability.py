@@ -22,7 +22,7 @@ import shutil
 import sys
 import types
 from collections import defaultdict
-from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, Sequence, Set, Tuple, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
 from unittest.mock import Base
 
 import dot2tex as d2t
@@ -77,7 +77,6 @@ class DataOp(Op):
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None) -> None:
         super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
-        pass
 
 
 class _UnslicerWrapper():
@@ -282,7 +281,7 @@ class Traceability(Trace):
             self.doc.append(NoEscape(r'\FloatBarrier'))
             with self.doc.create(Subsection('Infer')):
                 with NonContext():
-                    diagram = self._draw_infer_diagram(ds_id)
+                    diagram = self._draw_infer_diagram()
                     ltx = d2t.dot2tex(diagram.to_string(), figonly=True)
                     args = Arguments(**{'max width': r'\textwidth, max height=0.9\textheight'})
                     args.escape = False
@@ -557,7 +556,7 @@ class Traceability(Trace):
                                         color='black!5' if color else 'white')
                         color = not color
 
-    def _draw_infer_diagram(self, ds_id) -> pydot.Dot:
+    def _draw_infer_diagram(self) -> pydot.Dot:
         """Draw a summary diagram of the FastEstimator Ops
 
         Returns:
@@ -596,23 +595,27 @@ class Traceability(Trace):
         dataop = DataOp(outputs=input_keys)
         label_last_seen = DefaultKeyDict(lambda k: str(id(dataop)))  # Where was this key last generated
         self._draw_data_node(diagram, dataop, label_last_seen)
-        self._draw_subgraph(diagram, diagram, label_last_seen, f'Pipeline', pipe_ops, None)
+        self._draw_subgraph(diagram, diagram, label_last_seen, 'Pipeline', pipe_ops, None)
         self._draw_subgraph(diagram,
                             diagram,
                             label_last_seen,
                             'Network',
                             net_slicers + net_ops + [_UnslicerWrapper(slicer) for slicer in net_slicers] + net_post,
                             None)
-        #self._draw_data_node(diagram, label_last_seen, "Input Data", input_keys)
         return diagram
 
-    def _draw_data_node(self, diagram: pydot.Dot, dataop, label_last_seen):
+    def _draw_data_node(
+        self,
+        diagram: pydot.Dot,
+        dataop: Op,
+        label_last_seen: DefaultKeyDict[str, str],
+    ):
         """Draw a subgraph of ops into an existing `diagram`.
 
         Args:
-            diagram: The diagram into which to add new Nodes.
-            dataop: The op to be wrapped in this diagram.
-            label_last_seen:
+            diagram: The diagram into which to add new node.
+            dataop: The data op to be wrapped in this diagram.
+            label_last_seen: A mapping of {data_dict_key: node_id} indicating the last node which generated the key.
         """
         diagram.add_node(pydot.Node(str(id(dataop)), label="Inference Data", texlbl="Inference Data"))
         self._add_edge(diagram, dataop, label_last_seen, None)
