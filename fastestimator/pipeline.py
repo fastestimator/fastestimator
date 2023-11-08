@@ -466,12 +466,7 @@ class Pipeline:
         Returns:
             List of schedulable items in Pipeline.
         """
-        all_items = self.ops + [self.batch_size]
-
-        if mode == 'infer' or mode == 'test':
-            all_items += list(self.data['test'].values())
-        else:
-            all_items += list(self.data[mode].values())
+        all_items = self.ops + [self.batch_size] + list(self.data[mode].values())
 
         return all_items
 
