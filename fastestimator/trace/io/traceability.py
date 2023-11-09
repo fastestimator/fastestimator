@@ -348,6 +348,7 @@ class Traceability(Trace):
                 for model in self.system.network.models if isinstance(model, (tf.keras.Model, torch.nn.Module))
             }
         except Exception as e:
+            print(e)
             parameter_retrieval_errors.append('no_of_model_parameters')
 
         try:
@@ -356,6 +357,7 @@ class Traceability(Trace):
                 for model in self.system.network.models if isinstance(model, (tf.keras.Model, torch.nn.Module))
             }
         except Exception as e:
+            print(e)
             parameter_retrieval_errors.append('lr')
 
         try:
@@ -364,6 +366,7 @@ class Traceability(Trace):
                 for model in self.system.network.models
             }
         except Exception as e:
+            print(e)
             parameter_retrieval_errors.append('optimizers')
 
         try:
@@ -372,10 +375,11 @@ class Traceability(Trace):
                 for lr_schedule in self.system.traces if isinstance(lr_schedule, LRScheduler)
             },
         except Exception as e:
+            print(e)
             parameter_retrieval_errors.append('lr_scheduler')
 
         if len(parameter_retrieval_errors) > 0:
-            print("couldn't retrieve " + ','.join(parameter_retrieval_errors) + " parameters.")
+            print("Couldn't retrieve the following parameters due to errors: " + ', '.join(parameter_retrieval_errors))
 
         parameter_summary_table = SummaryTable('Parameter Summary', kwargs=parameters)
         self.doc.append(NoEscape(r'\FloatBarrier'))

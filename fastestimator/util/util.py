@@ -212,18 +212,20 @@ class Suppressor(object):
         except FileNotFoundError:
             pass
 
-def get_optimizer_name(model):
+
+def get_optimizer_name(model: Union[tf.keras.Model, torch.nn.Module]) -> str:
     try:
         return type(model.optimizer).__name__
-    except:
+    except AttributeError:
         return model.optimizer
 
-def count_params(weights):
+
+def count_params(weights: List[Union[tf.Tensor, torch.Tensor]]) -> int:
     shapes = [v.shape for v in weights]
     return int(sum(math.prod(p) for p in shapes))
 
 
-def get_model_parameters(model):
+def get_model_parameters(model: Union[tf.keras.Model, torch.nn.Module]) -> Dict[str, int]:
     if isinstance(model, tf.keras.Model):
         trainable_params = count_params(model.trainable_weights)
         non_trainable_params = count_params(model.non_trainable_weights)
@@ -232,9 +234,7 @@ def get_model_parameters(model):
         total_params = sum(p.numel() for p in model.parameters())
         trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     else:
-        print("Model not recognized.")
-        total_params = 0
-        trainable_params = 0
+        raise ValueError("Model not recognized.")
     return {'total_params': total_params, 'trainable_params': trainable_params}
 
 
