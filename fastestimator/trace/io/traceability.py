@@ -16,7 +16,6 @@ import contextlib
 import functools
 import inspect
 import locale
-import math
 import os
 import platform
 import re
@@ -348,7 +347,7 @@ class Traceability(Trace):
                 model.model_name.lower(): get_model_parameters(model)
                 for model in self.system.network.models if isinstance(model, (tf.keras.Model, torch.nn.Module))
             }
-        except:
+        except Exception as e:
             parameter_retrieval_errors.append('no_of_model_parameters')
 
         try:
@@ -356,7 +355,7 @@ class Traceability(Trace):
                 model.model_name.lower(): fe.backend.get_lr(model=model)
                 for model in self.system.network.models if isinstance(model, (tf.keras.Model, torch.nn.Module))
             }
-        except:
+        except Exception as e:
             parameter_retrieval_errors.append('lr')
 
         try:
@@ -364,7 +363,7 @@ class Traceability(Trace):
                 model.model_name.lower(): get_optimizer_name(model)
                 for model in self.system.network.models
             }
-        except:
+        except Exception as e:
             parameter_retrieval_errors.append('optimizers')
 
         try:
@@ -372,7 +371,7 @@ class Traceability(Trace):
                 lr_schedule.model.model_name.lower(): inspect.getsource(lr_schedule.lr_fn)
                 for lr_schedule in self.system.traces if isinstance(lr_schedule, LRScheduler)
             },
-        except:
+        except Exception as e:
             parameter_retrieval_errors.append('lr_scheduler')
 
         if len(parameter_retrieval_errors) > 0:
