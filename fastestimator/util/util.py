@@ -14,6 +14,7 @@
 # ==============================================================================
 """Utilities for FastEstimator."""
 import atexit
+import math
 import os
 import re
 import shutil
@@ -210,6 +211,31 @@ class Suppressor(object):
             os.remove(Suppressor.tf_print_name)
         except FileNotFoundError:
             pass
+
+def get_optimizer_name(model):
+    try:
+        return type(model.optimizer).__name__
+    except:
+        return model.optimizer
+
+def count_params(weights):
+    shapes = [v.shape for v in weights]
+    return int(sum(math.prod(p) for p in shapes))
+
+
+def get_model_parameters(model):
+    if isinstance(model, tf.keras.Model):
+        trainable_params = count_params(model.trainable_weights)
+        non_trainable_params = count_params(model.non_trainable_weights)
+        total_params = trainable_params + non_trainable_params
+    elif isinstance(model, torch.nn.Module):
+        total_params = sum(p.numel() for p in model.parameters())
+        trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    else:
+        print("Model not recognized.")
+        total_params = 0
+        trainable_params = 0
+    return {'total_params': total_params, 'trainable_params': trainable_params}
 
 
 def _custom_tf_print(*args, **kwargs):

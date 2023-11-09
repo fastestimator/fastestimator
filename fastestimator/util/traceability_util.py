@@ -282,6 +282,68 @@ class FeSummaryTable:
                         tabular.add_row((italic(kwarg), val), color='white' if idx % 2 else 'black!5')
 
 
+class SummaryTable:
+    """A class containing summaries of traceability information.
+
+    This class is intentionally not @traceable.
+
+    Args:
+        name: The string to be used as the title line in the summary table.
+        target_type: The type of the object being summarized.
+        path: The import path of the object in question. Might be more complicated when methods/functions are involved.
+        kwargs: The keyword arguments used to instantiate the object being summarized.
+        **fields: Any other information about the summarized object / function.
+    """
+    name: Union[str, LatexObject]
+    fields: Dict[str, Any]
+
+    def __init__(self, name: str, kwargs: Optional[Dict[str, Any]] = None, **fields: Any):
+        self.name = name
+        self.args = fields.pop("args", None)
+        self.kwargs = kwargs or {}
+        self.fields = fields
+
+    def render_table(self,
+                     doc: Document,
+                     name_override: Optional[LatexObject] = None,
+                     toc_ref: Optional[str] = None,
+                     extra_rows: Optional[List[Tuple[str, Any]]] = None) -> None:
+        """Write this table into a LaTeX document.
+
+        Args:
+            doc: The LaTeX document to be appended to.
+            name_override: An optional replacement for this table's name field.
+            toc_ref: A reference to be added to the table of contents.
+            extra_rows: Any extra rows to be added to the table before the kwargs.
+        """
+        with doc.create(Table(position='htp!')) as table:
+            table.append(NoEscape(r'\refstepcounter{table}'))
+            if toc_ref:
+                table.append(NoEscape(r'\addcontentsline{toc}{subsection}{' + escape_latex(toc_ref) + '}'))
+            with doc.create(Tabularx('|lX|', booktabs=True)) as tabular:
+                package = Package('xcolor', options='table')
+                if package not in tabular.packages:
+                    # Need to invoke a table color before invoking TextColor (bug?)
+                    tabular.packages.append(package)
+                package = Package('seqsplit')
+                if package not in tabular.packages:
+                    tabular.packages.append(package)
+                for k, v in self.fields.items():
+                    tabular.add_hline()
+                    tabular.add_row((f"{k.capitalize()}: ", v))
+                if self.args:
+                    tabular.add_hline()
+                    tabular.add_row(("Args: ", self.args))
+                if extra_rows:
+                    for (key, val) in extra_rows:
+                        tabular.add_hline()
+                        tabular.add_row(key, val)
+                if self.kwargs:
+                    tabular.add_hline()
+                    for idx, (kwarg, val) in enumerate(self.kwargs.items()):
+                        tabular.add_row((italic(kwarg), val), color='white' if idx % 2 else 'black!5')
+
+
 def _deref_is_callable(instruction: dis.Instruction, closure_vars: inspect.ClosureVars) -> bool:
     """A function to determine whether an `instruction` is referencing something that is callable or not.
 
