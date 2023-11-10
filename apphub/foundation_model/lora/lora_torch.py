@@ -494,10 +494,7 @@ class BestLoRASaver(BestModelSaver):
             self.best = data[self.metric]
             self.since_best = 0
             if self.save_dir:
-                if isinstance(self.model, torch.nn.DataParallel):
-                    self.model_path = self.model.module.save_lora_weights(self.save_dir, self.model_name + "_lora")
-                else:
-                    self.model_path = self.model.save_lora_weights(self.save_dir, self.model_name + "_lora")
+                self.model_path = self.model.save_lora_weights(self.save_dir, self.model_name + "_lora")
         else:
             self.since_best += 1
         data.write_with_log(self.outputs[0], self.since_best)
