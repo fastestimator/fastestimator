@@ -827,7 +827,6 @@ class TFNetwork(BaseNetwork):
         if isinstance(strategy, tf.distribute.MirroredStrategy):
             batch_size, num_devices = get_batch_size(batch), strategy.num_replicas_in_sync
             if batch_size < num_devices:
-                # batch = self._fill_batch(batch, num_devices - batch_size)
                 batch = self._fill_batch(batch, num_devices, batch_size)
                 sub_sample = True
             self.ctx_manual_gpu_data_handling = True
@@ -842,7 +841,8 @@ class TFNetwork(BaseNetwork):
 
         Args:
             data: The data to be filled.
-            n: The number of times to be repeated.
+            n: The number of available devices.
+            batch: batch size of the data.
 
         Returns:
             Filled data.
