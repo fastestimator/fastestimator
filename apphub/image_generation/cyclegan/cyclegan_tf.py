@@ -32,7 +32,6 @@ from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace import Trace
 from fastestimator.trace.adapt import LRScheduler
 from fastestimator.trace.io import ModelSaver
-from fastestimator.util.util import get_num_devices
 
 
 def lr_schedule(epoch):
@@ -276,11 +275,10 @@ def build_generator(input_shape=(256, 256, 3), num_blocks=9):
 
 def get_estimator(weight=10.0,
                   epochs=200,
-                  batch_size_per_device=1,
+                  batch_size=1,
                   train_steps_per_epoch=None,
                   save_dir=tempfile.mkdtemp(),
                   data_dir=None):
-    batch_size = batch_size_per_device * get_num_devices()
     train_data, _ = load_data(batch_size=batch_size, root_dir=data_dir)
 
     pipeline = fe.Pipeline(
