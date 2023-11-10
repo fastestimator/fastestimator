@@ -827,7 +827,8 @@ class TFNetwork(BaseNetwork):
         if isinstance(strategy, tf.distribute.MirroredStrategy):
             batch_size, num_devices = get_batch_size(batch), strategy.num_replicas_in_sync
             if batch_size < num_devices:
-                batch = self._fill_batch(batch, num_devices - batch_size)
+                # batch = self._fill_batch(batch, num_devices - batch_size)
+                batch = self._fill_batch(batch, num_devices, batch_size)
                 sub_sample = True
             self.ctx_manual_gpu_data_handling = True
         batch = super()._do_transform(batch)
@@ -836,7 +837,7 @@ class TFNetwork(BaseNetwork):
             self.ctx_manual_gpu_data_handling = False
         return batch
 
-    def _fill_batch(self, data: T, n: int) -> T:
+    def _fill_batch(self, data: T, n: int, batch:int) -> T:
         """Fill data on batch dimension repeating the first n indices at the end.
 
         Args:
@@ -847,16 +848,21 @@ class TFNetwork(BaseNetwork):
             Filled data.
         """
         if isinstance(data, dict):
-            return {key: self._fill_batch(val, n) for (key, val) in data.items()}
+            return {key: self._fill_batch(val, n, batch) for (key, val) in data.items()}
         elif isinstance(data, list):
-            return [self._fill_batch(val, n) for val in data]
+            return [self._fill_batch(val, n, batch) for val in data]
         elif isinstance(data, tuple):
-            return tuple([self._fill_batch(val, n) for val in data])
+            return tuple([self._fill_batch(val, n, batch) for val in data])
         elif isinstance(data, set):
-            return set([self._fill_batch(val, n) for val in data])
+            return set([self._fill_batch(val, n, batch) for val in data])
         elif hasattr(data, "shape"):
-            paddings = [[0, n]] + [[0, 0] for _ in range(len(data.shape) - 1)]
-            return tf.pad(data, paddings=paddings, mode="symmetric")
+            if n-batch > batch:
+                paddings = [[0, batch]] + [[0, 0] for _ in range(len(data.shape) - 1)]
+                temp_data = tf.pad(data, paddings=paddings, mode="symmetric")
+                return self._fill_batch(temp_data, n, temp_data.shape[0])
+            else:
+                paddings = [[0, n-batch]] + [[0, 0] for _ in range(len(data.shape) - 1)]
+                return tf.pad(data, paddings=paddings, mode="symmetric")
         else:
             return data
 
