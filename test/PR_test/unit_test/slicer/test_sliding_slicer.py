@@ -44,6 +44,28 @@ class TestSlidingSlicer(unittest.TestCase):
             self.assertEqual(len(minibatches), 1)
             np.testing.assert_array_equal(minibatches[0].numpy(), self.batch)
 
+    def test_gap_stride_pad_nopad(self):
+        slicer = SlidingSlicer(slice="x", pad_mode='nopad', window_size=(-1, 2, 4, 3), strides=(0, 3, 5, 0))
+        with self.subTest("TF"):
+            batch = tf.convert_to_tensor(self.batch)
+            minibatches = slicer._slice_batch(batch)
+            self.assertEqual(len(minibatches), 8)
+            for mbatch in minibatches:
+                self.assertListEqual(list(mbatch.shape), [2, 2, 4, 3])
+            np.testing.assert_array_equal(minibatches[0].numpy(), self.batch[:, 0:2, 0:4, :])
+            np.testing.assert_array_equal(minibatches[-1].numpy(), self.padded_batch[:, 8:10, 5:9, :])
+
+        slicer = SlidingSlicer(slice="x", pad_mode='nopad', window_size=(-1, 3, 2, 4), strides=(0, 0, 3, 5))
+        with self.subTest("Torch"):
+            batch = torch.moveaxis(torch.Tensor(self.batch), -1, 1)
+            padded_batch = torch.moveaxis(torch.Tensor(self.padded_batch), -1, 1)
+            minibatches = slicer._slice_batch(batch)
+            self.assertEqual(len(minibatches), 8)
+            for mbatch in minibatches:
+                self.assertListEqual(list(mbatch.shape), [2, 3, 2, 4])
+            np.testing.assert_array_equal(minibatches[0].numpy(), batch[:, :, 0:2, 0:4])
+            np.testing.assert_array_equal(minibatches[-1].numpy(), padded_batch[:, :, 8:10, 5:9])
+
     def test_tiled_slice(self):
         slicer = SlidingSlicer(slice="x", window_size=(-1, 2, 2, 3))
         with self.subTest("TF"):
