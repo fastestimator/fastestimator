@@ -22,7 +22,7 @@ example_name="cyclegan"
 # 1. Usually we set the epochs:2, batch_size:2, train_steps_per_epoch:2
 # 2. The expression for the following setup is "--epochs 2 --batch_size 8 --train_steps_per_epoch 2"
 # 3. The syntax of this expression is different from run_notebook.py
-train_info=(--epochs 2 --batch_size 2 --train_steps_per_epoch 2)
+train_info=(--epochs 2 --batch_size_per_device 1 --train_steps_per_epoch 2)
 
 # Do you want to run "fastestimator test"? (bool)
 need_test=0
