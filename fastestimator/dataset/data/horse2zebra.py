@@ -29,7 +29,7 @@ wget.callback_progress = callback_progress
 def load_data(batch_size: int, root_dir: Optional[str] = None) -> Tuple[BatchDataset, BatchDataset]:
     """Load and return the horse2zebra dataset.
 
-    Sourced from https://people.eecs.berkeley.edu/~taesung_park/CycleGAN/datasets/horse2zebra.zip. This method will
+    Sourced from http://efrosgans.eecs.berkeley.edu/cyclegan/datasets/horse2zebra.zip. This method will
         download the data to local storage if the data has not been previously downloaded.
 
     Args:
@@ -55,7 +55,7 @@ def load_data(batch_size: int, root_dir: Optional[str] = None) -> Tuple[BatchDat
         # download
         if not os.path.exists(data_compressed_path):
             print("Downloading data to {}".format(root_dir))
-            wget.download('https://people.eecs.berkeley.edu/~taesung_park/CycleGAN/datasets/horse2zebra.zip',
+            wget.download('http://efrosgans.eecs.berkeley.edu/cyclegan/datasets/horse2zebra.zip',
                           root_dir,
                           bar=bar_custom)
 
