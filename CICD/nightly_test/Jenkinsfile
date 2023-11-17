@@ -3,7 +3,7 @@ def IMAGE_TAG = 'fenightly'
 pipeline {
     agent {label 'master'}
     options {
-        timeout(time: 7, unit: 'HOURS')
+        timeout(time: 10, unit: 'HOURS')
     }
     environment {
         IMAGE_TAG = "${IMAGE_TAG}"
