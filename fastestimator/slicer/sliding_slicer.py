@@ -101,9 +101,11 @@ class SlidingSlicer(Slicer):
         for dim in self.strides:
             assert isinstance(dim, int), f"All stride dimensions must be integers, but found {dim} of type {type(dim)}"
             assert dim >= 0, f"All stride dimensions must be non-negative, but found {dim}."
-        options = ('drop', 'partial', 'constant', 'nopad')
+        options = ('drop', 'partial', 'constant', 'nopad', 'mirror')
         assert pad_mode in options, f"pad_mode must be one of {options}, but got {pad_mode}"
         self.pad_mode = pad_mode
+        if self.pad_mode == 'mirror':
+            assert len(self.strides) > 2, 'Should have atleast 2d for reflect padding.'
         self.pad_val = pad_val
         options = ("sum", "avg")
         assert unslice_mode in options, f"unslice_mode must be one of: {options}, but got {unslice_mode}"
@@ -166,7 +168,6 @@ class SlidingSlicer(Slicer):
                         else:
                             # Padding the input
                             pass
-
                     new_cut = slice(start, stop)
                     new_template = list(stride_template)
                     new_template[axis] = new_cut
@@ -181,18 +182,17 @@ class SlidingSlicer(Slicer):
         return results
 
     def _solve_padding(self, batch: TensorT, batch_shape: List[int]) -> TensorT:
+        paddings = []
+        for tru, win, stride in zip(batch_shape, self.window_size, self.strides):
+            axis_pad = 0
+            if stride != 0 and win != -1:
+                for start in list(range(0, tru, stride)):
+                    stop = start + win
+                    if stop >= tru:
+                        axis_pad = int(stop - tru)
+                        break
+            paddings.append([0, axis_pad])
         if self.pad_mode == 'constant':
-            paddings = []
-            for tru, win, stride in zip(batch_shape, self.window_size, self.strides):
-                axis_pad = 0
-                if stride != 0 and win != -1:
-                    for start in list(range(0, tru, stride)):
-                        stop = start + win
-                        if stop >= tru:
-                            if self.pad_mode != 'nopad':
-                                axis_pad = int(stop - tru)
-                            break
-                paddings.append([0, axis_pad])
             if isinstance(batch, torch.Tensor):
                 paddings.reverse()  # Torch padding reads from right-most dim to left-most dim
                 paddings = [elem for x in paddings for elem in x]
@@ -202,6 +202,19 @@ class SlidingSlicer(Slicer):
                                paddings=tf.constant(paddings),
                                mode="CONSTANT",
                                constant_values=tf.cast(self.pad_val, dtype=batch.dtype))
+        elif self.pad_mode == 'mirror':
+            if isinstance(batch, torch.Tensor):
+                paddings.reverse()  # Torch padding reads from right-most dim to left-most dim
+                paddings = [elem for x in paddings for elem in x]
+                axis_padding = paddings[:-4]  # reflect only works skipping batch and channel dim
+                if not torch.is_floating_point(batch):
+                    batch_dtype = batch.dtype
+                    batch = torch.nn.functional.pad(batch.float(), pad=axis_padding, mode='reflect').to(batch_dtype)
+                else:
+                    batch = torch.nn.functional.pad(batch, pad=axis_padding, mode='reflect')
+            else:
+                batch = tf.pad(batch, paddings=tf.constant(paddings), mode="reflect")
+
         return batch
 
     def _unslice_batch(self, slices: Tuple[Tensor, ...], key: str) -> Tensor:
