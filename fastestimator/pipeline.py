@@ -178,8 +178,7 @@ class Pipeline:
         # Consider x + m*n epochs for each epoch scheduler x value
         schedule_epochs = sorted({
             epoch
-            for base_epoch in schedule_epochs
-            for epoch in list(range(base_epoch, base_epoch + schedule_cycles))
+            for base_epoch in schedule_epochs for epoch in list(range(base_epoch, base_epoch + schedule_cycles))
         })
         for mode, id_ds in list(self.data.items()) + [('infer', {'': None})]:
             for ds_id in id_ds.keys():
@@ -468,6 +467,7 @@ class Pipeline:
             List of schedulable items in Pipeline.
         """
         all_items = self.ops + [self.batch_size] + list(self.data[mode].values())
+
         return all_items
 
     def get_epochs_with_data(self, total_epochs: int, mode: str) -> Set[int]:

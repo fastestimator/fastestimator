@@ -23,7 +23,7 @@ import shutil
 import sys
 import types
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
 from unittest.mock import Base
 
 import dot2tex as d2t
@@ -71,6 +71,15 @@ from fastestimator.util.latex_util import AdjustBox, Center, ContainerList, Href
 from fastestimator.util.traceability_util import FeSummaryTable, SummaryTable, traceable
 from fastestimator.util.util import Suppressor, cpu_count, get_gpu_info, get_model_parameters, get_num_gpus, \
     get_optimizer_name
+
+
+class DataOp(Op):
+    def __init__(self,
+                 inputs: Union[None, str, Iterable[str]] = None,
+                 outputs: Union[None, str, Iterable[str]] = None,
+                 mode: Union[None, str, Iterable[str]] = None,
+                 ds_id: Union[None, str, Iterable[str]] = None) -> None:
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
 
 
 class _UnslicerWrapper():
@@ -270,6 +279,18 @@ class Traceability(Trace):
                                         with self.doc.create(Center()):
                                             with self.doc.create(AdjustBox(arguments=args)) as box:
                                                 box.append(NoEscape(ltx))
+
+            # infer graph
+            self.doc.append(NoEscape(r'\FloatBarrier'))
+            with self.doc.create(Subsection('Infer')):
+                with NonContext():
+                    diagram = self._draw_infer_diagram()
+                    ltx = d2t.dot2tex(diagram.to_string(), figonly=True)
+                    args = Arguments(**{'max width': r'\textwidth, max height=0.9\textheight'})
+                    args.escape = False
+                    with self.doc.create(Center()):
+                        with self.doc.create(AdjustBox(arguments=args)) as box:
+                            box.append(NoEscape(ltx))
 
     def _document_init_params(self) -> None:
         """Add initialization parameters to the traceability document.
@@ -592,6 +613,70 @@ class Traceability(Trace):
                                         color='black!5' if color else 'white')
                         color = not color
 
+    def _draw_infer_diagram(self) -> pydot.Dot:
+        """Draw a summary diagram of the FastEstimator Ops
+
+        Returns:
+            A pydot digraph representing the execution flow.
+        """
+        pipe_ops = get_current_items(self.system.pipeline.ops, run_modes='infer')
+        net_ops = get_current_items(self.system.network.ops, run_modes='infer')
+        net_slicers = get_current_items(self.system.network.slicers, run_modes='infer')
+        net_post = get_current_items(self.system.network.postprocessing, run_modes='infer')
+
+        diagram = pydot.Dot(compound='true')  # Compound lets you draw edges which terminate at sub-graphs
+        diagram.set('rankdir', 'TB')
+        diagram.set('dpi', 300)
+        diagram.set_node_defaults(shape='box')
+
+        # Make the dataset the first of the pipeline ops
+        def get_in_out(ops):
+            inputs = {}
+            outputs = {}
+            for op in ops:
+                for i in op:
+                    op_input = {op_in: None for op_in in i.inputs}
+                    op_output = {op_in: None for op_in in i.outputs}
+
+                    for op_in in op_input:
+                        if op_in in outputs:
+                            del outputs[op_in]
+                        else:
+                            inputs[op_in] = ''
+
+                    for op_out in op_output:
+                        outputs[op_out] = ''
+            return list(inputs.keys()), list(outputs.keys())
+
+        input_keys, _ = get_in_out([pipe_ops, net_ops, net_slicers, net_post])
+        dataop = DataOp(outputs=input_keys)
+        label_last_seen = DefaultKeyDict(lambda k: str(id(dataop)))  # Where was this key last generated
+        self._draw_data_node(diagram, dataop, label_last_seen)
+        self._draw_subgraph(diagram, diagram, label_last_seen, 'Pipeline', pipe_ops, None)
+        self._draw_subgraph(diagram,
+                            diagram,
+                            label_last_seen,
+                            'Network',
+                            net_slicers + net_ops + [_UnslicerWrapper(slicer) for slicer in net_slicers] + net_post,
+                            None)
+        return diagram
+
+    def _draw_data_node(
+        self,
+        diagram: pydot.Dot,
+        dataop: Op,
+        label_last_seen: DefaultKeyDict[str, str],
+    ):
+        """Draw a subgraph of ops into an existing `diagram`.
+
+        Args:
+            diagram: The diagram into which to add new node.
+            dataop: The data op to be wrapped in this diagram.
+            label_last_seen: A mapping of {data_dict_key: node_id} indicating the last node which generated the key.
+        """
+        diagram.add_node(pydot.Node(str(id(dataop)), label="Inference Data", texlbl="Inference Data"))
+        self._add_edge(diagram, dataop, label_last_seen, None)
+
     def _draw_diagram(self, mode: str, epoch: int, ds_id: str) -> pydot.Dot:
         """Draw a summary diagram of the FastEstimator Ops / Traces.
 
@@ -815,7 +900,7 @@ class Traceability(Trace):
             if inp == '*':
                 continue
             _, candidate_id, *_ = f"{inp}|".split('|')
-            if candidate_id in global_ds_ids and candidate_id != ds_id:
+            if candidate_id in global_ds_ids and candidate_id != ds_id and ds_id is not None:
                 continue  # Skip inputs which will be provided in other ds_id plots
             edge_srcs[label_last_seen[inp]].append(inp)
         for src, labels in edge_srcs.items():
