@@ -14,6 +14,7 @@
 # ==============================================================================
 import contextlib
 import functools
+import inspect
 import locale
 import os
 import platform
@@ -60,14 +61,16 @@ from fastestimator.pipeline import Pipeline
 from fastestimator.schedule.schedule import Scheduler, get_current_items, get_signature_epochs
 from fastestimator.slicer.slicer import Slicer
 from fastestimator.summary.logs.log_plot import visualize_logs
+from fastestimator.trace.adapt.lr_scheduler import LRScheduler
 from fastestimator.trace.io.restore_wizard import RestoreWizard
 from fastestimator.trace.trace import Trace, sort_traces
 from fastestimator.util.base_util import FEID, DefaultKeyDict, LogSplicer, NonContext, prettify_metric_name, to_list, \
     warn
 from fastestimator.util.data import Data
 from fastestimator.util.latex_util import AdjustBox, Center, ContainerList, HrefFEID, Verbatim
-from fastestimator.util.traceability_util import FeSummaryTable, traceable
-from fastestimator.util.util import Suppressor, cpu_count, get_gpu_info, get_num_gpus
+from fastestimator.util.traceability_util import FeSummaryTable, SummaryTable, traceable
+from fastestimator.util.util import Suppressor, cpu_count, get_gpu_info, get_model_parameters, get_num_gpus, \
+    get_optimizer_name
 
 
 class _UnslicerWrapper():
@@ -329,6 +332,59 @@ class Traceability(Trace):
                                       model_ids=model_ids,
                                       datasets=datasets)
             self._loop_tables(start, classes=Any, name="Miscellaneous", model_ids=model_ids, datasets=datasets)
+            self.get_parameter_summary()
+
+    def get_parameter_summary(self):
+        parameters = {
+            'batch_size': self.system.pipeline.batch_size,
+            'epochs': self.system.total_epochs,
+            'train_steps_per_epoch': self.system.train_steps_per_epoch,
+            'eval_steps_per_epoch': self.system.eval_steps_per_epoch,
+        }
+        parameter_retrieval_errors = []
+        try:
+            parameters["no_of_model_parameters"] = {
+                model.model_name.lower(): get_model_parameters(model)
+                for model in self.system.network.models if isinstance(model, (tf.keras.Model, torch.nn.Module))
+            }
+        except Exception as e:
+            print(e)
+            parameter_retrieval_errors.append('no_of_model_parameters')
+
+        try:
+            parameters["lr"] = {
+                model.model_name.lower(): fe.backend.get_lr(model=model)
+                for model in self.system.network.models if isinstance(model, (tf.keras.Model, torch.nn.Module))
+            }
+        except Exception as e:
+            print(e)
+            parameter_retrieval_errors.append('lr')
+
+        try:
+            parameters['optimizers'] = {
+                model.model_name.lower(): get_optimizer_name(model)
+                for model in self.system.network.models
+            }
+        except Exception as e:
+            print(e)
+            parameter_retrieval_errors.append('optimizers')
+
+        try:
+            parameters['lr_scheduler'] = {
+                lr_schedule.model.model_name.lower(): inspect.getsource(lr_schedule.lr_fn)
+                for lr_schedule in self.system.traces if isinstance(lr_schedule, LRScheduler)
+            },
+        except Exception as e:
+            print(e)
+            parameter_retrieval_errors.append('lr_scheduler')
+
+        if len(parameter_retrieval_errors) > 0:
+            print("Couldn't retrieve the following parameters due to errors: " + ', '.join(parameter_retrieval_errors))
+
+        parameter_summary_table = SummaryTable('Parameter Summary', kwargs=parameters)
+        self.doc.append(NoEscape(r'\FloatBarrier'))
+        with self.doc.create(Subsection('Parameter Summary')):
+            self._write_tables([parameter_summary_table], set(), set())
 
     def _loop_tables(self,
                      start: int,
@@ -361,7 +417,7 @@ class Traceability(Trace):
         return stop
 
     def _write_tables(self,
-                      tables: List[FeSummaryTable],
+                      tables: Union[List[FeSummaryTable], List[SummaryTable]],
                       model_ids: Set[FEID],
                       datasets: Dict[FEID, Tuple[Set[str], Any]]) -> None:
         """Insert a LaTeX representation of a list of tables into the current doc.
@@ -375,32 +431,33 @@ class Traceability(Trace):
             name_override = None
             toc_ref = None
             extra_rows = None
-            if tbl.fe_id in model_ids:
-                # Link to a later detailed model description
-                name_override = Hyperref(Marker(name=str(tbl.name), prefix="subsec"),
-                                         text=NoEscape(r'\textcolor{blue}{') + bold(tbl.name) + NoEscape('}'))
-            if tbl.fe_id in datasets:
-                modes, dataset = datasets[tbl.fe_id]
-                title = ", ".join([s.capitalize() for s in modes])
-                name_override = bold(f'{tbl.name} ({title})')
-                # Enhance the dataset summary
-                if isinstance(dataset, FEDataset):
-                    extra_rows = list(dataset.summary().__getstate__().items())
-                    for idx, (key, val) in enumerate(extra_rows):
-                        key = f"{prettify_metric_name(key)}:"
-                        if isinstance(val, dict) and val:
-                            if isinstance(list(val.values())[0], (int, float, str, bool, type(None))):
-                                val = jsonpickle.dumps(val, unpicklable=False)
-                            else:
-                                subtable = Tabularx('l|X', width_argument=NoEscape(r'\linewidth'))
-                                for k, v in val.items():
-                                    if hasattr(v, '__getstate__'):
-                                        v = jsonpickle.dumps(v, unpicklable=False)
-                                    subtable.add_row((k, v))
-                                # To nest TabularX, have to wrap it in brackets
-                                subtable = ContainerList(data=[NoEscape("{"), subtable, NoEscape("}")])
-                                val = subtable
-                        extra_rows[idx] = (key, val)
+            if isinstance(tbl, FeSummaryTable):
+                if tbl.fe_id in model_ids:
+                    # Link to a later detailed model description
+                    name_override = Hyperref(Marker(name=str(tbl.name), prefix="subsec"),
+                                             text=NoEscape(r'\textcolor{blue}{') + bold(tbl.name) + NoEscape('}'))
+                if tbl.fe_id in datasets:
+                    modes, dataset = datasets[tbl.fe_id]
+                    title = ", ".join([s.capitalize() for s in modes])
+                    name_override = bold(f'{tbl.name} ({title})')
+                    # Enhance the dataset summary
+                    if isinstance(dataset, FEDataset):
+                        extra_rows = list(dataset.summary().__getstate__().items())
+                        for idx, (key, val) in enumerate(extra_rows):
+                            key = f"{prettify_metric_name(key)}:"
+                            if isinstance(val, dict) and val:
+                                if isinstance(list(val.values())[0], (int, float, str, bool, type(None))):
+                                    val = jsonpickle.dumps(val, unpicklable=False)
+                                else:
+                                    subtable = Tabularx('l|X', width_argument=NoEscape(r'\linewidth'))
+                                    for k, v in val.items():
+                                        if hasattr(v, '__getstate__'):
+                                            v = jsonpickle.dumps(v, unpicklable=False)
+                                        subtable.add_row((k, v))
+                                    # To nest TabularX, have to wrap it in brackets
+                                    subtable = ContainerList(data=[NoEscape("{"), subtable, NoEscape("}")])
+                                    val = subtable
+                            extra_rows[idx] = (key, val)
             tbl.render_table(self.doc, name_override=name_override, toc_ref=toc_ref, extra_rows=extra_rows)
 
     def _document_models(self) -> None:
