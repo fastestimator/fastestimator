@@ -17,6 +17,8 @@ import json
 import os
 from typing import Any, Callable, Dict, List, Optional, Union
 
+import numpy as np
+
 import fastestimator as fe
 
 
@@ -50,6 +52,21 @@ class Search:
         self.search_summary = []
         self.evaluation_cache = {}
 
+    def process_results(self,result):
+        """
+        Process results to ensure efficient storing and loading
+            1. Convert a numpy array to list
+            2. Ensure that results are a list
+        """
+        if isinstance(result,dict):
+            for key,val in result.items():
+                if isinstance(val,np.ndarray):
+                    result[key] = val.tolist()
+            return result
+        else:
+            return {"value": result}
+
+
     def evaluate(self, **kwargs: Any) -> Dict[str, Union[float, int, str]]:
         """Evaluate the eval_fn and return the result.
 
@@ -69,8 +86,8 @@ class Search:
             fe.fe_build_count = 0  # Resetting the build count to refresh the model names
             kwargs["search_idx"] = self.search_idx
             result = self.eval_fn(**kwargs)
-            if not isinstance(result, dict):
-                result = {"value": result}
+            # process results
+            result = self.process_results(result)
             summary = {"param": kwargs, "result": result}
             self.search_summary.append(summary)
             self.evaluation_cache[hash_value] = result
