@@ -34,7 +34,7 @@ from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver, ModelSaver
 
 
-class DiagonalGaussianDistribution(object):
+class DiagonalGaussianDistribution:
     def __init__(self, parameters):
         self.parameters = parameters
         self.mean, self.logvar = torch.chunk(parameters, 2, dim=1)
@@ -547,14 +547,14 @@ def get_pipeline(batch_size=8, image_size=256, split_per=0.05) -> fe.Pipeline:
     return pipeline
 
 
-def get_latent_encoder(batch_size,
-                       image_size,
-                       emb_channels,
-                       epochs,
-                       model_dir=tempfile.mkdtemp(),
-                       train_steps_per_epoch=1000,
-                       eval_steps_per_epoch=100,
-                       log_steps=200):
+def train_latent_encoder(batch_size,
+                         image_size,
+                         emb_channels,
+                         epochs,
+                         model_dir=tempfile.mkdtemp(),
+                         train_steps_per_epoch=1000,
+                         eval_steps_per_epoch=100,
+                         log_steps=200):
     pipeline = get_pipeline(batch_size, image_size, split_per=0.05)
 
     encoder_model = fe.build(
@@ -584,7 +584,7 @@ def get_latent_encoder(batch_size,
 
     emb_estimator = fe.Estimator(pipeline=pipeline,
                                  network=network,
-                                 monitor_names=["l1_loss", "p_loss", "emb_loss", 'loss'],
+                                 monitor_names=["l1_loss", "p_loss", "emb_loss"],
                                  epochs=epochs,
                                  traces=traces,
                                  train_steps_per_epoch=train_steps_per_epoch,
@@ -639,7 +639,7 @@ def train_noise_estimator(encoder_weights_path,
     estimator.fit(warmup=False)
 
 
-def fastestimator_run(epochs=2,
+def fastestimator_run(epochs=40,
                       batch_size=8,
                       emb_channels=16,
                       image_size=256,
@@ -649,14 +649,14 @@ def fastestimator_run(epochs=2,
                       model_dir=tempfile.mkdtemp()):
 
     # train latent embedding
-    encoder_weights_path = get_latent_encoder(batch_size=batch_size,
-                                              image_size=image_size,
-                                              emb_channels=emb_channels,
-                                              model_dir=model_dir,
-                                              epochs=max(epochs // 4, 1),
-                                              train_steps_per_epoch=train_steps_per_epoch,
-                                              eval_steps_per_epoch=eval_steps_per_epoch,
-                                              log_steps=log_steps)
+    encoder_weights_path = train_latent_encoder(batch_size=batch_size,
+                                                image_size=image_size,
+                                                emb_channels=emb_channels,
+                                                model_dir=model_dir,
+                                                epochs=max(epochs // 4, 1),
+                                                train_steps_per_epoch=train_steps_per_epoch,
+                                                eval_steps_per_epoch=eval_steps_per_epoch,
+                                                log_steps=log_steps)
     # train noise estimator
     train_noise_estimator(encoder_weights_path=encoder_weights_path,
                           batch_size=batch_size,
