@@ -24,11 +24,12 @@ from torchvision import models
 
 import fastestimator as fe
 from fastestimator.backend._reduce_mean import reduce_mean
+from fastestimator.backend._reduce_sum import reduce_sum
 from fastestimator.dataset.data import nih_chestxray
 from fastestimator.op.numpyop import Delete
 from fastestimator.op.numpyop.multivariate import Resize
 from fastestimator.op.numpyop.univariate import ChannelTranspose, Normalize, ReadImage
-from fastestimator.op.tensorop import TensorOp
+from fastestimator.op.tensorop import LambdaOp, TensorOp
 from fastestimator.op.tensorop.loss import L1_Loss, LossOp
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver, ModelSaver
@@ -569,6 +570,7 @@ def train_latent_encoder(batch_size,
 
     network = fe.Network(ops=[
         ModelOp(model=encoder_model, inputs="image", outputs=['sample', 'emb_loss']),
+        LambdaOp(fn=lambda x: reduce_sum(x), inputs="emb_loss", outputs="emb_loss"),
         ModelOp(model=decoder_model, inputs="sample", outputs='pred'),
         L1_Loss(inputs=['pred', 'image'], outputs='l1_loss'),
         LPIPS_Loss(inputs=['pred', 'image'], outputs='p_loss'),
