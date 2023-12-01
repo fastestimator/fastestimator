@@ -520,9 +520,9 @@ class NoiseNetwork(nn.Module):
 
 
 class NoiseSampler(TensorOp):
-    def __init__(self, inputs, outputs):
+    def __init__(self, inputs, outputs, timesteps=1000):
         super().__init__(inputs=inputs, outputs=outputs)
-        self.gausian_noise_scheduler = GaussianNoiseScheduler()
+        self.gausian_noise_scheduler = GaussianNoiseScheduler(timesteps=timesteps)
 
     def forward(self, data, state: Dict[str, Any]):
         encoded_image = data
@@ -603,9 +603,10 @@ def train_noise_estimator(encoder_weights_path,
                           emb_channels,
                           model_dir,
                           epochs,
-                          train_steps_per_epoch,
-                          eval_steps_per_epoch,
-                          log_steps):
+                          train_steps_per_epoch=1000,
+                          eval_steps_per_epoch=100,
+                          log_steps=200,
+                          timesteps=1000):
 
     pipeline = get_pipeline(batch_size, image_size, split_per=0.05)
 
@@ -624,7 +625,7 @@ def train_noise_estimator(encoder_weights_path,
 
     network = fe.Network(ops=[
         ModelOp(model=encoder_model, inputs="image", outputs=['sample', 'e_loss'], trainable=False, gradients=False),
-        NoiseSampler(inputs='sample', outputs=['encoded_image_t', 'encoded_image_T', 't']),
+        NoiseSampler(inputs='sample', outputs=['encoded_image_t', 'encoded_image_T', 't'], timesteps=1000),
         ModelOp(model=noise_model, inputs=["encoded_image_t", 't'], outputs='pred'),
         L1_Loss(inputs=['pred', 'encoded_image_T'], outputs='l1_loss'),
         UpdateOp(model=noise_model, loss_name="l1_loss")
@@ -649,6 +650,7 @@ def fastestimator_run(epochs=40,
                       train_steps_per_epoch=1000,
                       eval_steps_per_epoch=100,
                       log_steps=200,
+                      timesteps=1000,
                       model_dir=tempfile.mkdtemp()):
 
     # train latent embedding
@@ -669,7 +671,8 @@ def fastestimator_run(epochs=40,
                           epochs=epochs,
                           train_steps_per_epoch=train_steps_per_epoch,
                           eval_steps_per_epoch=eval_steps_per_epoch,
-                          log_steps=log_steps)
+                          log_steps=log_steps,
+                          timesteps=timesteps)
 
 
 if __name__ == "__main__":
