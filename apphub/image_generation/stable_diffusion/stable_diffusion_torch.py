@@ -223,15 +223,16 @@ class Decoder(nn.Module):
 class LPIPS_Loss(LossOp):
     def __init__(self, inputs, outputs, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.net = VGG16(requires_grad=False)
         self.chns = [64, 128, 256, 512, 512]
         self.L = len(self.chns)
         self.net.eval()
         self.shift = torch.Tensor([-.030, -.088, -.188])[None, :, None, None]
         self.scale = torch.Tensor([.458, .448, .450])[None, :, None, None]
-        self.net = self.net.to('cuda')
-        self.shift = self.shift.to('cuda')
-        self.scale = self.scale.to('cuda')
+        self.net = self.net.to(device)
+        self.shift = self.shift.to(device)
+        self.scale = self.scale.to(device)
 
     def normalize_tensor(self, in_feat, eps=1e-10):
         norm_factor = torch.sqrt(torch.sum(in_feat**2, dim=1, keepdim=True))
@@ -322,7 +323,7 @@ class GaussianNoiseScheduler():
             beta_start=0.002,  # default 1e-4, stable-diffusion ~ 1e-3
             beta_end=0.02,
             betas=None,
-            device='cuda'):
+            device='cuda' if torch.cuda.is_available() else 'cpu'):
         super().__init__()
         self.device = device
         self.timesteps = timesteps
@@ -519,9 +520,9 @@ class NoiseNetwork(nn.Module):
 
 
 class NoiseSampler(TensorOp):
-    def __init__(self, inputs, outputs):
+    def __init__(self, inputs, outputs, timesteps=1000):
         super().__init__(inputs=inputs, outputs=outputs)
-        self.gausian_noise_scheduler = GaussianNoiseScheduler()
+        self.gausian_noise_scheduler = GaussianNoiseScheduler(timesteps=timesteps)
 
     def forward(self, data, state: Dict[str, Any]):
         encoded_image = data
@@ -602,9 +603,10 @@ def train_noise_estimator(encoder_weights_path,
                           emb_channels,
                           model_dir,
                           epochs,
-                          train_steps_per_epoch,
-                          eval_steps_per_epoch,
-                          log_steps):
+                          train_steps_per_epoch=1000,
+                          eval_steps_per_epoch=100,
+                          log_steps=200,
+                          timesteps=1000):
 
     pipeline = get_pipeline(batch_size, image_size, split_per=0.05)
 
@@ -623,7 +625,7 @@ def train_noise_estimator(encoder_weights_path,
 
     network = fe.Network(ops=[
         ModelOp(model=encoder_model, inputs="image", outputs=['sample', 'e_loss'], trainable=False, gradients=False),
-        NoiseSampler(inputs='sample', outputs=['encoded_image_t', 'encoded_image_T', 't']),
+        NoiseSampler(inputs='sample', outputs=['encoded_image_t', 'encoded_image_T', 't'], timesteps=1000),
         ModelOp(model=noise_model, inputs=["encoded_image_t", 't'], outputs='pred'),
         L1_Loss(inputs=['pred', 'encoded_image_T'], outputs='l1_loss'),
         UpdateOp(model=noise_model, loss_name="l1_loss")
@@ -648,6 +650,7 @@ def fastestimator_run(epochs=40,
                       train_steps_per_epoch=1000,
                       eval_steps_per_epoch=100,
                       log_steps=200,
+                      timesteps=1000,
                       model_dir=tempfile.mkdtemp()):
 
     # train latent embedding
@@ -668,7 +671,8 @@ def fastestimator_run(epochs=40,
                           epochs=epochs,
                           train_steps_per_epoch=train_steps_per_epoch,
                           eval_steps_per_epoch=eval_steps_per_epoch,
-                          log_steps=log_steps)
+                          log_steps=log_steps,
+                          timesteps=timesteps)
 
 
 if __name__ == "__main__":
