@@ -17,7 +17,6 @@ import tempfile
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_probability as tfp
 from tensorflow.keras import layers
 from tensorflow.keras.initializers import RandomNormal
 from torch.utils.data import Dataset
