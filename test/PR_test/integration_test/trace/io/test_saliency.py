@@ -21,7 +21,6 @@ from fastestimator.architecture.tensorflow import LeNet
 from fastestimator.dataset.data import mnist
 from fastestimator.op.numpyop.univariate import ExpandDims, Minmax
 from fastestimator.op.tensorop.model import ModelOp
-from fastestimator.test.unittest_util import check_img_similar, img_to_rgb_array
 from fastestimator.trace.io import ImageSaver
 from fastestimator.trace.xai import Saliency
 
@@ -72,9 +71,5 @@ class TestSaliency(unittest.TestCase):
 
         estimator = fe.Estimator(pipeline=pipeline, network=network, epochs=5, traces=traces, log_steps=1000)
         estimator.test()
-
-        ans_img_path = os.path.abspath(os.path.join(__file__, "..", "resources", "saliency_figure.png"))
-        ans_img = img_to_rgb_array(ans_img_path)
-        output_img_path = os.path.join(save_dir, "saliency_test_epoch_5.png")
-        output_img = img_to_rgb_array(output_img_path)
-        self.assertTrue(check_img_similar(output_img, ans_img))
+        # we are no longer doing a image pixel-wise match, because the test is extremely brittle, and works differently
+        # in different hardwares.

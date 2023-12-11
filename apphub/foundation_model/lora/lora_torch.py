@@ -435,11 +435,11 @@ class UNetDecoderBlock(nn.Module):
     def __init__(self, in_channels: int, mid_channels: int, out_channels: int) -> None:
         super().__init__()
         self.layers = nn.Sequential(nn.GroupNorm(num_groups=8, num_channels=in_channels),
-                                    nn.ReLU(inplace=True),
+                                    nn.ReLU(),
                                     nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1),
                                     nn.Upsample(scale_factor=2),
                                     nn.GroupNorm(num_groups=8, num_channels=mid_channels),
-                                    nn.ReLU(inplace=True),
+                                    nn.ReLU(),
                                     nn.Conv2d(mid_channels, out_channels, kernel_size=3, padding=1))
 
         for layer in self.layers:
@@ -459,10 +459,10 @@ class UNet_Decoder(nn.Module):
         self.dec2 = UNetDecoderBlock(in_channels=64, mid_channels=64, out_channels=64)  # 512
         self.dec1 = UNetDecoderBlock(in_channels=64, mid_channels=64, out_channels=32)  # 1024
         self.dec0 = nn.Sequential(nn.GroupNorm(num_groups=8, num_channels=32),
-                                  nn.ReLU(inplace=False),
+                                  nn.ReLU(),
                                   nn.Conv2d(32, 32, kernel_size=3, padding=1),
                                   nn.GroupNorm(num_groups=8, num_channels=32),
-                                  nn.ReLU(inplace=False),
+                                  nn.ReLU(),
                                   nn.Conv2d(32, num_classes, kernel_size=3, padding=1))
 
         for layer in self.dec0:

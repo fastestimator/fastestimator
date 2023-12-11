@@ -14,7 +14,7 @@
 # ==============================================================================
 import os
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import wget
@@ -25,14 +25,17 @@ from fastestimator.util.wget_util import bar_custom, callback_progress
 wget.callback_progress = callback_progress
 
 
-def load_data(root_dir: Optional[str] = None,
-              seq_length: int = 64) -> Tuple[NumpyDataset, NumpyDataset, NumpyDataset, List[str]]:
+def load_data(
+    root_dir: Optional[str] = None, seq_length: int = 64, return_text_path=False
+) -> Tuple[Union[NumpyDataset, str], Union[NumpyDataset, str], Union[NumpyDataset, str], List[str]]:
     """Load and return the Penn TreeBank dataset.
 
     Args:
         root_dir: The path to store the downloaded data. When `path` is not provided, the data will be saved into
             `fastestimator_data` under the user's home directory.
         seq_length: Length of data sequence.
+        return_text_path: Whether to return the text path. When set to True, the text file path will be returned instead
+            of the dataset instance.
 
     Returns:
         (train_data, eval_data, test_data, vocab)
@@ -74,7 +77,12 @@ def load_data(root_dir: Optional[str] = None,
     data = [[word2idx[word] for word in text[:-(len(text) % seq_length)]] for text in texts]
     x_train, x_eval, x_test = [np.array(d).reshape(-1, seq_length) for d in data]
 
-    train_data = NumpyDataset(data={"x": x_train})
-    eval_data = NumpyDataset(data={"x": x_eval})
-    test_data = NumpyDataset(data={"x": x_test})
+    if return_text_path:
+        train_data = train_data_path
+        eval_data = eval_data_path
+        test_data = test_data_path
+    else:
+        train_data = NumpyDataset(data={"x": x_train})
+        eval_data = NumpyDataset(data={"x": x_eval})
+        test_data = NumpyDataset(data={"x": x_test})
     return train_data, eval_data, test_data, vocab

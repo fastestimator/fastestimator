@@ -41,7 +41,7 @@ class BasicBlock(nn.Module):
         self.bn2 = nn.BatchNorm2d(planes)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
         self.bn3 = nn.BatchNorm2d(planes)
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = nn.ReLU()
         self.downsample = downsample
         self.stride = stride
 
@@ -80,7 +80,7 @@ class Bottleneck(nn.Module):
         self.bn3 = nn.BatchNorm2d((planes * 1))
         self.conv3 = nn.Conv2d((planes * 1), planes * Bottleneck.outchannel_ratio, kernel_size=1, bias=False)
         self.bn4 = nn.BatchNorm2d(planes * Bottleneck.outchannel_ratio)
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = nn.ReLU()
         self.downsample = downsample
         self.stride = stride
 
@@ -137,7 +137,7 @@ class PyramidNet(nn.Module):
 
         self.final_featuremap_dim = self.input_featuremap_dim
         self.bn_final = nn.BatchNorm2d(self.final_featuremap_dim)
-        self.relu_final = nn.ReLU(inplace=True)
+        self.relu_final = nn.ReLU()
         self.avgpool = nn.AvgPool2d(8)
         self.fc = nn.Linear(self.final_featuremap_dim, num_classes)
         for m in self.modules():
