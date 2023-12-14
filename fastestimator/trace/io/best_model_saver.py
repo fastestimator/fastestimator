@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from operator import lt, gt
+from operator import gt, lt
 from typing import Optional, Union
 
 import numpy as np
@@ -35,6 +35,7 @@ class BestModelSaver(Trace):
         save_dir: Folder path into which to save the model.
         metric: Eval metric name to monitor. If None, the model's loss will be used.
         save_best_mode: Can be 'min' or 'max'.
+        model_name: Prefix to be used for the saved output model.
         load_best_final: Whether to automatically reload the best model (if available) after training.
         save_architecture: Whether to save the full model architecture in addition to the model weights. This option is
             only available for TensorFlow models at present, and will generate a folder containing several files. The
@@ -50,6 +51,7 @@ class BestModelSaver(Trace):
                  save_dir: str,
                  metric: Optional[str] = None,
                  save_best_mode: str = "min",
+                 model_name: Optional[str] = None,
                  load_best_final: bool = False,
                  save_architecture: bool = False) -> None:
         if not metric:
@@ -63,6 +65,13 @@ class BestModelSaver(Trace):
         self.fe_monitor_names.add(metric)
         self.model = model
         self.model_name = "{}_best_{}".format(self.model.model_name, self.metric)
+        if model_name is not None:
+            if isinstance(model_name, str) and len(model_name) > 0:
+                self.model_name = model_name
+            else:
+                raise ValueError(
+                    "Model name provided to BestModelSaver is not a string with atleast one character.")
+
         self.save_dir = save_dir
         self.save_best_mode = save_best_mode
         self.load_best_final = load_best_final

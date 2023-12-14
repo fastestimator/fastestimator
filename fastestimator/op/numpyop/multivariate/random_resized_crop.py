@@ -34,12 +34,12 @@ class RandomResizedCrop(MultiVariateAlbumentation):
             ds_ids except for a particular one, you can pass an argument like "!ds1".
         image_in: The key of an image to be modified.
         mask_in: The key of a mask to be modified (with the same random factors as the image).
-        masks_in: The key of masks to be modified (with the same random factors as the image).
+        masks_in: The list of mask keys to be modified (with the same random factors as the image).
         bbox_in: The key of a bounding box(es) to be modified (with the same random factors as the image).
         keypoints_in: The key of keypoints to be modified (with the same random factors as the image).
         image_out: The key to write the modified image (defaults to `image_in` if None).
         mask_out: The key to write the modified mask (defaults to `mask_in` if None).
-        masks_out: The key to write the modified masks (defaults to `masks_in` if None).
+        masks_out: The list of keys to write the modified masks (defaults to `masks_in` if None).
         bbox_out: The key to write the modified bounding box(es) (defaults to `bbox_in` if None).
         keypoints_out: The key to write the modified keypoints (defaults to `keypoints_in` if None).
         bbox_params: Parameters defining the type of bounding box ('coco', 'pascal_voc', 'albumentations' or 'yolo').
@@ -64,12 +64,12 @@ class RandomResizedCrop(MultiVariateAlbumentation):
                  ds_id: Union[None, str, Iterable[str]] = None,
                  image_in: Optional[str] = None,
                  mask_in: Optional[str] = None,
-                 masks_in: Optional[str] = None,
+                 masks_in: Optional[Iterable[str]] = None,
                  bbox_in: Optional[str] = None,
                  keypoints_in: Optional[str] = None,
                  image_out: Optional[str] = None,
                  mask_out: Optional[str] = None,
-                 masks_out: Optional[str] = None,
+                 masks_out: Optional[Iterable[str]] = None,
                  bbox_out: Optional[str] = None,
                  keypoints_out: Optional[str] = None,
                  bbox_params: Union[BboxParams, str, None] = None,

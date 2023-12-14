@@ -32,10 +32,10 @@ class RandomGridShuffle(MultiVariateAlbumentation):
             ds_ids except for a particular one, you can pass an argument like "!ds1".
         image_in: The key of an image to be modified.
         mask_in: The key of a mask to be modified (with the same random factors as the image).
-        masks_in: The key of masks to be modified (with the same random factors as the image).
+        masks_in: The list of mask keys to be modified (with the same random factors as the image).
         image_out: The key to write the modified image (defaults to `image_in` if None).
         mask_out: The key to write the modified mask (defaults to `mask_in` if None).
-        masks_out: The key to write the modified masks (defaults to `masks_in` if None).
+        masks_out: The list of keys to write the modified masks (defaults to `masks_in` if None).
         grid: size of grid for splitting image (height, width).
 
     Image types:
@@ -47,10 +47,10 @@ class RandomGridShuffle(MultiVariateAlbumentation):
                  ds_id: Union[None, str, Iterable[str]] = None,
                  image_in: Optional[str] = None,
                  mask_in: Optional[str] = None,
-                 masks_in: Optional[str] = None,
+                 masks_in: Optional[Iterable[str]] = None,
                  image_out: Optional[str] = None,
                  mask_out: Optional[str] = None,
-                 masks_out: Optional[str] = None):
+                 masks_out: Optional[Iterable[str]] = None):
         import numpy as np  # Albumentations 1.3.0 is relying on deprecated np.int alias.
         np.int = np.int32  # TODO - Remove this after they upgrade
         super().__init__(RandomGridShuffleAlb(grid=grid, always_apply=True),
