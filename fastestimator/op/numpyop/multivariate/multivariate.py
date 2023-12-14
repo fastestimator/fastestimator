@@ -105,8 +105,10 @@ class MultiVariateAlbumentation(NumpyOp):
 
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[Union[np.ndarray, List[np.ndarray]]]:
         mul_input = {}
+        ind = 0
         for key in self.keys_in.keys():
             key_length = self.get_num_items(self.keys_in[key])
-            mul_input[key] = data.pop(0) if key_length == 1 else [data.pop(0) for i in range(key_length)]
+            mul_input[key] = data[ind] if key_length == 1 else data[ind:ind + key_length]
+            ind = ind + key_length
         result = self.func(**mul_input)
         return [result[k] for k in self.keys_out.keys()]

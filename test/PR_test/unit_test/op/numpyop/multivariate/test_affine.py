@@ -56,4 +56,4 @@ class TestAffine(unittest.TestCase):
         with self.subTest('Check output mask1 shape'):
             self.assertEqual(output[1][0].shape, self.image_and_mask_output_shape)
         with self.subTest('Check output mask2 shape'):
-            self.assertEqual(output[1][0].shape, self.image_and_mask_output_shape)
+            self.assertEqual(output[1][1].shape, self.image_and_mask_output_shape)
