@@ -33,10 +33,10 @@ class CropAndPad(MultiVariateAlbumentation):
             ds_ids except for a particular one, you can pass an argument like "!ds1".
         image_in: The key of an image to be modified.
         mask_in: The key of a mask to be modified (with the same random factors as the image).
-        masks_in: The key of masks to be modified (with the same random factors as the image).
+        masks_in: The list of mask keys to be modified (with the same random factors as the image).
         image_out: The key to write the modified image (defaults to `image_in` if None).
         mask_out: The key to write the modified mask (defaults to `mask_in` if None).
-        masks_out: The key to write the modified masks (defaults to `masks_in` if None).
+        masks_out: The list of keys to write the modified masks (defaults to `masks_in` if None).
         px: The number of pixels to crop (negative values) or pad (positive values) on each side of the image.
             Either this or the parameter percent may be set, not both at the same time.
         percent: The number of pixels to crop (negative values) or pad (positive values) on each side of the image given
@@ -65,10 +65,10 @@ class CropAndPad(MultiVariateAlbumentation):
                  ds_id: Union[None, str, Iterable[str]] = None,
                  image_in: Optional[str] = None,
                  mask_in: Optional[str] = None,
-                 masks_in: Optional[str] = None,
+                 masks_in: Optional[Iterable[str]] = None,
                  image_out: Optional[str] = None,
                  mask_out: Optional[str] = None,
-                 masks_out: Optional[str] = None):
+                 masks_out: Optional[Iterable[str]] = None):
         order = {'nearest_neighbor': 0, 'bilinear': 1, 'bicubic': 3, 'biquartic': 4, 'biquintic': 5}[interpolation]
         border = {'constant':0, 'reflect':1}[pad_mode]
         if not pad_cval_mask:

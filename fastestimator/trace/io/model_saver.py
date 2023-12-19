@@ -35,6 +35,7 @@ class ModelSaver(Trace):
         save_dir: Folder path into which to save the `model`.
         frequency: Model saving frequency in epoch(s).
         max_to_keep: Maximum number of latest saved files to keep. If 0 or None, all models will be saved.
+        weights_name: The prefix used for saving model weights. If None model.model_name will be used as a prefix.
         save_architecture: Whether to save the full model architecture in addition to the model weights. This option is
             only available for TensorFlow models at present, and will generate a folder containing several files. The
             model can then be re-instantiated even without access to the original code by calling:
@@ -48,10 +49,17 @@ class ModelSaver(Trace):
                  save_dir: str,
                  frequency: int = 1,
                  max_to_keep: Optional[int] = None,
+                 weights_name: Optional[str] = None,
                  save_architecture: bool = False) -> None:
         super().__init__(mode="train")
         self.model = model
         self.save_dir = save_dir
+        self.weights_name = None
+        if weights_name is not None:
+            if isinstance(weights_name, str) and len(weights_name) > 0:
+                self.weights_name = weights_name
+            else:
+                raise ValueError("Weights name provided to ModelSaver is not a string with atleast one character.")
         self.frequency = frequency
         self.save_architecture = save_architecture
         if save_architecture and isinstance(model, torch.nn.Module):
@@ -63,7 +71,8 @@ class ModelSaver(Trace):
     def on_epoch_end(self, data: Data) -> None:
         # No model will be saved when save_dir is None, which makes smoke test easier.
         if self.save_dir and self.system.epoch_idx % self.frequency == 0:
-            model_name = "{}_epoch_{}".format(self.model.model_name, self.system.epoch_idx)
+            model_name_prefix = self.weights_name if self.weights_name is not None else self.model.model_name
+            model_name = "{}_epoch_{}".format(model_name_prefix, self.system.epoch_idx)
             model_path = save_model(model=self.model,
                                     save_dir=self.save_dir,
                                     model_name=model_name,

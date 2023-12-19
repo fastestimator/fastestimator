@@ -434,13 +434,16 @@ def get_type(obj: Any) -> str:
     return result
 
 
-def check_io_names(names: List[str]) -> List[str]:
+def check_io_names(names: Union[List[str], Any]) -> Union[List[str], Any]:
     forbidden_chars = {":", ";"}
     for name in names:
-        assert not any(char in name for char in forbidden_chars), \
-            "inputs/outputs name cannot contain characters like ':', ';', found {}".format(name)
-        assert len(name) > 0, "inputs/outputs cannot be an empty string"
-        assert len(name.split('|')) < 3, f"inputs/outputs cannot contain more than one '|' character, found {name}"
+        if isinstance(name, list):
+            check_io_names(name)
+        else:
+            assert not any(char in name for char in forbidden_chars), \
+                "inputs/outputs name cannot contain characters like ':', ';', found {}".format(name)
+            assert len(name) > 0, "inputs/outputs cannot be an empty string"
+            assert len(name.split('|')) < 3, f"inputs/outputs cannot contain more than one '|' character, found {name}"
     return names
 
 

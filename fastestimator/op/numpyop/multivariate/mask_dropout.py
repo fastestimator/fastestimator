@@ -36,10 +36,10 @@ class MaskDropout(MultiVariateAlbumentation):
             ds_ids except for a particular one, you can pass an argument like "!ds1".
         image_in: The key of an image to be modified.
         mask_in: The key of a mask to be modified (with the same random factors as the image).
-        masks_in: The key of masks to be modified (with the same random factors as the image).
-                image_out: The key to write the modified image (defaults to `image_in` if None).
+        masks_in: The list of mask keys to be modified (with the same random factors as the image).
+        image_out: The key to write the modified image (defaults to `image_in` if None).
         mask_out: The key to write the modified mask (defaults to `mask_in` if None).
-        masks_out: The key to write the modified masks (defaults to `masks_in` if None).
+        masks_out: The list of keys to write the modified masks (defaults to `masks_in` if None).
         max_objects: Maximum number of labels that can be zeroed out. Can be tuple, in this case it's [min, max]
         image_fill_value: Fill value to use when filling image.
             Can be 'inpaint' to apply in-painting (works only  for 3-channel images)
@@ -56,10 +56,10 @@ class MaskDropout(MultiVariateAlbumentation):
                  ds_id: Union[None, str, Iterable[str]] = None,
                  image_in: Optional[str] = None,
                  mask_in: Optional[str] = None,
-                 masks_in: Optional[str] = None,
+                 masks_in: Optional[Iterable[str]] = None,
                  image_out: Optional[str] = None,
                  mask_out: Optional[str] = None,
-                 masks_out: Optional[str] = None):
+                 masks_out: Optional[Iterable[str]] = None):
         super().__init__(
             MaskDropoutAlb(max_objects=max_objects,
                            image_fill_value=image_fill_value,

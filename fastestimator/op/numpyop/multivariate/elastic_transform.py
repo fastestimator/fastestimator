@@ -33,10 +33,10 @@ class ElasticTransform(MultiVariateAlbumentation):
             ds_ids except for a particular one, you can pass an argument like "!ds1".
         image_in: The key of an image to be modified.
         mask_in: The key of a mask to be modified (with the same random factors as the image).
-        masks_in: The key of masks to be modified (with the same random factors as the image).
+        masks_in: The list of mask keys to be modified (with the same random factors as the image).
         image_out: The key to write the modified image (defaults to `image_in` if None).
         mask_out: The key to write the modified mask (defaults to `mask_in` if None).
-        masks_out: The key to write the modified masks (defaults to `masks_in` if None).
+        masks_out: The list of keys to write the modified masks (defaults to `masks_in` if None).
         alpha: Scaling factor during point translation.
         sigma: Gaussian filter parameter. The effect (small to large) is: random -> elastic -> affine -> translation.
         alpha_affine: The range will be (-alpha_affine, alpha_affine).
@@ -68,10 +68,10 @@ class ElasticTransform(MultiVariateAlbumentation):
                  ds_id: Union[None, str, Iterable[str]] = None,
                  image_in: Optional[str] = None,
                  mask_in: Optional[str] = None,
-                 masks_in: Optional[str] = None,
+                 masks_in: Optional[Iterable[str]] = None,
                  image_out: Optional[str] = None,
                  mask_out: Optional[str] = None,
-                 masks_out: Optional[str] = None):
+                 masks_out: Optional[Iterable[str]] = None):
         super().__init__(
             ElasticTransformAlb(alpha=alpha,
                                 sigma=sigma,

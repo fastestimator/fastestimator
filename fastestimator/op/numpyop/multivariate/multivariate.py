@@ -42,12 +42,12 @@ class MultiVariateAlbumentation(NumpyOp):
             ds_ids except for a particular one, you can pass an argument like "!ds1".
         image_in: The key of an image to be modified.
         mask_in: The key of a mask to be modified (with the same random factors as the image).
-        masks_in: The key of masks to be modified (with the same random factors as the image).
+        masks_in: The list of mask keys to be modified (with the same random factors as the image).
         bbox_in: The key of a bounding box(es) to be modified (with the same random factors as the image).
         keypoints_in: The key of keypoints to be modified (with the same random factors as the image).
         image_out: The key to write the modified image (defaults to `image_in` if None).
         mask_out: The key to write the modified mask (defaults to `mask_in` if None).
-        masks_out: The key to write the modified masks (defaults to `masks_in` if None).
+        masks_out: The list of keys to write the modified masks (defaults to `masks_in` if None).
         bbox_out: The key to write the modified bounding box(es) (defaults to `bbox_in` if None).
         keypoints_out: The key to write the modified keypoints (defaults to `keypoints_in` if None).
         bbox_params: Parameters defining the type of bounding box ('coco', 'pascal_voc', 'albumentations' or 'yolo').
@@ -62,12 +62,12 @@ class MultiVariateAlbumentation(NumpyOp):
                  ds_id: Union[None, str, Iterable[str]] = None,
                  image_in: Optional[str] = None,
                  mask_in: Optional[str] = None,
-                 masks_in: Optional[str] = None,
+                 masks_in: Optional[Iterable[str]] = None,
                  bbox_in: Optional[str] = None,
                  keypoints_in: Optional[str] = None,
                  image_out: Optional[str] = None,
                  mask_out: Optional[str] = None,
-                 masks_out: Optional[str] = None,
+                 masks_out: Optional[Iterable[str]] = None,
                  bbox_out: Optional[str] = None,
                  keypoints_out: Optional[str] = None,
                  bbox_params: Union[BboxParams, str, None] = None,
@@ -100,6 +100,15 @@ class MultiVariateAlbumentation(NumpyOp):
             keypoint_params = KeypointParams(keypoint_params)
         self.func = Compose(transforms=[func], bbox_params=bbox_params, keypoint_params=keypoint_params)
 
-    def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[np.ndarray]:
-        result = self.func(**{k: v for k, v in zip(self.keys_in.keys(), data)})
+    def get_num_items(self, value):
+        return 1 if isinstance(value, str) else len(value)
+
+    def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> List[Union[np.ndarray, List[np.ndarray]]]:
+        mul_input = {}
+        ind = 0
+        for key in self.keys_in.keys():
+            key_length = self.get_num_items(self.keys_in[key])
+            mul_input[key] = data[ind] if key_length == 1 else data[ind:ind + key_length]
+            ind = ind + key_length
+        result = self.func(**mul_input)
         return [result[k] for k in self.keys_out.keys()]
