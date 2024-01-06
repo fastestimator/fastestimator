@@ -518,11 +518,14 @@ class Traceability(Trace):
                             # Text Summary
                             # noinspection PyUnresolvedReferences
                             inputs = model.fe_input_spec.get_dummy_input()
+                            model.to(inputs.device)
                             with Suppressor():
                                 self.doc.append(
                                     Verbatim(
                                         str(
-                                            pms(model.module if self.system.num_devices > 1 else model,
+                                            pms(
+                                                model.module
+                                                if isinstance(model, torch.nn.parallel.DataParallel) else model,
                                                 input_data=inputs,
                                                 col_names=("output_size", "num_params", "trainable"),
                                                 col_width=20,
@@ -534,7 +537,6 @@ class Traceability(Trace):
                             # Visual Summary
                             # noinspection PyBroadException
                             try:
-                                model.to(inputs.device)
                                 graph = draw_graph(
                                     model.module if isinstance(model, torch.nn.parallel.DataParallel) else model,
                                     input_data=inputs,
