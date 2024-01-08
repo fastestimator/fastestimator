@@ -68,6 +68,8 @@ class Search:
             for key,val in result.items():
                 if isinstance(val,np.ndarray):
                     result[key] = val.tolist()
+                elif isinstance(val,dict):
+                    result[key] = self.process_results(val)
             return result
         else:
             return {"value": result}
@@ -94,6 +96,13 @@ class Search:
             result = self.eval_fn(**kwargs)
             # process results
             result = self.process_results(result)
+            for key,val in result.items():
+                print(key,type(val))
+                if isinstance(val, dict):
+                    print('**********************************************')
+                    for sub_key,sub_val in val.items():
+                        print(sub_key, type(sub_val))
+                    print('**********************************************')
             summary = {"param": kwargs, "result": result}
             self.search_summary.append(summary)
             self.evaluation_cache[hash_value] = result
