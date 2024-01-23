@@ -64,7 +64,7 @@ def load_data(root_dir: str = None,
 
     if not os.path.exists(image_extracted_path):
         print("Downloading data to {}".format(root_dir))
-        download_file_from_google_drive('1ntXqOaXMaq4TcvpCaOCpqqNCjYy2oVsb', image_compressed_path)
+        download_file_from_google_drive('1J6G3ND0-aSd1whNlrHvbAArAYhCQfeQ3', image_compressed_path)
 
         print("Extracting data to {}".format(root_dir))
         with tarfile.open(image_compressed_path) as img_tar:
