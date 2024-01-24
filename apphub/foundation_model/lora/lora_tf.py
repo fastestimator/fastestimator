@@ -24,7 +24,7 @@ import tensorflow as tf
 from tensorflow.keras import layers
 
 import fastestimator as fe
-from fastestimator.dataset.data import cifar10
+from fastestimator.dataset.data import cifair10
 from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import HorizontalFlip, PadIfNeeded, RandomCrop
 from fastestimator.op.numpyop.univariate import CoarseDropout, Normalize
@@ -252,7 +252,7 @@ def get_estimator(batch_size=128,
                   eval_steps_per_epoch=None,
                   encoder_weights=None,
                   lora_weights=None):
-    train_data, eval_data = cifar10.load_data()
+    train_data, eval_data = cifair10.load_data()
     pipeline = fe.Pipeline(
         train_data=train_data,
         eval_data=eval_data,

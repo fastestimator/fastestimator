@@ -68,6 +68,8 @@ class Search:
             for key,val in result.items():
                 if isinstance(val,np.ndarray):
                     result[key] = val.tolist()
+                elif isinstance(val,dict):
+                    result[key] = self.process_results(val)
             return result
         else:
             return {"value": result}
