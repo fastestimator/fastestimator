@@ -64,6 +64,10 @@
         "https://drive.google.com/uc?id=1M5wec6b-iiLPjVs3MrCrAlKCxwjuEL2z&export=download&confirm=t",
         "https://drive.google.com/uc?id=1orrps7d-SKB4kFPV0jaN3r_jfYpDtGpP&export=download&confirm=t"
     ],
-    "wikitext_103": "https://s3.amazonaws.com/research.metamind.io/wikitext/wikitext-103-raw-v1.zip",
+    "wikitext_103": [
+        "https://huggingface.co/datasets/wikitext/resolve/main/wikitext-103-raw-v1/test-00000-of-00001.parquet",
+        "https://huggingface.co/datasets/wikitext/resolve/main/wikitext-103-raw-v1/train-00001-of-00002.parquet",
+        "https://huggingface.co/datasets/wikitext/resolve/main/wikitext-103-raw-v1/validation-00000-of-00001.parquet"
+    ],
     "unnatural_instructions": "https://github.com/orhonovich/unnatural-instructions/raw/main/data/core_data.zip"
 }
