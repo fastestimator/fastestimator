@@ -16,6 +16,7 @@ import random
 import tempfile
 
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras.initializers import RandomNormal
@@ -39,8 +40,7 @@ class TextDataset(Dataset):
 
     @staticmethod
     def _read_file(path):
-        with open(path, 'r', encoding='utf-8') as f:
-            text = f.read()
+        text = ''.join(pd.read_parquet(path, engine='pyarrow')['text'].to_list())
         return text
 
     def __len__(self):
