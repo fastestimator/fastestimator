@@ -40,7 +40,7 @@ class TextDataset(Dataset):
 
     @staticmethod
     def _read_file(path):
-        text = ''.join(pd.read_parquet(path, engine='pyarrow')['text'].to_list())
+        text = ''.join(pd.read_parquet(path, engine='fastparquet')['text'].to_list())
         return text
 
     def __len__(self):
