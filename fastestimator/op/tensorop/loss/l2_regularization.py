@@ -19,7 +19,6 @@ import torch
 
 from fastestimator.backend._l2_regularization import l2_regularization
 from fastestimator.op.tensorop.tensorop import TensorOp
-
 from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
@@ -45,7 +44,6 @@ class L2Regularizaton(TensorOp):
                  mode: Union[None, str, Iterable[str]] = None,
                  beta: float = 0.01):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-
         self.model = model
         self.beta = beta
 

@@ -45,8 +45,8 @@ class Hinge(LossOp):
                  mode: Union[None, str, Iterable[str]] = "!infer",
                  ds_id: Union[None, str, Iterable[str]] = None,
                  average_loss: bool = True):
-        self.average_loss = average_loss
         super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
+        self.average_loss = average_loss
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
         y_pred, y_true = data
