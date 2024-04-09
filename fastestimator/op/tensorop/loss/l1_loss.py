@@ -58,11 +58,11 @@ class L1_Loss(LossOp):
                  ds_id: Union[None, str, Iterable[str]] = None,
                  average_loss: bool = True,
                  loss_type: str = 'L1',
-                 beta: Union[None, float] = 1.0):
+                 beta: float = 1.0):
+        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.average_loss = average_loss
         self.loss_type = loss_type
         self.beta = beta
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
         y_pred, y_true = data
