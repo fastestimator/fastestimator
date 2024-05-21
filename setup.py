@@ -68,7 +68,7 @@ def get_dependency():
         'kaleido==0.2.1',
         'orjson==3.8.7',
         'scikit-learn==1.3.2',
-        'lazy_loader==0.1',
+        'lazy_loader==0.2',
         'fe_pycocotools==1.0',
         'typing_extensions==4.9.0',
         'charset-normalizer==3.1.0',
