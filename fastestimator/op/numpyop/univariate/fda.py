@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Iterable, Tuple, Union, Any, Callable
+from typing import Any, Callable, Iterable, Sequence, Tuple, Union
 
 from albumentations.augmentations import FDA as FDAAlb
 
-from fastestimator.util.traceability_util import traceable
-
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
-
+from fastestimator.util.traceability_util import traceable
 
 
 @traceable()
@@ -43,7 +41,7 @@ class FDA(ImageOnlyAlbumentation):
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
-                 reference_images: Union[Any, Iterable[Any]],
+                 reference_images: Union[Any, Sequence[Any]],
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
                  beta_limit: Union[float, Tuple[float, float]] = 0.1,

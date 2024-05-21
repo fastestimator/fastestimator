@@ -33,7 +33,7 @@ def get_name():
 
 def get_dependency():
     dependencies = [
-        'albumentations==1.3.1',
+        'albumentations==1.4.7',
         'matplotlib==3.7.1',
         'h5py==3.8.0',
         'scipy==1.9.1',
