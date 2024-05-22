@@ -71,7 +71,7 @@ python -m pip install tensorflow-metal==0.7.1
 ```
 
 ```bash
-python -m pip install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2
+python -m pip install torch==2.1.1 torchvision==0.16.1 torchaudio==2.1.1
 ```
 
 ```bash

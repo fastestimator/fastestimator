@@ -54,7 +54,7 @@ def get_dependency():
         'scikit-image==0.20.0',
         'prettytable==3.6.0',
         'nltk==3.8.1',
-        'requests==2.28.2',
+        'requests==2.32.2',
         'tqdm==4.65.0',
         'numpy==1.24.2',
         'pyfiglet==0.8.post1',
