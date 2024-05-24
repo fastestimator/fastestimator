@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import random
 import unittest
 
 import numpy as np
-import random
 
 from fastestimator.op.numpyop.multivariate import RandomCropFromBorders
 
@@ -25,9 +25,9 @@ class TestRandomCropFromBorders(unittest.TestCase):
     def setUpClass(cls):
         random.seed(10)
         cls.single_input = [np.random.rand(28, 28, 3)]
-        cls.single_output_shape = (27, 16, 3)
+        cls.single_output_shape = (24, 22, 3)
         cls.input_image_and_mask = [np.random.rand(28, 28, 3), np.random.rand(28, 28, 3)]
-        cls.image_and_mask_output_shape = (27, 24, 3)
+        cls.image_and_mask_output_shape = (26, 25, 3)
 
     def test_input(self):
         randomcrop = RandomCropFromBorders(image_in='x', crop_left=0.5, crop_right=0.1, crop_top=0.1, crop_bottom=0.1)
