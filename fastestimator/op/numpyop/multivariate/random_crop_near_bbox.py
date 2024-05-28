@@ -82,4 +82,3 @@ class RandomCropNearBBox(MultiVariateAlbumentation):
                          mode=mode,
                          ds_id=ds_id,
                          extra_in_keys={"cropping_bbox": cropping_bbox_in})
-        self.func.disable_check_args_private()
