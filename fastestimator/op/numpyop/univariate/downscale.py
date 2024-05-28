@@ -49,7 +49,7 @@ class Downscale(ImageOnlyAlbumentation):
                  scale_max: float = 0.25,
                  interpolation: int = cv2.INTER_NEAREST):
         super().__init__(
-            DownscaleAlb(scale_range=(scale_min, scale_max), interpolation=interpolation, always_apply=True),
+            DownscaleAlb(scale_min=scale_min, scale_max=scale_max, interpolation=interpolation, always_apply=True),
             inputs=inputs,
             outputs=outputs,
             mode=mode,

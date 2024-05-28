@@ -43,8 +43,8 @@ class ImageOnlyAlbumentation(NumpyOp):
     """
     def __init__(self,
                  func: ImageOnlyTransform,
-                 inputs: Union[str, Sequence[str], Iterable[str]],
-                 outputs: Union[str, Sequence[str], Iterable[str]],
+                 inputs: Union[str, Sequence[str]],
+                 outputs: Union[str, Sequence[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)

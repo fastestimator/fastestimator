@@ -57,7 +57,8 @@ class RandomShadow(ImageOnlyAlbumentation):
         # TODO - Have pipeline look for bad ops and auto-magically set num_process correctly
         super().__init__(
             RandomShadowAlb(shadow_roi=shadow_roi,
-                            num_shadows_limit=(num_shadows_lower, num_shadows_upper),
+                            num_shadows_lower=num_shadows_lower,
+                            num_shadows_upper=num_shadows_upper,
                             shadow_dimension=shadow_dimension,
                             always_apply=True),
             inputs=inputs,
