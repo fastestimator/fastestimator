@@ -50,13 +50,13 @@ For more information, please visit our [website](https://www.fastestimator.org/)
   * CPU:
 
       ```bash
-      pip install torch==2.2.2+cpu torchvision==0.17.2+cpu torchaudio==2.2.2+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
+      pip install --no-cache-dir torch==2.2.2+cpu torchvision==0.17.2+cpu torchaudio==2.2.2+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
       ```
 
   * GPU:
 
       ```bash
-      pip install torch==2.2.2+cu118 torchvision==0.17.2+cu118 torchaudio==2.2.2+cu118 -f https://download.pytorch.org/whl/cu118/torch_stable.html
+      pip install --no-cache-dir torch==2.2.2+cu118 torchvision==0.17.2+cu118 torchaudio==2.2.2+cu118 -f https://download.pytorch.org/whl/cu118/torch_stable.html
       ```
 
 * Extra Dependencies:
