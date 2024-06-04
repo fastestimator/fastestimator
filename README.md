@@ -21,7 +21,7 @@ For more information, please visit our [website](https://www.fastestimator.org/)
 
 | FastEstimator  | Python | TensorFlow | PyTorch | CUDA |  Installation Instruction |
 | -------------  | ------  | --------- | ------- | ---- | ----------- |
-| Nightly  | 3.8-3.10  | 2.11.1 | 2.1.1 | 11.8 | master branch |
+| Nightly  | 3.8-3.10  | 2.11.1 | 2.2.2 | 11.8 | master branch |
 | 1.6 (recent stable) | 3.8-3.10  | 2.11.1 | 2.0.1 | 11.8 | [r1.6 branch](https://github.com/fastestimator/fastestimator/tree/r1.6) |
 | 1.5  | 3.7-3.9  | 2.9.1 | 1.10.2 | 11.0 | [r1.5 branch](https://github.com/fastestimator/fastestimator/tree/r1.5) |
 | 1.4  | 3.6-3.8  | 2.4.1 | 1.7.1 | 11.0 | [r1.4 branch](https://github.com/fastestimator/fastestimator/tree/r1.4) |
@@ -50,13 +50,13 @@ For more information, please visit our [website](https://www.fastestimator.org/)
   * CPU:
 
       ```bash
-      pip install torch==2.1.1+cpu torchvision==0.16.1+cpu torchaudio==2.1.1+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
+      pip install --no-cache-dir torch==2.2.2+cpu torchvision==0.17.2+cpu torchaudio==2.2.2+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
       ```
 
   * GPU:
 
       ```bash
-      pip install torch==2.1.1+cu118 torchvision==0.16.1+cu118 torchaudio==2.1.1+cu118 -f https://download.pytorch.org/whl/cu118/torch_stable.html
+      pip install --no-cache-dir torch==2.2.2+cu118 torchvision==0.17.2+cu118 torchaudio==2.2.2+cu118 -f https://download.pytorch.org/whl/cu118/torch_stable.html
       ```
 
 * Extra Dependencies:
