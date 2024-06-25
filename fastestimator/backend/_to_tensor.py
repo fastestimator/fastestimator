@@ -101,7 +101,10 @@ def to_tensor(data: Union[Collection, Array, float, int, None], target_type: str
         # We don't convert strings to tensors because torch collate behavior is just to wrap strings into a list
         return data
     elif isinstance(data, dict):
-        return {key: to_tensor(value, target_type) for (key, value) in data.items()}
+        # for custom dictionaries
+        for key in data.keys():
+            data[key]= to_tensor(data[key], target_type)
+        return data
     elif isinstance(data, list):
         return [to_tensor(val, target_type) for val in data]
     elif isinstance(data, tuple) and hasattr(data, '_fields'):  # Named tuple
