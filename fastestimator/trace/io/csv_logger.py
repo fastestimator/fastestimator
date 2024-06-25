@@ -166,6 +166,10 @@ class CSVLogger(Trace):
                 df1 = pd.read_csv(self.filename, dtype=str)
                 stack.insert(0, df1)
         stack = pd.concat(stack, axis=0, ignore_index=True)
+        try:
+            os.makedirs(os.path.dirname(self.filename), exist_ok=True)
+        except OSError as error:
+            print(f"Directory {os.path.dirname(self.filename)} can not be created")
         stack.to_csv(self.filename, index=False)
 
     @staticmethod
