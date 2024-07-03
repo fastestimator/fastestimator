@@ -517,7 +517,7 @@ class Pipeline:
         op_data = forward_numpyop(batch_ops, data, state, batched='torch')
         if isinstance(op_data, FilteredData):
             return op_data
-        return to_tensor(data, target_type=target_type)
+        return to_tensor(data, target_type=target_type, shared_memory=True)
 
     @overload
     def get_results(self,
