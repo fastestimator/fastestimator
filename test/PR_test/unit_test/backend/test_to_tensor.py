@@ -17,7 +17,6 @@ import unittest
 import numpy as np
 import tensorflow as tf
 import torch
-import copy
 
 import fastestimator as fe
 import fastestimator.test.unittest_util as fet
@@ -59,11 +58,11 @@ class TestToTensor(unittest.TestCase):
 
     def test_to_tensor_tf_to_torch(self):
         self.assertTrue(
-            fet.is_equal(fe.backend.to_tensor(copy.deepcopy(self.data_tf), target_type='torch'), self.data_torch, assert_dtype=True))
+            fet.is_equal(fe.backend.to_tensor(self.data_tf, target_type='torch'), self.data_torch, assert_dtype=True))
 
     def test_to_tensor_torch_to_tf(self):
         self.assertTrue(
-            fet.is_equal(fe.backend.to_tensor(copy.deepcopy(self.data_torch), target_type='tf'), self.data_tf, assert_dtype=True))
+            fet.is_equal(fe.backend.to_tensor(self.data_torch, target_type='tf'), self.data_tf, assert_dtype=True))
 
     def test_tf_with_nones(self):
         n = np.ones((13, 3, 2, 4), dtype=np.float32)
