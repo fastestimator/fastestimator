@@ -102,8 +102,8 @@ def to_tensor(data: Union[Collection, Array, float, int, None], target_type: str
         return data
     elif isinstance(data, dict):
         # for custom dictionaries
-        for key in data.keys():
-            data[key]= to_tensor(data[key], target_type)
+        for key in data:
+            data[key] = to_tensor(data[key], target_type)
         return data
     elif isinstance(data, list):
         return [to_tensor(val, target_type) for val in data]
