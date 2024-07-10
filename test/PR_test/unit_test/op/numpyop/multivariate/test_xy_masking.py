@@ -23,6 +23,7 @@ class TestXYMasking(unittest.TestCase):
     def setUpClass(cls):
         cls.input_image_and_mask = [np.random.rand(28, 28, 3), np.random.rand(28, 28, 3)]
         cls.image_and_mask_output_shape = (28, 28, 3)
+        cls.input_image_and_mask_ones = [np.ones((28, 28, 3)), np.ones((28, 28, 3))]
 
     def test_input_image_and_mask(self):
         xy_masking = XYMasking(image_in='x', mask_in='x_mask', num_masks_x=1, num_masks_y=1, mask_x_length=5, mask_y_length=5)
