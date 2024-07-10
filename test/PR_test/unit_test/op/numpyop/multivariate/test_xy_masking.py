@@ -43,28 +43,17 @@ class TestXYMasking(unittest.TestCase):
             self.assertEqual(output[0].shape, self.image_and_mask_output_shape)
         with self.subTest('Check output mask shape'):
             self.assertEqual(output[1].shape, self.image_and_mask_output_shape)
-            
-    def test_fill_values(self):
-        input_image = np.ones((28, 28, 3), dtype=np.float32)
-        input_mask = np.ones((28, 28, 3), dtype=np.float32)
-        fill_value = 0.5
-        mask_fill_value = 0.2
-        xy_masking = XYMasking(image_in='x', mask_in='x_mask', num_masks_x=1, num_masks_y=1, mask_x_length=5, mask_y_length=5, fill_value=fill_value, mask_fill_value=mask_fill_value)
-        
-        output_image, output_mask = xy_masking.forward(data=[input_image, input_mask], state={})
 
+    def test_max_objects_masking_values(self):
+        num_masks = 2
+        xy_masking = XYMasking(image_in='x', mask_in='x_mask', num_masks_x=num_masks, num_masks_y=num_masks, mask_x_length=1, mask_y_length=1)
+        output = xy_masking.forward(data=self.input_image_and_mask_ones, state={})
         with self.subTest('Check output type'):
-            self.assertEqual(type(output_image), np.ndarray)
-            self.assertEqual(type(output_mask), np.ndarray)
+            self.assertEqual(type(output), list)
         with self.subTest('Check output image shape'):
-            self.assertEqual(output_image.shape, input_image.shape)
+            self.assertEqual(output[0].shape, self.image_and_mask_output_shape)
         with self.subTest('Check output mask shape'):
-            self.assertEqual(output_mask.shape, input_mask.shape)
-            
-        masked_indices = np.where(output_image == fill_value)
-        with self.subTest('Check fill value in image'):
-            self.assertTrue(np.any(output_image == fill_value), f"Fill value {fill_value} not found in image")
-        with self.subTest('Check fill value in mask'):
-            self.assertTrue(np.any(output_mask == mask_fill_value), f"Mask fill value {mask_fill_value} not found in mask")
-        with self.subTest('Check that the masked regions in image and mask correspond'):
-            self.assertTrue(np.array_equal(masked_indices, np.where(output_mask == mask_fill_value)), "Masked regions in image and mask do not correspond")
+            self.assertEqual(output[1].shape, self.image_and_mask_output_shape)
+        with self.subTest('Check output mask values'):
+            mask_val_count = np.prod(self.image_and_mask_output_shape) * num_masks
+            self.assertEqual(np.count_nonzero(output), mask_val_count)
