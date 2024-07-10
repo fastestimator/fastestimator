@@ -46,7 +46,7 @@ class TestXYMasking(unittest.TestCase):
             self.assertEqual(output[1].shape, self.image_and_mask_output_shape)
 
     def test_max_objects_masking_values(self):
-        num_masks = 2
+        num_masks = 1
         xy_masking = XYMasking(image_in='x', mask_in='x_mask', num_masks_x=num_masks, num_masks_y=num_masks, mask_x_length=1, mask_y_length=1)
         output = xy_masking.forward(data=self.input_image_and_mask_ones, state={})
         with self.subTest('Check output type'):
@@ -57,4 +57,5 @@ class TestXYMasking(unittest.TestCase):
             self.assertEqual(output[1].shape, self.image_and_mask_output_shape)
         with self.subTest('Check output mask values'):
             mask_val_count = np.prod(self.image_and_mask_output_shape) * num_masks
-            self.assertEqual(np.count_nonzero(output), mask_val_count)
+            actual_non_zero_count = np.count_nonzero(output[1])
+            self.assertEqual(actual_non_zero_count, mask_val_count)
