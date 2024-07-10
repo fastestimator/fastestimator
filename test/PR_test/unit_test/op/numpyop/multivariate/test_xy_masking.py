@@ -60,15 +60,11 @@ class TestXYMasking(unittest.TestCase):
             self.assertEqual(output_image.shape, input_image.shape)
         with self.subTest('Check output mask shape'):
             self.assertEqual(output_mask.shape, input_mask.shape)
-
+            
         masked_indices = np.where(output_image == fill_value)
         with self.subTest('Check fill value in image'):
             self.assertTrue(np.any(output_image == fill_value), f"Fill value {fill_value} not found in image")
-
         with self.subTest('Check fill value in mask'):
             self.assertTrue(np.any(output_mask == mask_fill_value), f"Mask fill value {mask_fill_value} not found in mask")
-
         with self.subTest('Check that the masked regions in image and mask correspond'):
             self.assertTrue(np.array_equal(masked_indices, np.where(output_mask == mask_fill_value)), "Masked regions in image and mask do not correspond")
-
-
