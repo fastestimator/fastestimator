@@ -1,4 +1,4 @@
-"""U-Net example refactored to use MobileNetV3 with DeepLabV3 via torchvision."""
+"""MobileNetV3 with DeepLabV3 example."""
 import tempfile
 from typing import Any, Dict, List
 
@@ -13,7 +13,7 @@ from fastestimator.dataset.data import montgomery
 from fastestimator.op.numpyop import NumpyOp
 from fastestimator.op.numpyop.meta import Sometimes
 from fastestimator.op.numpyop.multivariate import HorizontalFlip, Resize, Rotate
-from fastestimator.op.numpyop.univariate import Minmax, ReadImage, Reshape
+from fastestimator.op.numpyop.univariate import Minmax, ReadImage, Reshape, ChannelTranspose
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.trace.io import BestModelSaver
@@ -28,10 +28,10 @@ class CombineLeftRightMask(NumpyOp):
         return data
 
 
-class RepeatChannel(NumpyOp): # new local channel op for image formatting
-    """NumpyOp to repeat a single channel grayscale image to 3 channels."""
-    def forward(self, data: np.ndarray, state: Dict[str, Any]) -> np.ndarray:
-        return np.repeat(data, 3, axis=0)
+# class RepeatChannel(NumpyOp): # new local channel op for image formatting
+#     """NumpyOp to repeat a single channel grayscale image to 3 channels."""
+#     def forward(self, data: np.ndarray, state: Dict[str, Any]) -> np.ndarray:
+#         return np.repeat(data, 3, axis=0)
 
 
 def get_estimator(epochs=20,
@@ -48,16 +48,16 @@ def get_estimator(epochs=20,
         eval_data=csv.split(0.2),
         batch_size=batch_size,
         ops=[
-            ReadImage(inputs="image", parent_path=csv.parent_path, outputs="image", color_flag='gray'),
+            ReadImage(inputs="image", parent_path=csv.parent_path, outputs="image", color_flag='color'),
             ReadImage(inputs="mask_left",
                       parent_path=csv.parent_path,
                       outputs="mask_left",
-                      color_flag='gray',
+                      color_flag='color',
                       mode='!infer'),
             ReadImage(inputs="mask_right",
                       parent_path=csv.parent_path,
                       outputs="mask_right",
-                      color_flag='gray',
+                      color_flag='color',
                       mode='!infer'),
             CombineLeftRightMask(inputs=("mask_left", "mask_right"), outputs="mask", mode='!infer'),
             Resize(image_in="image", width=512, height=512),
@@ -67,13 +67,14 @@ def get_estimator(epochs=20,
                 image_in="image", mask_in="mask", limit=(-10, 10), border_mode=cv2.BORDER_CONSTANT, mode='train')),
             Minmax(inputs="image", outputs="image"),
             Minmax(inputs="mask", outputs="mask", mode='!infer'),
-            Reshape(shape=(1, 512, 512), inputs="image", outputs="image"),
-            Reshape(shape=(1, 512, 512), inputs="mask", outputs="mask", mode='!infer'),
-            RepeatChannel(inputs="image", outputs="image") # Adds channels
+            # use channel tranpose instead of the below line
+            ChannelTranspose(inputs="image", outputs="image"),
+            Reshape(shape=(3, 512, 512), inputs="mask", outputs="mask", mode='!infer'),
+            # RepeatChannel(inputs="image", outputs="image") # Adds channels
         ])
 
     # step 2
-    model = fe.build(model_fn=lambda: models.segmentation.deeplabv3_mobilenet_v3_large(pretrained=True),
+    model = fe.build(model_fn=lambda: models.segmentation.deeplabv3_mobilenet_v3_large(),
                      optimizer_fn=lambda x: torch.optim.Adam(params=x, lr=0.0001),
                      model_name="lung_segmentation")
 
