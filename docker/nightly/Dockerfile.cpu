@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:2.11.1
+FROM tensorflow/tensorflow:2.12.0
 
 # change python library to root owner
 # it fixes "container ID cannot be mapped to a host ID" issue that happens later while upgrading python packages

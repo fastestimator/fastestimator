@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:2.11.1-gpu
+FROM tensorflow/tensorflow:2.12.0-gpu
 
 # Resolves a "Release no longer has a Release file" error on apt-get update later
 RUN rm /etc/apt/sources.list.d/cuda.list
