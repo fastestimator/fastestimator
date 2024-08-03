@@ -10,7 +10,9 @@ from fastestimator.test.unittest_util import OneLayerTorchModel, one_layer_tf_mo
 
 
 class TestUpdateModel(unittest.TestCase):
+
     def test_tf_model_with_get_gradient(self):
+
         def update(x, model):
             with tf.GradientTape(persistent=True) as tape:
                 y = fe.backend.feed_forward(model, x)
@@ -38,12 +40,10 @@ class TestUpdateModel(unittest.TestCase):
 
     def test_torch_model_with_get_gradient(self):
         lr = 0.1
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        model = fe.build(model_fn=OneLayerTorchModel,
-                         optimizer_fn=lambda x: torch.optim.SGD(params=x, lr=lr)).to(device)
+        model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=lambda x: torch.optim.SGD(params=x, lr=lr))
         init_weights = [deepcopy(x).cpu().detach().numpy() for x in model.parameters() if x.requires_grad]
 
-        x = torch.tensor([1.0, 1.0, 1.0]).to(torch.device(device))
+        x = torch.tensor([1.0, 1.0, 1.0])
         y = fe.backend.feed_forward(model.module if torch.cuda.device_count() > 1 else model, x)
 
         gradients = fe.backend.get_gradient(target=y, sources=[x for x in model.parameters() if x.requires_grad])
@@ -57,6 +57,7 @@ class TestUpdateModel(unittest.TestCase):
             self.assertTrue(np.allclose(new_w_ans, new_w))
 
     def test_tf_model_with_arbitrary_gradient(self):
+
         def update(gradients, model):
             fe.backend.update_model(model, gradients=gradients)
 
@@ -78,11 +79,9 @@ class TestUpdateModel(unittest.TestCase):
 
     def test_torch_model_with_arbitrary_gradient(self):
         lr = 0.1
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        model = fe.build(model_fn=OneLayerTorchModel,
-                         optimizer_fn=lambda x: torch.optim.SGD(params=x, lr=lr)).to(device)
+        model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=lambda x: torch.optim.SGD(params=x, lr=lr))
         init_weights = [deepcopy(x).cpu().detach().numpy() for x in model.parameters() if x.requires_grad]
-        gradients = [torch.tensor([[1.0, 1.0, 1.0]]).to(torch.device(device))]
+        gradients = [torch.tensor([[1.0, 1.0, 1.0]])]
         fe.backend.update_model(model, gradients=gradients)
 
         gradients = [x.cpu().detach().numpy() for x in gradients]
