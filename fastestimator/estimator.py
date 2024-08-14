@@ -50,8 +50,8 @@ from fastestimator.util.util import Suppressor, draw
 def _verify_dependency_versions() -> None:
     """Print warning messages if the user is using unexpected versions of TF or torch.
     """
-    if tf.__version__ not in {'2.12.1', '2.12.0'}:
-        warn(f"Expected TensorFlow version 2.12.0 but found {tf.__version__}. The framework may not work as expected.")
+    if tf.__version__ not in {'2.11.1', '2.11.0'}:
+        warn(f"Expected TensorFlow version 2.11.1 but found {tf.__version__}. The framework may not work as expected.")
     if torch.__version__ not in ('2.2.2', '2.2.2+cpu', '2.2.2+cu118'):
         warn(f"Expected PyTorch version 2.2.2 but found {torch.__version__}. The framework may not work as expected.")
 
