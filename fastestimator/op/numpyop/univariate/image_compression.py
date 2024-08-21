@@ -15,7 +15,6 @@
 from typing import Iterable, Union
 
 from albumentations.augmentations.transforms import ImageCompression as ImgCmpAlb
-from albumentations.augmentations.transforms import ImageCompressionType
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
 from fastestimator.util.traceability_util import traceable
@@ -40,15 +39,14 @@ class ImageCompression(ImageOnlyAlbumentation):
     Image types:
         uint8, float32
     """
-
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
-                 quality_lower: int = 99,
-                 quality_upper: int = 100,
-                 compression_type: ImageCompressionType = ImageCompressionType.JPEG):
+                 quality_lower: float = 99,
+                 quality_upper: float = 100,
+                 compression_type: ImgCmpAlb.ImageCompressionType = ImgCmpAlb.ImageCompressionType.JPEG):
         super().__init__(
             ImgCmpAlb(quality_lower=quality_lower,
                       quality_upper=quality_upper,

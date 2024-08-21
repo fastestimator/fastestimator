@@ -14,8 +14,8 @@
 # ==============================================================================
 from typing import Iterable, Tuple, Union
 
-from albumentations.augmentations.blur.transforms import AdvancedBlur as AdvBlurAlb
 from albumentations.augmentations.blur.transforms import Blur as BlurAlb
+from albumentations.augmentations.blur.transforms import AdvancedBlur as AdvBlurAlb
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
 from fastestimator.util.traceability_util import traceable
@@ -49,29 +49,32 @@ class Blur(ImageOnlyAlbumentation):
     Image types:
         uint8, float32
     """
-
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
                  blur_limit: Union[int, Tuple[int, int]] = 7,
-                 advanced: bool = False,
-                 sigmaX_limit: Union[float, Tuple[float, float]] = (0.2, 1.0),
-                 sigmaY_limit: Union[float, Tuple[float, float]] = (0.2, 1.0),
-                 rotate_limit: Union[int, Tuple[int, int]] = 90,
-                 beta_limit: Union[float, Tuple[float, float]] = (0.5, 8.0),
-                 noise_limit: Union[float, Tuple[float, float]] = (0.9, 1.1)):
+                 advanced: bool= False,
+                 sigmaX_limit: Union[None, float, Tuple[float, float]] = (0.2, 1.0),
+                 sigmaY_limit: Union[None, float, Tuple[float, float]] = (0.2, 1.0),
+                 rotate_limit: Union[None, int, Tuple[int, int]] = 90,
+                 beta_limit: Union[None, float, Tuple[float, float]] = (0.5, 8.0),
+                 noise_limit: Union[None, float, Tuple[float, float]] = (0.9, 1.1)):
 
         if advanced:
             func = AdvBlurAlb(blur_limit=blur_limit,
-                              sigma_x_limit=sigmaX_limit,
-                              sigma_y_limit=sigmaY_limit,
+                              sigmaX_limit=sigmaX_limit,
+                              sigmaY_limit=sigmaY_limit,
                               rotate_limit=rotate_limit,
                               beta_limit=beta_limit,
                               noise_limit=noise_limit,
                               always_apply=True)
         else:
-            func = BlurAlb(blur_limit=blur_limit, always_apply=True)
+            func = BlurAlb(blur_limit=blur_limit,always_apply=True)
 
-        super().__init__(func, inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
+        super().__init__(func,
+                         inputs=inputs,
+                         outputs=outputs,
+                         mode=mode,
+                         ds_id=ds_id)

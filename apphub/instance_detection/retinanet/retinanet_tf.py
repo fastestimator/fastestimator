@@ -73,7 +73,6 @@ def _get_fpn_anchor_box(width: int, height: int):
 
 
 class ShiftLabel(NumpyOp):
-
     def forward(self, data, state):
         # the label of COCO dataset starts from 1, shifting the start to 0
         bbox = np.array(data, dtype=np.float32)
@@ -82,7 +81,6 @@ class ShiftLabel(NumpyOp):
 
 
 class AnchorBox(NumpyOp):
-
     def __init__(self, width, height, inputs, outputs, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.anchorbox, _ = _get_fpn_anchor_box(width, height)  # anchorbox is #num_anchor x 4
@@ -302,7 +300,6 @@ def RetinaNet(input_shape, num_classes, num_anchor=9):
 
 
 class RetinaLoss(TensorOp):
-
     def forward(self, data, state):
         anchorbox, cls_pred, loc_pred = data
         batch_size = anchorbox.shape[0]
@@ -357,7 +354,6 @@ class RetinaLoss(TensorOp):
 class PredictBox(TensorOp):
     """Convert network output to bounding boxes.
     """
-
     def __init__(self,
                  inputs=None,
                  outputs=None,
@@ -466,15 +462,16 @@ def get_estimator(data_dir=None,
                            bbox_in="bbox",
                            bbox_out="bbox",
                            bbox_params=BboxParams("coco", min_area=1.0)),
-            PadIfNeeded(image_size,
-                        image_size,
-                        border_mode=cv2.BORDER_CONSTANT,
-                        image_in="image",
-                        image_out="image",
-                        bbox_in="bbox",
-                        bbox_out="bbox",
-                        bbox_params=BboxParams("coco", min_area=1.0),
-                        value=0),
+            PadIfNeeded(
+                image_size,
+                image_size,
+                border_mode=cv2.BORDER_CONSTANT,
+                image_in="image",
+                image_out="image",
+                bbox_in="bbox",
+                bbox_out="bbox",
+                bbox_params=BboxParams("coco", min_area=1.0),
+            ),
             Sometimes(
                 HorizontalFlip(mode="train",
                                image_in="image",

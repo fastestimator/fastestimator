@@ -20,7 +20,6 @@ from fastestimator.op.numpyop.univariate import GaussianBlur
 
 
 class TestGaussianBlur(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.single_input = [np.random.rand(28, 28, 3)]
@@ -29,7 +28,7 @@ class TestGaussianBlur(unittest.TestCase):
         cls.multi_output_shape = (28, 28, 3)
 
     def test_single_input(self):
-        gaussian_blur = GaussianBlur(inputs='x', outputs='x', blur_limit=3, sigma_limit=0)
+        gaussian_blur = GaussianBlur(inputs='x', outputs='x')
         output = gaussian_blur.forward(data=self.single_input, state={})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)
@@ -37,7 +36,7 @@ class TestGaussianBlur(unittest.TestCase):
             self.assertEqual(output[0].shape, self.single_output_shape)
 
     def test_multi_input(self):
-        gaussian_blur = GaussianBlur(inputs='x', outputs='x', blur_limit=3, sigma_limit=0)
+        gaussian_blur = GaussianBlur(inputs='x', outputs='x')
         output = gaussian_blur.forward(data=self.multi_input, state={})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)
