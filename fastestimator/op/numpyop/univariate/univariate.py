@@ -41,11 +41,10 @@ class ImageOnlyAlbumentation(NumpyOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
-
     def __init__(self,
                  func: ImageOnlyTransform,
-                 inputs: Union[str, Sequence[str], Iterable[str]],
-                 outputs: Union[str, Sequence[str], Iterable[str]],
+                 inputs: Union[str, Sequence[str]],
+                 outputs: Union[str, Sequence[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
