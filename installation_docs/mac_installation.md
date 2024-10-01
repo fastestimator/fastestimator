@@ -59,11 +59,11 @@ pyenv activate FE16
 ## Step 4: Install python dependencies
 
 ```bash
-conda install -c apple tensorflow-deps==2.10.0 -y
+conda install -c apple tensorflow-deps==2.15.0 -y
 ```
 
 ```bash
-python -m pip install tensorflow-macos==2.11.0
+python -m pip install tensorflow-macos==2.15.0
 ```
 
 ```bash
@@ -71,7 +71,7 @@ python -m pip install tensorflow-metal==0.7.1
 ```
 
 ```bash
-python -m pip install torch==2.1.1 torchvision==0.16.1 torchaudio==2.1.1
+python -m pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1
 ```
 
 ```bash

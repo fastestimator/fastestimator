@@ -1,4 +1,4 @@
-# Copyright 2022 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ import pickle
 from typing import Optional, Union
 
 import tensorflow as tf
-import tensorflow_addons as tfa
 import torch
 
 from fastestimator.backend._get_lr import get_lr
@@ -75,9 +74,8 @@ def save_model(model: Union[tf.keras.Model, torch.nn.Module],
                     saved_data['weights'] = model.current_optimizer.get_weights()
                 else:
                     saved_data['weights'] = model.current_optimizer.variables()
-                if isinstance(model.current_optimizer, tfa.optimizers.DecoupledWeightDecayExtension) or hasattr(
-                        model.current_optimizer, "inner_optimizer") and isinstance(
-                            model.current_optimizer.inner_optimizer, tfa.optimizers.DecoupledWeightDecayExtension):
+                if hasattr(model.current_optimizer, "weight_decay") and tf.keras.backend.get_value(
+                        model.current_optimizer.weight_decay) is not None:
                     saved_data['weight_decay'] = tf.keras.backend.get_value(model.current_optimizer.weight_decay)
                 pickle.dump(saved_data, f)
         return model_path

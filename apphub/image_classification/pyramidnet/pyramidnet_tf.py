@@ -15,7 +15,6 @@
 import tempfile
 
 import tensorflow as tf
-import tensorflow_addons as tfa
 from tensorflow.keras import layers
 
 import fastestimator as fe
@@ -129,7 +128,7 @@ def get_estimator(epochs=150,
     model = fe.build(
         model_fn=lambda: pyramidnet_cifar(
             inputs_shape=(32, 32, 3), depth=272, alpha=200, num_classes=10, bottleneck=True),
-        optimizer_fn=lambda: tfa.optimizers.SGDW(weight_decay=0.0001, lr=0.1, momentum=0.9))
+        optimizer_fn=lambda: tf.keras.optimizers.SGD(weight_decay=0.0001, lr=0.1, momentum=0.9))
 
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="x", outputs="y_pred"),

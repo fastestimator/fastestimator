@@ -42,6 +42,7 @@ from fastestimator.util import get_num_devices
 
 # This dataset selects 4 images and their bboxes
 class PreMosaicDataset(Dataset):
+
     def __init__(self, mscoco_ds):
         self.mscoco_ds = mscoco_ds
 
@@ -64,6 +65,7 @@ class PreMosaicDataset(Dataset):
 
 
 class CombineMosaic(NumpyOp):
+
     def forward(self, data, state):
         image1, image2, image3, image4, bbox1, bbox2, bbox3, bbox4 = data
         images = [image1, image2, image3, image4]
@@ -106,6 +108,7 @@ class CombineMosaic(NumpyOp):
 
 
 class HSVAugment(NumpyOp):
+
     def __init__(self, inputs, outputs, mode="train", hsv_h=0.015, hsv_s=0.7, hsv_v=0.4):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.hsv_h = hsv_h
@@ -127,6 +130,7 @@ class HSVAugment(NumpyOp):
 
 
 class CategoryID2ClassID(NumpyOp):
+
     def __init__(self, inputs, outputs, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         missing_category = [66, 68, 69, 71, 12, 45, 83, 26, 29, 30]
@@ -143,6 +147,7 @@ class CategoryID2ClassID(NumpyOp):
 
 
 class GTBox(NumpyOp):
+
     def __init__(self, inputs, outputs, image_size, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.image_size = image_size
@@ -287,6 +292,7 @@ def yolov5(input_shape, num_classes, strides=(8, 16, 32)):
 
 
 class ComputeLoss(LossOp):
+
     def __init__(self, inputs, outputs, img_size=640, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.loss_conf = tf.losses.BinaryCrossentropy(reduction="none")
@@ -344,11 +350,13 @@ class ComputeLoss(LossOp):
 
 
 class Rescale(TensorOp):
+
     def forward(self, data, state):
         return data / 255
 
 
 class DecodePred(TensorOp):
+
     def __init__(self, inputs, outputs, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.strides = [8, 16, 32]
@@ -401,6 +409,7 @@ class DecodePred(TensorOp):
 
 
 class PredictBox(TensorOp):
+
     def __init__(self, inputs, outputs, mode, width, height, max_outputs=500, conf_threshold=0.4):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.width = width
@@ -537,7 +546,7 @@ def get_estimator(data_dir=None,
         ])
     init_lr = 1e-2 / 64 * batch_size
     model = fe.build(lambda: yolov5(input_shape=(640, 640, 3), num_classes=80),
-                     optimizer_fn=lambda: tf.optimizers.SGD(momentum=0.937, learning_rate=init_lr, nesterov=True))
+                     optimizer_fn=lambda: tf.keras.optimizers.SGD(momentum=0.937, learning_rate=init_lr, nesterov=True))
     network = fe.Network(ops=[
         Rescale(inputs="image", outputs="image"),
         ModelOp(model=model, inputs="image", outputs=("pred_s", "pred_m", "pred_l")),

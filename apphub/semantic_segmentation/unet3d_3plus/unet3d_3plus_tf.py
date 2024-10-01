@@ -179,7 +179,7 @@ def get_estimator(epochs=40,
 
     # step 2
     model = fe.build(model_fn=lambda: unet3d_3plus(input_shape + (channels, ), num_classes, filters),
-                     optimizer_fn=lambda: tf.keras.optimizers.Adam(learning_rate=learning_rate),
+                     optimizer_fn=lambda: tf.keras.optimizers.legacy.Adam(learning_rate=learning_rate),
                      model_name="unet3d_3plus")
 
     network = fe.Network(ops=[

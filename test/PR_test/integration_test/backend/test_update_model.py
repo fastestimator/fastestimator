@@ -10,7 +10,9 @@ from fastestimator.test.unittest_util import OneLayerTorchModel, one_layer_tf_mo
 
 
 class TestUpdateModel(unittest.TestCase):
+
     def test_tf_model_with_get_gradient(self):
+
         def update(x, model):
             with tf.GradientTape(persistent=True) as tape:
                 y = fe.backend.feed_forward(model, x)
@@ -19,7 +21,7 @@ class TestUpdateModel(unittest.TestCase):
                 return gradient
 
         lr = 0.1
-        model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=lambda: tf.optimizers.SGD(lr))
+        model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=lambda: tf.keras.optimizers.legacy.SGD(lr))
         init_weights = [x.numpy() for x in model.trainable_variables]
         x = tf.constant([[1, 1, 1], [1, 1, 1]])
         strategy = tf.distribute.get_strategy()
@@ -57,11 +59,12 @@ class TestUpdateModel(unittest.TestCase):
             self.assertTrue(np.allclose(new_w_ans, new_w))
 
     def test_tf_model_with_arbitrary_gradient(self):
+
         def update(gradients, model):
             fe.backend.update_model(model, gradients=gradients)
 
         lr = 0.1
-        model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=lambda: tf.optimizers.SGD(lr))
+        model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=lambda: tf.keras.optimizers.legacy.SGD(lr))
         init_weights = [x.numpy() for x in model.trainable_variables]
         gradients = [tf.constant([[1.0], [1.0], [1.0]])]
 

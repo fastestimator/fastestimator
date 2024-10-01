@@ -20,11 +20,12 @@ from fastestimator.op.numpyop.univariate import GaussianNoise
 
 
 class TestGaussianNoise(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
-        cls.single_input = [np.random.rand(28, 28, 3)]
+        cls.single_input = [np.random.rand(28, 28, 3).astype(np.float32)]
         cls.single_output_shape = (28, 28, 3)
-        cls.multi_input = [np.random.rand(28, 28, 3), np.random.rand(28, 28, 3)]
+        cls.multi_input = [np.random.rand(28, 28, 3).astype(np.float32), np.random.rand(28, 28, 3).astype(np.float32)]
         cls.multi_output_shape = (28, 28, 3)
 
     def test_single_input(self):

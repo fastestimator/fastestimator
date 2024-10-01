@@ -19,7 +19,6 @@ import cv2
 import numpy as np
 import pycocotools.mask as mask_util
 import tensorflow as tf
-import tensorflow_addons as tfa
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 from scipy.ndimage import center_of_mass
@@ -75,7 +74,7 @@ def pad_with_coord(data):
 
 def conv_norm(x, filters, kernel_size=3, groups=32):
     x = layers.Conv2D(filters=filters, kernel_size=kernel_size, padding='same', use_bias=False)(x)
-    x = tfa.layers.GroupNormalization(groups=groups, epsilon=1e-5)(x)
+    x = layers.GroupNormalization(groups=groups, epsilon=1e-5)(x)
     return x
 
 
@@ -155,18 +154,21 @@ def solov2(input_shape=(None, None, 3), num_classes=80):
 
 
 class MergeMask(NumpyOp):
+
     def forward(self, data, state):
         data = np.stack(data, axis=-1)
         return data
 
 
 class GetImageSize(NumpyOp):
+
     def forward(self, data, state):
         height, width, _ = data.shape
         return np.array([height, width], dtype="int32")
 
 
 class Gt2Target(NumpyOp):
+
     def __init__(self,
                  inputs,
                  outputs,
@@ -231,6 +233,7 @@ class Gt2Target(NumpyOp):
 
 
 class Solov2Loss(TensorOp):
+
     def __init__(self, level, grid_dim, inputs, outputs, mode=None, num_class=80):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.level = level
@@ -311,6 +314,7 @@ class Solov2Loss(TensorOp):
 
 
 class CombineLoss(TensorOp):
+
     def forward(self, data, state):
         l_c1, l_s1, l_c2, l_s2, l_c3, l_s3, l_c4, l_s4, l_c5, l_s5 = data
         cls_losses = tf.reduce_sum(tf.stack([l_c1, l_c2, l_c3, l_c4, l_c5], axis=-1), axis=-1)
@@ -320,6 +324,7 @@ class CombineLoss(TensorOp):
 
 
 class PointsNMS(TensorOp):
+
     def forward(self, data, state):
         feat_cls_list = [self.points_nms(x) for x in data]
         return feat_cls_list
@@ -332,6 +337,7 @@ class PointsNMS(TensorOp):
 
 
 class Predict(TensorOp):
+
     def __init__(self, inputs, outputs, mode=None, score_threshold=0.1, segm_strides=(8.0, 8.0, 16.0, 32.0, 32.0)):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.score_threshold = score_threshold
@@ -418,6 +424,7 @@ def lr_schedule_warmup(step, init_lr):
 
 
 class COCOMaskmAP(Trace):
+
     def __init__(self, data_dir, inputs=None, outputs="mAP", mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         with Suppressor():
@@ -521,7 +528,7 @@ def get_estimator(data_dir=None,
         num_process=8 * num_device)
     init_lr = 1e-2 / 16 * batch_size
     model = fe.build(model_fn=lambda: solov2(input_shape=(im_size, im_size, 3)),
-                     optimizer_fn=lambda: tf.optimizers.SGD(learning_rate=init_lr, momentum=0.9))
+                     optimizer_fn=lambda: tf.keras.optimizers.SGD(learning_rate=init_lr, momentum=0.9))
     network = fe.Network(ops=[
         Normalize(inputs="image", outputs="image", mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         ModelOp(model=model, inputs="image", outputs=("feat_seg", "feat_cls_list", "feat_kernel_list")),

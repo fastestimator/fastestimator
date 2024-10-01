@@ -259,6 +259,7 @@ class System:
         for model in self.network.models:
             save_model(model, save_dir=save_dir, save_optimizer=hasattr(model, "optimizer") and model.optimizer)
         # Save everything else
+
         objects = {
             'summary': self.summary,
             'custom_graphs': self.custom_graphs,
