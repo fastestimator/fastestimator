@@ -95,6 +95,6 @@ setup(
     classifiers=["License :: OSI Approved :: Apache Software License", "Programming Language :: Python :: 3"],
     # Declare minimal set for installation
     install_requires=get_dependency(),
-    python_requires='>=3.8.0',
+    python_requires='>=3.9.0',
     # Declare extra set for installation
     extras_require={})
