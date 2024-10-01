@@ -1177,7 +1177,7 @@ def _optimizer_fn_to_optimizer(
                 optimizer_fn are using the same backend")
                 raise ValueError(repr(e))
             assert isinstance(optimizer, torch.optim.Optimizer), "optimizer_fn should generate pytorch optimizer"
-            if mixed_precision:
+            if mixed_precision and torch.cuda.is_available():
                 setattr(optimizer, "scaler", torch.cuda.amp.GradScaler())
             else:
                 setattr(optimizer, "scaler", None)
