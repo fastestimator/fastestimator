@@ -392,25 +392,24 @@ class TestNetworkBuild(unittest.TestCase):
 
     def test_network_build_tf_model_torch_optimizer_check_assertion_error(self):
         with self.assertRaises(AssertionError):
-            model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=lambda x: torch.optim.SGD(params=x, lr=0.01))
+            _ = fe.build(model_fn=one_layer_tf_model, optimizer_fn=lambda x: torch.optim.SGD(params=x, lr=0.01))
 
     def test_network_build_torch_model_tf_optimizer_check_assertion_error(self):
         with self.subTest("optimizer_fn directly uses tf optimizer "):
             with self.assertRaises(ValueError):
-                model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=tf.keras.optimizers.Adadelta)
+                _ = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=tf.keras.optimizers.Adadelta)
 
         with self.subTest("optimizer_fn directly uses legacy tf optimizer "):
             with self.assertRaises(AssertionError):
-                model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=tf.keras.optimizers.legacy.Adadelta)
+                _ = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=tf.keras.optimizers.legacy.Adadelta)
 
         with self.subTest("optimizer_fn use lambda function"):
             with self.assertRaises(ValueError):
-                model = fe.build(model_fn=OneLayerTorchModel,
-                                 optimizer_fn=lambda: tf.keras.optimizers.legacy.Adadelta())
+                _ = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=lambda: tf.keras.optimizers.legacy.Adadelta())
 
     def test_network_build_unknown_model_check_assertion_error(self):
         with self.assertRaises(ValueError):
-            model = fe.build(model_fn=lambda: "string", optimizer_fn=tf.keras.optimizers.legacy.Adadelta)
+            _ = fe.build(model_fn=lambda: "string", optimizer_fn=tf.keras.optimizers.legacy.Adadelta)
 
     def test_network_build_check_load_weight_from_path(self):
         with unittest.mock.patch("fastestimator.network.load_model") as fake:
