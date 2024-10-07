@@ -140,7 +140,7 @@ class FEDataLoader(DataLoader):
         if isinstance(self._iterator, _MultiProcessingDataLoaderIter):
             try:
                 self._iterator._shutdown_workers()
-            except:
+            except Exception:
                 self._iterator = None
         self._iterator = None
         FEDataLoader._current_threads.clear()

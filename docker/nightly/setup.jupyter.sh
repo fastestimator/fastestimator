@@ -2,7 +2,7 @@
 jupyter serverextension enable --py jupyter_http_over_ws
 
 mkdir /.local
-chmod a+rwx /.local
+chmod 755 /.local
 apt-get update
 apt-get install -y --no-install-recommends wget git
 

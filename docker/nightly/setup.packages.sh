@@ -25,7 +25,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update
 
 # Remove commented lines and blank lines from the package list
-apt-get install -y --no-install-recommends $(sed -e '/^\s*#.*$/d' -e '/^\s*$/d' "$1" | sort -u)
+apt-get install -y --no-install-recommends $(sed -e '/^\s*#.*$/d' -e '/^\s*$/d' "$1" | sort -u | xargs)
 
 apt-get clean
 rm -rf /var/lib/apt/lists/*

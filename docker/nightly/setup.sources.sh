@@ -15,10 +15,6 @@
 # limitations under the License.
 # ==============================================================================
 #
-# setup.python.sh: Install a specific Python version and packages for it.
-# Usage: setup.python.sh <pyversion> <requirements.txt>
-
-# Sets up custom apt sources for our TF images.
 
 # Prevent apt install tzinfo from asking our location (assumes UTC)
 export DEBIAN_FRONTEND=noninteractive

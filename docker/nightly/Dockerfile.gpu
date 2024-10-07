@@ -83,7 +83,7 @@ RUN ipython kernel install --user --name nightly_build
 RUN apt-get install -y lsof
 
 # backend dependencies
-RUN pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 -f https://download.pytorch.org/whl/cu121/torch_stable.html  --trusted-host download.pytorch.org
+RUN pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 -f https://download.pytorch.org/whl/cu121/torch_stable.html
 
 # install FastEstimator
 ARG InstallFE=True
