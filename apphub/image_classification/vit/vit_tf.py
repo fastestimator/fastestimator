@@ -187,7 +187,7 @@ def pretrain(batch_size, epochs, model_dir=tempfile.mkdtemp(), train_steps_per_e
     backbone, vit = fe.build(
         model_fn=lambda: vision_transformer(
             num_class=100, image_size=(32, 32, 3), patch_size=4, num_layers=6, em_dim=256, num_heads=8, dff=512),
-        optimizer_fn=[None, lambda: tf.keras.optimizers.legacy.SGD(0.01, momentum=0.9)])
+        optimizer_fn=[None, lambda: tf.keras.optimizers.SGD(0.01, momentum=0.9)])
     network = fe.Network(ops=[
         ModelOp(model=vit, inputs="x", outputs="y_pred"),
         CrossEntropy(inputs=("y_pred", "y"), outputs="ce", from_logits=True),

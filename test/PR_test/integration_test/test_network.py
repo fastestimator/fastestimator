@@ -405,11 +405,12 @@ class TestNetworkBuild(unittest.TestCase):
 
         with self.subTest("optimizer_fn use lambda function"):
             with self.assertRaises(ValueError):
-                _ = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=lambda: tf.keras.optimizers.legacy.Adadelta())
+                model = fe.build(model_fn=OneLayerTorchModel,
+                                 optimizer_fn=lambda: tf.keras.optimizers.legacy.Adadelta())
 
     def test_network_build_unknown_model_check_assertion_error(self):
         with self.assertRaises(ValueError):
-            _ = fe.build(model_fn=lambda: "string", optimizer_fn=tf.keras.optimizers.legacy.Adadelta)
+            model = fe.build(model_fn=lambda: "string", optimizer_fn=tf.keras.optimizers.legacy.Adadelta)
 
     def test_network_build_check_load_weight_from_path(self):
         with unittest.mock.patch("fastestimator.network.load_model") as fake:
