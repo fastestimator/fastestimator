@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -60,14 +60,15 @@ class ShiftScaleRotate(MultiVariateAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  shift_limit: Union[float, Tuple[float, float]] = 0.0625,
                  scale_limit: Union[float, Tuple[float, float]] = 0.1,
                  rotate_limit: Union[int, Tuple[int, int]] = 45,
                  interpolation: int = cv2.INTER_LINEAR,
                  border_mode: int = cv2.BORDER_REFLECT_101,
-                 value: Union[None, int, float, List[int], List[float]] = None,
-                 mask_value: Union[None, int, float, List[int], List[float]] = None,
+                 value: Union[int, float, List[int], List[float]] = 0,
+                 mask_value: Union[int, float, List[int], List[float]] = 0,
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
                  image_in: Optional[str] = None,

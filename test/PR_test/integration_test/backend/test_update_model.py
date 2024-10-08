@@ -1,3 +1,17 @@
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
 import unittest
 from copy import deepcopy
 
@@ -10,7 +24,9 @@ from fastestimator.test.unittest_util import OneLayerTorchModel, one_layer_tf_mo
 
 
 class TestUpdateModel(unittest.TestCase):
+
     def test_tf_model_with_get_gradient(self):
+
         def update(x, model):
             with tf.GradientTape(persistent=True) as tape:
                 y = fe.backend.feed_forward(model, x)
@@ -19,7 +35,7 @@ class TestUpdateModel(unittest.TestCase):
                 return gradient
 
         lr = 0.1
-        model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=lambda: tf.optimizers.SGD(lr))
+        model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=lambda: tf.keras.optimizers.legacy.SGD(lr))
         init_weights = [x.numpy() for x in model.trainable_variables]
         x = tf.constant([[1, 1, 1], [1, 1, 1]])
         strategy = tf.distribute.get_strategy()
@@ -57,11 +73,12 @@ class TestUpdateModel(unittest.TestCase):
             self.assertTrue(np.allclose(new_w_ans, new_w))
 
     def test_tf_model_with_arbitrary_gradient(self):
+
         def update(gradients, model):
             fe.backend.update_model(model, gradients=gradients)
 
         lr = 0.1
-        model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=lambda: tf.optimizers.SGD(lr))
+        model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=lambda: tf.keras.optimizers.legacy.SGD(lr))
         init_weights = [x.numpy() for x in model.trainable_variables]
         gradients = [tf.constant([[1.0], [1.0], [1.0]])]
 

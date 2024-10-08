@@ -1,4 +1,4 @@
-# Copyright 2023 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import unittest
 import random
+import unittest
 
 import numpy as np
 from albumentations import BboxParams
@@ -22,21 +22,19 @@ from fastestimator.op.numpyop.multivariate import BBoxSafeRandomCrop
 
 
 class TestBBoxSafeRandomCrop(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         random.seed(10)
         cls.single_input = [np.random.rand(28, 28, 3), np.array([[12, 12, 5, 5, 1], [13, 13, 6, 6, 0]])]
-        cls.single_output_shape = (23, 18, 3)
+        cls.single_output_shape = (18, 15, 3)
         cls.input_image_and_mask = [
             np.random.rand(28, 28, 3), np.random.rand(28, 28, 3), np.array([[12, 12, 5, 5, 1], [13, 13, 6, 6, 0]])
         ]
-        cls.image_and_mask_output_shape = (22, 11, 3)
+        cls.image_and_mask_output_shape = (17, 12, 3)
 
     def test_input(self):
-        safecrop = BBoxSafeRandomCrop(image_in='x',
-                                      erosion_rate=0.1,
-                                      bbox_in="x_bbox",
-                                      bbox_params=BboxParams("coco"))
+        safecrop = BBoxSafeRandomCrop(image_in='x', erosion_rate=0.1, bbox_in="x_bbox", bbox_params=BboxParams("coco"))
         output = safecrop.forward(data=self.single_input, state={})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)

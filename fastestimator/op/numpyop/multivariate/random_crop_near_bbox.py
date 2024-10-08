@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ class RandomCropNearBBox(MultiVariateAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  cropping_bbox_in: str,
                  max_part_shift: float = 0.3,
@@ -82,3 +83,4 @@ class RandomCropNearBBox(MultiVariateAlbumentation):
                          mode=mode,
                          ds_id=ds_id,
                          extra_in_keys={"cropping_bbox": cropping_bbox_in})
+        self.func.disable_check_args_private()

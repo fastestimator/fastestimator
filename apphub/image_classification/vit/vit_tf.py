@@ -1,4 +1,4 @@
-# Copyright 2021 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -48,6 +48,7 @@ def point_wise_feed_forward_network(em_dim, dff):
 
 
 class MultiHeadAttention(layers.Layer):
+
     def __init__(self, em_dim, num_heads):
         super().__init__()
         assert em_dim % num_heads == 0, "model dimension must be multiple of number of heads"
@@ -79,6 +80,7 @@ class MultiHeadAttention(layers.Layer):
 
 
 class EncoderLayer(layers.Layer):
+
     def __init__(self, em_dim, num_heads, dff, rate=0.1):
         super().__init__()
         self.mha = MultiHeadAttention(em_dim, num_heads)
@@ -99,6 +101,7 @@ class EncoderLayer(layers.Layer):
 
 
 class Encoder(layers.Layer):
+
     def __init__(self, num_layers, em_dim, num_heads, dff, rate=0.1):
         super().__init__()
         self.num_layers = num_layers
@@ -113,6 +116,7 @@ class Encoder(layers.Layer):
 
 
 class PositionEmbedding(layers.Layer):
+
     def __init__(self, image_size, patch_size, em_dim):
         super().__init__()
         h, w, _ = image_size
@@ -126,6 +130,7 @@ class PositionEmbedding(layers.Layer):
 
 
 class ClsToken(layers.Layer):
+
     def __init__(self, em_dim):
         super().__init__()
         self.cls_token = tf.Variable(tf.zeros(shape=(1, 1, em_dim)), trainable=True, name="cls_token")
@@ -182,7 +187,7 @@ def pretrain(batch_size, epochs, model_dir=tempfile.mkdtemp(), train_steps_per_e
     backbone, vit = fe.build(
         model_fn=lambda: vision_transformer(
             num_class=100, image_size=(32, 32, 3), patch_size=4, num_layers=6, em_dim=256, num_heads=8, dff=512),
-        optimizer_fn=[None, lambda: tf.optimizers.SGD(0.01, momentum=0.9)])
+        optimizer_fn=[None, lambda: tf.keras.optimizers.SGD(0.01, momentum=0.9)])
     network = fe.Network(ops=[
         ModelOp(model=vit, inputs="x", outputs="y_pred"),
         CrossEntropy(inputs=("y_pred", "y"), outputs="ce", from_logits=True),
@@ -229,7 +234,7 @@ def finetune(weights_path,
                                             em_dim=256,
                                             num_heads=8,
                                             dff=512),
-        optimizer_fn=[None, lambda: tf.optimizers.SGD(0.01, momentum=0.9)])
+        optimizer_fn=[None, lambda: tf.keras.optimizers.SGD(0.01, momentum=0.9)])
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="x", outputs="y_pred"),
         CrossEntropy(inputs=("y_pred", "y"), outputs="ce", from_logits=True),

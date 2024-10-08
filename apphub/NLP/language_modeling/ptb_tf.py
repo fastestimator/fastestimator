@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,11 +28,13 @@ from fastestimator.trace.io import BestModelSaver
 
 
 class CreateInputAndTarget(NumpyOp):
+
     def forward(self, data, state):
         return data[:-1], data[1:]
 
 
 class Perplexity(Trace):
+
     def on_epoch_end(self, data):
         ce = data["ce"]
         data.write_with_log(self.outputs[0], np.exp(ce))
@@ -70,7 +72,7 @@ def get_estimator(epochs=30,
         ops=[CreateInputAndTarget(inputs="x", outputs=("x", "y")), Batch(batch_size=batch_size, drop_last=True)])
     # step 2
     model = fe.build(model_fn=lambda: build_model(vocab_size, embedding_dim=300, rnn_units=600, seq_length=seq_length),
-                     optimizer_fn=lambda: tf.optimizers.SGD(1.0, momentum=0.9))
+                     optimizer_fn=lambda: tf.keras.optimizers.SGD(1.0, momentum=0.9))
 
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="x", outputs="y_pred", mode=None),

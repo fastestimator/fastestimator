@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@ import inspect
 import math
 import os
 import random
-from collections import ChainMap
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Union, overload
 
 import numpy as np
@@ -50,10 +49,10 @@ from fastestimator.util.util import Suppressor, draw
 def _verify_dependency_versions() -> None:
     """Print warning messages if the user is using unexpected versions of TF or torch.
     """
-    if tf.__version__ not in {'2.11.1', '2.11.0'}:
-        warn(f"Expected TensorFlow version 2.11.1 but found {tf.__version__}. The framework may not work as expected.")
-    if torch.__version__ not in ('2.1.1', '2.1.1+cpu', '2.1.1+cu118'):
-        warn(f"Expected PyTorch version 2.1.1 but found {torch.__version__}. The framework may not work as expected.")
+    if tf.__version__ not in {'2.15.1', '2.15.0'}:
+        warn(f"Expected TensorFlow version 2.15.0 but found {tf.__version__}. The framework may not work as expected.")
+    if torch.__version__ not in ('2.3.1', '2.3.1+cpu', '2.3.1+cu121'):
+        warn(f"Expected PyTorch version 2.3.1 but found {torch.__version__}. The framework may not work as expected.")
 
 
 @traceable()
