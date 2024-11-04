@@ -62,11 +62,11 @@ RUN pip install --upgrade pip setuptools
 
 # nightly test related packages
 RUN pip install --no-cache-dir \
-    ipython \
-    ipykernel \
-    ipywidgets \
-    papermill \
-    traitlets
+    ipython==8.18.1 \
+    ipykernel==6.27.1 \
+    ipywidgets==8.1.1 \
+    papermill==2.4.0 \
+    traitlets==5.14.0
 
 RUN pip install jupyter-client notebook
 

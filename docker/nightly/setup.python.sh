@@ -35,8 +35,8 @@ rm pythons.txt
 
 # Setup links for TensorFlow to compile.
 # Referenced in devel.usertools/*.bazelrc
-ln -sf /usr/bin/$VERSION /usr/bin/python3
-ln -sf /usr/bin/$VERSION /usr/bin/python
+ln -sf "/usr/bin/$VERSION" "/usr/bin/python3"
+ln -sf "/usr/bin/$VERSION" "/usr/bin/python"
 
 chown -R root:root /usr/local/lib/python*
 
