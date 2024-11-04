@@ -44,7 +44,7 @@ chown -R root:root /usr/local/lib/python*
 # sysconfig.get_path('include') incorrectly points to /usr/local/include/python
 # map /usr/include/python3.10 to /usr/local/include/python3.10
 if [[ ! -f "/usr/local/include/$VERSION" ]]; then
-  ln -sf /usr/include/$VERSION /usr/local/include/$VERSION
+  ln -sf "/usr/include/$VERSION" "/usr/local/include/$VERSION"
 fi
 
 # Install pip
@@ -53,4 +53,4 @@ python3 get-pip.py
 python3 -m pip install --no-cache-dir pip==24.0
 
 # Disable the cache dir to save image space, and install packages
-python3 -m pip install --no-cache-dir -r $REQUIREMENTS
+python3 -m pip install --no-cache-dir -r "$REQUIREMENTS"
