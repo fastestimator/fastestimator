@@ -1,4 +1,4 @@
-# Copyright 2020 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,11 +20,12 @@ from fastestimator.op.numpyop.univariate import RGBShift
 
 
 class TestRGBShift(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
-        cls.single_input = [np.random.rand(28, 28, 3)]
+        cls.single_input = [np.random.rand(28, 28, 3).astype(np.float32)]
         cls.single_output_shape = (28, 28, 3)
-        cls.multi_input = [np.random.rand(28, 28, 3), np.random.rand(28, 28, 3)]
+        cls.multi_input = [np.random.rand(28, 28, 3).astype(np.float32), np.random.rand(28, 28, 3).astype(np.float32)]
         cls.multi_output_shape = (28, 28, 3)
 
     def test_single_input(self):

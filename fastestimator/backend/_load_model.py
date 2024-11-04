@@ -1,4 +1,4 @@
-# Copyright 2022 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ from collections import OrderedDict
 from typing import Union
 
 import tensorflow as tf
-import tensorflow_addons as tfa
 import torch
 
 from fastestimator.backend._set_lr import set_lr
@@ -52,8 +51,8 @@ def load_model(model: Union[tf.keras.Model, torch.nn.Module], weights_path: str,
     if load_optimizer:
         assert hasattr(model, "fe_compiled") and model.fe_compiled, "model must be built by fe.build if loading optimizers"
 
-    if os.path.exists(weights_path):
-        ValueError("Weights path doesn't exist: ", weights_path)
+    if not os.path.exists(weights_path):
+        raise ValueError("Weights path doesn't exist: ", weights_path)
 
     if isinstance(model, tf.keras.Model):
         model.load_weights(weights_path)
@@ -65,9 +64,8 @@ def load_model(model: Union[tf.keras.Model, torch.nn.Module], weights_path: str,
                 state_dict = pickle.load(f)
             model.current_optimizer.set_weights(state_dict['weights'])
             weight_decay = None
-            if isinstance(model.current_optimizer, tfa.optimizers.DecoupledWeightDecayExtension) or hasattr(
-                    model.current_optimizer, "inner_optimizer") and isinstance(
-                        model.current_optimizer.inner_optimizer, tfa.optimizers.DecoupledWeightDecayExtension):
+            if hasattr(model.current_optimizer, "weight_decay") and tf.keras.backend.get_value(
+                    model.current_optimizer.weight_decay) is not None:
                 weight_decay = state_dict['weight_decay']
             set_lr(model, state_dict['lr'], weight_decay=weight_decay)
     elif isinstance(model, torch.nn.Module):

@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ class Pipeline:
     Args:
         train_data: The training data, or None if no training data is available.
         eval_data: The evaluation data, or None if no evaluation data is available.
-        test_data: The testing data, or None if no evaluation data is available.
+        test_data: The testing data, or None if no test data is available.
         batch_size: The batch size to be used by the pipeline. If the batch_size is also set by a Batch Op, that value
             will take precedence over this one (for example, if you want to set the batch_size based on mode or ds_is).
             NOTE: This argument is only applicable when using a FastEstimator Dataset.
@@ -125,10 +125,10 @@ class Pipeline:
             if isinstance(dataset, dict):
                 for ds_name in dataset:
                     assert isinstance(ds_name, str) and len(ds_name) > 0, \
-                        "dataset id must be a string, found {}".format(ds_name)
+                        f"dataset id must be a string, found {ds_name}"
                     assert not any(char in ds_name for char in forbidden_ds_id_chars), \
                         "dataset id should not contain forbidden characters like ':', ';', '!', '|', " + \
-                        "found {} in pipeline".format(ds_name)
+                        f"found {ds_name} in pipeline"
                 data[mode] = filter_nones(dataset)
             else:
                 # Empty string is special, matches against ops which require '!ds1' but not 'ds1'
@@ -178,7 +178,8 @@ class Pipeline:
         # Consider x + m*n epochs for each epoch scheduler x value
         schedule_epochs = sorted({
             epoch
-            for base_epoch in schedule_epochs for epoch in list(range(base_epoch, base_epoch + schedule_cycles))
+            for base_epoch in schedule_epochs
+            for epoch in list(range(base_epoch, base_epoch + schedule_cycles))
         })
         for mode, id_ds in list(self.data.items()) + [('infer', {'': None})]:
             for ds_id in id_ds.keys():
@@ -206,7 +207,7 @@ class Pipeline:
         if isinstance(dataset, Dataset):
             # batch_size check
             for batch_size in get_current_items(to_list(self.batch_size)):
-                assert isinstance(batch_size, int), "unsupported batch_size format: {}".format(type(batch_size))
+                assert isinstance(batch_size, int), f"unsupported batch_size format: {type(batch_size)}"
             # ops check
             for op in get_current_items(self.ops):
                 assert isinstance(op, NumpyOp), "unsupported op format, must provide NumpyOp in Pipeline"
@@ -222,7 +223,7 @@ class Pipeline:
                 warn("num_process will only be used for built-in dataset")
             return False
         else:
-            raise ValueError("Unsupported dataset type: {}".format(type(dataset)))
+            raise ValueError(f"Unsupported dataset type: {type(dataset)}")
 
     def _get_op_split(self, mode: str, epoch: int,
                       ds_id: Union[str, Iterable[str]]) -> Tuple[List[NumpyOp], Batch, List[NumpyOp]]:
@@ -322,17 +323,20 @@ class Pipeline:
                         duration = time.perf_counter() - start
                         iters_per_sec = log_interval / duration
                         ds_str = f"Dataset: {ds_id}, " if ds_id else ""
-                        print("FastEstimator-Benchmark ({}): {}Step: {}, Epoch: {}, Steps/sec: {}".format(
-                            mode.capitalize(), ds_str, idx, epoch, iters_per_sec))
+                        print(
+                            f"FastEstimator-Benchmark ({mode.capitalize()}): {ds_str}, Step: {idx}, Epoch: {epoch}, Steps/sec: {iters_per_sec}"
+                        )
                         start = time.perf_counter()
+
                 # Pipeline Operations Benchmarking when using FEDataset
                 if isinstance(loader, FEDataLoader) and isinstance(loader.dataset, OpDataset) and detailed:
                     # (n_visited, duration)
                     duration_list = np.zeros(shape=(len(self.ctx_ops) + 1 + len(self.ctx_batch_ops), 2))
                     data_len = len(loader.dataset)
                     ds_str = f", Dataset: {ds_id}" if ds_id else ""
-                    print("\nBreakdown of time taken by Pipeline Operations (Mode: {}, Epoch: {}{})\n".format(
-                        mode.capitalize(), epoch, ds_str))
+                    print(
+                        f"\nBreakdown of time taken by Pipeline Operations (Mode: {mode.capitalize()}, Epoch: {epoch}{ds_str})\n"
+                    )
                     extra_memory_management_time = 0
                     for _ in range(log_interval):
                         filtered = False

@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,12 +22,11 @@ from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional
     Union, overload
 
 import gdown
-import keras.mixed_precision as mixed_precision_tf
-import numpy as np
 import tensorflow as tf
+import tensorflow.keras.mixed_precision as mixed_precision_tf
 import torch
-from keras.engine.sequential import Sequential
-from keras.mixed_precision.loss_scale_optimizer import LossScaleOptimizer, LossScaleOptimizerV3
+from tensorflow.keras import Sequential
+from tensorflow.keras.mixed_precision import LossScaleOptimizer
 from tensorflow.python.distribute.values import DistributedValues
 from typing_extensions import Self
 
@@ -74,6 +73,7 @@ class BaseNetwork:
     Raises:
         ValueError: Mixed precision settings for all models are not the same.
     """
+
     def __init__(
         self,
         target_type: str,
@@ -632,6 +632,7 @@ class TFNetwork(BaseNetwork):
             them onto a smaller GPU. After cutting the data apart and running through the `ops`, the samples are fused
             back together into a single batch on the CPU before being handed over to the `pops`.
     """
+
     def __init__(
         self,
         ops: Sequence[Union[None, TensorOp, Scheduler[TensorOp]]],
@@ -836,7 +837,7 @@ class TFNetwork(BaseNetwork):
             self.ctx_manual_gpu_data_handling = False
         return batch
 
-    def _fill_batch(self, data: T, n: int, batch:int) -> T:
+    def _fill_batch(self, data: T, n: int, batch: int) -> T:
         """Fill data on batch dimension repeating the first n indices at the end.
 
         Args:
@@ -856,12 +857,12 @@ class TFNetwork(BaseNetwork):
         elif isinstance(data, set):
             return set([self._fill_batch(val, n, batch) for val in data])
         elif hasattr(data, "shape"):
-            if n-batch > batch:
+            if n - batch > batch:
                 paddings = [[0, batch]] + [[0, 0] for _ in range(len(data.shape) - 1)]
                 temp_data = tf.pad(data, paddings=paddings, mode="symmetric")
                 return self._fill_batch(temp_data, n, temp_data.shape[0])
             else:
-                paddings = [[0, n-batch]] + [[0, 0] for _ in range(len(data.shape) - 1)]
+                paddings = [[0, n - batch]] + [[0, 0] for _ in range(len(data.shape) - 1)]
                 return tf.pad(data, paddings=paddings, mode="symmetric")
         else:
             return data
@@ -944,6 +945,7 @@ def build(model_fn: Callable[[], Union[Model, Sequence[Model]]],
     Returns:
         models: The model(s) built by FastEstimator.
     """
+
     def _generate_model_names(num_names):
         names = [
             "model" if i + fe.fe_build_count == 0 else "model{}".format(i + fe.fe_build_count) for i in range(num_names)
@@ -1099,12 +1101,12 @@ def _optimizer_fn_from_string(name: str, framework: str) -> Callable:
     # The legacy optimizers appear to be faster than the new ones on both mac and linux. Revisit this speed test again
     # after tf version > 2.12
     tf_optimizer_fn = {
-        'adadelta': tf.optimizers.legacy.Adadelta,
-        'adagrad': tf.optimizers.legacy.Adagrad,
-        'adam': tf.optimizers.legacy.Adam,
-        'adamax': tf.optimizers.legacy.Adamax,
-        'rmsprop': tf.optimizers.legacy.RMSprop,
-        'sgd': tf.optimizers.legacy.SGD
+        'adadelta': tf.keras.optimizers.legacy.Adadelta,
+        'adagrad': tf.keras.optimizers.legacy.Adagrad,
+        'adam': tf.keras.optimizers.legacy.Adam,
+        'adamax': tf.keras.optimizers.legacy.Adamax,
+        'rmsprop': tf.keras.optimizers.legacy.RMSprop,
+        'sgd': tf.keras.optimizers.legacy.SGD
     }
     pytorch_optimizer_fn = {
         'adadelta': lambda x: torch.optim.Adadelta(params=x),
@@ -1166,10 +1168,7 @@ def _optimizer_fn_to_optimizer(
                 f"optimizer_fn should generate tensorflow optimizer, but got {type(optimizer)}"
             # handle mixed precision loss scaling
             if mixed_precision:
-                if isinstance(optimizer, tf.optimizers.legacy.Optimizer):
-                    optimizer = LossScaleOptimizer(optimizer)
-                else:
-                    optimizer = LossScaleOptimizerV3(optimizer)
+                optimizer = LossScaleOptimizer(optimizer)
         else:
             try:
                 optimizer = optimizer_fn(model.parameters())
@@ -1178,7 +1177,7 @@ def _optimizer_fn_to_optimizer(
                 optimizer_fn are using the same backend")
                 raise ValueError(repr(e))
             assert isinstance(optimizer, torch.optim.Optimizer), "optimizer_fn should generate pytorch optimizer"
-            if mixed_precision:
+            if mixed_precision and torch.cuda.is_available():
                 setattr(optimizer, "scaler", torch.cuda.amp.GradScaler())
             else:
                 setattr(optimizer, "scaler", None)

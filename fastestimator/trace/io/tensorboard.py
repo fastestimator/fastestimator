@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import tensorboard as tb
 import tensorflow as tf
 import torch
 from keras import backend
-from keras.callbacks import keras_model_summary
+from keras.src.callbacks import keras_model_summary
 from plotly.graph_objs import Figure
 from tensorflow.python.framework import ops as tfops
 from tensorflow.python.ops import summary_ops_v2
@@ -253,6 +253,7 @@ class _TorchWriter(_BaseWriter):
 
     This class is intentionally not @traceable.
     """
+
     def write_epoch_models(self, mode: str, epoch: int) -> None:
         for model in self.network.ctx_models:
             inputs = model.fe_input_spec.get_dummy_input()

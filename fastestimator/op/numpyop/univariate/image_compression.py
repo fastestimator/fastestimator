@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -39,13 +39,14 @@ class ImageCompression(ImageOnlyAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
-                 quality_lower: float = 99,
-                 quality_upper: float = 100,
+                 quality_lower: int = 99,
+                 quality_upper: int = 100,
                  compression_type: ImgCmpAlb.ImageCompressionType = ImgCmpAlb.ImageCompressionType.JPEG):
         super().__init__(
             ImgCmpAlb(quality_lower=quality_lower,

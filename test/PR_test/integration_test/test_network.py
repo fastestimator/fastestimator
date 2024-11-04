@@ -1,4 +1,4 @@
-# Copyright 2020 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,10 +31,15 @@ from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.loss import CrossEntropy, MeanSquaredError
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
 from fastestimator.schedule import EpochScheduler, RepeatScheduler
-from fastestimator.test.unittest_util import OneLayerTorchModel, is_equal, one_layer_tf_model
+from fastestimator.test.unittest_util import (
+    OneLayerTorchModel,
+    is_equal,
+    one_layer_tf_model,
+)
 
 
 class UnknownCompiledModel:
+
     def __init__(self, model):
         self.model = model
         self.fe_compiled = True
@@ -42,16 +47,19 @@ class UnknownCompiledModel:
 
 
 class SampleNumpyOp(NumpyOp):
+
     def forward(self, data, state):
         return data
 
 
 class SampleTensorOp(TensorOp):
+
     def forward(self, data, state):
         return data
 
 
 class PlusOneNumpyOp(NumpyOp):
+
     def forward(self, data, state):
         return data + 1
 
@@ -95,6 +103,7 @@ class TestNetworkCollectModel(unittest.TestCase):
     * fe.op.tensorop.model.update.UpdateOp
     * fe.network.build
     """
+
     def test_network_collect_model_with_model_op_and_update_op(self):
         model_fns = {"tf_model_fn": one_layer_tf_model, "torch_model_fn": OneLayerTorchModel}
 
@@ -127,6 +136,7 @@ class TestNetworkNetwork(unittest.TestCase):
     * fe.op.tensorop.model.model.ModelOp
     * fe.network.build
     """
+
     @classmethod
     def setUpClass(cls):
         cls.tf_model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=None)
@@ -184,6 +194,7 @@ class TestNetworkBuildOptimizer(unittest.TestCase):
     * fe.network._optimizer_fn_from_string
     * fe.network._optimizer_fn_to_optimizer
     """
+
     @classmethod
     def setUpClass(cls):
         cls.tf_model = one_layer_tf_model()
@@ -197,7 +208,7 @@ class TestNetworkBuildOptimizer(unittest.TestCase):
                                                         model=self.tf_model,
                                                         framework="tf",
                                                         mixed_precision=False)
-                self.assertIsInstance(optimizer, tf.optimizers.legacy.Optimizer)
+                self.assertIsInstance(optimizer, tf.keras.optimizers.legacy.Optimizer)
 
     def test_network_build_optimizer_torch_model_optimizer_str(self):
         str_list = ['adadelta', 'adagrad', 'adam', 'adamax', 'rmsprop', 'sgd']
@@ -210,14 +221,14 @@ class TestNetworkBuildOptimizer(unittest.TestCase):
                 self.assertIsInstance(optimizer, torch.optim.Optimizer)
 
     def test_network_build_optimizer_tf_model_optimizer_fn(self):
-        fn_list = [tf.optimizers.Adadelta, lambda: tf.optimizers.Adam(lr=0.001)]
+        fn_list = [tf.keras.optimizers.legacy.Adadelta, lambda: tf.keras.optimizers.legacy.Adam(learning_rate=0.001)]
         for opt_fn in fn_list:
             with self.subTest(optimizer_fn=opt_fn):
                 optimizer = fe.network._build_optimizer(optimizer_fn=opt_fn,
                                                         model=self.tf_model,
                                                         framework="tf",
                                                         mixed_precision=False)
-                self.assertIsInstance(optimizer, tf.optimizers.Optimizer)
+                self.assertIsInstance(optimizer, tf.keras.optimizers.legacy.Optimizer)
 
     def test_network_build_optimizer_torch_model_optimizer_fn(self):
         opt_fn = lambda x: torch.optim.SGD(params=x, lr=0.01)
@@ -234,6 +245,7 @@ class TestNetworkFeCompile(unittest.TestCase):
     * fe.schedule.schedule.EpochScheduler
     * fe.schedule.schedule.RepeatScheduler
     """
+
     @classmethod
     def setUpClass(cls):
         cls.tf_model = one_layer_tf_model()
@@ -355,6 +367,7 @@ class TestNetworkBuild(unittest.TestCase):
     * fe.util.traceability_util.trace_model
     * fe.network._fe_compile
     """
+
     def test_network_build_check_model_name(self):
         with self.subTest("not specify model_name"):
             model = fe.build(model_fn=one_layer_tf_model, optimizer_fn="adam")
@@ -366,12 +379,12 @@ class TestNetworkBuild(unittest.TestCase):
             self.assertEqual(model.model_name, "test")
 
     def test_network_build_tf_model_tf_optimizer_check_model_optimizer_instance(self):
-        model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=tf.optimizers.Adadelta)
+        model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=tf.keras.optimizers.legacy.Adadelta)
         with self.subTest("check model instance"):
             self.assertIsInstance(model, tf.keras.Model)
 
         with self.subTest("check optimizer"):
-            self.assertIsInstance(model.optimizer, tf.optimizers.Optimizer)
+            self.assertIsInstance(model.optimizer, tf.keras.optimizers.legacy.Optimizer)
 
     def test_network_build_torch_model_torch_optimizer_check_model_optimizer_instance(self):
         model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=lambda x: torch.optim.SGD(params=x, lr=0.01))
@@ -383,30 +396,30 @@ class TestNetworkBuild(unittest.TestCase):
 
     def test_network_build_tf_model_torch_optimizer_check_assertion_error(self):
         with self.assertRaises(AssertionError):
-            model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=lambda x: torch.optim.SGD(params=x, lr=0.01))
+            _ = fe.build(model_fn=one_layer_tf_model, optimizer_fn=lambda x: torch.optim.SGD(params=x, lr=0.01))
 
     def test_network_build_torch_model_tf_optimizer_check_assertion_error(self):
         with self.subTest("optimizer_fn directly uses tf optimizer "):
             with self.assertRaises(ValueError):
-                model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=tf.optimizers.Adadelta)
+                _ = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=tf.keras.optimizers.Adadelta)
 
         with self.subTest("optimizer_fn directly uses legacy tf optimizer "):
             with self.assertRaises(AssertionError):
-                model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=tf.optimizers.legacy.Adadelta)
+                _ = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=tf.keras.optimizers.legacy.Adadelta)
 
         with self.subTest("optimizer_fn use lambda function"):
             with self.assertRaises(ValueError):
-                model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=lambda: tf.optimizers.Adadelta())
+                _ = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=lambda: tf.keras.optimizers.legacy.Adadelta())
 
     def test_network_build_unknown_model_check_assertion_error(self):
         with self.assertRaises(ValueError):
-            model = fe.build(model_fn=lambda: "string", optimizer_fn=tf.optimizers.Adadelta)
+            _ = fe.build(model_fn=lambda: "string", optimizer_fn=tf.keras.optimizers.legacy.Adadelta)
 
     def test_network_build_check_load_weight_from_path(self):
         with unittest.mock.patch("fastestimator.network.load_model") as fake:
             optimizer = EpochScheduler(epoch_dict={1: "adam", 10: "sgd"})
             model = fe.build(model_fn=one_layer_tf_model,
-                             optimizer_fn=tf.optimizers.Adadelta,
+                             optimizer_fn=tf.keras.optimizers.legacy.Adadelta,
                              weights_path="example_path")
 
             _, weight = fake.call_args[0]
@@ -418,6 +431,7 @@ class TestNetworkTransform(unittest.TestCase):
     * fe.network.TFNetwork.transform (and its all invoking function)
     * fe.network.TorchNetwork.transform (and its all invoking function)
     """
+
     def test_network_transform_one_layer_model_tf(self):
         model = fe.build(model_fn=one_layer_tf_model, optimizer_fn="adam")
         weight = get_tf_model_weight(model)
@@ -428,7 +442,7 @@ class TestNetworkTransform(unittest.TestCase):
                 UpdateOp(model=model, loss_name="ce")
             ],
             pops=PlusOneNumpyOp(inputs="y_pred", outputs="y_pred_processed"))
-        batch = {"x": np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]]), "y": np.array([1,1,1,1])}
+        batch = {"x": np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]]), "y": np.array([1, 1, 1, 1])}
         batch = network.transform(data=batch, mode="train")
 
         with self.subTest("output y_pred check"):
@@ -489,7 +503,7 @@ class TestNetworkTransform(unittest.TestCase):
             UpdateOp(model=model, loss_name="ce")
         ])
 
-        batch = {"x": np.ones((4, 28, 28, 1)), "y": np.array([1,1,1,1])}
+        batch = {"x": np.ones((4, 28, 28, 1)), "y": np.array([1, 1, 1, 1])}
         batch = network.transform(data=batch, mode="train")
         with self.subTest("output y_pred check"):
             self.assertTrue("y_pred" in batch.keys())

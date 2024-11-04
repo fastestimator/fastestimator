@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -38,14 +38,14 @@ class RandomGamma(ImageOnlyAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
-                 gamma_limit: Union[float, Tuple[float, float]] = (80, 120),
-                 eps: float = 1e-7):
-        super().__init__(RandomGammaAlb(gamma_limit=gamma_limit, eps=eps, always_apply=True),
+                 gamma_limit: Union[int, Tuple[int, int]] = (80, 120)):
+        super().__init__(RandomGammaAlb(gamma_limit=gamma_limit, always_apply=True),
                          inputs=inputs,
                          outputs=outputs,
                          mode=mode,
