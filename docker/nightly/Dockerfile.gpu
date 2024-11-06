@@ -95,7 +95,7 @@ RUN pip install --no-cache-dir \
     papermill==2.4.0 \
     traitlets==5.14.0
 
-RUN pip install jupyter-client notebook
+RUN pip install jupyter-client==8.6.0 notebook==7.0.6
 
 RUN ipython kernel install --user --name nightly_build
 
@@ -103,7 +103,7 @@ RUN ipython kernel install --user --name nightly_build
 RUN apt-get install -y lsof
 
 # backend dependencies
-RUN pip install torch==2.3.1+cu121 torchvision==0.18.1+cu121 torchaudio==2.3.1+cu121 -f https://download.pytorch.org/whl/cu121/torch_stable.html --trusted-host download.pytorch.org
+RUN pip install torch==2.3.1+cu121 torchvision==0.18.1+cu121 torchaudio==2.3.1+cu121 -f https://download.pytorch.org/whl/cu121/torch_stable.html
 # install FastEstimator
 ARG InstallFE=True
 RUN if [ $InstallFE = "True" ]; then pip install git+https://github.com/fastestimator/fastestimator.git; fi

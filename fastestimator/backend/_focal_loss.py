@@ -101,8 +101,7 @@ def tf_focal_loss(y_true, y_pred, alpha=0.25, gamma=2.0, from_logits=False, labe
 
     >>> y_true = [[0, 1], [0, 0]]
     >>> y_pred = [[0.6, 0.4], [0.4, 0.6]]
-    >>> loss = keras.losses.binary_focal_crossentropy(
-    ...        y_true, y_pred, gamma=2)
+    >>> loss = tf_focal_loss(y_true, y_pred, gamma=2)
     >>> assert loss.shape == (2,)
     >>> loss
     array([0.330, 0.206], dtype=float32)
@@ -141,7 +140,8 @@ def focal_loss(y_true: Tensor,
                from_logits: bool = False,
                normalize: bool = True,
                shape_reduction: str = "sum",
-               sample_reduction: str = "mean") -> Tensor:
+               sample_reduction: str = "mean",
+               label_smoothing: float = 0.0) -> Tensor:
     """Calculate the focal loss between two tensors.
 
     Original implementation from https://github.com/facebookresearch/fvcore/blob/master/fvcore/nn/focal_loss.py .
@@ -181,6 +181,10 @@ def focal_loss(y_true: Tensor,
                  'none': No reduction will be applied to the output.
                  'mean': The output will be averaged across batch size.
                  'sum': The output will be summed across batch size.
+        label_smoothing: Float in `[0, 1]`. If > `0` then smooth the labels by
+            squeezing them towards 0.5, that is,
+            using `1. - 0.5 * label_smoothing` for the target class
+            and `0.5 * label_smoothing` for the non-target class.
     Returns:
         The Focal loss between `y_true` and `y_pred`
 
@@ -195,7 +199,12 @@ def focal_loss(y_true: Tensor,
 
     if tf.is_tensor(y_true):
         y_true = tf.cast(y_true, dtype=y_pred.dtype)
-        fl = tf_focal_loss(y_true, y_pred, from_logits=from_logits, alpha=alpha, gamma=gamma)
+        fl = tf_focal_loss(y_true,
+                           y_pred,
+                           from_logits=from_logits,
+                           alpha=alpha,
+                           gamma=gamma,
+                           label_smoothing=label_smoothing)
         gt_shape = tf.shape(y_true)
         fl_shape = tf.shape(fl)
     elif isinstance(y_true, torch.Tensor):
