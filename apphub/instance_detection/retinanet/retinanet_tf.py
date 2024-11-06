@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -73,6 +73,7 @@ def _get_fpn_anchor_box(width: int, height: int):
 
 
 class ShiftLabel(NumpyOp):
+
     def forward(self, data, state):
         # the label of COCO dataset starts from 1, shifting the start to 0
         bbox = np.array(data, dtype=np.float32)
@@ -81,6 +82,7 @@ class ShiftLabel(NumpyOp):
 
 
 class AnchorBox(NumpyOp):
+
     def __init__(self, width, height, inputs, outputs, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.anchorbox, _ = _get_fpn_anchor_box(width, height)  # anchorbox is #num_anchor x 4
@@ -300,6 +302,7 @@ def RetinaNet(input_shape, num_classes, num_anchor=9):
 
 
 class RetinaLoss(TensorOp):
+
     def forward(self, data, state):
         anchorbox, cls_pred, loc_pred = data
         batch_size = anchorbox.shape[0]
@@ -354,6 +357,7 @@ class RetinaLoss(TensorOp):
 class PredictBox(TensorOp):
     """Convert network output to bounding boxes.
     """
+
     def __init__(self,
                  inputs=None,
                  outputs=None,
@@ -462,16 +466,15 @@ def get_estimator(data_dir=None,
                            bbox_in="bbox",
                            bbox_out="bbox",
                            bbox_params=BboxParams("coco", min_area=1.0)),
-            PadIfNeeded(
-                image_size,
-                image_size,
-                border_mode=cv2.BORDER_CONSTANT,
-                image_in="image",
-                image_out="image",
-                bbox_in="bbox",
-                bbox_out="bbox",
-                bbox_params=BboxParams("coco", min_area=1.0),
-            ),
+            PadIfNeeded(image_size,
+                        image_size,
+                        border_mode=cv2.BORDER_CONSTANT,
+                        image_in="image",
+                        image_out="image",
+                        bbox_in="bbox",
+                        bbox_out="bbox",
+                        bbox_params=BboxParams("coco", min_area=1.0),
+                        value=0),
             Sometimes(
                 HorizontalFlip(mode="train",
                                image_in="image",
@@ -486,7 +489,7 @@ def get_estimator(data_dir=None,
         ])
     # network
     model = fe.build(model_fn=lambda: RetinaNet(input_shape=(image_size, image_size, 3), num_classes=num_classes),
-                     optimizer_fn=lambda: tf.optimizers.SGD(momentum=0.9))
+                     optimizer_fn=lambda: tf.keras.optimizers.SGD(momentum=0.9))
     network = fe.Network(ops=[
         ModelOp(model=model, inputs="image", outputs=["cls_pred", "loc_pred"]),
         RetinaLoss(inputs=["anchorbox", "cls_pred", "loc_pred"], outputs=["total_loss", "focal_loss", "l1_loss"]),

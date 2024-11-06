@@ -22,6 +22,10 @@ physical_devices = tf.config.list_physical_devices('GPU')
 for device in physical_devices:
     tf.config.experimental.set_memory_growth(device, True)
 
+if len(physical_devices) > 1:
+    tf.distribute.experimental_set_strategy(
+        tf.distribute.MirroredStrategy(cross_device_ops=tf.distribute.ReductionToOneDevice()))
+
 loader = unittest.TestLoader()
 test_dir = os.path.join(__file__, "..", "PR_test")
 suite = loader.discover(test_dir)

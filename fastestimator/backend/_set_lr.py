@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
 from typing import Optional, Union
 
 import tensorflow as tf
-import tensorflow_addons as tfa
 import torch
 
 from fastestimator.backend._get_lr import get_lr
@@ -39,7 +38,7 @@ def set_lr(model: Union[tf.keras.Model, torch.nn.Module], lr: float, weight_deca
     Args:
         model: A neural network instance to modify.
         lr: The learning rate to assign to the `model`.
-        weight_decay: The weight decay parameter, this is only relevant when using `tfa.DecoupledWeightDecayExtension`.
+        weight_decay: The weight decay parameter.
 
     Raises:
         ValueError: If `model` is an unacceptable data type.
@@ -47,14 +46,12 @@ def set_lr(model: Union[tf.keras.Model, torch.nn.Module], lr: float, weight_deca
     assert hasattr(model, "fe_compiled") and model.fe_compiled, "set_lr only accept models from fe.build"
     if isinstance(model, tf.keras.Model):
         # when using decoupled weight decay like SGDW or AdamW, weight decay factor needs to change together with lr
-        # see https://www.tensorflow.org/addons/api_docs/python/tfa/optimizers/DecoupledWeightDecayExtension for detail
-        if isinstance(model.current_optimizer, tfa.optimizers.DecoupledWeightDecayExtension) or hasattr(
-                model.current_optimizer, "inner_optimizer") and isinstance(
-                    model.current_optimizer.inner_optimizer, tfa.optimizers.DecoupledWeightDecayExtension):
+        if hasattr(model.current_optimizer, "weight_decay") and tf.keras.backend.get_value(
+                model.current_optimizer.weight_decay) is not None:
             if weight_decay is None:
                 weight_decay = tf.keras.backend.get_value(model.current_optimizer.weight_decay) * lr / get_lr(model)
-            tf.keras.backend.set_value(model.current_optimizer.weight_decay, weight_decay)
-        tf.keras.backend.set_value(model.current_optimizer.lr, lr)
+            model.current_optimizer.weight_decay = weight_decay
+        model.current_optimizer.lr = lr
     elif isinstance(model, torch.nn.Module):
         for param_group in model.current_optimizer.param_groups:
             param_group['lr'] = lr

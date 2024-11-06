@@ -1,4 +1,4 @@
-# Copyright 2021 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ from fastestimator.util.util import Suppressor
 
 
 class PostProcessFunction(Protocol):
+
     def __call__(self, data: Dict[str, Any], shared: bool = True) -> Union[Dict[str, Any], FilteredData]:
         ...
 
@@ -137,7 +138,10 @@ class FEDataLoader(DataLoader):
         the test suites.
         """
         if isinstance(self._iterator, _MultiProcessingDataLoaderIter):
-            self._iterator._shutdown_workers()
+            try:
+                self._iterator._shutdown_workers()
+            except Exception:
+                self._iterator = None
         self._iterator = None
         FEDataLoader._current_threads.clear()
 
@@ -206,6 +210,7 @@ class _BaseFELoaderIter(_BaseDataLoaderIter, ABC):
     Args:
         loader: The parent loader object that will own this iterator.
     """
+
     def __init__(self, loader: FEDataLoader):
         super().__init__(loader)
         self.fe_batch_size = loader.fe_batch_size
@@ -379,6 +384,7 @@ class InfiniteSampler(Sampler):
         convert_fn: A function to be invoked (using the current index) every sample in order to convert an integer index
             into some arbitrary alternative index representation.
     """
+
     def __init__(self,
                  data_source: Sized,
                  shuffle: bool = True,
@@ -430,6 +436,7 @@ class InfiniteSampler(Sampler):
 
 
 class _IdxMapDatasetFetcher(_MapDatasetFetcher):
+
     def fetch(self, possibly_batched_index):
         if self.auto_collation:
             data = [self.dataset[idx] for idx in possibly_batched_index]

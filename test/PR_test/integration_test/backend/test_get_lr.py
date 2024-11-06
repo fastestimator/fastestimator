@@ -1,4 +1,4 @@
-# Copyright 2020 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,12 +22,13 @@ import fastestimator as fe
 
 
 class TestGetLr(unittest.TestCase):
+
     def test_get_lr_tf(self):
-        m = fe.build(fe.architecture.tensorflow.LeNet, optimizer_fn=lambda: tf.optimizers.Adam(1e-4))
+        m = fe.build(fe.architecture.tensorflow.LeNet, optimizer_fn=lambda: tf.keras.optimizers.legacy.Adam(1e-4))
         b = fe.backend.get_lr(model=m)
         self.assertTrue(np.allclose(b, 1e-4))
 
-        m = fe.build(fe.architecture.tensorflow.LeNet, optimizer_fn=lambda: tf.optimizers.Adam(5e-2))
+        m = fe.build(fe.architecture.tensorflow.LeNet, optimizer_fn=lambda: tf.keras.optimizers.legacy.Adam(5e-2))
         b = fe.backend.get_lr(model=m)
         self.assertTrue(np.allclose(b, 5e-2))
 

@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,12 +40,13 @@ class GaussianBlur(ImageOnlyAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
-                 blur_limit: Union[int, Tuple[int, int]] = 7,
+                 blur_limit: Union[int, Tuple[int, int]] = 3,
                  sigma_limit: Union[float, Tuple[float, float]] = 0.0):
 
         super().__init__(GaussianBlurAlb(blur_limit=blur_limit, always_apply=True, sigma_limit=sigma_limit),

@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -97,6 +97,7 @@ class FeInputSpec:
         model_input: The input to the model.
         model: The model which corresponds to the given `model_input`.
     """
+
     def __init__(self, model_input: Any, model: Model):
         self.shape = to_shape(model_input)
         self.dtype = to_type(model_input)
@@ -165,6 +166,7 @@ class FeSplitSummary(LatexObject):
 
     This class is intentionally not @traceable.
     """
+
     def __init__(self):
         super().__init__()
         self.data = []
@@ -1129,7 +1131,8 @@ def __getstate__(self) -> Dict[str, Any]:
     if self._fe_state_whitelist:
         state_dict = {key: state_dict[key] for key in self._fe_state_whitelist}
     for key in self._fe_state_blacklist:
-        state_dict.pop(key, None)
+        if key in state_dict:
+            del state_dict[key]
     # We can't support complex objects / recursion since lambda functions can't be pickled and collections might
     # be appended to after the init call over the course of training, preventing nested complex objects from
     # being perfectly recovered. The memory limit is to avoid saving a copy of the user's entire dataset if it
@@ -1137,7 +1140,7 @@ def __getstate__(self) -> Dict[str, Any]:
     for key, value in list(state_dict.items()):
         keep, size = is_restorable(value, memory_limit=0 if key in self._fe_state_whitelist else 1e6)
         if not keep:
-            state_dict.pop(key)
+            del state_dict[key]
     return state_dict
 
 

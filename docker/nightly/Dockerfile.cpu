@@ -1,8 +1,41 @@
-FROM tensorflow/tensorflow:2.11.1
+# Copyright 2019 The TensorFlow Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
 
-# change python library to root owner
-# it fixes "container ID cannot be mapped to a host ID" issue that happens later while upgrading python packages
-RUN chown -R root:root /usr/local/lib/python*
+FROM ubuntu:22.04 as base
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LANG C.UTF-8
+
+COPY setup.sources.sh /setup.sources.sh
+COPY setup.packages.sh /setup.packages.sh
+COPY cpu.packages.txt /cpu.packages.txt
+
+# Set up shared custom sources
+RUN apt-get update && \
+    apt-get install -y gnupg ca-certificates wget && \
+    /setup.packages.sh /cpu.packages.txt
+
+
+ARG PYTHON_VERSION=python3.10
+ARG TENSORFLOW_PACKAGE=tf-nightly
+COPY setup.python.sh /setup.python.sh
+COPY cpu.requirements.txt /cpu.requirements.txt
+RUN /setup.python.sh $PYTHON_VERSION /cpu.requirements.txt
+RUN pip install --no-cache-dir tensorflow==2.15.1
+
+COPY bashrc /etc/bash.bashrc
+RUN chmod a+rwx /etc/bash.bashrc
 
 RUN apt-get update
 
@@ -29,13 +62,13 @@ RUN pip install --upgrade pip setuptools
 
 # nightly test related packages
 RUN pip install --no-cache-dir \
-    ipython==8.12.0 \
-    ipykernel \
-    ipywidgets \
-    papermill \
-    traitlets==5.2.2.post1
+    ipython==8.18.1 \
+    ipykernel==6.27.1 \
+    ipywidgets==8.1.1 \
+    papermill==2.4.0 \
+    traitlets==5.14.0
 
-RUN pip install jupyter-client notebook
+RUN pip install jupyter-client==8.6.0 notebook==7.0.6
 
 RUN ipython kernel install --user --name nightly_build
 
@@ -43,8 +76,10 @@ RUN ipython kernel install --user --name nightly_build
 RUN apt-get install -y lsof
 
 # backend dependencies
-RUN pip install torch==2.1.1+cpu torchvision==0.16.1+cpu torchaudio==2.1.1+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
+RUN pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cpu/torch_stable.html
 
 # install FastEstimator
 ARG InstallFE=True
 RUN if [ $InstallFE = "True" ]; then pip install git+https://github.com/fastestimator/fastestimator.git; fi
+
+WORKDIR /

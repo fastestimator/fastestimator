@@ -1,4 +1,4 @@
-# Copyright 2021 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,21 +16,21 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_addons as tfa
 import torch
 
 import fastestimator as fe
 
 
 class TestSetLr(unittest.TestCase):
+
     def test_set_lr_tf(self):
-        m = fe.build(fe.architecture.tensorflow.LeNet, optimizer_fn=lambda: tf.optimizers.Adam(1e-4))
+        m = fe.build(fe.architecture.tensorflow.LeNet, optimizer_fn=lambda: tf.keras.optimizers.legacy.Adam(1e-4))
         fe.backend.set_lr(m, 2e-4)
         self.assertTrue(np.allclose(fe.backend.get_lr(model=m), 2e-4))
 
     def test_set_lr_tf_weight_decay(self):
         m = fe.build(fe.architecture.tensorflow.LeNet,
-                     optimizer_fn=lambda: tfa.optimizers.SGDW(weight_decay=1e-5, learning_rate=1e-4))
+                     optimizer_fn=lambda: tf.keras.optimizers.SGD(weight_decay=1e-5, learning_rate=1e-4))
         fe.backend.set_lr(m, 2e-4)
         self.assertTrue(np.allclose(tf.keras.backend.get_value(m.current_optimizer.weight_decay), 2e-5))
 
