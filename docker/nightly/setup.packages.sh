@@ -32,4 +32,4 @@ rm -rf /var/lib/apt/lists/*
 # Remove apt cache
 rm -rf /var/cache/apt/*
 # Remove any temporary files
-+rm -rf /tmp/* /var/tmp/*
+rm -rf /tmp/* /var/tmp/*
