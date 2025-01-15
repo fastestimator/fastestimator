@@ -27,7 +27,7 @@ pipeline {
                             steps {
                                 script {
                                     def customImage = docker.build("${IMAGE_TAG}", \
-                                                                  '--no-cache - < docker/nightly/Dockerfile.gpu')
+                                                                  '--no-cache docker/nightly < docker/nightly/Dockerfile.gpu')
                                         customImage.inside('-u root -v $LOCAL_DATASET_PATH:$DOCKER_DATASET_PATH \
                                                         --gpus all --shm-size 50g') {
                                             sh 'pip install coverage'
@@ -51,7 +51,7 @@ pipeline {
                             steps {
                                 script {
                                     def customImage = docker.build("${IMAGE_TAG}", \
-                                                                  '--no-cache - < docker/nightly/Dockerfile.gpu')
+                                                                  '--no-cache docker/nightly < docker/nightly/Dockerfile.gpu')
                                         customImage.inside('-u root -v $LOCAL_DATASET_PATH:$DOCKER_DATASET_PATH \
                                                         --gpus all --shm-size 50g') {
                                             sh 'pip install coverage'
@@ -75,7 +75,7 @@ pipeline {
                             steps {
                                 script {
                                     def customImage = docker.build("${IMAGE_TAG}", \
-                                                                '--no-cache - < docker/nightly/Dockerfile.cpu')
+                                                                '--no-cache docker/nightly < docker/nightly/Dockerfile.cpu')
                                         customImage.inside('-u root -v $LOCAL_DATASET_PATH:$DOCKER_DATASET_PATH \
                                                         --shm-size 50g') {
                                             sh 'pip install coverage'
@@ -93,7 +93,7 @@ pipeline {
             agent {label 'master'}
             steps {
                 script {
-                    def customImage = docker.build("${IMAGE_TAG}", "--no-cache . < docker/nightly/Dockerfile.cpu")
+                    def customImage = docker.build("${IMAGE_TAG}", "--no-cache docker/nightly < docker/nightly/Dockerfile.cpu")
                         customImage.inside("-u root") {
                             withCredentials([string(credentialsId: 'pypi_password', variable: 'PYPI_PWD')]) {
                                 sh '''#!/bin/bash
@@ -113,9 +113,9 @@ pipeline {
             steps {
                 withDockerRegistry(credentialsId: 'docker_hub_credentials', url:'') {
                     sh '''#!/bin/bash
-                        docker build -t fastestimator/fastestimator:nightly-cpu --no-cache - < docker/nightly/Dockerfile.cpu
+                        docker build -t fastestimator/fastestimator:nightly-cpu --no-cache docker/nightly < docker/nightly/Dockerfile.cpu
                         docker push fastestimator/fastestimator:nightly-cpu
-                        docker build -t fastestimator/fastestimator:nightly-gpu --no-cache - < docker/nightly/Dockerfile.gpu
+                        docker build -t fastestimator/fastestimator:nightly-gpu --no-cache docker/nightly < docker/nightly/Dockerfile.gpu
                         docker push fastestimator/fastestimator:nightly-gpu
                         rm -rf *
                     '''
