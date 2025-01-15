@@ -93,7 +93,7 @@ pipeline {
             agent {label 'master'}
             steps {
                 script {
-                    def customImage = docker.build("${IMAGE_TAG}", "--no-cache - < docker/nightly/Dockerfile.cpu")
+                    def customImage = docker.build("${IMAGE_TAG}", "--no-cache . < docker/nightly/Dockerfile.cpu")
                         customImage.inside("-u root") {
                             withCredentials([string(credentialsId: 'pypi_password', variable: 'PYPI_PWD')]) {
                                 sh '''#!/bin/bash
