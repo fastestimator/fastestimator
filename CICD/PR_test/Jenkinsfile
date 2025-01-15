@@ -15,7 +15,7 @@ pipeline {
         stage('PR-test') {
             steps {
                 script {
-                        customImage = docker.build("$IMAGE_TAG", "--no-cache --build-arg InstallFE=False -f Dockerfile.cpu docker/nightly")
+                        customImage = docker.build("$IMAGE_TAG", "--no-cache --build-arg InstallFE=False -f docker/nightly/Dockerfile.cpu docker/nightly")
                         customImage.inside('-u root') {
                             sh 'pip install --no-cache-dir .'
                             sh 'pip install coverage'
