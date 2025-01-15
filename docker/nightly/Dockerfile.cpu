@@ -22,9 +22,10 @@ COPY setup.packages.sh /setup.packages.sh
 COPY cpu.packages.txt /cpu.packages.txt
 
 # Set up shared custom sources
-RUN apt-get update && \
-    apt-get install -y gnupg ca-certificates wget && \
-    /setup.packages.sh /cpu.packages.txt
+RUN apt-get update
+RUN apt-get install -y gnupg ca-certificates wget
+
+RUN /setup.packages.sh /cpu.packages.txt
 
 
 ARG PYTHON_VERSION=python3.10
@@ -76,7 +77,7 @@ RUN ipython kernel install --user --name nightly_build
 RUN apt-get install -y lsof
 
 # backend dependencies
-RUN pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cpu/torch_stable.html
+RUN pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cpu
 
 # install FastEstimator
 ARG InstallFE=True
