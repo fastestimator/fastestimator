@@ -40,7 +40,7 @@ def get_dependency():
         'PyLaTeX==1.4.1',
         'natsort==8.3.1',
         'tensorflow_probability==0.22.1',
-        'transformers==4.26.1',
+        'transformers==4.38.2',
         'torchinfo==1.7.2',
         'graphviz==0.20.1',
         'torchview==0.2.6',
