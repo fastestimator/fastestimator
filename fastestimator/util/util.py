@@ -25,7 +25,17 @@ import time
 from contextlib import ContextDecorator
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, List, MutableMapping, Optional, Tuple, Type, TypeVar, Union
+from typing import (
+    Any,
+    Dict,
+    List,
+    MutableMapping,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 import numpy as np
 import tensorflow as tf
@@ -290,6 +300,7 @@ class Timer(ContextDecorator):
     func()  # T2 took 0.14819 seconds
     ```
     """
+
     def __init__(self, name="Task") -> None:
         self.name = name
         self.start = None
@@ -452,15 +463,24 @@ def get_gpu_info() -> List[str]:
         A formatted summary of the GPUs available on the machine (one list entry per GPU).
     """
     if shutil.which('nvidia-smi') is not None:
-        nvidia_command = ['nvidia-smi', '--query-gpu=gpu_name,memory.total,driver_version', '--format=csv']
-        output = subprocess.check_output(nvidia_command)
-        output = output.decode('utf-8')
-        lines = output.strip().split(os.linesep)[1:]
-        names = []
-        for line in lines:
-            name, mem, driver = line.strip().split(',')
-            names.append(f"{name.strip()} ({mem.strip()}, Driver={driver.strip()})")
-        return names
+        i = 0
+        while i < 2:
+            i += 1
+            try:
+                nvidia_command = ['nvidia-smi', '--query-gpu=gpu_name,memory.total,driver_version', '--format=csv']
+                output = subprocess.check_output(nvidia_command)
+                output = output.decode('utf-8')
+                lines = output.strip().split(os.linesep)[1:]
+                names = []
+                for line in lines:
+                    name, mem, driver = line.strip().split(',')
+                    names.append(f"{name.strip()} ({mem.strip()}, Driver={driver.strip()})")
+                return names
+            except Exception as e:
+                print(e)
+                time.sleep(3)
+                continue
+        return []
     elif torch.backends.mps.is_available():
         output = subprocess.check_output(["ioreg", "-l"])
         output = output.decode('utf-8')
