@@ -1,4 +1,4 @@
-# Copyright 2019 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ __getattr__, __dir__, __all__ = lazy.attach(__name__,
                                                           'horizontal_flip': ['HorizontalFlip'],
                                                           'longest_max_size': ['LongestMaxSize'],
                                                           'mask_dropout': ['MaskDropout'],
+                                                          'xy_masking': ['XYMasking'],
                                                           'optical_distortion': ['OpticalDistortion'],
                                                           'pad_if_needed': ['PadIfNeeded'],
                                                           'random_crop_from_borders': ['RandomCropFromBorders'],
@@ -63,6 +64,7 @@ if TYPE_CHECKING:
     from fastestimator.op.numpyop.multivariate.crop_and_pad import CropAndPad
     from fastestimator.op.numpyop.multivariate.longest_max_size import LongestMaxSize
     from fastestimator.op.numpyop.multivariate.mask_dropout import MaskDropout
+    from fastestimator.op.numpyop.multivariate.xy_masking import XYMasking
     from fastestimator.op.numpyop.multivariate.optical_distortion import OpticalDistortion
     from fastestimator.op.numpyop.multivariate.pad_if_needed import PadIfNeeded
     from fastestimator.op.numpyop.multivariate.random_crop_from_borders import RandomCropFromBorders
