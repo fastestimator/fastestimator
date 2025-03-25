@@ -81,6 +81,6 @@ RUN pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url h
 
 # install FastEstimator
 ARG InstallFE=True
-RUN if [ $InstallFE = "True" ]; then pip install git+https://github.com/fastestimator/fastestimator.git; fi
+RUN if [ $InstallFE = "True" ]; then pip install fastestimator; fi
 
 WORKDIR /
