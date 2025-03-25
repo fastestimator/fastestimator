@@ -518,7 +518,11 @@ class Traceability(Trace):
                             # Text Summary
                             # noinspection PyUnresolvedReferences
                             inputs = model.fe_input_spec.get_dummy_input()
-                            model.to(inputs.device)
+                            try:
+                                model.to(inputs.device)
+                            except Exception:
+                                file_path = None
+                                warn("Model {} could not be visualized by Traceability".format(model.model_name))
                             with Suppressor():
                                 self.doc.append(
                                     Verbatim(
