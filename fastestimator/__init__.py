@@ -50,7 +50,7 @@ if TYPE_CHECKING:
     from fastestimator.network import Network, build
     from fastestimator.pipeline import Pipeline
 
-__version__ = '1.6.0'
+__version__ = '1.7.0'
 fe_deterministic_seed = None
 fe_history_path = None  # Where to save training histories. None for ~/fastestimator_data/history.db, False to disable
 fe_build_count = 0
