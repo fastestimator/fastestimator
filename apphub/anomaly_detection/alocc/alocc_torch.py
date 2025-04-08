@@ -15,7 +15,6 @@
 import tempfile
 
 import numpy as np
-import tensorflow as tf
 import torch
 import torch.nn as nn
 from sklearn.metrics import auc, f1_score, roc_curve
@@ -23,6 +22,7 @@ from torch.nn.init import normal_
 
 import fastestimator as fe
 from fastestimator.backend import binary_crossentropy
+from fastestimator.dataset.data import mnist
 from fastestimator.op.numpyop import LambdaOp
 from fastestimator.op.numpyop.univariate import ChannelTranspose, ExpandDims, Normalize
 from fastestimator.op.tensorop import TensorOp
@@ -33,6 +33,7 @@ from fastestimator.util import to_number
 
 
 class reconstructor(nn.Module):
+
     def __init__(self):
         super().__init__()
         self.encoder = nn.Sequential(
@@ -70,11 +71,13 @@ class reconstructor(nn.Module):
 
 
 class Flatten(nn.Module):
+
     def forward(self, x):
         return x.view(x.size(0), -1)
 
 
 class discriminator(nn.Module):
+
     def __init__(self):
         super().__init__()
         self.layers = nn.Sequential(nn.Conv2d(1, 16, 5, stride=2, padding=2),
@@ -102,6 +105,7 @@ class discriminator(nn.Module):
 
 
 class RLoss(TensorOp):
+
     def __init__(self, alpha=0.2, inputs=None, outputs=None, mode=None):
         super().__init__(inputs, outputs, mode)
         self.alpha = alpha
@@ -114,6 +118,7 @@ class RLoss(TensorOp):
 
 
 class DLoss(TensorOp):
+
     def forward(self, data, state):
         true_score, fake_score = data
         real_loss = binary_crossentropy(y_pred=true_score, y_true=torch.ones_like(true_score), from_logits=True)
@@ -125,6 +130,7 @@ class DLoss(TensorOp):
 class F1AUCScores(Trace):
     """Computes F1-Score and AUC Score for a classification task and reports it back to the logger.
     """
+
     def __init__(self, true_key, pred_key, mode=("eval", "test"), output_name=("auc_score", "f1_score")):
         super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode)
         self.y_true = []
@@ -162,8 +168,9 @@ class F1AUCScores(Trace):
 
 
 def get_estimator(epochs=20, batch_size=128, train_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
-    # Dataset Creation
-    (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.mnist.load_data()
+    train_data, eval_data = mnist.load_data()
+    x_train, y_train = train_data['x'], np.array(train_data['y'])
+    x_eval, y_eval = eval_data['x'], np.array(eval_data['y'])
     x_eval0, y_eval0 = x_eval[np.where((y_eval == 1))], np.ones(y_eval[np.where((y_eval == 1))].shape)
     x_eval1, y_eval1 = x_eval[np.where((y_eval != 1))], y_eval[np.where((y_eval != 1))]
 
