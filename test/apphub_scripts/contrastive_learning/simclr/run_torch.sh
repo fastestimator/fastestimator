@@ -30,6 +30,6 @@ dir_path="$(dirname "$full_path")"
 
 source_dir="${dir_path/'test/apphub_scripts'/'apphub'}"
 stderr_file="${dir_path}/run_tf_stderr.txt"
-py_file="${source_dir}/${example_name}_tf.py"
+py_file="${source_dir}/${example_name}_torch.py"
 
 fastestimator run "$py_file" "${train_info[@]}" "$@" 2> "$stderr_file"

@@ -110,7 +110,7 @@ class FindApphubModule:
         """Check whether the framework is extension is available.
 
         Args:
-            filename (str): The location of the file.(_tf.py/_torch.py)
+            filename (str): The location of the file.(_torch.py)
 
         Returns:
             bool: True if the framework is available based on file suffix.
