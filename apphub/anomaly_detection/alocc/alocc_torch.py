@@ -33,7 +33,6 @@ from fastestimator.util import to_number
 
 
 class reconstructor(nn.Module):
-
     def __init__(self):
         super().__init__()
         self.encoder = nn.Sequential(
@@ -77,7 +76,6 @@ class Flatten(nn.Module):
 
 
 class discriminator(nn.Module):
-
     def __init__(self):
         super().__init__()
         self.layers = nn.Sequential(nn.Conv2d(1, 16, 5, stride=2, padding=2),
@@ -105,7 +103,6 @@ class discriminator(nn.Module):
 
 
 class RLoss(TensorOp):
-
     def __init__(self, alpha=0.2, inputs=None, outputs=None, mode=None):
         super().__init__(inputs, outputs, mode)
         self.alpha = alpha
@@ -118,7 +115,6 @@ class RLoss(TensorOp):
 
 
 class DLoss(TensorOp):
-
     def forward(self, data, state):
         true_score, fake_score = data
         real_loss = binary_crossentropy(y_pred=true_score, y_true=torch.ones_like(true_score), from_logits=True)
@@ -130,7 +126,6 @@ class DLoss(TensorOp):
 class F1AUCScores(Trace):
     """Computes F1-Score and AUC Score for a classification task and reports it back to the logger.
     """
-
     def __init__(self, true_key, pred_key, mode=("eval", "test"), output_name=("auc_score", "f1_score")):
         super().__init__(inputs=(true_key, pred_key), outputs=output_name, mode=mode)
         self.y_true = []
@@ -183,6 +178,12 @@ def get_estimator(epochs=20, batch_size=128, train_steps_per_epoch=None, save_di
 
     x_eval, y_eval = np.concatenate([x_eval0, x_eval1]), np.concatenate([y_eval0, y_eval1])
     eval_data = fe.dataset.NumpyDataset({"x": x_eval, "y": y_eval})
+    return train_data, eval_data
+
+
+def get_estimator(epochs=20, batch_size=128, train_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
+
+    train_data, eval_data = get_mnist_data()
 
     pipeline = fe.Pipeline(
         train_data=train_data,
