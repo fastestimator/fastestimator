@@ -18,7 +18,6 @@ from collections import deque
 from copy import deepcopy
 
 import numpy as np
-import tensorflow as tf
 import torch
 
 import fastestimator as fe
@@ -63,28 +62,15 @@ class CheckNetworkWeight(fe.trace.Trace):
         self.lrs = lrs
         self.work_intervals = work_intervals
         self.n_gpu = torch.cuda.device_count()
-        if self.framework == "tf":
-            self.previous_weights = [x.numpy() for x in model.trainable_variables]
-        else:
-            self.previous_weights = [
-                deepcopy(x).cpu().detach().numpy() for x in self.model.parameters() if x.requires_grad
-            ]
+        self.previous_weights = [
+            deepcopy(x).cpu().detach().numpy() for x in self.model.parameters() if x.requires_grad
+        ]
         self.gradients = deque(maxlen=merge_grad)
         self.new_weight = None
 
     def on_batch_end(self, data):
-        if self.framework == "tf":
-            if self.n_gpu > 1:
-                # the data[self.key] shape is self.n_gpu times large on axis 0 and need to be folded
-                gradients = [self.fold(x.numpy()) for x in data[self.grad_key]]
-            else:
-                gradients = [x.numpy() for x in data[self.grad_key]]
-
-            self.gradients.append(gradients)
-            self.new_weight = [x.numpy() for x in self.model.trainable_variables]
-        else:
-            self.gradients.append([x.cpu().detach().numpy() for x in data[self.grad_key]])
-            self.new_weight = [deepcopy(x).cpu().detach().numpy() for x in self.model.parameters() if x.requires_grad]
+        self.gradients.append([x.cpu().detach().numpy() for x in data[self.grad_key]])
+        self.new_weight = [deepcopy(x).cpu().detach().numpy() for x in self.model.parameters() if x.requires_grad]
 
         lr = self.get_lr()  # if lr is False, don't need to do the check
         if lr:
@@ -144,58 +130,6 @@ class TestUpdateOp(unittest.TestCase):
     def setUpClass(cls):
         cls.train_data, _ = mnist.load_data()
 
-    def test_tf_end_to_end(self):
-        """This test cover the all combination of:
-            - mixed-precision / not
-            - merge_grad / not
-            - gradient input / loss input
-        """
-
-        def run_test(mixed_precision, merge_grad, gradient):
-            lr = 0.1
-            pipeline = fe.Pipeline(train_data=self.train_data,
-                                   batch_size=4,
-                                   ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")])
-
-            model = fe.build(model_fn=LeNet_tf,
-                             optimizer_fn=lambda: tf.keras.optimizers.legacy.SGD(lr),
-                             mixed_precision=mixed_precision)
-            network = fe.Network(ops=[
-                ModelOp(model=model, inputs="x", outputs="y_pred"),
-                CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),
-                GradientOp(model=model, finals="ce", outputs="grad"),
-                UpdateOp(model=model, loss_name="ce", gradients=gradient, merge_grad=merge_grad),
-            ])
-
-            traces = [
-                CheckNetworkWeight(model=model,
-                                   grad_key="grad",
-                                   merge_grad=merge_grad,
-                                   test_self=self,
-                                   lrs=lr,
-                                   framework="tf")
-            ]
-            estimator = fe.Estimator(pipeline=pipeline,
-                                     network=network,
-                                     epochs=2,
-                                     traces=traces,
-                                     train_steps_per_epoch=2)
-            estimator.fit(warmup=False)
-
-        for mixed_precision in [True, False]:
-            for merge_grad in [1, 2]:
-                for gradient in ["grad", None]:
-                    with self.subTest("mixed_precision: {}, merge_grad: {}, take: {}".format(
-                            mixed_precision, merge_grad, "gradient" if gradient else "loss")):
-                        if mixed_precision and sys.platform == 'darwin':
-                            self.skipTest("Mixed Precision is not yet supported on Mac")
-                        if (mixed_precision and gradient) or (torch.cuda.device_count() > 1 and merge_grad > 1):
-                            with self.assertRaises(ValueError):
-                                run_test(mixed_precision, merge_grad, gradient)
-
-                        else:
-                            run_test(mixed_precision, merge_grad, gradient)
-
     def test_torch_end_to_end(self):
         """This test cover the all combination of:
             - mixed-precision / not
@@ -230,64 +164,6 @@ class TestUpdateOp(unittest.TestCase):
             estimator = fe.Estimator(pipeline=pipeline,
                                      network=network,
                                      epochs=2,
-                                     traces=traces,
-                                     train_steps_per_epoch=2)
-            estimator.fit(warmup=False)
-
-        for mixed_precision in [True, False]:
-            for merge_grad in [1, 2]:
-                for gradient in ["grad", None]:
-                    with self.subTest("mixed_precision: {}, merge_grad: {}, take: {}".format(
-                            mixed_precision, merge_grad, "gradient" if gradient else "loss")):
-                        if mixed_precision and sys.platform == 'darwin':
-                            self.skipTest("Mixed Precision is not yet supported on Mac")
-                        if (mixed_precision and gradient) or (torch.cuda.device_count() > 1 and merge_grad > 1):
-                            with self.assertRaises(ValueError):
-                                run_test(mixed_precision, merge_grad, gradient)
-                        else:
-                            run_test(mixed_precision, merge_grad, gradient)
-
-    def test_tf_multi_optimizer_with_epoch_scheduler(self):
-        """This test cover the all combination of:
-            - mixed-precision / not
-            - merge_grad / not
-            - gradient input / loss input
-        """
-
-        def run_test(mixed_precision, merge_grad, gradient):
-            lr = 0.1
-            lr2 = 0.01
-            lr3 = 0.001
-            pipeline = fe.Pipeline(train_data=self.train_data,
-                                   batch_size=4,
-                                   ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")])
-
-            optimizer_fn = EpochScheduler({
-                1: lambda: tf.keras.optimizers.legacy.SGD(lr),
-                2: lambda: tf.keras.optimizers.legacy.SGD(lr2),
-                3: lambda: tf.keras.optimizers.legacy.SGD(lr3)
-            })
-
-            model = fe.build(model_fn=LeNet_tf, optimizer_fn=optimizer_fn, mixed_precision=mixed_precision)
-            network = fe.Network(ops=[
-                ModelOp(model=model, inputs="x", outputs="y_pred"),
-                CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),
-                GradientOp(model=model, finals="ce", outputs="grad"),
-                UpdateOp(model=model, loss_name="ce", gradients=gradient, merge_grad=merge_grad),
-            ])
-
-            traces = [
-                CheckNetworkWeight(model=model,
-                                   grad_key="grad",
-                                   merge_grad=merge_grad,
-                                   test_self=self,
-                                   framework="tf",
-                                   lrs=[lr, lr2, lr3],
-                                   work_intervals=[[1, 2], [2, 3], [3, 4]])
-            ]
-            estimator = fe.Estimator(pipeline=pipeline,
-                                     network=network,
-                                     epochs=3,
                                      traces=traces,
                                      train_steps_per_epoch=2)
             estimator.fit(warmup=False)
@@ -346,60 +222,6 @@ class TestUpdateOp(unittest.TestCase):
             estimator = fe.Estimator(pipeline=pipeline,
                                      network=network,
                                      epochs=3,
-                                     traces=traces,
-                                     train_steps_per_epoch=2)
-            estimator.fit(warmup=False)
-
-        for mixed_precision in [True, False]:
-            for merge_grad in [1, 2]:
-                for gradient in ["grad", None]:
-                    with self.subTest("mixed_precision: {}, merge_grad: {}, take: {}".format(
-                            mixed_precision, merge_grad, "gradient" if gradient else "loss")):
-                        if mixed_precision and sys.platform == 'darwin':
-                            self.skipTest("Mixed Precision is not yet supported on Mac")
-                        if (mixed_precision and gradient) or (torch.cuda.device_count() > 1 and merge_grad > 1):
-                            with self.assertRaises(ValueError):
-                                run_test(mixed_precision, merge_grad, gradient)
-                        else:
-                            run_test(mixed_precision, merge_grad, gradient)
-
-    def test_tf_multi_optimizer_with_repeat_scheduler(self):
-        """This test cover the all combination of:
-            - mixed-precision / not
-            - merge_grad / not
-            - gradient input / loss input
-        """
-
-        def run_test(mixed_precision, merge_grad, gradient):
-            lr = 0.1
-            lr2 = 0.01
-            pipeline = fe.Pipeline(train_data=self.train_data,
-                                   batch_size=4,
-                                   ops=[ExpandDims(inputs="x", outputs="x"), Minmax(inputs="x", outputs="x")])
-
-            optimizer_fn = RepeatScheduler(
-                [lambda: tf.keras.optimizers.legacy.SGD(lr), lambda: tf.keras.optimizers.legacy.SGD(lr2)])
-
-            model = fe.build(model_fn=LeNet_tf, optimizer_fn=optimizer_fn, mixed_precision=mixed_precision)
-            network = fe.Network(ops=[
-                ModelOp(model=model, inputs="x", outputs="y_pred"),
-                CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),
-                GradientOp(model=model, finals="ce", outputs="grad"),
-                UpdateOp(model=model, loss_name="ce", gradients=gradient, merge_grad=merge_grad),
-            ])
-
-            traces = [
-                CheckNetworkWeight(model=model,
-                                   grad_key="grad",
-                                   merge_grad=merge_grad,
-                                   test_self=self,
-                                   framework="tf",
-                                   lrs=[lr, lr2, lr, lr2],
-                                   work_intervals=[[1, 2], [2, 3], [3, 4], [4, 5]])
-            ]
-            estimator = fe.Estimator(pipeline=pipeline,
-                                     network=network,
-                                     epochs=4,
                                      traces=traces,
                                      train_steps_per_epoch=2)
             estimator.fit(warmup=False)

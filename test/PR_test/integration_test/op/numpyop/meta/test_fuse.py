@@ -1,7 +1,7 @@
 import tempfile
 import unittest
 
-import tensorflow as tf
+import torch
 
 import fastestimator as fe
 from fastestimator.op.numpyop import Delete, NumpyOp
@@ -17,35 +17,7 @@ class TestNumpyOp(NumpyOp):
 class TestFuse(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tf_data = tf.constant([[1., 2., 4.], [1., 2., 6.]])
-
-    def test_save_and_load_state_tf(self):
-        def instantiate_system():
-            system = sample_system_object()
-            system.pipeline.ops = [
-                fe.op.numpyop.meta.Fuse(ops=[
-                    TestNumpyOp(inputs="x", outputs="x", mode="train", var=1),
-                    TestNumpyOp(inputs="x", outputs="x", mode="train", var=1),
-                ])
-            ]
-            return system
-
-        system = instantiate_system()
-
-        # make some changes
-        new_var = 2
-        system.pipeline.ops[0].ops[0].var = new_var
-
-        # save the state
-        save_path = tempfile.mkdtemp()
-        system.save_state(save_path)
-
-        # reinstantiate system and load the state
-        system = instantiate_system()
-        system.load_state(save_path)
-        loaded_var = system.pipeline.ops[0].ops[0].var
-
-        self.assertEqual(loaded_var, new_var)
+        cls.tf_data = torch.tensor([[1., 2., 4.], [1., 2., 6.]])
 
     def test_delete_op(self):
         ops = fe.op.numpyop.meta.Fuse(
