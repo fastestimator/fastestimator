@@ -14,16 +14,12 @@
 # ==============================================================================
 from typing import Any, Dict, List, Optional, Set, TypeVar, Union
 
-import tensorflow as tf
 import torch
 
 from fastestimator.network import BaseNetwork
 from fastestimator.op.tensorop.tensorop import TensorOp
-from fastestimator.util.traceability_util import traceable
 from fastestimator.util.base_util import to_list
-
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
-Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
+from fastestimator.util.traceability_util import traceable
 
 
 @traceable()
@@ -37,6 +33,7 @@ class Fuse(TensorOp):
     Raises:
         ValueError: If `ops` are invalid.
     """
+
     def __init__(self, ops: Union[TensorOp, List[TensorOp]]) -> None:
         ops = to_list(ops)
         if len(ops) < 1:
@@ -70,7 +67,7 @@ class Fuse(TensorOp):
         for op in self.ops:
             op.build(framework, device)
 
-    def get_fe_models(self) -> Set[Model]:
+    def get_fe_models(self) -> Set[torch.nn.Module]:
         return self.models
 
     def get_fe_loss_keys(self) -> Set[str]:
@@ -82,7 +79,7 @@ class Fuse(TensorOp):
     def __getstate__(self) -> Dict[str, List[Dict[Any, Any]]]:
         return {'ops': [elem.__getstate__() if hasattr(elem, '__getstate__') else {} for elem in self.ops]}
 
-    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
+    def forward(self, data: List[torch.Tensor], state: Dict[str, Any]) -> List[torch.Tensor]:
         data = {key: elem for key, elem in zip(self.inputs, data)}
         BaseNetwork._forward_batch(data, state, self.ops)
         return [data[key] for key in self.outputs]

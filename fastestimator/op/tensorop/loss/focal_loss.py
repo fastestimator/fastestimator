@@ -12,16 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Iterable, List, Tuple, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Tuple, Union
 
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._focal_loss import focal_loss
 from fastestimator.op.tensorop.loss.loss import LossOp
 from fastestimator.util.traceability_util import traceable
-
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 @traceable()
@@ -53,6 +50,7 @@ class FocalLoss(LossOp):
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an
             argument like "!infer" or "!train".
     """
+
     def __init__(self,
                  inputs: Union[Tuple[str, str], List[str]],
                  outputs: str,
@@ -71,7 +69,7 @@ class FocalLoss(LossOp):
         self.from_logits = from_logits
         self.normalize = normalize
 
-    def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> Tensor:
+    def forward(self, data: Union[torch.Tensor, List[torch.Tensor]], state: Dict[str, Any]) -> torch.Tensor:
         y_pred, y_true = data
         return focal_loss(y_true,
                           y_pred,

@@ -14,20 +14,16 @@
 # ==============================================================================
 from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 
-import tensorflow as tf
-import tensorflow_probability as tfp
 import torch
 
 from fastestimator.backend._cast import cast
 from fastestimator.backend._clip_by_value import clip_by_value
-from fastestimator.backend._roll import roll
 from fastestimator.backend._get_image_dims import get_image_dims
 from fastestimator.backend._maximum import maximum
+from fastestimator.backend._roll import roll
 from fastestimator.backend._tensor_round import tensor_round
 from fastestimator.backend._tensor_sqrt import tensor_sqrt
 from fastestimator.op.tensorop.tensorop import TensorOp
-
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 class CutMixBatch(TensorOp):
@@ -52,12 +48,13 @@ class CutMixBatch(TensorOp):
     Raises:
         AssertionError: If the provided inputs are invalid.
     """
+
     def __init__(self,
                  inputs: Iterable[str],
                  outputs: Iterable[str],
                  mode: Union[None, str, Iterable[str]] = 'train',
                  ds_id: Union[None, str, Iterable[str]] = None,
-                 alpha: Union[float, Tensor] = 1.0) -> None:
+                 alpha: Union[float, torch.Tensor] = 1.0) -> None:
         assert alpha > 0, "Alpha value must be greater than zero"
         assert len(inputs) == 2, "Cut-Mix must have exactly 2 inputs"
         assert len(outputs) == 2, "Cut-Mix must have exactly 2 outputs"
@@ -67,18 +64,16 @@ class CutMixBatch(TensorOp):
         self.uniform = None
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
-        if framework == 'tf':
-            self.beta = tfp.distributions.Beta(self.alpha, self.alpha)
-            self.uniform = tfp.distributions.Uniform()
-        elif framework == 'torch':
+        if framework == 'torch':
             self.beta = torch.distributions.beta.Beta(self.alpha, self.alpha)
             self.uniform = torch.distributions.uniform.Uniform(low=0, high=1)
         else:
             raise ValueError("unrecognized framework: {}".format(framework))
 
     @staticmethod
-    def _get_patch_coordinates(tensor: Tensor, x: Tensor, y: Tensor,
-                               lam: Tensor) -> Tuple[Tensor, Tensor, Tensor, Tensor, Tensor, Tensor]:
+    def _get_patch_coordinates(
+            tensor: torch.Tensor, x: torch.Tensor, y: torch.Tensor, lam: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """Randomly cut the patches from input images.
 
         If patches are going to be pasted in other image, combination ratio between two images is defined by `lam`.
@@ -99,12 +94,8 @@ class CutMixBatch(TensorOp):
         """
         _, img_height, img_width = get_image_dims(tensor)
 
-        if tf.is_tensor(tensor):
-            ht = cast(img_height, "float32")
-            wd = cast(img_width, "float32")
-        else:
-            ht = img_height
-            wd = img_width
+        ht = img_height
+        wd = img_width
 
         cut_x = wd * x
         cut_y = ht * y
@@ -123,16 +114,8 @@ class CutMixBatch(TensorOp):
         cut_x = self.uniform.sample()
         cut_y = self.uniform.sample()
         bbox_x1, bbox_x2, bbox_y1, bbox_y2, width, height = self._get_patch_coordinates(x, cut_x, cut_y, lam=lam)
-        if tf.is_tensor(x):
-            rolled_x = roll(x, shift=1, axis=0)
-            patches = rolled_x[:, bbox_y1:bbox_y2, bbox_x1:bbox_x2, :] - x[:, bbox_y1:bbox_y2, bbox_x1:bbox_x2, :]
-            patches = tf.pad(patches, [[0, 0], [bbox_y1, height - bbox_y2], [bbox_x1, width - bbox_x2], [0, 0]],
-                             mode="CONSTANT",
-                             constant_values=0)
-            x = x + patches
-        else:
-            rolled_x = roll(x, shift=1, axis=0)
-            x[:, :, bbox_y1:bbox_y2, bbox_x1:bbox_x2] = rolled_x[:, :, bbox_y1:bbox_y2, bbox_x1:bbox_x2]
+        rolled_x = roll(x, shift=1, axis=0)
+        x[:, :, bbox_y1:bbox_y2, bbox_x1:bbox_x2] = rolled_x[:, :, bbox_y1:bbox_y2, bbox_x1:bbox_x2]
         # adjust lambda to match pixel ratio
         lam = 1 - cast(((bbox_x2 - bbox_x1) * (bbox_y2 - bbox_y1)), dtype=y) / cast((width * height), dtype=y)
         rolled_y = roll(y, shift=1, axis=0) * (1. - lam)

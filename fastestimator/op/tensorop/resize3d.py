@@ -14,15 +14,12 @@
 # ==============================================================================
 from typing import Any, Dict, Iterable, List, Sequence, TypeVar, Union
 
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._resize3d import resize_3d
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.base_util import to_list
 from fastestimator.util.traceability_util import traceable
-
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 @traceable()
@@ -43,6 +40,7 @@ class Resize3D(TensorOp):
             ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
                 ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
@@ -58,5 +56,5 @@ class Resize3D(TensorOp):
         self.output_shape = output_shape
         self.resize_mode = resize_mode
 
-    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
+    def forward(self, data: List[torch.Tensor], state: Dict[str, Any]) -> Union[torch.Tensor, List[torch.Tensor]]:
         return [resize_3d(elem, self.output_shape, self.resize_mode) for elem in data]

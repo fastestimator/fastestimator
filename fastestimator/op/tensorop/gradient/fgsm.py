@@ -14,7 +14,6 @@
 # ==============================================================================
 from typing import Any, Dict, Iterable, List, Optional, TypeVar, Union
 
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._clip_by_value import clip_by_value
@@ -67,9 +66,9 @@ class FGSM(TensorOp):
             self.retain_graph = retain
         return self.retain_graph
 
-    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
+    def forward(self, data: List[torch.Tensor], state: Dict[str, Any]) -> torch.Tensor:
         data, loss = data
-        grad = get_gradient(target=loss, sources=data, tape=state['tape'], retain_graph=self.retain_graph)
+        grad = get_gradient(target=loss, sources=data, retain_graph=self.retain_graph)
         adverse_data = clip_by_value(data + self.epsilon * sign(grad),
                                      min_value=self.clip_low or reduce_min(data),
                                      max_value=self.clip_high or reduce_max(data))
