@@ -24,6 +24,8 @@ from fastestimator.types import FilteredData
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import pad_batch
 
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
+
 
 @traceable()
 class NumpyOp(Op):
@@ -223,8 +225,8 @@ class LambdaOp(NumpyOp):
     def forward(self, data: List[np.ndarray], state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
         return self.fn(*data)
 
-    def forward_batch(self, data: Union[torch.Tensor, List[torch.Tensor]],
-                      state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
+    def forward_batch(self, data: Union[Tensor, List[Tensor]], state: Dict[str,
+                                                                           Any]) -> Union[np.ndarray, List[np.ndarray]]:
         return self.forward(data, state)
 
 
@@ -265,8 +267,7 @@ class RemoveIf(NumpyOp):
             return FilteredData(replacement=self.replacement)
         return None
 
-    def forward_batch(self, data: Union[torch.Tensor, List[torch.Tensor]], state: Dict[str,
-                                                                                       Any]) -> Optional[FilteredData]:
+    def forward_batch(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> Optional[FilteredData]:
         return self.forward(data, state)
 
 

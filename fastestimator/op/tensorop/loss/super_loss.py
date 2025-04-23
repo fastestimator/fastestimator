@@ -78,31 +78,28 @@ class SuperLoss(LossOp):
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
         self.loss.build(framework, device)
-        if framework == 'torch':
-            self.initialized = {
-                'train': torch.tensor(False).to(device),
-                'eval': torch.tensor(False).to(device),
-                'test': torch.tensor(False).to(device),
-                'infer': torch.tensor(False).to(device)
+        self.initialized = {
+            'train': torch.tensor(False).to(device),
+            'eval': torch.tensor(False).to(device),
+            'test': torch.tensor(False).to(device),
+            'infer': torch.tensor(False).to(device)
+        }
+        if self.tau_method == 'exp':
+            self.tau = {
+                'train': torch.tensor(0.0).to(device),
+                'eval': torch.tensor(0.0).to(device),
+                'test': torch.tensor(0.0).to(device),
+                'infer': torch.tensor(0.0).to(device)
             }
-            if self.tau_method == 'exp':
-                self.tau = {
-                    'train': torch.tensor(0.0).to(device),
-                    'eval': torch.tensor(0.0).to(device),
-                    'test': torch.tensor(0.0).to(device),
-                    'infer': torch.tensor(0.0).to(device)
-                }
-            else:
-                self.tau = {
-                    'train': torch.tensor(self.tau_method).to(device),
-                    'eval': torch.tensor(self.tau_method).to(device),
-                    'test': torch.tensor(self.tau_method).to(device),
-                    'infer': torch.tensor(self.tau_method).to(device)
-                }
-            self.cap = torch.tensor(self.cap).to(device)
-            self.lam = torch.tensor(self.lam).to(device)
         else:
-            raise ValueError("unrecognized framework: {}".format(framework))
+            self.tau = {
+                'train': torch.tensor(self.tau_method).to(device),
+                'eval': torch.tensor(self.tau_method).to(device),
+                'test': torch.tensor(self.tau_method).to(device),
+                'infer': torch.tensor(self.tau_method).to(device)
+            }
+        self.cap = torch.tensor(self.cap).to(device)
+        self.lam = torch.tensor(self.lam).to(device)
 
     def forward(self, data: List[torch.Tensor], state: Dict[str, Any]) -> Union[torch.Tensor, List[torch.Tensor]]:
         base_loss = self.loss.forward(data, state)

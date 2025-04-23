@@ -74,9 +74,8 @@ class UnHadamard(TensorOp):
             np.array((self.code_length + 1) * math.pow((1.0 - max_prob) / (max_prob * (self.n_classes - 1)), 1 / power),
                      dtype=np.float32),
             target_type=framework)
-        if framework == "torch":
-            self.labels = self.labels.to(device)
-            self.eps = self.eps.to(device)
+        self.labels = self.labels.to(device)
+        self.eps = self.eps.to(device)
 
     def forward(self, data: List[torch.Tensor], state: Dict[str, Any]) -> List[torch.Tensor]:
         results = []

@@ -24,8 +24,6 @@ from fastestimator.backend._sign import sign
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
-
 
 @traceable()
 class FGSM(TensorOp):

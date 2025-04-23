@@ -14,7 +14,7 @@
 # ==============================================================================
 import functools
 import inspect
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Union
 
 import torch
 
@@ -22,8 +22,6 @@ from fastestimator.network import BaseNetwork
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
-Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
 
 @traceable()
@@ -94,7 +92,7 @@ class Repeat(TensorOp):
         self.op.build(framework, device)
         self.while_fn = self._torch_while
 
-    def get_fe_models(self) -> Set[Model]:
+    def get_fe_models(self) -> Set[torch.nn.Module]:
         return self.op.get_fe_models()
 
     def get_fe_loss_keys(self) -> Set[str]:
@@ -108,7 +106,7 @@ class Repeat(TensorOp):
     def __getstate__(self) -> Dict[str, List[Dict[Any, Any]]]:
         return {'ops': [elem.__getstate__() if hasattr(elem, '__getstate__') else {} for elem in self.ops]}
 
-    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
+    def forward(self, data: List[torch.Tensor], state: Dict[str, Any]) -> List[torch.Tensor]:
         # Set retain to true since might loop over a gradient aware op
         self.op.fe_retain_graph(True)
 

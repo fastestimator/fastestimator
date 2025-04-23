@@ -52,10 +52,7 @@ class Sometimes(TensorOp):
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
         self.op.build(framework, device)
-        if framework == 'torch':
-            self.prob_fn = torch.distributions.uniform.Uniform(low=0, high=1)
-        else:
-            raise ValueError("unrecognized framework: {}".format(framework))
+        self.prob_fn = torch.distributions.uniform.Uniform(low=0, high=1)
 
     def get_fe_loss_keys(self) -> Set[str]:
         return self.op.get_fe_loss_keys()

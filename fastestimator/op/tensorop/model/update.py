@@ -51,7 +51,7 @@ class UpdateOp(TensorOp):
 
     Raise:
         ValueError: When model is mixed-precision and `gradients` is provided.
-        ValueError: Network framework is not one of "tf" or "torch".
+        ValueError: Network framework is not "torch".
         ValueError: `merge_grad` is larger than 1 in multi-GPU configuration.
         RuntimeError: If attempting to modify a PyTorch model which relied on gradients within a different PyTorch model
             which has in turn already undergone a non-deferred update.

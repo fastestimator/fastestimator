@@ -17,19 +17,19 @@ class TestNumpyOp(NumpyOp):
 class TestFuse(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tf_data = torch.tensor([[1., 2., 4.], [1., 2., 6.]])
+        cls.torch_data = torch.tensor([[1., 2., 4.], [1., 2., 6.]])
 
     def test_delete_op(self):
         ops = fe.op.numpyop.meta.Fuse(
             ops=[TestNumpyOp(inputs='x', outputs=['x'], mode="train", var=1), Delete(keys='x', mode='train')])
-        _ = ops.forward(data=[self.tf_data], state={})
+        _ = ops.forward(data=[self.torch_data], state={})
         self.assertEqual(ops.inputs, ['x'])
         self.assertEqual(ops.outputs, [])
 
     def test_delete_multi_outputs(self):
         ops = fe.op.numpyop.meta.Fuse(
             ops=[TestNumpyOp(inputs='x', outputs=['x', 'y'], mode="train", var=1), Delete(keys='y', mode='train')])
-        _ = ops.forward(data=[self.tf_data], state={})
+        _ = ops.forward(data=[self.torch_data], state={})
         self.assertEqual(ops.inputs, ['x'])
         self.assertEqual(ops.outputs, ['x'])
 

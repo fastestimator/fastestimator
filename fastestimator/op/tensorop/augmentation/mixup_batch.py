@@ -22,8 +22,6 @@ from fastestimator.backend._reshape import reshape
 from fastestimator.backend._roll import roll
 from fastestimator.op.tensorop.tensorop import TensorOp
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
-
 
 class MixUpBatch(TensorOp):
     """MixUp augmentation for tensors.
@@ -60,11 +58,8 @@ class MixUpBatch(TensorOp):
         self.shared_beta = shared_beta
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
-        if framework == 'torch':
-            self.beta = torch.distributions.beta.Beta(
-                torch.tensor([self.alpha]).to(device), torch.tensor([self.alpha]).to(device))
-        else:
-            raise ValueError("unrecognized framework: {}".format(framework))
+        self.beta = torch.distributions.beta.Beta(
+            torch.tensor([self.alpha]).to(device), torch.tensor([self.alpha]).to(device))
 
     def forward(self, data: List[torch.Tensor], state: Dict[str, Any]) -> Tuple[torch.Tensor, torch.Tensor]:
         x, y = data

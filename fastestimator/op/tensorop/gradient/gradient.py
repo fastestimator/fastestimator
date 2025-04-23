@@ -14,7 +14,6 @@
 # ==============================================================================
 from typing import Any, Dict, Iterable, List, Optional, TypeVar, Union
 
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._get_gradient import get_gradient
@@ -79,14 +78,10 @@ class GradientOp(TensorOp):
                 results.append(get_gradient(final, initial, tape=state['tape'], retain_graph=retain_graph))
         else:
             finals = data
-            if self.framework == "torch":
-                trainable_params = [p for p in self.model.parameters() if p.requires_grad]
-                for idx, final in enumerate(finals):
-                    # get_gradient
-                    retain_graph = self.retain_graph or not idx == len(finals) - 1
-                    gradient = get_gradient(final, trainable_params, retain_graph=retain_graph)
-                    results.append(gradient)
-            else:
-                raise ValueError(f"Unrecognized framework {self.framework}")
-
+            trainable_params = [p for p in self.model.parameters() if p.requires_grad]
+            for idx, final in enumerate(finals):
+                # get_gradient
+                retain_graph = self.retain_graph or not idx == len(finals) - 1
+                gradient = get_gradient(final, trainable_params, retain_graph=retain_graph)
+                results.append(gradient)
         return results

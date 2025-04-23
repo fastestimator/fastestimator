@@ -64,11 +64,8 @@ class CutMixBatch(TensorOp):
         self.uniform = None
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
-        if framework == 'torch':
-            self.beta = torch.distributions.beta.Beta(self.alpha, self.alpha)
-            self.uniform = torch.distributions.uniform.Uniform(low=0, high=1)
-        else:
-            raise ValueError("unrecognized framework: {}".format(framework))
+        self.beta = torch.distributions.beta.Beta(self.alpha, self.alpha)
+        self.uniform = torch.distributions.uniform.Uniform(low=0, high=1)
 
     @staticmethod
     def _get_patch_coordinates(
