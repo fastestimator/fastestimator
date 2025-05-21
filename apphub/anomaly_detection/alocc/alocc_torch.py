@@ -162,7 +162,7 @@ class F1AUCScores(Trace):
         data.write_with_log(self.outputs[1], f_score)
 
 
-def get_estimator(epochs=20, batch_size=128, train_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
+def get_mnist_data(epochs=20, batch_size=128, train_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
     train_data, eval_data = mnist.load_data()
     x_train, y_train = train_data['x'], np.array(train_data['y'])
     x_eval, y_eval = eval_data['x'], np.array(eval_data['y'])
