@@ -12,16 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Iterable, List, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Union
 
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._l2_regularization import l2_regularization
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
-
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 @traceable()
@@ -34,20 +31,21 @@ class L2Regularizaton(TensorOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        model: A tensorflow or pytorch model
+        model: A pytorch model
         beta: The multiplicative factor, to weight the l2 regularization loss with the input loss
     """
+
     def __init__(self,
                  inputs: str,
                  outputs: str,
-                 model: Union[tf.keras.Model, torch.nn.Module],
+                 model: torch.nn.Module,
                  mode: Union[None, str, Iterable[str]] = None,
                  beta: float = 0.01):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.model = model
         self.beta = beta
 
-    def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> Tensor:
+    def forward(self, data: Union[torch.Tensor, List[torch.Tensor]], state: Dict[str, Any]) -> torch.Tensor:
         loss = data
         total_loss = l2_regularization(self.model, self.beta) + loss
         return total_loss

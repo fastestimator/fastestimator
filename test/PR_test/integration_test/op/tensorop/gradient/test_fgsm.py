@@ -15,7 +15,6 @@
 import unittest
 
 import numpy as np
-import tensorflow as tf
 import torch
 
 from fastestimator.op.tensorop.gradient import FGSM
@@ -23,28 +22,11 @@ from fastestimator.test.unittest_util import is_equal
 
 
 class TestFGSM(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
-        cls.tf_data = tf.Variable([1.0, 2.0, 4.0])
-        cls.tf_output = tf.constant([1.01, 2.01, 4])
         cls.torch_data = torch.tensor([1.0, 2.0, 4.0], requires_grad=True)
         cls.torch_output = torch.tensor([1.01, 2.01, 4])
-
-    def test_tf_input(self):
-        def run_single(tf_data, fgsm):
-            with tf.GradientTape(persistent=True) as tape:
-                x = tf_data * tf_data
-                output = fgsm.forward(data=[tf_data, x], state={'tape': tape})
-            return output
-
-        fgsm = FGSM(data='x', loss='loss', outputs='y')
-        strategy = tf.distribute.get_strategy()
-        if isinstance(strategy, tf.distribute.MirroredStrategy):
-            output = strategy.run(run_single, args=(self.tf_data, fgsm))
-            output = output.values[0]
-        else:
-            output = run_single(self.tf_data, fgsm)
-        self.assertTrue(np.array_equal(output, self.tf_output))
 
     def test_torch_input(self):
         fgsm = FGSM(data='x', loss='loss', outputs='y')

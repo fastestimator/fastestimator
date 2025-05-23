@@ -14,15 +14,10 @@
 # ==============================================================================
 from typing import Any, Dict, List, Optional, Set, TypeVar
 
-import tensorflow as tf
-import tensorflow_probability as tfp
 import torch
 
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
-
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
-Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
 
 @traceable()
@@ -38,6 +33,7 @@ class Sometimes(TensorOp):
         tensor_op: The operator to be performed.
         prob: The probability of execution, which should be in the range: [0-1).
     """
+
     def __init__(self, tensor_op: TensorOp, prob: float = 0.5) -> None:
         # We're going to try to collect any missing output keys from the data dictionary so that they don't get
         # overridden when Sometimes chooses not to execute.
@@ -56,17 +52,12 @@ class Sometimes(TensorOp):
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
         self.op.build(framework, device)
-        if framework == 'tf':
-            self.prob_fn = tfp.distributions.Uniform()
-        elif framework == 'torch':
-            self.prob_fn = torch.distributions.uniform.Uniform(low=0, high=1)
-        else:
-            raise ValueError("unrecognized framework: {}".format(framework))
+        self.prob_fn = torch.distributions.uniform.Uniform(low=0, high=1)
 
     def get_fe_loss_keys(self) -> Set[str]:
         return self.op.get_fe_loss_keys()
 
-    def get_fe_models(self) -> Set[Model]:
+    def get_fe_models(self) -> Set[torch.nn.Module]:
         return self.op.get_fe_models()
 
     def fe_retain_graph(self, retain: Optional[bool] = None) -> Optional[bool]:
@@ -75,7 +66,7 @@ class Sometimes(TensorOp):
     def __getstate__(self) -> Dict[str, Dict[Any, Any]]:
         return {'op': self.op.__getstate__() if hasattr(self.op, '__getstate__') else {}}
 
-    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
+    def forward(self, data: List[torch.Tensor], state: Dict[str, Any]) -> List[torch.Tensor]:
         """Execute the wrapped operator a certain fraction of the time.
 
         Args:

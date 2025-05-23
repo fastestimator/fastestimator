@@ -14,7 +14,6 @@
 # ==============================================================================
 from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._binary_crossentropy import binary_crossentropy
@@ -22,8 +21,6 @@ from fastestimator.backend._categorical_crossentropy import categorical_crossent
 from fastestimator.backend._sparse_categorical_crossentropy import sparse_categorical_crossentropy
 from fastestimator.op.tensorop.loss.loss import LossOp
 from fastestimator.util.traceability_util import traceable
-
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
 
 
 @traceable()
@@ -50,6 +47,7 @@ class CrossEntropy(LossOp):
     Raises:
         AssertionError: If `class_weights` or it's keys and values are of unacceptable data types.
     """
+
     def __init__(self,
                  inputs: Union[Tuple[str, str], List[str]],
                  outputs: str,
@@ -81,17 +79,9 @@ class CrossEntropy(LossOp):
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
         if self.class_weights:
-            if framework == 'tf':
-                keys_tensor = tf.constant(list(self.class_weights.keys()))
-                vals_tensor = tf.constant(list(self.class_weights.values()))
-                self.class_dict = tf.lookup.StaticHashTable(
-                    tf.lookup.KeyValueTensorInitializer(keys_tensor, vals_tensor), default_value=1.0)
-            elif framework == 'torch':
-                self.class_dict = self.class_weights
-            else:
-                raise ValueError("unrecognized framework: {}".format(framework))
+            self.class_dict = self.class_weights
 
-    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
+    def forward(self, data: List[torch.Tensor], state: Dict[str, Any]) -> torch.Tensor:
         y_pred, y_true = data
         form = self.form
         if form is None:

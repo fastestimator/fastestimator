@@ -14,15 +14,12 @@
 # ==============================================================================
 from typing import Any, Dict, Iterable, List, Optional, TypeVar, Union
 
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._get_gradient import get_gradient
 from fastestimator.op.tensorop.tensorop import TensorOp
-from fastestimator.util.traceability_util import traceable
 from fastestimator.util.base_util import to_list
-
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+from fastestimator.util.traceability_util import traceable
 
 
 @traceable()
@@ -40,11 +37,12 @@ class GradientOp(TensorOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  finals: Union[str, List[str]],
                  outputs: Union[str, List[str]],
                  inputs: Union[None, str, List[str]] = None,
-                 model: Union[None, tf.keras.Model, torch.nn.Module] = None,
+                 model: Union[None, torch.nn.Module] = None,
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None):
         inputs = to_list(inputs)
@@ -55,7 +53,7 @@ class GradientOp(TensorOp):
             assert len(inputs) == len(finals) == len(outputs), \
                 "GradientOp requires the same number of inputs, finals, and outputs"
         else:
-            assert isinstance(model, (tf.keras.Model, torch.nn.Module)), "Unrecognized model format"
+            assert isinstance(model, torch.nn.Module), "Unrecognized model format"
             assert len(finals) == len(outputs), "GradientOp requires the same number of finals, and outputs"
         inputs.extend(finals)
         super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
@@ -70,7 +68,7 @@ class GradientOp(TensorOp):
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
         self.framework = framework
 
-    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
+    def forward(self, data: List[torch.Tensor], state: Dict[str, Any]) -> List[torch.Tensor]:
         results = []
         if self.model is None:
             initials = data[:len(data) // 2]
@@ -80,19 +78,10 @@ class GradientOp(TensorOp):
                 results.append(get_gradient(final, initial, tape=state['tape'], retain_graph=retain_graph))
         else:
             finals = data
-            if self.framework == "tf":
-                trainable_params = self.model.trainable_variables
-                for idx, final in enumerate(finals):
-                    gradient = get_gradient(final, trainable_params, tape=state['tape'])
-                    results.append(gradient)
-            elif self.framework == "torch":
-                trainable_params = [p for p in self.model.parameters() if p.requires_grad]
-                for idx, final in enumerate(finals):
-                    # get_gradient
-                    retain_graph = self.retain_graph or not idx == len(finals) - 1
-                    gradient = get_gradient(final, trainable_params, retain_graph=retain_graph)
-                    results.append(gradient)
-            else:
-                raise ValueError(f"Unrecognized framework {self.framework}")
-
+            trainable_params = [p for p in self.model.parameters() if p.requires_grad]
+            for idx, final in enumerate(finals):
+                # get_gradient
+                retain_graph = self.retain_graph or not idx == len(finals) - 1
+                gradient = get_gradient(final, trainable_params, retain_graph=retain_graph)
+                results.append(gradient)
         return results

@@ -14,14 +14,10 @@
 # ==============================================================================
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Set, TypeVar, Union
 
-import tensorflow as tf
 import torch
 
 from fastestimator.op.op import Op
 from fastestimator.util.traceability_util import traceable
-
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
-Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 
 
 @traceable()
@@ -30,7 +26,9 @@ class TensorOp(Op):
 
     These Operators are used in fe.Network to perform graph-based operations like neural network training.
     """
-    def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
+
+    def forward(self, data: Union[torch.Tensor, List[torch.Tensor]],
+                state: Dict[str, Any]) -> Union[torch.Tensor, List[torch.Tensor]]:
         """A method which will be invoked in order to transform data.
 
         This method will be invoked on batches of data.
@@ -63,7 +61,7 @@ class TensorOp(Op):
     # ###########################################################################
 
     # noinspection PyMethodMayBeStatic
-    def get_fe_models(self) -> Set[Model]:
+    def get_fe_models(self) -> Set[torch.nn.Module]:
         """A method to get any models held by this Op.
 
         All users and most developers can safely ignore this method. This method may be invoked to gather and manipulate
@@ -119,6 +117,7 @@ class LambdaOp(TensorOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  fn: Callable,
                  inputs: Union[None, str, Iterable[str]] = None,
@@ -129,7 +128,7 @@ class LambdaOp(TensorOp):
         self.fn = fn
         self.in_list = True
 
-    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
+    def forward(self, data: List[torch.Tensor], state: Dict[str, Any]) -> Union[torch.Tensor, List[torch.Tensor]]:
         return self.fn(*data)
 
 
@@ -147,11 +146,12 @@ class Delete(TensorOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  keys: Union[str, Sequence[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None) -> None:
         super().__init__(inputs=keys, mode=mode, ds_id=ds_id)
 
-    def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> None:
+    def forward(self, data: Union[torch.Tensor, List[torch.Tensor]], state: Dict[str, Any]) -> None:
         pass
