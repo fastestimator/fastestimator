@@ -20,23 +20,23 @@ FastEstimator comes with a set of CLI commands that can help users train and tes
 
 <a id='t10usage'></a>
 ## CLI Usage
-In this section we will show the actual commands that we can use to train and test our models. We will use [mnist_tf.py](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/mnist/mnist_tf.py) for illustration.
+In this section we will show the actual commands that we can use to train and test our models. We will use [mnist_torch.py](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/mnist/mnist_torch.py) for illustration.
 
 To call `estimator.fit()` and start the training on terminal:
 
 ``` bash
-$ fastestimator train mnist_tf.py
+$ fastestimator train mnist_torch.py
 ```
 
 To call `estimator.test()` and start testing on terminal:
 
 ``` bash
-$ fastestimator test mnist_tf.py
+$ fastestimator test mnist_torch.py
 ```
 
 To first call `estimator.fit()` then `estimator.test()`, you can use:
 ``` bash
-$ fastestimator run mnist_tf.py
+$ fastestimator run mnist_torch.py
 ```
 
 <a id='t10args'></a>
@@ -54,7 +54,7 @@ Next, we try to change these arguments in two ways:
 To pass the arguments directly from the CLI we can use the `--arg` format. The following shows an example of how we can set the number of epochs to 3 and batch_size to 64:
 
 ``` bash
-$ fastestimator train mnist_tf.py --epochs 3 --batch_size 64
+$ fastestimator train mnist_torch.py --epochs 3 --batch_size 64
 ```
 
 <a id='t10json'></a>
@@ -67,7 +67,7 @@ The other way we can send arguments is by using the `--hyperparameters` argument
 }
 ```
 ``` bash
-$ fastestimator train mnist_tf.py --hyperparameters hp.json
+$ fastestimator train mnist_torch.py --hyperparameters hp.json
 ```
 <a id='t10system'></a>
 ### System argument

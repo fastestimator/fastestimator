@@ -15,7 +15,6 @@
 import tempfile
 
 import numpy as np
-import tensorflow as tf
 import torch
 import torch.nn as nn
 from sklearn.metrics import auc, f1_score, roc_curve
@@ -23,6 +22,7 @@ from torch.nn.init import normal_
 
 import fastestimator as fe
 from fastestimator.backend import binary_crossentropy
+from fastestimator.dataset.data import mnist
 from fastestimator.op.numpyop import LambdaOp
 from fastestimator.op.numpyop.univariate import ChannelTranspose, ExpandDims, Normalize
 from fastestimator.op.tensorop import TensorOp
@@ -70,6 +70,7 @@ class reconstructor(nn.Module):
 
 
 class Flatten(nn.Module):
+
     def forward(self, x):
         return x.view(x.size(0), -1)
 
@@ -161,9 +162,10 @@ class F1AUCScores(Trace):
         data.write_with_log(self.outputs[1], f_score)
 
 
-def get_estimator(epochs=20, batch_size=128, train_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
-    # Dataset Creation
-    (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.mnist.load_data()
+def get_mnist_data():
+    train_data, eval_data = mnist.load_data()
+    x_train, y_train = train_data['x'], np.array(train_data['y'])
+    x_eval, y_eval = eval_data['x'], np.array(eval_data['y'])
     x_eval0, y_eval0 = x_eval[np.where((y_eval == 1))], np.ones(y_eval[np.where((y_eval == 1))].shape)
     x_eval1, y_eval1 = x_eval[np.where((y_eval != 1))], y_eval[np.where((y_eval != 1))]
 
@@ -176,6 +178,12 @@ def get_estimator(epochs=20, batch_size=128, train_steps_per_epoch=None, save_di
 
     x_eval, y_eval = np.concatenate([x_eval0, x_eval1]), np.concatenate([y_eval0, y_eval1])
     eval_data = fe.dataset.NumpyDataset({"x": x_eval, "y": y_eval})
+    return train_data, eval_data
+
+
+def get_estimator(epochs=20, batch_size=128, train_steps_per_epoch=None, save_dir=tempfile.mkdtemp()):
+
+    train_data, eval_data = get_mnist_data()
 
     pipeline = fe.Pipeline(
         train_data=train_data,
