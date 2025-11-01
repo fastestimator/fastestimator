@@ -25,6 +25,7 @@ def to_tensor(data: CollectionT, target_type: str, shared_memory: bool = False) 
     ...
 
 
+
 @overload
 def to_tensor(data: Union[Array, float, int], target_type: Literal['torch'],
               shared_memory: bool = False) -> torch.Tensor:
@@ -57,15 +58,24 @@ def to_tensor(data: Union[Collection, Array, float, int, None], target_type: str
     # {"x": <torch.Tensor>, "y":[<torch.Tensor>, <torch.Tensor>], "z": {"key": <torch.Tensor>}}
     ```
 
+    This method can be used with PyTorch tensors:
+    ```python
+    data = {"x": torch.ones((10,15)), "y":[torch.ones((4)), torch.ones((5, 3))], "z":{"key":torch.ones((2,2))}}
+    n = fe.backend.to_tensor(data, target_type='np')
+    # {"x": <np.ndarray>, "y":[<np.ndarray>, <np.ndarray>], "z": {"key": <np.ndarray>}}
+    ```
+
     Args:
         data: A tensor or possibly nested collection of tensors.
-        target_type: What kind of tensor(s) to create, one of "tf", "torch", or "np".
+        target_type: What kind of tensor(s) to create, one of "torch" or "np".
         shared_memory: Whether to put the tensor(s) in shared memory (only applicable when `target_type` is 'torch').
 
     Returns:
         A collection with the same structure as `data`, but with any tensors converted to the `target_type`.
     """
-    target_instance = {"torch": torch.Tensor, "np": np.ndarray}
+    target_instance = {
+        "torch": torch.Tensor, "np": np.ndarray
+    }
     conversion_function = {"torch": torch.from_numpy, "np": np.array}
     if isinstance(data, target_instance[target_type]):
         if shared_memory and target_type == "torch":

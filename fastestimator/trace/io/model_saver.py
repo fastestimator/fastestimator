@@ -17,14 +17,12 @@ import shutil
 from collections import deque
 from typing import Optional, Union
 
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._save_model import save_model
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
-
 
 @traceable()
 class ModelSaver(Trace):
@@ -45,7 +43,7 @@ class ModelSaver(Trace):
         ValueError: If `max_to_keep` is negative, or if save_architecture is used with a PyTorch model.
     """
     def __init__(self,
-                 model: Union[tf.keras.Model, torch.nn.Module],
+                 model: torch.nn.Module,
                  save_dir: str,
                  frequency: int = 1,
                  max_to_keep: Optional[int] = None,

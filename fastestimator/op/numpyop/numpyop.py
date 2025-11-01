@@ -15,6 +15,7 @@
 from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, Sequence, TypeVar, Union
 
 import numpy as np
+
 import torch
 from torch.utils.data.dataloader import default_collate
 
@@ -25,7 +26,6 @@ from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import pad_batch
 
 Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
-
 
 @traceable()
 class NumpyOp(Op):
@@ -43,7 +43,6 @@ class NumpyOp(Op):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
-
     def __init__(self,
                  inputs: Union[None, str, Iterable[str]] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
@@ -96,7 +95,6 @@ class NumpyOp(Op):
         else:
             results = np.array(results)
         return results
-
 
 @traceable()
 class Batch(NumpyOp):
@@ -161,7 +159,6 @@ class Batch(NumpyOp):
         pad_batch(batch, self._pad_value)
         return default_collate(batch)
 
-
 @traceable()
 class Delete(NumpyOp):
     """Delete key(s) and their associated values from the data dictionary.
@@ -176,7 +173,6 @@ class Delete(NumpyOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
-
     def __init__(self,
                  keys: Union[str, Sequence[str]],
                  mode: Union[None, str, Iterable[str]] = None,
@@ -186,9 +182,8 @@ class Delete(NumpyOp):
     def forward(self, data: Union[np.ndarray, List[np.ndarray]], state: Dict[str, Any]) -> None:
         pass
 
-    def forward_batch(self, data: Union[torch.Tensor, List[torch.Tensor]], state: Dict[str, Any]) -> None:
+    def forward_batch(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> None:
         pass
-
 
 @traceable()
 class LambdaOp(NumpyOp):
@@ -204,7 +199,6 @@ class LambdaOp(NumpyOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
-
     def __init__(self,
                  fn: Callable,
                  inputs: Union[None, str, Iterable[str]] = None,
@@ -229,7 +223,6 @@ class LambdaOp(NumpyOp):
                                                                            Any]) -> Union[np.ndarray, List[np.ndarray]]:
         return self.forward(data, state)
 
-
 @traceable()
 class RemoveIf(NumpyOp):
     """An Operator which will remove a datapoint from the pipeline if the given criterion is satisfied.
@@ -250,7 +243,6 @@ class RemoveIf(NumpyOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
-
     def __init__(self,
                  fn: Callable[..., bool],
                  replacement: bool = True,

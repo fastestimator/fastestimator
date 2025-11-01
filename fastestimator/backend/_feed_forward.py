@@ -12,17 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union
+from typing import TypeVar, Union
 
 import numpy as np
 import torch
 
 from fastestimator.backend._to_tensor import to_tensor
 
+Tensor = TypeVar('Tensor', torch.Tensor)
 
-def feed_forward(model: torch.nn.Module, *x: Union[torch.Tensor, np.ndarray], training: bool = True) -> torch.Tensor:
+
+def feed_forward(model: torch.nn.Module, *x: Union[Tensor, np.ndarray],
+                 training: bool = True) -> Tensor:
     """Run a forward step on a given model.
-
 
     This method can be used with PyTorch models:
     ```python
@@ -32,8 +34,8 @@ def feed_forward(model: torch.nn.Module, *x: Union[torch.Tensor, np.ndarray], tr
     ```
 
     Args:
-        model: A neural network to run the forward step through.
-        x: One or more input tensor for the `model`. This value will be auto-cast to either a torch.Tensor
+        model: A PyTorch neural network to run the forward step through.
+        x: One or more input tensor for the `model`. This value will be auto-cast to torch.Tensor
             as applicable for the `model`.
         training: Whether this forward step is part of training or not. This may impact the behavior of `model` layers
             such as dropout.

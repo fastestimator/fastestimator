@@ -13,18 +13,13 @@
 # limitations under the License.
 # ==============================================================================
 import os
-import pickle
 from collections import OrderedDict
-from typing import Union
 
 import torch
-
-from fastestimator.backend._set_lr import set_lr
 
 
 def load_model(model: torch.nn.Module, weights_path: str, load_optimizer: bool = False):
     """Load saved weights for a given model.
-
 
     This method can be used with PyTorch models:
     ```python

@@ -26,13 +26,10 @@ from fastestimator.util.base_util import FigureFE, in_notebook, to_list
 from fastestimator.util.util import to_number
 
 if TYPE_CHECKING:
-    import tensorflow as tf
-
-    Tensor = TypeVar('Tensor', np.ndarray, tf.Tensor, torch.Tensor)
+    Tensor = TypeVar('Tensor', np.ndarray, torch.Tensor)
     BoundingBox = TypeVar('BoundingBox',
                           Tuple[Union[int, float], Union[int, float], Union[int, float], Union[int, float]],
                           Tuple[Union[int, float], Union[int, float], Union[int, float], Union[int, float], str])
-
 
 class Display(ABC):
     @abstractmethod
@@ -53,7 +50,6 @@ class Display(ABC):
         """
         fig = self.prepare()
         fig.show(save_path=save_path, verbose=verbose, scale=scale, interactive=interactive)
-
 
 class ImageDisplay(Display):
     """An object to combine various image components for visualization
@@ -430,7 +426,6 @@ class ImageDisplay(Display):
 
         return fig
 
-
 class BatchDisplay(Display):
     """An object to combine various batched image components for visualization
 
@@ -518,7 +513,6 @@ class BatchDisplay(Display):
             fig = FigureFE.from_figure(fig)
 
         return fig
-
 
 class GridDisplay(Display):
     def __init__(self, columns: Sequence[Union[BatchDisplay, ImageDisplay]]):

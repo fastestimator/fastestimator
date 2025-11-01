@@ -15,7 +15,6 @@
 from typing import List, Tuple
 
 import numpy as np
-import tensorflow as tf
 
 from fastestimator.dataset.numpy_dataset import NumpyDataset
 
@@ -33,7 +32,6 @@ def pad(input_list: List[int], padding_size: int, padding_value: int) -> List[in
     """
     return input_list + [padding_value] * abs((len(input_list) - padding_size))
 
-
 def load_data(max_len: int, vocab_size: int) -> Tuple[NumpyDataset, NumpyDataset]:
     """Load and return the IMDB Movie review dataset.
 
@@ -46,7 +44,8 @@ def load_data(max_len: int, vocab_size: int) -> Tuple[NumpyDataset, NumpyDataset
     Returns:
         (train_data, eval_data)
     """
-    (x_train, y_train), (x_eval, y_eval) = tf.keras.datasets.imdb.load_data(maxlen=max_len, num_words=vocab_size)
+    # TensorFlow backend removed - use torchtext or download IMDB data manually
+    raise NotImplementedError("Use torchtext.datasets.IMDB or download IMDB data manually")
     # pad the sequences to max length
     x_train = np.array([pad(x, max_len, 0) for x in x_train])
     x_eval = np.array([pad(x, max_len, 0) for x in x_eval])

@@ -122,7 +122,7 @@ def dice_score(y_pred: Tensor,
     numerator = reduce(y_pred * y_true, axis=spacial_axes)
 
     if soft_dice:
-        denominator = reduce(y_pred**2, axis=spacial_axes) + reduce(y_true**2, axis=spacial_axes)
+        denominator = reduce(y_pred ** 2, axis=spacial_axes) + reduce(y_true ** 2, axis=spacial_axes)
     else:
         denominator = reduce(y_pred, axis=spacial_axes) + reduce(y_true, axis=spacial_axes)
 
@@ -131,7 +131,6 @@ def dice_score(y_pred: Tensor,
     if channel_weights is not None:
         channel_weights = cast(channel_weights, dtype=y_pred)
         dice = dice * channel_weights
-
     if empty_nan:
         dice = where(
             reduce_max(y_true, axis=spacial_axes) + reduce_max(y_pred, axis=spacial_axes) < 1e-4, math.nan, dice)

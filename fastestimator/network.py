@@ -22,12 +22,9 @@ from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional
     Union, overload
 
 import gdown
-import tensorflow as tf
-import tensorflow.keras.mixed_precision as mixed_precision_tf
+
 import torch
-from tensorflow.keras import Sequential
-from tensorflow.keras.mixed_precision import LossScaleOptimizer
-from tensorflow.python.distribute.values import DistributedValues
+
 from typing_extensions import Self
 
 import fastestimator as fe
@@ -52,7 +49,6 @@ T = TypeVar('T')
 
 GOOGLE_DRIVE_URL = "https://drive.google.com"
 _MAC_BUILD_WARNING = False
-
 
 @traceable(blacklist=('ctx_lock', ))
 class BaseNetwork:
@@ -403,7 +399,6 @@ class BaseNetwork:
         """
         return self.run_step(batch)
 
-
 def _collect_models(
     ops: Union[None, TensorOp, Scheduler[TensorOp], Iterable[Union[None, TensorOp,
                                                                    Scheduler[TensorOp]]]]) -> Set[Model]:
@@ -420,7 +415,6 @@ def _collect_models(
     for op in get_current_items(ops_list):
         models |= op.get_fe_models()
     return models
-
 
 # noinspection PyPep8Naming
 def Network(
@@ -454,9 +448,7 @@ def Network(
     for model in models:
         # 'Model' and 'model' should not be considered unique in case you are saving on a non-case-sensitive filesystem
         model_names.add(model.model_name.lower())
-        if isinstance(model, tf.keras.Model):
-            framework.add("tf")
-        elif isinstance(model, torch.nn.Module):
+        if isinstance(model, torch.nn.Module):
             framework.add("torch")
         else:
             framework.add("unknown")
@@ -473,7 +465,6 @@ def Network(
     else:
         raise ValueError("Unknown model type")
     return network
-
 
 @traceable(blacklist=('ctx_lock', ))
 class TorchNetwork(BaseNetwork):
@@ -619,278 +610,6 @@ class TorchNetwork(BaseNetwork):
             prediction = {key: detach_tensors(batch_in[key]) for key in self.ctx_outputs if key in batch_in}
         return batch, prediction
 
-
-@traceable(blacklist=('ctx_lock', ))
-class TFNetwork(BaseNetwork):
-    """An extension of BaseNetwork for TensorFlow models.
-
-    Args:
-        ops: The ops defining the execution graph for this Network.
-        postprocessing: A collection of NumpyOps to be run on the CPU after all of the normal `ops` have been executed.
-            Unlike the NumpyOps found in the pipeline, these ops will run on batches of data rather than single points.
-        slicers: Slicers to use if you want to cut apart a single batch of data into multiple slices in order to fit
-            them onto a smaller GPU. After cutting the data apart and running through the `ops`, the samples are fused
-            back together into a single batch on the CPU before being handed over to the `pops`.
-    """
-
-    def __init__(
-        self,
-        ops: Sequence[Union[None, TensorOp, Scheduler[TensorOp]]],
-        postprocessing: Union[None, NumpyOp, Scheduler[NumpyOp], Sequence[Union[None, NumpyOp,
-                                                                                Scheduler[NumpyOp]]]] = None,
-        slicers: Union[None, Slicer, Scheduler[Slicer], Sequence[Union[None, Slicer, Scheduler[Slicer]]]] = None,
-    ) -> None:
-        super().__init__(target_type='tf', device=None, ops=ops, postprocessing=postprocessing, slicers=slicers)
-
-    def __call__(self,
-                 mode: str,
-                 epoch: int,
-                 ds_id: str,
-                 desired_output_keys: Optional[Set[str]] = None,
-                 warmup: bool = False,
-                 eager: bool = False) -> Self:
-        super().__call__(mode=mode,
-                         epoch=epoch,
-                         ds_id=ds_id,
-                         desired_output_keys=desired_output_keys,
-                         warmup=warmup,
-                         eager=eager)
-        # Don't cause a re-trace just because epoch changed
-        self.ctx_state["epoch"] = tf.convert_to_tensor(self.ctx_state["epoch"])
-        # Need to re-trace the TF graph if optimizer or layer trainable setting is changing:
-        trainable_str = "".join([str(layer.trainable) for model in self.ctx_models for layer in model.layers])
-        opt_str = "x".join(
-            [str(id(model.current_optimizer)) for model in self.ctx_models if hasattr(model, 'current_optimizer')])
-        self.ctx_state["_force_tf_retrace"] = hash(trainable_str + opt_str)  # Hash to keep at fixed memory overhead
-        self.ctx_manual_gpu_data_handling = False
-        return self
-
-    def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
-        # This prevents a tf graph memory leak that would slow down long trainings. Since we
-        # re-build graphs every epoch there is no reason to keep old ones around.
-        strategy = tf.distribute.get_strategy()
-        if isinstance(strategy, tf.distribute.MirroredStrategy):
-            pass  # TODO - Find a way to clear graph for multi-gpu
-        else:
-            tf.keras.backend.clear_session()
-        super().__exit__(*exc)
-
-    def _run_step(self, batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-        """Run a forward step through the Network on a batch of data.
-
-        Implementations of this method within derived classes should handle bringing the prediction data back from the
-        (multi-)GPU environment to the CPU. This method expects that Network.load_epoch() has already been invoked.
-
-        Args:
-            batch: The batch of data serving as input to the Network.
-
-        Returns:
-            (batch_data, prediction_data)
-        """
-        batch_in = self._get_effective_batch_input(batch)
-        strategy = tf.distribute.get_strategy()
-        if isinstance(strategy, tf.distribute.MirroredStrategy):
-            with Suppressor(allow_pyprint=True, show_if_exception=True):
-                if self.ctx_manual_gpu_data_handling:
-                    batch_in = next(
-                        iter(strategy.experimental_distribute_dataset(tf.data.Dataset.from_tensors(batch_in))))
-                if self.ctx_state["eager"]:
-                    prediction = strategy.run(self._forward_step_eager,
-                                              args=(batch_in, self.ctx_state, self.ctx_ops, to_list(self.ctx_outputs)))
-                else:
-                    prediction = strategy.run(self._forward_step_static,
-                                              args=(batch_in, self.ctx_state, self.ctx_ops, to_list(self.ctx_outputs)))
-            batch = self._per_replica_to_global(batch)
-            prediction = self._per_replica_to_global(prediction)
-        else:
-            with Suppressor(allow_pyprint=True, show_if_exception=True):
-                if self.ctx_state["eager"]:
-                    prediction = self._forward_step_eager(batch_in,
-                                                          self.ctx_state,
-                                                          self.ctx_ops,
-                                                          to_list(self.ctx_outputs))
-                else:
-                    prediction = self._forward_step_static(batch_in,
-                                                           self.ctx_state,
-                                                           self.ctx_ops,
-                                                           to_list(self.ctx_outputs))
-        return batch, prediction
-
-    def _per_replica_to_global(self, data: T) -> T:
-        """Combine data from "per-replica" values recursively.
-
-        For multi-GPU training, data are distributed using `tf.distribute.Strategy.experimental_distribute_dataset`.
-        This method collects data from all replicas and combines them into one.
-
-        Args:
-            data: Distributed data.
-
-        Returns:
-            Combined data from all replicas.
-        """
-        if isinstance(data, DistributedValues):
-            if data.values[0].shape.rank == 0:
-                return tf.reduce_mean(tuple(d for d in data.values if not tf.math.is_nan(d)))
-            else:
-                return tf.concat(data.values, axis=0)
-        elif isinstance(data, dict):
-            result = {}
-            for key, val in data.items():
-                result[key] = self._per_replica_to_global(val)
-            return result
-        elif isinstance(data, list):
-            return [self._per_replica_to_global(val) for val in data]
-        elif isinstance(data, tuple):
-            return tuple([self._per_replica_to_global(val) for val in data])
-        elif isinstance(data, set):
-            return set([self._per_replica_to_global(val) for val in data])
-        else:
-            return data
-
-    def _get_effective_batch_input(self, batch: MutableMapping[str, Any]) -> Dict[str, Any]:
-        """Filter input data so that only the data required by the Network is moved onto the GPU.
-
-        Args:
-            batch: An unfiltered batch of input data.
-
-        Returns:
-            The filtered input data ready for use on GPU(s).
-        """
-        new_batch = {}
-        for key in self.ctx_gpu_inputs:
-            if key in batch:
-                new_batch[key] = batch[key]
-        return new_batch
-
-    def _forward_step_eager(self,
-                            batch: Dict[str, Any],
-                            state: Dict[str, Any],
-                            ops: List[TensorOp],
-                            effective_outputs: List[str]) -> Dict[str, Any]:
-        """Run a forward step of the Network in eager (non-static graph) mode.
-
-        Args:
-            batch: The input data for the Network.
-            state: A dictionary containing information about the current execution environment, including the active
-                gradient tape.
-            ops: A list of Ops to run during the forward step.
-            effective_outputs: Which outputs should be copied from the GPU back onto the CPU for further use in Traces.
-
-        Returns:
-            The prediction dictionary resulting from a forward pass of the Network.
-        """
-        batch = ChainMap({}, batch)
-        prediction = {}
-        with tf.GradientTape(persistent=True) if state["req_grad"] else NonContext() as tape:
-            state['tape'] = tape
-            self._forward_batch(batch, state, ops)
-        del state['tape']
-        del tape
-        for key in effective_outputs:
-            if key in batch:
-                prediction[key] = batch[key]
-        return prediction
-
-    @tf.function(reduce_retracing=True)
-    def _forward_step_static(self,
-                             batch: Dict[str, Any],
-                             state: Dict[str, Any],
-                             ops: List[TensorOp],
-                             effective_outputs: List[str]) -> Dict[str, Any]:
-        """Run a forward step of the Network in static graph mode.
-
-        Args:
-            batch: The input data for the Network.
-            state: A dictionary containing information about the current execution environment, including the active
-                gradient tape.
-            ops: A list of Ops to run during the forward step.
-            effective_outputs: Which outputs should be copied from the GPU back onto the CPU for further use in Traces.
-
-        Returns:
-            The prediction dictionary resulting from a forward pass of the Network.
-        """
-        batch = dict(batch)
-        prediction = {}
-        with tf.GradientTape(persistent=True) if state["req_grad"] else NonContext() as tape:
-            state['tape'] = tape
-            self._forward_batch(batch, state, ops)
-        del state['tape']
-        del tape
-        for key in effective_outputs:
-            if key in batch:
-                prediction[key] = batch[key]
-        return prediction
-
-    def _do_transform(self, batch: Dict[str, Array]) -> Dict[str, Array]:
-        # Distribute multi-gpu data for processing
-        sub_sample = False
-        strategy = tf.distribute.get_strategy()
-        if isinstance(strategy, tf.distribute.MirroredStrategy):
-            batch_size, num_devices = get_batch_size(batch), strategy.num_replicas_in_sync
-            if batch_size < num_devices:
-                batch = self._fill_batch(batch, num_devices, batch_size)
-                sub_sample = True
-            self.ctx_manual_gpu_data_handling = True
-        batch = super()._do_transform(batch)
-        if sub_sample:
-            batch = self._subsample_data(batch, batch_size)
-            self.ctx_manual_gpu_data_handling = False
-        return batch
-
-    def _fill_batch(self, data: T, n: int, batch: int) -> T:
-        """Fill data on batch dimension repeating the first n indices at the end.
-
-        Args:
-            data: The data to be filled.
-            n: The number of available devices.
-            batch: batch size of the data.
-
-        Returns:
-            Filled data.
-        """
-        if isinstance(data, dict):
-            return {key: self._fill_batch(val, n, batch) for (key, val) in data.items()}
-        elif isinstance(data, list):
-            return [self._fill_batch(val, n, batch) for val in data]
-        elif isinstance(data, tuple):
-            return tuple([self._fill_batch(val, n, batch) for val in data])
-        elif isinstance(data, set):
-            return set([self._fill_batch(val, n, batch) for val in data])
-        elif hasattr(data, "shape"):
-            if n - batch > batch:
-                paddings = [[0, batch]] + [[0, 0] for _ in range(len(data.shape) - 1)]
-                temp_data = tf.pad(data, paddings=paddings, mode="symmetric")
-                return self._fill_batch(temp_data, n, temp_data.shape[0])
-            else:
-                paddings = [[0, n - batch]] + [[0, 0] for _ in range(len(data.shape) - 1)]
-                return tf.pad(data, paddings=paddings, mode="symmetric")
-        else:
-            return data
-
-    def _subsample_data(self, data: T, n: int) -> T:
-        """Subsample data by selecting the first n indices recursively.
-
-        Args:
-            data: The data to be subsampled.
-            n: The number of indices to be subsampled.
-
-        Returns:
-            Subsampled data.
-        """
-        if isinstance(data, (dict, ChainMap)):
-            return {key: self._subsample_data(val, n) for (key, val) in data.items()}
-        elif isinstance(data, list):
-            return [self._subsample_data(val, n) for val in data]
-        elif isinstance(data, tuple):
-            return tuple([self._subsample_data(val, n) for val in data])
-        elif isinstance(data, set):
-            return set([self._subsample_data(val, n) for val in data])
-        elif hasattr(data, "shape") and list(data.shape) and data.shape[0] > n:
-            return data[0:n]
-        else:
-            return data
-
-
 @overload
 def build(model_fn: Callable[[], Model],
           optimizer_fn: Union[None, str, Scheduler, Callable],
@@ -898,7 +617,6 @@ def build(model_fn: Callable[[], Model],
           model_name: Union[str, List[str], None] = None,
           mixed_precision: bool = False) -> Model:
     ...
-
 
 @overload
 def build(model_fn: Callable[[], Sequence[Model]],
@@ -908,21 +626,12 @@ def build(model_fn: Callable[[], Sequence[Model]],
           mixed_precision: bool = False) -> List[Model]:
     ...
 
-
 def build(model_fn: Callable[[], Union[Model, Sequence[Model]]],
           optimizer_fn: Union[None, str, Scheduler, Callable, Sequence[Union[None, str, Callable, Scheduler]]],
           weights_path: Union[str, None, List[Union[str, None]]] = None,
           model_name: Union[str, List[str], None] = None,
           mixed_precision: bool = False) -> Union[Model, List[Model]]:
     """Build model instances and associate them with optimizers.
-
-    This method can be used with TensorFlow models / optimizers:
-    ```python
-    model_def = fe.architecture.tensorflow.LeNet
-    model = fe.build(model_fn = model_def, optimizer_fn="adam")
-    model = fe.build(model_fn = model_def, optimizer_fn=lambda: tf.optimizers.Adam(lr=0.1))
-    model = fe.build(model_fn = model_def, optimizer_fn="adam", weights_path="~/weights.h5")
-    ```
 
     This method can be used with PyTorch models / optimizers:
     ```python
@@ -953,36 +662,20 @@ def build(model_fn: Callable[[], Union[Model, Sequence[Model]]],
         fe.fe_build_count += num_names
         return names
 
-    # The following garbage collection is needed for if a TF model was running, but then died due to an exception being
-    # thrown, but the exception was then caught, whereupon the user wanted to switch to a pytorch model instead. Absent
-    # this collection, you would see: "Failed setting context: CUDA_ERROR_NOT_INITIALIZED: initialization error". This
-    # would be followed by the death of the pytorch multi-processor which would report something like the following:
+    # The following garbage collection is needed for if a model was running, but then died due to an exception being
+    # thrown, but the exception was then caught, whereupon the user wanted to switch to a different model. Absent
+    # this collection, you might see: "Failed setting context: CUDA_ERROR_NOT_INITIALIZED: initialization error".
+    # This would be followed by the death of the pytorch multi-processor which would report something like:
     # RuntimeError: DataLoader worker (pid 4225) is killed by signal: Aborted.
     # RuntimeError: DataLoader worker (pid(s) 4225, 4226, 4227) exited unexpectedly
     gc.collect()
-    # tensorflow models requires setting global policies prior to model creation. Since there is no way to know the
-    # framework of model, setting the policy for both tf and pytorch here.
+    # Set mixed precision policy for PyTorch
     if mixed_precision:
         if sys.platform == 'darwin':
             warn("Mixed Precision is not currently supported on Mac / Metal. This flag will be ignored.")
             mixed_precision = False
-        else:
-            mixed_precision_tf.set_global_policy(mixed_precision_tf.Policy('mixed_float16'))
-    else:
-        mixed_precision_tf.set_global_policy(mixed_precision_tf.Policy('float32'))
-    models = None
-    if get_num_gpus() > 1:
-        # We need to figure out whether model_fn returns tf models or torch models
-        if not isinstance(tf.distribute.get_strategy(), tf.distribute.MirroredStrategy):
-            # If we've already done this and gotten TF model, the above flag will be set and this will be skipped. If we
-            # are dealing with pytorch models, the model_fn() invocation will be kept so as to not waste clock cycles.
-            models = to_list(model_fn())
-            if isinstance(models[0], tf.keras.Model):
-                models = None  # We will re-instantiate the models again now that we know we need MirroredStrategy
-                tf.keras.backend.clear_session()  # This will reset the automatic layer naming in case user is
-                # extracting intermediate layer outputs by name
-                tf.distribute.experimental_set_strategy(tf.distribute.MirroredStrategy())
-    models, optimizer_fn = to_list(model_fn()) if models is None else models, to_list(optimizer_fn)
+    models = to_list(model_fn())
+    optimizer_fn = to_list(optimizer_fn)
     # fill optimizers if optimizer_fn is None
     if not optimizer_fn:
         optimizer_fn = [None] * len(models)
@@ -1008,7 +701,6 @@ def build(model_fn: Callable[[], Union[Model, Sequence[Model]]],
         models = models[0]
     return models
 
-
 def _fe_compile(model: Model,
                 optimizer_fn: Union[str, Scheduler, Callable, None],
                 weight: Union[str, None],
@@ -1027,9 +719,7 @@ def _fe_compile(model: Model,
         The `model` combined with its optimizer, weights, and name. Models will also have an 'fe_compiled' flag to
         indicate that they were built via this function.
     """
-    if isinstance(model, tf.keras.Model):
-        framework = "tf"
-    elif isinstance(model, torch.nn.Module):
+    if isinstance(model, torch.nn.Module):
         framework = "torch"
     elif isinstance(model, Sequential):
         raise DeprecationWarning("Importing from tensorflow.python.keras.models/layers is deprecated. Import from "
@@ -1066,17 +756,16 @@ def _fe_compile(model: Model,
     model.model_name = name
     return model
 
-
 def _build_optimizer(
     optimizer_fn: Union[str, Callable, None], model: Model, framework: str, mixed_precision: bool
-) -> Union[None, tf.optimizers.Optimizer, tf.optimizers.legacy.Optimizer, torch.optim.Optimizer]:
+) -> Union[None, torch.optim.Optimizer]:
     """A helper method to instantiate an optimizer.
 
     Args:
         optimizer_fn: The function responsible for constructing an optimizer, or else a string indicating one of the
             default optimizers to be used.
         model: The model to associate the optimizer with.
-        framework: Which backend framework should be used ('tf' or 'torch').
+        framework: Which backend framework should be used ('torch').
         mixed_precision: Whether to enable mixed-precision training.
 
     Returns:
@@ -1087,27 +776,16 @@ def _build_optimizer(
     optimizer = _optimizer_fn_to_optimizer(optimizer_fn, model, framework, mixed_precision)
     return optimizer
 
-
 def _optimizer_fn_from_string(name: str, framework: str) -> Callable:
     """A function to construct default optimizers based on string keys.
 
     Args:
         name: The name of the default optimizer to instantiate.
-        framework: Which backend framework should be used ('tf' or 'torch').
+        framework: Which backend framework should be used ('torch').
 
     Returns:
-        An optimizer instance corresponding to the given `name` and `framework`.
+        An optimizer instance corresponding to the given `name`.
     """
-    # The legacy optimizers appear to be faster than the new ones on both mac and linux. Revisit this speed test again
-    # after tf version > 2.12
-    tf_optimizer_fn = {
-        'adadelta': tf.keras.optimizers.legacy.Adadelta,
-        'adagrad': tf.keras.optimizers.legacy.Adagrad,
-        'adam': tf.keras.optimizers.legacy.Adam,
-        'adamax': tf.keras.optimizers.legacy.Adamax,
-        'rmsprop': tf.keras.optimizers.legacy.RMSprop,
-        'sgd': tf.keras.optimizers.legacy.SGD
-    }
     pytorch_optimizer_fn = {
         'adadelta': lambda x: torch.optim.Adadelta(params=x),
         'adagrad': lambda x: torch.optim.Adagrad(params=x),
@@ -1116,22 +794,18 @@ def _optimizer_fn_from_string(name: str, framework: str) -> Callable:
         'rmsprop': lambda x: torch.optim.RMSprop(params=x),
         'sgd': lambda x: torch.optim.SGD(params=x, lr=0.01)
     }
-    if framework == "tf":
-        optimizer_fn = tf_optimizer_fn[name]
-    else:
-        optimizer_fn = pytorch_optimizer_fn[name]
+    optimizer_fn = pytorch_optimizer_fn[name]
     return optimizer_fn
-
 
 def _optimizer_fn_to_optimizer(
         optimizer_fn: Union[Callable, None], model: Model, framework: str,
-        mixed_precision: bool) -> Union[None, tf.optimizers.legacy.Optimizer, torch.optim.Optimizer]:
+        mixed_precision: bool) -> Union[None, torch.optim.Optimizer]:
     """A helper function to invoke an optimizer function.
 
     Args:
         optimizer_fn: The function to be invoked in order to instantiate an optimizer.
         model: The model with which the optimizer should be associated.
-        framework: Which backend framework should be used ('tf' or 'torch').
+        framework: Which backend framework should be used ('torch').
         mixed_precision: Whether to enable mixed-precision training.
 
     Returns:
@@ -1139,47 +813,16 @@ def _optimizer_fn_to_optimizer(
     """
     optimizer = None
     if optimizer_fn:
-        if framework == "tf":
-            try:
-                optimizer = optimizer_fn()
-            except:
-                raise AssertionError("optimizer_fn of Tensorflow backend should be callable without args. Please "
-                                     "make sure model and optimizer_fn are using the same backend")
-            if sys.platform == 'darwin' and hasattr(optimizer, 'jit_compile'):
-                # Mac doesn't support XLA acceleration as of TF 2.11
-                # TODO - check compatibility again in future release
-                global _MAC_BUILD_WARNING
-                if not _MAC_BUILD_WARNING:
-                    warn("JIT compiling of optimizers is not currently supported by MacOS and will be disabled. You "
-                         "may want to use an optimizer from tf.optimizers.legacy instead for better speed.")
-                    _MAC_BUILD_WARNING = True
-                optimizer.jit_compile = False
-            # initialize optimizer variables
-            if hasattr(optimizer, 'build'):
-                optimizer.build(var_list=model.trainable_variables)
-            else:
-                _ = optimizer.iterations
-                if hasattr(optimizer, '_create_hypers'):
-                    optimizer._create_hypers()
-                if hasattr(optimizer, '_create_slots'):
-                    optimizer._create_slots(model.trainable_variables)
-            assert isinstance(optimizer, (tf.optimizers.Optimizer, tf.keras.optimizers.experimental.Optimizer,
-                                          tf.optimizers.legacy.Optimizer)), \
-                f"optimizer_fn should generate tensorflow optimizer, but got {type(optimizer)}"
-            # handle mixed precision loss scaling
-            if mixed_precision:
-                optimizer = LossScaleOptimizer(optimizer)
+        try:
+            optimizer = optimizer_fn(model.parameters())
+        except Exception as e:
+            print("optimizer_fn of PyTorch backend should be callable with single arg. Please ensure model and \
+            optimizer_fn are using the same backend")
+            raise ValueError(repr(e))
+        assert isinstance(optimizer, torch.optim.Optimizer), "optimizer_fn should generate pytorch optimizer"
+        if mixed_precision and torch.cuda.is_available():
+            setattr(optimizer, "scaler", torch.cuda.amp.GradScaler())
         else:
-            try:
-                optimizer = optimizer_fn(model.parameters())
-            except Exception as e:
-                print("optimizer_fn of Pytorch backend should be callable with single arg. Please sure model and \
-                optimizer_fn are using the same backend")
-                raise ValueError(repr(e))
-            assert isinstance(optimizer, torch.optim.Optimizer), "optimizer_fn should generate pytorch optimizer"
-            if mixed_precision and torch.cuda.is_available():
-                setattr(optimizer, "scaler", torch.cuda.amp.GradScaler())
-            else:
-                setattr(optimizer, "scaler", None)
+            setattr(optimizer, "scaler", None)
 
     return optimizer

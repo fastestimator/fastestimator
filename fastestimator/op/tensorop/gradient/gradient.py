@@ -18,9 +18,10 @@ import torch
 
 from fastestimator.backend._get_gradient import get_gradient
 from fastestimator.op.tensorop.tensorop import TensorOp
-from fastestimator.util.base_util import to_list
 from fastestimator.util.traceability_util import traceable
+from fastestimator.util.base_util import to_list
 
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 @traceable()
 class GradientOp(TensorOp):
@@ -37,7 +38,6 @@ class GradientOp(TensorOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
-
     def __init__(self,
                  finals: Union[str, List[str]],
                  outputs: Union[str, List[str]],
@@ -68,20 +68,24 @@ class GradientOp(TensorOp):
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
         self.framework = framework
 
-    def forward(self, data: List[torch.Tensor], state: Dict[str, Any]) -> List[torch.Tensor]:
+    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
         results = []
         if self.model is None:
             initials = data[:len(data) // 2]
             finals = data[len(data) // 2:]
             for idx, (initial, final) in enumerate(zip(initials, finals)):
                 retain_graph = self.retain_graph or not idx == len(finals) - 1
-                results.append(get_gradient(final, initial, tape=state['tape'], retain_graph=retain_graph))
+                results.append(get_gradient(final, initial, retain_graph=retain_graph))
         else:
             finals = data
-            trainable_params = [p for p in self.model.parameters() if p.requires_grad]
-            for idx, final in enumerate(finals):
-                # get_gradient
-                retain_graph = self.retain_graph or not idx == len(finals) - 1
-                gradient = get_gradient(final, trainable_params, retain_graph=retain_graph)
-                results.append(gradient)
+            if self.framework == "torch":
+                trainable_params = [p for p in self.model.parameters() if p.requires_grad]
+                for idx, final in enumerate(finals):
+                    # get_gradient
+                    retain_graph = self.retain_graph or not idx == len(finals) - 1
+                    gradient = get_gradient(final, trainable_params, retain_graph=retain_graph)
+                    results.append(gradient)
+            else:
+                raise ValueError(f"Unrecognized framework {self.framework}")
+
         return results

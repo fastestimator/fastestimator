@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Iterable, List, Union
+from typing import Any, Dict, Iterable, List, TypeVar, Union
 
 import torch
 
@@ -20,6 +20,7 @@ from fastestimator.backend._l2_regularization import l2_regularization
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 @traceable()
 class L2Regularizaton(TensorOp):
@@ -34,7 +35,6 @@ class L2Regularizaton(TensorOp):
         model: A pytorch model
         beta: The multiplicative factor, to weight the l2 regularization loss with the input loss
     """
-
     def __init__(self,
                  inputs: str,
                  outputs: str,
@@ -45,7 +45,7 @@ class L2Regularizaton(TensorOp):
         self.model = model
         self.beta = beta
 
-    def forward(self, data: Union[torch.Tensor, List[torch.Tensor]], state: Dict[str, Any]) -> torch.Tensor:
+    def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> Tensor:
         loss = data
         total_loss = l2_regularization(self.model, self.beta) + loss
         return total_loss

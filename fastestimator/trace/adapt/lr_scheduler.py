@@ -16,7 +16,7 @@ import inspect
 from typing import Callable, Union, Iterable
 
 import numpy as np
-import tensorflow as tf
+
 import torch
 
 from fastestimator.backend._get_lr import get_lr
@@ -26,7 +26,6 @@ from fastestimator.summary.system import System
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
-
 
 @traceable()
 class LRScheduler(Trace):
@@ -52,7 +51,7 @@ class LRScheduler(Trace):
     system: System
 
     def __init__(self,
-                 model: Union[tf.keras.Model, torch.nn.Module],
+                 model: torch.nn.Module,
                  lr_fn: Union[str, Callable[[int], float]],
                  ds_id: Union[None, str, Iterable[str]] = None) -> None:
         self.model = model

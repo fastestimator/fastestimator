@@ -18,9 +18,11 @@ import torch
 
 from fastestimator.network import BaseNetwork
 from fastestimator.op.tensorop.tensorop import TensorOp
-from fastestimator.util.base_util import to_list
 from fastestimator.util.traceability_util import traceable
+from fastestimator.util.base_util import to_list
 
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
+Model = TypeVar('Model', bound=torch.nn.Module)
 
 @traceable()
 class Fuse(TensorOp):
@@ -33,7 +35,6 @@ class Fuse(TensorOp):
     Raises:
         ValueError: If `ops` are invalid.
     """
-
     def __init__(self, ops: Union[TensorOp, List[TensorOp]]) -> None:
         ops = to_list(ops)
         if len(ops) < 1:
@@ -67,7 +68,7 @@ class Fuse(TensorOp):
         for op in self.ops:
             op.build(framework, device)
 
-    def get_fe_models(self) -> Set[torch.nn.Module]:
+    def get_fe_models(self) -> Set[Model]:
         return self.models
 
     def get_fe_loss_keys(self) -> Set[str]:
@@ -79,7 +80,7 @@ class Fuse(TensorOp):
     def __getstate__(self) -> Dict[str, List[Dict[Any, Any]]]:
         return {'ops': [elem.__getstate__() if hasattr(elem, '__getstate__') else {} for elem in self.ops]}
 
-    def forward(self, data: List[torch.Tensor], state: Dict[str, Any]) -> List[torch.Tensor]:
+    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
         data = {key: elem for key, elem in zip(self.inputs, data)}
         BaseNetwork._forward_batch(data, state, self.ops)
         return [data[key] for key in self.outputs]

@@ -39,7 +39,6 @@ def get_dependency():
         'scipy',
         'PyLaTeX==1.4.1',
         'natsort==8.3.1',
-        'tensorflow_probability==0.22.1',
         'transformers==4.38.2',
         'torchinfo==1.7.2',
         'graphviz==0.20.1',
@@ -91,7 +90,7 @@ setup(
     author="FastEstimator Dev",
     url='https://github.com/fastestimator/fastestimator',
     license="Apache License 2.0",
-    keywords="fastestimator tensorflow pytorch",
+    keywords="fastestimator pytorch",
     classifiers=["License :: OSI Approved :: Apache Software License", "Programming Language :: Python :: 3"],
     # Declare minimal set for installation
     install_requires=get_dependency(),

@@ -24,7 +24,7 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type, TypeVa
 
 import numpy as np
 import pandas as pd
-import tensorflow as tf
+
 import torch
 from pylatex import Document, Label, Marker, MultiColumn, NoEscape, Package, Table, Tabularx, TextColor
 from pylatex.base_classes import LatexObject
@@ -76,8 +76,6 @@ _RestorableClasses = (int,
                       str,
                       type(None),
                       ValWithError,
-                      tf.Tensor,
-                      tf.Variable,
                       torch.Tensor,
                       np.ndarray,
                       np.number,
@@ -85,8 +83,7 @@ _RestorableClasses = (int,
                       np.flexible,
                       pd.DataFrame)
 
-Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
-
+Model = TypeVar('Model', bound=torch.nn.Module)
 
 class FeInputSpec:
     """A class to keep track of a model's input so that fake inputs can be generated.
@@ -102,7 +99,7 @@ class FeInputSpec:
         self.shape = to_shape(model_input)
         self.dtype = to_type(model_input)
         self.device = self._get_device(model_input)
-        self.tensor_func = tf.ones if isinstance(model, tf.keras.Model) else torch.ones
+        self.tensor_func = torch.ones
 
     def _get_device(self, data: Any) -> Union[None, str, torch.device]:
         """Get the device on which a tensor or collection of tensors is residing.
@@ -113,7 +110,7 @@ class FeInputSpec:
         Returns:
             The device on which the tensors are residing
         """
-        if tf.is_tensor(data) or isinstance(data, torch.Tensor):
+        if isinstance(data, torch.Tensor):
             return data.device
         elif isinstance(data, dict):
             return self._get_device(list(data.values()))
@@ -520,7 +517,7 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
         return _trace_value(args, tables, ret_ref, wrap_str=False).raw_input  # unwrap kwargs back into a dict
     elif isinstance(inp, _VarWrap):
         return inp.var
-    elif isinstance(inp, (tf.keras.Model, torch.nn.Module)):
+    elif isinstance(inp, (torch.nn.Module)):
         # FE models should never actually get here since they are given summaries by trace_model() during fe.build()
         inp_id = FEID(id(inp))
         if inp_id in tables:
@@ -552,16 +549,16 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
                 v in inp.items()
             },
             truncate=_CollectionSizeLimit)
-    elif isinstance(inp, (tf.Tensor, torch.Tensor, np.ndarray, tf.Variable)):
+    elif isinstance(inp, (torch.Tensor, np.ndarray)):
         inp_type = type(inp)
         inp_id = FEID(id(inp))
         if inp_id not in tables:
-            if isinstance(inp, (tf.Tensor, torch.Tensor, tf.Variable)):
+            if isinstance(inp, (torch.Tensor, np.ndarray)):
                 if isinstance(inp, torch.Tensor):
                     inp = inp.cpu().detach()
                     inp.numpy()
                 # In the elif here we're sure to be tf
-                elif inp.dtype != tf.dtypes.variant:
+                else:
                     inp = inp.numpy()  # The variant dtype can't be cast to numpy()
             rank = inp.ndim
             description = {'shape': inp.shape}

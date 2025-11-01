@@ -16,7 +16,7 @@ from copy import deepcopy
 from typing import Any, Dict, List, Optional, Sequence, TypeVar, Union
 
 import numpy as np
-import tensorflow as tf
+
 import torch
 
 from fastestimator.backend._abs import abs
@@ -37,9 +37,8 @@ from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
 from fastestimator.util.base_util import to_list
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
-Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
-
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
+Model = TypeVar('Model', bound=torch.nn.Module)
 
 @traceable()
 class SaliencyNet:

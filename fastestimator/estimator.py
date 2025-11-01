@@ -19,9 +19,9 @@ import random
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Union, overload
 
 import numpy as np
-import tensorflow as tf
+
 import torch
-from tensorflow.python.distribute.input_lib import DistributedDataset
+
 from torch.utils.data import DataLoader
 
 import fastestimator as fe
@@ -45,15 +45,11 @@ from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import Suppressor, draw
 
-
 def _verify_dependency_versions() -> None:
-    """Print warning messages if the user is using unexpected versions of TF or torch.
+    """Print warning messages if the user is using unexpected versions of PyTorch.
     """
-    if tf.__version__ not in {'2.15.1', '2.15.0'}:
-        warn(f"Expected TensorFlow version 2.15.0 but found {tf.__version__}. The framework may not work as expected.")
     if torch.__version__ not in ('2.3.1', '2.3.1+cpu', '2.3.1+cu121'):
         warn(f"Expected PyTorch version 2.3.1 but found {torch.__version__}. The framework may not work as expected.")
-
 
 @traceable()
 class Estimator:
@@ -63,10 +59,7 @@ class Estimator:
     (estimator.fit) or test (estimator.test) models. It wraps `Pipeline`, `Network`, `Trace` objects together and
     defines the whole optimization process.
 
-    If the data fed into pipeline is a TensorFlow Dataset, then the parameters `train_steps_per_epoch` and
-    `eval_steps_per_epoch` can only reduce the number of steps per epoch. If these parameters are higher than the
-    dimension of the stated Dataset then the whole Dataset will be used.
-
+    
 
     Args:
         pipeline: An fe.Pipeline object that defines the data processing workflow.
@@ -142,14 +135,12 @@ class Estimator:
                 epoch where schedulers cause the execution graph to change. This can take some time up front, but can
                 also save significant heartache on epoch 300 when the training unexpectedly fails due to a tensor size
                 mismatch.
-            eager: Whether to run the training in eager mode. This is only related to TensorFlow training because
-                PyTorch by nature is always in eager mode.
+            eager: Whether to run the training in eager mode. PyTorch runs in eager mode by default.
 
         Returns:
             A summary object containing the training history for this session iff a `summary` name was provided.
         """
         _verify_dependency_versions()
-        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # Prevent tf from constantly printing useless information
         draw()
         self.system.reset(summary, self.fe_summary())
         self._prepare_traces(run_modes={"train", "eval"})
@@ -207,15 +198,13 @@ class Estimator:
             summary: A name for the experiment. If provided, the log history will be recorded in-memory and returned as
                 a summary object at the end of training. If None, the default value will be whatever `summary` name was
                 most recently provided to this Estimator's .fit() or .test() methods.
-            eager: Whether to run the training in eager mode. This is only related to TensorFlow training because
-                PyTorch by nature is always in eager mode.
+            eager: Whether to run the training in eager mode. PyTorch runs in eager mode by default.
 
         Returns:
             A summary object containing the training history for this session iff the `summary` name is not None (after
             considering the default behavior above).
         """
         _verify_dependency_versions()
-        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # Prevent tf from constantly printing useless information
         self.system.reset_for_test(summary)
         self._prepare_traces(run_modes={"test"})
         self._start(run_modes={"test"}, eager=eager)
@@ -228,8 +217,7 @@ class Estimator:
         corrupted by running extra steps.
 
         Args:
-            eager: Whether to run the training in eager mode. This is only related to TensorFlow training because
-                PyTorch by nature is always in eager mode.
+            eager: Whether to run the training in eager mode. PyTorch runs in eager mode by default.
         """
         all_traces = get_current_items(self.traces_in_use, run_modes={"train", "eval"})
         sort_traces(all_traces, ds_ids=[])  # This ensures that the traces can sort properly for on_begin and on_end
@@ -319,13 +307,8 @@ class Estimator:
 
         Args:
             run_modes: The current execution modes.
-            eager: Whether to run the training in eager mode. This is only related to TensorFlow training because
-                PyTorch by nature is always in eager mode.
+            eager: Whether to run the training in eager mode. PyTorch runs in eager mode by default.
         """
-        with Suppressor():
-            # TODO - remove this after updating to TF > 2.11
-            from tensorflow.python.autograph.pyct.static_analysis.liveness import Analyzer
-            Analyzer.lamba_check(None, None)  # type: ignore
         all_traces = sort_traces(get_current_items(self.traces_in_use, run_modes=run_modes), ds_ids=[])
         with NonContext() if fe.fe_history_path is False else HistoryRecorder(
                 self.system, self.filepath, db_path=fe.fe_history_path):
@@ -355,8 +338,7 @@ class Estimator:
         This method requires that the current mode and epoch already be specified within the self.system object.
 
         Args:
-            eager: Whether to run the training in eager mode. This is only related to TensorFlow training because
-                PyTorch by nature is always in eager mode.
+            eager: Whether to run the training in eager mode. PyTorch runs in eager mode by default.
         """
         ds_ids = self.pipeline.get_ds_ids(self.system.epoch_idx, self.system.mode)
         epoch_traces = sort_traces(
@@ -404,9 +386,7 @@ class Estimator:
 
                     loader = self._configure_loader(loader)
                     iterator = iter(loader)
-                    with Suppressor(allow_pyprint=True, show_if_exception=True):
-                        # multi-gpu tensorflow prints a ton of complaint messages here
-                        batch = next(iterator)
+                    batch = next(iterator)
                     ds_traces = sort_traces(ds_traces,
                                             available_outputs=to_set(batch.keys()) | network_output_keys,
                                             ds_ids=ds_ids)
@@ -433,67 +413,27 @@ class Estimator:
                     self._run_traces_on_ds_end(traces=per_ds_traces, data=end_epoch_data)
         self._run_traces_on_epoch_end(traces=epoch_traces, data=end_epoch_data)
 
-    def _configure_loader(self, loader: Union[DataLoader, tf.data.Dataset]) -> Union[DataLoader, tf.data.Dataset]:
+    def _configure_loader(self, loader: DataLoader) -> DataLoader:
         """A method to configure a given dataloader for use with this Estimator's Network.
 
-        This method will ensure that the `loader` returns the correct data type (tf.Tensor or torch.Tensor) depending on
-         the requirements of the Network. It also handles issues with multi-gpu data sharding.
+        This method ensures the loader is properly configured for PyTorch training.
 
         Args:
             loader: A data loader to be modified.
 
         Returns:
-            The potentially modified dataloader to be used for training.
+            The dataloader to be used for training.
         """
+        # PyTorch DataLoader is used directly
+        return loader
 
-        new_loader = loader
-        if isinstance(new_loader, DataLoader) and isinstance(self.network, TFNetwork):
-            add_batch = bool(new_loader.batch_size)
-            if hasattr(loader, 'fe_postprocess_fn') and loader.fe_postprocess_fn is not None:
-                # The user is manually batching data and running ops on data batches. No reliable way to shortcut this
-                # since ops might require specific batch composition.
-                data_instance = next(iter(loader))
-                add_batch = False
-            else:
-                # No batch-based ops so we can try and just use the OpDataset to more quickly get our data summary
-                data_instance = loader.dataset[0]
-                if isinstance(data_instance, list):
-                    # This is a batched dataset
-                    data_instance = data_instance[0]
-                    add_batch = True
-                if isinstance(data_instance, FilteredData):
-                    # We got unlucky and drew filtered data as the zeroth element. Fall back to a slower but more robust
-                    # analysis of the batch
-                    data_instance = next(iter(loader))
-                    add_batch = False
-            data_instance = to_tensor(data_instance, target_type="tf")
-            data_type = to_type(data_instance)
-            data_shape = to_shape(data_instance, add_batch=add_batch, exact_shape=False)
-            new_loader = tf.data.Dataset.from_generator(lambda: loader, data_type, output_shapes=data_shape)
-            new_loader = new_loader.prefetch(1)
-        if isinstance(new_loader, tf.data.Dataset):
-            if self.system.train_steps_per_epoch and self.system.mode == "train":
-                new_loader = new_loader.take(self.system.train_steps_per_epoch)
-            if self.system.eval_steps_per_epoch and self.system.mode == "eval":
-                new_loader = new_loader.take(self.system.eval_steps_per_epoch)
-            if isinstance(tf.distribute.get_strategy(), tf.distribute.MirroredStrategy) and isinstance(
-                    self.network, TFNetwork) and not isinstance(new_loader, DistributedDataset):
-                # The default autoshard policy is file, changing it to data to avoid warning
-                options = tf.data.Options()
-                options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.DATA
-                new_loader = new_loader.with_options(options)
-                new_loader = tf.distribute.get_strategy().experimental_distribute_dataset(new_loader)
-        return new_loader
-
-    def _configure_tensor(self, loader: Union[DataLoader, tf.data.Dataset], batch: Dict[str, Any]) -> Dict[str, Any]:
-        """A function to convert a batch of tf.Tensors to torch.Tensors if required.
+    def _configure_tensor(self, loader: DataLoader, batch: Dict[str, Any]) -> Dict[str, Any]:
+        """A function to ensure batch tensors are in the correct format.
 
         Returns:
-            Either the original `batch`, or the `batch` converted to torch.Tensors if required.
+            The original `batch` (PyTorch handles tensor conversion automatically).
         """
-        # TODO - if user has torch loader but custom collate that doesn't return torch tensor, need to cast here
-        if isinstance(loader, tf.data.Dataset) and isinstance(self.network, TorchNetwork):
-            batch = to_tensor(batch, target_type="torch")
+        # PyTorch DataLoader returns torch.Tensors by default
         return batch
 
     def _run_traces_on_begin(self, traces: Iterable[Trace]) -> None:
@@ -613,13 +553,11 @@ class Estimator:
         if self.system.stop_training:
             raise EarlyStop
 
-
 class EarlyStop(Exception):
     """An exception raised when the system.stop_training flag is flipped by a Trace in order to abort the training.
 
     This class is intentionally not @traceable.
     """
-
 
 def enable_deterministic(seed: int) -> None:
     """Invoke to set random seed for deterministic training.
@@ -627,7 +565,6 @@ def enable_deterministic(seed: int) -> None:
     The determinism only works for tensorflow >= 2.1 and pytorch >= 1.14, and some model layers don't support.
 
     Known failing layers:
-    * tf.keras.layers.UpSampling2D
 
     Args:
         seed: The random seed to use for training.
@@ -637,11 +574,7 @@ def enable_deterministic(seed: int) -> None:
     os.environ['TF_DETERMINISTIC_OPS'] = str(1)
     random.seed(seed)
     np.random.seed(seed)
-    tf.random.set_seed(seed)
     torch.manual_seed(seed)
-    tf.keras.utils.set_random_seed(seed)
-    tf.config.experimental.enable_op_determinism()
-
 
 def record_history(path: Union[bool, str]) -> None:
     """Change the default location for history tracking.

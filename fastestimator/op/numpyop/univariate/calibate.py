@@ -17,7 +17,7 @@ from typing import Any, Callable, Dict, Iterable, List, TypeVar, Union
 
 import dill
 import numpy as np
-import tensorflow as tf
+
 import torch
 
 from fastestimator.op.numpyop.numpyop import NumpyOp
@@ -25,7 +25,6 @@ from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
 
 Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
-
 
 @traceable()
 class Calibrate(NumpyOp):

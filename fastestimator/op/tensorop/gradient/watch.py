@@ -20,6 +20,7 @@ from fastestimator.backend._watch import watch
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 @traceable()
 class Watch(TensorOp):
@@ -33,7 +34,6 @@ class Watch(TensorOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
-
     def __init__(self,
                  inputs: Union[None, str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
@@ -47,7 +47,7 @@ class Watch(TensorOp):
             self.retain_graph = retain
         return self.retain_graph
 
-    def forward(self, data: List[torch.Tensor], state: Dict[str, Any]) -> List[torch.Tensor]:
+    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
         for idx, tensor in enumerate(data):
             data[idx] = watch(tensor=tensor)
         return data

@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional, Tuple, TypeVar, Iterable, Union
 
 import cv2
 import numpy as np
-import tensorflow as tf
+
 import torch
 
 from fastestimator.backend._argmax import argmax
@@ -30,8 +30,7 @@ from fastestimator.util.img_data import GridDisplay, BatchDisplay
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
-
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 @traceable()
 class EigenCAM(Trace):
@@ -154,8 +153,6 @@ class EigenCAM(Trace):
         images = concat(self.images)[:self.n_samples or self.n_found]
         _, height, width = get_image_dims(images)
         activations = to_number(concat(self.activations)[:self.n_samples or self.n_found])
-        if tf.is_tensor(images):
-            activations = np.moveaxis(activations, source=-1, destination=1)  # Activations should be channel first
         columns = []
         labels = None if not self.labels else concat(self.labels)[:self.n_samples or self.n_found]
         if labels is not None:

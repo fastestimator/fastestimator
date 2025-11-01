@@ -79,9 +79,12 @@ class DiceLoss(LossOp):
                 self.weights[0, channel] = weight
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
-        if self.weights is not None:
-            self.weights = convert_tensor_precision(to_tensor(self.weights, 'torch'))
-            self.weights.to(device)
+        if framework == 'torch':
+            if self.weights is not None:
+                self.weights = convert_tensor_precision(to_tensor(self.weights, 'torch'))
+                self.weights.to(device)
+        else:
+            raise ValueError("unrecognized framework: {}".format(framework))
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
         y_pred, y_true = data

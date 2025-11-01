@@ -19,9 +19,10 @@ import torch
 from fastestimator.backend._gather_from_batch import gather_from_batch
 from fastestimator.backend._reduce_max import reduce_max
 from fastestimator.op.tensorop.tensorop import TensorOp
-from fastestimator.util.base_util import to_list
 from fastestimator.util.traceability_util import traceable
+from fastestimator.util.base_util import to_list
 
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 @traceable()
 class Gather(TensorOp):
@@ -39,7 +40,6 @@ class Gather(TensorOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
-
     def __init__(self,
                  inputs: Union[str, List[str]],
                  outputs: Union[str, List[str]],
@@ -53,7 +53,7 @@ class Gather(TensorOp):
         super().__init__(inputs=combined_inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.in_list, self.out_list = True, True
 
-    def forward(self, data: List[torch.Tensor], state: Dict[str, Any]) -> List[torch.Tensor]:
+    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
         indices = data[:self.num_indices]
         inputs = data[self.num_indices:]
         results = []

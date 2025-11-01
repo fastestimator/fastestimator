@@ -20,9 +20,8 @@ import uuid
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
 
 import dill as pickle  # Need to use dill since tf.Variable is a weakref object on multi-gpu machines
-import tensorflow as tf
+
 import torch
-from tensorflow.python.distribute.mirrored_strategy import MirroredStrategy
 
 from fastestimator.backend._load_model import load_model
 from fastestimator.backend._save_model import save_model
@@ -37,8 +36,7 @@ from fastestimator.util.util import get_num_gpus
 if TYPE_CHECKING:
     from fastestimator.trace.trace import Trace
 
-Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
-
+Model = TypeVar('Model', bound=torch.nn.Module)
 
 def pickle_mirroredstrategy(obj: MirroredStrategy) -> Tuple[Callable, Tuple]:
     """A custom reduce function to use when Pickle encounters a tf MirroredStrategy.
@@ -52,7 +50,6 @@ def pickle_mirroredstrategy(obj: MirroredStrategy) -> Tuple[Callable, Tuple]:
         The mechanism to construct a new instance of the MirroredStrategy. See Python docs on the __reduce__ method.
     """
     return tf.distribute.get_strategy, ()
-
 
 class System:
     """A class which tracks state information while the fe.Estimator is running.
@@ -331,9 +328,7 @@ class System:
             ValueError: If the model is of an unknown type.
             FileNotFoundError: If the model weights or optimizer state is missing.
         """
-        if isinstance(model, tf.keras.Model):
-            model_ext, optimizer_ext = 'h5', 'pkl'
-        elif isinstance(model, torch.nn.Module):
+        if isinstance(model, torch.nn.Module):
             model_ext, optimizer_ext = 'pt', 'pt'
         else:
             raise ValueError(f"Unknown model type: {type(model)}")

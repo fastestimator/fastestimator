@@ -22,6 +22,7 @@ from fastestimator.backend._sparse_categorical_crossentropy import sparse_catego
 from fastestimator.op.tensorop.loss.loss import LossOp
 from fastestimator.util.traceability_util import traceable
 
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 @traceable()
 class CrossEntropy(LossOp):
@@ -47,7 +48,6 @@ class CrossEntropy(LossOp):
     Raises:
         AssertionError: If `class_weights` or it's keys and values are of unacceptable data types.
     """
-
     def __init__(self,
                  inputs: Union[Tuple[str, str], List[str]],
                  outputs: str,
@@ -79,9 +79,12 @@ class CrossEntropy(LossOp):
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
         if self.class_weights:
-            self.class_dict = self.class_weights
+            if framework == 'torch':
+                self.class_dict = self.class_weights
+            else:
+                raise ValueError("unrecognized framework: {}".format(framework))
 
-    def forward(self, data: List[torch.Tensor], state: Dict[str, Any]) -> torch.Tensor:
+    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
         y_pred, y_true = data
         form = self.form
         if form is None:

@@ -20,6 +20,7 @@ from fastestimator.backend._zeros_like import zeros_like
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 @traceable()
 class Average(TensorOp):
@@ -34,7 +35,6 @@ class Average(TensorOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
-
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: str,
@@ -43,7 +43,7 @@ class Average(TensorOp):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.in_list, self.out_list = True, False
 
-    def forward(self, data: List[torch.Tensor], state: Dict[str, Any]) -> torch.Tensor:
+    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
         result = zeros_like(data[0])
         for tensor in data:
             result += tensor

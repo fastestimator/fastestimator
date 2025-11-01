@@ -15,12 +15,15 @@
 from typing import Any, Dict, List, Optional, Set, TypeVar, Union
 
 import numpy as np
+
 import torch
 
 from fastestimator.backend._cast import cast
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
+Model = TypeVar('Model', bound=torch.nn.Module)
 
 @traceable()
 class OneOf(TensorOp):
@@ -30,7 +33,6 @@ class OneOf(TensorOp):
         *tensor_ops: Ops to choose between with a specified (or uniform) probability.
         probs: List of probabilities, must sum to 1. When None, the probabilities will be equally distributed.
     """
-
     def __init__(self, *tensor_ops: TensorOp, probs: Optional[List[float]] = None) -> None:
         inputs = tensor_ops[0].inputs
         outputs = tensor_ops[0].outputs
@@ -64,7 +66,7 @@ class OneOf(TensorOp):
     def get_fe_loss_keys(self) -> Set[str]:
         return set.union(*[op.get_fe_loss_keys() for op in self.ops])
 
-    def get_fe_models(self) -> Set[torch.nn.Module]:
+    def get_fe_models(self) -> Set[Model]:
         return set.union(*[op.get_fe_models() for op in self.ops])
 
     def fe_retain_graph(self, retain: Optional[bool] = None) -> Optional[bool]:
@@ -76,8 +78,7 @@ class OneOf(TensorOp):
     def __getstate__(self) -> Dict[str, List[Dict[Any, Any]]]:
         return {'ops': [elem.__getstate__() if hasattr(elem, '__getstate__') else {} for elem in self.ops]}
 
-    def forward(self, data: Union[torch.Tensor, List[torch.Tensor]],
-                state: Dict[str, Any]) -> Union[torch.Tensor, List[torch.Tensor]]:
+    def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
         """Execute a randomly selected op from the list of `numpy_ops`.
 
         Args:

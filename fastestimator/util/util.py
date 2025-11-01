@@ -38,12 +38,11 @@ from typing import (
 )
 
 import numpy as np
-import tensorflow as tf
+
 import torch
 import torch.backends.mps
 from cpuinfo import get_cpu_info
 from pyfiglet import Figlet
-from tensorflow.python.ops.logging_ops import print_v2
 
 from fastestimator.util.base_util import warn
 
@@ -67,19 +66,7 @@ STRING_TO_TORCH_DTYPE = {
 }
 
 STRING_TO_TF_DTYPE = {
-    None: None,
-    "string": tf.string,
-    "int8": tf.int8,
-    "uint8": tf.uint8,
-    "int16": tf.int16,
-    "uint16": tf.uint16,
-    "int32": tf.int32,
-    "uint32": tf.uint32,
-    "int64": tf.int64,
-    "uint64": tf.uint64,
-    "float16": tf.float16,
-    "float32": tf.float32,
-    "float64": tf.float64
+    None: None
 }
 
 TENSOR_TO_NP_DTYPE = {
@@ -95,15 +82,6 @@ TENSOR_TO_NP_DTYPE = {
     torch.int32: np.int32,
     torch.int64: np.int64,
     torch.bool: bool,
-    tf.float32: np.float32,
-    tf.float64: np.float64,
-    tf.float16: np.float16,
-    tf.uint8: np.uint8,
-    tf.int8: np.int8,
-    tf.int16: np.int16,
-    tf.int32: np.int32,
-    tf.int64: np.int64,
-    tf.bool: bool,
     np.dtype('float32'): np.float32,
     np.dtype('float64'): np.float64,
     np.dtype('float16'): np.float16,
@@ -115,9 +93,8 @@ TENSOR_TO_NP_DTYPE = {
     np.dtype('bool'): bool,
 }
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 T = TypeVar('T')
-
 
 class Suppressor(object):
     """A class which can be used to silence output of function calls.
@@ -222,36 +199,27 @@ class Suppressor(object):
         except FileNotFoundError:
             pass
 
-
-def get_optimizer_name(model: Union[tf.keras.Model, torch.nn.Module]) -> str:
+def get_optimizer_name(model: torch.nn.Module) -> str:
     try:
         return type(model.optimizer).__name__
     except AttributeError:
         return model.optimizer
 
-
-def count_params(weights: List[Union[tf.Tensor, torch.Tensor]]) -> int:
+def count_params(weights: List[torch.Tensor]) -> int:
     shapes = [v.shape for v in weights]
     return int(sum(math.prod(p) for p in shapes))
 
-
-def get_model_parameters(model: Union[tf.keras.Model, torch.nn.Module]) -> Dict[str, int]:
-    if isinstance(model, tf.keras.Model):
-        trainable_params = count_params(model.trainable_weights)
-        non_trainable_params = count_params(model.non_trainable_weights)
-        total_params = trainable_params + non_trainable_params
-    elif isinstance(model, torch.nn.Module):
+def get_model_parameters(model: torch.nn.Module) -> Dict[str, int]:
+    if isinstance(model, torch.nn.Module):
         total_params = sum(p.numel() for p in model.parameters())
         trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     else:
         raise ValueError("Model not recognized.")
     return {'total_params': total_params, 'trainable_params': trainable_params}
 
-
 def _custom_tf_print(*args, **kwargs):
     kwargs['output_stream'] = Suppressor.tf_print_name_f
-    print_v2(*args, **kwargs)
-
+    print(*args, **kwargs)
 
 def is_valid_file(file_path: str) -> bool:
     """Validate whether file is valid or not.
@@ -571,8 +539,7 @@ def get_batch_size(data: Dict[str, Any]) -> int:
     assert len(batch_size) == 1, "invalid batch size: {}".format(batch_size)
     return batch_size.pop()
 
-
-def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray, int, float, str]) -> np.ndarray:
+def to_number(data: Union[torch.Tensor, np.ndarray, int, float, str]) -> np.ndarray:
     """Convert an input value into a Numpy ndarray.
 
     This method can be used with Python and Numpy data:
@@ -601,9 +568,7 @@ def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray, int, float, str])
     Returns:
         An ndarray corresponding to the given `data`.
     """
-    if tf.is_tensor(data):
-        data = data.numpy()
-    elif isinstance(data, torch.Tensor):
+    if isinstance(data, torch.Tensor):
         if data.requires_grad:
             data = data.detach().numpy()
         else:

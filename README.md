@@ -13,39 +13,26 @@
 [![PyPI stable Download](https://img.shields.io/pypi/dm/fastestimator?label=stable%20downloads&color=16D1B4)](https://pypistats.org/packages/fastestimator)
 [![PyPI stable Download](https://img.shields.io/pypi/dm/fastestimator-nightly?label=nightly%20downloads&color=16D1B4)](https://pypistats.org/packages/fastestimator-nightly)
 
-FastEstimator is a high-level deep learning library built on TensorFlow2 and PyTorch. With the help of FastEstimator, you can easily build a high-performance deep learning model and run it anywhere. :wink:
+FastEstimator is a high-level deep learning library built on PyTorch. With the help of FastEstimator, you can easily build a high-performance deep learning model and run it anywhere. :wink:
 
 For more information, please visit our [website](https://www.fastestimator.org/).
 
 ## Support Matrix
 
-| FastEstimator  | Python | TensorFlow | PyTorch | CUDA |  Installation Instruction |
-| -------------  | ------  | --------- | ------- | ---- | ----------- |
-| Nightly  | 3.10-3.12  | 2.15.1 | 2.3.1 | 12.2.2 | master branch |
-| 1.7 (recent stable) | 3.10-3.12  | 2.15.1 | 2.3.1 | 12.2 | [r1.7 branch](https://github.com/fastestimator/fastestimator/tree/r1.7) |
-| 1.6  | 3.8-3.10  | 2.11.1 | 2.0.1 | 11.8 | [r1.6 branch](https://github.com/fastestimator/fastestimator/tree/r1.6) |
-| 1.5  | 3.7-3.9  | 2.9.1 | 1.10.2 | 11.0 | [r1.5 branch](https://github.com/fastestimator/fastestimator/tree/r1.5) |
-| 1.4  | 3.6-3.8  | 2.4.1 | 1.7.1 | 11.0 | [r1.4 branch](https://github.com/fastestimator/fastestimator/tree/r1.4) |
-| 1.3  | 3.6-3.8  | 2.4.1 | 1.7.1 | 11.0 | [r1.3 branch](https://github.com/fastestimator/fastestimator/tree/r1.3) |
-| 1.2  | 3.6-3.8  | 2.4.1 | 1.7.1 | 11.0 | [r1.2 branch](https://github.com/fastestimator/fastestimator/tree/r1.2) |
-| 1.1  | 3.6-3.8  | 2.3.0 | 1.6.0 | 10.1 | [r1.1 branch](https://github.com/fastestimator/fastestimator/tree/r1.1) |
+| FastEstimator  | Python | PyTorch | CUDA |  Installation Instruction |
+| -------------  | ------  | ------- | ---- | ----------- |
+| Nightly  | 3.10-3.12  | 2.3.1 | 12.2.2 | master branch |
+| 1.7 (recent stable) | 3.10-3.12  | 2.3.1 | 12.2 | [r1.7 branch](https://github.com/fastestimator/fastestimator/tree/r1.7) |
+| 1.6  | 3.8-3.10  | 2.0.1 | 11.8 | [r1.6 branch](https://github.com/fastestimator/fastestimator/tree/r1.6) |
+| 1.5  | 3.7-3.9  | 1.10.2 | 11.0 | [r1.5 branch](https://github.com/fastestimator/fastestimator/tree/r1.5) |
+| 1.4  | 3.6-3.8  | 1.7.1 | 11.0 | [r1.4 branch](https://github.com/fastestimator/fastestimator/tree/r1.4) |
+| 1.3  | 3.6-3.8  | 1.7.1 | 11.0 | [r1.3 branch](https://github.com/fastestimator/fastestimator/tree/r1.3) |
+| 1.2  | 3.6-3.8  | 1.7.1 | 11.0 | [r1.2 branch](https://github.com/fastestimator/fastestimator/tree/r1.2) |
+| 1.1  | 3.6-3.8  | 1.6.0 | 10.1 | [r1.1 branch](https://github.com/fastestimator/fastestimator/tree/r1.1) |
 
 ## Installation
 
 ### 1. Install Dependencies
-
-* Install TensorFlow
-  * Linux:
-
-      ```bash
-      pip install tensorflow==2.15.1
-      ```
-
-  * Mac (M1/M2):
-        Please follow this [installation guide](https://github.com/fastestimator/fastestimator/blob/master/installation_docs/mac_installation.md)
-
-  * Windows:
-        Please follow this [installation guide](https://github.com/fastestimator/fastestimator/blob/master/installation_docs/tensorflow_windows_installation.md)
 
 * Install PyTorch
   * CPU:

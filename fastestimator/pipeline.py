@@ -23,7 +23,7 @@ from threading import Lock
 from typing import Any, Dict, Iterable, List, Literal, Optional, Set, Tuple, Type, TypeVar, Union, cast, overload
 
 import numpy as np
-import tensorflow as tf
+
 from torch.utils.data import DataLoader, Dataset
 from typing_extensions import Self
 
@@ -43,7 +43,6 @@ from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import cpu_count, get_num_devices
 
 DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
-
 
 @traceable(blacklist=('ctx_loader', 'ctx_lock'))
 class Pipeline:
@@ -214,7 +213,6 @@ class Pipeline:
             # num_process check
             assert isinstance(self.num_process, int), "number of processes must be an integer"
             return True
-        elif isinstance(dataset, (DataLoader, tf.data.Dataset)):
             if kwargs['batch_size'] is not None:
                 warn("batch_size will only be used for built-in dataset")
             if kwargs['ops'] is not None:
@@ -778,7 +776,6 @@ class Pipeline:
         # killing one another through multi-processing.
         gc.collect()
         self.ctx_lock.release()
-
 
 def _batch_postprocess(data: Dict[str, Any], ops: List[NumpyOp], output_keys: Set[str], mode: str, shared: bool = True) -> \
         Union[Dict[str, Any], FilteredData]:

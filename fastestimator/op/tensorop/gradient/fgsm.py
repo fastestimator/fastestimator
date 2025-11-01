@@ -24,6 +24,7 @@ from fastestimator.backend._sign import sign
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 @traceable()
 class FGSM(TensorOp):
@@ -64,7 +65,7 @@ class FGSM(TensorOp):
             self.retain_graph = retain
         return self.retain_graph
 
-    def forward(self, data: List[torch.Tensor], state: Dict[str, Any]) -> torch.Tensor:
+    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
         data, loss = data
         grad = get_gradient(target=loss, sources=data, retain_graph=self.retain_graph)
         adverse_data = clip_by_value(data + self.epsilon * sign(grad),

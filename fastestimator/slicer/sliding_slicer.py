@@ -14,7 +14,6 @@
 # ==============================================================================
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._expand_dims import expand_dims
@@ -26,7 +25,6 @@ from fastestimator.types import Tensor, TensorT
 from fastestimator.util.base_util import to_list
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import get_num_gpus
-
 
 @traceable()
 class SlidingSlicer(Slicer):

@@ -30,7 +30,7 @@ import dot2tex as d2t
 import jsonpickle
 import numpy as np
 import pydot
-import tensorflow as tf
+
 import torch
 from cpuinfo import get_cpu_info
 from natsort import humansorted
@@ -72,7 +72,6 @@ from fastestimator.util.traceability_util import FeSummaryTable, SummaryTable, t
 from fastestimator.util.util import Suppressor, cpu_count, get_gpu_info, get_model_parameters, get_num_gpus, \
     get_optimizer_name
 
-
 class DataOp(Op):
     def __init__(self,
                  inputs: Union[None, str, Iterable[str]] = None,
@@ -81,11 +80,9 @@ class DataOp(Op):
                  ds_id: Union[None, str, Iterable[str]] = None) -> None:
         super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
 
-
 class _UnslicerWrapper():
     def __init__(self, slicer: Slicer) -> None:
         self.slicer = slicer
-
 
 @traceable()
 class Traceability(Trace):
@@ -486,34 +483,11 @@ class Traceability(Trace):
         """
         with self.doc.create(Section("Models")):
             for model in humansorted(self.system.network.models, key=lambda m: m.model_name):
-                if not isinstance(model, (tf.keras.Model, torch.nn.Module)):
+                if not isinstance(model, torch.nn.Module):
                     continue
                 self.doc.append(NoEscape(r'\FloatBarrier'))
                 with self.doc.create(Subsection(f"{model.model_name.capitalize()}", label=model.model_name)):
-                    if isinstance(model, tf.keras.Model):
-                        # Text Summary
-                        summary = []
-                        model.summary(line_length=92, print_fn=lambda x: summary.append(x))
-                        summary = "\n".join(summary)
-                        self.doc.append(Verbatim(summary))
-                        with self.doc.create(Center()):
-                            self.doc.append(HrefFEID(FEID(id(model)), model.model_name))
-
-                        # Visual Summary
-                        # noinspection PyBroadException
-                        try:
-                            file_path = os.path.join(self.resource_dir,
-                                                     "{}_{}.pdf".format(self.report_name, model.model_name))
-                            dot = tf.keras.utils.model_to_dot(model, show_shapes=True, expand_nested=True)
-                            # LaTeX \maxdim is around 575cm (226 inches), so the image must have max dimension less than
-                            # 226 inches. However, the 'size' parameter doesn't account for the whole node height, so
-                            # set the limit lower (100 inches) to leave some wiggle room.
-                            dot.set('size', '100')
-                            dot.write(file_path, format='pdf')
-                        except Exception:
-                            file_path = None
-                            warn(f"Model {model.model_name} could not be visualized by Traceability")
-                    elif isinstance(model, torch.nn.Module):
+                    if isinstance(model, torch.nn.Module):
                         if hasattr(model, 'fe_input_spec'):
                             # Text Summary
                             # noinspection PyUnresolvedReferences
