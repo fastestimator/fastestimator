@@ -57,7 +57,7 @@ class BaseNetwork:
     Networks are used to define the computation graph surrounding one or more models during training.
 
     Args:
-        target_type: What tensor type is expected by this network ('torch' or 'tf').
+        target_type: What tensor type is expected by this network ('torch').
         ops: The operators to be executed throughout training / testing / inference. These are likely to contain one or
             more model ops, as well as loss ops and update ops.
         postprocessing: A collection of NumpyOps to be run on the CPU after all of the normal `ops` have been executed.
@@ -426,7 +426,7 @@ def Network(
 
     Args:
         ops: A collection of Ops defining the graph for this Network. It should contain at least one ModelOp, and all
-            models should be either TensorFlow or Pytorch. We currently do not support mixing TensorFlow and Pytorch
+            models should be  Pytorch. We currently do not support mixing Pytorch
             models within the same network.
         pops: Postprocessing Ops. A collection of NumpyOps to be run on the CPU after all of the normal `ops` have been
             executed. Unlike the NumpyOps found in the pipeline, these ops will run on batches of data rather than
@@ -439,8 +439,8 @@ def Network(
         A network instance containing the given `ops`.
 
     Raises:
-        AssertionError: If TensorFlow and PyTorch models are mixed, or if no models are provided.
-        ValueError: If a model is provided whose type cannot be identified as either TensorFlow or PyTorch.
+        AssertionError: If PyTorch models are mixed, or if no models are provided.
+        ValueError: If a model is provided whose type cannot be identified as PyTorch.
     """
     models = _collect_models(ops)
     framework = set()
@@ -453,14 +453,12 @@ def Network(
         else:
             framework.add("unknown")
     if len(framework) == 0:
-        framework.add('tf')  # We will use tf as default framework if no models are found
-    assert len(framework) == 1, "please make sure either tensorflow or torch model is used in network"
+        framework.add('torch')  # We will use torch as default framework if no models are found
+    assert len(framework) == 1, "please make sure either torch model is used in network"
     assert len(model_names) == len(models), "all models must have unique model names"
 
     framework = framework.pop()
-    if framework == "tf":
-        network = TFNetwork(ops, pops, slicers)
-    elif framework == "torch":
+    if framework == "torch":
         network = TorchNetwork(ops, pops, slicers)
     else:
         raise ValueError("Unknown model type")
@@ -721,9 +719,6 @@ def _fe_compile(model: Model,
     """
     if isinstance(model, torch.nn.Module):
         framework = "torch"
-    elif isinstance(model, Sequential):
-        raise DeprecationWarning("Importing from tensorflow.python.keras.models/layers is deprecated. Import from "
-                                 "tensorflow.keras.models/layers instead")
     else:
         raise ValueError("unrecognized model format: {}".format(type(model)))
     # torch multi-gpu handling
@@ -742,8 +737,6 @@ def _fe_compile(model: Model,
     else:
         optimizer_fn = _build_optimizer(optimizer_fn, model, framework, mixed_precision)
         model.current_optimizer = optimizer_fn
-    if framework == "tf":
-        model.input_spec = None  # this is to handle a behavior change in tf 2.4.1 that enforces a input shape check
     model.optimizer = optimizer_fn
     model.fe_compiled = True
     if weight:

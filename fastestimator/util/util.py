@@ -550,12 +550,6 @@ def to_number(data: Union[torch.Tensor, np.ndarray, int, float, str]) -> np.ndar
     b = fe.backend.to_number(n)  # [1, 2, 3] (type==np.ndarray)
     ```
 
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.constant([1, 2, 3])
-    b = fe.backend.to_number(t)  # [1, 2, 3] (type==np.ndarray)
-    ```
-
     This method can be used with PyTorch tensors:
     ```python
     p = torch.tensor([1, 2, 3])

@@ -42,7 +42,7 @@ from fastestimator.util.base_util import filter_nones, to_list, to_set, warn
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import cpu_count, get_num_devices
 
-DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
+DataSource = TypeVar('DataSource', Dataset, DataLoader)
 
 @traceable(blacklist=('ctx_loader', 'ctx_lock'))
 class Pipeline:
@@ -197,7 +197,7 @@ class Pipeline:
             **kwargs: A selection of variables and their values which must be validated.
 
         Returns:
-            True iff the `dataset` is a PyTorch Dataset (as opposed to a DataLoader or tf.data.Dataset).
+            True iff the `dataset` is a PyTorch Dataset (as opposed to a DataLoader).
 
         Raises:
             AssertionError: If the `kwargs` are found to be invalid based on the given `dataset`.
@@ -313,8 +313,6 @@ class Pipeline:
 
         for ds_id in ds_ids:
             with self(mode=mode, epoch=epoch, ds_id=ds_id, steps_per_epoch=num_steps) as loader:
-                if isinstance(loader, tf.data.Dataset):
-                    loader = loader.take(num_steps)
                 start = time.perf_counter()
                 for idx, _ in enumerate(loader, start=1):
                     if idx % log_interval == 0:
@@ -559,8 +557,6 @@ class Pipeline:
         """
         results = []
         with self(mode=mode, epoch=epoch, ds_id=ds_id, shuffle=shuffle) as loader:
-            if isinstance(loader, tf.data.Dataset):
-                loader = loader.take(num_steps)
             if loader:
                 for idx, batch in enumerate(loader, start=1):
                     results.append(batch)
@@ -675,7 +671,7 @@ class Pipeline:
         self.ctx_lock.release()
         return self
 
-    def __enter__(self) -> Union[DataLoader, tf.data.Dataset]:
+    def __enter__(self) -> DataLoader:
         """Get a data loader from the Pipeline for the current epoch and mode.
 
         A given pipeline can only provide one loader at a time. This helps to prevent issues with multi-threading.

@@ -378,13 +378,6 @@ class TestNetworkBuild(unittest.TestCase):
             model = fe.build(model_fn=one_layer_tf_model, optimizer_fn="adam", model_name="test")
             self.assertEqual(model.model_name, "test")
 
-    def test_network_build_tf_model_tf_optimizer_check_model_optimizer_instance(self):
-        model = fe.build(model_fn=one_layer_tf_model, optimizer_fn=tf.keras.optimizers.legacy.Adadelta)
-        with self.subTest("check model instance"):
-            self.assertIsInstance(model, tf.keras.Model)
-
-        with self.subTest("check optimizer"):
-            self.assertIsInstance(model.optimizer, tf.keras.optimizers.legacy.Optimizer)
 
     def test_network_build_torch_model_torch_optimizer_check_model_optimizer_instance(self):
         model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=lambda x: torch.optim.SGD(params=x, lr=0.01))

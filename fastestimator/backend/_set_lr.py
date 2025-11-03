@@ -38,6 +38,8 @@ def set_lr(model: torch.nn.Module, lr: float, weight_decay: Optional[float] = No
     if isinstance(model, torch.nn.Module):
         for param_group in model.current_optimizer.param_groups:
             param_group['lr'] = lr
+            if weight_decay is not None:
+                param_group['weight_decay'] = weight_decay
     else:
         raise ValueError("Unrecognized model instance {}".format(type(model)))
 

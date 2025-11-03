@@ -15,7 +15,6 @@
 import unittest
 
 import numpy as np
-import tensorflow as tf
 import torch
 
 from fastestimator.slicer import MeanUnslicer
@@ -29,10 +28,6 @@ class TestMeanUnslicer(unittest.TestCase):
 
     def test_unslice(self):
         slicer = MeanUnslicer(unslice="x")
-        with self.subTest("TF"):
-            minibatches = [tf.convert_to_tensor(elem) for elem in self.minibatches]
-            batch = slicer._unslice_batch(minibatches, key='x')
-            np.testing.assert_array_almost_equal(batch, self.target)
         with self.subTest("Torch"):
             minibatches = [torch.tensor(elem) for elem in self.minibatches]
             batch = slicer._unslice_batch(minibatches, key='x')

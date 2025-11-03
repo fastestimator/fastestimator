@@ -38,18 +38,6 @@ if TYPE_CHECKING:
 
 Model = TypeVar('Model', bound=torch.nn.Module)
 
-def pickle_mirroredstrategy(obj: MirroredStrategy) -> Tuple[Callable, Tuple]:
-    """A custom reduce function to use when Pickle encounters a tf MirroredStrategy.
-
-    This relies on the fact that the tf strategy will already be set before the System.load_state method gets called.
-
-    Args:
-        obj: The MirroredStrategy instance.
-
-    Returns:
-        The mechanism to construct a new instance of the MirroredStrategy. See Python docs on the __reduce__ method.
-    """
-    return tf.distribute.get_strategy, ()
 
 class System:
     """A class which tracks state information while the fe.Estimator is running.
@@ -279,7 +267,6 @@ class System:
             # MirroredVariables in multi-gpu systems.
             p = pickle.Pickler(file)
             p.dispatch_table = copyreg.dispatch_table.copy()
-            p.dispatch_table[MirroredStrategy] = pickle_mirroredstrategy
             p.dump(objects)
 
     def load_state(self, load_dir: str) -> None:

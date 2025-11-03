@@ -16,7 +16,7 @@ import tempfile
 import unittest
 from collections import defaultdict
 
-import tensorflow as tf
+import torch
 
 from fastestimator.test.unittest_util import sample_system_object
 from fastestimator.trace.xai import InstanceTracker
@@ -27,19 +27,19 @@ class TestInstanceTracker(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # Epoch 1 Data
-        batch1_metrics = tf.constant([0.9, 0.8, 0.1, 0.4, 0.9, 0.6, 0.1, 0.6, 0.8, 0.3])
-        batch1_idx = tf.constant([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-        batch2_metrics = tf.constant([0.3, 0.1, 0.0, 0.8, 0.5, 0.5, 0.6, 0.2, 0.5, 1.0])
-        batch2_idx = tf.constant([10, 11, 12, 13, 14, 15, 16, 17, 18, 19])
-        batch3_metrics = tf.constant([0.3, 0.4, 0.7, 0.9, 0.3, 0.0, 0.3, 0.7, 0.8, 0.6])
-        batch3_idx = tf.constant([20, 21, 22, 23, 24, 25, 26, 27, 28, 29])
+        batch1_metrics = torch.Tensor([0.9, 0.8, 0.1, 0.4, 0.9, 0.6, 0.1, 0.6, 0.8, 0.3])
+        batch1_idx = torch.Tensor([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+        batch2_metrics = torch.Tensor([0.3, 0.1, 0.0, 0.8, 0.5, 0.5, 0.6, 0.2, 0.5, 1.0])
+        batch2_idx = torch.Tensor([10, 11, 12, 13, 14, 15, 16, 17, 18, 19])
+        batch3_metrics = torch.Tensor([0.3, 0.4, 0.7, 0.9, 0.3, 0.0, 0.3, 0.7, 0.8, 0.6])
+        batch3_idx = torch.Tensor([20, 21, 22, 23, 24, 25, 26, 27, 28, 29])
         # Epoch 2 Data
-        batch4_metrics = tf.constant([0.8, 0.9, 0.6, 0.1, 0.7, 0.3, 0.9, 0.9, 0.4, 0.6])
-        batch4_idx = tf.constant([21, 2, 18, 3, 15, 22, 12, 27, 23, 9])
-        batch5_metrics = tf.constant([0.4, 0.4, 0.9, 0.1, 0.4, 0.9, 0.0, 0.8, 1.0, 0.1])
-        batch5_idx = tf.constant([20, 5, 28, 8, 6, 25, 11, 13, 7, 16])
-        batch6_metrics = tf.constant([0.3, 0.9, 0.9, 0.5, 0.9, 0.8, 0.6, 0.1, 0.1, 0.2])
-        batch6_idx = tf.constant([1, 19, 24, 10, 0, 29, 17, 14, 4, 26])
+        batch4_metrics = torch.Tensor([0.8, 0.9, 0.6, 0.1, 0.7, 0.3, 0.9, 0.9, 0.4, 0.6])
+        batch4_idx = torch.Tensor([21, 2, 18, 3, 15, 22, 12, 27, 23, 9])
+        batch5_metrics = torch.Tensor([0.4, 0.4, 0.9, 0.1, 0.4, 0.9, 0.0, 0.8, 1.0, 0.1])
+        batch5_idx = torch.Tensor([20, 5, 28, 8, 6, 25, 11, 13, 7, 16])
+        batch6_metrics = torch.Tensor([0.3, 0.9, 0.9, 0.5, 0.9, 0.8, 0.6, 0.1, 0.1, 0.2])
+        batch6_idx = torch.Tensor([1, 19, 24, 10, 0, 29, 17, 14, 4, 26])
 
         cls.training_data = [[
             Data({'ce': batch1_metrics, 'idx': batch1_idx}),

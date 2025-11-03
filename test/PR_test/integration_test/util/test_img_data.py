@@ -15,7 +15,7 @@
 import os
 import unittest
 from typing import Tuple
-import tensorflow as tf
+import torch
 
 from fastestimator.test.unittest_util import check_img_similar, fig_to_rgb_array, img_to_rgb_array
 from fastestimator.util import BatchDisplay, GridDisplay
@@ -25,8 +25,8 @@ class TestImageData(unittest.TestCase):
     output_img: str
     input_image_shape: Tuple[int, int]
     label_shape: Tuple[int]
-    x_test: tf.Tensor
-    y_test: tf.Tensor
+    x_test: torch.Tensor
+    y_test: torch.Tensor
     img_data: GridDisplay
 
     @classmethod
@@ -34,8 +34,8 @@ class TestImageData(unittest.TestCase):
         cls.output_img = os.path.abspath(os.path.join(__file__, "..", "resources", "test_img_data_paintfig.png"))
         cls.input_image_shape = (150, 150)
         cls.label_shape = (4, )
-        cls.x_test = 0.5 * tf.ones((4, 150, 150, 3))
-        cls.y_test = tf.ones(cls.label_shape)
+        cls.x_test = 0.5 * torch.ones((4, 150, 150, 3))
+        cls.y_test = torch.ones(cls.label_shape)
         cls.img_data = GridDisplay([BatchDisplay(text=cls.y_test, title="y"),
                                     BatchDisplay(image=cls.x_test, title="x")])
 

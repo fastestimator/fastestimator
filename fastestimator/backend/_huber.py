@@ -18,7 +18,7 @@ import torch
 
 from fastestimator.backend._reduce_mean import reduce_mean
 
-Tensor = TypeVar('Tensor', torch.Tensor)
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 
 def huber(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:

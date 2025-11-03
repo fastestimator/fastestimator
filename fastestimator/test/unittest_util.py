@@ -140,20 +140,6 @@ class MockUniformDistribution:
         else:
             raise ValueError("Unrecognized framework {}".format(self.framework))
 
-def sample_system_object():
-    x_train = np.random.rand(3, 28, 28, 3)
-    y_train = np.random.randint(10, size=(3, ))
-    x_eval = np.random.rand(2, 28, 28, 3)
-    y_eval = np.random.randint(10, size=(2, ))
-
-    train_data = NumpyDataset({'x': x_train, 'y': y_train})
-    eval_data = NumpyDataset({'x': x_eval, 'y': y_eval})
-    test_data = eval_data.split(0.5)
-    model = fe.build(model_fn=fe.architecture.tensorflow.LeNet, optimizer_fn='adam', model_name='tf')
-    pipeline = fe.Pipeline(train_data=train_data, eval_data=eval_data, test_data=test_data, batch_size=1)
-    network = fe.Network(ops=[ModelOp(model=model, inputs="x_out", outputs="y_pred")])
-    system = System(network=network, pipeline=pipeline, traces=[], total_epochs=10, mode='train')
-    return system
 
 def sample_system_object_torch():
     x_train = np.random.rand(3, 28, 28, 3)
@@ -237,7 +223,7 @@ class TraceRun:
         self.data_on_batch_end = None
 
     def run_trace(self) -> None:
-        system = sample_system_object()
+        system = sample_system_object_torch()
         self.trace.system = system
 
         self.data_on_begin = Data()

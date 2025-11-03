@@ -557,9 +557,6 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
                 if isinstance(inp, torch.Tensor):
                     inp = inp.cpu().detach()
                     inp.numpy()
-                # In the elif here we're sure to be tf
-                else:
-                    inp = inp.numpy()  # The variant dtype can't be cast to numpy()
             rank = inp.ndim
             description = {'shape': inp.shape}
             if rank == 0 or (rank == 1 and inp.shape[0] <= 10):

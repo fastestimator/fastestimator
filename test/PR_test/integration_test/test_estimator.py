@@ -45,16 +45,6 @@ class TorchCustomDataset(Dataset):
         return {key: self.data[key][idx] for key in self.data}
 
 
-def get_sample_tf_dataset(expand_axis=-1, batch_size=10):
-    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-    x_train = x_train[:100]
-    y_train = y_train[:100]
-    x_train = np.expand_dims(x_train, axis=expand_axis) / 255.0
-    x_train = x_train.astype(np.float32)
-    dataset_train = tf.data.Dataset.from_tensor_slices({"x": x_train, "y": y_train}).batch(batch_size)
-    return dataset_train
-
-
 def get_sample_torch_dataloader(expand_axis=1, batch_size=10):
     (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
     x_train = x_train[:100]
@@ -162,37 +152,6 @@ class TestEstimatorConfigureLoader(unittest.TestCase):
     * fe.util.util.to_type
     * fe.util.util.to_shape
     """
-    def test_estimator_configure_loader_torch_data_loader_tf_model(self):
-        loader = get_sample_torch_dataloader()
-        pipeline = fe.Pipeline(train_data=loader)
-        model = fe.build(model_fn=LeNetTf, optimizer_fn="adam")
-
-        network = fe.Network(ops=[
-            ModelOp(model=model, inputs="x_out", outputs="y_pred"),
-            CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),
-            UpdateOp(model=model, loss_name="ce")
-        ])
-
-        est = fe.Estimator(pipeline=pipeline, network=network, train_steps_per_epoch=3, epochs=1)
-
-        est.system.mode = "train"
-        new_loader = est._configure_loader(loader)
-
-        with self.subTest("check loader type"):
-            strategy = tf.distribute.get_strategy()
-            if isinstance(strategy, tf.distribute.MirroredStrategy):
-                self.assertIsInstance(new_loader, tf.distribute.DistributedDataset)
-            else:
-                self.assertIsInstance(new_loader, tf.data.Dataset)
-
-        with self.subTest("train_steps_per_epoch=3"):
-            iterator = iter(new_loader)
-            for i in range(3):
-                batch = next(iterator)
-
-            with self.assertRaises(StopIteration):
-                batch = next(iterator)
-
     def test_estimator_configure_loader_tf_data_loader_torch_model(self):
         loader = get_sample_tf_dataset()
         pipeline = fe.Pipeline(train_data=loader)

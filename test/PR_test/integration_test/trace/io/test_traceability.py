@@ -19,12 +19,10 @@ import unittest
 from typing import Union
 
 import pydot
-import tensorflow as tf
 import torch
 
 import fastestimator as fe
 from fastestimator.architecture.pytorch import LeNet as PyLeNet
-from fastestimator.architecture.tensorflow import LeNet
 from fastestimator.dataset.data import mnist
 from fastestimator.op.numpyop.univariate import ExpandDims, Minmax
 from fastestimator.op.tensorop.loss import CrossEntropy
@@ -45,7 +43,7 @@ def _lacks_graphviz():
     return False
 
 
-def _build_estimator(model: Union[tf.keras.Model, torch.nn.Module], trace: Traceability, axis: int = -1):
+def _build_estimator(model: torch.nn.Module, trace: Traceability, axis: int = -1):
     train_data, eval_data = mnist.load_data()
     test_data = eval_data.split(0.5)
     batch_size = 32
@@ -70,7 +68,7 @@ def _build_estimator(model: Union[tf.keras.Model, torch.nn.Module], trace: Trace
                              traces=traces,
                              train_steps_per_epoch=1,
                              eval_steps_per_epoch=None)
-    fake_data = tf.ones(shape=(batch_size, 28, 28, 1)) if axis == -1 else torch.ones(size=(batch_size, 1, 28, 28))
+    fake_data = torch.ones(size=(batch_size, 1, 28, 28))
     model.fe_input_spec = FeInputSpec(fake_data, model)
     return estimator
 
@@ -81,32 +79,6 @@ class TestTraceability(unittest.TestCase):
         cls.root_dir = os.path.join(tempfile.gettempdir(), "FEUnitTestReports")
         cls.tf_dir = os.path.join(cls.root_dir, "TF")
         cls.torch_dir = os.path.join(cls.root_dir, "Torch")
-
-    @unittest.skipIf(_lacks_graphviz(), "The machine does not have GraphViz installed")
-    def test_tf_traceability(self):
-        if os.path.exists(self.tf_dir) and os.path.isdir(self.tf_dir):
-            shutil.rmtree(self.tf_dir)
-
-        trace = Traceability(save_path=self.tf_dir)
-        est = _build_estimator(fe.build(model_fn=LeNet, optimizer_fn="adam", model_name='tfLeNet'), trace)
-
-        trace.system = est.system
-        trace.system.epoch_idx = 1
-        trace.system.summary.name = "TF Test"
-
-        trace.on_begin(Data())
-        trace.on_end(Data())
-
-        crawler = os.walk(self.tf_dir)
-        root = next(crawler)
-        self.assertIn('resources', root[1], "A resources subdirectory should have been generated")
-        self.assertIn('tf_test.tex', root[2], "The tex file should have been generated")
-        # Might be a pdf and/or a .ds_store file depending on system, but shouldn't be more than that
-        self.assertLessEqual(len(root[2]), 3, "Extra files should not have been generated")
-        figs = next(crawler)
-        self.assertIn('tf_test_tfLeNet.pdf', figs[2], "A figure for the model should have been generated")
-        self.assertIn('tf_test_logs.png', figs[2], "A log image should have been generated")
-        self.assertIn('tf_test.txt', figs[2], "A raw log file should have been generated")
 
     @unittest.skipIf(_lacks_graphviz(), "The machine does not have GraphViz installed")
     def test_torch_traceability(self):

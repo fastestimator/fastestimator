@@ -22,7 +22,6 @@ import torch
 
 import fastestimator as fe
 from fastestimator.architecture.pytorch import LeNet as LeNet_torch
-from fastestimator.architecture.tensorflow import LeNet as LeNet_tf
 from fastestimator.dataset.data import mnist
 from fastestimator.op.numpyop.univariate import ExpandDims, Minmax
 from fastestimator.op.tensorop.gradient import GradientOp

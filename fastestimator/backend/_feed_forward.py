@@ -19,7 +19,7 @@ import torch
 
 from fastestimator.backend._to_tensor import to_tensor
 
-Tensor = TypeVar('Tensor', torch.Tensor)
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 
 def feed_forward(model: torch.nn.Module, *x: Union[Tensor, np.ndarray],

@@ -73,15 +73,6 @@ class TorchCustomDataset(Dataset):
         return {key: self.data[key][idx] for key in self.data}
 
 
-def get_sample_tf_dataset():
-    x_train = np.array([[x] for x in range(100)], dtype=np.float32)
-    y_train = np.array([[x] for x in range(-99, 1)], dtype=np.float32)
-    train_data = {"x": x_train, "y": y_train}
-    dataset_tf = tf.data.Dataset.from_tensor_slices(train_data)
-    dataset_tf = dataset_tf.batch(4)
-    return dataset_tf
-
-
 def get_sample_torch_dataset():
     x_train = np.array([[x] for x in range(100)], dtype=np.float32)
     y_train = np.array([[x] for x in range(-99, 1)], dtype=np.float32)
