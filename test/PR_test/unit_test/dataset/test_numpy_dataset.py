@@ -15,17 +15,17 @@
 import unittest
 
 import numpy as np
-import tensorflow as tf
 
 import fastestimator as fe
 
 
 class TestNumpyDataset(unittest.TestCase):
     def test_dataset(self):
-        (x_train, y_train), _ = tf.keras.datasets.mnist.load_data()
+        ## TODO: replace with torch data
+        '''(x_train, y_train), _ = tf.keras.datasets.mnist.load_data()
         train_data = fe.dataset.NumpyDataset({"x": x_train, "y": y_train})
 
-        self.assertEqual(len(train_data), 60000)
+        self.assertEqual(len(train_data), 60000)'''
 
     def test_single_frac_split(self):
         ds1 = fe.dataset.NumpyDataset(

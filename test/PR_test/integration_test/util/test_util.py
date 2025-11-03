@@ -16,7 +16,6 @@ import os
 import unittest
 
 import numpy as np
-import tensorflow as tf
 import torch
 
 import fastestimator as fe
@@ -72,19 +71,6 @@ class TestShowImage(unittest.TestCase):
         img[:, 30:60, :] = np.array([0, 255, 0])
         img[:, 60:90, :] = np.array([0, 0, 255])
         img = torch.from_numpy(img.transpose((2, 0, 1)))
-
-        fig = fe.util.ImageDisplay(image=img)
-
-        obj1 = fig_to_rgb_array(fig.prepare())
-        obj2 = self.color_img_ans
-        self.assertTrue(check_img_similar(obj1, obj2))
-
-    def test_show_image_color_tf(self):
-        img = np.zeros((90, 90, 3), dtype=np.uint8)
-        img[:, 0:30, :] = np.array([255, 0, 0])
-        img[:, 30:60, :] = np.array([0, 255, 0])
-        img[:, 60:90, :] = np.array([0, 0, 255])
-        img = tf.convert_to_tensor(img)
 
         fig = fe.util.ImageDisplay(image=img)
 

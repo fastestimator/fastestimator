@@ -20,12 +20,11 @@ from typing import List, Tuple, Union
 
 import cv2
 import numpy as np
-import tensorflow as tf
+
 import wget
 
 from fastestimator.backend._zscore import zscore
 from fastestimator.util.traceability_util import traceable
-
 
 def cosine_decay(time: int,
                  cycle_length: int,
@@ -76,7 +75,6 @@ def cosine_decay(time: int,
         time_in_cycle = (time - cumulative) / current_cycle_length
         lr = (init_lr - min_lr) / 2 * math.cos(time_in_cycle * math.pi) + (init_lr + min_lr) / 2
     return lr
-
 
 @traceable()
 class ARC:

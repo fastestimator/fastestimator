@@ -18,7 +18,7 @@ import torch
 
 from fastestimator.backend._reduce_mean import reduce_mean
 
-Tensor = TypeVar('Tensor', torch.Tensor, None)
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 
 def smooth_l1_loss(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
@@ -52,7 +52,8 @@ def smooth_l1_loss(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
         raise ValueError("Beta cannot be less than or equal to 0")
 
     if isinstance(y_pred, torch.Tensor):
-        smooth_mae = reduce_mean(torch.nn.SmoothL1Loss(reduction="none", beta=beta)(y_pred, y_true), axis=-1)
+        smooth_mae = reduce_mean(
+            torch.nn.SmoothL1Loss(reduction="none", beta=beta)(y_pred, y_true), axis=-1)
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(y_pred)))
     return smooth_mae

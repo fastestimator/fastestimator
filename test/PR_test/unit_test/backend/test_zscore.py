@@ -21,7 +21,6 @@ import fastestimator as fe
 
 
 class TestZscore(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.data_np = np.array([[0, 1], [2, 3]])

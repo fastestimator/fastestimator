@@ -230,6 +230,7 @@ def get_estimator(batch_size=4,
                   style_img_path='Vassily_Kandinsky,_1913_-_Composition_7.jpg',
                   data_dir=None):
     train_data, _ = mscoco.load_data(root_dir=data_dir, load_bboxes=False, load_masks=False, load_captions=False)
+
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     style_img = cv2.imread(style_img_path)
     assert style_img is not None, "cannot load the style image, please go to the folder with style image"

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Iterable, List, Tuple, Union
+from typing import Any, Dict, Iterable, List, Tuple, TypeVar, Union
 
 import torch
 
@@ -21,6 +21,7 @@ from fastestimator.backend._reduce_mean import reduce_mean
 from fastestimator.op.tensorop.loss.loss import LossOp
 from fastestimator.util.traceability_util import traceable
 
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 @traceable()
 class Hinge(LossOp):
@@ -36,7 +37,6 @@ class Hinge(LossOp):
             ds_ids except for a particular one, you can pass an argument like "!ds1".
         average_loss: Whether to average the element-wise loss after the Loss Op.
     """
-
     def __init__(self,
                  inputs: Union[Tuple[str, str], List[str]],
                  outputs: str,
@@ -46,7 +46,7 @@ class Hinge(LossOp):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
         self.average_loss = average_loss
 
-    def forward(self, data: List[torch.Tensor], state: Dict[str, Any]) -> torch.Tensor:
+    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
         y_pred, y_true = data
         loss = hinge(y_true=y_true, y_pred=y_pred)
         if self.average_loss:

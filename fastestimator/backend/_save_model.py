@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import os
-from typing import Callable, Optional, Tuple, Union
+from typing import Optional
 
 import torch
 
@@ -42,7 +42,7 @@ def save_model(model: torch.nn.Module,
         The saved model path.
 
     Raises:
-        ValueError: If `model` is an unacceptable data type, of if a user tries to save architecture of a PyTorch model.
+        ValueError: If `model` is an unacceptable data type, if a user tries to save architecture of a PyTorch model.
     """
     assert hasattr(model, "fe_compiled") and model.fe_compiled, "model must be built by fe.build"
     if model_name is None:

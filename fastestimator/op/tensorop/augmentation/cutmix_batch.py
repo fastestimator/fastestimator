@@ -18,13 +18,14 @@ import torch
 
 from fastestimator.backend._cast import cast
 from fastestimator.backend._clip_by_value import clip_by_value
+from fastestimator.backend._roll import roll
 from fastestimator.backend._get_image_dims import get_image_dims
 from fastestimator.backend._maximum import maximum
-from fastestimator.backend._roll import roll
 from fastestimator.backend._tensor_round import tensor_round
 from fastestimator.backend._tensor_sqrt import tensor_sqrt
 from fastestimator.op.tensorop.tensorop import TensorOp
 
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 class CutMixBatch(TensorOp):
     """This class performs cutmix augmentation on a batch of tensors.
@@ -48,13 +49,12 @@ class CutMixBatch(TensorOp):
     Raises:
         AssertionError: If the provided inputs are invalid.
     """
-
     def __init__(self,
                  inputs: Iterable[str],
                  outputs: Iterable[str],
                  mode: Union[None, str, Iterable[str]] = 'train',
                  ds_id: Union[None, str, Iterable[str]] = None,
-                 alpha: Union[float, torch.Tensor] = 1.0) -> None:
+                 alpha: Union[float, Tensor] = 1.0) -> None:
         assert alpha > 0, "Alpha value must be greater than zero"
         assert len(inputs) == 2, "Cut-Mix must have exactly 2 inputs"
         assert len(outputs) == 2, "Cut-Mix must have exactly 2 outputs"
@@ -64,13 +64,15 @@ class CutMixBatch(TensorOp):
         self.uniform = None
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
-        self.beta = torch.distributions.beta.Beta(self.alpha, self.alpha)
-        self.uniform = torch.distributions.uniform.Uniform(low=0, high=1)
+        if framework == 'torch':
+            self.beta = torch.distributions.beta.Beta(self.alpha, self.alpha)
+            self.uniform = torch.distributions.uniform.Uniform(low=0, high=1)
+        else:
+            raise ValueError("unrecognized framework: {}".format(framework))
 
     @staticmethod
-    def _get_patch_coordinates(
-            tensor: torch.Tensor, x: torch.Tensor, y: torch.Tensor, lam: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    def _get_patch_coordinates(tensor: Tensor, x: Tensor, y: Tensor,
+                               lam: Tensor) -> Tuple[Tensor, Tensor, Tensor, Tensor, Tensor, Tensor]:
         """Randomly cut the patches from input images.
 
         If patches are going to be pasted in other image, combination ratio between two images is defined by `lam`.

@@ -15,7 +15,7 @@
 import unittest
 from typing import List, Tuple
 
-import tensorflow as tf
+import torch
 
 from fastestimator.slicer import Slicer
 from fastestimator.slicer.slicer import forward_slicers, reverse_slicers, sanity_assert_slicers
@@ -76,13 +76,13 @@ class TestForwardSlicers(unittest.TestCase):
     def test_forward(self):
         with self.subTest("Single Slice"):
             slicers = [MockSlicer(slice="x"), MockSlicer(slice=("y", "z"))]
-            batch = {"x": tf.ones((3, 5, 5, 7)), "y": tf.ones((3, 10)), "z": tf.ones((3, 1)), "w": tf.ones((3, 2))}
+            batch = {"x": torch.ones((3, 5, 5, 7)), "y": torch.ones((3, 10)), "z": torch.ones((3, 1)), "w": torch.ones((3, 2))}
             minibatch = forward_slicers(slicers=slicers, data=batch)
             self.assertEqual(len(minibatch), 1)
             self.assertDictEqual(minibatch[0], batch)
         with self.subTest("Multi Slice"):
             slicers = [MockSlicer2(slice="x"), MockSlicer2(slice=("y", "z"))]
-            batch = {"x": tf.ones((3, 5, 5, 7)), "y": tf.ones((3, 10)), "z": tf.ones((3, 1)), "w": tf.ones((3, 2))}
+            batch = {"x": torch.ones((3, 5, 5, 7)), "y": torch.ones((3, 10)), "z": torch.ones((3, 1)), "w": torch.ones((3, 2))}
             minibatch = forward_slicers(slicers=slicers, data=batch)
             self.assertEqual(len(minibatch), 2)
             self.assertDictEqual(minibatch[0], batch)
@@ -91,7 +91,7 @@ class TestForwardSlicers(unittest.TestCase):
 class TestReverseSlicers(unittest.TestCase):
     def test_reverse(self):
         slicers = [MockSlicer(slice="x"), MockSlicer(slice=("y", "z"))]
-        batch = {"x": tf.ones((3, 5, 5, 7)), "y": tf.ones((3, 10)), "z": tf.ones((3, 1)), "w": tf.ones((3, 2))}
+        batch = {"x": torch.ones((3, 5, 5, 7)), "y": torch.ones((3, 10)), "z": torch.ones((3, 1)), "w": torch.ones((3, 2))}
         minibatch = forward_slicers(slicers=slicers, data=batch)
         for elem in minibatch:
             elem.pop("z")  # simulate z being un-wanted later

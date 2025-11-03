@@ -25,7 +25,6 @@ from fastestimator.util.base_util import NonContext, to_list, warn
 from fastestimator.util.traceability_util import FeInputSpec, traceable
 from fastestimator.util.util import get_num_devices
 
-
 @traceable()
 class ModelOp(TensorOp):
     """This class performs forward passes of a neural network over batch data to generate predictions.
@@ -70,21 +69,22 @@ class ModelOp(TensorOp):
             warn("Layer names / ids may be different between single-gpu and multi-gpu environments")
         for intermediate_layer in intermediate_layers:
             storage = {}
-            layers = model.named_modules()
-            if get_num_devices() > 1:
-                # Try to automatically adjust parameters for multi-gpu so that user doesn't need to change code
-                layers2 = list(model.named_modules())  # It's a generator, so don't corrupt the other copy
-                if isinstance(layers2[0][1], torch.nn.parallel.DataParallel):
-                    parallel_prefix = "module."
-                    if isinstance(intermediate_layer, str) and not intermediate_layer.startswith(parallel_prefix):
-                        intermediate_layer = parallel_prefix + intermediate_layer
-                    elif isinstance(intermediate_layer, int):
-                        layers = layers2[1:]
-            if isinstance(intermediate_layer, int):
-                intermediate_layer = list(layers)[intermediate_layer][1]
-            else:
-                intermediate_layer = dict(layers)[intermediate_layer]
-            intermediate_layer.register_forward_hook(partial(_capture_call_torch, fe_storage=storage))
+            if isinstance(model, torch.nn.Module):
+                layers = model.named_modules()
+                if get_num_devices() > 1:
+                    # Try to automatically adjust parameters for multi-gpu so that user doesn't need to change code
+                    layers2 = list(model.named_modules())  # It's a generator, so don't corrupt the other copy
+                    if isinstance(layers2[0][1], torch.nn.parallel.DataParallel):
+                        parallel_prefix = "module."
+                        if isinstance(intermediate_layer, str) and not intermediate_layer.startswith(parallel_prefix):
+                            intermediate_layer = parallel_prefix + intermediate_layer
+                        elif isinstance(intermediate_layer, int):
+                            layers = layers2[1:]
+                if isinstance(intermediate_layer, int):
+                    intermediate_layer = list(layers)[intermediate_layer][1]
+                else:
+                    intermediate_layer = dict(layers)[intermediate_layer]
+                intermediate_layer.register_forward_hook(partial(_capture_call_torch, fe_storage=storage))
             self.intermediate_outputs.append(storage)
         self.model = model
         self.trainable = trainable
@@ -96,8 +96,8 @@ class ModelOp(TensorOp):
             assert self.gradients, "When model is trainable, the `gradients` must be True."
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
-        self.device = device
-        if len(self.inputs) > 1:
+        self.device = device or ''  # TF will just use empty string for device
+        if framework == "torch" and len(self.inputs) > 1:
             if hasattr(self.model, "module"):
                 # multi-gpu models have module attribute
                 self.multi_inputs = len(inspect.signature(self.model.module.forward).parameters.keys()) > 1
@@ -107,8 +107,7 @@ class ModelOp(TensorOp):
     def get_fe_models(self) -> Set[Model]:
         return {self.model}
 
-    def forward(self, data: Union[torch.Tensor, List[torch.Tensor]],
-                state: Dict[str, Any]) -> Union[torch.Tensor, List[torch.Tensor]]:
+    def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
         training = state['mode'] == "train" and self.trainable
         if isinstance(self.model, torch.nn.Module) and self.epoch_spec != state['epoch']:
             # Gather model input specs for the sake of TensorBoard and Traceability
@@ -117,8 +116,9 @@ class ModelOp(TensorOp):
         if self.gradients:
             data = self._forward_pass(data, training=training)
         else:
-            with torch.no_grad():
-                data = self._forward_pass(data, training=training)
+            if isinstance(self.model, torch.nn.Module):
+                with torch.no_grad():
+                    data = self._forward_pass(data, training=training)
         intermediate_outputs = []
         for output in self.intermediate_outputs:
             intermediate_outputs.append(_unpack_output(output, self.device))
@@ -127,8 +127,7 @@ class ModelOp(TensorOp):
             data = to_list(data) + intermediate_outputs
         return data
 
-    def _forward_pass(self, data: Union[torch.Tensor, List[torch.Tensor]],
-                      training: bool) -> Union[torch.Tensor, List[torch.Tensor]]:
+    def _forward_pass(self, data: Union[Tensor, List[Tensor]], training: bool) -> Union[Tensor, List[Tensor]]:
         if self.multi_inputs:
             data = feed_forward(self.model, *data, training=training)
         else:
@@ -136,7 +135,8 @@ class ModelOp(TensorOp):
         return data
 
 
-def _capture_call_torch(input: Tuple[torch.Tensor, ...],
+def _capture_call_torch(module: torch.nn.Module,
+                        input: Tuple[torch.Tensor, ...],
                         output: torch.Tensor,
                         fe_storage: Dict[Union[str, torch.device], Tensor]) -> None:
     """A callback function to capture the output of a torch model layer.
@@ -148,7 +148,6 @@ def _capture_call_torch(input: Tuple[torch.Tensor, ...],
         fe_storage: A place to store the output from the layer.
     """
     fe_storage[input[0].device] = output
-
 
 def _unpack_output(output_dict: Dict[Union[str, torch.device], Tensor], device: Union[str, torch.device]) -> Tensor:
     """A function to convert a collection of layer outputs into a single output.
@@ -162,5 +161,6 @@ def _unpack_output(output_dict: Dict[Union[str, torch.device], Tensor], device: 
     Returns:
         A stacked representation of the tensor(s) in the output_dict.
     """
-    response = torch.vstack([t[1].to(device) for t in sorted(output_dict.items(), key=lambda x: x[0].index or 0)])
+    if isinstance(device, torch.device):
+        response = torch.vstack([t[1].to(device) for t in sorted(output_dict.items(), key=lambda x: x[0].index or 0)])
     return response

@@ -16,7 +16,7 @@ from operator import gt, lt
 from typing import Optional, Union
 
 import numpy as np
-import tensorflow as tf
+
 import torch
 
 from fastestimator.backend._load_model import load_model
@@ -24,7 +24,6 @@ from fastestimator.backend._save_model import save_model
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
-
 
 @traceable()
 class BestModelSaver(Trace):
@@ -47,7 +46,7 @@ class BestModelSaver(Trace):
         ValueError: If `save_best_mode` is an unacceptable string, or `save_architecture` is used with a PyTorch model.
     """
     def __init__(self,
-                 model: Union[tf.keras.Model, torch.nn.Module],
+                 model: torch.nn.Module,
                  save_dir: str,
                  metric: Optional[str] = None,
                  save_best_mode: str = "min",

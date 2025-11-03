@@ -17,8 +17,9 @@ from typing import TYPE_CHECKING
 import lazy_loader as lazy
 
 __getattr__, __dir__, __all__ = lazy.attach(__name__,
-                                            submodules={'pytorch', 'tensorflow'},
+                                            submodules={'pytorch'},
                                             )
 
 if TYPE_CHECKING:
-    from fastestimator.layers import pytorch, tensorflow
+    from fastestimator.layers import pytorch
+

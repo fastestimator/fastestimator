@@ -39,32 +39,6 @@ class FakeSlicer(Slicer):
 
 
 class TestSlicer(unittest.TestCase):
-    def test_save_and_load_state_tf(self):
-        def instantiate_system():
-            system = sample_system_object()
-            model = fe.build(model_fn=fe.architecture.tensorflow.LeNet, optimizer_fn='adam', model_name='tf')
-            system.network = fe.Network(
-                ops=[ModelOp(model=model, inputs="x_out", outputs="y_pred")],
-                slicers=FakeSlicer(slice="x", unslice=("x", "y_pred"), mode=None, ds_id=None, var=2.0))
-            return system
-
-        system = instantiate_system()
-
-        # make some changes
-        new_var = 4.0
-        system.network.slicers[0].var = new_var
-
-        # save the state
-        save_path = tempfile.mkdtemp()
-        system.save_state(save_path)
-
-        # reinstantiate system and load the state
-        system = instantiate_system()
-        system.load_state(save_path)
-        loaded_var = system.network.slicers[0].var
-
-        self.assertEqual(loaded_var, new_var)
-
     def test_unslice_key_check(self):
         def instantiate_system():
             system = sample_system_object()

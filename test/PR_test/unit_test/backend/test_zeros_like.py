@@ -22,7 +22,6 @@ import fastestimator.test.unittest_util as fet
 
 
 class TestZerosLike(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.data_np = np.array([[0, 1], [2, 3]])

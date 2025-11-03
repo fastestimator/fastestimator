@@ -12,18 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Dict, Optional
+from typing import Dict, Optional, TypeVar
 
 import torch
 
 from fastestimator.backend._reduce_mean import reduce_mean
 
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
+Weight_Dict = TypeVar('Weight_Dict', bound=Dict[int, float])
 
-def categorical_crossentropy(y_pred: torch.Tensor,
-                             y_true: torch.Tensor,
+
+def categorical_crossentropy(y_pred: Tensor,
+                             y_true: Tensor,
                              from_logits: bool = False,
                              average_loss: bool = True,
-                             class_weights: Optional[Dict[int, float]] = None) -> torch.Tensor:
+                             class_weights: Optional[Weight_Dict] = None) -> Tensor:
     """Compute categorical crossentropy.
 
     Note that if any of the `y_pred` values are exactly 0, this will result in a NaN output. If `from_logits` is
@@ -42,7 +45,8 @@ def categorical_crossentropy(y_pred: torch.Tensor,
     ```
 
     Args:
-        y_pred: Prediction with a shape like (Batch, C, ...) for PyTorch. dtype: float32 or float16.
+        y_pred: Prediction with a shape like (Batch, C, ...) for PyTorch. dtype:
+            float32 or float16.
         y_true: Ground truth class labels with a shape like `y_pred`. dtype: int or float32 or float16.
         from_logits: Whether y_pred is from logits. If True, a softmax will be applied to the prediction.
         average_loss: Whether to average the element-wise loss.
@@ -72,7 +76,7 @@ def categorical_crossentropy(y_pred: torch.Tensor,
     return ce
 
 
-def _categorical_crossentropy_torch(y_pred: torch.Tensor, y_true: torch.Tensor, from_logits: bool) -> torch.Tensor:
+def _categorical_crossentropy_torch(y_pred: Tensor, y_true: Tensor, from_logits: bool) -> Tensor:
     if from_logits:
         ce = torch.sum(-y_true * torch.nn.LogSoftmax(dim=1)(y_pred), 1)
     else:

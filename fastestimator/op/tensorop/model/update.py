@@ -149,7 +149,6 @@ class UpdateOp(TensorOp):
 
         Args:
             loss: Input loss.
-            tape: A TensorFlow GradientTape which was recording when the `loss` was computed (iff using TensorFlow).
 
         Returns:
             Computed gradients.
@@ -203,7 +202,7 @@ class UpdateOp(TensorOp):
                 self._assign_add(gs, -gs)  # zero the gradient in place
 
     def _assign_add(self, a: torch.Tensor, b: torch.Tensor) -> None:
-        """In-place addition for both Tensorflow and PyTorch. `a` = `a` + `b`
+        """In-place addition for PyTorch. `a` = `a` + `b`
 
         Args:
             a: A tensor where in-place addition happens.

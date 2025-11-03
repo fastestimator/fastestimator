@@ -20,6 +20,7 @@ from fastestimator.backend._reshape import reshape
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 @traceable()
 class Reshape(TensorOp):
@@ -35,7 +36,6 @@ class Reshape(TensorOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
-
     def __init__(self,
                  inputs: Union[str, List[str]],
                  outputs: Union[str, List[str]],
@@ -46,5 +46,5 @@ class Reshape(TensorOp):
         self.shape = list(shape)
         self.in_list, self.out_list = True, True
 
-    def forward(self, data: List[torch.Tensor], state: Dict[str, Any]) -> List[torch.Tensor]:
+    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
         return [reshape(elem, self.shape) for elem in data]

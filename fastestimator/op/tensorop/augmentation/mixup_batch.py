@@ -22,6 +22,7 @@ from fastestimator.backend._reshape import reshape
 from fastestimator.backend._roll import roll
 from fastestimator.op.tensorop.tensorop import TensorOp
 
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 class MixUpBatch(TensorOp):
     """MixUp augmentation for tensors.
@@ -41,7 +42,6 @@ class MixUpBatch(TensorOp):
     Raises:
         AssertionError: If input arguments are invalid.
     """
-
     def __init__(self,
                  inputs: Iterable[str],
                  outputs: Iterable[str],
@@ -58,10 +58,13 @@ class MixUpBatch(TensorOp):
         self.shared_beta = shared_beta
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
-        self.beta = torch.distributions.beta.Beta(
-            torch.tensor([self.alpha]).to(device), torch.tensor([self.alpha]).to(device))
+        if framework == 'torch':
+            self.beta = torch.distributions.beta.Beta(
+                torch.tensor([self.alpha]).to(device), torch.tensor([self.alpha]).to(device))
+        else:
+            raise ValueError("unrecognized framework: {}".format(framework))
 
-    def forward(self, data: List[torch.Tensor], state: Dict[str, Any]) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tuple[Tensor, Tensor]:
         x, y = data
 
         if self.shared_beta:

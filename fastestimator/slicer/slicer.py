@@ -14,13 +14,9 @@
 # ==============================================================================
 from typing import Dict, Iterable, List, MutableMapping, Sequence, Set, Tuple, Union
 
-import tensorflow as tf
-from tensorflow.python.distribute.values import DistributedValues
-
 from fastestimator.types import Tensor
 from fastestimator.util.base_util import check_ds_id, check_io_names, parse_modes, to_list, to_set
 from fastestimator.util.traceability_util import traceable
-
 
 @traceable()
 class Slicer():
@@ -114,7 +110,6 @@ class Slicer():
         """
         raise NotImplementedError
 
-
 def sanity_assert_slicers(slicers: List[Slicer]) -> None:
     """A sanity test to ensure that slicers in a given list don't interfere with each-other.
 
@@ -141,7 +136,6 @@ def sanity_assert_slicers(slicers: List[Slicer]) -> None:
         unslice_inputs |= more_u_inputs
     if unslice_inputs and not slice_inputs:
         raise ValueError("Cannot unslice keys if no slicing is performed.")
-
 
 def forward_slicers(slicers: List[Slicer], data: MutableMapping[str, Tensor]) -> List[Dict[str, Tensor]]:
     """Perform a forward pass over a list of slicers, cutting a batch of data apart into multiple mini-batches.
@@ -184,7 +178,6 @@ def forward_slicers(slicers: List[Slicer], data: MutableMapping[str, Tensor]) ->
     for minibatch in slices:
         minibatch.update(leftover_data)
     return slices
-
 
 def reverse_slicers(slicers: List[Slicer], data: List[MutableMapping[str, Tensor]],
                     original_data: Dict[str, Tensor]) -> Dict[str, Tensor]:

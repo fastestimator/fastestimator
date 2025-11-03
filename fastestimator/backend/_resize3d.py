@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Sequence
+from typing import Sequence, TypeVar
 
 import torch
 
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
-def resize_3d(tensor: torch.Tensor, output_shape: Sequence[int], resize_mode: str = 'nearest') -> torch.Tensor:
+
+def resize_3d(tensor: Tensor, output_shape: Sequence[int], resize_mode: str = 'nearest') -> Tensor:
     """Reshape a `tensor` to conform to a given shape.Currently torch doesn't support 16 bit tensors on cpu.
 
     This method can be used with PyTorch tensors:

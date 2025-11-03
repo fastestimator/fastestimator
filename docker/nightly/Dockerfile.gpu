@@ -56,11 +56,9 @@ RUN /setup.sources.sh
 RUN /setup.packages.sh /cpu.packages.txt
 
 ARG PYTHON_VERSION=python3.10
-ARG TENSORFLOW_PACKAGE=tensorflow[and-cuda]==2.15.1
 COPY setup.python.sh /setup.python.sh
 COPY gpu.requirements.txt /gpu.requirements.txt
 RUN /setup.python.sh $PYTHON_VERSION /gpu.requirements.txt
-RUN pip install --no-cache-dir ${TENSORFLOW_PACKAGE}
 
 COPY setup.cuda.sh /setup.cuda.sh
 RUN /setup.cuda.sh

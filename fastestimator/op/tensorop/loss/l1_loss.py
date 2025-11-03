@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Iterable, List, Tuple, Union
+from typing import Any, Dict, Iterable, List, Tuple, TypeVar, Union
 
 import torch
 
@@ -23,6 +23,7 @@ from fastestimator.backend._smooth_l1_loss import smooth_l1_loss
 from fastestimator.op.tensorop.loss.loss import LossOp
 from fastestimator.util.traceability_util import traceable
 
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 @traceable()
 class L1_Loss(LossOp):
@@ -34,7 +35,6 @@ class L1_Loss(LossOp):
                         'beta' and vanilla L1 loss otherwise.
         Huber loss: Is a criterion that uses squared loss if absolute element wise subtraction (y_pred - y_true) is less than
                     'beta' and a 'beta' scaled L1 loss otherwise.
-
 
     Args:
         inputs: A tuple or list like: [y_pred, y_true].
@@ -48,7 +48,6 @@ class L1_Loss(LossOp):
         loss_type: What type of L1 loss. Can either be 'L1' (L1 Loss), 'Smooth' (Smooth L1 Loss) or 'Huber' (Huber loss). Default:'L1'
         beta: A threshold at which to change between L1 and L2 loss. Needs to be a positive number. Default:1.0 . dtype: float16 or float32.
     """
-
     def __init__(self,
                  inputs: Union[Tuple[str, str], List[str]],
                  outputs: str,
@@ -62,7 +61,7 @@ class L1_Loss(LossOp):
         self.loss_type = loss_type
         self.beta = beta
 
-    def forward(self, data: List[torch.Tensor], state: Dict[str, Any]) -> torch.Tensor:
+    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
         y_pred, y_true = data
         if self.loss_type == 'L1':
             loss = l1_loss(y_true=y_true, y_pred=y_pred)

@@ -12,12 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from typing import TypeVar
+
 import torch
 
 from fastestimator.backend._reduce_mean import reduce_mean
 
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
-def mean_squared_error(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
+
+def mean_squared_error(y_true: Tensor, y_pred: Tensor) -> Tensor:
     """Calculate mean squared error between two tensors.
 
     This method can be used with PyTorch tensors:

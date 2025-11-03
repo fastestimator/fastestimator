@@ -20,6 +20,7 @@ from fastestimator.backend._argmax import argmax
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 @traceable()
 class Argmax(TensorOp):
@@ -46,5 +47,5 @@ class Argmax(TensorOp):
         self.axis = axis
         self.in_list, self.out_list = True, True
 
-    def forward(self, data: List[torch.Tensor], state: Dict[str, Any]) -> List[torch.Tensor]:
+    def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
         return [argmax(tensor=tensor, axis=self.axis) for tensor in data]
